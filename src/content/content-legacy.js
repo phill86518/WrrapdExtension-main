@@ -1,3 +1,25 @@
+import {
+    waitForPageReady,
+    getSimplifiedDOMSnapshot,
+    observeDomChanges,
+    waitForElement,
+    waitForPopover,
+    getFullPageDOMSnapshot,
+    getUniqueSelectorForElement
+} from './lib/dom-utils.js';
+import {
+    getAllItemsFromLocalStorage,
+    saveAllItemsToLocalStorage,
+    saveItemToLocalStorage,
+    retrieveItemFromLocalStorage,
+    removeAllItemsFromLocalStorage,
+    saveDeliveryInstructions
+} from './lib/storage.js';
+import { hideLoadingScreen, showLoadingScreen, removeLoadingScreen } from './lib/loading-ui.js';
+import { getValueByLabel, getElementValue, generateOrderNumber } from './lib/order-helpers.js';
+import { ensureWrrapdSummaryAlignment } from './lib/summary-alignment.js';
+import { isZipCodeAllowed } from './lib/zip-codes.js';
+
 (function () {
 
     // Flag to prevent duplicate calls to selectAddressesForItemsSimple
@@ -120,108 +142,6 @@
         return false;
     }
     
-    /**
-     * COMMON FUNCTION: Ensure Wrrapd summary text has correct indentations to match Amazon
-     * This function should be called after the summary is created or updated
-     */
-    function ensureWrrapdSummaryAlignment() {
-        console.log("[ensureWrrapdSummaryAlignment] Ensuring Wrrapd summary alignment with Amazon...");
-        
-        const wrrapdSummaryItems = document.querySelector('#wrrapd-summary-items');
-        if (!wrrapdSummaryItems) {
-            console.warn("[ensureWrrapdSummaryAlignment] Wrrapd summary items container not found.");
-            return;
-        }
-        
-        // Find Amazon's items container to match its padding exactly
-        const orderSummary = document.querySelector('#spc-order-summary, [id*="order-summary"], .spc-order-summary');
-        if (!orderSummary) {
-            console.warn("[ensureWrrapdSummaryAlignment] Amazon order summary not found.");
-            return;
-        }
-        
-        const amazonItemsContainer = orderSummary.querySelector('ul, #subtotals-marketplace-table, [class*="subtotal"], [class*="items"]');
-        if (amazonItemsContainer) {
-            const itemsComputed = window.getComputedStyle(amazonItemsContainer);
-            const itemsStyle = [
-                itemsComputed.paddingLeft && itemsComputed.paddingLeft !== '0px' ? `padding-left: ${itemsComputed.paddingLeft};` : '',
-                itemsComputed.paddingRight && itemsComputed.paddingRight !== '0px' ? `padding-right: ${itemsComputed.paddingRight};` : '',
-                itemsComputed.marginLeft && itemsComputed.marginLeft !== '0px' ? `margin-left: ${itemsComputed.marginLeft};` : '',
-                itemsComputed.marginRight && itemsComputed.marginRight !== '0px' ? `margin-right: ${itemsComputed.marginRight};` : ''
-            ].filter(s => s).join(' ');
-            
-            if (itemsStyle) {
-                wrrapdSummaryItems.style.cssText += itemsStyle;
-                console.log("[ensureWrrapdSummaryAlignment] Applied Amazon items container styles to Wrrapd summary.");
-            }
-        }
-        
-        // Also update individual line items to match Amazon's item styles
-        const amazonItems = orderSummary.querySelectorAll('ul li, .a-row, [class*="a-row"]');
-        if (amazonItems.length > 0) {
-            const firstAmazonItem = amazonItems[0];
-            const computedStyle = window.getComputedStyle(firstAmazonItem);
-            const itemStyle = {
-                paddingLeft: computedStyle.paddingLeft,
-                paddingRight: computedStyle.paddingRight,
-                marginLeft: computedStyle.marginLeft,
-                marginRight: computedStyle.marginRight,
-                fontSize: computedStyle.fontSize,
-                lineHeight: computedStyle.lineHeight
-            };
-            
-            // Update all Wrrapd line items
-            const wrrapdItems = wrrapdSummaryItems.querySelectorAll('.a-row');
-            wrrapdItems.forEach(item => {
-                const itemStyleStr = [
-                    itemStyle.paddingLeft && itemStyle.paddingLeft !== '0px' ? `padding-left: ${itemStyle.paddingLeft};` : '',
-                    itemStyle.paddingRight && itemStyle.paddingRight !== '0px' ? `padding-right: ${itemStyle.paddingRight};` : '',
-                    itemStyle.marginLeft && itemStyle.marginLeft !== '0px' ? `margin-left: ${itemStyle.marginLeft};` : '',
-                    itemStyle.marginRight && itemStyle.marginRight !== '0px' ? `margin-right: ${itemStyle.marginRight};` : '',
-                    itemStyle.fontSize ? `font-size: ${itemStyle.fontSize};` : '',
-                    itemStyle.lineHeight ? `line-height: ${itemStyle.lineHeight};` : ''
-                ].filter(s => s).join(' ');
-                
-                const innerSpan = item.querySelector('span[style*="display"]');
-                if (innerSpan && itemStyleStr) {
-                    innerSpan.style.cssText += itemStyleStr;
-                }
-            });
-            
-            console.log("[ensureWrrapdSummaryAlignment] Updated all Wrrapd line items to match Amazon styles.");
-        }
-    }
-
-    // Load allowed zip codes from shared JSON file
-    let allowedZipCodes = [];
-    let zipCodesLoaded = false;
-    
-    async function loadAllowedZipCodes() {
-        if (zipCodesLoaded) return allowedZipCodes;
-        
-        try {
-            const response = await fetch('https://api.wrrapd.com/api/allowed-zip-codes');
-            if (response.ok) {
-                const data = await response.json();
-                allowedZipCodes = data.allowedZipCodes || [];
-                zipCodesLoaded = true;
-            } else {
-                console.error('[Content] Failed to load zip codes from API. Response status:', response.status);
-                allowedZipCodes = [];
-                zipCodesLoaded = true;
-            }
-        } catch (error) {
-            console.error('[Content] Error loading zip codes:', error);
-            allowedZipCodes = [];
-            zipCodesLoaded = true;
-        }
-        
-        return allowedZipCodes;
-    }
-    
-    // Load zip codes immediately when script loads
-    loadAllowedZipCodes();
-
     // ----------------------------------------------------- PAGE CONTROL -----------------------------------------------------
 
     function monitorURLChanges() {
@@ -468,73 +388,8 @@
         setInterval(checkURLAndExecute, 1000);
     }
     
-    function waitForPageReady(selector, callback) {
-        const checkInterval = 200; // Intervalo de chequeo (en ms)
-        const timeout = 10000; // Tiempo máximo de espera (10 segundos)
-        let elapsedTime = 0;
-    
-        const interval = setInterval(() => {
-            const element = document.querySelector(selector);
-    
-            if (element) {
-                clearInterval(interval);
-                callback();
-            } else if (elapsedTime >= timeout) {
-                clearInterval(interval);
-                callback();
-            }
-    
-            elapsedTime += checkInterval;
-        }, checkInterval);
-    }
-    
     // Inicializar monitoreo
     monitorURLChanges();
-
-    // ----------------------------------------------------- LOCAL STORAGE -----------------------------------------------------
-
-    function getAllItemsFromLocalStorage() {
-        const storageKey = "wrrapd-items";
-        const data = JSON.parse(localStorage.getItem(storageKey)) || {};
-        return data;
-    }
-
-    function saveAllItemsToLocalStorage(items) {
-        const storageKey = "wrrapd-items";
-        localStorage.setItem(storageKey, JSON.stringify(items));
-    }
-    
-    function saveItemToLocalStorage(item) {
-        const storageKey = "wrrapd-items";
-        const allItems = JSON.parse(localStorage.getItem(storageKey)) || {};
-    
-        // Check if item already exists and hasn't changed (optimization to prevent duplicate saves)
-        const existingItem = allItems[item.title];
-        if (existingItem && JSON.stringify(existingItem) === JSON.stringify(item)) {
-            // Item hasn't changed, skip saving
-            return;
-        }
-    
-        allItems[item.title] = item; // Guardar o actualizar el ítem por su título
-        localStorage.setItem(storageKey, JSON.stringify(allItems));
-    
-        console.log(`[saveItemToLocalStorage] Item saved:`, item);
-    }
-    
-    function retrieveItemFromLocalStorage(title) {
-        const storageKey = "wrrapd-items";
-        const allItems = JSON.parse(localStorage.getItem(storageKey)) || {};
-    
-        const item = allItems[title] || null;
-        console.log(`[retrieveItemFromLocalStorage] Retrieved item for title "${title}":`, item);
-    
-        return item;
-    }
-  
-    function removeAllItemsFromLocalStorage() {
-        const storageKey = "wrrapd-items";
-        localStorage.removeItem(storageKey);
-    }
 
     // ----------------------------------------------------- CART PAGE -----------------------------------------------------
 
@@ -890,109 +745,6 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
         }
         
         return null;
-    }
-    
-    /**
-     * Gets a simplified DOM snapshot for AI analysis
-     * @returns {string} - Simplified HTML structure
-     */
-    function getSimplifiedDOMSnapshot() {
-        // Focus on relevant areas of the page - check if we're on gift options page
-        const isGiftPage = window.location.href.includes('/gift');
-        
-        const relevantSelectors = isGiftPage ? [
-            '#giftOptions',
-            '[id^="item-"]',
-            '[data-testid*="gift"]',
-            '[class*="gift"]',
-            'input[type="checkbox"][id*="gift"]',
-            'input[type="checkbox"][name*="gift"]',
-            'label[for*="gift"]',
-            '[class*="product"]',
-            '[class*="item"]',
-            'section',
-            '.a-section'
-        ] : [
-            '#sc-buy-box',
-            '#sc-buy-box-ptc-button',
-            '[data-feature-id*="checkout"]',
-            '.a-button-input',
-            'button[type="submit"]',
-            'input[type="submit"]',
-            '.a-button-primary',
-            '#sc-active-cart',
-            'form[action*="checkout"]',
-            '[aria-label*="checkout" i]',
-            '[aria-label*="proceed" i]'
-        ];
-        
-        let snapshot = '';
-        const foundElements = new Set(); // Avoid duplicates
-        
-        relevantSelectors.forEach(selector => {
-            try {
-                const elements = document.querySelectorAll(selector);
-                elements.forEach((el, index) => {
-                    if (index < 10 && !foundElements.has(el)) { // Limit to first 10 matches per selector
-                        foundElements.add(el);
-                        const text = el.textContent?.trim().substring(0, 150) || '';
-                        const id = el.id || '';
-                        const classes = el.className || '';
-                        const name = el.name || '';
-                        const value = el.value || '';
-                        const ariaLabel = el.getAttribute('aria-label') || '';
-                        const dataAttrs = Array.from(el.attributes)
-                            .filter(attr => attr.name.startsWith('data-'))
-                            .map(attr => `${attr.name}="${attr.value}"`)
-                            .join(' ');
-                        
-                        snapshot += `\n--- Element ${foundElements.size} ---\n`;
-                        snapshot += `Selector: ${selector}\n`;
-                        snapshot += `Tag: ${el.tagName}\n`;
-                        snapshot += `ID: ${id}\n`;
-                        snapshot += `Name: ${name}\n`;
-                        snapshot += `Value: ${value}\n`;
-                        snapshot += `Classes: ${classes}\n`;
-                        snapshot += `Aria-label: ${ariaLabel}\n`;
-                        snapshot += `Data attributes: ${dataAttrs}\n`;
-                        snapshot += `Text content: ${text}\n`;
-                        snapshot += `Parent ID: ${el.parentElement?.id || ''}\n`;
-                        snapshot += `Parent classes: ${el.parentElement?.className || ''}\n`;
-                    }
-                });
-            } catch (e) {
-                // Ignore selector errors
-            }
-        });
-        
-        // Also search by text content for buttons/inputs containing "checkout" or "proceed"
-        try {
-            const allButtons = document.querySelectorAll('button, input[type="submit"], input[type="button"], a[role="button"]');
-            allButtons.forEach(el => {
-                if (foundElements.has(el)) return;
-                
-                const text = el.textContent?.trim().toLowerCase() || '';
-                const value = (el.value || '').toLowerCase();
-                const ariaLabel = (el.getAttribute('aria-label') || '').toLowerCase();
-                
-                if (text.includes('checkout') || text.includes('proceed') || 
-                    value.includes('checkout') || value.includes('proceed') ||
-                    ariaLabel.includes('checkout') || ariaLabel.includes('proceed')) {
-                    foundElements.add(el);
-                    snapshot += `\n--- Text-based Match ---\n`;
-                    snapshot += `Tag: ${el.tagName}\n`;
-                    snapshot += `ID: ${el.id || ''}\n`;
-                    snapshot += `Classes: ${el.className || ''}\n`;
-                    snapshot += `Text: ${el.textContent?.trim().substring(0, 150) || ''}\n`;
-                    snapshot += `Value: ${el.value || ''}\n`;
-                    snapshot += `Aria-label: ${el.getAttribute('aria-label') || ''}\n`;
-                }
-            });
-        } catch (e) {
-            // Ignore errors
-        }
-        
-        return snapshot || 'No relevant elements found';
     }
     
     /**
@@ -3458,28 +3210,6 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
 
     }
 
-    /****************************************************************
-     * isZipCodeAllowed - checks if the subItem's zip code is allowed
-     * in our list of supported zip codes
-     ****************************************************************/
-    async function isZipCodeAllowed(subItem) { 
-        console.log("[isZipCodeAllowed] Checking if zip code is allowed.");
-
-        const zipCode = subItem?.shippingAddress?.postalCode;
-        if (!zipCode) {
-            console.log("[isZipCodeAllowed] No postalCode found, returning false.");
-            return false;
-        }
-
-        // Ensure zip codes are loaded before checking
-        if (!zipCodesLoaded) {
-            await loadAllowedZipCodes();
-        }
-        const isAllowed = allowedZipCodes.includes(zipCode);
-        console.log(`[isZipCodeAllowed] Zip code "${zipCode}" allowed: ${isAllowed}`);
-        return isAllowed;
-    }
-
     // ----------------------------------------------------- SINGLE ADDRESS SELECTION -----------------------------------------------------
 
     function singleSelectAddress() {
@@ -3616,28 +3346,6 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
 
     // ----------------------------------------------------- MULTI ADDRESS SELECTION -----------------------------------------------------
 
-    function observeDomChanges(callback) {
-        const observer = new MutationObserver((mutationsList, obs) => {
-        // Importante: desconectamos para no generar loops cuando inyectamos overlays
-        obs.disconnect();
-    
-        // Llamamos a nuestro callback para re-inyectar overlays
-        callback();
-    
-        // Volvemos a observar
-        obs.observe(document.body, {
-            childList: true,
-            subtree: true,
-        });
-        });
-    
-        // Iniciamos la observación
-        observer.observe(document.body, {
-        childList: true,
-        subtree: true,
-        });
-    }
-    
     function createOverlayButton2(originalButton, callback, overlayId) {
         // Evitar que Amazon reciba clics
         originalButton.style.pointerEvents = 'none';
@@ -3784,49 +3492,6 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
     // Cache for Wrrapd address details (data-value) - once found, reuse for all dropdowns
     // Since Wrrapd address is ALWAYS available once it's in the address list, we cache it upfront
     let wrrapdAddressCache = null;
-    
-    /**
-     * OPTIMIZED: Dynamic wait for element using MutationObserver
-     * Replaces fixed timeouts with real-time DOM detection
-     * This is faster than fixed delays because it responds immediately when elements appear
-     * 
-     * @param {string} selector - CSS selector to wait for
-     * @param {number} timeout - Maximum time to wait in ms (default: 2000)
-     * @param {boolean} multiple - If true, returns NodeList, otherwise returns single element
-     */
-    function waitForElement(selector, timeout = 2000, multiple = false) {
-        return new Promise((resolve) => {
-            // Check if already exists (most common case - instant return)
-            const element = multiple ? document.querySelectorAll(selector) : document.querySelector(selector);
-            if ((multiple && element.length > 0) || (!multiple && element)) {
-                return resolve(element);
-            }
-            
-            // Use MutationObserver for real-time detection (faster than polling)
-            const observer = new MutationObserver(() => {
-                const element = multiple ? document.querySelectorAll(selector) : document.querySelector(selector);
-                if ((multiple && element.length > 0) || (!multiple && element)) {
-                    observer.disconnect();
-                    resolve(element);
-                }
-            });
-            
-            observer.observe(document.body, { childList: true, subtree: true });
-            
-            // Fallback timeout
-            setTimeout(() => {
-                observer.disconnect();
-                resolve(multiple ? [] : null);
-            }, timeout);
-        });
-    }
-    
-    /**
-     * OPTIMIZED: Wait for popover to appear dynamically
-     */
-    function waitForPopover(timeout = 2000) {
-        return waitForElement('.a-popover', timeout);
-    }
     
     async function selectAddressesForItemsSimple(allItems) {
         // CRITICAL: Prevent duplicate calls
@@ -6716,177 +6381,6 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             return false;
         }
     }
-    
-    /**
-     * Gets a comprehensive DOM snapshot of the entire page including all <select> elements
-     */
-    function getFullPageDOMSnapshot() {
-        let snapshot = '';
-        
-        // Get all <select> elements on the page
-        const allSelects = document.querySelectorAll('select');
-        console.log(`[getFullPageDOMSnapshot] Found ${allSelects.length} <select> elements on page.`);
-        
-        snapshot += `\n=== PAGE STRUCTURE ===\n`;
-        snapshot += `Total <select> elements found: ${allSelects.length}\n\n`;
-        
-        // Get all item rows
-        const itemRows = document.querySelectorAll('.a-row.a-spacing-base.item-row, [class*="item-row"], [class*="product-row"]');
-        snapshot += `Item rows found: ${itemRows.length}\n\n`;
-        
-        // For each select element, get detailed information
-        allSelects.forEach((select, index) => {
-            if (index < 50) { // Limit to first 50 to avoid token limits
-                const id = select.id || '';
-                const name = select.name || '';
-                const classes = select.className || '';
-                const options = Array.from(select.options);
-                const selectedValue = select.value;
-                const selectedText = select.options[select.selectedIndex]?.text || '';
-                
-                // Get parent context
-                const parent = select.parentElement;
-                const parentClasses = parent ? (parent.className || '') : '';
-                const parentId = parent ? (parent.id || '') : '';
-                
-                // Get product title if available in parent hierarchy
-                let productTitle = '';
-                let current = parent;
-                let depth = 0;
-                while (current && depth < 5) {
-                    const titleEl = current.querySelector('p.a-spacing-micro.a-size-base.a-text-bold, [class*="title"], [class*="product-name"]');
-                    if (titleEl) {
-                        productTitle = titleEl.textContent?.trim().substring(0, 50) || '';
-                        break;
-                    }
-                    current = current.parentElement;
-                    depth++;
-                }
-                
-                snapshot += `\n--- Select Element ${index + 1} ---\n`;
-                snapshot += `Tag: ${select.tagName}\n`;
-                snapshot += `ID: ${id}\n`;
-                snapshot += `Name: ${name}\n`;
-                snapshot += `Classes: ${classes}\n`;
-                snapshot += `Parent Classes: ${parentClasses}\n`;
-                snapshot += `Parent ID: ${parentId}\n`;
-                snapshot += `Product Title: ${productTitle}\n`;
-                snapshot += `Selected Value: ${selectedValue}\n`;
-                snapshot += `Selected Text: ${selectedText}\n`;
-                snapshot += `Total Options: ${options.length}\n`;
-                
-                // Show first few options
-                options.slice(0, 5).forEach((opt, optIndex) => {
-                    snapshot += `  Option ${optIndex + 1}: value="${opt.value}", text="${opt.text.trim().substring(0, 80)}"\n`;
-                });
-                if (options.length > 5) {
-                    snapshot += `  ... and ${options.length - 5} more options\n`;
-                }
-            }
-        });
-        
-        // Also include structure of item rows
-        itemRows.forEach((row, rowIndex) => {
-            if (rowIndex < 10) { // Limit to first 10 rows
-                const titleEl = row.querySelector('p.a-spacing-micro.a-size-base.a-text-bold, [class*="title"]');
-                const title = titleEl ? titleEl.textContent?.trim().substring(0, 50) : 'Unknown';
-                const selectsInRow = row.querySelectorAll('select');
-                
-                snapshot += `\n--- Item Row ${rowIndex + 1} ---\n`;
-                snapshot += `Title: ${title}\n`;
-                snapshot += `Selects in row: ${selectsInRow.length}\n`;
-            }
-        });
-        
-        return snapshot || 'No DOM structure found';
-    }
-    
-    /**
-     * Gets a simplified DOM snapshot for a single row (for Gemini AI analysis)
-     */
-    function getSimplifiedDOMSnapshotForRow(row) {
-        let snapshot = '';
-        
-        // Get all <select> elements in the row
-        const selects = row.querySelectorAll('select');
-        snapshot += `Select elements in row: ${selects.length}\n\n`;
-        
-        selects.forEach((select, index) => {
-            const id = select.id || '';
-            const name = select.name || '';
-            const classes = select.className || '';
-            const options = Array.from(select.options);
-            const selectedValue = select.value;
-            
-            snapshot += `\n--- Select ${index + 1} ---\n`;
-            snapshot += `ID: ${id}\n`;
-            snapshot += `Name: ${name}\n`;
-            snapshot += `Classes: ${classes}\n`;
-            snapshot += `Selected Value: ${selectedValue}\n`;
-            snapshot += `Options: ${options.length}\n`;
-            options.slice(0, 3).forEach(opt => {
-                snapshot += `  - "${opt.text.trim().substring(0, 60)}"\n`;
-            });
-        });
-        
-        return snapshot || 'Row structure not found';
-    }
-    
-    /**
-     * Gets a unique CSS selector for an element within a container
-     */
-    function getUniqueSelectorForElement(element, container) {
-        if (!element || !container) return null;
-        
-        // Try ID first
-        if (element.id) {
-            const selector = `#${element.id}`;
-            if (container.querySelector(selector) === element) {
-                return selector;
-            }
-        }
-        
-        // Try class combination
-        if (element.className && typeof element.className === 'string') {
-            const classes = element.className.trim().split(/\s+/).filter(c => c.length > 0);
-            if (classes.length > 0) {
-                const selector = '.' + classes.join('.');
-                const matches = container.querySelectorAll(selector);
-                if (matches.length === 1 && matches[0] === element) {
-                    return selector;
-                }
-            }
-        }
-        
-        // Try tag + nth-child
-        const parent = element.parentElement;
-        if (parent && container.contains(parent)) {
-            const siblings = Array.from(parent.children);
-            const index = siblings.indexOf(element);
-            if (index >= 0) {
-                return `${element.tagName.toLowerCase()}:nth-child(${index + 1})`;
-            }
-        }
-        
-        // Fallback: try to build path
-        let path = [];
-        let current = element;
-        while (current && current !== container && path.length < 5) {
-            let selector = current.tagName.toLowerCase();
-            if (current.id) {
-                selector += `#${current.id}`;
-            } else if (current.className && typeof current.className === 'string') {
-                const classes = current.className.trim().split(/\s+/).filter(c => c.length > 0);
-                if (classes.length > 0) {
-                    selector += '.' + classes[0];
-                }
-            }
-            path.unshift(selector);
-            current = current.parentElement;
-        }
-        
-        return path.length > 0 ? path.join(' > ') : null;
-    }
   
     async function scrapeShippingAddressOnMulti(allItems) {
         console.log("[scrapeShippingAddressOnMulti] Scraping shipping addresses on the multi-address selection page.");
@@ -8505,90 +7999,6 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
         document.body.appendChild(modal);
     }
     
-    function hideLoadingScreen() {
-        const loadingScreen = document.getElementById('loadingScreen');
-        if (loadingScreen) {
-            console.log("[hideLoadingScreen] Hiding loading screen temporarily...");
-            loadingScreen.style.display = 'none';
-        }
-    }
-    
-    function showLoadingScreen(message = "Items selected for gift-wrapping by Wrrapd shall be re-routed to Wrrapd and then delivered to you!<br>In some cases, it may take an extra day for delivery.") {
-        // CRITICAL: Only show loading screen if there are actually Wrrapd items
-        const allItems = getAllItemsFromLocalStorage();
-        const hasWrrapdItems = Object.values(allItems).some(item => 
-            item.options && item.options.some(subItem => subItem.checkbox_wrrapd === true)
-        );
-        
-        if (!hasWrrapdItems) {
-            console.log("[showLoadingScreen] No Wrrapd items found - NOT showing loading screen");
-            return;
-        }
-    
-        // CRITICAL: If loading screen already exists, ensure it's visible and on top
-        const existingScreen = document.getElementById('loadingScreen');
-        if (existingScreen) {
-            // Ensure it's visible and has highest z-index
-            existingScreen.style.display = 'flex';
-            existingScreen.style.zIndex = '999999';
-            existingScreen.style.position = 'fixed';
-            existingScreen.style.top = '0';
-            existingScreen.style.left = '0';
-            existingScreen.style.width = '100%';
-            existingScreen.style.height = '100%';
-            return;
-        }
-    
-        // Create the main container
-        const loadingScreen = document.createElement('div');
-        loadingScreen.id = 'loadingScreen';
-        loadingScreen.style.position = 'fixed';
-        loadingScreen.style.top = '0';
-        loadingScreen.style.left = '0';
-        loadingScreen.style.width = '100%';
-        loadingScreen.style.height = '100%';
-        loadingScreen.style.backgroundColor = 'black';
-        loadingScreen.style.zIndex = '999999';
-        loadingScreen.style.display = 'flex';
-        loadingScreen.style.flexDirection = 'column';
-        loadingScreen.style.alignItems = 'center';
-        loadingScreen.style.justifyContent = 'center';
-    
-        // Crear el contenido interno
-        loadingScreen.innerHTML = `
-            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: white;">
-                <div style="
-                    width: 50px;
-                    height: 50px;
-                    border: 5px solid rgba(255, 255, 255, 0.3);
-                    border-top: 5px solid white;
-                    border-radius: 50%;
-                    animation: spin 1s linear infinite;
-                    margin-bottom: 20px;">
-                </div>
-                <p style="font-size: 18px; font-weight: bold; margin: 0;">${message}</p>
-            </div>
-            <style>
-                @keyframes spin {
-                    0% { transform: rotate(0deg); }
-                    100% { transform: rotate(360deg); }
-                }
-            </style>
-        `;
-    
-        // Add to DOM
-        document.body.appendChild(loadingScreen);
-    }
-    
-    function removeLoadingScreen() {
-        const loadingScreen = document.getElementById('loadingScreen');
-        if (loadingScreen) {
-            loadingScreen.remove();
-        } else {
-            console.warn("[removeLoadingScreen] No loading screen found to remove.");
-        }
-    }
-
     // ----------------------------------------------------- PAYMENT SECTION -----------------------------------------------------
 
     function paymentSection(allItems) {
@@ -10380,79 +9790,6 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             
             console.log("[captureDeliveryInstructions] Delivery instructions captured:", instructions);
         }, 500);
-    }
-
-    /**
-     * Saves delivery instructions to localStorage, overwriting any previous instructions
-     */
-    function saveDeliveryInstructions(instructions) {
-        // Simply save the instructions object directly to localStorage
-        localStorage.setItem('wrrapd-delivery-instructions', JSON.stringify(instructions));
-        
-        console.log("[saveDeliveryInstructions] Saved delivery instructions:", instructions);
-    }
-
-    /**
-     * Helper function to extract value by label text
-     */
-    function getValueByLabel(container, labelText) {
-        const labels = container.querySelectorAll('.a-size-base');
-        for (let i = 0; i < labels.length; i++) {
-            if (labels[i].textContent.trim() === labelText) {
-                // The value is typically the next element
-                const valueElement = labels[i].nextElementSibling;
-                if (valueElement && valueElement.classList.contains('a-size-base')) {
-                    return valueElement.textContent.trim();
-                }
-            }
-        }
-        return null;
-    }
-
-    /**
-     * Helper function to extract value by selector
-     */
-    function getElementValue(container, selector) {
-        const element = container.querySelector(selector);
-        return element ? element.textContent.trim() : null;
-    }
-
-    function generateOrderNumber(zipCode) {
-        console.log("[generateOrderNumber] Generating order number.");
-        
-        // Get current date and time
-        const now = new Date();
-        
-        // Format: 100-XXTTTTT-ZZZZZCC
-        
-        // XX: Year % 100 converted to hex
-        const yearMod100 = now.getFullYear() % 100;
-        const yearHex = yearMod100.toString(16).padStart(2, '0');
-        
-        // TTTTT: 10000 + seconds since midnight
-        const secondsSinceMidnight = 
-            now.getHours() * 3600 + 
-            now.getMinutes() * 60 + 
-            now.getSeconds();
-        const timeComponent = (10000 + secondsSinceMidnight).toString();
-        
-        // ZZZZZ: 100000 - ZIP code
-        // Make sure zipCode is a number and only use first 5 digits
-        let zip = parseInt(zipCode.toString().substring(0, 5));
-        if (isNaN(zip)) {
-            zip = 0; // Default if ZIP is invalid
-        }
-        const zipComponent = (100000 - zip).toString().padStart(5, '0');
-        
-        // CC: Counter (starts at 01)
-        // For simplicity, using 01 as default
-        const counter = "01";
-        
-        // Build the final order number
-        const orderNumber = `100-${yearHex}${timeComponent}-${zipComponent}${counter}`;
-        
-        console.log(`[generateOrderNumber] Generated order number: ${orderNumber}`);
-        return orderNumber;
     }
 
   })();
