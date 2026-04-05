@@ -1,8 +1,15 @@
 {
+  "private": true,
+  "scripts": {
+    "build": "esbuild src/content/index.js --bundle --outfile=content.js --platform=browser --format=iife --legal-comments=none"
+  },
   "dependencies": {
     "body-parser": "^1.20.3",
     "cors": "^2.8.5",
     "express": "^4.21.2",
     "stripe": "^17.4.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0"
   }
 }
