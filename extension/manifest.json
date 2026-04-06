@@ -1,0 +1,53 @@
+{
+  "manifest_version": 3,
+  "name": "Wrrapd",
+  "version": "1.3.6",
+  "description": "Enhance your gifting experience with Wrrapd",
+  "permissions": [
+    "scripting",
+    "webNavigation",
+    "declarativeNetRequest"
+  ],
+  "host_permissions": [
+    "*://*.amazon.com/*",
+    "*://*.amazon.ca/*",
+    "*://*.amazon.co.uk/*",
+    "*://*.amazon.de/*",
+    "*://*.amazon.fr/*",
+    "*://*.amazon.es/*",
+    "*://*.amazon.it/*",
+    "*://*.amazon.nl/*",
+    "*://*.amazon.co.jp/*",
+    "*://*.amazon.in/*",
+    "*://*.amazon.com.au/*",
+    "*://*.amazon.com.br/*",
+    "*://*.amazon.mx/*"
+  ],
+  "declarative_net_request": {
+    "rule_resources": [
+      {
+        "id": "disable_csp_rules",
+        "enabled": true,
+        "path": "rules.json"
+      }
+    ]
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://www.amazon.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_end"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["assets/*"],
+      "matches": ["*://www.amazon.com/*"]
+    }
+  ],
+  "icons": {
+    "16": "assets/icons/icon16.png",
+    "48": "assets/icons/icon48.png",
+    "128": "assets/icons/icon128.png"
+  }
+}

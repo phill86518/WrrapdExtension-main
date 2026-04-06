@@ -1,0 +1,38 @@
+# --- Monorepo (root) ---
+.DS_Store
+.cursor/
+
+# Editor
+*.swp
+*~
+
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Secrets
+.env
+**/.env
+**/.env.*
+
+# Python
+**/__pycache__/
+**/*.pyc
+.venv/
+venv/
+
+# Logs & local server output
+**/logs/
+**/*.log
+server.log
+
+# WrrapdServer runtime (optional: do not commit customer orders)
+backend/wrrapd-api-repo/WrrapdServer/orders/*.json
+backend/wrrapd-api-repo/WrrapdServer/temp_qr_*.png
+
+# Extension / server local-only dirs (from nested .gitignore)
+no-upload-code/
+no-upload/
+
+# Server secrets (never commit keys)
+backend/wrrapd-api-repo/WrrapdServer/config/

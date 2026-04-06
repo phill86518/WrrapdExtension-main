@@ -1,0 +1,31 @@
+{
+    "version": "1.0.0",
+    "lastUpdated": "2025-04-25",
+    "flowers": [
+      {
+        "name": "Flowers 1",
+        "imageUrl": "https://scene7.samsclub.com/is/image/samsclub/0002005943541_A?$DT_PDP_BB$",
+        "available": true
+      },
+      {
+        "name": "Flowers 2",
+        "imageUrl": "https://scene7.samsclub.com/is/image/samsclub/0002371100828_A?$DT_PDP_BB$",
+        "available": true
+      },
+      {
+        "name": "Flowers 3",
+        "imageUrl": "https://scene7.samsclub.com/is/image/samsclub/0002005929934_A?$DT_PDP_BB$",
+        "available": true
+      },
+      {
+        "name": "Flowers 4",
+        "imageUrl": "https://scene7.samsclub.com/is/image/samsclub/0002005930392_A?$DT_PDP_BB$",
+        "available": true
+      },
+      {
+        "name": "Flowers 5",
+        "imageUrl": "https://scene7.samsclub.com/is/image/samsclub/0002371100828_E?$DT_PDP_BB$",
+        "available": true
+      }
+    ]
+  }

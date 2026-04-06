@@ -1,0 +1,6 @@
+node_modules/
+no-upload/
+.env
+server-test.js
+venv/
+config/

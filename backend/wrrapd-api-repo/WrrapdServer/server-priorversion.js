@@ -1,0 +1,1370 @@
+require('dotenv').config();
+
+const express = require('express');
+const bodyParser = require('body-parser');
+const cors = require('cors');
+const path = require('path');
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const FormData = require('form-data');
+const Mailgun = require('mailgun.js');
+const OpenAI = require('openai');
+const { Storage } = require('@google-cloud/storage');
+const fs = require('fs');
+const QRCode = require('qrcode');
+const https = require('https');
+const http = require('http');
+
+// Initialize Google Cloud Storage
+let storageOptions = {
+    projectId: process.env.GCS_PROJECT_ID
+};
+
+// If GOOGLE_APPLICATION_CREDENTIALS is set in the .env file and starts with ./
+// use the keyFilename option for local file path
+if (process.env.GOOGLE_APPLICATION_CREDENTIALS && 
+    process.env.GOOGLE_APPLICATION_CREDENTIALS.startsWith('./')) {
+    storageOptions.keyFilename = path.join(__dirname, process.env.GOOGLE_APPLICATION_CREDENTIALS.substring(2));
+}
+
+const storage = new Storage(storageOptions);
+
+const app = express();
+
+// Configure CORS to allow requests from Amazon domains
+const corsOptions = {
+    origin: function (origin, callback) {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+        
+        const allowedOrigins = [
+            'https://www.amazon.com',
+            'https://www.amazon.ca',
+            'https://www.amazon.co.uk',
+            'https://www.amazon.de',
+            'https://www.amazon.fr',
+            'https://www.amazon.es',
+            'https://www.amazon.it',
+            'https://www.amazon.nl',
+            'https://www.amazon.co.jp',
+            'https://www.amazon.in',
+            'https://www.amazon.com.au',
+            'https://www.amazon.com.br',
+            'https://www.amazon.mx'
+        ];
+        
+        if (allowedOrigins.indexOf(origin) !== -1 || origin.includes('amazon.com')) {
+            callback(null, true);
+        } else {
+            callback(null, true); // Allow all for now, can restrict later
+        }
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'X-Requested-With'],
+    preflightContinue: false,
+    optionsSuccessStatus: 204
+};
+
+app.use(cors(corsOptions));
+
+// Increase body size limit to handle large base64 images (50MB)
+app.use(bodyParser.json({ limit: '50mb' }));
+app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Handle ALL OPTIONS requests FIRST (before any other middleware that might block them)
+app.options('*', (req, res) => {
+    console.log('[CORS] OPTIONS preflight request:', req.method, req.path, 'Origin:', req.headers.origin);
+    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Origin, X-Requested-With');
+    res.header('Access-Control-Max-Age', '86400'); // Cache preflight for 24 hours
+    res.status(204).send();
+});
+
+const mailgun = new Mailgun(FormData);
+const mg = mailgun.client({
+    username: 'api',
+    key: process.env.MAILGUN_API_KEY
+});
+
+// Initialize OpenAI client
+const openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY
+});
+
+// Middleware to verify the domain
+app.use((req, res, next) => {
+    if (req.hostname === 'pay.wrrapd.com') {
+        req.isPayDomain = true;
+    } else if (req.hostname === 'api.wrrapd.com') {
+        req.isApiDomain = true;
+    }
+    next();
+});
+
+// Endpoints specific to pay.wrrapd.com
+app.get('/success', (req, res) => {
+    if (!req.isPayDomain) {
+        return res.status(403).send('Access forbidden.');
+    }
+    res.sendFile(path.join(__dirname, 'public', 'success.html'));
+});
+
+app.get('/cancel', (req, res) => {
+    if (!req.isPayDomain) {
+        return res.status(403).send('Access forbidden.');
+    }
+    res.sendFile(path.join(__dirname, 'public', 'cancel.html'));
+});
+
+app.get('/checkout', (req, res) => {
+    if (!req.isPayDomain) {
+        return res.status(403).send('Access forbidden.');
+    }
+    res.sendFile(path.join(__dirname, 'public', 'checkout.html'));
+});
+
+// Endpoint specific to api.wrrapd.com
+app.post('/create-payment-intent', async (req, res) => {
+    if (!req.isApiDomain) {
+        return res.status(403).send('Access forbidden.');
+    }
+
+    const { total, orderNumber } = req.body;
+
+    try {
+        if (!total || total <= 0) {
+            return res.status(400).json({ error: 'Invalid total amount' });
+        }
+
+        const paymentIntent = await stripe.paymentIntents.create({
+            amount: total, // Total in cents
+            currency: 'usd',
+            payment_method_types: ['card'],
+            // billing_address_collection: 'required',
+            metadata: {
+                orderNumber: orderNumber || 'N/A'
+            }
+        });
+
+        res.status(200).json({ clientSecret: paymentIntent.client_secret });
+    } catch (error) {
+        console.error('Error creating PaymentIntent:', error);
+        res.status(500).json({ error: 'Failed to create PaymentIntent' });
+    }
+});
+
+// Helper function to download image from GCS for email attachment
+const getImageForEmail = async (filePath) => {
+    if (!filePath) return null;
+    
+    console.log(`Attempting to download image from path: ${filePath}`);
+    
+    try {
+        // Check if file exists first
+        const [exists] = await storage.bucket('wrrapd-media').file(filePath).exists();
+        if (!exists) {
+            console.error(`File does not exist in bucket: ${filePath}`);
+            return null;
+        }
+        
+        // Download the file from GCS
+        const [fileContent] = await storage.bucket('wrrapd-media').file(filePath).download();
+        
+        console.log(`Successfully downloaded file: ${filePath}, size: ${fileContent.length} bytes`);
+        
+        return {
+            contentType: filePath.toLowerCase().endsWith('.png') ? 'image/png' : 
+                         filePath.toLowerCase().endsWith('.webp') ? 'image/webp' : 'image/jpeg',
+            data: fileContent
+        };
+    } catch (error) {
+        console.error(`Error downloading image ${filePath}:`, error);
+        return null;
+    }
+};
+
+// Function to save order data to a JSON file
+const saveOrderToJsonFile = (orderData, paymentData, customerData, orderNumber) => {
+    // Create 'orders' directory if it doesn't exist
+    const ordersDir = path.join(__dirname, 'orders');
+    if (!fs.existsSync(ordersDir)) {
+        fs.mkdirSync(ordersDir);
+    }
+
+    // Create a timestamp for the filename
+    const timestamp = new Date().toISOString().replace(/:/g, '-');
+    const filename = `order_${timestamp}.json`;
+    const filePath = path.join(ordersDir, filename);
+
+    // Prepare the data to be saved
+    const saveData = {
+        orderNumber: orderNumber,
+        timestamp: new Date().toISOString(),
+        orderItems: orderData,
+        payment: {
+            id: paymentData.id,
+            amount: paymentData.amount,
+            status: paymentData.status
+        },
+        customer: {
+            email: customerData.email,
+            phone: customerData.phone
+        }
+    };
+
+    // Write the data to the file
+    fs.writeFileSync(filePath, JSON.stringify(saveData, null, 2));
+    
+    console.log(`Order data saved to ${filePath}`);
+    return filePath;
+};
+
+app.post('/process-payment', async (req, res) => {
+    if (!req.isApiDomain) {
+        return res.status(403).send('Access forbidden.');
+    }
+
+    const { paymentIntentId, orderData, customerEmail, customerPhone, orderNumber, billingDetails } = req.body;
+
+    // Validate that all parameters are present
+    if (!paymentIntentId || !orderData || !customerEmail || !customerPhone || !orderNumber) {
+        return res.status(400).json({ error: 'Missing required parameters' });
+    }
+    
+    console.log('[process-payment] Received billingDetails:', billingDetails);
+
+    try {
+        // Verify the PaymentIntent with Stripe
+        const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+
+        if (paymentIntent.status !== 'succeeded') {
+            return res.status(400).json({ error: 'Payment not confirmed' });
+        }
+
+        // Process the order information
+        const amount = (paymentIntent.amount / 100).toFixed(2);
+
+        console.log('Order Data:', orderData);
+        console.log(`Using order number: ${orderNumber}`);
+
+        // Save order data to a local JSON file
+        saveOrderToJsonFile(orderData, paymentIntent, { 
+            email: customerEmail, 
+            phone: customerPhone 
+        }, orderNumber);
+        
+        // Generate QR code for the order
+        const qrData = {
+            orderNumber,
+            timestamp: new Date().toISOString(),
+            amount,
+            items: orderData.length
+        };
+        
+        // Create a temporary file for the QR code
+        const qrTempPath = path.join(__dirname, `temp_qr_${orderNumber}.png`);
+        
+        // Generate the QR code as a PNG file
+        await QRCode.toFile(qrTempPath, JSON.stringify(qrData), {
+            errorCorrectionLevel: 'H',
+            type: 'png',
+            margin: 1,
+            width: 300
+        });
+        
+        // Upload the QR code to Google Cloud Storage
+        const qrDestPath = `qr-codes/${orderNumber}.png`;
+        await storage.bucket('wrrapd-media').upload(qrTempPath, {
+            destination: qrDestPath,
+            metadata: {
+                contentType: 'image/png',
+            },
+        });
+        
+        // Delete the temporary file after upload
+        fs.unlinkSync(qrTempPath);
+        
+        console.log(`QR code generated and uploaded to gs://wrrapd-media/${qrDestPath}`);
+
+        // Collect images for both emails
+        const adminAttachments = [];
+        const customerAttachments = [];
+        
+        // Process order items to collect images and build custom design HTML
+        const processedItems = await Promise.all(orderData.map(async (item, index) => {
+            // Format Wrrapd shipping address (where item is sent for wrapping)
+            const shippingAddress = item.shippingAddress 
+                ? `
+                    ${item.shippingAddress.name || 'N/A'},<br>
+                    ${item.shippingAddress.street || 'N/A'},<br>
+                    ${item.shippingAddress.city || 'N/A'}, 
+                    ${item.shippingAddress.state || 'N/A'}, 
+                    ${item.shippingAddress.postalCode || 'N/A'},<br>
+                    ${item.shippingAddress.country || 'N/A'}
+                `
+                : 'Wrrapd PO BOX 26067, JACKSONVILLE, FL, 32226-6067, US';
+
+            // Format delivery instructions if they exist
+            let deliveryInstructionsFormatted = '';
+            if (item.deliveryInstructions) {
+                deliveryInstructionsFormatted = `
+                    <strong>Delivery Instructions:</strong><br>
+                    ${item.deliveryInstructions.propertyType ? `Property Type: ${item.deliveryInstructions.propertyType}<br>` : ''}
+                    ${item.deliveryInstructions.securityCode ? `Security Code: ${item.deliveryInstructions.securityCode}<br>` : ''}
+                    ${item.deliveryInstructions.callBox ? `Call Box: ${item.deliveryInstructions.callBox}<br>` : ''}
+                    ${item.deliveryInstructions.preferredLocation ? `Preferred Location: ${item.deliveryInstructions.preferredLocation}<br>` : ''}
+                    ${item.deliveryInstructions.businessHours ? `Business Hours: ${item.deliveryInstructions.businessHours}<br>` : ''}
+                    ${item.deliveryInstructions.additionalInstructions ? `Additional Instructions: ${item.deliveryInstructions.additionalInstructions}` : ''}
+                `;
+            }
+
+            // Format AI design if it exists
+            let aiDesignFormatted = 'None';
+            let aiDesignPath = null;
+            let aiDesignFilename = null;
+            if (item.selected_ai_design && typeof item.selected_ai_design === 'object') {
+                aiDesignFormatted = `<strong>${item.selected_ai_design.title}</strong><br>${item.selected_ai_design.description}`;
+                // Get AI design path from gcsPath if available
+                if (item.selected_ai_design.gcsPath) {
+                    aiDesignPath = item.selected_ai_design.gcsPath;
+                    aiDesignFilename = aiDesignPath.split('/').pop();
+                }
+            }
+
+            // Check if there's a custom design and prepare to attach it
+            let adminCustomDesignHtml = 'None';
+            let customerCustomDesignHtml = '';
+            
+            // Handle AI design image attachment
+            let adminAiDesignHtml = '';
+            let customerAiDesignHtml = '';
+            if (item.selected_wrapping_option === 'ai') {
+                if (aiDesignPath) {
+                    const aiImageData = await getImageForEmail(aiDesignPath);
+                    
+                    if (aiImageData) {
+                        // Add attachments for admin email
+                        adminAttachments.push({
+                            filename: aiDesignFilename,
+                            data: aiImageData.data
+                        });
+                        
+                        // Add attachments for customer email
+                        customerAttachments.push({
+                            filename: aiDesignFilename,
+                            data: aiImageData.data
+                        });
+                        
+                        // Create HTML with CID references
+                        adminAiDesignHtml = `
+                            <div style="margin-top: 15px;">
+                                <h4 style="margin-top: 0;">AI Design Image</h4>
+                                <p><strong>Filename:</strong> ${aiDesignFilename}</p>
+                                <p><strong>Path:</strong> ${aiDesignPath}</p>
+                                <img src="cid:${aiDesignFilename}" alt="AI Design" style="max-width: 200px; max-height: 200px; border: 1px solid #ddd;">
+                            </div>
+                        `;
+                        
+                        customerAiDesignHtml = `
+                            <div style="margin-top: 15px; margin-bottom: 15px;">
+                                <p><strong>Your AI Generated Design:</strong></p>
+                                <img src="cid:${aiDesignFilename}" alt="Your AI Design" style="max-width: 300px; max-height: 300px; border: 1px solid #ddd;">
+                            </div>
+                        `;
+                    } else {
+                        // Image couldn't be loaded, but still show the info
+                        adminAiDesignHtml = `
+                            <div style="margin-top: 15px;">
+                                <h4 style="margin-top: 0;">AI Design</h4>
+                                <p><strong>Filename:</strong> ${aiDesignFilename || 'N/A'}</p>
+                                <p><strong>Path:</strong> ${aiDesignPath || 'N/A'}</p>
+                                <p><em>Note: AI design image should be available in the media bucket at the path above.</em></p>
+                            </div>
+                        `;
+                    }
+                } else {
+                    // No path available, but still show what we have
+                    adminAiDesignHtml = `
+                        <div style="margin-top: 15px;">
+                            <h4 style="margin-top: 0;">AI Design</h4>
+                            <p><strong>Title:</strong> ${item.selected_ai_design?.title || 'N/A'}</p>
+                            <p><strong>Description:</strong> ${item.selected_ai_design?.description || 'N/A'}</p>
+                            <p><em>Note: AI design image path not available in order data.</em></p>
+                        </div>
+                    `;
+                }
+            }
+            
+            if (item.uploaded_design_path && item.selected_wrapping_option === 'upload') {
+                const imageData = await getImageForEmail(item.uploaded_design_path);
+                
+                if (imageData) {
+                    // Extract the original filename from the path
+                    const originalFilename = item.uploaded_design_path.split('/').pop();
+                    
+                    // Add attachments for admin email
+                    adminAttachments.push({
+                        filename: originalFilename,
+                        data: imageData.data
+                    });
+                    
+                    // Add attachments for customer email
+                    customerAttachments.push({
+                        filename: originalFilename,
+                        data: imageData.data
+                    });
+                    
+                    // Create HTML with CID references
+                    adminCustomDesignHtml = `
+                        <p>Custom Design:</p>
+                        <img src="cid:${originalFilename}" alt="Custom Design" style="max-width: 100px; max-height: 100px;">
+                    `;
+                    
+                    customerCustomDesignHtml = `
+                        <div style="margin-top: 15px; margin-bottom: 15px;">
+                            <p><strong>Your Custom Design:</strong></p>
+                            <img src="cid:${originalFilename}" alt="Your Custom Design" style="max-width: 300px; max-height: 300px; border: 1px solid #ddd;">
+                        </div>
+                    `;
+                }
+            }
+
+            // Handle product image display (without attachment)
+            let adminProductImageHtml = '';
+            let customerProductImageHtml = '';
+            
+            if (item.imageUrl) {
+                // Just reference the image directly instead of downloading and attaching it
+                adminProductImageHtml = `
+                    <div style="margin-right: 20px; margin-bottom: 15px;">
+                        <img src="${item.imageUrl}" alt="Product image" style="max-width: 150px; max-height: 150px; border: 1px solid #ddd; border-radius: 4px;">
+                    </div>
+                `;
+                
+                customerProductImageHtml = `
+                    <div style="margin-right: 20px; margin-bottom: 15px;">
+                        <img src="${item.imageUrl}" alt="Product image" style="max-width: 150px; max-height: 150px; border: 1px solid #ddd; border-radius: 4px;">
+                    </div>
+                `;
+            }
+
+            // Return the processed data for admin and customer emails
+            return {
+                adminRow: `
+                    <div style="border: 1px solid #e1e1e1; margin-bottom: 20px; padding: 15px; border-radius: 5px;">
+                        <div style="display: flex; flex-wrap: wrap;">
+                            ${adminProductImageHtml}
+                            <div style="flex: 1; min-width: 300px;">
+                                <h3 style="margin-top: 0;">Item: ${item.title}</h3>
+                                <p><strong>ASIN:</strong> ${item.asin}</p>
+                                <p><strong>Flowers:</strong> ${item.checkbox_flowers ? 'Yes' : 'No'}</p>
+                                ${item.selected_flower_design ? `<p><strong>Flower Design:</strong> ${item.selected_flower_design}</p>` : ''}
+                                ${item.selected_wrapping_option ? `<p><strong>Wrapping Option:</strong> ${item.selected_wrapping_option}</p>` : ''}
+                                
+                                ${item.selected_wrapping_option === 'ai' && item.selected_ai_design ? 
+                                  `<div style="margin: 10px 0;">
+                                     <p><strong>AI Design:</strong> ${item.selected_ai_design.title}</p>
+                                     <p style="margin-left: 15px;">${item.selected_ai_design.description}</p>
+                                     ${aiDesignFilename ? `<p><strong>AI Design Filename:</strong> ${aiDesignFilename}</p>` : ''}
+                                   </div>` : 
+                                  ''}
+                                
+                                ${item.occasion ? `<p><strong>Occasion:</strong> ${item.occasion}</p>` : ''}
+                                
+                                ${item.senderName ? `<p><strong>From:</strong> ${item.senderName}</p>` : ''}
+                                ${item.giftMessage ? 
+                                  `<div style="margin: 10px 0; padding: 10px; background-color: #f5f5f5; border-radius: 5px; font-style: italic;">
+                                     <p style="margin: 0;"><strong>Gift Message:</strong> "${item.giftMessage}"</p>
+                                   </div>` : 
+                                  ''}
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top: 15px; padding: 10px; background-color: #f9f9f9; border-radius: 5px;">
+                            <h4 style="margin-top: 0;">Shipping Address (Wrrapd)</h4>
+                            <p style="white-space: pre-line;">${shippingAddress.replace(/<br>/g, "\n")}</p>
+                        </div>
+                        
+                        ${item.finalShippingAddress ? 
+                          `<div style="margin-top: 15px; padding: 10px; background-color: #f9f9f9; border-radius: 5px;">
+                             <h4 style="margin-top: 0;">Final Shipping Address (Customer's Amazon Address)</h4>
+                             <p style="white-space: pre-line;">${
+                                item.finalShippingAddress.name || 'N/A'},<br>
+                                ${item.finalShippingAddress.street || 'N/A'},<br>
+                                ${item.finalShippingAddress.city || 'N/A'}, 
+                                ${item.finalShippingAddress.state || 'N/A'}, 
+                                ${item.finalShippingAddress.postalCode || 'N/A'},<br>
+                                ${item.finalShippingAddress.country || 'N/A'}
+                             </p>
+                           </div>` : 
+                          ''}
+                        
+                        ${deliveryInstructionsFormatted ? 
+                          `<div style="margin-top: 15px; padding: 10px; background-color: #f9f9f9; border-radius: 5px;">
+                             <h4 style="margin-top: 0;">Delivery Instructions</h4>
+                             ${deliveryInstructionsFormatted.replace('<strong>Delivery Instructions:</strong><br>', '')}
+                           </div>` : 
+                          ''}
+                        
+                        ${item.selected_wrapping_option === 'ai' ? adminAiDesignHtml : ''}
+                        ${item.uploaded_design_path && item.selected_wrapping_option === 'upload' ?
+                          `<div style="margin-top: 15px;">
+                             <h4 style="margin-top: 0;">Custom Design</h4>
+                             ${adminCustomDesignHtml.replace('<p>Custom Design:</p>', '')}
+                           </div>` :
+                          ''}
+                    </div>
+                `,
+                customerRow: `
+                    <div style="border: 1px solid #e1e1e1; margin-bottom: 20px; padding: 15px; border-radius: 5px;">
+                        <div style="display: flex; flex-wrap: wrap;">
+                            ${customerProductImageHtml}
+                            <div style="flex: 1; min-width: 300px;">
+                                <h3 style="margin-top: 0;">${item.title}</h3>
+                                
+                                ${item.senderName ? `<p><strong>From:</strong> ${item.senderName}</p>` : ''}
+                                ${item.giftMessage ? 
+                                  `<div style="margin: 10px 0; padding: 10px; background-color: #f5f5f5; border-radius: 5px; font-style: italic; border-left: 3px solid #ccc;">
+                                     <p style="margin: 0;"><strong>Your Gift Message:</strong> "${item.giftMessage}"</p>
+                                   </div>` : 
+                                  ''}
+                            </div>
+                        </div>
+                        
+                        <div style="margin: 10px 0; padding: 10px; background-color: #f9f9f9; border-radius: 5px;">
+                            <h4 style="margin-top: 0;">Wrapping Details</h4>
+                            <p><strong>Flowers:</strong> ${item.checkbox_flowers ? 'Yes' : 'No'}</p>
+                            <p><strong>Wrapping Paper:</strong> ${
+                                item.selected_wrapping_option === 'ai' ? 'AI Generated Design' :
+                                item.selected_wrapping_option === 'wrrapd' ? 'Selected by Wrrapd' :
+                                item.selected_wrapping_option === 'upload' ? 'Your Own Design' :
+                                item.selected_wrapping_option || 'None'
+                            }</p>
+                            ${item.selected_wrapping_option === 'ai' && item.selected_ai_design ? 
+                              `<p><strong>Design Details:</strong> ${item.selected_ai_design.title} - ${item.selected_ai_design.description}</p>` : 
+                              ''}
+                            ${customerAiDesignHtml}
+                            ${customerCustomDesignHtml}
+                        </div>
+                        
+                        <div style="margin-top: 15px; padding: 10px; background-color: #f9f9f9; border-radius: 5px;">
+                            <h4 style="margin-top: 0;">Shipping Address</h4>
+                            <p style="white-space: pre-line;">${shippingAddress.replace(/<br>/g, "\n")}</p>
+                        </div>
+                        
+                        ${deliveryInstructionsFormatted ? 
+                          `<div style="margin-top: 15px; padding: 10px; background-color: #f9f9f9; border-radius: 5px;">
+                             <h4 style="margin-top: 0;">Delivery Instructions</h4>
+                             ${deliveryInstructionsFormatted.replace('<strong>Delivery Instructions:</strong><br>', '')}
+                           </div>` : 
+                          ''}
+                    </div>
+                `
+            };
+        }));
+
+        // Admin email template
+        const adminEmailBody = `
+            <div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto;">
+                <h1 style="color: #333;">New Payment Received</h1>
+                <p>A payment of <strong>$${amount}</strong> has been successfully processed.</p>
+                <p><strong>Order Number:</strong> ${orderNumber}</p>
+                
+                <div style="margin: 20px 0; padding: 15px; background-color: #f2f2f2; border-radius: 5px;">
+                    <h2 style="margin-top: 0; color: #333;">Customer Contact</h2>
+                    <p><strong>Email:</strong> ${customerEmail}</p>
+                    <p><strong>Phone:</strong> ${customerPhone}</p>
+                </div>
+                
+                ${billingDetails ? 
+                  `<div style="margin: 20px 0; padding: 15px; background-color: #f2f2f2; border-radius: 5px;">
+                     <h2 style="margin-top: 0; color: #333;">Billing Details</h2>
+                     <p><strong>Name:</strong> ${billingDetails.name || 'N/A'}</p>
+                     <p><strong>Email:</strong> ${billingDetails.email || 'N/A'}</p>
+                     <p><strong>Phone:</strong> ${billingDetails.phone || 'N/A'}</p>
+                     <p><strong>Billing Address:</strong><br>
+                        ${billingDetails.address?.line1 || 'N/A'},<br>
+                        ${billingDetails.address?.line2 ? billingDetails.address.line2 + '<br>' : ''}
+                        ${billingDetails.address?.city || 'N/A'}, 
+                        ${billingDetails.address?.state || 'N/A'}, 
+                        ${billingDetails.address?.postal_code || 'N/A'},<br>
+                        ${billingDetails.address?.country || 'N/A'}
+                     </p>
+                   </div>` : 
+                  ''}
+                
+                <h2 style="color: #333;">Order Details</h2>
+                ${processedItems.map(item => item.adminRow).join('')}
+            </div>
+        `;
+        
+        // Customer email template
+        const customerEmailBody = `
+            <div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto;">
+                <h1 style="color: #333;">Thank you for your order!</h1>
+                <p>We've received your payment of <strong>$${amount}</strong>.</p>
+                <p><strong>Order Number:</strong> ${orderNumber}</p>
+                
+                <h2 style="color: #333;">Order Details</h2>
+                ${processedItems.map(item => item.customerRow).join('')}
+                
+                <p>We'll start processing your order right away!</p>
+                <p>If you have any questions, please don't hesitate to contact us.</p>
+                <br>
+                <p>Best regards,</p>
+                <p>The Wrrapd Team</p>
+            </div>
+        `;
+
+        // Send email to admin
+        try {
+            console.log('[process-payment] Sending admin email to admin@wrrapd.com and angel@wrrapd.com');
+            const adminEmailResult = await mg.messages.create(process.env.MAILGUN_DOMAIN, {
+                from: "Wrrapd <noreply@wrrapd.com>",
+                to: ["angel@wrrapd.com", "admin@wrrapd.com"],
+                subject: `New order #${orderNumber}`,
+                html: adminEmailBody,
+                ...(adminAttachments.length > 0 ? { inline: adminAttachments } : {})
+            });
+            console.log('[process-payment] Admin email sent successfully:', adminEmailResult.id);
+        } catch (adminEmailError) {
+            console.error('[process-payment] ERROR sending admin email:', adminEmailError);
+            // Don't fail the whole request if admin email fails
+        }
+
+        // Send confirmation email to customer
+        try {
+            console.log('[process-payment] Sending customer email to:', customerEmail);
+            const customerEmailResult = await mg.messages.create(process.env.MAILGUN_DOMAIN, {
+                from: "Wrrapd Orders <orders@wrrapd.com>",
+                to: customerEmail,
+                subject: `Your Wrrapd Order Confirmation #${orderNumber}`,
+                html: customerEmailBody,
+                'h:Reply-To': 'support@wrrapd.com',
+                'h:X-Mailgun-Attachments': 'inline',
+                'o:tag': 'order-confirmation',
+                'o:tracking': true,
+                ...(customerAttachments.length > 0 ? { inline: customerAttachments } : {})
+            });
+            console.log('[process-payment] Customer email sent successfully:', customerEmailResult.id);
+        } catch (customerEmailError) {
+            console.error('[process-payment] ERROR sending customer email:', customerEmailError);
+            // Don't fail the whole request if customer email fails
+        }
+
+        // Respond to client
+        res.status(200).json({ 
+            success: true, 
+            message: 'Payment and order processed successfully',
+            orderNumber: orderNumber
+        });
+    } catch (error) {
+        console.error('Error processing payment:', error);
+        res.status(500).json({ error: 'Failed to process payment' });
+    }
+});
+
+// Updated /generate-ideas endpoint for server.js
+// Replace the existing endpoint (lines 501-570 approximately) with this code
+
+// Handle OPTIONS preflight for /generate-ideas (redundant but explicit)
+app.options('/generate-ideas', (req, res) => {
+    console.log('[generate-ideas] OPTIONS preflight request received');
+    console.log('[generate-ideas] Origin:', req.headers.origin);
+    console.log('[generate-ideas] Headers:', JSON.stringify(req.headers));
+    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Origin, X-Requested-With');
+    res.header('Access-Control-Max-Age', '86400');
+    res.status(204).send();
+    console.log('[generate-ideas] OPTIONS response sent with status 204');
+});
+
+app.post('/generate-ideas', async (req, res) => {
+    // Set CORS headers IMMEDIATELY for ALL responses (including errors)
+    const origin = req.headers.origin || '*';
+    res.header('Access-Control-Allow-Origin', origin);
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Origin, X-Requested-With');
+    
+    // Set a longer timeout for this endpoint (5 minutes for 3 image generations)
+    req.setTimeout(300000); // 5 minutes
+    res.setTimeout(300000);
+    
+    console.log('[generate-ideas] POST request received. Origin:', origin);
+    console.log('[generate-ideas] Request headers:', JSON.stringify(req.headers));
+    
+    if (!req.isApiDomain) {
+        console.warn('[generate-ideas] Request not from api.wrrapd.com, hostname:', req.hostname);
+        return res.status(403).json({ error: 'Access forbidden.' });
+    }
+
+    const { occasion } = req.body;
+
+    if (!occasion) {
+        return res.status(400).json({ error: 'Occasion is required' });
+    }
+
+	    try {
+		            console.log(`[generate-ideas] Received occasion: ${occasion}`);
+
+		            // Step 1: Generate text descriptions using GPT-4o
+        console.log('[generate-ideas] Generating design descriptions...');
+        const completion = await openai.chat.completions.create({
+            model: "gpt-4o",
+            messages: [{
+                role: "system",
+                content: "You are a creative gift wrapping designer. Generate 3 unique wrapping paper design ideas. Keep each description brief and impactful - maximum two short sentences per design."
+            }, {
+                role: "user",
+                content: `Generate 3 concise wrapping paper designs for this occasion: ${occasion}`
+            }],
+            temperature: 0.7,
+            max_tokens: 200,
+            response_format: {
+                type: "json_schema",
+                json_schema: {
+                    name: "wrapping_paper_designs",
+                    schema: {
+                        type: "object",
+                        properties: {
+                            designs: {
+                                type: "array",
+                                items: {
+                                    type: "object",
+                                    properties: {
+                                        title: {
+                                            type: "string",
+                                            description: "A short, catchy title for the wrapping paper design"
+                                        },
+                                        description: {
+                                            type: "string",
+                                            description: "A detailed description of the wrapping paper design"
+                                        }
+                                    },
+                                    required: ["title", "description"],
+                                    additionalProperties: false
+                                }
+                            }
+                        },
+                        required: ["designs"],
+                        additionalProperties: false
+                    },
+                    strict: true
+                }
+            }
+        });
+
+        // Parse the JSON response
+        const designsData = JSON.parse(completion.choices[0].message.content);
+        const designs = designsData.designs || [];
+
+        console.log(`[generate-ideas] Generated ${designs.length} design descriptions`);
+
+        // Step 2: Generate images for each design using Stability AI
+        const designsWithImages = [];
+        
+        for (let i = 0; i < designs.length; i++) {
+            const design = designs[i];
+            console.log(`[generate-ideas] Generating image ${i + 1}/3 for: ${design.title}`);
+            
+            try {
+                // Create a refined prompt for Stability AI with "tileable" keyword
+                const imagePrompt = `${design.description}. Tileable, seamless, repeating pattern for gift-wrapping paper. No text, no symbols, no gift boxes.`;
+                
+                console.log(`[generate-ideas] Stability AI prompt: ${imagePrompt.substring(0, 100)}...`);
+                
+                // Generate image using Stability AI Stable Image Core
+                const stabilityApiKey = process.env.STABILITY_API_KEY;
+                if (!stabilityApiKey) {
+                    throw new Error('STABILITY_API_KEY not configured in .env file');
+                }
+                
+                // Generate initial 1.5-megapixel image using Stable Image Core
+                const formData = new FormData();
+                formData.append('prompt', imagePrompt);
+                formData.append('output_format', 'png');
+                formData.append('mode', 'text-to-image');
+                
+                const generateResponse = await new Promise((resolve, reject) => {
+                    const req = https.request({
+                        hostname: 'api.stability.ai',
+                        path: '/v2beta/stable-image/generate/core',
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${stabilityApiKey}`,
+                            'Accept': 'application/json',
+                            ...formData.getHeaders()
+                        }
+                    }, (res) => {
+                        let data = '';
+                        res.on('data', chunk => data += chunk);
+                        res.on('end', () => {
+                            try {
+                                if (res.statusCode === 200) {
+                                    const parsed = JSON.parse(data);
+                                    resolve({ status: 200, data: parsed });
+                                } else {
+                                    console.error(`[generate-ideas] Stability AI error response: ${data}`);
+                                    reject(new Error(`Stability AI generation failed: ${res.statusCode} ${data.substring(0, 200)}`));
+                                }
+                            } catch (parseError) {
+                                reject(new Error(`Failed to parse Stability AI response: ${parseError.message}`));
+                            }
+                        });
+                    });
+                    req.on('error', (error) => {
+                        console.error(`[generate-ideas] Stability AI request error:`, error);
+                        reject(error);
+                    });
+                    req.setTimeout(120000, () => {
+                        req.destroy();
+                        reject(new Error('Stability AI request timeout'));
+                    });
+                    formData.pipe(req);
+                });
+
+                // Get the image from response - Stable Image Core returns base64
+                let imageBase64;
+                if (generateResponse.data && generateResponse.data.image) {
+                    imageBase64 = generateResponse.data.image;
+                } else if (generateResponse.data && generateResponse.data.artifacts && generateResponse.data.artifacts[0]) {
+                    // Alternative response format
+                    imageBase64 = generateResponse.data.artifacts[0].base64;
+                } else {
+                    console.error(`[generate-ideas] Unexpected Stability AI response format:`, JSON.stringify(generateResponse.data).substring(0, 500));
+                    throw new Error('No image returned from Stability AI - unexpected response format');
+                }
+                
+                // Create data URL for display in extension
+                const imageUrl = `data:image/png;base64,${imageBase64}`;
+                
+                console.log(`[generate-ideas] ✓ Image ${i + 1} generated (1.5MP) - will be upscaled when selected`);
+
+                // Add imageUrl and base64 to the design (base64 needed for upscaling when selected)
+                designsWithImages.push({
+                    title: design.title,
+                    description: design.description,
+                    imageUrl: imageUrl,
+                    imageBase64: imageBase64 // Store for upscaling when selected
+                });
+
+                // Small delay between image generations to avoid rate limits
+                if (i < designs.length - 1) {
+                    console.log('[generate-ideas] Waiting 2 seconds before next image...');
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                }
+
+            } catch (imageError) {
+                console.error(`[generate-ideas] Error generating image for design ${i + 1}:`, imageError);
+                console.error(`[generate-ideas] Error stack:`, imageError.stack);
+                // Still add the design without image if generation fails
+                // This prevents the entire request from failing
+                designsWithImages.push({
+                    title: design.title,
+                    description: design.description,
+                    imageUrl: null,
+                    imageBase64: null,
+                    error: imageError.message
+                });
+            }
+        }
+
+        // Step 3: Return the response with images
+        const responseData = {
+            designs: designsWithImages
+        };
+
+        console.log(`[generate-ideas] Successfully generated ${designsWithImages.length} designs with images`);
+        
+        // Ensure CORS headers are set on success response
+        res.header('Access-Control-Allow-Origin', origin);
+        res.header('Access-Control-Allow-Credentials', 'true');
+        res.header('Access-Control-Allow-Methods', 'POST, OPTIONS');
+        res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Origin, X-Requested-With');
+        
+        // Return double-stringified JSON (as expected by the extension)
+        res.status(200).json(JSON.stringify(responseData));
+        console.log('[generate-ideas] Response sent successfully');
+
+    } catch (error) {
+        console.error('[generate-ideas] Error generating design ideas:', error);
+        console.error('[generate-ideas] Error message:', error.message);
+        console.error('[generate-ideas] Error stack:', error.stack);
+        
+        // Ensure CORS headers are set on error response (CRITICAL - must be set before sending)
+        res.header('Access-Control-Allow-Origin', origin);
+        res.header('Access-Control-Allow-Credentials', 'true');
+        res.header('Access-Control-Allow-Methods', 'POST, OPTIONS');
+        res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Origin, X-Requested-With');
+        res.header('Access-Control-Allow-Methods', 'POST, OPTIONS');
+        res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+        res.status(500).json({ error: 'Failed to generate design ideas' });
+    }
+});
+
+
+// Add the new upload URL generation endpoint
+app.post('/api/get-upload-url', async (req, res) => {
+    if (!req.isApiDomain) {
+        return res.status(403).send('Access forbidden.');
+    }
+
+    const { filename, contentType, fileSize } = req.body;
+
+    // Basic validation
+    if (!filename || !contentType) {
+        return res.status(400).json({ error: 'Missing filename or contentType' });
+    }
+
+    // Check that file is an image type
+    const validContentTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!validContentTypes.includes(contentType)) {
+        return res.status(400).json({ error: 'Invalid content type. Only jpg, png, and webp are allowed.' });
+    }
+
+    // Check file size (5MB limit)
+    const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB in bytes
+    if (fileSize && fileSize > MAX_FILE_SIZE) {
+        return res.status(400).json({ error: 'File size exceeds the 5MB limit.' });
+    }
+
+    // Use the provided filename directly without adding a timestamp
+    const filePath = `designs/${filename}`;
+
+    try {
+        // Get a signed URL for uploading
+        const [signedUrl] = await storage.bucket('wrrapd-media').file(filePath).getSignedUrl({
+            version: 'v4',
+            action: 'write',
+            expires: Date.now() + 10 * 60 * 1000, // 10 minutes
+            contentType: contentType,
+            method: 'PUT',
+        });
+
+        // Return the URL and path to the client
+        res.status(200).json({
+            signedUrl,
+            filePath
+        });
+    } catch (error) {
+        console.error('Error generating signed URL:', error);
+        res.status(500).json({ error: 'Failed to generate upload URL' });
+    }
+});
+
+// Handle OPTIONS preflight for /api/save-ai-design
+app.options('/api/save-ai-design', (req, res) => {
+    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.status(204).send();
+});
+
+// Endpoint to save AI-generated design image to GCS
+app.post('/api/save-ai-design', async (req, res) => {
+    // Set CORS headers for all responses
+    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    
+    if (!req.isApiDomain) {
+        return res.status(403).send('Access forbidden.');
+    }
+
+    const { imageBase64, imageUrl, designTitle, orderNumber, itemTitle, prompt, folder = 'designs', asin, index, shouldUpscale = false } = req.body;
+
+    if ((!imageBase64 && !imageUrl) || !designTitle) {
+        return res.status(400).json({ error: 'Missing imageBase64/imageUrl or designTitle' });
+    }
+
+    try {
+        console.log(`[save-ai-design] Saving design "${designTitle}"`);
+        console.log(`[save-ai-design] Folder: ${folder}, OrderNumber: ${orderNumber || 'N/A'}, Upscale: ${shouldUpscale}`);
+
+        let imageBuffer;
+        let finalImageBase64 = imageBase64;
+
+        // If this is the selected design, upscale it first using Fast Upscaler
+        if (shouldUpscale && imageBase64) {
+            console.log(`[save-ai-design] Upscaling selected design using Fast Upscaler...`);
+            
+            const stabilityApiKey = process.env.STABILITY_API_KEY;
+            if (!stabilityApiKey) {
+                console.warn(`[save-ai-design] STABILITY_API_KEY not configured, saving original image without upscaling`);
+            } else {
+                try {
+                    const upscaleFormData = new FormData();
+                    upscaleFormData.append('image', Buffer.from(imageBase64, 'base64'), {
+                        filename: 'image.png',
+                        contentType: 'image/png'
+                    });
+
+                    const upscaleResponse = await new Promise((resolve, reject) => {
+                        const req = https.request({
+                            hostname: 'api.stability.ai',
+                            path: '/v2beta/stable-image/upscale/fast',
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${stabilityApiKey}`,
+                                'Accept': 'application/json',
+                                ...upscaleFormData.getHeaders()
+                            }
+                        }, (res) => {
+                            let data = '';
+                            res.on('data', chunk => data += chunk);
+                            res.on('end', () => {
+                                try {
+                                    if (res.statusCode === 200) {
+                                        const parsed = JSON.parse(data);
+                                        resolve({ status: 200, data: parsed });
+                                    } else {
+                                        console.error(`[save-ai-design] Stability AI upscale error response (${res.statusCode}): ${data.substring(0, 500)}`);
+                                        reject(new Error(`Stability AI upscale failed: ${res.statusCode} ${data.substring(0, 200)}`));
+                                    }
+                                } catch (parseError) {
+                                    console.error(`[save-ai-design] Failed to parse upscale response: ${parseError.message}, data: ${data.substring(0, 200)}`);
+                                    reject(new Error(`Failed to parse Stability AI upscale response: ${parseError.message}`));
+                                }
+                            });
+                        });
+                        req.on('error', (error) => {
+                            console.error(`[save-ai-design] Stability AI upscale request error:`, error);
+                            reject(error);
+                        });
+                        req.setTimeout(120000, () => {
+                            req.destroy();
+                            reject(new Error('Stability AI upscale request timeout'));
+                        });
+                        upscaleFormData.pipe(req);
+                    });
+
+                    // Get the upscaled image from response
+                    if (upscaleResponse.data && upscaleResponse.data.image) {
+                        finalImageBase64 = upscaleResponse.data.image;
+                        console.log(`[save-ai-design] ✓ Design upscaled to 4x (up to 4MP)`);
+                    } else {
+                        console.error(`[save-ai-design] Unexpected upscale response format:`, JSON.stringify(upscaleResponse.data).substring(0, 500));
+                        throw new Error('No image returned from Stability AI upscaler - unexpected response format');
+                    }
+                } catch (upscaleError) {
+                    // If upscaling fails, log the error but continue with the original image
+                    console.error(`[save-ai-design] Upscaling failed, saving original image instead:`, upscaleError.message);
+                    console.error(`[save-ai-design] Upscale error stack:`, upscaleError.stack);
+                    // Keep finalImageBase64 as the original imageBase64 (already set above)
+                    // This allows the save to continue with the original 1.5MP image
+                }
+            }
+        } else if (!finalImageBase64 && imageUrl) {
+            // Fallback: Download from URL if base64 not provided (for backward compatibility)
+            console.log(`[save-ai-design] Downloading image from URL (fallback)...`);
+            const url = new URL(imageUrl);
+            const client = url.protocol === 'https:' ? https : http;
+            
+            const downloadedBuffer = await new Promise((resolve, reject) => {
+                client.get(url.href, (response) => {
+                    if (response.statusCode !== 200) {
+                        reject(new Error(`Failed to download image: ${response.statusCode} ${response.statusMessage}`));
+                        return;
+                    }
+                    const chunks = [];
+                    response.on('data', (chunk) => chunks.push(chunk));
+                    response.on('end', () => resolve(Buffer.concat(chunks)));
+                    response.on('error', reject);
+                }).on('error', reject);
+            });
+            
+            imageBuffer = downloadedBuffer;
+        } else if (!finalImageBase64) {
+            throw new Error('No image data provided (neither imageBase64 nor imageUrl)');
+        }
+
+        // Convert base64 to buffer if we have base64
+        if (finalImageBase64 && !imageBuffer) {
+            imageBuffer = Buffer.from(finalImageBase64, 'base64');
+        }
+        
+        const contentType = 'image/png';
+
+        // Generate filename based on whether it's selected (has order number) or unused
+        let filename;
+        if (orderNumber && asin && index !== undefined) {
+            // Selected design: use order number format (e.g., 100-xxxx-xxxxx-asin-0.png)
+            const paddedIndex = String(index).padStart(2, '0');
+            filename = `${orderNumber}-${asin}-${paddedIndex}.png`;
+        } else {
+            // Unused design: use timestamp-based filename
+            const timestamp = Date.now();
+            const sanitizedTitle = designTitle.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+            filename = `ai-design-${sanitizedTitle}-${timestamp}.png`;
+        }
+
+        const filePath = `${folder}/${filename}`;
+
+        // Upload to GCS
+        const bucket = storage.bucket('wrrapd-media');
+        const file = bucket.file(filePath);
+
+        // Try to save the file. If we get a delete permission error (due to bucket versioning),
+        // we'll use a unique filename instead of overwriting.
+        let finalFilePath = filePath;
+        let finalFile = file;
+        
+        try {
+            await file.save(imageBuffer, {
+                metadata: {
+                    contentType: contentType,
+                    metadata: {
+                        designTitle: designTitle,
+                        orderNumber: orderNumber || 'unused',
+                        itemTitle: itemTitle || 'N/A',
+                        asin: asin || 'N/A',
+                        prompt: prompt || 'N/A',
+                        source: 'stability-ai',
+                        upscaled: shouldUpscale ? 'true' : 'false',
+                        uploadedAt: new Date().toISOString(),
+                        isSelected: orderNumber ? 'true' : 'false'
+                    }
+                },
+                resumable: false
+            });
+        } catch (saveError) {
+            // If we get a delete permission error, use a unique filename instead
+            if (saveError.message && saveError.message.includes('storage.objects.delete')) {
+                console.warn(`[save-ai-design] Delete permission error detected, using unique filename instead...`);
+                // Append timestamp to make filename unique (avoids needing delete permission)
+                const timestamp = Date.now();
+                const pathParts = filePath.split('/');
+                const fileNameParts = pathParts[pathParts.length - 1].split('.');
+                const baseName = fileNameParts[0];
+                const extension = fileNameParts[1] || 'png';
+                finalFilePath = `${pathParts.slice(0, -1).join('/')}/${baseName}-${timestamp}.${extension}`;
+                finalFile = bucket.file(finalFilePath);
+                
+                // Retry with unique filename
+                await finalFile.save(imageBuffer, {
+                    metadata: {
+                        contentType: contentType,
+                        metadata: {
+                            designTitle: designTitle,
+                            orderNumber: orderNumber || 'unused',
+                            itemTitle: itemTitle || 'N/A',
+                            asin: asin || 'N/A',
+                            prompt: prompt || 'N/A',
+                            source: 'stability-ai',
+                            upscaled: shouldUpscale ? 'true' : 'false',
+                            uploadedAt: new Date().toISOString(),
+                            isSelected: orderNumber ? 'true' : 'false'
+                        }
+                    },
+                    resumable: false
+                });
+                console.log(`[save-ai-design] Saved with unique filename: ${finalFilePath}`);
+            } else {
+                // Re-throw other errors
+                throw saveError;
+            }
+        }
+
+        // Generate a signed URL for accessing the file (valid for 7 days - max allowed by GCS)
+        const [signedUrl] = await finalFile.getSignedUrl({
+            version: 'v4',
+            action: 'read',
+            expires: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days (604800 seconds - max allowed)
+        });
+
+        const publicUrl = signedUrl;
+
+        console.log(`[save-ai-design] Successfully saved to ${finalFilePath}`);
+
+        res.status(200).json({
+            success: true,
+            filePath: finalFilePath,
+            publicUrl: publicUrl
+        });
+
+    } catch (error) {
+        console.error('[save-ai-design] Error saving AI design:', error);
+        console.error('[save-ai-design] Error message:', error.message);
+        console.error('[save-ai-design] Error stack:', error.stack);
+        // Ensure CORS headers are set even on error
+        res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+        res.header('Access-Control-Allow-Credentials', 'true');
+        res.header('Access-Control-Allow-Methods', 'POST, OPTIONS');
+        res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+        res.status(500).json({ 
+            error: 'Failed to save AI design image',
+            details: error.message 
+        });
+    }
+});
+
+app.get('/flowers.json', (req, res) => {
+    if (!req.isApiDomain) return res.status(403).send('Access forbidden.');
+    
+    const filePath = path.join(__dirname, 'data/flowers.json');
+    res.sendFile(filePath);
+});
+
+// Endpoint to get allowed zip codes
+app.get('/api/allowed-zip-codes', (req, res) => {
+    // Allow CORS for this endpoint (needed for checkout.html)
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET');
+    res.header('Access-Control-Allow-Headers', 'Content-Type');
+    res.header('Content-Type', 'application/json');
+    
+    const filePath = path.join(__dirname, 'data/allowed-zip-codes.json');
+    
+    // Check if file exists
+    if (!fs.existsSync(filePath)) {
+        console.error('[API] allowed-zip-codes.json not found at:', filePath);
+        return res.status(404).json({ error: 'Zip codes file not found' });
+    }
+    
+    res.sendFile(filePath);
+});
+
+// Also serve it as a static file for direct access
+app.get('/data/allowed-zip-codes.json', (req, res) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Content-Type', 'application/json');
+    
+    const filePath = path.join(__dirname, 'data/allowed-zip-codes.json');
+    
+    if (!fs.existsSync(filePath)) {
+        return res.status(404).json({ error: 'Zip codes file not found' });
+    }
+    
+    res.sendFile(filePath);
+});
+
+// Endpoint to get valid addresses for dropdown
+app.get('/api/valid-addresses', (req, res) => {
+    // Set CORS headers
+    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    
+    if (!req.isApiDomain) {
+        return res.status(403).send('Access forbidden.');
+    }
+    
+    // TODO: Replace this with actual address directory from database or file
+    // For now, return a sample structure - you'll need to populate this with your valid addresses
+    // This should be a comprehensive list of all valid addresses where Wrrapd can deliver
+    const validAddresses = [
+        // Example addresses - replace with your actual valid address directory
+        // Format: { line1: 'Street Address', city: 'City', state: 'State Code', postalCode: 'ZIP', country: 'US' }
+        { line1: '8137 BROWARD COVE RD', city: 'JACKSONVILLE', state: 'FL', postalCode: '32218', country: 'US' },
+        { line1: '117 W DUVAL ST STE 300', city: 'JACKSONVILLE', state: 'FL', postalCode: '32202', country: 'US' },
+        // Add more valid addresses here from your directory
+    ];
+    
+    res.status(200).json(validAddresses);
+});
+
+// Health check endpoint for PM2 monitoring
+app.get('/health', (req, res) => {
+    res.status(200).json({ 
+        status: 'ok', 
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        memory: process.memoryUsage()
+    });
+});
+
+// Handle uncaught errors to prevent server crashes
+process.on('uncaughtException', (error) => {
+    console.error('[SERVER] Uncaught Exception:', error);
+    console.error('[SERVER] Stack:', error.stack);
+    // Log to file if possible
+    try {
+        const errorLog = `[${new Date().toISOString()}] Uncaught Exception: ${error.message}\n${error.stack}\n\n`;
+        fs.appendFileSync(path.join(__dirname, 'error.log'), errorLog);
+    } catch (e) {
+        console.error('[SERVER] Could not write to error.log:', e);
+    }
+    // Don't exit - keep server running, but log the error
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('[SERVER] Unhandled Rejection at:', promise, 'reason:', reason);
+    // Log to file if possible
+    try {
+        const errorLog = `[${new Date().toISOString()}] Unhandled Rejection: ${reason}\n${reason?.stack || ''}\n\n`;
+        fs.appendFileSync(path.join(__dirname, 'error.log'), errorLog);
+    } catch (e) {
+        console.error('[SERVER] Could not write to error.log:', e);
+    }
+    // Don't exit - keep server running
+});
+
+// Handle SIGTERM gracefully (for PM2 restarts)
+process.on('SIGTERM', () => {
+    console.log('[SERVER] SIGTERM received, shutting down gracefully...');
+    server.close(() => {
+        console.log('[SERVER] Server closed');
+        process.exit(0);
+    });
+});
+
+// Monitor memory usage and log warnings
+setInterval(() => {
+    const memUsage = process.memoryUsage();
+    const memMB = {
+        rss: Math.round(memUsage.rss / 1024 / 1024),
+        heapTotal: Math.round(memUsage.heapTotal / 1024 / 1024),
+        heapUsed: Math.round(memUsage.heapUsed / 1024 / 1024),
+        external: Math.round(memUsage.external / 1024 / 1024)
+    };
+    
+    // Warn if memory usage is high
+    if (memMB.heapUsed > 400) {
+        console.warn(`[SERVER] High memory usage: ${memMB.heapUsed}MB heap used, ${memMB.rss}MB RSS`);
+    }
+}, 60000); // Check every minute
+
+const PORT = 8080;
+const server = app.listen(PORT, () => {
+    console.log(`[SERVER] Server running on port ${PORT}`);
+    console.log(`[SERVER] CORS enabled for Amazon domains`);
+    console.log(`[SERVER] OPTIONS handler configured for all routes`);
+    console.log(`[SERVER] Health check available at /health`);
+    console.log(`[SERVER] Process PID: ${process.pid}`);
+    // Signal to PM2 that server is ready
+    if (process.send) {
+        process.send('ready');
+    }
+});
+
+// Set server timeout to 10 minutes (for long image generation)
+server.timeout = 600000;
+server.keepAliveTimeout = 65000; // Keep connections alive
+server.headersTimeout = 66000; // Slightly longer than keepAliveTimeout
+
+// Handle server errors
+server.on('error', (error) => {
+    console.error('[SERVER] Server error:', error);
+    const errorLog = `[${new Date().toISOString()}] Server Error: ${error.message}\n${error.stack}\n\n`;
+    try {
+        fs.appendFileSync(path.join(__dirname, 'error.log'), errorLog);
+    } catch (e) {
+        // If we can't write to file, just log to console
+        console.error('[SERVER] Could not write to error.log:', e);
+    }
+});
+
+// Handle client connection errors
+server.on('clientError', (error, socket) => {
+    console.error('[SERVER] Client error:', error.message);
+    socket.end('HTTP/1.1 400 Bad Request\r\n\r\n');
+});

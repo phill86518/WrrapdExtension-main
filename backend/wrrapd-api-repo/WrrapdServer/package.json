@@ -1,0 +1,14 @@
+{
+  "dependencies": {
+    "@google-cloud/storage": "^7.9.0",
+    "body-parser": "^1.20.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "form-data": "^4.0.1",
+    "mailgun.js": "^10.3.0",
+    "openai": "^4.82.0",
+    "qrcode": "^1.5.4",
+    "stripe": "^17.4.0"
+  }
+}
