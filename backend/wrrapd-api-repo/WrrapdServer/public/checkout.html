@@ -16,12 +16,27 @@
             background-color: #f9f9f9;
         }
         #payment-form {
-            max-width: 380px; /* Make form more compact */
+            max-width: 520px;
             margin: auto;
-            padding: 8px; /* Reduce form padding */
+            padding: 8px;
             border: 1px solid #ddd;
             background: #fff;
             border-radius: 4px;
+        }
+        #card-element {
+            margin: 10px 0 8px;
+            padding: 8px 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            margin-bottom: 8px;
+            min-height: 44px;
+            box-sizing: border-box;
+            background: #fff;
+            width: 100%;
+            overflow: visible;
+        }
+        #card-element .StripeElement {
+            min-height: 22px;
         }
         #submit {
             background-color: #f0c14b;
@@ -41,21 +56,12 @@
             text-align: center;
             margin-bottom: 8px;
         }
-        /* Stripe Card Element: needs min height/width so the iframe is not collapsed */
-        #card-element {
-            margin: 12px 0;
-            padding: 8px 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            font-size: 12px;
-            margin-bottom: 8px;
-            min-height: 44px;
-            width: 100%;
-            box-sizing: border-box;
-            background: #fff;
-        }
-        #card-element .StripeElement {
-            min-height: 28px;
+        .zip-outside-msg {
+            color: #c62828;
+            font-size: 10px;
+            margin-top: 3px;
+            line-height: 1.2;
+            display: none;
         }
         .form-group {
             margin-bottom: 8px; /* Reduce margin between groups */
@@ -156,6 +162,55 @@
             margin-top: 4px;
             display: none;
         }
+
+        /* Editable address fields + custom suggestion list (not Google's locked pac-input widget) */
+        .address-autocomplete-wrap {
+            position: relative;
+        }
+        #line1,
+        #billing-line1 {
+            background: #fff !important;
+            color: #111 !important;
+            cursor: text !important;
+        }
+        .address-suggestions {
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 100%;
+            margin: 2px 0 0;
+            padding: 0;
+            list-style: none;
+            background: #fff;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            max-height: 220px;
+            overflow-y: auto;
+            z-index: 2000;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+        }
+        .address-suggestions[hidden] {
+            display: none !important;
+        }
+        .address-suggestions li {
+            padding: 8px 10px;
+            cursor: pointer;
+            font-size: 12px;
+            line-height: 1.35;
+            border-bottom: 1px solid #eee;
+        }
+        .address-suggestions li:last-child {
+            border-bottom: none;
+        }
+        .address-suggestions li:hover {
+            background: #f5f5f5;
+        }
+        #country:disabled,
+        #billing-country:disabled {
+            background: #f0f0f0;
+            color: #333;
+            cursor: not-allowed;
+        }
     </style>
     
 </head>
@@ -164,13 +219,9 @@
     <div id="total"></div>
     <form id="payment-form">
 
-        <!-- Card details -->
+        <!-- Card details: single Stripe Card element; smaller base font so PAN / expiry / CVC fit -->
         <div class="heading-card">Card Details</div>
-        <div id="card-element"><!-- Stripe Card Element mounts here --></div>
-        <div class="form-group" style="margin-top: 8px;">
-            <label for="card-zip-code">Billing ZIP Code*</label>
-            <input type="text" id="card-zip-code" name="card-zip-code" required maxlength="10" pattern="[0-9-]*" placeholder="12345">
-        </div>
+        <div id="card-element"></div>
 
         <!-- Add after the Card Details section and before Billing Address -->
         <div class="heading-card">Your (Gifter's) Contact Information</div>
@@ -186,19 +237,18 @@
             </div>
         </div>
 
-        <!-- Final shipping address -->
-        <div class="heading-address">Final shipping address (Giftee's address)</div>
+        <div class="heading-address">Delivery address (Giftee address)</div>
         <div class="form-group">
-            <label for="name">Full Name</label>
-            <input type="text" id="name" name="name">
+            <label for="name">Giftee full name</label>
+            <input type="text" id="name" name="name" autocomplete="name" placeholder="Recipient name">
         </div>
+        <input type="hidden" id="line2" name="line2" value="">
         <div class="form-group">
             <label for="line1">Address Line 1</label>
-            <input type="text" id="line1" name="line1">
-        </div>
-        <div class="form-group">
-            <label for="line2">Address Line 2</label>
-            <input type="text" id="line2" name="line2">
+            <div class="address-autocomplete-wrap">
+                <input type="text" id="line1" name="line1" autocomplete="off" spellcheck="false" data-lpignore="true" data-1p-ignore>
+                <ul class="address-suggestions" id="line1-suggestions" role="listbox" hidden></ul>
+            </div>
         </div>
         <div class="row">
             <div class="form-group">
@@ -207,7 +257,7 @@
             </div>
             <div class="form-group">
                 <label for="postal_code">ZIP Code</label>
-                <input type="text" id="postal_code" name="postal_code">
+                <input type="text" id="postal_code" name="postal_code" inputmode="numeric" autocomplete="postal-code" maxlength="10">
             </div>
         </div>
         <div class="row">
@@ -217,11 +267,10 @@
             </div>
             <div class="form-group">
                 <label for="state">State</label>
-                <input type="text" id="state" name="state" value="FL" disabled>
+                <input type="text" id="state" name="state">
             </div>
         </div>
 
-        <!-- Checkbox below Final shipping address -->
         <div class="billingAddressCheckbox">
             <label>
                 <input type="checkbox" id="use-default-address" checked>Billing address same as Final shipping address
@@ -237,7 +286,10 @@
             </div>
             <div class="form-group">
                 <label for="billing-line1">Address Line 1</label>
-                <input type="text" id="billing-line1" name="billing-line1">
+                <div class="address-autocomplete-wrap">
+                    <input type="text" id="billing-line1" name="billing-line1" autocomplete="off" spellcheck="false" data-lpignore="true" data-1p-ignore>
+                    <ul class="address-suggestions" id="billing-line1-suggestions" role="listbox" hidden></ul>
+                </div>
             </div>
             <div class="form-group">
                 <label for="billing-line2">Address Line 2</label>
@@ -250,7 +302,7 @@
                 </div>
                 <div class="form-group">
                     <label for="billing-postal_code">ZIP Code</label>
-                    <input type="text" id="billing-postal_code" name="billing-postal_code" readonly style="background-color: #e9ecef; color: #6c757d; cursor: not-allowed;">
+                    <input type="text" id="billing-postal_code" name="billing-postal_code">
                 </div>
             </div>
             <div class="row">
@@ -260,14 +312,14 @@
                 </div>
                 <div class="form-group">
                     <label for="billing-state">State</label>
-                    <input type="text" id="billing-state" name="billing-state" value="FL" disabled>
+                    <input type="text" id="billing-state" name="billing-state" value="">
                 </div>
             </div>
         </div>
 
         
 
-        <button type="submit" id="submit">Pay Now</button>
+        <button type="submit" id="submit" disabled>Pay Now</button>
     </form>
 
     <script>
@@ -302,7 +354,6 @@
             }
         }, 60000); // Check every minute
         
-        const stripe = Stripe('pk_test_51QUZBkCZ6tFiFwmsouyofMcNHnfeJgdA3FMmxEdhgH2sfmlQbsOSclGjS8DImpAt77cQhKyW0Ucwp4XuZfc0Jrpn00KLPjMKOO');
         const urlParams = new URLSearchParams(window.location.search);
         const encodedPayload = urlParams.get('data');
 
@@ -319,7 +370,10 @@
             throw new Error('Failed to decode payment data');
         }
 
-        const { total, address, orderNumber } = payload;
+        const { total, address, orderNumber, gifteeOriginalAddress: gifteeFromPayload } = payload;
+        const gifteeOriginalAddress = gifteeFromPayload || address;
+
+        const GOOGLE_API_KEY = 'AIzaSyDpZREUIh84APl6ivKxWxM6zENaVJZvmo4';
 
         if (!total || isNaN(total)) {
             document.body.innerHTML = '<h1>Error: Invalid total amount</h1>';
@@ -328,25 +382,33 @@
 
         document.getElementById('total').textContent = `Total: $${(total / 100).toFixed(2)}`;
 
-        // Global variables for Stripe elements
+        let stripe = null;
         let cardElement = null;
         let clientSecret = null;
         let elements = null;
 
-        async function initializeStripeElements() {
+        async function initializeCheckoutPage() {
+            let stripeCardComplete = false;
+            let gifteeGoogleValidated = false;
+            let billingGoogleValidated = false;
+            let gifteeValidationTimer = null;
+            let billingValidationTimer = null;
+            let gifteeValidationSeq = 0;
+            let billingValidationSeq = 0;
+            let updatePayButtonState = function () {};
+
             try {
-                // Ensure Stripe is loaded
                 if (typeof Stripe === 'undefined') {
                     throw new Error('Stripe library not loaded. Please check your internet connection and refresh the page.');
                 }
 
-                // Ensure DOM is ready
+                stripe = Stripe('pk_test_51QUZBkCZ6tFiFwmsouyofMcNHnfeJgdA3FMmxEdhgH2sfmlQbsOSclGjS8DImpAt77cQhKyW0Ucwp4XuZfc0Jrpn00KLPjMKOO');
+
                 const cardElementContainer = document.getElementById('card-element');
                 if (!cardElementContainer) {
                     throw new Error('Card element container (#card-element) not found in DOM');
                 }
 
-                // Show loading state
                 cardElementContainer.innerHTML = '<div style="padding: 10px; text-align: center; color: #666;">Loading payment form...</div>';
 
                 const response = await fetch('https://api.wrrapd.com/create-payment-intent', {
@@ -367,58 +429,30 @@
                 }
 
                 clientSecret = responseData.clientSecret;
-                // PaymentIntent + Card Element: pass clientSecret so Stripe mounts the card iframe (required by current Stripe.js)
-                elements = stripe.elements({ clientSecret: clientSecret });
+                elements = stripe.elements();
 
-                // Clear loading message
                 cardElementContainer.innerHTML = '';
 
-                // Single Card Element: card number, expiry, CVC on one row (postal hidden — we use #card-zip-code)
                 cardElement = elements.create('card', {
                     hidePostalCode: true,
                     style: {
                         base: {
-                            fontSize: '13px',
+                            fontSize: '12px',
                             color: '#32325d',
                             fontFamily: 'Arial, Helvetica, sans-serif',
-                            lineHeight: '1.4',
-                            '::placeholder': {
-                                color: '#aab7c4'
-                            }
+                            lineHeight: '18px',
+                            '::placeholder': { color: '#aab7c4' },
                         },
-                        invalid: {
-                            color: '#df1b41',
-                            iconColor: '#df1b41'
-                        }
-                    }
+                        invalid: { color: '#df1b41', iconColor: '#df1b41' },
+                    },
                 });
                 cardElement.mount('#card-element');
-                
-                // Set up zip code sync from card zip field to billing address
-                const cardZipField = document.getElementById('card-zip-code');
-                const billingZipField = document.getElementById('billing-postal_code');
-                
-                if (cardZipField && billingZipField) {
-                    // On page load: Auto-populate billing zip from card section zip field if it has a value
-                    if (cardZipField.value) {
-                        billingZipField.value = cardZipField.value;
-                    }
-                    
-                    // On input: Keep billing zip in sync with card section zip field (real-time sync)
-                    cardZipField.addEventListener('input', function() {
-                        // Only allow numbers and hyphens
-                        this.value = this.value.replace(/[^0-9-]/g, '');
-                        billingZipField.value = this.value;
-                    });
-                    
-                    // Make billing zip read-only to prevent manual changes - show in grey area
-                    billingZipField.readOnly = true;
-                    billingZipField.style.backgroundColor = '#e9ecef';
-                    billingZipField.style.color = '#6c757d';
-                    billingZipField.style.cursor = 'not-allowed';
-                    billingZipField.title = 'ZIP code is synced from Card Details above (uneditable)';
-                }
-                
+
+                cardElement.on('change', function (event) {
+                    stripeCardComplete = !!(event && event.complete);
+                    updatePayButtonState();
+                });
+
                 console.log('[Payment] Stripe card element mounted successfully');
             } catch (error) {
                 console.error('[Payment] Error initializing Stripe elements:', error);
@@ -517,24 +551,43 @@
                 if (!validZipCodes.has(zip)) {
                     return { 
                         valid: false, 
-                        message: 'Wrrapd is currently working on delivering to additional zip codes, but can\'t currently deliver to that zip code. Please enter a different ZIP code.' 
+                        message: 'Outside delivery area' 
                     };
                 }
 
                 return { valid: true };
             }
 
-            // Load zip codes first, then set default address
             await loadAllowedZipCodes();
 
+            async function syncGifteeCityStateFromZip() {
+                const zipInput = document.getElementById('postal_code');
+                const zip = zipInput.value.replace(/[^0-9]/g, '').substring(0, 5);
+                if (zip.length !== 5) return;
+                try {
+                    const r = await fetch(`https://api.zippopotam.us/us/${zip}`);
+                    if (!r.ok) return;
+                    const data = await r.json();
+                    const p = data.places && data.places[0];
+                    if (p) {
+                        document.getElementById('city').value = p['place name'] || '';
+                        document.getElementById('state').value = p['state abbreviation'] || '';
+                    }
+                } catch (e) {
+                    console.warn('[syncGifteeCityStateFromZip]', e);
+                }
+            }
+
             const setDefaultAddress = () => {
-                document.getElementById('name').value = address.name || '';
-                // document.getElementById('country').value = 'US';
-                document.getElementById('line1').value = address.street || '';
+                const g = gifteeOriginalAddress || {};
+                document.getElementById('name').value = g.name || '';
+                const street = (g.street || '').trim();
+                document.getElementById('line1').value = street.split(',')[0].trim();
                 document.getElementById('line2').value = '';
-                document.getElementById('city').value = address.city || '';
-                // document.getElementById('state').value = address.state || '';
-                document.getElementById('postal_code').value = address.postalCode || '';
+                document.getElementById('postal_code').value = (g.postalCode || '').replace(/[^0-9-]/g, '').substring(0, 10);
+                document.getElementById('country').value = 'US';
+                document.getElementById('city').value = g.city || '';
+                document.getElementById('state').value = g.state || '';
             };
 
             const clearBillingAddressFields = () => {
@@ -543,82 +596,75 @@
                 document.getElementById('billing-line2').value = '';
                 document.getElementById('billing-city').value = '';
                 document.getElementById('billing-postal_code').value = '';
+                document.getElementById('billing-country').value = 'US';
             };
 
             // Handle checkbox change - show/hide billing address section
             document.getElementById('use-default-address').addEventListener('change', (event) => {
                 const billingSection = document.getElementById('billing-address-section');
-                const billingZipField = document.getElementById('billing-postal_code');
                 
                 if (event.target.checked) {
-                    // Hide billing address section
                     billingSection.style.display = 'none';
-                    // Clear billing fields
                     clearBillingAddressFields();
                 } else {
-                    // Show billing address section
                     billingSection.style.display = 'block';
-                    // Auto-fill billing address fields with Amazon default address
                     if (payload && payload.address) {
-                        document.getElementById('billing-name').value = payload.address.name || '';
-                        document.getElementById('billing-line1').value = payload.address.street ? payload.address.street.split(',')[0] : '';
+                        const a = payload.address;
+                        document.getElementById('billing-name').value = a.name || '';
+                        document.getElementById('billing-line1').value = a.street ? String(a.street).split(',')[0].trim() : '';
                         document.getElementById('billing-line2').value = '';
-                        document.getElementById('billing-city').value = payload.address.city || '';
-                        // Don't set postal_code from payload - it should come from card zip field
-                        document.getElementById('billing-state').value = payload.address.state || '';
-                        // Normalize country code to ISO format (US, not "United States")
-                        const countryCode = payload.address.country || 'US';
+                        document.getElementById('billing-city').value = a.city || '';
+                        document.getElementById('billing-postal_code').value = (a.postalCode || '').replace(/[^0-9-]/g, '').substring(0, 10);
+                        document.getElementById('billing-state').value = a.state || '';
+                        const countryCode = a.country || 'US';
                         const normalizedCountry = (countryCode === 'United States' || countryCode === 'USA') ? 'US' : 
                                                    (countryCode === 'Canada' || countryCode === 'CA') ? 'CA' : countryCode;
                         document.getElementById('billing-country').value = normalizedCountry;
                     }
-                    
-                    // Ensure billing zip remains read-only (will be synced from Stripe card element during payment)
-                    if (billingZipField) {
-                        billingZipField.readOnly = true;
-                        billingZipField.style.backgroundColor = '#e9ecef';
-                        billingZipField.style.color = '#6c757d';
-                        billingZipField.style.cursor = 'not-allowed';
-                        billingZipField.title = 'ZIP code is synced from Card Details above (uneditable)';
-                    }
                 }
+                if (typeof scheduleBillingAddressValidation === 'function') scheduleBillingAddressValidation();
+                if (typeof updatePayButtonState === 'function') updatePayButtonState();
             });
 
-            // Load zip codes first, then set default address
-            await loadAllowedZipCodes();
-
             setDefaultAddress();
+            await syncGifteeCityStateFromZip();
 
-            // Add zip code validation for Final shipping address
+            // Tiny inline message under ZIP only when ZIP is outside allowed delivery area
             const postalCodeField = document.getElementById('postal_code');
             const postalCodeError = document.createElement('div');
-            postalCodeError.style.cssText = 'color: #ff6b6b; font-size: 11px; margin-top: 4px; display: none;';
+            postalCodeError.className = 'zip-outside-msg';
+            postalCodeError.setAttribute('aria-live', 'polite');
             postalCodeField.parentElement.appendChild(postalCodeError);
 
+            function updateGifteeZipOutsideDeliveryMessage() {
+                const el = document.getElementById('postal_code');
+                const zip = el.value.replace(/[^0-9]/g, '').substring(0, 5);
+                postalCodeError.style.display = 'none';
+                el.style.borderColor = '#ccc';
+                if (zip.length === 5 && validZipCodes.size > 0 && !validZipCodes.has(zip)) {
+                    postalCodeError.textContent = 'Outside delivery area';
+                    postalCodeError.style.display = 'block';
+                    el.style.borderColor = '#ff6b6b';
+                }
+            }
+
             if (postalCodeField) {
-                // Validate on blur and prevent leaving field if invalid
-                postalCodeField.addEventListener('blur', function(e) {
-                    const validation = validateShippingZipCode(this.value);
-                    if (!validation.valid && this.value.trim() !== '') {
-                        postalCodeError.textContent = validation.message;
-                        postalCodeError.style.display = 'block';
-                        this.style.borderColor = '#ff6b6b';
-                        // Keep focus on the field - prevent blur
-                        setTimeout(() => {
-                            this.focus();
-                        }, 10);
-                    } else {
-                        postalCodeError.style.display = 'none';
-                        this.style.borderColor = '#ccc';
-                    }
+                let zipMsgDebounce;
+                postalCodeField.addEventListener('blur', async function() {
+                    await syncGifteeCityStateFromZip();
+                    updateGifteeZipOutsideDeliveryMessage();
+                    if (typeof scheduleGifteeAddressValidation === 'function') scheduleGifteeAddressValidation();
                 });
 
-                // Clear error on input
                 postalCodeField.addEventListener('input', function() {
                     if (postalCodeError.style.display === 'block') {
                         postalCodeError.style.display = 'none';
                         this.style.borderColor = '#ccc';
                     }
+                    clearTimeout(zipMsgDebounce);
+                    zipMsgDebounce = setTimeout(function () {
+                        updateGifteeZipOutsideDeliveryMessage();
+                    }, 200);
                 });
 
                 // Also validate on keypress to prevent invalid characters
@@ -711,8 +757,6 @@
             }
 
             // Address validation using Google Address Validation API
-            const GOOGLE_API_KEY = 'AIzaSyDpZREUIh84APl6ivKxWxM6zENaVJZvmo4';
-            
             async function validateAddress(addressData, addressType) {
                 const { name, line1, line2, city, state, postal_code, country } = addressData;
                 
@@ -1101,6 +1145,308 @@
                 }
             }
 
+            function scheduleGifteeAddressValidation() {
+                gifteeGoogleValidated = false;
+                updatePayButtonState();
+                clearTimeout(gifteeValidationTimer);
+                gifteeValidationTimer = setTimeout(async function () {
+                    const seq = ++gifteeValidationSeq;
+                    const zipVal = document.getElementById('postal_code').value;
+                    if (!validateShippingZipCode(zipVal).valid) {
+                        gifteeGoogleValidated = false;
+                        if (seq === gifteeValidationSeq) updatePayButtonState();
+                        return;
+                    }
+                    const line1v = document.getElementById('line1').value.trim();
+                    const cityv = document.getElementById('city').value.trim();
+                    const statev = document.getElementById('state').value.trim();
+                    const namev = document.getElementById('name').value.trim();
+                    if (!namev || !line1v || !cityv || !statev) {
+                        gifteeGoogleValidated = false;
+                        if (seq === gifteeValidationSeq) updatePayButtonState();
+                        return;
+                    }
+                    const addr = {
+                        name: document.getElementById('name').value,
+                        line1: document.getElementById('line1').value,
+                        line2: document.getElementById('line2').value,
+                        city: document.getElementById('city').value,
+                        state: document.getElementById('state').value,
+                        postal_code: document.getElementById('postal_code').value,
+                        country: document.getElementById('country').value || 'US',
+                    };
+                    const r = await validateAddress(addr, 'Final shipping address');
+                    if (seq !== gifteeValidationSeq) return;
+                    gifteeGoogleValidated = !!r.valid;
+                    updatePayButtonState();
+                }, 700);
+            }
+
+            function scheduleBillingAddressValidation() {
+                clearTimeout(billingValidationTimer);
+                if (document.getElementById('use-default-address').checked) {
+                    billingGoogleValidated = true;
+                    updatePayButtonState();
+                    return;
+                }
+                billingGoogleValidated = false;
+                updatePayButtonState();
+                billingValidationTimer = setTimeout(async function () {
+                    const seq = ++billingValidationSeq;
+                    const addr = {
+                        name: document.getElementById('billing-name').value,
+                        line1: document.getElementById('billing-line1').value,
+                        line2: document.getElementById('billing-line2').value,
+                        city: document.getElementById('billing-city').value,
+                        state: document.getElementById('billing-state').value,
+                        postal_code: document.getElementById('billing-postal_code').value,
+                        country: document.getElementById('billing-country').value || 'US',
+                    };
+                    if (
+                        !addr.name.trim() ||
+                        !addr.line1.trim() ||
+                        !addr.city.trim() ||
+                        !addr.state.trim() ||
+                        !addr.postal_code.trim()
+                    ) {
+                        billingGoogleValidated = false;
+                        if (seq === billingValidationSeq) updatePayButtonState();
+                        return;
+                    }
+                    const r = await validateAddress(addr, 'Billing address');
+                    if (seq !== billingValidationSeq) return;
+                    billingGoogleValidated = !!r.valid;
+                    updatePayButtonState();
+                }, 700);
+            }
+
+            updatePayButtonState = function () {
+                const submit = document.getElementById('submit');
+                if (isSessionExpired()) {
+                    submit.disabled = true;
+                    return;
+                }
+                const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(document.getElementById('email').value.trim());
+                const phoneOk = phoneInput.isValidNumber();
+                if (!emailOk || !phoneOk || !stripeCardComplete) {
+                    submit.disabled = true;
+                    return;
+                }
+                const zipOk = validateShippingZipCode(document.getElementById('postal_code').value).valid;
+                const gifteeFilled =
+                    document.getElementById('name').value.trim() &&
+                    document.getElementById('line1').value.trim() &&
+                    document.getElementById('city').value.trim() &&
+                    document.getElementById('state').value.trim();
+                const gifteeOk = zipOk && gifteeFilled && gifteeGoogleValidated;
+
+                const useDefaultBilling = document.getElementById('use-default-address').checked;
+                let billingOk;
+                if (useDefaultBilling) {
+                    billingOk = gifteeOk;
+                } else {
+                    const bFilled =
+                        document.getElementById('billing-name').value.trim() &&
+                        document.getElementById('billing-line1').value.trim() &&
+                        document.getElementById('billing-city').value.trim() &&
+                        document.getElementById('billing-state').value.trim() &&
+                        document.getElementById('billing-postal_code').value.trim();
+                    billingOk = bFilled && billingGoogleValidated;
+                }
+
+                submit.disabled = !(gifteeOk && billingOk);
+            };
+
+            /**
+             * Address autocomplete via Google Places (database-backed quality).
+             * Keeps existing custom suggestion dropdowns and field-fill behavior.
+             */
+            function loadGooglePlacesLibrary() {
+                if (window.google && window.google.maps && window.google.maps.places) {
+                    return Promise.resolve();
+                }
+                if (window.__wrrapdGooglePlacesPromise) return window.__wrrapdGooglePlacesPromise;
+                window.__wrrapdGooglePlacesPromise = new Promise(function (resolve, reject) {
+                    const existing = document.querySelector('script[data-wrrapd-google-places="1"]');
+                    if (existing) {
+                        existing.addEventListener('load', function () { resolve(); });
+                        existing.addEventListener('error', function () { reject(new Error('Google Maps script failed to load')); });
+                        return;
+                    }
+                    const script = document.createElement('script');
+                    script.src =
+                        'https://maps.googleapis.com/maps/api/js?key=' +
+                        encodeURIComponent(GOOGLE_API_KEY) +
+                        '&libraries=places&v=weekly';
+                    script.async = true;
+                    script.defer = true;
+                    script.setAttribute('data-wrrapd-google-places', '1');
+                    script.onload = function () { resolve(); };
+                    script.onerror = function () { reject(new Error('Google Maps script failed to load')); };
+                    document.head.appendChild(script);
+                });
+                return window.__wrrapdGooglePlacesPromise;
+            }
+
+            function setupGoogleAddressAutocomplete() {
+                const line1 = document.getElementById('line1');
+                const billingLine1 = document.getElementById('billing-line1');
+                const line1List = document.getElementById('line1-suggestions');
+                const billingList = document.getElementById('billing-line1-suggestions');
+
+                const service = new google.maps.places.AutocompleteService();
+                const detailsHost = document.createElement('div');
+                const placesSvc = new google.maps.places.PlacesService(detailsHost);
+
+                function fillFromPlace(place, mode) {
+                    if (!place || !place.address_components) return;
+                    let streetNumber = '';
+                    let route = '';
+                    let city = '';
+                    let state = '';
+                    let postal = '';
+                    place.address_components.forEach(function (c) {
+                        const types = c.types || [];
+                        if (types.indexOf('street_number') !== -1) streetNumber = c.long_name || '';
+                        if (types.indexOf('route') !== -1) route = c.long_name || '';
+                        if (types.indexOf('locality') !== -1) city = c.long_name || '';
+                        if (!city && types.indexOf('postal_town') !== -1) city = c.long_name || '';
+                        if (!city && types.indexOf('sublocality') !== -1) city = c.long_name || '';
+                        if (types.indexOf('administrative_area_level_1') !== -1) state = c.short_name || '';
+                        if (types.indexOf('postal_code') !== -1) postal = c.long_name || '';
+                    });
+                    const line = [streetNumber, route].filter(Boolean).join(' ').trim();
+
+                    if (mode === 'giftee') {
+                        if (line) line1.value = line;
+                        if (city) document.getElementById('city').value = city;
+                        if (state) document.getElementById('state').value = state;
+                        if (postal) document.getElementById('postal_code').value = postal.replace(/[^0-9-]/g, '').substring(0, 10);
+                        syncGifteeCityStateFromZip().then(function () {
+                            updateGifteeZipOutsideDeliveryMessage();
+                            if (typeof scheduleGifteeAddressValidation === 'function') scheduleGifteeAddressValidation();
+                        });
+                    } else {
+                        if (line) billingLine1.value = line;
+                        if (city) document.getElementById('billing-city').value = city;
+                        if (state) document.getElementById('billing-state').value = state;
+                        if (postal) document.getElementById('billing-postal_code').value = postal.replace(/[^0-9-]/g, '').substring(0, 10);
+                        if (typeof scheduleBillingAddressValidation === 'function') scheduleBillingAddressValidation();
+                    }
+                }
+
+                function setupPredictions(inputEl, listEl, mode) {
+                    let debounce;
+                    let seq = 0;
+                    const hideList = function () {
+                        listEl.hidden = true;
+                        listEl.innerHTML = '';
+                    };
+
+                    inputEl.addEventListener('input', function () {
+                        clearTimeout(debounce);
+                        const q = inputEl.value.trim();
+                        if (q.length < 2) {
+                            hideList();
+                            return;
+                        }
+                        debounce = setTimeout(function () {
+                            const current = ++seq;
+                            const token = new google.maps.places.AutocompleteSessionToken();
+                            service.getPlacePredictions(
+                                {
+                                    input: q,
+                                    sessionToken: token,
+                                    componentRestrictions: { country: 'us' },
+                                    types: ['address'],
+                                },
+                                function (predictions, status) {
+                                    if (current !== seq) return;
+                                    if (status !== google.maps.places.PlacesServiceStatus.OK || !predictions || !predictions.length) {
+                                        hideList();
+                                        return;
+                                    }
+                                    listEl.innerHTML = '';
+                                    predictions.slice(0, 8).forEach(function (pred) {
+                                        const li = document.createElement('li');
+                                        li.setAttribute('role', 'option');
+                                        li.textContent = pred.description || '';
+                                        li.addEventListener('mousedown', function (e) {
+                                            e.preventDefault();
+                                            placesSvc.getDetails(
+                                                {
+                                                    placeId: pred.place_id,
+                                                    sessionToken: token,
+                                                    fields: ['address_components'],
+                                                },
+                                                function (place, detailsStatus) {
+                                                    if (detailsStatus === google.maps.places.PlacesServiceStatus.OK) {
+                                                        fillFromPlace(place, mode);
+                                                    }
+                                                }
+                                            );
+                                            hideList();
+                                        });
+                                        listEl.appendChild(li);
+                                    });
+                                    listEl.hidden = listEl.childNodes.length === 0;
+                                }
+                            );
+                        }, 120);
+                    });
+
+                    inputEl.addEventListener('blur', function () {
+                        setTimeout(hideList, 220);
+                    });
+
+                    inputEl.addEventListener('keydown', function (e) {
+                        if (e.key === 'Escape') hideList();
+                    });
+                }
+
+                setupPredictions(line1, line1List, 'giftee');
+                setupPredictions(billingLine1, billingList, 'billing');
+            }
+
+            loadGooglePlacesLibrary()
+                .then(function () {
+                    setupGoogleAddressAutocomplete();
+                })
+                .catch(function (e) {
+                    console.warn('[Address autocomplete] Google Places setup failed:', e);
+                });
+
+            ['name', 'line1', 'city', 'state', 'postal_code'].forEach(function (id) {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.addEventListener('input', scheduleGifteeAddressValidation);
+                el.addEventListener('change', scheduleGifteeAddressValidation);
+            });
+
+            document.getElementById('email').addEventListener('input', updatePayButtonState);
+            phoneElement.addEventListener('input', updatePayButtonState);
+            phoneElement.addEventListener('blur', function () {
+                updatePayButtonState();
+            });
+
+            [
+                'billing-name',
+                'billing-line1',
+                'billing-line2',
+                'billing-city',
+                'billing-state',
+                'billing-postal_code',
+            ].forEach(function (id) {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.addEventListener('input', scheduleBillingAddressValidation);
+                el.addEventListener('change', scheduleBillingAddressValidation);
+            });
+
+            scheduleGifteeAddressValidation();
+            scheduleBillingAddressValidation();
+            updatePayButtonState();
+
             const form = document.getElementById('payment-form');
             form.addEventListener('submit', async (event) => {
                 event.preventDefault();
@@ -1117,23 +1463,20 @@
                 submitButton.textContent = 'Validating...';
 
                 try {
-                // Validate Stripe card element (postal code is included in the card element)
-                if (!cardElement) {
+                if (!cardElement || !clientSecret) {
                     alert('Payment form not fully loaded. Please wait a moment and try again.');
-                    submitButton.disabled = false;
                     submitButton.textContent = 'Pay Now';
+                    updatePayButtonState();
                     return;
                 }
-                
-                // Stripe card element includes postal code field inline - Stripe will validate it
-                
+
                 // Email validation
                 const email = document.getElementById('email').value;
                 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
                 if (!emailRegex.test(email)) {
                     alert('Please enter a valid email address');
-                        submitButton.disabled = false;
                         submitButton.textContent = 'Pay Now';
+                        updatePayButtonState();
                     return;
                 }
 
@@ -1142,23 +1485,32 @@
                     phoneElement.classList.add("error");
                     errorMsg.style.display = "block";
                     errorMsg.textContent = "Please enter a valid phone number";
-                        submitButton.disabled = false;
                         submitButton.textContent = 'Pay Now';
+                        updatePayButtonState();
                     return;
                 }
 
                 const phone = phoneInput.getNumber();
 
-                    // Validate Final shipping address zip code before submission
+                    // Delivery ZIP must be in allowed set — block Pay; outside area uses inline message only
                     const shippingZipCode = document.getElementById('postal_code').value;
                     const zipValidation = validateShippingZipCode(shippingZipCode);
                     if (!zipValidation.valid) {
-                        alert(zipValidation.message);
-                        document.getElementById('postal_code').focus();
-                        submitButton.disabled = false;
+                        const z = shippingZipCode.replace(/[^0-9]/g, '').substring(0, 5);
+                        const isOutsideDelivery =
+                            z.length === 5 && validZipCodes.size > 0 && !validZipCodes.has(z);
+                        if (isOutsideDelivery) {
+                            updateGifteeZipOutsideDeliveryMessage();
+                            document.getElementById('postal_code').focus();
+                        } else {
+                            alert(zipValidation.message);
+                            document.getElementById('postal_code').focus();
+                        }
                         submitButton.textContent = 'Pay Now';
+                        updatePayButtonState();
                         return;
                     }
+                    updateGifteeZipOutsideDeliveryMessage();
 
                     // Validate Final shipping address
                     const finalShippingAddress = {
@@ -1178,8 +1530,8 @@
                     
                     // Auto-correct address fields if corrections are available (do this regardless of validation result)
                     let hasCorrections = false;
-                        if (shippingValidation.correctedComponents) {
-                            const corrected = shippingValidation.correctedComponents;
+                    if (shippingValidation.correctedComponents) {
+                        const corrected = shippingValidation.correctedComponents;
                         const currentLine1 = document.getElementById('line1').value;
                         const currentPostal = document.getElementById('postal_code').value;
                         const currentCity = document.getElementById('city').value;
@@ -1211,10 +1563,10 @@
                             hasCorrections = true;
                             console.log(`[Payment] Auto-corrected line2 from ${currentLine2} to ${corrected.line2 || ''}`);
                         }
-                        }
-                        
-                        // If ZIP code correction suggested, update it
-                        if (shippingValidation.suggestedZip) {
+                    }
+                    
+                    // If ZIP code correction suggested, update it
+                    if (shippingValidation.suggestedZip) {
                         const currentPostal = document.getElementById('postal_code').value;
                         if (shippingValidation.suggestedZip !== currentPostal) {
                             document.getElementById('postal_code').value = shippingValidation.suggestedZip;
@@ -1270,69 +1622,69 @@
                                 el.style.borderColor = '';
                                 el.style.borderWidth = '';
                             });
-                        
-                        // Show error message in the form field (AFTER auto-correction)
-                        const errorField = shippingValidation.field || 'line1';
-                        const fieldId = errorField === 'postal_code' ? 'postal_code' : 
-                                         errorField === 'name' ? 'name' : 
-                                         errorField === 'city' ? 'city' : 
-                                         errorField === 'state' ? 'state' : 
-                                         errorField === 'country' ? 'country' : 'line1';
-                        const fieldElement = document.getElementById(fieldId);
-                        
-                        if (!fieldElement) {
-                            console.error(`[Payment] Could not find Final shipping address field: ${fieldId}`);
-                            return;
-                        }
-                        
-                        // Check if field was auto-corrected - if ZIP was corrected, don't show stale ZIP mismatch error
-                        if (errorField === 'postal_code' && shippingValidation.suggestedZip) {
-                            const currentZip = document.getElementById('postal_code').value;
-                            // If ZIP was corrected and now matches the suggestion, but error message still mentions old ZIP
-                            if (currentZip === shippingValidation.suggestedZip && 
-                                shippingValidation.message && 
-                                shippingValidation.message.includes('ZIP code mismatch')) {
-                                // Extract the old ZIP from the error message
-                                const oldZipMatch = shippingValidation.message.match(/you entered (\d+)/);
-                                if (oldZipMatch && oldZipMatch[1] !== currentZip) {
-                                    // This is a stale error - ZIP was already corrected
-                                    // Don't show this error, validation will pass on next attempt
-                                    console.log(`[Payment] Final shipping ZIP code was auto-corrected from ${oldZipMatch[1]} to ${currentZip}, clearing stale error`);
-                                    fieldElement.style.borderColor = '';
-                                    fieldElement.style.borderWidth = '';
-                                    const staleErrorDiv = fieldElement.parentElement.querySelector('.field-error');
-                                    if (staleErrorDiv) {
-                                        staleErrorDiv.remove();
+                            
+                            // Show error message in the form field (AFTER auto-correction)
+                            const errorField = shippingValidation.field || 'line1';
+                            const fieldId = errorField === 'postal_code' ? 'postal_code' : 
+                                             errorField === 'name' ? 'name' : 
+                                             errorField === 'city' ? 'city' : 
+                                             errorField === 'state' ? 'state' : 
+                                             errorField === 'country' ? 'country' : 'line1';
+                            const fieldElement = document.getElementById(fieldId);
+                            
+                            if (!fieldElement) {
+                                console.error(`[Payment] Could not find Final shipping address field: ${fieldId}`);
+                                return;
+                            }
+                            
+                            // Check if field was auto-corrected - if ZIP was corrected, don't show stale ZIP mismatch error
+                            if (errorField === 'postal_code' && shippingValidation.suggestedZip) {
+                                const currentZip = document.getElementById('postal_code').value;
+                                // If ZIP was corrected and now matches the suggestion, but error message still mentions old ZIP
+                                if (currentZip === shippingValidation.suggestedZip && 
+                                    shippingValidation.message && 
+                                    shippingValidation.message.includes('ZIP code mismatch')) {
+                                    // Extract the old ZIP from the error message
+                                    const oldZipMatch = shippingValidation.message.match(/you entered (\d+)/);
+                                    if (oldZipMatch && oldZipMatch[1] !== currentZip) {
+                                        // This is a stale error - ZIP was already corrected
+                                        // Don't show this error, validation will pass on next attempt
+                                        console.log(`[Payment] Final shipping ZIP code was auto-corrected from ${oldZipMatch[1]} to ${currentZip}, clearing stale error`);
+                                        fieldElement.style.borderColor = '';
+                                        fieldElement.style.borderWidth = '';
+                                        const staleErrorDiv = fieldElement.parentElement.querySelector('.field-error');
+                                        if (staleErrorDiv) {
+                                            staleErrorDiv.remove();
+                                        }
+                                        // Re-validate will happen on next click
+                                        submitButton.textContent = 'Pay Now';
+                                        updatePayButtonState();
+                                        return;
                                     }
-                                    // Re-validate will happen on next click
-                                    submitButton.disabled = false;
-                                    submitButton.textContent = 'Pay Now';
-                                    return;
                                 }
                             }
-                        }
-                        
-                        // Add error styling
-                        fieldElement.style.borderColor = '#dc3545';
-                        fieldElement.style.borderWidth = '2px';
-                        
-                        // Show error message below field
-                        let errorDiv = fieldElement.parentElement.querySelector('.field-error');
-                        if (!errorDiv) {
-                            errorDiv = document.createElement('div');
-                            errorDiv.className = 'field-error';
-                            errorDiv.style.color = '#dc3545';
-                            errorDiv.style.fontSize = '14px';
-                            errorDiv.style.marginTop = '5px';
-                            errorDiv.style.fontWeight = 'bold';
-                            fieldElement.parentElement.appendChild(errorDiv);
-                        }
-                        errorDiv.textContent = shippingValidation.message;
-                        
-                        fieldElement.focus();
-                        submitButton.disabled = false;
-                        submitButton.textContent = 'Pay Now';
-                        return; // Require user to click 'Pay Now' again with corrected address
+                            
+                            // Add error styling
+                            fieldElement.style.borderColor = '#dc3545';
+                            fieldElement.style.borderWidth = '2px';
+                            
+                            // Show error message below field
+                            let errorDiv = fieldElement.parentElement.querySelector('.field-error');
+                            if (!errorDiv) {
+                                errorDiv = document.createElement('div');
+                                errorDiv.className = 'field-error';
+                                errorDiv.style.color = '#dc3545';
+                                errorDiv.style.fontSize = '14px';
+                                errorDiv.style.marginTop = '5px';
+                                errorDiv.style.fontWeight = 'bold';
+                                fieldElement.parentElement.appendChild(errorDiv);
+                            }
+                            errorDiv.textContent = shippingValidation.message;
+                            
+                            fieldElement.focus();
+                            submitButton.textContent = 'Pay Now';
+                            updatePayButtonState();
+                            return; // Require user to click 'Pay Now' again with corrected address
                         }
                     }
                     
@@ -1387,31 +1739,21 @@
                         submitButton.textContent = 'Validating billing address...';
                         const billingValidation = await validateAddress(billingAddress, 'Billing address');
                         if (!billingValidation.valid) {
-                            // CRITICAL: Clear any previous errors from billing address FIRST
-                            // Also clear any billing errors that might have been incorrectly placed in Final shipping section
+                            // Clear any previous errors from billing address FIRST
                             document.querySelectorAll('#billing-address-section .field-error').forEach(el => el.remove());
-                            // Also remove any billing-related errors from Final shipping section (they shouldn't be there)
-                            document.querySelectorAll('#payment-form .field-error').forEach(el => {
-                                const errorText = el.textContent || '';
-                                // If error mentions billing or is in a billing context, remove it from Final shipping section
-                                if (errorText.includes('billing') || errorText.includes('Billing') || 
-                                    (el.closest('#billing-address-section') === null && 
-                                     (errorText.includes('ZIP code should match') || errorText.includes('Card Details')))) {
-                                    // This is a billing error in wrong location - remove it
-                                    el.remove();
-                                }
-                            });
                             document.querySelectorAll('#billing-address-section input, #billing-address-section select').forEach(el => {
                                 el.style.borderColor = '';
                                 el.style.borderWidth = '';
                             });
                             
-                            // Auto-correct address fields if corrections are available
-                            // NEVER auto-correct postal_code - it comes from card section zip code
+                            // Auto-correct billing fields when Google suggests corrections (billing ZIP is not limited to delivery area)
                             let hasBillingCorrections = false;
                             if (billingValidation.correctedComponents) {
                                 const corrected = billingValidation.correctedComponents;
-                                // Skip postal_code - it's synced from card section and should never be auto-corrected
+                                if (corrected.postal_code) {
+                                    document.getElementById('billing-postal_code').value = corrected.postal_code;
+                                    hasBillingCorrections = true;
+                                }
                                 if (corrected.city) {
                                     document.getElementById('billing-city').value = corrected.city;
                                     hasBillingCorrections = true;
@@ -1430,17 +1772,14 @@
                                 }
                             }
                             
-                            // NEVER auto-correct ZIP code - it comes from card section
-                            // If ZIP code correction was suggested, show message to check card section
-                            
-                            // Show confirmation messages for auto-corrected billing fields
-                            // Never show confirmation for postal_code - it's synced from card section
                             if (hasBillingCorrections && billingValidation.correctedComponents) {
                                 const corrected = billingValidation.correctedComponents;
                                 if (corrected.line1) {
                                     showFieldConfirmation('billing-line1', 'Address has been corrected');
                                 }
-                                // Skip postal_code confirmation - it comes from card section
+                                if (corrected.postal_code) {
+                                    showFieldConfirmation('billing-postal_code', 'ZIP code has been corrected');
+                                }
                                 if (corrected.city) {
                                     showFieldConfirmation('billing-city', 'City has been corrected');
                                 }
@@ -1449,24 +1788,8 @@
                                 }
                             }
                             
-                            // If validation failed due to ZIP mismatch, show message to check card section
                             if (billingValidation.message && (billingValidation.message.includes('ZIP code') || billingValidation.field === 'postal_code')) {
-                                // Show error message directing user to check card section
-                                const billingZipField = document.getElementById('billing-postal_code');
-                                if (billingZipField) {
-                                    // Remove any existing error for this field
-                                    const existingError = billingZipField.parentNode.querySelector('.field-error');
-                                    if (existingError) {
-                                        existingError.remove();
-                                    }
-                                    const errorDiv = document.createElement('div');
-                                    errorDiv.className = 'field-error';
-                                    errorDiv.textContent = 'Please check your billing address. ZIP code should match the one entered in Card Details above.';
-                                    billingZipField.parentNode.insertBefore(errorDiv, billingZipField.nextSibling);
-                                    billingZipField.style.borderColor = '#dc3545';
-                                    billingZipField.style.borderWidth = '2px';
-                                }
-                                billingValidation.message = 'Please check your billing address. ZIP code should match the one entered in Card Details above.';
+                                billingValidation.message = 'Please verify the billing ZIP code and address.';
                             }
                             
                             // Show error message in the form field (AFTER auto-correction)
@@ -1506,8 +1829,8 @@
                             // Re-fetch the field element from within billing section to ensure it's the correct one
                             if (!billingSection) {
                                 console.error(`[Payment] ERROR: Billing address section not found!`);
-                                submitButton.disabled = false;
                                 submitButton.textContent = 'Pay Now';
+                                updatePayButtonState();
                                 return;
                             }
                             
@@ -1538,8 +1861,8 @@
                                     console.log(`[Payment] Found field using forced search:`, forcedField.id);
                                 } else {
                                     console.error(`[Payment] Could not find field in billing section. Aborting error display.`);
-                                    submitButton.disabled = false;
                                     submitButton.textContent = 'Pay Now';
+                                    updatePayButtonState();
                                     return;
                                 }
                             }
@@ -1567,8 +1890,8 @@
                                             staleErrorDiv.remove();
                                         }
                                         // Re-validate will happen on next click
-                                        submitButton.disabled = false;
                                         submitButton.textContent = 'Pay Now';
+                                        updatePayButtonState();
                                         return;
                                     }
                                 }
@@ -1579,59 +1902,16 @@
                             fieldElement.style.borderWidth = '2px';
                             
                             // Show appropriate error message for billing address
-                            // Format message similar to Final shipping address validation
-                            let billingErrorMessage = '';
+                            let billingErrorMessage = 'Please re-check your Billing address.';
                             
-                            // If error message contains "Address validation found issues", use it directly
-                            if (billingValidation.message && billingValidation.message.includes('Address validation found issues')) {
-                                billingErrorMessage = billingValidation.message;
-                            } else if (billingValidation.message && (billingValidation.message.includes('ZIP code') || billingValidation.field === 'postal_code')) {
-                                // If error is about ZIP code, reference card section
-                                billingErrorMessage = 'Address validation found issues: ZIP code mismatch. Please check your billing address. ZIP code should match the one entered in Card Details above.';
+                            if (billingValidation.message && (billingValidation.message.includes('ZIP code') || billingValidation.field === 'postal_code')) {
+                                billingErrorMessage = 'Please verify the billing ZIP code and address.';
                             } else if (billingValidation.message && !billingValidation.message.includes('ZIP code')) {
-                                // Use the validation message if it's not about ZIP code, but prefix with "Address validation found issues:"
-                                if (billingValidation.message.includes('inferred components') || 
-                                    billingValidation.message.includes('unconfirmed components') ||
-                                    billingValidation.message.includes('replaced components')) {
-                                    billingErrorMessage = billingValidation.message;
-                                } else {
-                                    billingErrorMessage = 'Address validation found issues: ' + billingValidation.message;
-                                }
-                            } else {
-                                billingErrorMessage = 'Address validation found issues. Please re-check your Billing address.';
+                                // Use the validation message if it's not about ZIP code
+                                billingErrorMessage = billingValidation.message;
                             }
                             
-                            // CRITICAL: Show error message below the correct field IN THE BILLING SECTION
-                            // Ensure we're working within the billing address section
-                            const billingSection = document.getElementById('billing-address-section');
-                            if (!billingSection || !billingSection.contains(fieldElement)) {
-                                console.error(`[Payment] CRITICAL: Field element is not in billing section! Finding correct field...`);
-                                // Try to find the field within billing section
-                                const correctField = billingSection.querySelector(`#${fieldId}`);
-                                if (correctField) {
-                                    fieldElement = correctField;
-                                } else {
-                                    console.error(`[Payment] Could not find field ${fieldId} in billing section`);
-                                    submitButton.disabled = false;
-                                    submitButton.textContent = 'Pay Now';
-                                    return;
-                                }
-                            }
-                            
-                            // Remove any existing error messages from Final shipping section that might be billing-related
-                            document.querySelectorAll('#payment-form .field-error').forEach(el => {
-                                // If error is NOT in billing section but mentions billing, remove it
-                                if (!el.closest('#billing-address-section')) {
-                                    const errorText = el.textContent || '';
-                                    if (errorText.includes('billing') || errorText.includes('Billing') || 
-                                        errorText.includes('ZIP code should match') || errorText.includes('Card Details')) {
-                                        console.log(`[Payment] Removing billing error from Final shipping section:`, errorText);
-                                        el.remove();
-                                    }
-                                }
-                            });
-                            
-                            // Show error message below the correct field IN BILLING SECTION
+                            // Show error message below the correct field
                             let errorDiv = fieldElement.parentElement.querySelector('.field-error');
                             if (!errorDiv) {
                                 errorDiv = document.createElement('div');
@@ -1644,10 +1924,10 @@
                             }
                             errorDiv.textContent = billingErrorMessage;
                             
-                            console.log(`[Payment] Displaying billing address error on field: ${fieldId}, element:`, fieldElement, 'in billing section:', billingSection.contains(fieldElement));
+                            console.log(`[Payment] Displaying billing address error on field: ${fieldId}, element:`, fieldElement);
                             fieldElement.focus();
-                            submitButton.disabled = false;
                             submitButton.textContent = 'Pay Now';
+                            updatePayButtonState();
                             return; // Require user to click 'Pay Now' again with corrected address
                         }
                         
@@ -1660,42 +1940,23 @@
                         });
                     }
 
-                    // All validations passed - proceed with payment
-                    submitButton.textContent = 'Processing payment...';
-                    
-                    // Build billing details - ensure billingAddress is not null when useDefaultBilling is false
+                    // All validations passed — confirm card payment with Stripe.js (Card Element on this page)
                     if (!useDefaultBilling && !billingAddress) {
                         alert('Billing address is required. Please fill in all billing address fields.');
-                        submitButton.disabled = false;
                         submitButton.textContent = 'Pay Now';
+                        updatePayButtonState();
                         return;
                     }
-                    
-                    // Get zip code from card section zip field (source of truth)
-                    const cardZipField = document.getElementById('card-zip-code');
+
+                    submitButton.textContent = 'Processing payment...';
+
                     let cardZipCode = '';
-                    
-                    // Get value from card zip field (source of truth)
-                    if (cardZipField) {
-                        cardZipCode = cardZipField.value.trim() || '';
+                    if (useDefaultBilling) {
+                        cardZipCode = (document.getElementById('postal_code').value || '').replace(/[^0-9]/g, '').substring(0, 5);
+                    } else {
+                        cardZipCode = (document.getElementById('billing-postal_code').value || '').replace(/[^0-9]/g, '').substring(0, 5);
                     }
-                    
-                    // Ensure billing zip is synced
-                    const billingZipField = document.getElementById('billing-postal_code');
-                    if (billingZipField && cardZipCode) {
-                        billingZipField.value = cardZipCode;
-                    }
-                    
-                    // Fallback to billing field if card zip is empty
-                    if (!cardZipCode && billingZipField) {
-                        cardZipCode = billingZipField.value || '';
-                    }
-                    
-                    // Final fallback to other sources
-                    if (!cardZipCode) {
-                        cardZipCode = useDefaultBilling ? finalShippingAddress.postal_code : (billingAddress ? billingAddress.postal_code : '');
-                    }
-                    
+
                     const billingDetails = {
                         name: useDefaultBilling ? finalShippingAddress.name : (billingAddress ? billingAddress.name : ''),
                         email: email,
@@ -1708,39 +1969,8 @@
                             postal_code: cardZipCode,
                             country: useDefaultBilling ? finalShippingAddress.country : (billingAddress ? billingAddress.country : 'US')
                         }
-                };
+                    };
 
-                // Verify cardElement and clientSecret are available
-                if (!cardElement) {
-                    alert('Payment form not fully loaded. Please wait a moment and try again.');
-                    submitButton.disabled = false;
-                    submitButton.textContent = 'Pay Now';
-                    return;
-                }
-                
-                if (!clientSecret) {
-                    alert('Payment session expired. Please refresh the page.');
-                    submitButton.disabled = false;
-                    submitButton.textContent = 'Pay Now';
-                    return;
-                }
-
-                const { paymentIntent, error } = await stripe.confirmCardPayment(clientSecret, {
-                    payment_method: {
-                        card: cardElement,
-                        billing_details: billingDetails,
-                    }
-                });
-
-                if (error) {
-                    alert(`Payment failed: ${error.message}`);
-                        submitButton.disabled = false;
-                        submitButton.textContent = 'Pay Now';
-                        return;
-                    }
-                    
-                    // Payment successful - send Final shipping address to server
-                    // Send Final shipping address directly to server (bypassing content.js)
                     const finalShippingAddressForServer = {
                         name: finalShippingAddress.name,
                         street: finalShippingAddress.line1 + (finalShippingAddress.line2 ? ' ' + finalShippingAddress.line2 : ''),
@@ -1749,8 +1979,7 @@
                         postalCode: finalShippingAddress.postal_code,
                         country: finalShippingAddress.country
                     };
-                    
-                    // Store Final shipping address on server associated with orderNumber
+
                     try {
                         await fetch('https://api.wrrapd.com/api/store-final-shipping-address', {
                             method: 'POST',
@@ -1760,58 +1989,55 @@
                                 finalShippingAddress: finalShippingAddressForServer
                             })
                         });
-                        console.log('[Checkout] Final shipping address sent directly to server');
+                        console.log('[Checkout] Final shipping address stored before payment confirmation');
                     } catch (error) {
                         console.error('[Checkout] Error sending Final shipping address to server:', error);
-                        // Continue anyway - content.js can still send it
-                    }
-                    
-                    // Update the postMessage to include contact info (Final shipping address sent directly to server)
-                    if (window.opener) {
-                        window.opener.postMessage(
-                            { 
-                                status: 'success', 
-                                paymentIntentId: paymentIntent.id,
-                                customerEmail: email,
-                                customerPhone: phone
-                            }, 
-                            '*'
-                        );
                     }
 
+                    const { paymentIntent, error: stripeError } = await stripe.confirmCardPayment(clientSecret, {
+                        payment_method: {
+                            card: cardElement,
+                            billing_details: billingDetails,
+                        }
+                    });
+
+                    if (stripeError) {
+                        alert(`Payment failed: ${stripeError.message}`);
+                        submitButton.textContent = 'Pay Now';
+                        updatePayButtonState();
+                        return;
+                    }
+
+                    if (window.opener) {
+                        window.opener.postMessage({
+                            status: 'success',
+                            paymentIntentId: paymentIntent.id,
+                            customerEmail: email,
+                            customerPhone: phone
+                        }, '*');
+                    }
                     window.location.href = '/success';
                 } catch (error) {
                     console.error('[Payment] Error during payment process:', error);
-                    alert('An error occurred during payment. Please try again.');
-                    submitButton.disabled = false;
+                    alert(`Payment could not complete: ${error.message || error}. If this persists, check the browser console and your network connection.`);
                     submitButton.textContent = 'Pay Now';
+                    updatePayButtonState();
                 }
             });
         }
 
-        // Wait for Stripe library to load before initializing
         function waitForStripeAndInitialize() {
-            if (typeof Stripe !== 'undefined' && document.readyState === 'complete') {
-        initializeStripeElements();
-            } else if (typeof Stripe !== 'undefined') {
-                // Stripe loaded but DOM might not be ready
+            if (typeof Stripe !== 'undefined') {
                 if (document.readyState === 'loading') {
-                    document.addEventListener('DOMContentLoaded', initializeStripeElements);
+                    document.addEventListener('DOMContentLoaded', initializeCheckoutPage);
                 } else {
-                    initializeStripeElements();
+                    initializeCheckoutPage();
                 }
             } else {
-                // Stripe not loaded yet, wait a bit and retry
                 setTimeout(waitForStripeAndInitialize, 100);
             }
         }
-
-        // Start initialization when DOM is ready
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', waitForStripeAndInitialize);
-        } else {
-            waitForStripeAndInitialize();
-        }
+        waitForStripeAndInitialize();
     </script>
 </body>
 </html>

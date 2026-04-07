@@ -3275,6 +3275,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                 console.log(`[scrapeShippingAddressOnSingle] Country: ${country}`);
     
                 const addressObject = { name, street, city, state, postalCode, country };
+                snapshotGifteeIntendedAddressIfApplicable(addressObject);
     
                 // Store this address inside each sub-item's "options"
                 Object.keys(allItems).forEach(titleKey => {
@@ -3300,6 +3301,35 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
             }
         } else {
             console.error("[scrapeShippingAddressOnSingle] No address found on the page.");
+        }
+    }
+
+    /**
+     * True when the scraped Amazon address is the Wrrapd warehouse (not the giftee's intended address).
+     */
+    function isLikelyWrrapdWarehouseAddress(addr) {
+        if (!addr) return false;
+        const blob = `${addr.name || ''} ${addr.street || ''}`.toLowerCase();
+        return blob.includes('wrrapd');
+    }
+
+    /**
+     * Persist the recipient's intended address before it may be replaced by the Wrrapd delivery address on Amazon.
+     */
+    function snapshotGifteeIntendedAddressIfApplicable(addressObject) {
+        if (!addressObject || isLikelyWrrapdWarehouseAddress(addressObject)) return;
+        try {
+            localStorage.setItem('wrrapd-giftee-intended-address', JSON.stringify({
+                name: addressObject.name,
+                street: addressObject.street,
+                city: addressObject.city,
+                state: addressObject.state,
+                postalCode: addressObject.postalCode,
+                country: addressObject.country
+            }));
+            console.log('[snapshotGifteeIntendedAddressIfApplicable] Saved wrrapd-giftee-intended-address');
+        } catch (e) {
+            console.warn('[snapshotGifteeIntendedAddressIfApplicable]', e);
         }
     }
 
@@ -3331,6 +3361,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
     
                 // Guardar en localStorage
                 localStorage.setItem('wrrapd-default-address', JSON.stringify(addressObject));
+                snapshotGifteeIntendedAddressIfApplicable(addressObject);
                 console.log("[extractDefaultAddress] Address saved to localStorage:", addressObject);
     
                 return addressObject;
@@ -7887,21 +7918,26 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
         
         // Terms & Conditions content
         scrollableContent.innerHTML = `
-            <h1 style="margin-top: 0; margin-bottom: 30px; color: #2c3e50; font-size: 28px; text-align: center; font-weight: 600; letter-spacing: 0.5px;">Wrrapd Terms & Conditions</h1>
+                        <h1 style="margin-top: 0; margin-bottom: 8px; color: #2c3e50; font-size: 28px; text-align: center; font-weight: 600; letter-spacing: 0.5px;">Wrrapd Inc. Terms & Conditions</h1>
+            <p style="margin-top: 0; margin-bottom: 22px; text-align: center;"><em>Last Updated: April 6, 2026</em></p>
             <div style="font-size: 15px; line-height: 1.9;">
-                <p style="margin-bottom: 16px;"><strong>1.</strong> These Terms & Conditions apply only to the gift-wrapping and related fulfillment services provided by Wrrapd Inc. ("Wrrapd," "we," "us," or "our"). Your purchase of the underlying items is governed solely by Amazon's Terms & Conditions.</p>
-                <p style="margin-bottom: 16px;"><strong>2.</strong> You must be at least 18 years old or the age of majority in your jurisdiction to use the gift-wrapping service.</p>
-                <p style="margin-bottom: 16px;"><strong>3.</strong> Your use of the service is subject to Wrrapd's Privacy Policy at <a href="https://www.wrrapd.com/privacy" target="_blank" style="color: #0066c0; text-decoration: none;">https://www.wrrapd.com/privacy</a>.</p>
-                <p style="margin-bottom: 16px;"><strong>4.</strong> You acknowledge that Wrrapd's gift-wrapping services provide professional exterior gift-wrapping only and may include personalized options (e.g., messages, custom or AI-generated designs, gift tags, or cards).</p>
-                <p style="margin-bottom: 16px;"><strong>5.</strong> You acknowledge that the Wrrapd service fee and any applicable taxes are clearly displayed at the time of selection, and by completing the order you accept and agree to pay these amounts.</p>
-                <p style="margin-bottom: 16px;"><strong>6.</strong> You acknowledge and agree that selecting the Wrrapd gift-wrapping option may add one extra day to Amazon's estimated or promised delivery date. While Wrrapd will make reasonable efforts to meet Amazon's delivery timeline, an additional day is often required due to the wrapping process—particularly if the item is received by Wrrapd's facilities after 2:00 p.m. local time or due to other operational factors.</p>
-                <p style="margin-bottom: 16px;"><strong>7.</strong> You agree to not hold Wrrapd responsible for any delays resulting from late delivery of items from Amazon or its sellers to Wrrapd's facilities.</p>
-                <p style="margin-bottom: 16px;"><strong>8.</strong> Wrrapd does not inspect, open, or handle the contents of Amazon-purchased items prior to wrapping. Wrrapd is not responsible for any damage to the underlying product, defects, missing parts, incorrect items, or any other issues with the product itself, regardless of when such issues occur. You agree to indemnify, defend, and hold harmless Wrrapd Inc., its affiliates, officers, directors, employees, and agents from any claims, liabilities, damages, losses, costs, or expenses (including reasonable attorneys' fees) arising from or related to the condition, quality, or contents of the underlying product, your use of the service, your violation of these Terms & Conditions, or your orders on Amazon.</p>
-                <p style="margin-bottom: 16px;"><strong>9.</strong> All issues relating to the condition, quality, or contents of the product must be addressed directly with Amazon or the seller according to Amazon's policies.</p>
-                <p style="margin-bottom: 16px;"><strong>10.</strong> Gift-wrapping fees are non-refundable except in these limited cases: (a) damage to the gift-wrapping itself (not the underlying product) during transit; or (b) failure to deliver the wrapped item within the estimated delivery window (excluding delays caused by Amazon, carriers, or events beyond our control). In these cases, Wrrapd may, at its sole discretion, refund the gift-wrapping fee or provide a replacement service. Contact info@wrrapd.com within 14 days of delivery with evidence (e.g., photos).</p>
-                <p style="margin-bottom: 16px;"><strong>11.</strong> You agree not to provide false or misleading order information or use the service for fraudulent or illegal purposes.</p>
-                <p style="margin-bottom: 16px;"><strong>12.</strong> The service is provided "AS IS" without warranties of any kind. Wrrapd is not liable for indirect, incidental, consequential, or punitive damages.</p>
-                <p style="margin-bottom: 16px;"><strong>13.</strong> Any disputes arising from these Terms & Conditions or the service will be resolved through binding individual arbitration administered by the American Arbitration Association. You waive the right to a jury trial or to participate in class actions, to the fullest extent permitted by law. These Terms & Conditions are governed by the laws of the State of Florida, USA.</p>
+                <p style="margin-bottom: 16px;"><strong>1.</strong> Scope of Service: These Terms & Conditions ("Terms") apply solely to the gift-wrapping and related fulfillment services provided by Wrrapd Inc. ("Wrrapd"). Your purchase of any underlying items is governed solely by Amazon's Terms & Conditions.</p>
+                <p style="margin-bottom: 16px;"><strong>2.</strong> Eligibility: You must be at least 18 years old or the age of majority in your jurisdiction to utilize the Wrrapd gift-wrapping service.</p>
+                <p style="margin-bottom: 16px;"><strong>3.</strong> Privacy Policy: Your use of the service is subject to Wrrapd's Privacy Policy, found at <a href="https://www.wrrapd.com/privacy" target="_blank" style="color: #0066c0; text-decoration: none;">https://www.wrrapd.com/privacy</a>.</p>
+                <p style="margin-bottom: 16px;"><strong>4.</strong> Limited Agency Appointment: By using the Wrrapd browser extension and clicking the agreement button, you explicitly appoint Wrrapd Inc. as your Limited Agent and Attorney-in-Fact for the sole purpose of navigating the Amazon interface and entering delivery information on your behalf. Wrrapd acts only at your specific direction and under your direct supervision.</p>
+                <p style="margin-bottom: 16px;"><strong>5.</strong> Platform Risk & Account Health: You acknowledge that Amazon's March 4, 2026 Agent Policy is an evolving platform rule. You agree to assume all risks regarding your Amazon account status, including potential flags or the voiding of Amazon-specific guarantees once an item is delivered to our hub.</p>
+                <p style="margin-bottom: 16px;"><strong>6.</strong> Description of Service: You acknowledge that Wrrapd provides professional exterior gift-wrapping and may include personalized options (e.g., messages, custom/AI designs, or tags).</p>
+                <p style="margin-bottom: 16px;"><strong>7.</strong> Fees and Taxes: You acknowledge that the Wrrapd service fee and any applicable taxes are clearly displayed at the time of selection, and by completing the order, you accept and agree to pay these amounts.</p>
+                <p style="margin-bottom: 16px;"><strong>8.</strong> Delivery Timelines: Selecting Wrrapd may add at least one business day to Amazon's estimated delivery date. An additional day is often required for the wrapping process, particularly for items received after 2:00 p.m. local time.</p>
+                <p style="margin-bottom: 16px;"><strong>9.</strong> Third-Party Delays: You agree not to hold Wrrapd responsible for any delays resulting from the late delivery of items from Amazon or its third-party sellers to Wrrapd's facilities.</p>
+                <p style="margin-bottom: 16px;"><strong>10.</strong> Video Audit Trail: Wrrapd provides high-fidelity Video Proof for every order, including (a) receipt of the Amazon package, (b) the unpackaging process, (c) the gift-wrapping process, and (d) final delivery to the outbound carrier. This record serves as definitive evidence of our service fulfillment.</p>
+                <p style="margin-bottom: 16px;"><strong>11.</strong> No Product Inspection: Wrrapd does not inspect, open, or handle the contents of Amazon-purchased items prior to the wrapping stage. Wrrapd is not responsible for any damage to the underlying product, defects, missing parts, or incorrect items sent by Amazon.</p>
+                <p style="margin-bottom: 16px;"><strong>12.</strong> Indemnification: You agree to indemnify and hold harmless Wrrapd Inc. from any claims or losses arising from the condition or quality of the underlying product, your use of the service, or your violation of these Terms.</p>
+                <p style="margin-bottom: 16px;"><strong>13.</strong> Product Issues & Returns: All issues relating to the product itself must be addressed directly with Amazon or the seller. Since you remain the owner of the product, you are responsible for initiating any returns through Amazon's standard channels using our provided video evidence if necessary.</p>
+                <p style="margin-bottom: 16px;"><strong>14.</strong> Refund Policy: Gift-wrapping fees are non-refundable except in limited cases: (a) damage to the gift-wrap itself during transit; or (b) failure to ship the wrapped item within our promised window. Service fees are not refundable once the wrapping process has been documented.</p>
+                <p style="margin-bottom: 16px;"><strong>15.</strong> Prohibited Conduct: You agree not to provide false or misleading information or use the service for any fraudulent or illegal purposes.</p>
+                <p style="margin-bottom: 16px;"><strong>16.</strong> Warranties and Liability: The service is provided "AS IS." Wrrapd's total liability is limited to the service fee paid. We are not liable for indirect, incidental, or consequential damages.</p>
+                <p style="margin-bottom: 16px;"><strong>17.</strong> Dispute Resolution & Governing Law: Any disputes will be resolved through binding individual arbitration in Jacksonville, Florida. You waive the right to a jury trial or class action. These Terms are governed by the laws of the State of Florida, USA.</p>
             </div>
         `;
         
@@ -7919,7 +7955,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
         
         // Create the agreement text with clickable link
         const agreementText = document.createElement('div');
-        agreementText.innerHTML = 'By clicking <span id="wrrapd-agree-link" style="color: #999; cursor: not-allowed; text-decoration: underline;">here</span>, I agree with Wrrapd\'s Terms & Conditions provided above.';
+        agreementText.innerHTML = 'By clicking <span id="wrrapd-agree-link" style="color: #999; cursor: not-allowed; text-decoration: underline;">here</span>, I appoint Wrrapd as my Limited Agent for this transaction and agree to the Wrrapd Terms & Conditions provided above.';
         
         const agreeLink = agreementText.querySelector('#wrrapd-agree-link');
         
@@ -8874,6 +8910,61 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                     }
 
                     const addressObject = JSON.parse(addressData);
+
+                    function getGifteeIntendedFromLocalStorage() {
+                        try {
+                            const raw = localStorage.getItem('wrrapd-giftee-intended-address');
+                            if (raw) return JSON.parse(raw);
+                        } catch (e) {}
+                        return null;
+                    }
+
+                    function getGifteeFromItemsFallback() {
+                        try {
+                            const allItems = JSON.parse(localStorage.getItem('wrrapd-items') || '{}');
+                            for (const productKey of Object.keys(allItems)) {
+                                const productObj = allItems[productKey];
+                                if (!productObj || !productObj.options) continue;
+                                for (const subItem of productObj.options) {
+                                    const sa = subItem.shippingAddress;
+                                    if (sa && !isLikelyWrrapdWarehouseAddress(sa)) {
+                                        return {
+                                            name: sa.name,
+                                            street: sa.street,
+                                            city: sa.city,
+                                            state: sa.state,
+                                            postalCode: sa.postalCode,
+                                            country: sa.country
+                                        };
+                                    }
+                                }
+                            }
+                        } catch (e) {}
+                        return null;
+                    }
+
+                    let gifteeOriginalAddress =
+                        getGifteeIntendedFromLocalStorage() || getGifteeFromItemsFallback();
+                    if (!gifteeOriginalAddress && !isLikelyWrrapdWarehouseAddress(addressObject)) {
+                        gifteeOriginalAddress = {
+                            name: addressObject.name,
+                            street: addressObject.street,
+                            city: addressObject.city,
+                            state: addressObject.state,
+                            postalCode: addressObject.postalCode,
+                            country: addressObject.country
+                        };
+                    }
+                    if (!gifteeOriginalAddress) {
+                        gifteeOriginalAddress = {
+                            name: addressObject.name || '',
+                            street: addressObject.street || '',
+                            city: addressObject.city || '',
+                            state: addressObject.state || '',
+                            postalCode: addressObject.postalCode || '',
+                            country: addressObject.country || 'United States'
+                        };
+                    }
                     
                     // Get ZIP code for the order number
                     let zipCode = "00000";
@@ -8902,18 +8993,20 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                     //
                     // The payload.address contains the default Amazon address object with:
                     // { name, street, city, state, postalCode, country, phone }
+                    // payload.gifteeOriginalAddress: intended recipient (before Wrrapd warehouse) for checkout UI.
                     // ====================================================================================
                     const payload = {
                         total: Math.round((total * 100).toFixed(2)),
-                        address: addressObject, // This is the default Amazon address (Final shipping address)
+                        address: addressObject, // Current/default Amazon address (often Wrrapd warehouse when selected)
+                        gifteeOriginalAddress: gifteeOriginalAddress,
                         orderNumber: orderNumber // Add order number to payload
                     };
 
                     const encodedPayload = btoa(JSON.stringify(payload));
                     const paymentUrl = `https://pay.wrrapd.com/checkout?data=${encodedPayload}`;
 
-                    const popupWidth = 400;
-                    const popupHeight = 680;
+                    const popupWidth = 480;
+                    const popupHeight = 820;
                     const screenX = window.screenX !== undefined ? window.screenX : window.screenLeft;
                     const screenY = window.screenY !== undefined ? window.screenY : window.screenTop;
                     const windowWidth = window.innerWidth;
