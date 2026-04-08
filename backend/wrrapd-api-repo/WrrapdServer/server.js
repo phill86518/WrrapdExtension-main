@@ -29,6 +29,7 @@ if (process.env.GOOGLE_APPLICATION_CREDENTIALS &&
 const storage = new Storage(storageOptions);
 
 const app = express();
+app.set('trust proxy', 1);
 
 // Configure CORS to allow requests from Amazon domains
 const corsOptions = {
@@ -67,34 +68,7 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-// Increase body size limit to handle large base64 images (50MB)
-app.use(bodyParser.json({ limit: '50mb' }));
-app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
-app.use(express.static(path.join(__dirname, 'public')));
-
-// Handle ALL OPTIONS requests FIRST (before any other middleware that might block them)
-app.options('*', (req, res) => {
-    console.log('[CORS] OPTIONS preflight request:', req.method, req.path, 'Origin:', req.headers.origin);
-    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
-    res.header('Access-Control-Allow-Credentials', 'true');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Origin, X-Requested-With');
-    res.header('Access-Control-Max-Age', '86400'); // Cache preflight for 24 hours
-    res.status(204).send();
-});
-
-const mailgun = new Mailgun(FormData);
-const mg = mailgun.client({
-    username: 'api',
-    key: process.env.MAILGUN_API_KEY
-});
-
-// Initialize OpenAI client
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY
-});
-
-// Middleware to verify the domain
+// Pay pages: register before body parsers and static (CORS already handles OPTIONS preflight).
 app.use((req, res, next) => {
     if (req.hostname === 'pay.wrrapd.com') {
         req.isPayDomain = true;
@@ -104,7 +78,6 @@ app.use((req, res, next) => {
     next();
 });
 
-// Endpoints specific to pay.wrrapd.com
 app.get('/success', (req, res) => {
     if (!req.isPayDomain) {
         return res.status(403).send('Access forbidden.');
@@ -126,6 +99,23 @@ app.get('/checkout', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'checkout.html'));
 });
 
+// Increase body size limit to handle large base64 images (50MB)
+app.use(bodyParser.json({ limit: '50mb' }));
+app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
+
+const mailgun = new Mailgun(FormData);
+const mg = mailgun.client({
+    username: 'api',
+    key: process.env.MAILGUN_API_KEY
+});
+
+// Initialize OpenAI client
+const openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY
+});
+
+app.use(express.static(path.join(__dirname, 'public')));
+
 // Endpoint specific to api.wrrapd.com
 app.post('/create-payment-intent', async (req, res) => {
     if (!req.isApiDomain) {
@@ -143,7 +133,6 @@ app.post('/create-payment-intent', async (req, res) => {
             amount: total, // Total in cents
             currency: 'usd',
             payment_method_types: ['card'],
-            // billing_address_collection: 'required',
             metadata: {
                 orderNumber: orderNumber || 'N/A'
             }
@@ -153,6 +142,91 @@ app.post('/create-payment-intent', async (req, res) => {
     } catch (error) {
         console.error('Error creating PaymentIntent:', error);
         res.status(500).json({ error: 'Failed to create PaymentIntent' });
+    }
+});
+
+// Stripe-hosted Checkout — no Stripe.js / Elements on our page (avoids iframe/popup issues)
+app.post('/create-checkout-session', async (req, res) => {
+    if (!req.isApiDomain) {
+        return res.status(403).send('Access forbidden.');
+    }
+
+    const { total, orderNumber, customerEmail } = req.body;
+
+    try {
+        if (!total || total <= 0) {
+            return res.status(400).json({ error: 'Invalid total amount' });
+        }
+
+        const session = await stripe.checkout.sessions.create({
+            mode: 'payment',
+            line_items: [
+                {
+                    price_data: {
+                        currency: 'usd',
+                        unit_amount: total,
+                        product_data: {
+                            name: `Wrrapd Gift Wrap — Order ${orderNumber || 'N/A'}`,
+                        },
+                    },
+                    quantity: 1,
+                },
+            ],
+            success_url: 'https://pay.wrrapd.com/success?session_id={CHECKOUT_SESSION_ID}',
+            cancel_url: 'https://pay.wrrapd.com/cancel',
+            customer_email:
+                typeof customerEmail === 'string' && customerEmail.includes('@') ? customerEmail.trim() : undefined,
+            phone_number_collection: { enabled: true },
+            metadata: {
+                orderNumber: orderNumber || 'N/A',
+            },
+            payment_intent_data: {
+                metadata: {
+                    orderNumber: orderNumber || 'N/A',
+                },
+            },
+        });
+
+        res.status(200).json({ url: session.url });
+    } catch (error) {
+        console.error('Error creating Checkout Session:', error);
+        res.status(500).json({ error: error.message || 'Failed to create Checkout Session' });
+    }
+});
+
+app.get('/api/checkout-session-complete', async (req, res) => {
+    if (!req.isApiDomain) {
+        return res.status(403).send('Access forbidden.');
+    }
+
+    const sessionId = req.query.session_id;
+    if (!sessionId || typeof sessionId !== 'string') {
+        return res.status(400).json({ error: 'Missing session_id' });
+    }
+
+    try {
+        const session = await stripe.checkout.sessions.retrieve(sessionId, {
+            expand: ['payment_intent'],
+        });
+
+        const pi = session.payment_intent;
+        const paymentIntentId = typeof pi === 'string' ? pi : pi && pi.id;
+
+        if (!paymentIntentId) {
+            return res.status(400).json({ error: 'No payment intent on session' });
+        }
+
+        const cd = session.customer_details || {};
+
+        res.status(200).json({
+            paymentIntentId,
+            paymentStatus: session.payment_status,
+            customerEmail: cd.email || '',
+            customerPhone: cd.phone || '',
+        });
+    } catch (error) {
+        console.error('checkout-session-complete error:', error);
+        res.status(500).json({ error: error.message || 'Failed to retrieve session' });
     }
 });
 

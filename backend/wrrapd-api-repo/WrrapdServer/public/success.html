@@ -83,19 +83,44 @@
     </div>
 
     <script>
-        // Countdown for automatic closing
-        const countdownElement = document.getElementById('countdown');
-        let countdown = 5;
+        (async function notifyOpenerThenCountdown() {
+            const params = new URLSearchParams(window.location.search);
+            const sessionId = params.get('session_id');
 
-        const interval = setInterval(() => {
-            countdown -= 1;
-            countdownElement.textContent = countdown;
-
-            if (countdown <= 0) {
-                clearInterval(interval);
-                window.close();
+            if (sessionId && window.opener) {
+                try {
+                    const r = await fetch(
+                        'https://api.wrrapd.com/api/checkout-session-complete?session_id=' +
+                            encodeURIComponent(sessionId)
+                    );
+                    const data = await r.json();
+                    if (data.paymentIntentId) {
+                        window.opener.postMessage(
+                            {
+                                status: 'success',
+                                paymentIntentId: data.paymentIntentId,
+                                customerEmail: data.customerEmail || '',
+                                customerPhone: data.customerPhone || '',
+                            },
+                            '*'
+                        );
+                    }
+                } catch (e) {
+                    console.error('[success] notify opener failed:', e);
+                }
             }
-        }, 1000);
+
+            const countdownElement = document.getElementById('countdown');
+            let countdown = 5;
+            const interval = setInterval(() => {
+                countdown -= 1;
+                countdownElement.textContent = countdown;
+                if (countdown <= 0) {
+                    clearInterval(interval);
+                    window.close();
+                }
+            }, 1000);
+        })();
     </script>
 </body>
 </html>

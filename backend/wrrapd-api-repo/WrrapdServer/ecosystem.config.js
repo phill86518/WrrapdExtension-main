@@ -3,6 +3,7 @@ module.exports = {
     name: 'wrrapd-server',
     script: 'server.js',
     cwd: '/home/phill/wrrapd-GCP/backend/wrrapd-api-repo/WrrapdServer',
+    exec_mode: 'fork',
     instances: 1,
     autorestart: true,
     watch: false,
