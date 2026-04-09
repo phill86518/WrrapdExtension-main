@@ -1,0 +1,32 @@
+{
+  "name": "tracking-platform",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "dev:public": "next dev --hostname 0.0.0.0",
+    "build": "next build",
+    "start": "next start",
+    "start:public": "next start --hostname 0.0.0.0 -p 3000",
+    "lint": "eslint"
+  },
+  "dependencies": {
+    "date-fns": "^4.1.0",
+    "date-fns-tz": "^3.2.0",
+    "firebase-admin": "^13.7.0",
+    "jose": "^6.2.2",
+    "next": "16.2.2",
+    "react": "19.2.4",
+    "react-dom": "19.2.4"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.2",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}

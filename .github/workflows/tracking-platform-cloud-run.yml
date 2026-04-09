@@ -1,0 +1,67 @@
+name: tracking-platform-cloud-run
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Deployment environment"
+        required: true
+        default: "dev"
+        type: choice
+        options:
+          - dev
+          - prod
+  push:
+    branches: [main]
+    paths:
+      - "tracking-platform/**"
+      - ".github/workflows/tracking-platform-cloud-run.yml"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tracking-platform
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: tracking-platform/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+
+  deploy:
+    if: github.event_name == 'workflow_dispatch'
+    needs: validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      SERVICE_NAME: wrrapd-tracking
+      REGION: us-central1
+    steps:
+      - uses: actions/checkout@v4
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_DEPLOYER_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@v2
+      - name: Build and push image
+        run: |
+          IMAGE_URI="gcr.io/${{ secrets.GCP_PROJECT_ID }}/wrrapd-tracking:${{ github.sha }}"
+          gcloud builds submit tracking-platform --tag "$IMAGE_URI" --project "${{ secrets.GCP_PROJECT_ID }}"
+          echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_ENV
+      - name: Deploy Cloud Run
+        run: |
+          gcloud run deploy "$SERVICE_NAME" \
+            --image "$IMAGE_URI" \
+            --region "$REGION" \
+            --project "${{ secrets.GCP_PROJECT_ID }}" \
+            --allow-unauthenticated \
+            --set-env-vars APP_SESSION_SECRET=${{ secrets.APP_SESSION_SECRET }},APP_ADMIN_PASSWORD=${{ secrets.APP_ADMIN_PASSWORD }},APP_DRIVER_PASSWORD=${{ secrets.APP_DRIVER_PASSWORD }}

@@ -1,0 +1,18 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: wrrapd-tracking
+spec:
+  template:
+    spec:
+      containerConcurrency: 80
+      timeoutSeconds: 300
+      containers:
+        - image: gcr.io/PROJECT_ID/wrrapd-tracking
+          env:
+            - name: APP_SESSION_SECRET
+              value: change-me
+            - name: APP_ADMIN_PASSWORD
+              value: change-me
+            - name: APP_DRIVER_PASSWORD
+              value: change-me

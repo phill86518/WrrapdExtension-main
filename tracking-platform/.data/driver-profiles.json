@@ -1,0 +1,13 @@
+{
+  "drv-1": {
+    "driverId": "drv-1",
+    "onboardingStatus": "approved",
+    "notes": "Founder — Roger",
+    "forcedAvailableDates": []
+  },
+  "drv-2": {
+    "driverId": "drv-2",
+    "onboardingStatus": "pending",
+    "notes": "Taylor — pending onboarding"
+  }
+}
