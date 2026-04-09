@@ -26,7 +26,14 @@ export function AdminCreateDeliveryForm({
       <input required name="city" placeholder="City" className="rounded border px-2 py-1" />
       <input required name="state" placeholder="State" className="rounded border px-2 py-1" />
       <input required name="postalCode" placeholder="ZIP" className="rounded border px-2 py-1" />
-      <input required type="datetime-local" name="scheduledFor" min={min} className="rounded border px-2 py-1 md:col-span-2" />
+      <input
+        required
+        type="datetime-local"
+        name="scheduledFor"
+        min={min}
+        suppressHydrationWarning
+        className="rounded border px-2 py-1 md:col-span-2"
+      />
       <p className="text-xs text-slate-600 md:col-span-4">
         Past dates are disabled. Production logic is Amazon date + 1 day. Auto-allocation minimizes driver usage and only spills to a second driver when a day exceeds 10 stops.
       </p>
