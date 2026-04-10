@@ -1003,26 +1003,37 @@
                                 };
                             }
                             
-                            // Check if address needs correction
+                            // If Google inferred/replaced components but street+ZIP are consistent,
+                            // accept and continue; only hard-block truly unconfirmed components.
                             if (verdict.hasUnconfirmedComponents || verdict.hasInferredComponents || verdict.hasReplacedComponents) {
-                                // Address has issues - return corrected components
                                 const issues = [];
                                 if (verdict.hasUnconfirmedComponents) issues.push('unconfirmed components');
                                 if (verdict.hasInferredComponents) issues.push('inferred components');
                                 if (verdict.hasReplacedComponents) issues.push('replaced components');
-                                
-                                return { 
-                                    valid: false, 
-                                    message: `Address validation found issues: ${issues.join(', ')}. The address has been corrected. Please review and click 'Pay now' again.`, 
-                                    field: 'line1',
-                                    correctedAddress: correctedAddress,
-                                    correctedComponents: {
-                                        postal_code: verifiedZip || zip,
-                                        city: verifiedCity || city,
-                                        state: verifiedState || state,
-                                        line1: verifiedLine1 || line1,
-                                        line2: verifiedLine2 || line2
-                                    }
+
+                                const correctedComponents = {
+                                    postal_code: verifiedZip || zip,
+                                    city: verifiedCity || city,
+                                    state: verifiedState || state,
+                                    line1: verifiedLine1 || line1,
+                                    line2: verifiedLine2 || line2,
+                                };
+
+                                if (verdict.hasUnconfirmedComponents) {
+                                    return {
+                                        valid: false,
+                                        message: `Address validation found issues: ${issues.join(', ')}. The address has been corrected. Please review and click 'Pay now' again.`,
+                                        field: 'line1',
+                                        correctedAddress: correctedAddress,
+                                        correctedComponents,
+                                    };
+                                }
+
+                                return {
+                                    valid: true,
+                                    verifiedAddress: correctedAddress,
+                                    warning: `Address validation inferred/replaced components: ${issues.join(', ')}.`,
+                                    correctedComponents,
                                 };
                             }
                             
