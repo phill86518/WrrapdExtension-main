@@ -9035,13 +9035,22 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
 
                     popup.focus();
 
-                    // Listen for messages from the popup
+                    // Listen for messages from the popup (guard against duplicate callbacks)
+                    let hasProcessedPaymentMessage = false;
                     window.addEventListener('message', async (event) => {
-                        if (event.data && event.data.status === 'success') {
-                            const paymentIntentId = event.data.paymentIntentId;
-                            const customerEmail = event.data.customerEmail;
-                            const customerPhone = event.data.customerPhone;
-                            const billingDetails = event.data.billingDetails || null;
+                        if (!event || event.source !== popup) return;
+                        if (event.origin !== 'https://pay.wrrapd.com') return;
+                        if (!event.data || event.data.status !== 'success') return;
+                        if (hasProcessedPaymentMessage) {
+                            console.log('[Payment] Duplicate success message ignored.');
+                            return;
+                        }
+                        hasProcessedPaymentMessage = true;
+
+                        const paymentIntentId = event.data.paymentIntentId;
+                        const customerEmail = event.data.customerEmail;
+                        const customerPhone = event.data.customerPhone;
+                        const billingDetails = event.data.billingDetails || null;
 
                             // Remove the overlay buttons
                             const overlayButtons = document.querySelectorAll('button[style*="z-index: 1000"]');
@@ -9132,10 +9141,20 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                                 const parsedItems = JSON.parse(rawItems);
                 
                                 if (parsedItems && typeof parsedItems === 'object') {
-                                    Object.values(parsedItems).forEach(item => {
-                                        if (item.options) {
+                                    const itemList = Array.isArray(parsedItems) ? parsedItems : Object.values(parsedItems);
+                                    itemList.forEach(item => {
+                                        if (item && item.options) {
                                             item.options.forEach(option => {
-                                                if (option.checkbox_wrrapd === true) {
+                                                const isWrrapdLike =
+                                                    option && (
+                                                        option.checkbox_wrrapd === true ||
+                                                        !!option.selected_wrapping_option ||
+                                                        !!option.selected_ai_design ||
+                                                        !!option.uploaded_design_path ||
+                                                        !!option.file_data_url ||
+                                                        option.checkbox_flowers === true
+                                                    );
+                                                if (isWrrapdLike) {
                                                     // Get the shipping address from the option
                                                     const shippingAddress = option.shippingAddress;
                                                     
@@ -9209,6 +9228,9 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                             }
 
                             console.log('Order Data:', orderData);
+                            if (!orderData.length) {
+                                console.warn('[Order Data] No items found from localStorage wrrapd-items; backend will apply normalization fallback if possible.');
+                            }
 
                             // Send paymentIntentId and orderData to backend
                             try {
@@ -9373,7 +9395,6 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                             } catch (error) {
                                 console.error('Error sending payment and order data to backend:', error);
                             }
-                        }
                     });
 
                 } catch (error) {

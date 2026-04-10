@@ -296,6 +296,132 @@ const saveOrderToJsonFile = (orderData, paymentData, customerData, orderNumber) 
     return filePath;
 };
 
+function normalizeOrderItems(orderData) {
+    if (Array.isArray(orderData)) return orderData;
+    if (!orderData || typeof orderData !== 'object') return [];
+
+    const out = [];
+    for (const item of Object.values(orderData)) {
+        if (!item || typeof item !== 'object') continue;
+        const options = Array.isArray(item.options) ? item.options : [];
+        for (const option of options) {
+            if (!option || typeof option !== 'object') continue;
+            const isWrrapdLike =
+                option.checkbox_wrrapd === true ||
+                !!option.selected_wrapping_option ||
+                !!option.selected_ai_design ||
+                !!option.uploaded_design_path ||
+                !!option.file_data_url ||
+                option.checkbox_flowers === true;
+            if (!isWrrapdLike) continue;
+            out.push({
+                asin: item.asin,
+                title: item.title,
+                imageUrl: item.imageUrl || null,
+                checkbox_flowers: option.checkbox_flowers,
+                selected_flower_design: option.selected_flower_design || null,
+                selected_wrapping_option: option.selected_wrapping_option,
+                selected_ai_design: option.selected_ai_design || null,
+                uploaded_design_path: option.uploaded_design_path || null,
+                occasion: option.occasion || null,
+                shippingAddress: option.shippingAddress,
+                finalShippingAddress: option.finalShippingAddress || null,
+                deliveryInstructions: option.deliveryInstructions || null,
+                giftMessage: option.giftMessage || null,
+                senderName: option.senderName || null,
+            });
+        }
+    }
+    return out;
+}
+
+function findExistingOrderByPaymentIntent(paymentIntentId) {
+    const ordersDir = path.join(__dirname, 'orders');
+    if (!fs.existsSync(ordersDir)) return null;
+    const files = fs.readdirSync(ordersDir).filter((f) => f.startsWith('order_') && f.endsWith('.json'));
+    for (const file of files) {
+        try {
+            const raw = fs.readFileSync(path.join(ordersDir, file), 'utf8');
+            const parsed = JSON.parse(raw);
+            if (parsed && parsed.payment && parsed.payment.id === paymentIntentId) {
+                return { file, data: parsed };
+            }
+        } catch (_) {
+            // ignore malformed historical files
+        }
+    }
+    return null;
+}
+
+function parseDateCandidate(raw) {
+    if (!raw || typeof raw !== 'string') return null;
+    const t = raw.trim();
+    if (!t) return null;
+    const d = new Date(t);
+    if (!Number.isNaN(d.getTime())) return d;
+    return null;
+}
+
+function computeScheduledForPlusOne(orderItem) {
+    const cands = [
+        orderItem && orderItem.amazonDeliveryDate,
+        orderItem && orderItem.deliveryDate,
+        orderItem && orderItem.estimatedDeliveryDate,
+        orderItem && orderItem.arrivalDate,
+        orderItem && orderItem.shippingDate,
+    ];
+    let base = null;
+    for (const c of cands) {
+        const d = parseDateCandidate(c);
+        if (d) {
+            base = d;
+            break;
+        }
+    }
+    if (!base) {
+        // Fallback when Amazon date wasn't captured in payload yet
+        base = new Date();
+    }
+    const plusOne = new Date(base.getTime());
+    plusOne.setDate(plusOne.getDate() + 1);
+    return plusOne.toISOString();
+}
+
+function splitStreet(rawStreet) {
+    if (!rawStreet || typeof rawStreet !== 'string') return { line1: '', line2: '' };
+    const parts = rawStreet.split(',').map((x) => x.trim()).filter(Boolean);
+    return {
+        line1: parts[0] || rawStreet.trim(),
+        line2: parts.slice(1).join(', '),
+    };
+}
+
+async function ingestOrderIntoTracking(orderPayload) {
+    const ingestKey = process.env.INGEST_API_KEY;
+    const ingestUrl = process.env.TRACKING_INGEST_URL || 'http://127.0.0.1:3000/api/orders/ingest';
+    if (!ingestKey) {
+        return { ok: false, skipped: true, reason: 'INGEST_API_KEY missing' };
+    }
+
+    try {
+        const resp = await fetch(ingestUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${ingestKey}`,
+            },
+            body: JSON.stringify(orderPayload),
+        });
+        const text = await resp.text();
+        if (!resp.ok) {
+            return { ok: false, skipped: false, reason: `ingest ${resp.status}: ${text.substring(0, 300)}` };
+        }
+        return { ok: true, skipped: false };
+    } catch (e) {
+        return { ok: false, skipped: false, reason: e && e.message ? e.message : String(e) };
+    }
+}
+
 app.post('/process-payment', async (req, res) => {
     if (!req.isApiDomain) {
         return res.status(403).send('Access forbidden.');
@@ -304,9 +430,11 @@ app.post('/process-payment', async (req, res) => {
     const { paymentIntentId, orderData, customerEmail, customerPhone, orderNumber, billingDetails } = req.body;
 
     // Validate that all parameters are present
-    if (!paymentIntentId || !orderData || !customerEmail || !customerPhone || !orderNumber) {
+    if (!paymentIntentId || !customerEmail || !customerPhone || !orderNumber) {
         return res.status(400).json({ error: 'Missing required parameters' });
     }
+
+    const normalizedOrderData = normalizeOrderItems(orderData);
     
     // Get Final shipping address from server storage (sent directly from checkout.html)
     let finalShippingAddressFromCheckout = null;
@@ -325,16 +453,27 @@ app.post('/process-payment', async (req, res) => {
             return res.status(400).json({ error: 'Payment not confirmed' });
         }
 
+        const existingOrder = findExistingOrderByPaymentIntent(paymentIntentId);
+        if (existingOrder) {
+            console.log(`[process-payment] Duplicate callback ignored for ${paymentIntentId}; already saved in ${existingOrder.file}`);
+            return res.status(200).json({
+                success: true,
+                message: 'Payment already processed',
+                orderNumber: existingOrder.data.orderNumber || orderNumber,
+                alreadyProcessed: true,
+            });
+        }
+
         // Process the order information
         const amount = (paymentIntent.amount / 100).toFixed(2);
 
-        console.log('Order Data:', orderData);
+        console.log('Order Data (normalized):', normalizedOrderData);
         console.log(`Using order number: ${orderNumber}`);
 
         // Save order data to a local JSON file
-        saveOrderToJsonFile(orderData, paymentIntent, { 
-            email: customerEmail, 
-            phone: customerPhone 
+        saveOrderToJsonFile(normalizedOrderData, paymentIntent, {
+            email: customerEmail,
+            phone: customerPhone
         }, orderNumber);
         
         // Generate QR code for the order
@@ -342,7 +481,7 @@ app.post('/process-payment', async (req, res) => {
             orderNumber,
             timestamp: new Date().toISOString(),
             amount,
-            items: orderData.length
+            items: normalizedOrderData.length
         };
         
         // Create a temporary file for the QR code
@@ -375,7 +514,7 @@ app.post('/process-payment', async (req, res) => {
         const customerAttachments = [];
         
         // Process order items to collect images and build custom design HTML
-        const processedItems = await Promise.all(orderData.map(async (item, index) => {
+        const processedItems = await Promise.all(normalizedOrderData.map(async (item, index) => {
             // Use Final shipping address from checkout.html if available, otherwise use the one from orderData
             if (finalShippingAddressFromCheckout && !item.finalShippingAddress) {
                 item.finalShippingAddress = finalShippingAddressFromCheckout;
@@ -637,6 +776,37 @@ app.post('/process-payment', async (req, res) => {
             };
         }));
 
+        const nonBlockingWarnings = [];
+
+        // Ingest into tracking platform (Admin/Driver/Customer) with scheduled = Amazon day + 1.
+        for (let i = 0; i < normalizedOrderData.length; i++) {
+            const item = normalizedOrderData[i] || {};
+            const finalAddr = finalShippingAddressFromCheckout || item.finalShippingAddress || item.shippingAddress || {};
+            const streetParts = splitStreet(finalAddr.street || '');
+            const customerName =
+                (billingDetails && billingDetails.name) ||
+                (customerEmail && customerEmail.split('@')[0]) ||
+                'Customer';
+            const recipientName = finalAddr.name || customerName;
+            const ingestPayload = {
+                customerName,
+                customerPhone,
+                recipientName,
+                addressLine1: streetParts.line1 || finalAddr.line1 || item.addressLine1 || 'N/A',
+                addressLine2: streetParts.line2 || finalAddr.line2 || item.addressLine2 || '',
+                city: finalAddr.city || item.city || 'N/A',
+                state: finalAddr.state || item.state || 'N/A',
+                postalCode: finalAddr.postalCode || finalAddr.postal_code || item.postalCode || '00000',
+                scheduledFor: computeScheduledForPlusOne(item),
+                externalOrderId: `${orderNumber}-${String(i + 1).padStart(2, '0')}`,
+                sourceNote: `Amazon order ${orderNumber} item ${i + 1}; auto scheduled (Amazon+1)`,
+            };
+            const ingestResult = await ingestOrderIntoTracking(ingestPayload);
+            if (!ingestResult.ok) {
+                nonBlockingWarnings.push(`tracking ingest item ${i + 1}: ${ingestResult.reason}`);
+            }
+        }
+
         // Admin email template
         const adminEmailBody = `
             <div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto;">
@@ -646,11 +816,11 @@ app.post('/process-payment', async (req, res) => {
                 
                 <div style="margin: 20px 0; padding: 15px; background-color: #f2f2f2; border-radius: 5px;">
                     <h2 style="margin-top: 0; color: #333;">Customer Information</h2>
-                    <p><strong>Name (Giftee):</strong> ${(finalShippingAddressFromCheckout ? finalShippingAddressFromCheckout.name : (orderData && orderData.length > 0 && orderData[0].finalShippingAddress ? orderData[0].finalShippingAddress.name : null)) || billingDetails?.name || 'N/A'}</p>
+                    <p><strong>Name (Giftee):</strong> ${(finalShippingAddressFromCheckout ? finalShippingAddressFromCheckout.name : (normalizedOrderData && normalizedOrderData.length > 0 && normalizedOrderData[0].finalShippingAddress ? normalizedOrderData[0].finalShippingAddress.name : null)) || billingDetails?.name || 'N/A'}</p>
                     <p><strong>Email (Gifter):</strong> ${customerEmail}</p>
                     <p><strong>Phone (Gifter):</strong> ${customerPhone}</p>
-                    ${(finalShippingAddressFromCheckout || (orderData && orderData.length > 0 && orderData[0].finalShippingAddress)) ? 
-                      `<p><strong>Final Shipping Address (Giftee):</strong> ${(finalShippingAddressFromCheckout || orderData[0].finalShippingAddress).name || 'N/A'}, ${(finalShippingAddressFromCheckout || orderData[0].finalShippingAddress).street || 'N/A'}, ${(finalShippingAddressFromCheckout || orderData[0].finalShippingAddress).city || 'N/A'}, ${(finalShippingAddressFromCheckout || orderData[0].finalShippingAddress).state || 'N/A'} ${(finalShippingAddressFromCheckout || orderData[0].finalShippingAddress).postalCode || 'N/A'}, ${(finalShippingAddressFromCheckout || orderData[0].finalShippingAddress).country || 'N/A'}</p>` : 
+                    ${(finalShippingAddressFromCheckout || (normalizedOrderData && normalizedOrderData.length > 0 && normalizedOrderData[0].finalShippingAddress)) ? 
+                      `<p><strong>Final Shipping Address (Giftee):</strong> ${(finalShippingAddressFromCheckout || normalizedOrderData[0].finalShippingAddress).name || 'N/A'}, ${(finalShippingAddressFromCheckout || normalizedOrderData[0].finalShippingAddress).street || 'N/A'}, ${(finalShippingAddressFromCheckout || normalizedOrderData[0].finalShippingAddress).city || 'N/A'}, ${(finalShippingAddressFromCheckout || normalizedOrderData[0].finalShippingAddress).state || 'N/A'} ${(finalShippingAddressFromCheckout || normalizedOrderData[0].finalShippingAddress).postalCode || 'N/A'}, ${(finalShippingAddressFromCheckout || normalizedOrderData[0].finalShippingAddress).country || 'N/A'}</p>` : 
                       ''}
                     ${billingDetails && billingDetails.address && (!finalShippingAddressFromCheckout || 
                       (billingDetails.address.line1 !== finalShippingAddressFromCheckout.street?.split(',')[0]?.trim())) ? 
@@ -681,33 +851,46 @@ app.post('/process-payment', async (req, res) => {
             </div>
         `;
 
-        // Send email to admin
-        await mg.messages.create(process.env.MAILGUN_DOMAIN, {
-            from: "Wrrapd <noreply@wrrapd.com>",
-            to: ["angel@wrrapd.com", "admin@wrrapd.com"],
-            subject: `New order #${orderNumber}`,
-            html: adminEmailBody,
-            ...(adminAttachments.length > 0 ? { inline: adminAttachments } : {})
+        // Send emails (non-blocking from order persistence perspective)
+        const emailResults = await Promise.allSettled([
+            mg.messages.create(process.env.MAILGUN_DOMAIN, {
+                from: "Wrrapd <noreply@wrrapd.com>",
+                to: ["angel@wrrapd.com", "admin@wrrapd.com"],
+                subject: `New order #${orderNumber}`,
+                html: adminEmailBody,
+                ...(adminAttachments.length > 0 ? { inline: adminAttachments } : {})
+            }),
+            mg.messages.create(process.env.MAILGUN_DOMAIN, {
+                from: "Wrrapd Orders <orders@wrrapd.com>",
+                to: customerEmail,
+                subject: `Your Wrrapd Order Confirmation #${orderNumber}`,
+                html: customerEmailBody,
+                'h:Reply-To': 'support@wrrapd.com',
+                'h:X-Mailgun-Attachments': 'inline',
+                'o:tag': 'order-confirmation',
+                'o:tracking': true,
+                ...(customerAttachments.length > 0 ? { inline: customerAttachments } : {})
+            }),
+        ]);
+
+        emailResults.forEach((r, idx) => {
+            if (r.status === 'rejected') {
+                const label = idx === 0 ? 'admin email' : 'customer email';
+                const msg = r.reason && r.reason.message ? r.reason.message : String(r.reason);
+                nonBlockingWarnings.push(`${label} failed: ${msg}`);
+            }
         });
 
-        // Send confirmation email to customer
-        await mg.messages.create(process.env.MAILGUN_DOMAIN, {
-            from: "Wrrapd Orders <orders@wrrapd.com>",
-            to: customerEmail,
-            subject: `Your Wrrapd Order Confirmation #${orderNumber}`,
-            html: customerEmailBody,
-            'h:Reply-To': 'support@wrrapd.com',
-            'h:X-Mailgun-Attachments': 'inline',
-            'o:tag': 'order-confirmation',
-            'o:tracking': true,
-            ...(customerAttachments.length > 0 ? { inline: customerAttachments } : {})
-        });
+        if (nonBlockingWarnings.length > 0) {
+            console.warn(`[process-payment] non-blocking warnings for ${orderNumber}:`, nonBlockingWarnings);
+        }
 
         // Respond to client
-        res.status(200).json({ 
-            success: true, 
+        res.status(200).json({
+            success: true,
             message: 'Payment and order processed successfully',
-            orderNumber: orderNumber
+            orderNumber: orderNumber,
+            warnings: nonBlockingWarnings,
         });
     } catch (error) {
         console.error('Error processing payment:', error);
