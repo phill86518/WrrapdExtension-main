@@ -2,22 +2,19 @@ import { randomUUID } from "crypto";
 import { existsSync } from "fs";
 import { mkdir, readFile, writeFile } from "fs/promises";
 import path from "path";
-import type { Order, DeliveryStatus, Driver, OrdersFilePayload } from "@/lib/types";
+import type { Order, DeliveryStatus, OrdersFilePayload } from "@/lib/types";
 import { getFirestoreDb } from "@/lib/firebase-admin";
 import { buildDemoSeedOrders } from "@/lib/demo-orders";
 import { computeAssignmentsForOrders } from "@/lib/allocation";
 import { parseScheduledForInput, validateScheduledInstant } from "@/lib/scheduling";
 import { getDriverProfile } from "@/lib/driver-profiles";
 import { assignStopSequences } from "@/lib/route-optimization";
+import { findDriverById, listRegisteredDrivers } from "@/lib/driver-registry";
+import { uploadProofDataUrl } from "@/lib/proof-storage";
 
 const nowIso = () => new Date().toISOString();
 
 const ORDERS_FILE_VERSION = 4;
-
-const drivers: Driver[] = [
-  { id: "drv-1", name: "Roger", allocationRank: 0 },
-  { id: "drv-2", name: "Taylor", allocationRank: 1 },
-];
 
 const db = getFirestoreDb();
 const ordersCollection = db?.collection("orders");
@@ -68,6 +65,7 @@ async function readFallbackOrders(): Promise<Order[]> {
 }
 
 export async function applyAutoAllocationToOrders(orders: Order[]): Promise<Order[]> {
+  const drivers = await listRegisteredDrivers();
   const map = await computeAssignmentsForOrders({ orders, drivers });
   const merged = orders.map((o) => {
     if (o.status === "delivered" || o.status === "cancelled" || o.status === "en_route") {
@@ -101,20 +99,67 @@ export async function runAutoAllocation(): Promise<void> {
   await writeFallbackPayload(next);
 }
 
-export async function listDrivers(): Promise<Driver[]> {
-  return drivers;
+export async function listDrivers() {
+  return listRegisteredDrivers();
 }
 
-export async function createOrder(input: {
+export async function unassignDeletedDriverOrders(driverId: string): Promise<void> {
+  if (ordersCollection) {
+    const snap = await ordersCollection.get();
+    const orders = snap.docs.map((d) => d.data() as Order);
+    const updated = orders.map((o) =>
+      o.driverId === driverId
+        ? {
+            ...o,
+            driverId: undefined,
+            driverName: undefined,
+            stopSequence: undefined,
+            status: o.status === "assigned" || o.status === "en_route" ? "scheduled" : o.status,
+            updatedAt: nowIso(),
+            updatedBy: "admin-driver-delete",
+          }
+        : o,
+    );
+    const allocated = await applyAutoAllocationToOrders(updated);
+    await Promise.all(allocated.map((o) => ordersCollection.doc(o.id).set(o)));
+    return;
+  }
+
+  const orders = await readFallbackOrders();
+  const updated = orders.map((o) =>
+    o.driverId === driverId
+      ? {
+          ...o,
+          driverId: undefined,
+          driverName: undefined,
+          stopSequence: undefined,
+          status: o.status === "assigned" || o.status === "en_route" ? "scheduled" : o.status,
+          updatedAt: nowIso(),
+          updatedBy: "admin-driver-delete",
+        }
+      : o,
+  );
+  const allocated = await applyAutoAllocationToOrders(updated);
+  await writeFallbackPayload(allocated);
+}
+
+export type CreateOrderInput = {
   customerName: string;
   customerPhone: string;
   recipientName: string;
   addressLine1: string;
+  addressLine2?: string;
   city: string;
   state: string;
   postalCode: string;
   scheduledFor: string;
-}): Promise<{ ok: true; order: Order } | { ok: false; error: string }> {
+  sourceNote?: string;
+  externalOrderId?: string;
+};
+
+export async function createOrder(
+  input: CreateOrderInput,
+): Promise<{ ok: true; order: Order } | { ok: false; error: string }> {
   const scheduledAt = parseScheduledForInput(input.scheduledFor);
   const check = validateScheduledInstant(scheduledAt);
   if (!check.ok) {
@@ -128,15 +173,19 @@ export async function createOrder(input: {
     status: "scheduled",
     createdAt: nowIso(),
     updatedAt: nowIso(),
-    sourceNote: "Test phase: manual / planner (production: Amazon delivery day + 1)",
+    sourceNote:
+      input.sourceNote ??
+      "Test phase: manual / planner (production: Amazon delivery day + 1)",
     customerName: input.customerName,
     customerPhone: input.customerPhone,
     recipientName: input.recipientName,
     addressLine1: input.addressLine1,
+    addressLine2: input.addressLine2,
     city: input.city,
     state: input.state,
     postalCode: input.postalCode,
     scheduledFor: scheduledIso,
+    externalOrderId: input.externalOrderId,
   };
   if (ordersCollection) {
     await ordersCollection.doc(order.id).set(order);
@@ -227,7 +276,7 @@ export async function updateOrderStatus(id: string, status: DeliveryStatus, upda
 
 export async function assignDriver(id: string, driverId: string, updatedBy: string) {
   const current = await getOrderById(id);
-  const driver = drivers.find((d) => d.id === driverId);
+  const driver = await findDriverById(driverId);
   if (!current || !driver) return null;
   const prof = await getDriverProfile(driverId);
   if (prof.onboardingStatus !== "approved") {
@@ -285,9 +334,14 @@ export async function updateDriverLocation(
 export async function saveProofPhoto(id: string, proofPhotoUrl: string, updatedBy: string) {
   const current = await getOrderById(id);
   if (!current) return null;
+  let storedUrl = proofPhotoUrl;
+  if (proofPhotoUrl.trim().startsWith("data:")) {
+    const uploaded = await uploadProofDataUrl(proofPhotoUrl, id);
+    if (uploaded) storedUrl = uploaded;
+  }
   const next: Order = {
     ...current,
-    proofPhotoUrl,
+    proofPhotoUrl: storedUrl,
     status: "delivered",
     updatedAt: nowIso(),
     updatedBy,

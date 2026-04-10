@@ -3068,6 +3068,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                                                     body: JSON.stringify({
                                                         imageBase64: selectedDesign.imageBase64,
                                                         designTitle: selectedDesign.title,
+                                                        designDescription: selectedDesign.description || '',
                                                         itemTitle: productObj.title,
                                                         orderNumber: orderNumber,
                                                         prompt: occasionInput.value || prompt,
@@ -3109,6 +3110,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                                                                     body: JSON.stringify({
                                                                         imageBase64: design.imageBase64,
                                                                         designTitle: design.title,
+                                                                        designDescription: design.description || '',
                                                                         itemTitle: productObj.title,
                                                                         prompt: occasionInput.value || prompt,
                                                                         folder: 'designs/unused-designs',

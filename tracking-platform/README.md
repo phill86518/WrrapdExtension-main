@@ -97,6 +97,19 @@ gcloud run deploy wrrapd-tracking \
   --set-env-vars APP_SESSION_SECRET=change-me,APP_ADMIN_PASSWORD=change-me,APP_DRIVER_PASSWORD=change-me
 ```
 
+## Order ingest (Chrome extension / checkout)
+
+`POST /api/orders/ingest` accepts JSON and creates the same `Order` records the admin UI uses (Admin / Driver / Customer apps stay in sync).
+
+- **Auth:** `Authorization: Bearer <INGEST_API_KEY>` or `X-Ingest-Key: <INGEST_API_KEY>`. If `INGEST_API_KEY` is unset, the route returns **503**.
+- **Required (after alias mapping):** `customerName`, `customerPhone`, `recipientName`, `addressLine1`, `city`, `state`, `postalCode`, `scheduledFor`.
+- **Aliases:** `zipCode` -> `postalCode`; `deliveryDate` -> `scheduledFor`; `orderNumber` -> `externalOrderId` (and default `sourceNote`); nested `shippingAddress` (`line1`, `line2`, `city`, `state`, `postalCode` / `zip`, `name`) and `buyer` (`name`, `phone`).
+- **400** responses include `missingFields`, `invalidFields`, and `fieldGuide` (lists fields we do **not** persist yet — e.g. ASIN, line items, AI design blobs).
+
+## Proof-of-delivery storage
+
+Driver proof upload still accepts multipart or JSON `dataUrl`. When Firebase/GCS is configured (`FIREBASE_STORAGE_BUCKET` or `GCS_BACKUP_BUCKET` plus service account envs), the server uploads the image and stores a **`firebasestorage.googleapis.com` URL** with a download token on the order; if upload fails, the previous behavior applies and the **data URL** is stored. `next.config.ts` allows that host for `next/image`.
+
 ## Data and Backups
 
 This MVP currently uses in-memory data for speed. To move to Firestore/Cloud Storage persistence:

@@ -11,6 +11,11 @@ export function formatDateKeyNy(iso: string | Date): string {
   return formatInTimeZone(d, NY, "yyyy-MM-dd");
 }
 
+export function hourNy(iso: string | Date): number {
+  const d = typeof iso === "string" ? new Date(iso) : iso;
+  return Number.parseInt(formatInTimeZone(d, NY, "H"), 10);
+}
+
 export function startOfCalendarDayNyMs(dateKey: string): number {
   const s = `${dateKey}T00:00:00`;
   return toDate(s, { timeZone: NY }).getTime();

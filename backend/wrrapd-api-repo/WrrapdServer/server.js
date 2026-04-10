@@ -1006,6 +1006,47 @@ app.post('/api/get-upload-url', async (req, res) => {
     }
 });
 
+/** Plain-text sidecar next to each pattern image (same basename, .txt). */
+function buildPatternDescriptionFileText({
+    designTitle,
+    designDescription,
+    itemTitle,
+    orderNumber,
+    asin,
+    index,
+    prompt,
+    shouldUpscale,
+    isSelectedForOrder,
+}) {
+    const idx =
+        index !== undefined && index !== null && index !== ''
+            ? String(index)
+            : 'N/A';
+    return [
+        designDescription ? String(designDescription).trim() : '(no description)',
+        '',
+        '---',
+        `designTitle: ${designTitle}`,
+        `itemTitle: ${itemTitle || 'N/A'}`,
+        `orderNumber: ${orderNumber || 'N/A'}`,
+        `asin: ${asin || 'N/A'}`,
+        `optionIndex: ${idx}`,
+        `prompt: ${prompt || 'N/A'}`,
+        `upscaledForPrint: ${shouldUpscale ? 'yes' : 'no'}`,
+        `selectedForOrder: ${isSelectedForOrder ? 'yes' : 'no'}`,
+        `uploadedAt: ${new Date().toISOString()}`,
+    ].join('\n');
+}
+
+async function savePatternTextSidecar(bucket, pngObjectPath, text) {
+    const txtPath = pngObjectPath.replace(/\.png$/i, '.txt');
+    await bucket.file(txtPath).save(Buffer.from(text, 'utf8'), {
+        metadata: { contentType: 'text/plain; charset=utf-8' },
+        resumable: false,
+    });
+    return txtPath;
+}
+
 // Handle OPTIONS preflight for /api/save-ai-design
 app.options('/api/save-ai-design', (req, res) => {
     res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
@@ -1027,7 +1068,19 @@ app.post('/api/save-ai-design', async (req, res) => {
         return res.status(403).send('Access forbidden.');
     }
 
-    const { imageBase64, imageUrl, designTitle, orderNumber, itemTitle, prompt, folder = 'designs', asin, index, shouldUpscale = false } = req.body;
+    const {
+        imageBase64,
+        imageUrl,
+        designTitle,
+        designDescription,
+        orderNumber,
+        itemTitle,
+        prompt,
+        folder = 'designs',
+        asin,
+        index,
+        shouldUpscale = false,
+    } = req.body;
 
     if ((!imageBase64 && !imageUrl) || !designTitle) {
         return res.status(400).json({ error: 'Missing imageBase64/imageUrl or designTitle' });
@@ -1140,102 +1193,140 @@ app.post('/api/save-ai-design', async (req, res) => {
         }
         
         const contentType = 'image/png';
+        const isUnusedSlot = typeof folder === 'string' && folder.includes('unused');
+        const isSelectedForOrder = Boolean(
+            orderNumber && asin && index !== undefined && index !== null,
+        );
 
-        // Generate filename based on whether it's selected (has order number) or unused
+        // Every image lives under generated_patterns/all/ (+ unused subfolder for non-picks).
+        // The customer's chosen wrap (upscaled when configured) is also copied to generated_patterns/for_print/.
+        const archiveDir = isUnusedSlot
+            ? 'generated_patterns/all/unused'
+            : 'generated_patterns/all';
+
         let filename;
-        if (orderNumber && asin && index !== undefined) {
-            // Selected design: use order number format (e.g., 100-xxxx-xxxxx-asin-0.png)
+        if (orderNumber && asin && index !== undefined && index !== null) {
             const paddedIndex = String(index).padStart(2, '0');
             filename = `${orderNumber}-${asin}-${paddedIndex}.png`;
         } else {
-            // Unused design: use timestamp-based filename
             const timestamp = Date.now();
             const sanitizedTitle = designTitle.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
             filename = `ai-design-${sanitizedTitle}-${timestamp}.png`;
         }
 
-        const filePath = `${folder}/${filename}`;
+        const archivePngPath = `${archiveDir}/${filename}`;
 
-        // Upload to GCS
         const bucket = storage.bucket('wrrapd-media');
-        const file = bucket.file(filePath);
+        const descText = buildPatternDescriptionFileText({
+            designTitle,
+            designDescription,
+            itemTitle,
+            orderNumber,
+            asin,
+            index,
+            prompt,
+            shouldUpscale,
+            isSelectedForOrder,
+        });
 
-        // Try to save the file. If we get a delete permission error (due to bucket versioning),
-        // we'll use a unique filename instead of overwriting.
-        let finalFilePath = filePath;
-        let finalFile = file;
-        
+        const pngCustomMeta = {
+            designTitle,
+            designDescription: designDescription || '',
+            orderNumber: orderNumber || 'unused',
+            itemTitle: itemTitle || 'N/A',
+            asin: asin || 'N/A',
+            prompt: prompt || 'N/A',
+            source: 'stability-ai',
+            upscaled: shouldUpscale ? 'true' : 'false',
+            uploadedAt: new Date().toISOString(),
+            isSelected: isSelectedForOrder ? 'true' : 'false',
+            archivePath: archivePngPath,
+        };
+
+        let finalArchivePath = archivePngPath;
+        let archiveFile = bucket.file(archivePngPath);
+
         try {
-            await file.save(imageBuffer, {
+            await archiveFile.save(imageBuffer, {
                 metadata: {
                     contentType: contentType,
-                    metadata: {
-                        designTitle: designTitle,
-                        orderNumber: orderNumber || 'unused',
-                        itemTitle: itemTitle || 'N/A',
-                        asin: asin || 'N/A',
-                        prompt: prompt || 'N/A',
-                        source: 'stability-ai',
-                        upscaled: shouldUpscale ? 'true' : 'false',
-                        uploadedAt: new Date().toISOString(),
-                        isSelected: orderNumber ? 'true' : 'false'
-                    }
+                    metadata: pngCustomMeta,
                 },
-                resumable: false
+                resumable: false,
             });
         } catch (saveError) {
-            // If we get a delete permission error, use a unique filename instead
             if (saveError.message && saveError.message.includes('storage.objects.delete')) {
                 console.warn(`[save-ai-design] Delete permission error detected, using unique filename instead...`);
-                // Append timestamp to make filename unique (avoids needing delete permission)
                 const timestamp = Date.now();
-                const pathParts = filePath.split('/');
+                const pathParts = archivePngPath.split('/');
                 const fileNameParts = pathParts[pathParts.length - 1].split('.');
                 const baseName = fileNameParts[0];
                 const extension = fileNameParts[1] || 'png';
-                finalFilePath = `${pathParts.slice(0, -1).join('/')}/${baseName}-${timestamp}.${extension}`;
-                finalFile = bucket.file(finalFilePath);
-                
-                // Retry with unique filename
-                await finalFile.save(imageBuffer, {
+                finalArchivePath = `${pathParts.slice(0, -1).join('/')}/${baseName}-${timestamp}.${extension}`;
+                archiveFile = bucket.file(finalArchivePath);
+                await archiveFile.save(imageBuffer, {
                     metadata: {
                         contentType: contentType,
-                        metadata: {
-                            designTitle: designTitle,
-                            orderNumber: orderNumber || 'unused',
-                            itemTitle: itemTitle || 'N/A',
-                            asin: asin || 'N/A',
-                            prompt: prompt || 'N/A',
-                            source: 'stability-ai',
-                            upscaled: shouldUpscale ? 'true' : 'false',
-                            uploadedAt: new Date().toISOString(),
-                            isSelected: orderNumber ? 'true' : 'false'
-                        }
+                        metadata: { ...pngCustomMeta, archivePath: finalArchivePath },
                     },
-                    resumable: false
+                    resumable: false,
                 });
-                console.log(`[save-ai-design] Saved with unique filename: ${finalFilePath}`);
+                console.log(`[save-ai-design] Saved with unique filename: ${finalArchivePath}`);
             } else {
-                // Re-throw other errors
                 throw saveError;
             }
         }
 
-        // Generate a signed URL for accessing the file (valid for 7 days - max allowed by GCS)
-        const [signedUrl] = await finalFile.getSignedUrl({
+        const archiveTxtPath = await savePatternTextSidecar(
+            bucket,
+            finalArchivePath,
+            descText,
+        );
+
+        let forPrintPath = null;
+        let forPrintTxtPath = null;
+        if (isSelectedForOrder) {
+            const baseName = path.posix.basename(finalArchivePath);
+            forPrintPath = `generated_patterns/for_print/${baseName}`;
+            const forPrintFile = bucket.file(forPrintPath);
+            await forPrintFile.save(imageBuffer, {
+                metadata: {
+                    contentType: contentType,
+                    metadata: {
+                        ...pngCustomMeta,
+                        archivePath: finalArchivePath,
+                        forPrintPath,
+                    },
+                },
+                resumable: false,
+            });
+            forPrintTxtPath = await savePatternTextSidecar(bucket, forPrintPath, descText);
+        }
+
+        const primaryFile = isSelectedForOrder
+            ? bucket.file(forPrintPath)
+            : archiveFile;
+        const primaryPath = isSelectedForOrder ? forPrintPath : finalArchivePath;
+
+        const [signedUrl] = await primaryFile.getSignedUrl({
             version: 'v4',
             action: 'read',
-            expires: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days (604800 seconds - max allowed)
+            expires: Date.now() + 7 * 24 * 60 * 60 * 1000,
         });
 
-        const publicUrl = signedUrl;
-
-        console.log(`[save-ai-design] Successfully saved to ${finalFilePath}`);
+        console.log(
+            `[save-ai-design] archive=${finalArchivePath} txt=${archiveTxtPath}` +
+                (forPrintPath ? ` for_print=${forPrintPath} txt=${forPrintTxtPath}` : ''),
+        );
 
         res.status(200).json({
             success: true,
-            filePath: finalFilePath,
-            publicUrl: publicUrl
+            filePath: primaryPath,
+            archivePath: finalArchivePath,
+            archiveTxtPath,
+            forPrintPath: forPrintPath || undefined,
+            forPrintTxtPath: forPrintTxtPath || undefined,
+            publicUrl: signedUrl,
         });
 
     } catch (error) {

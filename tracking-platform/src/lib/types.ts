@@ -34,6 +34,8 @@ export type Order = {
   updatedBy?: string;
   /** Amazon ship day + 1 in production; test phase uses planner dates */
   sourceNote?: string;
+  /** Wrrapd / Amazon style id when ingested from extension or partner (optional) */
+  externalOrderId?: string;
   /** Per driver + calendar day (ET): optimized stop order (1 = first after leaving depot) */
   stopSequence?: number;
 };
@@ -58,8 +60,13 @@ export type WeekAvailabilityRecord = {
   /** ISO date YYYY-MM-DD of the Monday starting that work week */
   weekStartMonday: string;
   submittedAt: string;
-  /** calendar date YYYY-MM-DD -> available */
-  days: Record<string, boolean>;
+  /** calendar date YYYY-MM-DD -> shift availability */
+  days: Record<string, DayShiftAvailability>;
+};
+
+export type DayShiftAvailability = {
+  morning: boolean; // 7:00 AM - 1:00 PM
+  afternoon: boolean; // 1:00 PM - 7:00 PM
 };
 
 export type OrdersFilePayload = {

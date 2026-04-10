@@ -1,6 +1,6 @@
 import type { Order, Driver } from "./types";
-import { formatDateKeyNy } from "./ny-date";
-import { isDriverAvailableOnDate } from "./availability-store";
+import { formatDateKeyNy, hourNy } from "./ny-date";
+import { isDriverAvailableOnDate, type ShiftKey } from "./availability-store";
 import { getDriverProfile } from "./driver-profiles";
 
 const MAX_PER_PRIMARY_DRIVER = 10;
@@ -34,39 +34,74 @@ export async function computeAssignmentsForOrders(
   for (const [, dayOrders] of byDay) {
     dayOrders.sort((a, b) => a.id.localeCompare(b.id));
     const dateKey = formatDateKeyNy(dayOrders[0].scheduledFor);
+    const shiftForOrder = (o: Order): ShiftKey => (hourNy(o.scheduledFor) < 13 ? "morning" : "afternoon");
 
     const approved: Driver[] = [];
+    const forcedByDriver = new Map<string, string[]>();
     for (const d of driversSorted) {
       const p = await getDriverProfile(d.id);
       if (p.onboardingStatus !== "approved") continue;
-      const avail = await isDriverAvailableOnDate(
-        d.id,
-        dateKey,
-        now,
-        p.forcedAvailableDates ?? []
-      );
-      if (avail) approved.push(d);
+      const forced = p.forcedAvailableDates ?? [];
+      forcedByDriver.set(d.id, forced);
+
+      let hasShiftCoverage = false;
+      for (const o of dayOrders) {
+        if (
+          await isDriverAvailableOnDate(
+            d.id,
+            dateKey,
+            shiftForOrder(o),
+            now,
+            forced
+          )
+        ) {
+          hasShiftCoverage = true;
+          break;
+        }
+      }
+      if (hasShiftCoverage) approved.push(d);
     }
 
     if (approved.length === 0) {
       continue;
     }
 
+    const assignOne = async (o: Order, driver: Driver) => {
+      const avail = await isDriverAvailableOnDate(
+        driver.id,
+        dateKey,
+        shiftForOrder(o),
+        now,
+        forcedByDriver.get(driver.id) ?? []
+      );
+      return avail;
+    };
+
     const primary = approved[0];
     const secondary = approved[1];
 
     if (dayOrders.length <= MAX_PER_PRIMARY_DRIVER) {
       for (const o of dayOrders) {
-        result.set(o.id, { driverId: primary.id, driverName: primary.name });
+        if (await assignOne(o, primary)) {
+          result.set(o.id, { driverId: primary.id, driverName: primary.name });
+        }
       }
     } else if (secondary) {
-      dayOrders.forEach((o, i) => {
+      for (let i = 0; i < dayOrders.length; i++) {
+        const o = dayOrders[i]!;
         const pick = i < MAX_PER_PRIMARY_DRIVER ? primary : secondary;
-        result.set(o.id, { driverId: pick.id, driverName: pick.name });
-      });
+        const other = pick.id === primary.id ? secondary : primary;
+        if (await assignOne(o, pick)) {
+          result.set(o.id, { driverId: pick.id, driverName: pick.name });
+        } else if (await assignOne(o, other)) {
+          result.set(o.id, { driverId: other.id, driverName: other.name });
+        }
+      }
     } else {
       for (const o of dayOrders) {
-        result.set(o.id, { driverId: primary.id, driverName: primary.name });
+        if (await assignOne(o, primary)) {
+          result.set(o.id, { driverId: primary.id, driverName: primary.name });
+        }
       }
     }
   }

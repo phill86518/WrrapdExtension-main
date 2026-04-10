@@ -13,6 +13,7 @@ import {
 } from "@/lib/availability-store";
 import { DriverAvailabilityPanel } from "@/components/driver-availability-panel";
 import { formatInTimeZone } from "date-fns-tz";
+import type { DayShiftAvailability } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +33,19 @@ export default async function DriverPage() {
   const profile = await getDriverProfile(session.userId);
   const week = upcomingWeekFromToday();
   const existing = await getWeekAvailability(session.userId, week.weekStartMonday);
-  const initialDays = Object.fromEntries(week.days.map((d) => [d, existing?.days[d] === true]));
+  const initialDays = Object.fromEntries(
+    week.days.map((d) => {
+      const v = existing?.days[d];
+      const normalized: DayShiftAvailability =
+        typeof v === "boolean"
+          ? { morning: v, afternoon: v }
+          : {
+              morning: v?.morning === true,
+              afternoon: v?.afternoon === true,
+            };
+      return [d, normalized];
+    })
+  ) as Record<string, DayShiftAvailability>;
   const deadline = availabilityDeadlineForWeekMonday(week.weekStartMonday);
   const deadlineLabel = formatInTimeZone(deadline, "America/New_York", "EEE MMM d, h:mm a zzz");
 

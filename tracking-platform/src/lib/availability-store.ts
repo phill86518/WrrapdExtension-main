@@ -3,7 +3,7 @@ import { toDate } from "date-fns-tz";
 import { nowInNy } from "./ny-date";
 import { promises as fs } from "fs";
 import path from "path";
-import type { WeekAvailabilityRecord } from "./types";
+import type { DayShiftAvailability, WeekAvailabilityRecord } from "./types";
 
 const DATA_DIR = path.join(process.cwd(), ".data");
 const FILE = path.join(DATA_DIR, "driver-availability.json");
@@ -11,6 +11,7 @@ const FILE = path.join(DATA_DIR, "driver-availability.json");
 const NY = "America/New_York";
 
 type FileShape = { records: WeekAvailabilityRecord[] };
+export type ShiftKey = "morning" | "afternoon";
 
 async function ensureDir() {
   await fs.mkdir(DATA_DIR, { recursive: true });
@@ -60,7 +61,7 @@ function recordForWeek(
 export async function submitWeekAvailability(
   driverId: string,
   weekStartMonday: string,
-  days: Record<string, boolean>
+  days: Record<string, DayShiftAvailability>
 ): Promise<WeekAvailabilityRecord> {
   const data = await readFile();
   const rec: WeekAvailabilityRecord = {
@@ -104,6 +105,20 @@ export async function getWeekAvailability(
   return rec ?? null;
 }
 
+function normalizeShifts(value: unknown): DayShiftAvailability {
+  if (typeof value === "boolean") {
+    return { morning: value, afternoon: value };
+  }
+  if (typeof value === "object" && value !== null) {
+    const obj = value as Partial<DayShiftAvailability>;
+    return {
+      morning: obj.morning === true,
+      afternoon: obj.afternoon === true,
+    };
+  }
+  return { morning: false, afternoon: false };
+}
+
 /**
  * Effective availability for `dateKey` (YYYY-MM-DD in NY).
  * Before deadline without submission: treat as **available** (soft default for planning).
@@ -112,6 +127,7 @@ export async function getWeekAvailability(
 export async function isDriverAvailableOnDate(
   driverId: string,
   dateKey: string,
+  shift: ShiftKey,
   now: Date = new Date(),
   forcedDates: string[] = []
 ): Promise<boolean> {
@@ -121,7 +137,8 @@ export async function isDriverAvailableOnDate(
   const data = await readFile();
   const rec = recordForWeek(data.records, driverId, weekStart);
   if (rec) {
-    return rec.days[dateKey] === true;
+    const shifts = normalizeShifts(rec.days[dateKey]);
+    return shifts[shift] === true;
   }
   if (now.getTime() > deadline.getTime()) {
     return false;
