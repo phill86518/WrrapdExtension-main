@@ -216,6 +216,23 @@
             color: #333;
             cursor: not-allowed;
         }
+        .pay-status-hint {
+            font-size: 11px;
+            color: #555;
+            margin-top: 8px;
+            line-height: 1.4;
+            min-height: 2.8em;
+        }
+        .pay-status-hint.pay-status-hint--blocked {
+            color: #b45309;
+        }
+        #places-load-warning {
+            font-size: 11px;
+            color: #b45309;
+            margin-top: 4px;
+            line-height: 1.3;
+            display: none;
+        }
     </style>
     
 </head>
@@ -254,6 +271,7 @@
                 <input type="text" id="line1" name="line1" autocomplete="off" spellcheck="false" data-lpignore="true" data-1p-ignore>
                 <ul class="address-suggestions" id="line1-suggestions" role="listbox" hidden></ul>
             </div>
+            <div id="places-load-warning" role="status"></div>
         </div>
         <div class="row">
             <div class="form-group">
@@ -325,6 +343,8 @@
         
 
         <button type="submit" id="submit" disabled>Pay Now</button>
+        <p id="pay-status-hint" class="pay-status-hint pay-status-hint--blocked" aria-live="polite"></p>
+        <pre id="wrrapd-checkout-debug-panel" style="display:none;font-size:10px;background:#1a1a2e;color:#a6f0c6;padding:10px;margin-top:8px;border-radius:4px;max-height:220px;overflow:auto;white-space:pre-wrap;font-family:Consolas,monospace;"></pre>
     </form>
 
     <script>
@@ -378,6 +398,11 @@
         const { total, address, orderNumber, gifteeOriginalAddress: gifteeFromPayload } = payload;
         const gifteeOriginalAddress = gifteeFromPayload || address;
 
+        /** Set ?wrrapdDebug=1 on the checkout URL, or sessionStorage wrrapd_checkout_debug=1 then reload. */
+        const wrrapdCheckoutDebug =
+            urlParams.get('wrrapdDebug') === '1' ||
+            (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('wrrapd_checkout_debug') === '1');
+
         const GOOGLE_API_KEY = 'AIzaSyDpZREUIh84APl6ivKxWxM6zENaVJZvmo4';
 
         if (!total || isNaN(total)) {
@@ -387,6 +412,12 @@
 
         document.getElementById('total').textContent = `Total: $${(total / 100).toFixed(2)}`;
 
+        if (wrrapdCheckoutDebug) {
+            console.info(
+                '[wrrapd checkout] Debug on: gate snapshot on each Pay-state update (console + box below). Off: sessionStorage.removeItem("wrrapd_checkout_debug") or open without ?wrrapdDebug=1',
+            );
+        }
+
         let stripe = null;
         let cardElement = null;
         let clientSecret = null;
@@ -395,6 +426,7 @@
         async function initializeCheckoutPage() {
             let stripeCardComplete = false;
             let gifteeGoogleValidated = false;
+            let lastGifteeValidationHint = '';
             let billingGoogleValidated = false;
             let gifteeValidationTimer = null;
             let billingValidationTimer = null;
@@ -684,6 +716,25 @@
             const phoneElement = document.querySelector("#phone");
             const errorMsg = document.querySelector(".phone-group .error-message");
 
+            /** intl-tel-input needs utils.js; until it loads, isValidNumber() stays false — allow 10-digit US for enabling Pay. */
+            function isPhoneOkForPay() {
+                try {
+                    if (phoneInput.isValidNumber()) return true;
+                } catch (e) { /* ignore */ }
+                const digits = phoneElement.value.replace(/\D/g, '');
+                return digits.length === 10 || (digits.length === 11 && digits.charAt(0) === '1');
+            }
+
+            function getPhoneE164OrBest() {
+                try {
+                    if (phoneInput.isValidNumber()) return phoneInput.getNumber();
+                } catch (e) { /* ignore */ }
+                const digits = phoneElement.value.replace(/\D/g, '');
+                if (digits.length === 10) return '+1' + digits;
+                if (digits.length === 11 && digits.charAt(0) === '1') return '+' + digits;
+                return phoneInput.getNumber();
+            }
+
             // Prevent non-numeric input except + and spaces
             phoneElement.addEventListener("keypress", function(e) {
                 const char = String.fromCharCode(e.which);
@@ -745,6 +796,25 @@
                 confirmationDiv.style.fontStyle = 'italic';
                 confirmationDiv.textContent = message;
                 fieldElement.parentElement.appendChild(confirmationDiv);
+            }
+
+            function applyGifteeCorrectedComponents(c) {
+                if (!c) return;
+                if (c.postal_code) document.getElementById('postal_code').value = c.postal_code;
+                if (c.city) document.getElementById('city').value = c.city;
+                if (c.state) document.getElementById('state').value = c.state;
+                if (c.line1) document.getElementById('line1').value = c.line1;
+                if (c.line2 !== undefined) document.getElementById('line2').value = c.line2 || '';
+            }
+
+            /** PREMISE-only was too strict for many real US addresses; still require meaningful geocode where possible. */
+            function isGoogleValidationGranularitySufficient(verdict) {
+                if (!verdict || !verdict.validationGranularity) return false;
+                const g = verdict.validationGranularity;
+                if (g === 'SUB_PREMISE' || g === 'PREMISE') return true;
+                if (g === 'PREMISE_PROXIMITY') return true;
+                if (g === 'ROUTE' && verdict.addressComplete === true) return true;
+                return false;
             }
 
             // Address validation using Google Address Validation API
@@ -835,9 +905,7 @@
                         const verdict = data.result.verdict;
                         const address = data.result.address;
                         
-                        // STRICT: Only accept addresses with specific granularity (SUB_PREMISE or PREMISE)
-                        // ROUTE level is too vague - reject it
-                        if (verdict.validationGranularity === 'SUB_PREMISE' || verdict.validationGranularity === 'PREMISE') {
+                        if (isGoogleValidationGranularitySufficient(verdict)) {
                             // Address is valid - check for corrections
                             const correctedAddress = address.formattedAddress;
                             const addressComponents = address.addressComponents || [];
@@ -1131,6 +1199,7 @@
                     const zipVal = document.getElementById('postal_code').value;
                     if (!validateShippingZipCode(zipVal).valid) {
                         gifteeGoogleValidated = false;
+                        lastGifteeValidationHint = validateShippingZipCode(zipVal).message || 'Fix ZIP code first.';
                         if (seq === gifteeValidationSeq) updatePayButtonState();
                         return;
                     }
@@ -1140,6 +1209,7 @@
                     const namev = document.getElementById('name').value.trim();
                     if (!namev || !line1v || !cityv || !statev) {
                         gifteeGoogleValidated = false;
+                        lastGifteeValidationHint = 'Fill giftee name, street, city, and state.';
                         if (seq === gifteeValidationSeq) updatePayButtonState();
                         return;
                     }
@@ -1152,9 +1222,24 @@
                         postal_code: document.getElementById('postal_code').value,
                         country: document.getElementById('country').value || 'US',
                     };
-                    const r = await validateAddress(addr, 'Final shipping address');
+                    let r = await validateAddress(addr, 'Final shipping address');
                     if (seq !== gifteeValidationSeq) return;
+                    if (!r.valid && r.correctedComponents) {
+                        applyGifteeCorrectedComponents(r.correctedComponents);
+                        const addr2 = {
+                            name: document.getElementById('name').value,
+                            line1: document.getElementById('line1').value,
+                            line2: document.getElementById('line2').value,
+                            city: document.getElementById('city').value,
+                            state: document.getElementById('state').value,
+                            postal_code: document.getElementById('postal_code').value,
+                            country: document.getElementById('country').value || 'US',
+                        };
+                        r = await validateAddress(addr2, 'Final shipping address');
+                        if (seq !== gifteeValidationSeq) return;
+                    }
                     gifteeGoogleValidated = !!r.valid;
+                    lastGifteeValidationHint = r.valid ? '' : (r.message || 'Google could not confirm this street address. Check line 1 includes number and street.');
                     updatePayButtonState();
                 }, 700);
             }
@@ -1197,41 +1282,131 @@
                 }, 700);
             }
 
+            function logCheckoutPayDebugSnapshot() {
+                if (!wrrapdCheckoutDebug) return;
+                let phoneLibValid = null;
+                try {
+                    phoneLibValid = phoneInput.isValidNumber();
+                } catch (e) {
+                    phoneLibValid = 'error: ' + (e && e.message ? e.message : String(e));
+                }
+                const snap = {
+                    t: new Date().toISOString(),
+                    submitDisabled: document.getElementById('submit').disabled,
+                    sessionExpired: isSessionExpired(),
+                    emailOk: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(document.getElementById('email').value.trim()),
+                    phoneOkForPay: isPhoneOkForPay(),
+                    phoneIntlLibSaysValid: phoneLibValid,
+                    stripeCardComplete: stripeCardComplete,
+                    clientSecretLoaded: !!clientSecret,
+                    zipListSize: validZipCodes.size,
+                    zipField: document.getElementById('postal_code').value,
+                    zipValidation: validateShippingZipCode(document.getElementById('postal_code').value),
+                    gifteeGoogleValidated: gifteeGoogleValidated,
+                    billingGoogleValidated: billingGoogleValidated,
+                    lastGifteeValidationHint: lastGifteeValidationHint,
+                    useDefaultBilling: document.getElementById('use-default-address').checked,
+                    payHint: document.getElementById('pay-status-hint')
+                        ? document.getElementById('pay-status-hint').textContent
+                        : '',
+                };
+                console.log('[wrrapd checkout][debug]', snap);
+                const panel = document.getElementById('wrrapd-checkout-debug-panel');
+                if (panel) {
+                    panel.style.display = 'block';
+                    panel.textContent = JSON.stringify(snap, null, 2);
+                }
+            }
+
             updatePayButtonState = function () {
                 const submit = document.getElementById('submit');
-                if (isSessionExpired()) {
-                    submit.disabled = true;
-                    return;
-                }
-                const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(document.getElementById('email').value.trim());
-                const phoneOk = phoneInput.isValidNumber();
-                if (!emailOk || !phoneOk || !stripeCardComplete) {
-                    submit.disabled = true;
-                    return;
-                }
-                const zipOk = validateShippingZipCode(document.getElementById('postal_code').value).valid;
-                const gifteeFilled =
-                    document.getElementById('name').value.trim() &&
-                    document.getElementById('line1').value.trim() &&
-                    document.getElementById('city').value.trim() &&
-                    document.getElementById('state').value.trim();
-                const gifteeOk = zipOk && gifteeFilled && gifteeGoogleValidated;
+                const hintEl = document.getElementById('pay-status-hint');
+                const setHint = function (text, blocked) {
+                    if (!hintEl) return;
+                    hintEl.textContent = text || '';
+                    hintEl.classList.toggle('pay-status-hint--blocked', !!blocked);
+                };
+                try {
+                    if (isSessionExpired()) {
+                        submit.disabled = true;
+                        setHint('Session expired — refresh the page.', true);
+                        return;
+                    }
+                    const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(document.getElementById('email').value.trim());
+                    const phoneOk = isPhoneOkForPay();
+                    if (!emailOk) {
+                        submit.disabled = true;
+                        setHint('Enter a valid email address.', true);
+                        return;
+                    }
+                    if (!phoneOk) {
+                        submit.disabled = true;
+                        setHint('Enter a valid phone (10 digits for US). Wait a second after the page loads if the flag just appeared.', true);
+                        return;
+                    }
+                    if (!stripeCardComplete) {
+                        submit.disabled = true;
+                        setHint('Finish entering card number, expiry, and CVC.', true);
+                        return;
+                    }
+                    if (validZipCodes.size === 0) {
+                        submit.disabled = true;
+                        setHint('Could not load the delivery ZIP list from api.wrrapd.com. Check your connection and refresh.', true);
+                        return;
+                    }
+                    const zipOk = validateShippingZipCode(document.getElementById('postal_code').value).valid;
+                    if (!zipOk) {
+                        submit.disabled = true;
+                        const zm = validateShippingZipCode(document.getElementById('postal_code').value).message;
+                        setHint(zm || 'ZIP is not in the delivery area or is invalid.', true);
+                        return;
+                    }
+                    const gifteeFilled =
+                        document.getElementById('name').value.trim() &&
+                        document.getElementById('line1').value.trim() &&
+                        document.getElementById('city').value.trim() &&
+                        document.getElementById('state').value.trim();
+                    if (!gifteeFilled) {
+                        submit.disabled = true;
+                        setHint('Fill giftee name, street address, city, and state.', true);
+                        return;
+                    }
+                    const gifteeOk = zipOk && gifteeFilled && gifteeGoogleValidated;
 
-                const useDefaultBilling = document.getElementById('use-default-address').checked;
-                let billingOk;
-                if (useDefaultBilling) {
-                    billingOk = gifteeOk;
-                } else {
-                    const bFilled =
-                        document.getElementById('billing-name').value.trim() &&
-                        document.getElementById('billing-line1').value.trim() &&
-                        document.getElementById('billing-city').value.trim() &&
-                        document.getElementById('billing-state').value.trim() &&
-                        document.getElementById('billing-postal_code').value.trim();
-                    billingOk = bFilled && billingGoogleValidated;
-                }
+                    const useDefaultBilling = document.getElementById('use-default-address').checked;
+                    let billingOk;
+                    if (useDefaultBilling) {
+                        billingOk = gifteeOk;
+                    } else {
+                        const bFilled =
+                            document.getElementById('billing-name').value.trim() &&
+                            document.getElementById('billing-line1').value.trim() &&
+                            document.getElementById('billing-city').value.trim() &&
+                            document.getElementById('billing-state').value.trim() &&
+                            document.getElementById('billing-postal_code').value.trim();
+                        billingOk = bFilled && billingGoogleValidated;
+                    }
 
-                submit.disabled = !(gifteeOk && billingOk);
+                    if (!gifteeGoogleValidated) {
+                        submit.disabled = true;
+                        setHint(
+                            lastGifteeValidationHint ||
+                                'Checking delivery address with Google… If this stays stuck, open DevTools (F12) → Console for errors.',
+                            true,
+                        );
+                        return;
+                    }
+                    if (!billingOk) {
+                        submit.disabled = true;
+                        setHint('Billing address is not verified yet, or fields are incomplete.', true);
+                        return;
+                    }
+
+                    submit.disabled = false;
+                    setHint('Ready — click Pay Now to charge the card.', false);
+                } finally {
+                    logCheckoutPayDebugSnapshot();
+                }
             };
 
             /**
@@ -1389,7 +1564,15 @@
                 .then(function () {
                     setupGoogleAddressAutocomplete();
                 })
-                .catch(function () {});
+                .catch(function (err) {
+                    console.error('[checkout] Google Maps / Places failed to load:', err);
+                    const w = document.getElementById('places-load-warning');
+                    if (w) {
+                        w.style.display = 'block';
+                        w.textContent =
+                            'Address suggestions are off (Google Maps JavaScript API / Places). You can still type the full street address. In Google Cloud Console, enable Maps JavaScript API + Places API and allow https://pay.wrrapd.com/* for this API key.';
+                    }
+                });
 
             ['name', 'line1', 'city', 'state', 'postal_code'].forEach(function (id) {
                 const el = document.getElementById(id);
@@ -1426,6 +1609,10 @@
             form.addEventListener('submit', async (event) => {
                 event.preventDefault();
 
+                if (wrrapdCheckoutDebug) {
+                    console.log('[wrrapd checkout][debug] form submit event (button was enabled and clicked)');
+                }
+
                 // Check if session has expired before processing
                 if (isSessionExpired()) {
                     handleSessionTimeout();
@@ -1455,8 +1642,7 @@
                     return;
                 }
 
-                // Simple phone validation
-                if (!phoneInput.isValidNumber()) {
+                if (!isPhoneOkForPay()) {
                     phoneElement.classList.add("error");
                     errorMsg.style.display = "block";
                     errorMsg.textContent = "Please enter a valid phone number";
@@ -1465,7 +1651,7 @@
                     return;
                 }
 
-                const phone = phoneInput.getNumber();
+                const phone = getPhoneE164OrBest();
 
                     // Delivery ZIP must be in allowed set — block Pay; outside area uses inline message only
                     const shippingZipCode = document.getElementById('postal_code').value;

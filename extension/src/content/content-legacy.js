@@ -9005,7 +9005,12 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                     };
 
                     const encodedPayload = btoa(JSON.stringify(payload));
-                    const paymentUrl = `https://pay.wrrapd.com/checkout?data=${encodedPayload}`;
+                    let paymentUrl = `https://pay.wrrapd.com/checkout?data=${encodedPayload}`;
+                    try {
+                        if (localStorage.getItem('wrrapd-checkout-debug') === '1') {
+                            paymentUrl += '&wrrapdDebug=1';
+                        }
+                    } catch (e) { /* ignore */ }
 
                     const popupWidth = 480;
                     const popupHeight = 820;
