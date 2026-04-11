@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { existsSync } from "fs";
 import { mkdir, readFile, writeFile } from "fs/promises";
 import path from "path";
+import { trackingRuntimeDoc } from "./tracking-firestore";
 
 const COOKIE_NAME = "wrrapd_session";
 
@@ -76,7 +77,20 @@ async function ensureAuthFile() {
   );
 }
 
+async function readDriverPasswordFromFirestore(): Promise<string | null> {
+  const ref = trackingRuntimeDoc();
+  if (!ref) return null;
+  const snap = await ref.get();
+  if (!snap.exists) return null;
+  const p = (snap.data() as { driverPassword?: string }).driverPassword?.trim();
+  return p && p.length > 0 ? p : null;
+}
+
 async function readDriverPassword(): Promise<string> {
+  const fromEnv = process.env.APP_DRIVER_PASSWORD?.trim();
+  if (fromEnv) return fromEnv;
+  const fromDb = await readDriverPasswordFromFirestore();
+  if (fromDb) return fromDb;
   await ensureAuthFile();
   const raw = await readFile(authFilePath, "utf8");
   const parsed = JSON.parse(raw) as { driverPassword?: string };
@@ -88,6 +102,10 @@ export async function verifyDriverPassword(password: string) {
 }
 
 export async function updateDriverPassword(nextPassword: string) {
+  const ref = trackingRuntimeDoc();
+  if (ref) {
+    await ref.set({ driverPassword: nextPassword }, { merge: true });
+  }
   await mkdir(dataDir, { recursive: true });
   await writeFile(
     authFilePath,

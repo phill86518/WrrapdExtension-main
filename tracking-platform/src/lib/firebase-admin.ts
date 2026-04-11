@@ -31,7 +31,8 @@ function initFirebaseApp(): App | null {
 export function getFirestoreDb() {
   const app = initFirebaseApp();
   if (!app) return null;
-  return getFirestore(app);
+  const databaseId = process.env.FIREBASE_FIRESTORE_DATABASE_ID?.trim() || "(default)";
+  return databaseId === "(default)" ? getFirestore(app) : getFirestore(app, databaseId);
 }
 
 export function getStorageBucket() {

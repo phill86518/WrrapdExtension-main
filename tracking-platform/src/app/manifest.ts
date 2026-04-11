@@ -3,7 +3,7 @@ import type { MetadataRoute } from "next";
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Wrrapd Driver",
-    short_name: "Wrrapd",
+    short_name: "W",
     description: "Simple delivery companion for Wrrapd drivers.",
     start_url: "/driver",
     display: "standalone",
@@ -12,9 +12,16 @@ export default function manifest(): MetadataRoute.Manifest {
     orientation: "portrait",
     icons: [
       {
-        src: "/icon.svg",
+        src: "/icons/w-mark.svg",
         sizes: "any",
         type: "image/svg+xml",
+        purpose: "any",
+      },
+      {
+        src: "/icons/w-mark.svg",
+        sizes: "512x512",
+        type: "image/svg+xml",
+        purpose: "maskable",
       },
     ],
   };

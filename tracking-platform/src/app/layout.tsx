@@ -15,12 +15,16 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Wrrapd Tracking Platform",
   description: "Admin, driver, and customer delivery tracking experience.",
-  applicationName: "Wrrapd Driver",
+  applicationName: "W",
+  icons: {
+    icon: "/icons/w-mark.svg",
+    apple: "/icons/w-mark.svg",
+  },
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Wrrapd Driver",
+    title: "W",
   },
 };
 

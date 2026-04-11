@@ -97,6 +97,25 @@ gcloud run deploy wrrapd-tracking \
   --set-env-vars APP_SESSION_SECRET=change-me,APP_ADMIN_PASSWORD=change-me,APP_DRIVER_PASSWORD=change-me
 ```
 
+### Production persistence (Firestore — required on Cloud Run)
+
+Cloud Run instances use **ephemeral disk**. Without Firestore, orders/drivers/availability reset when the container recycles.
+
+1. In [Firebase Console](https://console.firebase.google.com/) (same GCP project), enable **Firestore** (Native mode, e.g. `us-central`).
+2. Create a **service account** with **Firebase Admin** or roles that include Firestore read/write (e.g. **Cloud Datastore User**). Create a JSON key.
+3. On the Cloud Run service, set (use your real values; keep the private key as one line with `\n` for newlines):
+
+   - `FIREBASE_PROJECT_ID`
+   - `FIREBASE_CLIENT_EMAIL`
+   - `FIREBASE_PRIVATE_KEY` (same escaping as `.env.example`)
+   - If you created a **named** Firestore database (not `(default)`), also set `FIREBASE_FIRESTORE_DATABASE_ID` to that ID (e.g. `wrrapd-firebase-db01`). Check **Firestore → database picker → Database ID** in Firebase Console.
+
+4. Optional for proof photos: `FIREBASE_STORAGE_BUCKET` and/or `GCS_BACKUP_BUCKET` (see Proof-of-delivery section).
+
+5. Redeploy. On Cloud Run the app **refuses to start** until these three are set (unless `TRACKING_ALLOW_EPHEMERAL=true`, which is for emergencies only).
+
+**Collections used:** `orders` (existing), plus `tracking_drivers`, `tracking_driver_profiles`, `tracking_week_availability`, `tracking_runtime` (password override / config).
+
 ## Order ingest (Chrome extension / checkout)
 
 `POST /api/orders/ingest` accepts JSON and creates the same `Order` records the admin UI uses (Admin / Driver / Customer apps stay in sync).
@@ -112,13 +131,10 @@ Driver proof upload still accepts multipart or JSON `dataUrl`. When Firebase/GCS
 
 ## Data and Backups
 
-This MVP currently uses in-memory data for speed. To move to Firestore/Cloud Storage persistence:
+Orders, drivers, profiles, and week-availability persist to **Firestore** when `FIREBASE_*` env vars are set; otherwise local `.data/` files are used (fine for dev only). Apply security rules if clients talk to Firestore directly (this app uses the **Admin SDK** on the server, which bypasses rules):
 
-1. Add Firebase service account envs from `.env.example`
-2. Implement persistence adapter in `src/lib/data.ts`
-3. Apply security rules:
-   - `gcloud firestore databases create --location=us-central`
-   - `gcloud firestore security-rules release infra/firestore.rules`
+- `gcloud firestore databases create --location=us-central` (if no database yet)
+- `gcloud firestore security-rules release infra/firestore.rules` (when you add client-side Firestore)
 
 ### Backup baseline
 

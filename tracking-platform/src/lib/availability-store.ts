@@ -4,6 +4,7 @@ import { nowInNy } from "./ny-date";
 import { promises as fs } from "fs";
 import path from "path";
 import type { DayShiftAvailability, WeekAvailabilityRecord } from "./types";
+import { trackingWeekAvailabilityCollection } from "./tracking-firestore";
 
 const DATA_DIR = path.join(process.cwd(), ".data");
 const FILE = path.join(DATA_DIR, "driver-availability.json");
@@ -11,13 +12,16 @@ const FILE = path.join(DATA_DIR, "driver-availability.json");
 const NY = "America/New_York";
 
 type FileShape = { records: WeekAvailabilityRecord[] };
-export type ShiftKey = "morning" | "afternoon";
+
+function weekDocId(driverId: string, weekStartMonday: string) {
+  return `${driverId}_${weekStartMonday}`;
+}
 
 async function ensureDir() {
   await fs.mkdir(DATA_DIR, { recursive: true });
 }
 
-async function readFile(): Promise<FileShape> {
+async function readLegacyFile(): Promise<FileShape> {
   try {
     const raw = await fs.readFile(FILE, "utf8");
     return JSON.parse(raw) as FileShape;
@@ -26,9 +30,17 @@ async function readFile(): Promise<FileShape> {
   }
 }
 
-async function writeFile(data: FileShape) {
+async function writeLegacyFile(data: FileShape) {
   await ensureDir();
   await fs.writeFile(FILE, JSON.stringify(data, null, 2), "utf8");
+}
+
+function recordForWeek(
+  records: WeekAvailabilityRecord[],
+  driverId: string,
+  weekStartMonday: string,
+): WeekAvailabilityRecord | undefined {
+  return records.find((r) => r.driverId === driverId && r.weekStartMonday === weekStartMonday);
 }
 
 /** Monday YYYY-MM-DD of the ISO week containing `date` (NY-local interpretation via calendar math on NY "now"). */
@@ -48,38 +60,38 @@ export function availabilityDeadlineForWeekMonday(weekStartMonday: string): Date
   return toDate(deadlineLocal, { timeZone: NY });
 }
 
-function recordForWeek(
-  records: WeekAvailabilityRecord[],
-  driverId: string,
-  weekStartMonday: string
-): WeekAvailabilityRecord | undefined {
-  return records.find(
-    (r) => r.driverId === driverId && r.weekStartMonday === weekStartMonday
-  );
-}
-
 export async function submitWeekAvailability(
   driverId: string,
   weekStartMonday: string,
-  days: Record<string, DayShiftAvailability>
+  days: Record<string, DayShiftAvailability>,
 ): Promise<WeekAvailabilityRecord> {
-  const data = await readFile();
   const rec: WeekAvailabilityRecord = {
     driverId,
     weekStartMonday,
     submittedAt: new Date().toISOString(),
     days,
   };
-  data.records = data.records.filter(
-    (r) => !(r.driverId === driverId && r.weekStartMonday === weekStartMonday)
-  );
+
+  const col = trackingWeekAvailabilityCollection();
+  if (col) {
+    await col.doc(weekDocId(driverId, weekStartMonday)).set(rec);
+    return rec;
+  }
+
+  const data = await readLegacyFile();
+  data.records = data.records.filter((r) => !(r.driverId === driverId && r.weekStartMonday === weekStartMonday));
   data.records.push(rec);
-  await writeFile(data);
+  await writeLegacyFile(data);
   return rec;
 }
 
 export async function listWeekRecords(): Promise<WeekAvailabilityRecord[]> {
-  const data = await readFile();
+  const col = trackingWeekAvailabilityCollection();
+  if (col) {
+    const snap = await col.get();
+    return snap.docs.map((d) => d.data() as WeekAvailabilityRecord);
+  }
+  const data = await readLegacyFile();
   return data.records;
 }
 
@@ -90,19 +102,21 @@ export function upcomingWeekFromToday(): {
   const nyNow = nowInNy();
   const monday = startOfWeek(nyNow, { weekStartsOn: 1 });
   const weekStartMonday = format(monday, "yyyy-MM-dd");
-  const days = Array.from({ length: 7 }, (_, i) =>
-    format(addDays(monday, i), "yyyy-MM-dd")
-  );
+  const days = Array.from({ length: 7 }, (_, i) => format(addDays(monday, i), "yyyy-MM-dd"));
   return { weekStartMonday, days };
 }
 
 export async function getWeekAvailability(
   driverId: string,
-  weekStartMonday: string
+  weekStartMonday: string,
 ): Promise<WeekAvailabilityRecord | null> {
-  const data = await readFile();
-  const rec = recordForWeek(data.records, driverId, weekStartMonday);
-  return rec ?? null;
+  const col = trackingWeekAvailabilityCollection();
+  if (col) {
+    const snap = await col.doc(weekDocId(driverId, weekStartMonday)).get();
+    return snap.exists ? (snap.data() as WeekAvailabilityRecord) : null;
+  }
+  const data = await readLegacyFile();
+  return recordForWeek(data.records, driverId, weekStartMonday) ?? null;
 }
 
 function normalizeShifts(value: unknown): DayShiftAvailability {
@@ -119,6 +133,8 @@ function normalizeShifts(value: unknown): DayShiftAvailability {
   return { morning: false, afternoon: false };
 }
 
+export type ShiftKey = "morning" | "afternoon";
+
 /**
  * Effective availability for `dateKey` (YYYY-MM-DD in NY).
  * Before deadline without submission: treat as **available** (soft default for planning).
@@ -129,13 +145,22 @@ export async function isDriverAvailableOnDate(
   dateKey: string,
   shift: ShiftKey,
   now: Date = new Date(),
-  forcedDates: string[] = []
+  forcedDates: string[] = [],
 ): Promise<boolean> {
   if (forcedDates.includes(dateKey)) return true;
   const weekStart = mondayOfWeekContaining(parseISO(`${dateKey}T12:00:00`));
   const deadline = availabilityDeadlineForWeekMonday(weekStart);
-  const data = await readFile();
-  const rec = recordForWeek(data.records, driverId, weekStart);
+
+  const col = trackingWeekAvailabilityCollection();
+  let rec: WeekAvailabilityRecord | null = null;
+  if (col) {
+    const snap = await col.doc(weekDocId(driverId, weekStart)).get();
+    rec = snap.exists ? (snap.data() as WeekAvailabilityRecord) : null;
+  } else {
+    const data = await readLegacyFile();
+    rec = recordForWeek(data.records, driverId, weekStart) ?? null;
+  }
+
   if (rec) {
     const shifts = normalizeShifts(rec.days[dateKey]);
     return shifts[shift] === true;
