@@ -11,13 +11,26 @@ import { getDriverProfile } from "@/lib/driver-profiles";
 import { assignStopSequences } from "@/lib/route-optimization";
 import { findDriverById, listRegisteredDrivers } from "@/lib/driver-registry";
 import { uploadProofDataUrl } from "@/lib/proof-storage";
+import type { CollectionReference } from "firebase-admin/firestore";
 
 const nowIso = () => new Date().toISOString();
 
 const ORDERS_FILE_VERSION = 4;
 
-const db = getFirestoreDb();
-const ordersCollection = db?.collection("orders");
+/** Lazy so a bad FIREBASE_PRIVATE_KEY does not 500 every route at import time. */
+let ordersFirestoreRef: CollectionReference | null | undefined;
+function getOrdersCollection(): CollectionReference | null {
+  if (ordersFirestoreRef !== undefined) return ordersFirestoreRef;
+  try {
+    const db = getFirestoreDb();
+    ordersFirestoreRef = db ? db.collection("orders") : null;
+  } catch (err) {
+    console.error("[data] Firestore orders collection init failed:", err);
+    ordersFirestoreRef = null;
+  }
+  return ordersFirestoreRef;
+}
+
 const dataDir = path.join(process.cwd(), ".data");
 const fallbackOrdersPath = path.join(dataDir, "orders.json");
 
@@ -87,11 +100,12 @@ export async function applyAutoAllocationToOrders(orders: Order[]): Promise<Orde
 }
 
 export async function runAutoAllocation(): Promise<void> {
-  if (ordersCollection) {
-    const snap = await ordersCollection.get();
+  const oc = getOrdersCollection();
+  if (oc) {
+    const snap = await oc.get();
     const orders = snap.docs.map((d) => d.data() as Order);
     const next = await applyAutoAllocationToOrders(orders);
-    await Promise.all(next.map((o) => ordersCollection.doc(o.id).set(o)));
+    await Promise.all(next.map((o) => oc.doc(o.id).set(o)));
     return;
   }
   const orders = await readFallbackOrders();
@@ -104,8 +118,9 @@ export async function listDrivers() {
 }
 
 export async function unassignDeletedDriverOrders(driverId: string): Promise<void> {
-  if (ordersCollection) {
-    const snap = await ordersCollection.get();
+  const oc = getOrdersCollection();
+  if (oc) {
+    const snap = await oc.get();
     const orders = snap.docs.map((d) => d.data() as Order);
     const updated = orders.map((o) =>
       o.driverId === driverId
@@ -121,7 +136,7 @@ export async function unassignDeletedDriverOrders(driverId: string): Promise<voi
         : o,
     );
     const allocated = await applyAutoAllocationToOrders(updated);
-    await Promise.all(allocated.map((o) => ordersCollection.doc(o.id).set(o)));
+    await Promise.all(allocated.map((o) => oc.doc(o.id).set(o)));
     return;
   }
 
@@ -187,8 +202,9 @@ export async function createOrder(
     scheduledFor: scheduledIso,
     externalOrderId: input.externalOrderId,
   };
-  if (ordersCollection) {
-    await ordersCollection.doc(order.id).set(order);
+  const ocCreate = getOrdersCollection();
+  if (ocCreate) {
+    await ocCreate.doc(order.id).set(order);
     await runAutoAllocation();
   } else {
     const orders = await readFallbackOrders();
@@ -201,8 +217,9 @@ export async function createOrder(
 }
 
 export async function listOrdersByStatus(status: "active" | "scheduled" | "past") {
-  const orders = ordersCollection
-    ? ((await ordersCollection.get()).docs.map((doc) => doc.data() as Order) as Order[])
+  const oc = getOrdersCollection();
+  const orders = oc
+    ? ((await oc.get()).docs.map((doc) => doc.data() as Order) as Order[])
     : await readFallbackOrders();
   if (status === "active") {
     return orders.filter((o) => o.status === "assigned" || o.status === "en_route");
@@ -214,8 +231,9 @@ export async function listOrdersByStatus(status: "active" | "scheduled" | "past"
 }
 
 export async function listAllOrders(): Promise<Order[]> {
-  if (ordersCollection) {
-    const snap = await ordersCollection.get();
+  const oc = getOrdersCollection();
+  if (oc) {
+    const snap = await oc.get();
     return snap.docs.map((d) => d.data() as Order);
   }
   return readFallbackOrders();
@@ -226,8 +244,9 @@ export async function listDriverOrders(driverId: string) {
   if (profile.onboardingStatus !== "approved") {
     return [];
   }
-  const orders = ordersCollection
-    ? ((await ordersCollection.get()).docs.map((doc) => doc.data() as Order) as Order[])
+  const oc = getOrdersCollection();
+  const orders = oc
+    ? ((await oc.get()).docs.map((doc) => doc.data() as Order) as Order[])
     : await readFallbackOrders();
   const mine = orders.filter(
     (o) =>
@@ -243,8 +262,9 @@ export async function listDriverOrders(driverId: string) {
 }
 
 export async function getOrderById(id: string) {
-  if (ordersCollection) {
-    const snap = await ordersCollection.doc(id).get();
+  const oc = getOrdersCollection();
+  if (oc) {
+    const snap = await oc.doc(id).get();
     return snap.exists ? (snap.data() as Order) : undefined;
   }
   const orders = await readFallbackOrders();
@@ -252,8 +272,9 @@ export async function getOrderById(id: string) {
 }
 
 export async function getOrderByTrackingToken(token: string) {
-  const orders = ordersCollection
-    ? ((await ordersCollection.get()).docs.map((doc) => doc.data() as Order) as Order[])
+  const oc = getOrdersCollection();
+  const orders = oc
+    ? ((await oc.get()).docs.map((doc) => doc.data() as Order) as Order[])
     : await readFallbackOrders();
   return orders.find((o) => o.trackingToken === token);
 }
@@ -262,8 +283,9 @@ export async function updateOrderStatus(id: string, status: DeliveryStatus, upda
   const current = await getOrderById(id);
   if (!current) return null;
   const next = { ...current, status, updatedAt: nowIso(), updatedBy };
-  if (ordersCollection) {
-    await ordersCollection.doc(id).set(next);
+  const ocUp = getOrdersCollection();
+  if (ocUp) {
+    await ocUp.doc(id).set(next);
     await runAutoAllocation();
   } else {
     const orders = await readFallbackOrders();
@@ -290,12 +312,13 @@ export async function assignDriver(id: string, driverId: string, updatedBy: stri
     updatedAt: nowIso(),
     updatedBy,
   };
-  if (ordersCollection) {
-    await ordersCollection.doc(id).set(next);
-    const snap = await ordersCollection.get();
+  const ocAs = getOrdersCollection();
+  if (ocAs) {
+    await ocAs.doc(id).set(next);
+    const snap = await ocAs.get();
     const all = snap.docs.map((d) => d.data() as Order);
     const routed = assignStopSequences(all);
-    await Promise.all(routed.map((o) => ordersCollection.doc(o.id).set(o)));
+    await Promise.all(routed.map((o) => ocAs.doc(o.id).set(o)));
   } else {
     const orders = await readFallbackOrders();
     const updated = orders.map((o) => (o.id === id ? next : o));
@@ -321,8 +344,9 @@ export async function updateDriverLocation(
     updatedAt: nowIso(),
     updatedBy,
   };
-  if (ordersCollection) {
-    await ordersCollection.doc(id).set(next);
+  const ocLoc = getOrdersCollection();
+  if (ocLoc) {
+    await ocLoc.doc(id).set(next);
   } else {
     const orders = await readFallbackOrders();
     const updated = orders.map((o) => (o.id === id ? next : o));
@@ -346,12 +370,13 @@ export async function saveProofPhoto(id: string, proofPhotoUrl: string, updatedB
     updatedAt: nowIso(),
     updatedBy,
   };
-  if (ordersCollection) {
-    await ordersCollection.doc(id).set(next);
-    const snap = await ordersCollection.get();
+  const ocProof = getOrdersCollection();
+  if (ocProof) {
+    await ocProof.doc(id).set(next);
+    const snap = await ocProof.get();
     const all = snap.docs.map((d) => d.data() as Order);
     const routed = assignStopSequences(all);
-    await Promise.all(routed.map((o) => ordersCollection.doc(o.id).set(o)));
+    await Promise.all(routed.map((o) => ocProof.doc(o.id).set(o)));
   } else {
     const orders = await readFallbackOrders();
     const updated = orders.map((o) => (o.id === id ? next : o));
@@ -371,8 +396,9 @@ export async function reopenOrderAsAssigned(id: string, updatedBy: string) {
   };
   delete next.proofPhotoUrl;
   delete next.latestLocation;
-  if (ordersCollection) {
-    await ordersCollection.doc(id).set(next);
+  const ocRe = getOrdersCollection();
+  if (ocRe) {
+    await ocRe.doc(id).set(next);
     await runAutoAllocation();
   } else {
     const orders = await readFallbackOrders();

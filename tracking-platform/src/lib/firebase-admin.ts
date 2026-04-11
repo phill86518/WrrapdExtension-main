@@ -19,20 +19,33 @@ function initFirebaseApp(): App | null {
     return null;
   }
 
-  return initializeApp({
-    credential: cert({
-      projectId,
-      clientEmail,
-      privateKey,
-    }),
-  });
+  try {
+    return initializeApp({
+      credential: cert({
+        projectId,
+        clientEmail,
+        privateKey,
+      }),
+    });
+  } catch (err) {
+    console.error("[firebase-admin] initializeApp failed (check FIREBASE_PRIVATE_KEY newlines / PEM):", err);
+    return null;
+  }
 }
 
 export function getFirestoreDb() {
   const app = initFirebaseApp();
   if (!app) return null;
   const databaseId = process.env.FIREBASE_FIRESTORE_DATABASE_ID?.trim() || "(default)";
-  return databaseId === "(default)" ? getFirestore(app) : getFirestore(app, databaseId);
+  try {
+    return databaseId === "(default)" ? getFirestore(app) : getFirestore(app, databaseId);
+  } catch (err) {
+    console.error(
+      `[firebase-admin] getFirestore failed (check FIREBASE_FIRESTORE_DATABASE_ID; databaseId=${databaseId}):`,
+      err,
+    );
+    return null;
+  }
 }
 
 export function getStorageBucket() {
