@@ -4,3 +4,11 @@
  */
 import './content-legacy.js';
 import './lib/amazon-delivery-hints.js';
+
+/** Bump when verifying deploy — search Amazon tab DevTools console for this string. */
+export const WRRAPD_CONTENT_BUILD_TAG = '2026-04-10-gift-save-only+ingest-ui';
+console.info(
+    '[Wrrapd] content bundle',
+    WRRAPD_CONTENT_BUILD_TAG,
+    '— if this line is missing after reload, Chrome is not using the built content.js.',
+);

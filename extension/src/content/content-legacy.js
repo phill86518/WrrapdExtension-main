@@ -1615,6 +1615,26 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
             }
         };
         
+        /**
+         * Terms modal must run ONLY for Amazon's "Save gift options" (not every primary button).
+         * Chewbacca uses #checkout-secondary-continue-button-id + input[data-testid="secondary-continue-button"].
+         */
+        function isDelegatedSaveGiftOptionsClick(target) {
+            if (!target || typeof target.closest !== 'function') return false;
+            if (target.closest('.wrrapd-modal')) return false;
+
+            if (target.closest('#checkout-secondary-continue-button-id')) return true;
+            if (target.closest('input[data-testid="secondary-continue-button"]')) return true;
+
+            const primaryBar = target.closest('#orderSummaryPrimaryActionBtn');
+            if (primaryBar) {
+                const announce = primaryBar.querySelector('.a-button-text, [id$="-announce"]');
+                const label = (announce && announce.textContent) ? announce.textContent.toLowerCase() : '';
+                if (label.includes('save gift')) return true;
+            }
+            return false;
+        }
+
         // ALSO use event delegation on document body to catch clicks even if button is replaced
         const delegatedHandler = function(event) {
             const target = event.target;
@@ -1626,18 +1646,9 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                 return; // Don't intercept programmatic clicks
             }
             
-            // Check if click is on a save/continue button (by text or class)
-            const isSaveButton = 
-                target.closest('#orderSummaryPrimaryActionBtn') !== null ||
-                target.closest('.a-button-primary') !== null ||
-                target.textContent?.toLowerCase().includes('save gift') ||
-                target.textContent?.toLowerCase().includes('continue') ||
-                target.value?.toLowerCase().includes('save') ||
-                target.value?.toLowerCase().includes('continue') ||
-                target.getAttribute('aria-label')?.toLowerCase().includes('save') ||
-                target.getAttribute('aria-label')?.toLowerCase().includes('continue');
+            const isSaveButton = isDelegatedSaveGiftOptionsClick(target);
             
-            if (isSaveButton && target.closest('.wrrapd-modal') === null) {
+            if (isSaveButton) {
                 // CRITICAL: Don't intercept programmatic clicks (check FIRST before anything else)
                 if (localStorage.getItem('wrrapd-programmatic-click-to-payment') === 'true') {
                     console.log("[overrideSaveGiftOptionsButtons] Delegated handler: Programmatic click detected - NOT intercepting.");
@@ -1673,10 +1684,9 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
             }
         };
         
-        // Attach delegation handler to document body (catches all clicks) - VERY EARLY
-        document.body.addEventListener('click', delegatedHandler, true); // Capture phase - runs FIRST
-        document.body.addEventListener('mousedown', delegatedHandler, true); // Also catch mousedown
-        console.log("[overrideSaveGiftOptionsButtons] Event delegation handler attached to document.body (capture phase)");
+        // Capture-phase click only (mousedown + click both fired the handler and could double-open the modal)
+        document.body.addEventListener('click', delegatedHandler, true);
+        console.log("[overrideSaveGiftOptionsButtons] Event delegation (Save gift options only) on document.body, capture click");
         
         // ALSO intercept any navigation that happens after clicking save button
         const checkAndInterceptNavigation = () => {
@@ -1721,11 +1731,25 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
         const findButtons = async () => {
             const buttons = [];
             
-            // Try original selectors first (fastest)
+            // Chewbacca "Save gift options" (secondary continue — user-confirmed selector)
+            const secondarySave = document.querySelector(
+                '#checkout-secondary-continue-button-id input.a-button-input, input[data-testid="secondary-continue-button"]',
+            );
+            if (secondarySave && secondarySave.closest('.wrrapd-modal') === null) {
+                buttons.push(secondarySave);
+                console.log("[overrideSaveGiftOptionsButtons] Found checkout-secondary-continue (Save gift options) button");
+            }
+
+            // Try original selectors first (fastest) — only when label is Save gift (avoid wrong page primary actions)
             const orderSummaryButton = document.querySelector('#orderSummaryPrimaryActionBtn .a-button-input');
             if (orderSummaryButton && orderSummaryButton.closest('.wrrapd-modal') === null) {
-                buttons.push(orderSummaryButton);
-                console.log("[overrideSaveGiftOptionsButtons] Found orderSummaryPrimaryActionBtn button");
+                const bar = orderSummaryButton.closest('#orderSummaryPrimaryActionBtn');
+                const announce = bar && bar.querySelector('.a-button-text, [id$="-announce"]');
+                const label = (announce && announce.textContent) ? announce.textContent.toLowerCase() : '';
+                if (label.includes('save gift') && !buttons.includes(orderSummaryButton)) {
+                    buttons.push(orderSummaryButton);
+                    console.log("[overrideSaveGiftOptionsButtons] Found orderSummaryPrimaryActionBtn (Save gift options) button");
+                }
             }
             
             // Try second original selector
