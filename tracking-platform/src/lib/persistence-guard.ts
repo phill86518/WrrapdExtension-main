@@ -1,4 +1,7 @@
-import { isFirebasePrivateKeyConfigured } from "./firebase-admin";
+import {
+  isFirebasePrivateKeyConfigured,
+  sanitizeFirebaseEnvScalar,
+} from "./firebase-admin";
 
 /**
  * Cloud Run sets K_SERVICE. Without Firestore, orders/drivers survive scale-to-zero
@@ -12,8 +15,8 @@ export function assertCloudRunPersistence(): void {
   const allowEphemeral = process.env.TRACKING_ALLOW_EPHEMERAL === "true";
   if (allowEphemeral) return;
 
-  const projectId = process.env.FIREBASE_PROJECT_ID?.trim();
-  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL?.trim();
+  const projectId = sanitizeFirebaseEnvScalar(process.env.FIREBASE_PROJECT_ID);
+  const clientEmail = sanitizeFirebaseEnvScalar(process.env.FIREBASE_CLIENT_EMAIL);
   if (projectId && clientEmail && isFirebasePrivateKeyConfigured()) return;
 
   throw new Error(

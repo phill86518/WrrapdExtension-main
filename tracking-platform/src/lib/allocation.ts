@@ -36,6 +36,31 @@ export async function computeAssignmentsForOrders(
     const dateKey = formatDateKeyNy(dayOrders[0].scheduledFor);
     const shiftForOrder = (o: Order): ShiftKey => (hourNy(o.scheduledFor) < 13 ? "morning" : "afternoon");
 
+    const soloId = process.env.TRACKING_SOLO_DRIVER_ID?.trim();
+    if (soloId) {
+      const solo = driversSorted.find((d) => d.id === soloId);
+      if (solo) {
+        const soloProf = await getDriverProfile(solo.id);
+        if (soloProf.onboardingStatus === "approved") {
+          const forcedSolo = soloProf.forcedAvailableDates ?? [];
+          for (const o of dayOrders) {
+            if (
+              await isDriverAvailableOnDate(
+                solo.id,
+                dateKey,
+                shiftForOrder(o),
+                now,
+                forcedSolo,
+              )
+            ) {
+              result.set(o.id, { driverId: solo.id, driverName: solo.name });
+            }
+          }
+          continue;
+        }
+      }
+    }
+
     const approved: Driver[] = [];
     const forcedByDriver = new Map<string, string[]>();
     for (const d of driversSorted) {

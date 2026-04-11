@@ -1,5 +1,9 @@
 import type { CreateOrderInput } from "@/lib/data";
 import type { Order } from "@/lib/types";
+import {
+  endOfCalendarDayAmericaNewYorkIso,
+  wrrapdScheduledInstantFromAmazonDeliveryDateKey,
+} from "@/lib/scheduling";
 
 /** Raw JSON from extension / website / partners (all fields optional until validated). */
 export type IngestOrderPayload = {
@@ -14,6 +18,16 @@ export type IngestOrderPayload = {
   zipCode?: unknown;
   scheduledFor?: unknown;
   deliveryDate?: unknown;
+  /** Amazon UI calendar date (YYYY-MM-DD, Eastern). Server sets Wrrapd day = +1 at 14:00 ET. */
+  amazonDeliveryDay?: unknown;
+  /** Multiple Wrrapd line items with different Amazon dates; use with wrrapdAmazonGrouping. */
+  amazonDeliveryDays?: unknown;
+  /**
+   * `earliest` — schedule after the **first** Amazon date (fastest Wrrapd delivery).
+   * `together` — schedule after the **last** Amazon date (one trip after all Amazon drops).
+   * `separate` — not supported in a single ingest body; submit one request per Amazon date.
+   */
+  wrrapdAmazonGrouping?: unknown;
   orderNumber?: unknown;
   externalOrderId?: unknown;
   sourceNote?: unknown;
@@ -29,7 +43,9 @@ export type IngestOrderPayload = {
   buyer?: {
     name?: unknown;
     phone?: unknown;
+    email?: unknown;
   };
+  customerEmail?: unknown;
 };
 
 export type IngestSuccess = {
@@ -48,6 +64,34 @@ function str(v: unknown): string | undefined {
   if (typeof v !== "string") return undefined;
   const t = v.trim();
   return t.length ? t : undefined;
+}
+
+const YMD = /^\d{4}-\d{2}-\d{2}$/;
+
+function isValidYyyyMmDd(key: string): boolean {
+  if (!YMD.test(key)) return false;
+  const [y, m, d] = key.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  return dt.getUTCFullYear() === y && dt.getUTCMonth() === m - 1 && dt.getUTCDate() === d;
+}
+
+function parseAmazonGrouping(v: unknown): "together" | "earliest" | "separate" | "pending" | undefined {
+  const s = str(v)?.toLowerCase();
+  if (s === "together" || s === "single-trip" || s === "latest") return "together";
+  if (s === "earliest" || s === "fastest" || s === "first") return "earliest";
+  if (s === "separate") return "separate";
+  if (s === "pending" || s === "ask_customer" || s === "deferred") return "pending";
+  return undefined;
+}
+
+function parseAmazonDateKeys(v: unknown): string[] | undefined {
+  if (!Array.isArray(v)) return undefined;
+  const out: string[] = [];
+  for (const x of v) {
+    const k = str(x);
+    if (k && isValidYyyyMmDd(k)) out.push(k);
+  }
+  return out.length ? out : undefined;
 }
 
 /**
@@ -83,16 +127,71 @@ export function parseIngestOrderPayload(body: unknown): IngestSuccess | IngestFa
     str(p.buyer && typeof p.buyer === "object" ? p.buyer.phone : undefined);
   const recipientName =
     str(p.recipientName) || str(sa?.name) || customerName;
+  const customerEmail =
+    str(p.customerEmail) ||
+    str(p.buyer && typeof p.buyer === "object" ? (p.buyer as { email?: unknown }).email : undefined);
   const addressLine1 = str(p.addressLine1) || str(sa?.line1);
   const addressLine2 = str(p.addressLine2) || str(sa?.line2);
   const city = str(p.city) || str(sa?.city);
   const state = str(p.state) || str(sa?.state);
   const postalCode =
     str(p.postalCode) || str(p.zipCode) || str(sa?.postalCode) || str(sa?.zip);
-  const scheduledFor = str(p.scheduledFor) || str(p.deliveryDate);
+  let scheduledFor = str(p.scheduledFor) || str(p.deliveryDate);
+
+  const amazonDaySingle = str(p.amazonDeliveryDay);
+  const amazonDaysArr = parseAmazonDateKeys(p.amazonDeliveryDays);
+  const groupingExplicit = parseAmazonGrouping(p.wrrapdAmazonGrouping);
+
+  let deliveryPreferencePending = false;
+  let deliveryPreferenceRespondBy: string | undefined;
+  let amazonDeliveryDatesSnapshot: string[] | undefined;
+
+  if (amazonDaySingle && !isValidYyyyMmDd(amazonDaySingle)) {
+    invalidFields.push("amazonDeliveryDay");
+  }
+
+  if (!scheduledFor && (amazonDaySingle || amazonDaysArr?.length)) {
+    if (!invalidFields.includes("amazonDeliveryDay")) {
+      const keys: string[] = [];
+      if (amazonDaysArr?.length) {
+        keys.push(...[...new Set(amazonDaysArr)].sort());
+      } else if (amazonDaySingle) {
+        keys.push(amazonDaySingle);
+      }
+      if (keys.length > 1 && groupingExplicit === "separate") {
+        return {
+          ok: false,
+          missingFields: [],
+          invalidFields: ["wrrapdAmazonGrouping", "amazonDeliveryDays"],
+          message:
+            "wrrapdAmazonGrouping=separate requires one ingest per Amazon delivery date (single amazonDeliveryDay per request).",
+        };
+      }
+      const needsCustomerChoice =
+        keys.length > 1 && (groupingExplicit === undefined || groupingExplicit === "pending");
+      const pick =
+        keys.length <= 1
+          ? keys[0]!
+          : groupingExplicit === "together"
+            ? keys[keys.length - 1]!
+            : groupingExplicit === "earliest"
+              ? keys[0]!
+              : keys[keys.length - 1]!;
+      if (needsCustomerChoice && keys.length > 1) {
+        deliveryPreferencePending = true;
+        amazonDeliveryDatesSnapshot = [...keys];
+        deliveryPreferenceRespondBy = endOfCalendarDayAmericaNewYorkIso();
+      }
+      try {
+        scheduledFor = wrrapdScheduledInstantFromAmazonDeliveryDateKey(pick);
+      } catch {
+        invalidFields.push("amazonDeliveryDay");
+      }
+    }
+  }
 
   const externalOrderId = str(p.externalOrderId) || str(p.orderNumber);
-  const sourceNote = str(p.sourceNote);
+  let sourceNote = str(p.sourceNote);
 
   const missingFields: string[] = [];
   if (!customerName) missingFields.push("customerName");
@@ -110,10 +209,21 @@ export function parseIngestOrderPayload(body: unknown): IngestSuccess | IngestFa
       missingFields,
       invalidFields,
       message:
-        missingFields.length > 0
-          ? "Missing required fields (after alias mapping)"
-          : "Invalid payload",
+        invalidFields.length > 0 && missingFields.length === 0
+          ? "Invalid field values"
+          : missingFields.length > 0
+            ? "Missing required fields (after alias mapping)"
+            : "Invalid payload",
     };
+  }
+
+  if (!sourceNote && (amazonDaySingle || amazonDaysArr?.length)) {
+    const daysLabel = amazonDaysArr?.length ? amazonDaysArr.join(", ") : amazonDaySingle!;
+    sourceNote = deliveryPreferencePending
+      ? `Amazon deliveries ${daysLabel} — Wrrapd scheduled after last Amazon date by default; customer may switch to fastest by ${deliveryPreferenceRespondBy} ET deadline.`
+      : `Amazon delivery ${daysLabel} → Wrrapd +1 day @ 14:00 ET`;
+  } else if (!sourceNote && externalOrderId) {
+    sourceNote = `Ingested order ${externalOrderId}`;
   }
 
   return {
@@ -129,11 +239,15 @@ export function parseIngestOrderPayload(body: unknown): IngestSuccess | IngestFa
       postalCode: postalCode!,
       scheduledFor: scheduledFor!,
       ...(externalOrderId ? { externalOrderId } : {}),
-      ...(sourceNote
-        ? { sourceNote }
-        : externalOrderId
-          ? { sourceNote: `Ingested order ${externalOrderId}` }
-          : {}),
+      ...(sourceNote ? { sourceNote } : {}),
+      ...(customerEmail ? { customerEmail } : {}),
+      ...(deliveryPreferencePending
+        ? {
+            deliveryPreferencePending: true,
+            deliveryPreferenceRespondBy,
+            amazonDeliveryDatesSnapshot,
+          }
+        : {}),
     },
   };
 }
@@ -161,6 +275,7 @@ export function orderIngestFieldGuide(): {
     storedOnOrder: [
       "customerName",
       "customerPhone",
+      "customerEmail",
       "recipientName",
       "addressLine1",
       "addressLine2",
@@ -170,10 +285,19 @@ export function orderIngestFieldGuide(): {
       "scheduledFor",
       "sourceNote",
       "externalOrderId",
+      "amazonDeliveryDatesSnapshot",
+      "deliveryPreferencePending",
+      "deliveryPreferenceRespondBy",
+      "deliveryPreferenceToken",
     ],
     acceptedAliases: {
       zipCode: "postalCode",
-      deliveryDate: "scheduledFor",
+      deliveryDate: "scheduledFor (or use amazonDeliveryDay)",
+      amazonDeliveryDay: "YYYY-MM-DD Eastern → Wrrapd scheduled +1 day 14:00 ET",
+      amazonDeliveryDays: "array of YYYY-MM-DD with wrrapdAmazonGrouping",
+      wrrapdAmazonGrouping: "earliest | together | separate | pending (email/SMS choice)",
+      customerEmail: "thank-you + delivery-choice emails",
+      "buyer.email": "customerEmail",
       orderNumber: "externalOrderId (+ sourceNote)",
       "shippingAddress.line1": "addressLine1",
       "shippingAddress.name": "recipientName (fallback)",

@@ -1,4 +1,4 @@
-import { randomUUID } from "crypto";
+import { randomBytes, randomUUID } from "crypto";
 import { existsSync } from "fs";
 import { mkdir, readFile, writeFile } from "fs/promises";
 import path from "path";
@@ -6,7 +6,11 @@ import type { Order, DeliveryStatus, OrdersFilePayload } from "@/lib/types";
 import { getFirestoreDb } from "@/lib/firebase-admin";
 import { buildDemoSeedOrders } from "@/lib/demo-orders";
 import { computeAssignmentsForOrders } from "@/lib/allocation";
-import { parseScheduledForInput, validateScheduledInstant } from "@/lib/scheduling";
+import {
+  parseScheduledForInput,
+  validateScheduledInstant,
+  wrrapdScheduledInstantFromAmazonDeliveryDateKey,
+} from "@/lib/scheduling";
 import { getDriverProfile } from "@/lib/driver-profiles";
 import { assignStopSequences } from "@/lib/route-optimization";
 import { findDriverById, listRegisteredDrivers } from "@/lib/driver-registry";
@@ -170,6 +174,12 @@ export type CreateOrderInput = {
   scheduledFor: string;
   sourceNote?: string;
   externalOrderId?: string;
+  customerEmail?: string;
+  amazonDeliveryDatesSnapshot?: string[];
+  deliveryPreferencePending?: boolean;
+  deliveryPreferenceRespondBy?: string;
+  /** Admin / internal creates: set true to skip thank-you email & SMS */
+  skipCustomerNotifications?: boolean;
 };
 
 export async function createOrder(
@@ -182,6 +192,10 @@ export async function createOrder(
   }
   const scheduledIso = scheduledAt.toISOString();
   const id = `ord-${Math.floor(Math.random() * 9000 + 1000)}`;
+  const prefToken =
+    input.deliveryPreferencePending === true
+      ? randomBytes(32).toString("base64url")
+      : undefined;
   const order: Order = {
     id,
     trackingToken: randomUUID(),
@@ -201,6 +215,17 @@ export async function createOrder(
     postalCode: input.postalCode,
     scheduledFor: scheduledIso,
     externalOrderId: input.externalOrderId,
+    ...(input.customerEmail ? { customerEmail: input.customerEmail.trim() } : {}),
+    ...(input.amazonDeliveryDatesSnapshot?.length
+      ? { amazonDeliveryDatesSnapshot: [...input.amazonDeliveryDatesSnapshot] }
+      : {}),
+    ...(input.deliveryPreferencePending === true && prefToken
+      ? {
+          deliveryPreferencePending: true,
+          deliveryPreferenceRespondBy: input.deliveryPreferenceRespondBy,
+          deliveryPreferenceToken: prefToken,
+        }
+      : {}),
   };
   const ocCreate = getOrdersCollection();
   if (ocCreate) {
@@ -213,7 +238,13 @@ export async function createOrder(
     await writeFallbackPayload(next);
   }
   const saved = await getOrderById(order.id);
-  return { ok: true, order: saved ?? order };
+  const finalOrder = saved ?? order;
+  if (!input.skipCustomerNotifications) {
+    void import("@/lib/post-order-notify")
+      .then((m) => m.sendPostOrderNotifications(finalOrder))
+      .catch((e) => console.error("[post-order-notify]", e));
+  }
+  return { ok: true, order: finalOrder };
 }
 
 export async function listOrdersByStatus(status: "active" | "scheduled" | "past") {
@@ -277,6 +308,98 @@ export async function getOrderByTrackingToken(token: string) {
     ? ((await oc.get()).docs.map((doc) => doc.data() as Order) as Order[])
     : await readFallbackOrders();
   return orders.find((o) => o.trackingToken === token);
+}
+
+export async function getOrderByDeliveryPreferenceToken(token: string): Promise<Order | undefined> {
+  if (!token.trim()) return undefined;
+  const oc = getOrdersCollection();
+  if (oc) {
+    const snap = await oc.where("deliveryPreferenceToken", "==", token.trim()).limit(1).get();
+    if (!snap.empty) return snap.docs[0]!.data() as Order;
+    return undefined;
+  }
+  const orders = await readFallbackOrders();
+  return orders.find((o) => o.deliveryPreferenceToken === token.trim());
+}
+
+export async function resolveDeliveryPreferenceByToken(
+  token: string,
+  choice: "together" | "earliest",
+): Promise<{ ok: true; order: Order } | { ok: false; error: string }> {
+  const current = await getOrderByDeliveryPreferenceToken(token);
+  if (!current?.deliveryPreferencePending) {
+    return { ok: false, error: "This link is invalid or your choice was already recorded." };
+  }
+  const days = current.amazonDeliveryDatesSnapshot;
+  if (!days?.length) {
+    return { ok: false, error: "Order is missing Amazon date data." };
+  }
+  const sorted = [...new Set(days.map((d) => d.trim()))].filter(Boolean).sort();
+  if (sorted.length < 2) {
+    return { ok: false, error: "No multi-date choice is needed for this order." };
+  }
+  const pick = choice === "together" ? sorted[sorted.length - 1]! : sorted[0]!;
+  let scheduledIso: string;
+  try {
+    scheduledIso = wrrapdScheduledInstantFromAmazonDeliveryDateKey(pick);
+  } catch {
+    return { ok: false, error: "Could not compute schedule from Amazon dates." };
+  }
+  const scheduledAt = parseScheduledForInput(scheduledIso);
+  const check = validateScheduledInstant(scheduledAt);
+  if (!check.ok) {
+    return { ok: false, error: check.message };
+  }
+  const next: Order = {
+    ...current,
+    scheduledFor: scheduledAt.toISOString(),
+    deliveryPreferencePending: false,
+    deliveryPreferenceChoice: choice,
+    updatedAt: nowIso(),
+    updatedBy: "customer-delivery-preference",
+  };
+  const oc = getOrdersCollection();
+  if (oc) {
+    await oc.doc(next.id).set(next);
+    await runAutoAllocation();
+  } else {
+    const orders = await readFallbackOrders();
+    const updated = orders.map((o) => (o.id === next.id ? next : o));
+    const allocated = await applyAutoAllocationToOrders(updated);
+    await writeFallbackPayload(allocated);
+  }
+  return { ok: true, order: (await getOrderById(next.id)) ?? next };
+}
+
+/** After EOD deadline: keep combined (last Amazon date) schedule; clear pending flag. */
+export async function expireStaleDeliveryPreferences(): Promise<number> {
+  const nowMs = Date.now();
+  const oc = getOrdersCollection();
+  const orders = await listAllOrders();
+  const toClose: Order[] = [];
+  for (const o of orders) {
+    if (!o.deliveryPreferencePending || !o.deliveryPreferenceRespondBy) continue;
+    if (nowMs <= new Date(o.deliveryPreferenceRespondBy).getTime()) continue;
+    toClose.push({
+      ...o,
+      deliveryPreferencePending: false,
+      deliveryPreferenceChoice: "together_deadline_default",
+      updatedAt: nowIso(),
+      updatedBy: "delivery-preference-deadline",
+    });
+  }
+  if (toClose.length === 0) return 0;
+  if (oc) {
+    await Promise.all(toClose.map((next) => oc.doc(next.id).set(next)));
+    await runAutoAllocation();
+  } else {
+    const all = await readFallbackOrders();
+    const closeMap = new Map(toClose.map((n) => [n.id, n] as const));
+    const merged = all.map((x) => closeMap.get(x.id) ?? x);
+    const allocated = await applyAutoAllocationToOrders(merged);
+    await writeFallbackPayload(allocated);
+  }
+  return toClose.length;
 }
 
 export async function updateOrderStatus(id: string, status: DeliveryStatus, updatedBy: string) {

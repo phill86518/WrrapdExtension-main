@@ -11,6 +11,30 @@ export function amazonShipDayPlusOnePlaceholder(amazonDeliveryDayIso: string): s
   return formatISO(next);
 }
 
+const YMD = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * Amazon-shown **calendar** delivery date in Eastern (`YYYY-MM-DD`) → Wrrapd calendar day = next day,
+ * route anchor **14:00 America/New_York** (afternoon shift / start of route window).
+ */
+/** End of calendar day (23:59:59.999) America/New_York for the date that `reference` falls on in that zone. */
+export function endOfCalendarDayAmericaNewYorkIso(reference: Date = new Date()): string {
+  const dayKey = formatInTimeZone(reference, NY, "yyyy-MM-dd");
+  return toDate(`${dayKey}T23:59:59.999`, { timeZone: NY }).toISOString();
+}
+
+export function wrrapdScheduledInstantFromAmazonDeliveryDateKey(amazonDateKey: string): string {
+  const key = amazonDateKey.trim();
+  if (!YMD.test(key)) {
+    throw new Error(`Invalid amazonDeliveryDay (expected YYYY-MM-DD): ${amazonDateKey}`);
+  }
+  const amazonNoonNy = toDate(`${key}T12:00:00`, { timeZone: NY });
+  const wrrapdCal = addDays(amazonNoonNy, 1);
+  const wrrapdYmd = formatInTimeZone(wrrapdCal, NY, "yyyy-MM-dd");
+  const startNy = toDate(`${wrrapdYmd}T14:00:00`, { timeZone: NY });
+  return formatISO(startNy);
+}
+
 /** Test phase: tomorrow, day after, day after that — 7:24 PM local NY for parity with existing demo. */
 export function getNextThreeDemoScheduleInstants(now: Date = new Date()): string[] {
   const todayKey = formatInTimeZone(now, NY, "yyyy-MM-dd");

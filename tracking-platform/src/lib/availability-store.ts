@@ -147,6 +147,10 @@ export async function isDriverAvailableOnDate(
   now: Date = new Date(),
   forcedDates: string[] = [],
 ): Promise<boolean> {
+  const founderId = process.env.TRACKING_FOUNDER_DRIVER_ID?.trim();
+  if (founderId && driverId === founderId) {
+    return true;
+  }
   if (forcedDates.includes(dateKey)) return true;
   const weekStart = mondayOfWeekContaining(parseISO(`${dateKey}T12:00:00`));
   const deadline = availabilityDeadlineForWeekMonday(weekStart);

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { clearSessionCookie } from "@/lib/auth";
+import { resolvePublicOrigin } from "@/lib/public-origin";
 
 export async function POST() {
   await clearSessionCookie();
@@ -16,7 +17,12 @@ function safeInternalPath(raw: string | null): string {
 export async function GET(request: NextRequest) {
   await clearSessionCookie();
   const path = safeInternalPath(request.nextUrl.searchParams.get("redirect"));
-  const url = new URL(path, request.nextUrl.origin);
+  const origin = resolvePublicOrigin(
+    (name) => request.headers.get(name),
+    request.nextUrl.origin,
+  );
+  const base = origin || request.nextUrl.origin;
+  const url = new URL(path, base);
   const res = NextResponse.redirect(url, 302);
   res.headers.set("Cache-Control", "no-store");
   return res;

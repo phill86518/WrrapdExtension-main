@@ -7,6 +7,7 @@ import {
   updateOrderStatus,
 } from "@/lib/data";
 import { getSession } from "@/lib/auth";
+import { SameOriginLogoutLink } from "@/components/same-origin-logout-link";
 import { LogoutButton } from "@/components/logout-button";
 import { AdminCreateDeliveryForm } from "@/components/admin-create-delivery-form";
 import { PasswordField } from "@/components/password-field";
@@ -34,6 +35,7 @@ async function createOrderAction(formData: FormData) {
     state: String(formData.get("state") || ""),
     postalCode: String(formData.get("postalCode") || "").trim(),
     scheduledFor: String(formData.get("scheduledFor") || ""),
+    skipCustomerNotifications: true,
   });
   if (!result.ok) {
     redirect(`/admin?createError=${encodeURIComponent(result.error)}`);
@@ -114,12 +116,32 @@ export default async function AdminPage({
   let past: Awaited<ReturnType<typeof listOrdersByStatus>>;
   let drivers: Awaited<ReturnType<typeof listDrivers>>;
   try {
-    [active, scheduled, past, drivers] = await Promise.all([
+    const settled = await Promise.allSettled([
       listOrdersByStatus("active"),
       listOrdersByStatus("scheduled"),
       listOrdersByStatus("past"),
       listDrivers(),
     ]);
+    const labels = ["orders:active", "orders:scheduled", "orders:past", "drivers"] as const;
+    settled.forEach((r, i) => {
+      if (r.status === "rejected") {
+        const reason = r.reason;
+        const msg = reason instanceof Error ? reason.message : String(reason);
+        const code =
+          reason && typeof reason === "object" && "code" in reason
+            ? String((reason as { code?: unknown }).code)
+            : "";
+        console.error(`[admin] load failed (${labels[i]}):`, msg, code || "", reason);
+      }
+    });
+    const failed = settled.find((r) => r.status === "rejected");
+    if (failed?.status === "rejected") {
+      throw failed.reason;
+    }
+    active = (settled[0] as PromiseFulfilledResult<typeof active>).value;
+    scheduled = (settled[1] as PromiseFulfilledResult<typeof scheduled>).value;
+    past = (settled[2] as PromiseFulfilledResult<typeof past>).value;
+    drivers = (settled[3] as PromiseFulfilledResult<typeof drivers>).value;
   } catch (err) {
     console.error("[admin] failed to load Firestore / orders", err);
     return (
@@ -127,10 +149,15 @@ export default async function AdminPage({
         <h1 className="text-2xl font-semibold">Command center unavailable</h1>
         <p className="mt-3 text-slate-700">
           Loading orders or drivers failed (often Firestore rules, network, or bad data). Check{" "}
-          <strong>Cloud Run → Logs</strong> for the stack trace.
+          <strong>Cloud Run → Logs</strong> for lines starting with{" "}
+          <code className="rounded bg-slate-100 px-1 text-sm">[admin] load failed</code> or{" "}
+          <code className="rounded bg-slate-100 px-1 text-sm">[firebase-admin]</code>.
         </p>
         <p className="mt-2 text-sm text-slate-500">
-          Try signing out and back in: <a href="/api/logout?redirect=/admin" className="text-blue-700 underline">Log out</a>
+          Try signing out and back in:{" "}
+          <SameOriginLogoutLink redirectPath="/admin" className="text-blue-700 underline">
+            Log out
+          </SameOriginLogoutLink>
         </p>
       </main>
     );

@@ -38,6 +38,16 @@ export type Order = {
   externalOrderId?: string;
   /** Per driver + calendar day (ET): optimized stop order (1 = first after leaving depot) */
   stopSequence?: number;
+  customerEmail?: string;
+  /** Amazon YYYY-MM-DD values seen at ingest when customer must choose combined vs fastest Wrrapd */
+  amazonDeliveryDatesSnapshot?: string[];
+  deliveryPreferencePending?: boolean;
+  /** ISO instant — respond by this time (EOD Eastern on order day) */
+  deliveryPreferenceRespondBy?: string;
+  /** Secret link segment for /delivery-choice */
+  deliveryPreferenceToken?: string;
+  /** together | earliest | together_deadline_default | set by customer */
+  deliveryPreferenceChoice?: string;
 };
 
 export type Driver = {

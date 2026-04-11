@@ -1,8 +1,11 @@
 import Image from "next/image";
 import { notFound } from "next/navigation";
+import { formatInTimeZone } from "date-fns-tz";
 import { getOrderByTrackingToken } from "@/lib/data";
 
 export const dynamic = "force-dynamic";
+
+const NY = "America/New_York";
 
 function statusLabel(status: string) {
   if (status === "scheduled") return "Scheduled";
@@ -20,6 +23,8 @@ export default async function TrackingPage({
   const { token } = await params;
   const order = await getOrderByTrackingToken(token);
   if (!order) notFound();
+
+  const wrrapdDayLabel = formatInTimeZone(new Date(order.scheduledFor), NY, "EEEE, MMMM d, yyyy");
 
   const mapUrl = order.latestLocation
     ? `https://www.google.com/maps?q=${order.latestLocation.lat},${order.latestLocation.lng}&z=14&output=embed`
@@ -45,6 +50,11 @@ export default async function TrackingPage({
             <p className="mt-2">
               <span className="font-semibold">Destination:</span> {order.addressLine1}, {order.city}, {order.state}{" "}
               {order.postalCode}
+            </p>
+            <p className="mt-3 rounded-lg border border-slate-600 bg-slate-800/80 px-3 py-2 text-sm text-slate-200">
+              <span className="font-semibold text-white">Your Wrrapd delivery window:</span>{" "}
+              <time dateTime={order.scheduledFor}>{wrrapdDayLabel}</time>, between{" "}
+              <strong>1:00 PM</strong> and <strong>7:00 PM Eastern</strong>. We may arrive anytime in that window.
             </p>
             {order.latestLocation && (
               <p className="mt-2 text-sm text-slate-300">
