@@ -5,7 +5,15 @@ import { getStorage } from "firebase-admin/storage";
 function getPrivateKey() {
   const raw = process.env.FIREBASE_PRIVATE_KEY;
   if (!raw) return undefined;
-  return raw.replace(/\\n/g, "\n");
+  let s = raw.trim();
+  // Strip UTF-8 BOM if Secret Manager / Windows added it (breaks PEM parsing).
+  if (s.charCodeAt(0) === 0xfeff) s = s.slice(1);
+  s = s.trim();
+  // .env-style: literal backslash-n in one line → real newlines
+  s = s.replace(/\\n/g, "\n");
+  // If the secret was stored with Windows CRLF only, normalize
+  s = s.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  return s;
 }
 
 function initFirebaseApp(): App | null {
