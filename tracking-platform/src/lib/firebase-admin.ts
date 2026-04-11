@@ -1,19 +1,43 @@
+import { Buffer } from "node:buffer";
 import { App, cert, getApps, initializeApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
 
+function normalizePemString(s: string): string {
+  let t = s.trim();
+  if (t.charCodeAt(0) === 0xfeff) t = t.slice(1);
+  t = t.trim();
+  t = t.replace(/\\n/g, "\n");
+  t = t.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  return t;
+}
+
+/**
+ * Prefer FIREBASE_PRIVATE_KEY_BASE64 (single line, Secret Manager–friendly).
+ * Otherwise FIREBASE_PRIVATE_KEY (PEM or .env-style \n escapes).
+ */
 function getPrivateKey() {
+  const b64 = process.env.FIREBASE_PRIVATE_KEY_BASE64?.trim();
+  if (b64) {
+    try {
+      const pem = Buffer.from(b64, "base64").toString("utf8");
+      return normalizePemString(pem);
+    } catch (err) {
+      console.error("[firebase-admin] FIREBASE_PRIVATE_KEY_BASE64 decode failed:", err);
+      return undefined;
+    }
+  }
+
   const raw = process.env.FIREBASE_PRIVATE_KEY;
   if (!raw) return undefined;
-  let s = raw.trim();
-  // Strip UTF-8 BOM if Secret Manager / Windows added it (breaks PEM parsing).
-  if (s.charCodeAt(0) === 0xfeff) s = s.slice(1);
-  s = s.trim();
-  // .env-style: literal backslash-n in one line → real newlines
-  s = s.replace(/\\n/g, "\n");
-  // If the secret was stored with Windows CRLF only, normalize
-  s = s.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
-  return s;
+  return normalizePemString(raw);
+}
+
+/** True if either private-key env form is non-empty (for startup guard). */
+export function isFirebasePrivateKeyConfigured(): boolean {
+  return Boolean(
+    process.env.FIREBASE_PRIVATE_KEY_BASE64?.trim() || process.env.FIREBASE_PRIVATE_KEY?.trim(),
+  );
 }
 
 function initFirebaseApp(): App | null {

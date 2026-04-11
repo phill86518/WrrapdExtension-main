@@ -107,7 +107,7 @@ Cloud Run instances use **ephemeral disk**. Without Firestore, orders/drivers/av
 
    - `FIREBASE_PROJECT_ID`
    - `FIREBASE_CLIENT_EMAIL`
-   - `FIREBASE_PRIVATE_KEY` (same escaping as `.env.example`)
+   - `FIREBASE_PRIVATE_KEY` (same escaping as `.env.example`), **or** `FIREBASE_PRIVATE_KEY_BASE64` (UTF-8 PEM → base64, one line; avoids Secret Manager newline bugs)
    - If you created a **named** Firestore database (not `(default)`), also set `FIREBASE_FIRESTORE_DATABASE_ID` to that ID (e.g. `wrrapd-firebase-db01`). Check **Firestore → database picker → Database ID** in Firebase Console.
 
 4. Optional for proof photos: `FIREBASE_STORAGE_BUCKET` and/or `GCS_BACKUP_BUCKET` (see Proof-of-delivery section).
