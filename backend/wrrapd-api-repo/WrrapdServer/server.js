@@ -791,6 +791,7 @@ app.post('/process-payment', async (req, res) => {
             const ingestPayload = {
                 customerName,
                 customerPhone,
+                customerEmail,
                 recipientName,
                 addressLine1: streetParts.line1 || finalAddr.line1 || item.addressLine1 || 'N/A',
                 addressLine2: streetParts.line2 || finalAddr.line2 || item.addressLine2 || '',

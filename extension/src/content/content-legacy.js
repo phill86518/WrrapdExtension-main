@@ -8688,6 +8688,207 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
         return itemsInCheckout;
     }
 
+    function splitStreetForIngest(rawStreet) {
+        if (!rawStreet || typeof rawStreet !== 'string') return { line1: '', line2: '' };
+        const parts = rawStreet.split(',').map((x) => x.trim()).filter(Boolean);
+        return {
+            line1: parts[0] || rawStreet.trim(),
+            line2: parts.slice(1).join(', '),
+        };
+    }
+
+    function readAmazonDeliveryHintsFromSessionStorage() {
+        try {
+            const raw = sessionStorage.getItem('wrrapd-amazon-delivery-hints-v1');
+            if (!raw) return null;
+            const j = JSON.parse(raw);
+            if (!j || typeof j !== 'object') return null;
+            return j;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function getStagingTrackingIngestConfig() {
+        try {
+            const key = localStorage.getItem('wrrapd-tracking-ingest-key');
+            if (!key || !key.trim()) return null;
+            const full = localStorage.getItem('wrrapd-tracking-ingest-url');
+            if (full && full.trim()) return { url: full.trim(), key: key.trim() };
+            const origin = localStorage.getItem('wrrapd-tracking-public-origin');
+            if (origin && origin.trim()) {
+                const base = origin.trim().replace(/\/$/, '');
+                return { url: `${base}/api/orders/ingest`, key: key.trim() };
+            }
+        } catch (e) { /* ignore */ }
+        return null;
+    }
+
+    /**
+     * Same shape as the array sent to process-payment (Wrrapd line items only).
+     */
+    function buildWrrapdOrderDataFromLocalStorage() {
+        const rawItems = localStorage.getItem('wrrapd-items');
+        const orderData = [];
+        if (!rawItems) return orderData;
+        try {
+            const parsedItems = JSON.parse(rawItems);
+            if (!parsedItems || typeof parsedItems !== 'object') return orderData;
+            const itemList = Array.isArray(parsedItems) ? parsedItems : Object.values(parsedItems);
+            itemList.forEach((item) => {
+                if (!item || !item.options) return;
+                item.options.forEach((option) => {
+                    const isWrrapdLike =
+                        option &&
+                        (option.checkbox_wrrapd === true ||
+                            !!option.selected_wrapping_option ||
+                            !!option.selected_ai_design ||
+                            !!option.uploaded_design_path ||
+                            !!option.file_data_url ||
+                            option.checkbox_flowers === true);
+                    if (!isWrrapdLike) return;
+                    let deliveryInstructions = null;
+                    try {
+                        deliveryInstructions = JSON.parse(localStorage.getItem('wrrapd-delivery-instructions'));
+                    } catch (err) {
+                        console.error('[buildWrrapdOrderDataFromLocalStorage] delivery instructions:', err);
+                    }
+                    let aiImageData = null;
+                    if (option.selected_wrapping_option === 'ai' && option.selected_ai_design) {
+                        try {
+                            const aiDesignData = option.selected_ai_design;
+                            if (typeof aiDesignData === 'string') aiImageData = aiDesignData;
+                            else if (aiDesignData && aiDesignData.imageData) aiImageData = aiDesignData.imageData;
+                            else if (aiDesignData && aiDesignData.url) aiImageData = aiDesignData.url;
+                        } catch (e) {
+                            console.error('[buildWrrapdOrderDataFromLocalStorage] AI image:', e);
+                        }
+                    }
+                    let finalShippingAddress = null;
+                    try {
+                        const defaultAddressData = localStorage.getItem('wrrapd-default-address');
+                        if (defaultAddressData) finalShippingAddress = JSON.parse(defaultAddressData);
+                    } catch (e) {
+                        console.error('[buildWrrapdOrderDataFromLocalStorage] final address:', e);
+                    }
+                    orderData.push({
+                        asin: item.asin,
+                        title: item.title,
+                        imageUrl: item.imageUrl || null,
+                        checkbox_flowers: option.checkbox_flowers,
+                        selected_flower_design: option.selected_flower_design || null,
+                        selected_wrapping_option: option.selected_wrapping_option,
+                        selected_ai_design: option.selected_ai_design || null,
+                        aiImageData,
+                        uploaded_design_path: option.uploaded_design_path || null,
+                        occasion: option.occasion || null,
+                        shippingAddress: option.shippingAddress,
+                        finalShippingAddress,
+                        deliveryInstructions,
+                        giftMessage: option.giftMessage || null,
+                        senderName: option.senderName || null,
+                    });
+                });
+            });
+        } catch (error) {
+            console.error('[buildWrrapdOrderDataFromLocalStorage] parse error:', error);
+        }
+        return orderData;
+    }
+
+    async function runStagingTrackingIngestSimulatePlaceOrder() {
+        if (localStorage.getItem('wrrapd-payment-status') !== 'success') {
+            alert('Complete Wrrapd payment first.');
+            return;
+        }
+        const customerEmail = localStorage.getItem('wrrapd-checkout-customer-email');
+        const customerPhone = localStorage.getItem('wrrapd-checkout-customer-phone');
+        let billingDetails = null;
+        try {
+            billingDetails = JSON.parse(localStorage.getItem('wrrapd-checkout-billing') || 'null');
+        } catch (_) {
+            billingDetails = null;
+        }
+        if (!customerEmail || !customerPhone) {
+            alert(
+                'Missing saved checkout email/phone. After a successful Pay Wrrapd flow this is stored automatically; ' +
+                    'or set localStorage keys wrrapd-checkout-customer-email and wrrapd-checkout-customer-phone.',
+            );
+            return;
+        }
+        const cfg = getStagingTrackingIngestConfig();
+        if (!cfg) {
+            alert(
+                'Configure tracking ingest (staging): set localStorage wrrapd-tracking-ingest-key (INGEST_API_KEY) ' +
+                    'and either wrrapd-tracking-ingest-url (full URL to .../api/orders/ingest) or wrrapd-tracking-public-origin (e.g. https://your-tracking.run.app).',
+            );
+            return;
+        }
+        const orderData = buildWrrapdOrderDataFromLocalStorage();
+        if (!orderData.length) {
+            alert('No Wrrapd line items found in wrrapd-items. Add wrapping options before testing.');
+            return;
+        }
+        const hints = readAmazonDeliveryHintsFromSessionStorage();
+        const orderNumber = localStorage.getItem('wrrapd-order-number') || 'unknown';
+        const customerName =
+            (billingDetails && billingDetails.name) ||
+            (customerEmail && customerEmail.split('@')[0]) ||
+            'Customer';
+
+        const warnings = [];
+        for (let i = 0; i < orderData.length; i++) {
+            const item = orderData[i];
+            const finalAddr = item.finalShippingAddress || item.shippingAddress || {};
+            const streetParts = splitStreetForIngest(finalAddr.street || '');
+            const recipientName = finalAddr.name || customerName;
+            const payload = {
+                customerName,
+                customerPhone,
+                customerEmail,
+                recipientName,
+                addressLine1: streetParts.line1 || finalAddr.line1 || 'N/A',
+                addressLine2: streetParts.line2 || finalAddr.line2 || '',
+                city: finalAddr.city || 'N/A',
+                state: finalAddr.state || 'N/A',
+                postalCode: finalAddr.postalCode || finalAddr.postal_code || '00000',
+                externalOrderId: `${orderNumber}-${String(i + 1).padStart(2, '0')}`,
+                sourceNote: `Staging simulate Place order — ${orderNumber} item ${i + 1}; Amazon delivery hints from checkout`,
+            };
+            if (hints && Array.isArray(hints.amazonDeliveryDays) && hints.amazonDeliveryDays.length > 0) {
+                payload.amazonDeliveryDays = hints.amazonDeliveryDays;
+                payload.wrrapdAmazonGrouping = hints.wrrapdAmazonGrouping || 'pending';
+            } else {
+                payload.amazonDeliveryDay = new Date().toLocaleDateString('en-CA', {
+                    timeZone: 'America/New_York',
+                });
+            }
+            try {
+                const resp = await fetch(cfg.url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${cfg.key}`,
+                    },
+                    body: JSON.stringify(payload),
+                });
+                const text = await resp.text();
+                if (!resp.ok) {
+                    warnings.push(`Item ${i + 1}: ${resp.status} ${text.substring(0, 200)}`);
+                }
+            } catch (e) {
+                warnings.push(`Item ${i + 1}: ${e && e.message ? e.message : String(e)}`);
+            }
+        }
+        if (warnings.length) {
+            alert('Some ingest requests failed:\n' + warnings.join('\n'));
+        } else {
+            alert(
+                `Tracking ingest OK for ${orderData.length} line item(s). Check Resend/Twilio on the tracking app if configured.`,
+            );
+        }
+    }
+
     function createWrrapdSummary() {
         console.log("[createWrrapdSummary] Attempting to create Wrrapd summary section.");
     
@@ -8838,6 +9039,8 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                     <div id="wrrapd-payment-info" class="a-row a-spacing-small a-spacing-top-small">
                         <div style="color: green; font-weight: bold; font-size: 16px;">Payment successful. Please place order with Amazon now.</div>
                     </div>
+                    <button type="button" id="wrrapd-staging-place-order-btn" class="a-button-primary" style="background-color: #0066c0; color: #ffcc00; font-weight: bold; margin-top: 10px; width: 100%; height: 40px; border-radius: 8px; border: none; cursor: pointer;">Place your order (staging — Wrrapd tracking)</button>
+                    <div id="wrrapd-staging-pyo-hint" style="font-size: 11px; color: #666; margin-top: 4px;">Runs tracking ingest + customer emails like a real Place order handoff. Set <code style="font-size:10px;">wrrapd-tracking-ingest-key</code> + origin or full ingest URL in localStorage.</div>
                 </div>
             `;
         } else {
@@ -8856,6 +9059,8 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                     <div id="wrrapd-payment-info" class="a-row a-spacing-small a-spacing-top-small">
                     </div>
                     <button id="pay-wrrapd-btn" class="a-button-primary" style="background-color: #f0c14b; color: black; font-weight: bold; margin-top: 10px; width: 100%; height: 40px; border-radius: 8px;">Pay Wrrapd</button>
+                    <button type="button" id="wrrapd-staging-place-order-btn" disabled aria-disabled="true" class="a-button-primary" style="background-color: #0066c0; color: #ffcc00; font-weight: bold; margin-top: 8px; width: 100%; height: 40px; border-radius: 8px; border: none; cursor: not-allowed; opacity: 0.65;">Place your order (staging — Wrrapd tracking)</button>
+                    <div id="wrrapd-staging-pyo-hint" style="font-size: 11px; color: #666; margin-top: 4px;">Enabled after Pay Wrrapd succeeds. Configure ingest: localStorage <code style="font-size:10px;">wrrapd-tracking-ingest-key</code> + <code style="font-size:10px;">wrrapd-tracking-public-origin</code> or <code style="font-size:10px;">wrrapd-tracking-ingest-url</code>.</div>
                 </div>
             `;
         }
@@ -9052,6 +9257,18 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                         const customerPhone = event.data.customerPhone;
                         const billingDetails = event.data.billingDetails || null;
 
+                            try {
+                                if (customerEmail) {
+                                    localStorage.setItem('wrrapd-checkout-customer-email', customerEmail);
+                                }
+                                if (customerPhone) {
+                                    localStorage.setItem('wrrapd-checkout-customer-phone', customerPhone);
+                                }
+                                localStorage.setItem('wrrapd-checkout-billing', JSON.stringify(billingDetails));
+                            } catch (e) {
+                                console.warn('[Payment] Could not persist checkout contact for staging ingest:', e);
+                            }
+
                             // Remove the overlay buttons
                             const overlayButtons = document.querySelectorAll('button[style*="z-index: 1000"]');
                             overlayButtons.forEach((btn) => btn.remove());
@@ -9128,6 +9345,14 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                             const payButton = document.getElementById('pay-wrrapd-btn');
                             if (payButton) {
                                 payButton.remove();
+                            }
+
+                            const stagingPyo = document.getElementById('wrrapd-staging-place-order-btn');
+                            if (stagingPyo) {
+                                stagingPyo.disabled = false;
+                                stagingPyo.removeAttribute('aria-disabled');
+                                stagingPyo.style.cursor = 'pointer';
+                                stagingPyo.style.opacity = '1';
                             }
 
                             // Store payment status in localStorage
@@ -9401,6 +9626,14 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                     console.error("[createWrrapdSummary] Error during payment:", error);
                     alert('Failed to initiate the payment. Please try again.');
                 }
+            });
+        }
+
+        const stagingPyoBtn = document.getElementById('wrrapd-staging-place-order-btn');
+        if (stagingPyoBtn && stagingPyoBtn.dataset.wrrapdStagingListener !== '1') {
+            stagingPyoBtn.dataset.wrrapdStagingListener = '1';
+            stagingPyoBtn.addEventListener('click', function () {
+                void runStagingTrackingIngestSimulatePlaceOrder();
             });
         }
     }
