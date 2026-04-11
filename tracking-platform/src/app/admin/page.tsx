@@ -9,6 +9,7 @@ import {
 import { getSession } from "@/lib/auth";
 import { LogoutButton } from "@/components/logout-button";
 import { AdminCreateDeliveryForm } from "@/components/admin-create-delivery-form";
+import { PasswordField } from "@/components/password-field";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -89,22 +90,17 @@ export default async function AdminPage({
         <p className="mt-2 text-sm text-slate-600">Sign in to the command center.</p>
         {query.error === "1" && (
           <p className="mt-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
-            Incorrect password. The admin password is not the same as the driver password.
+            Incorrect admin password. It must match <code className="rounded bg-red-100 px-1">APP_ADMIN_PASSWORD</code> on Cloud Run
+            (you may use the same value as the driver passcode if you set both env vars that way).
           </p>
         )}
         <p className="mt-3 text-sm text-slate-500">
-          Use the <strong>admin</strong> password (default <code className="rounded bg-slate-100 px-1">admin123</code> unless you set{" "}
-          <code className="rounded bg-slate-100 px-1">APP_ADMIN_PASSWORD</code>). Driver sign-in uses{" "}
-          <code className="rounded bg-slate-100 px-1">driver123</code> by default.
+          Sign in with the <strong>admin</strong> password from <code className="rounded bg-slate-100 px-1">APP_ADMIN_PASSWORD</code>{" "}
+          (default <code className="rounded bg-slate-100 px-1">admin123</code> if unset). Driver login uses{" "}
+          <code className="rounded bg-slate-100 px-1">APP_DRIVER_PASSWORD</code> — the two can be identical.
         </p>
         <form action="/api/admin/login" method="post" className="mt-6 space-y-4 rounded-lg border p-6">
-          <input
-            type="password"
-            name="password"
-            className="w-full rounded border px-3 py-2"
-            placeholder="Admin password"
-            required
-          />
+          <PasswordField name="password" placeholder="Admin password" autoComplete="current-password" />
           <button className="rounded bg-black px-4 py-2 text-white" type="submit">
             Sign in
           </button>
