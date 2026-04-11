@@ -90,15 +90,16 @@ async function readDriverPassword(): Promise<string> {
   const fromEnv = process.env.APP_DRIVER_PASSWORD?.trim();
   if (fromEnv) return fromEnv;
   const fromDb = await readDriverPasswordFromFirestore();
-  if (fromDb) return fromDb;
+  if (fromDb) return fromDb.trim();
   await ensureAuthFile();
   const raw = await readFile(authFilePath, "utf8");
   const parsed = JSON.parse(raw) as { driverPassword?: string };
-  return parsed.driverPassword || defaultDriverPassword;
+  return (parsed.driverPassword || defaultDriverPassword).trim();
 }
 
 export async function verifyDriverPassword(password: string) {
-  return password === (await readDriverPassword());
+  const expected = await readDriverPassword();
+  return password.trim() === expected.trim();
 }
 
 export async function updateDriverPassword(nextPassword: string) {

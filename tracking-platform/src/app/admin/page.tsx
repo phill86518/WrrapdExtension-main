@@ -14,6 +14,14 @@ import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
+/** Next may pass string | string[]; normalize so we never render invalid React children. */
+function pickSearchParam(v: string | string[] | undefined): string | undefined {
+  if (v === undefined) return undefined;
+  if (typeof v === "string") return v;
+  if (Array.isArray(v) && v.length > 0 && typeof v[0] === "string") return v[0];
+  return undefined;
+}
+
 async function createOrderAction(formData: FormData) {
   "use server";
   const result = await createOrder({
@@ -66,9 +74,13 @@ function orderRowClass(status: string) {
 export default async function AdminPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ error?: string; createError?: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const query = searchParams ? await searchParams : {};
+  const raw = searchParams ? await searchParams : {};
+  const query = {
+    error: pickSearchParam(raw.error),
+    createError: pickSearchParam(raw.createError),
+  };
   const session = await getSession();
   if (!session || session.role !== "admin") {
     return (
@@ -101,12 +113,32 @@ export default async function AdminPage({
     );
   }
 
-  const [active, scheduled, past, drivers] = await Promise.all([
-    listOrdersByStatus("active"),
-    listOrdersByStatus("scheduled"),
-    listOrdersByStatus("past"),
-    listDrivers(),
-  ]);
+  let active: Awaited<ReturnType<typeof listOrdersByStatus>>;
+  let scheduled: Awaited<ReturnType<typeof listOrdersByStatus>>;
+  let past: Awaited<ReturnType<typeof listOrdersByStatus>>;
+  let drivers: Awaited<ReturnType<typeof listDrivers>>;
+  try {
+    [active, scheduled, past, drivers] = await Promise.all([
+      listOrdersByStatus("active"),
+      listOrdersByStatus("scheduled"),
+      listOrdersByStatus("past"),
+      listDrivers(),
+    ]);
+  } catch (err) {
+    console.error("[admin] failed to load Firestore / orders", err);
+    return (
+      <main className="mx-auto max-w-2xl px-4 py-16">
+        <h1 className="text-2xl font-semibold">Command center unavailable</h1>
+        <p className="mt-3 text-slate-700">
+          Loading orders or drivers failed (often Firestore rules, network, or bad data). Check{" "}
+          <strong>Cloud Run → Logs</strong> for the stack trace.
+        </p>
+        <p className="mt-2 text-sm text-slate-500">
+          Try signing out and back in: <a href="/api/logout?redirect=/admin" className="text-blue-700 underline">Log out</a>
+        </p>
+      </main>
+    );
+  }
 
   return (
     <main className="mx-auto max-w-7xl px-4 py-8">

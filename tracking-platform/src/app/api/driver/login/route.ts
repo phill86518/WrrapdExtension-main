@@ -4,8 +4,8 @@ import { findDriverByName, listRegisteredDrivers } from "@/lib/driver-registry";
 
 export async function POST(request: NextRequest) {
   const formData = await request.formData();
-  const password = String(formData.get("password") || "");
-  const driverName = String(formData.get("driverName") || "Driver");
+  const password = String(formData.get("password") || "").trim();
+  const driverName = String(formData.get("driverName") || "Driver").trim();
   if (!(await verifyDriverPassword(password))) {
     return NextResponse.json({ ok: false, error: "Invalid credentials" }, { status: 401 });
   }
