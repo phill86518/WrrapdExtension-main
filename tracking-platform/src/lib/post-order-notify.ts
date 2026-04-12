@@ -6,6 +6,7 @@ import {
   toUsE164,
 } from "@/lib/customer-notify";
 import {
+  adminNewOrderEmailHtml,
   deliveryChoiceEmailHtml,
   formatOrderScheduleEt,
   thankYouEmailHtml,
@@ -13,6 +14,15 @@ import {
 import { formatInTimeZone } from "date-fns-tz";
 
 const NY = "America/New_York";
+
+function adminOrderNotifyEmails(): string[] {
+  const raw = process.env.NOTIFY_ADMIN_ORDER_EMAILS?.trim();
+  if (!raw) return [];
+  return raw
+    .split(/[,;]/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
 
 export async function sendPostOrderNotifications(order: Order): Promise<void> {
   if (process.env.TRACKING_NOTIFY_NEW_ORDERS === "false") {
@@ -41,6 +51,36 @@ export async function sendPostOrderNotifications(order: Order): Promise<void> {
       subject: thankYouSubject,
       html: thankYouHtml,
     });
+  }
+
+  const adminTos = adminOrderNotifyEmails();
+  if (adminTos.length) {
+    const adminHtml = adminNewOrderEmailHtml({
+      orderId: order.id,
+      externalOrderId: order.externalOrderId,
+      customerName: order.customerName,
+      customerPhone: order.customerPhone,
+      customerEmail: order.customerEmail,
+      recipientName: order.recipientName,
+      addressLine1: order.addressLine1,
+      addressLine2: order.addressLine2,
+      city: order.city,
+      state: order.state,
+      postalCode: order.postalCode,
+      scheduledEtLabel,
+      trackingUrl,
+      sourceNote: order.sourceNote,
+      deliveryPreferencePending: order.deliveryPreferencePending,
+      amazonDeliveryDatesSnapshot: order.amazonDeliveryDatesSnapshot,
+    });
+    const adminSubject = `New Wrrapd order ${order.id}${order.externalOrderId ? ` (${order.externalOrderId})` : ""}`;
+    for (const to of adminTos) {
+      await sendTransactionalEmail({
+        to,
+        subject: adminSubject,
+        html: adminHtml,
+      });
+    }
   }
 
   const e164 = toUsE164(order.customerPhone);

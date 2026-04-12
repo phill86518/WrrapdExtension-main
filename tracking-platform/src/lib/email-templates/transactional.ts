@@ -102,3 +102,78 @@ export function formatOrderScheduleEt(scheduledForIso: string): string {
   const day = formatInTimeZone(d, NY, "EEEE, MMMM d, yyyy");
   return `${day} · 1:00–7:00 PM Eastern window`;
 }
+
+/** Internal / operations — matches legacy Mailgun-style detail for admin@wrrapd.com. */
+export function adminNewOrderEmailHtml(input: {
+  orderId: string;
+  externalOrderId?: string;
+  customerName: string;
+  customerPhone: string;
+  customerEmail?: string;
+  recipientName: string;
+  addressLine1: string;
+  addressLine2?: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  scheduledEtLabel: string;
+  trackingUrl: string;
+  sourceNote?: string;
+  deliveryPreferencePending?: boolean;
+  amazonDeliveryDatesSnapshot?: string[];
+}): string {
+  const addr2 = input.addressLine2 ? `${escapeHtml(input.addressLine2)}, ` : "";
+  const inner = `
+<tr><td style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);padding:24px;text-align:center;">
+  <div style="font-size:12px;letter-spacing:0.25em;text-transform:uppercase;color:rgba(255,255,255,0.75);">Wrrapd Ops</div>
+  <h1 style="margin:10px 0 0;font-size:22px;font-weight:600;color:#fff;">New order (tracking)</h1>
+</td></tr>
+<tr><td style="padding:24px 28px;">
+  <table role="presentation" width="100%" style="background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0;">
+    <tr><td style="padding:18px 20px;">
+      <p style="margin:0 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:#64748b;">Order ID</p>
+      <p style="margin:0;font-size:17px;font-weight:700;color:#0f172a;">${escapeHtml(input.orderId)}</p>
+      ${
+        input.externalOrderId
+          ? `<p style="margin:10px 0 0;font-size:13px;color:#475569;">External / Amazon ref: <strong>${escapeHtml(input.externalOrderId)}</strong></p>`
+          : ""
+      }
+      <hr style="margin:16px 0;border:none;border-top:1px solid #e2e8f0;"/>
+      <p style="margin:0 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:#64748b;">Customer (gifter)</p>
+      <p style="margin:0;font-size:15px;color:#0f172a;">${escapeHtml(input.customerName)}</p>
+      <p style="margin:6px 0 0;font-size:14px;color:#334155;">${escapeHtml(input.customerPhone)}</p>
+      ${
+        input.customerEmail
+          ? `<p style="margin:6px 0 0;font-size:14px;color:#334155;"><a href="mailto:${escapeAttr(input.customerEmail)}" style="color:#1d4ed8;">${escapeHtml(input.customerEmail)}</a></p>`
+          : ""
+      }
+      <hr style="margin:16px 0;border:none;border-top:1px solid #e2e8f0;"/>
+      <p style="margin:0 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:#64748b;">Recipient / delivery</p>
+      <p style="margin:0;font-size:15px;font-weight:600;color:#0f172a;">${escapeHtml(input.recipientName)}</p>
+      <p style="margin:8px 0 0;font-size:14px;color:#334155;line-height:1.5;">
+        ${escapeHtml(input.addressLine1)}<br/>
+        ${addr2}${escapeHtml(input.city)}, ${escapeHtml(input.state)} ${escapeHtml(input.postalCode)}
+      </p>
+      <hr style="margin:16px 0;border:none;border-top:1px solid #e2e8f0;"/>
+      <p style="margin:0 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:#64748b;">Wrrapd window (Eastern)</p>
+      <p style="margin:0;font-size:15px;color:#0f172a;">${escapeHtml(input.scheduledEtLabel)}</p>
+      ${
+        input.deliveryPreferencePending && input.amazonDeliveryDatesSnapshot?.length
+          ? `<p style="margin:12px 0 0;font-size:13px;color:#b45309;background:#fffbeb;padding:10px;border-radius:8px;border:1px solid #fcd34d;">
+              <strong>Delivery choice pending</strong> — Amazon dates: ${escapeHtml(input.amazonDeliveryDatesSnapshot.join(", "))}
+            </p>`
+          : ""
+      }
+      ${
+        input.sourceNote
+          ? `<p style="margin:12px 0 0;font-size:13px;color:#475569;"><strong>Note:</strong> ${escapeHtml(input.sourceNote)}</p>`
+          : ""
+      }
+      <p style="margin:18px 0 0;">
+        <a href="${escapeAttr(input.trackingUrl)}" style="display:inline-block;background:#0f172a;color:#fff;text-decoration:none;padding:11px 20px;border-radius:8px;font-size:14px;font-weight:600;">Open in tracking app</a>
+      </p>
+    </td></tr>
+  </table>
+</td></tr>`;
+  return wrap(inner);
+}

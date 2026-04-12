@@ -1,6 +1,6 @@
-/** Resend (email) + Twilio (SMS). No-op when env is missing — logs once per channel. */
+/** Mailgun (email) + Twilio (SMS). Same provider family as pay.wrrapd.com — no Resend. */
 
-let warnedResend = false;
+let warnedMailgun = false;
 let warnedTwilio = false;
 
 export function getPublicOrigin(): string {
@@ -14,29 +14,55 @@ export function toUsE164(raw: string): string | null {
   return null;
 }
 
+function mailgunApiBase(): string {
+  return process.env.MAILGUN_REGION?.trim().toLowerCase() === "eu"
+    ? "https://api.eu.mailgun.net/v3"
+    : "https://api.mailgun.net/v3";
+}
+
+/**
+ * Send HTML email via Mailgun (same API as WrrapdServer process-payment).
+ * Env: MAILGUN_API_KEY, MAILGUN_DOMAIN (required). NOTIFY_EMAIL_FROM optional.
+ */
 export async function sendTransactionalEmail(opts: {
   to: string;
   subject: string;
   html: string;
 }): Promise<boolean> {
-  const key = process.env.RESEND_API_KEY?.trim();
-  if (!key) {
-    if (!warnedResend) {
-      console.warn("[notify] RESEND_API_KEY not set — transactional emails skipped");
-      warnedResend = true;
+  const key = process.env.MAILGUN_API_KEY?.trim();
+  const domain = process.env.MAILGUN_DOMAIN?.trim();
+  if (!key || !domain) {
+    if (!warnedMailgun) {
+      console.warn(
+        "[notify] MAILGUN_API_KEY / MAILGUN_DOMAIN not set — transactional emails skipped",
+      );
+      warnedMailgun = true;
     }
     return false;
   }
   const from =
-    process.env.NOTIFY_EMAIL_FROM?.trim() || "Wrrapd <onboarding@resend.dev>";
-  const res = await fetch("https://api.resend.com/emails", {
+    process.env.NOTIFY_EMAIL_FROM?.trim() || "Wrrapd Orders <orders@wrrapd.com>";
+  const replyTo = process.env.NOTIFY_EMAIL_REPLY_TO?.trim();
+  const params = new URLSearchParams();
+  params.set("from", from);
+  params.set("to", opts.to);
+  params.set("subject", opts.subject);
+  params.set("html", opts.html);
+  if (replyTo) {
+    params.set("h:Reply-To", replyTo);
+  }
+  const url = `${mailgunApiBase()}/${encodeURIComponent(domain)}/messages`;
+  const res = await fetch(url, {
     method: "POST",
-    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ from, to: [opts.to], subject: opts.subject, html: opts.html }),
+    headers: {
+      Authorization: `Basic ${Buffer.from(`api:${key}`).toString("base64")}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: params.toString(),
   });
   if (!res.ok) {
     const t = await res.text();
-    console.error("[notify] Resend error:", res.status, t);
+    console.error("[notify] Mailgun error:", res.status, t);
     return false;
   }
   return true;

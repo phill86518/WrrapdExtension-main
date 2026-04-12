@@ -8807,7 +8807,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
 
     async function runStagingTrackingIngestSimulatePlaceOrder() {
         if (localStorage.getItem('wrrapd-payment-status') !== 'success') {
-            alert('Complete Wrrapd payment first.');
+            console.warn('[Wrrapd staging ingest] Complete Pay Wrrapd first.');
             return;
         }
         const customerEmail = localStorage.getItem('wrrapd-checkout-customer-email');
@@ -8819,15 +8819,14 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             billingDetails = null;
         }
         if (!customerEmail || !customerPhone) {
-            alert(
-                'Missing saved checkout email/phone. After a successful Pay Wrrapd flow this is stored automatically; ' +
-                    'or set localStorage keys wrrapd-checkout-customer-email and wrrapd-checkout-customer-phone.',
+            console.warn(
+                '[Wrrapd staging ingest] Missing checkout email/phone after pay — complete Pay Wrrapd again.',
             );
             return;
         }
         const orderData = buildWrrapdOrderDataFromLocalStorage();
         if (!orderData.length) {
-            alert('No Wrrapd line items found in wrrapd-items. Add wrapping options before testing.');
+            console.warn('[Wrrapd staging ingest] No Wrrapd line items in wrrapd-items.');
             return;
         }
         const hints = readAmazonDeliveryHintsFromSessionStorage();
@@ -8881,16 +8880,18 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                 /* not JSON */
             }
             if (!resp.ok) {
-                alert(
-                    `Could not reach tracking through api.wrrapd.com (${resp.status}). ` +
-                        (text ? text.substring(0, 400) : 'No details.') +
-                        '\n\nDeploy the latest pay server (proxy endpoint) and set INGEST_API_KEY + TRACKING_INGEST_URL in its .env.',
+                console.error(
+                    '[Wrrapd staging ingest] api.wrrapd.com error',
+                    resp.status,
+                    text ? text.substring(0, 800) : '',
                 );
                 return;
             }
             if (data && data.ok) {
-                alert(
-                    `Tracking ingest OK for ${orders.length} line item(s). Check emails/SMS if your tracking app is configured.`,
+                console.info(
+                    '[Wrrapd staging ingest] OK —',
+                    orders.length,
+                    'line item(s). Check Cloud Run logs / Mailgun / Twilio.',
                 );
                 return;
             }
@@ -8898,19 +8899,17 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                 const lines = data.results
                     .filter((r) => !r.ok)
                     .map((r) => `Line ${(r.index || 0) + 1}: ${r.reason || 'failed'}`);
-                alert(
-                    lines.length
-                        ? 'Some lines failed:\n' + lines.join('\n')
-                        : 'Unexpected response from api.wrrapd.com',
+                console.error(
+                    '[Wrrapd staging ingest] Partial failure:',
+                    lines.length ? lines.join(' | ') : 'unexpected body',
                 );
                 return;
             }
-            alert('Unexpected response from api.wrrapd.com. Check server logs.');
+            console.error('[Wrrapd staging ingest] Unexpected JSON from api.wrrapd.com');
         } catch (e) {
-            alert(
-                'Network error talking to api.wrrapd.com: ' +
-                    (e && e.message ? e.message : String(e)) +
-                    '\n\nReload the extension (manifest must allow https://api.wrrapd.com) and try again.',
+            console.error(
+                '[Wrrapd staging ingest] Network error:',
+                e && e.message ? e.message : String(e),
             );
         }
     }

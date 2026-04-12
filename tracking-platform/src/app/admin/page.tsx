@@ -55,16 +55,19 @@ async function updateStatusAction(formData: FormData) {
       | "cancelled",
     "admin",
   );
+  revalidatePath("/admin");
 }
 
 async function assignDriverAction(formData: FormData) {
   "use server";
   await assignDriver(String(formData.get("orderId") || ""), String(formData.get("driverId") || ""), "admin");
+  revalidatePath("/admin");
 }
 
 async function reopenAssignedAction(formData: FormData) {
   "use server";
   await reopenOrderAsAssigned(String(formData.get("orderId") || ""), "admin");
+  revalidatePath("/admin");
 }
 
 function orderRowClass(status: string) {

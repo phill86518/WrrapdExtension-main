@@ -36,25 +36,15 @@ export async function computeAssignmentsForOrders(
     const dateKey = formatDateKeyNy(dayOrders[0].scheduledFor);
     const shiftForOrder = (o: Order): ShiftKey => (hourNy(o.scheduledFor) < 13 ? "morning" : "afternoon");
 
+    /** Solo mode: assign every order on this day to one driver (e.g. Roger). Weekly availability is ignored so ingest/admin flow always gets a driver. */
     const soloId = process.env.TRACKING_SOLO_DRIVER_ID?.trim();
     if (soloId) {
       const solo = driversSorted.find((d) => d.id === soloId);
       if (solo) {
         const soloProf = await getDriverProfile(solo.id);
         if (soloProf.onboardingStatus === "approved") {
-          const forcedSolo = soloProf.forcedAvailableDates ?? [];
           for (const o of dayOrders) {
-            if (
-              await isDriverAvailableOnDate(
-                solo.id,
-                dateKey,
-                shiftForOrder(o),
-                now,
-                forcedSolo,
-              )
-            ) {
-              result.set(o.id, { driverId: solo.id, driverName: solo.name });
-            }
+            result.set(o.id, { driverId: solo.id, driverName: solo.name });
           }
           continue;
         }

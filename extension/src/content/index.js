@@ -6,7 +6,7 @@ import './content-legacy.js';
 import './lib/amazon-delivery-hints.js';
 
 /** Bump when verifying deploy — search Amazon tab DevTools console for this string. */
-export const WRRAPD_CONTENT_BUILD_TAG = '2026-04-11-proxy-ingest-no-localstorage';
+export const WRRAPD_CONTENT_BUILD_TAG = '2026-04-12-mailgun-tracking+no-staging-alerts';
 console.info(
     '[Wrrapd] content bundle',
     WRRAPD_CONTENT_BUILD_TAG,

@@ -425,10 +425,6 @@ export async function assignDriver(id: string, driverId: string, updatedBy: stri
   const current = await getOrderById(id);
   const driver = await findDriverById(driverId);
   if (!current || !driver) return null;
-  const prof = await getDriverProfile(driverId);
-  if (prof.onboardingStatus !== "approved") {
-    return null;
-  }
   const next: Order = {
     ...current,
     driverId,

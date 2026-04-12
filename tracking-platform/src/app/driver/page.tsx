@@ -82,23 +82,31 @@ export default async function DriverPage() {
         <DriverInstallCard />
       </div>
       <DriverAccountPanel />
+      <section className="mb-8 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <h2 className="text-xl font-semibold text-slate-900">Today&apos;s deliveries</h2>
+        <p className="mt-1 text-sm text-slate-600">
+          Stops assigned to you in the admin command center appear here (route order by stop number).
+        </p>
+        <div className="mt-4">
+          <DriverConsole
+            orders={orders.map((o) => ({
+              id: o.id,
+              recipientName: o.recipientName,
+              addressLine1: o.addressLine1,
+              city: o.city,
+              state: o.state,
+              postalCode: o.postalCode,
+              status: o.status,
+              stopSequence: o.stopSequence,
+            }))}
+          />
+        </div>
+      </section>
       <DriverAvailabilityPanel
         weekStartMonday={week.weekStartMonday}
         days={week.days}
         initialDays={initialDays}
         deadlineLabel={deadlineLabel}
-      />
-      <DriverConsole
-        orders={orders.map((o) => ({
-          id: o.id,
-          recipientName: o.recipientName,
-          addressLine1: o.addressLine1,
-          city: o.city,
-          state: o.state,
-          postalCode: o.postalCode,
-          status: o.status,
-          stopSequence: o.stopSequence,
-        }))}
       />
     </main>
   );

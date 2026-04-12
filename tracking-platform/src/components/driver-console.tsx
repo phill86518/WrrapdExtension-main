@@ -278,7 +278,12 @@ export function DriverConsole({ orders }: { orders: DriverOrder[] }) {
           </div>
         </div>
       ))}
-      {orders.length === 0 && <p className="text-sm text-slate-500">No assigned deliveries right now.</p>}
+      {orders.length === 0 && (
+        <p className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm text-slate-600">
+          No stops assigned to you yet. When admin assigns orders to your name, they will list here with Start
+          delivery, GPS, and proof photo.
+        </p>
+      )}
     </div>
   );
 }
