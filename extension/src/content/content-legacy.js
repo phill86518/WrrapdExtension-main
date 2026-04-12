@@ -8733,21 +8733,6 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
         }
     }
 
-    function getStagingTrackingIngestConfig() {
-        try {
-            const key = localStorage.getItem('wrrapd-tracking-ingest-key');
-            if (!key || !key.trim()) return null;
-            const full = localStorage.getItem('wrrapd-tracking-ingest-url');
-            if (full && full.trim()) return { url: full.trim(), key: key.trim() };
-            const origin = localStorage.getItem('wrrapd-tracking-public-origin');
-            if (origin && origin.trim()) {
-                const base = origin.trim().replace(/\/$/, '');
-                return { url: `${base}/api/orders/ingest`, key: key.trim() };
-            }
-        } catch (e) { /* ignore */ }
-        return null;
-    }
-
     /**
      * Same shape as the array sent to process-payment (Wrrapd line items only).
      */
@@ -8840,14 +8825,6 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             );
             return;
         }
-        const cfg = getStagingTrackingIngestConfig();
-        if (!cfg) {
-            alert(
-                'Configure tracking ingest (staging): set localStorage wrrapd-tracking-ingest-key (INGEST_API_KEY) ' +
-                    'and either wrrapd-tracking-ingest-url (full URL to .../api/orders/ingest) or wrrapd-tracking-public-origin (e.g. https://your-tracking.run.app).',
-            );
-            return;
-        }
         const orderData = buildWrrapdOrderDataFromLocalStorage();
         if (!orderData.length) {
             alert('No Wrrapd line items found in wrrapd-items. Add wrapping options before testing.');
@@ -8860,7 +8837,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             (customerEmail && customerEmail.split('@')[0]) ||
             'Customer';
 
-        const warnings = [];
+        const orders = [];
         for (let i = 0; i < orderData.length; i++) {
             const item = orderData[i];
             const finalAddr = item.finalShippingAddress || item.shippingAddress || {};
@@ -8887,28 +8864,53 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                     timeZone: 'America/New_York',
                 });
             }
-            try {
-                const resp = await fetch(cfg.url, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        Authorization: `Bearer ${cfg.key}`,
-                    },
-                    body: JSON.stringify(payload),
-                });
-                const text = await resp.text();
-                if (!resp.ok) {
-                    warnings.push(`Item ${i + 1}: ${resp.status} ${text.substring(0, 200)}`);
-                }
-            } catch (e) {
-                warnings.push(`Item ${i + 1}: ${e && e.message ? e.message : String(e)}`);
-            }
+            orders.push(payload);
         }
-        if (warnings.length) {
-            alert('Some ingest requests failed:\n' + warnings.join('\n'));
-        } else {
+
+        try {
+            const resp = await fetch('https://api.wrrapd.com/api/proxy-tracking-ingest', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ orders }),
+            });
+            const text = await resp.text();
+            let data = null;
+            try {
+                data = JSON.parse(text);
+            } catch (_) {
+                /* not JSON */
+            }
+            if (!resp.ok) {
+                alert(
+                    `Could not reach tracking through api.wrrapd.com (${resp.status}). ` +
+                        (text ? text.substring(0, 400) : 'No details.') +
+                        '\n\nDeploy the latest pay server (proxy endpoint) and set INGEST_API_KEY + TRACKING_INGEST_URL in its .env.',
+                );
+                return;
+            }
+            if (data && data.ok) {
+                alert(
+                    `Tracking ingest OK for ${orders.length} line item(s). Check emails/SMS if your tracking app is configured.`,
+                );
+                return;
+            }
+            if (data && Array.isArray(data.results)) {
+                const lines = data.results
+                    .filter((r) => !r.ok)
+                    .map((r) => `Line ${(r.index || 0) + 1}: ${r.reason || 'failed'}`);
+                alert(
+                    lines.length
+                        ? 'Some lines failed:\n' + lines.join('\n')
+                        : 'Unexpected response from api.wrrapd.com',
+                );
+                return;
+            }
+            alert('Unexpected response from api.wrrapd.com. Check server logs.');
+        } catch (e) {
             alert(
-                `Tracking ingest OK for ${orderData.length} line item(s). Check Resend/Twilio on the tracking app if configured.`,
+                'Network error talking to api.wrrapd.com: ' +
+                    (e && e.message ? e.message : String(e)) +
+                    '\n\nReload the extension (manifest must allow https://api.wrrapd.com) and try again.',
             );
         }
     }
@@ -9064,7 +9066,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                         <div style="color: green; font-weight: bold; font-size: 16px;">Payment successful. Please place order with Amazon now.</div>
                     </div>
                     <button type="button" id="wrrapd-staging-place-order-btn" class="a-button-primary" style="background-color: #0066c0; color: #ffcc00; font-weight: bold; margin-top: 10px; width: 100%; height: 40px; border-radius: 8px; border: none; cursor: pointer;">Place your order (staging — Wrrapd tracking)</button>
-                    <div id="wrrapd-staging-pyo-hint" style="font-size: 11px; color: #666; margin-top: 4px;">Runs tracking ingest + customer emails like a real Place order handoff. Set <code style="font-size:10px;">wrrapd-tracking-ingest-key</code> + origin or full ingest URL in localStorage.</div>
+                    <div id="wrrapd-staging-pyo-hint" style="font-size: 11px; color: #666; margin-top: 4px;">Sends orders through api.wrrapd.com to your tracking app (same as pay server — no browser setup).</div>
                 </div>
             `;
         } else {
@@ -9084,7 +9086,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                     </div>
                     <button id="pay-wrrapd-btn" class="a-button-primary" style="background-color: #f0c14b; color: black; font-weight: bold; margin-top: 10px; width: 100%; height: 40px; border-radius: 8px;">Pay Wrrapd</button>
                     <button type="button" id="wrrapd-staging-place-order-btn" disabled aria-disabled="true" class="a-button-primary" style="background-color: #0066c0; color: #ffcc00; font-weight: bold; margin-top: 8px; width: 100%; height: 40px; border-radius: 8px; border: none; cursor: not-allowed; opacity: 0.65;">Place your order (staging — Wrrapd tracking)</button>
-                    <div id="wrrapd-staging-pyo-hint" style="font-size: 11px; color: #666; margin-top: 4px;">Enabled after Pay Wrrapd succeeds. Configure ingest: localStorage <code style="font-size:10px;">wrrapd-tracking-ingest-key</code> + <code style="font-size:10px;">wrrapd-tracking-public-origin</code> or <code style="font-size:10px;">wrrapd-tracking-ingest-url</code>.</div>
+                    <div id="wrrapd-staging-pyo-hint" style="font-size: 11px; color: #666; margin-top: 4px;">Enabled after Pay Wrrapd succeeds. Uses api.wrrapd.com to forward to tracking (no keys in the browser).</div>
                 </div>
             `;
         }

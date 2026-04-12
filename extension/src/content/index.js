@@ -6,7 +6,7 @@ import './content-legacy.js';
 import './lib/amazon-delivery-hints.js';
 
 /** Bump when verifying deploy — search Amazon tab DevTools console for this string. */
-export const WRRAPD_CONTENT_BUILD_TAG = '2026-04-10-gift-save-only+ingest-ui';
+export const WRRAPD_CONTENT_BUILD_TAG = '2026-04-11-proxy-ingest-no-localstorage';
 console.info(
     '[Wrrapd] content bundle',
     WRRAPD_CONTENT_BUILD_TAG,

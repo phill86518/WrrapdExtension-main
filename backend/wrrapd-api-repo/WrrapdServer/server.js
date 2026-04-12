@@ -422,6 +422,27 @@ async function ingestOrderIntoTracking(orderPayload) {
     }
 }
 
+/**
+ * Chrome extension (Amazon checkout): forwards order payloads to tracking ingest using server-side INGEST_API_KEY.
+ * No secret in the browser — same env as process-payment.
+ */
+app.post('/api/proxy-tracking-ingest', async (req, res) => {
+    if (!req.isApiDomain) {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
+    const orders = req.body && req.body.orders;
+    if (!Array.isArray(orders) || orders.length === 0) {
+        return res.status(400).json({ error: 'Expected JSON body: { orders: [ {...}, ... ] }' });
+    }
+    const results = [];
+    for (let i = 0; i < orders.length; i++) {
+        const r = await ingestOrderIntoTracking(orders[i]);
+        results.push({ index: i, ok: r.ok, skipped: r.skipped, reason: r.reason });
+    }
+    const allOk = results.every((row) => row.ok);
+    res.status(200).json({ ok: allOk, results });
+});
+
 app.post('/process-payment', async (req, res) => {
     if (!req.isApiDomain) {
         return res.status(403).send('Access forbidden.');

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Wrrapd",
-  "version": "1.3.8",
+  "version": "1.3.9",
   "description": "Enhance your gifting experience with Wrrapd",
   "permissions": [
     "scripting",
@@ -9,6 +9,7 @@
     "declarativeNetRequest"
   ],
   "host_permissions": [
+    "https://api.wrrapd.com/*",
     "*://*.amazon.com/*",
     "*://*.amazon.ca/*",
     "*://*.amazon.co.uk/*",
