@@ -222,7 +222,9 @@ export async function createOrder(
     ...(input.deliveryPreferencePending === true && prefToken
       ? {
           deliveryPreferencePending: true,
-          deliveryPreferenceRespondBy: input.deliveryPreferenceRespondBy,
+          ...(input.deliveryPreferenceRespondBy
+            ? { deliveryPreferenceRespondBy: input.deliveryPreferenceRespondBy }
+            : {}),
           deliveryPreferenceToken: prefToken,
         }
       : {}),

@@ -48,23 +48,32 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const result = await createOrder(parsed.normalized);
-  if (!result.ok) {
+  try {
+    const result = await createOrder(parsed.normalized);
+    if (!result.ok) {
+      return NextResponse.json(
+        {
+          error: result.error,
+          missingFields: [] as string[],
+          invalidFields: [] as string[],
+          hint: "Fix scheduledFor (ISO or yyyy-MM-ddTHH:mm in America/New_York) and business rules (not in past).",
+        },
+        { status: 400 },
+      );
+    }
+
+    return NextResponse.json({
+      ok: true,
+      order: result.order,
+      trackingUrlPath: `/track/${result.order.trackingToken}`,
+      notStoredYet: orderIngestFieldGuide().notStored,
+    });
+  } catch (err) {
+    console.error("[orders/ingest] createOrder threw:", err);
+    const message = err instanceof Error ? err.message : String(err);
     return NextResponse.json(
-      {
-        error: result.error,
-        missingFields: [] as string[],
-        invalidFields: [] as string[],
-        hint: "Fix scheduledFor (ISO or yyyy-MM-ddTHH:mm in America/New_York) and business rules (not in past).",
-      },
-      { status: 400 },
+      { error: "Ingest failed (server error)", detail: message },
+      { status: 500 },
     );
   }
-
-  return NextResponse.json({
-    ok: true,
-    order: result.order,
-    trackingUrlPath: `/track/${result.order.trackingToken}`,
-    notStoredYet: orderIngestFieldGuide().notStored,
-  });
 }

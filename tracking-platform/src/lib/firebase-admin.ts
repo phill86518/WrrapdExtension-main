@@ -1,6 +1,6 @@
 import { Buffer } from "node:buffer";
 import { App, cert, getApps, initializeApp } from "firebase-admin/app";
-import { getFirestore } from "firebase-admin/firestore";
+import { getFirestore, type Firestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
 
 /**
@@ -106,19 +106,44 @@ function initFirebaseApp(): App | null {
   }
 }
 
-export function getFirestoreDb() {
+/** Cached Firestore; `.settings()` runs once before any reads/writes. */
+let firestoreSingleton: Firestore | null | undefined;
+
+/**
+ * Firestore rejects writes that include `undefined` field values. Optional Order fields
+ * (e.g. addressLine2) used to 500 ingest — enable ignoreUndefinedProperties on the client.
+ */
+export function getFirestoreDb(): Firestore | null {
+  if (firestoreSingleton !== undefined) {
+    return firestoreSingleton;
+  }
   const app = initFirebaseApp();
-  if (!app) return null;
+  if (!app) {
+    firestoreSingleton = null;
+    return null;
+  }
   const databaseId = normalizeFirestoreDatabaseId(
     process.env.FIREBASE_FIRESTORE_DATABASE_ID,
   );
   try {
-    return databaseId === "(default)" ? getFirestore(app) : getFirestore(app, databaseId);
+    const db =
+      databaseId === "(default)" ? getFirestore(app) : getFirestore(app, databaseId);
+    try {
+      db.settings({ ignoreUndefinedProperties: true });
+    } catch (settingsErr) {
+      console.warn(
+        "[firebase-admin] Firestore.settings(ignoreUndefinedProperties) skipped:",
+        settingsErr,
+      );
+    }
+    firestoreSingleton = db;
+    return firestoreSingleton;
   } catch (err) {
     console.error(
       `[firebase-admin] getFirestore failed (check FIREBASE_FIRESTORE_DATABASE_ID; databaseId=${databaseId}):`,
       err,
     );
+    firestoreSingleton = null;
     return null;
   }
 }

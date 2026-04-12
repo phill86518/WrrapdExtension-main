@@ -414,7 +414,7 @@ async function ingestOrderIntoTracking(orderPayload) {
         });
         const text = await resp.text();
         if (!resp.ok) {
-            return { ok: false, skipped: false, reason: `ingest ${resp.status}: ${text.substring(0, 300)}` };
+            return { ok: false, skipped: false, reason: `ingest ${resp.status}: ${text.substring(0, 1200)}` };
         }
         return { ok: true, skipped: false };
     } catch (e) {
