@@ -86,16 +86,34 @@ Change these with env vars before production deployment.
 
 ## Cloud Run Deployment
 
-Build and deploy (from this folder):
+From the **monorepo root** (the directory that contains the `tracking-platform/` folder), not inside `tracking-platform` unless you adjust paths.
+
+**Set the GCP project first** (empty `GOOGLE_CLOUD_PROJECT` produces `gcr.io//...` and breaks the build):
 
 ```bash
-gcloud builds submit --tag gcr.io/$GOOGLE_CLOUD_PROJECT/wrrapd-tracking
+gcloud config set project YOUR_GCP_PROJECT_ID
+# or: export GOOGLE_CLOUD_PROJECT=YOUR_GCP_PROJECT_ID
+```
+
+Build and deploy (replace `YOUR_GCP_PROJECT_ID` if you skip `gcloud config set`):
+
+```bash
+cd /path/to/wrrapd-GCP   # e.g. /home/phill/wrrapd-GCP — use your real path, not literally "path/to"
+
+PROJECT_ID=$(gcloud config get-value project)
+TAG=$(git rev-parse --short HEAD)
+IMAGE="gcr.io/${PROJECT_ID}/wrrapd-tracking:${TAG}"
+
+gcloud builds submit tracking-platform --tag "$IMAGE" --project "$PROJECT_ID"
 gcloud run deploy wrrapd-tracking \
-  --image gcr.io/$GOOGLE_CLOUD_PROJECT/wrrapd-tracking \
+  --image "$IMAGE" \
   --region us-central1 \
+  --project "$PROJECT_ID" \
   --allow-unauthenticated \
   --set-env-vars APP_SESSION_SECRET=change-me,APP_ADMIN_PASSWORD=change-me,APP_DRIVER_PASSWORD=change-me
 ```
+
+In production, prefer **GitHub Actions → tracking-platform-cloud-run → Run workflow** so secrets and env are not pasted into the shell. Manual deploys must not drop existing Cloud Run env vars (Mailgun, Firestore, etc.); use the console **Edit & deploy new revision** or `--set-env-vars` / `--update-env-vars` only when you intend to change them.
 
 ### Production persistence (Firestore — required on Cloud Run)
 
