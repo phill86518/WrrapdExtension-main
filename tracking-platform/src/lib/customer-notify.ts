@@ -65,6 +65,12 @@ export async function sendTransactionalEmail(opts: {
     console.error("[notify] Mailgun error:", res.status, t);
     return false;
   }
+  try {
+    const j = (await res.json()) as { id?: string; message?: string };
+    console.info("[notify] Mailgun queued", j.id ?? "ok", "to", opts.to);
+  } catch {
+    console.info("[notify] Mailgun sent OK to", opts.to);
+  }
   return true;
 }
 

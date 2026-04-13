@@ -26,6 +26,7 @@ function adminOrderNotifyEmails(): string[] {
 
 export async function sendPostOrderNotifications(order: Order): Promise<void> {
   if (process.env.TRACKING_NOTIFY_NEW_ORDERS === "false") {
+    console.info("[post-order-notify] skipped (TRACKING_NOTIFY_NEW_ORDERS=false)", order.id);
     return;
   }
 
@@ -46,11 +47,15 @@ export async function sendPostOrderNotifications(order: Order): Promise<void> {
   });
 
   if (order.customerEmail?.trim()) {
-    await sendTransactionalEmail({
-      to: order.customerEmail.trim(),
-      subject: thankYouSubject,
-      html: thankYouHtml,
-    });
+    try {
+      await sendTransactionalEmail({
+        to: order.customerEmail.trim(),
+        subject: thankYouSubject,
+        html: thankYouHtml,
+      });
+    } catch (e) {
+      console.error("[post-order-notify] customer thank-you email failed", order.id, e);
+    }
   }
 
   const adminTos = adminOrderNotifyEmails();
@@ -75,11 +80,15 @@ export async function sendPostOrderNotifications(order: Order): Promise<void> {
     });
     const adminSubject = `New Wrrapd order ${order.id}${order.externalOrderId ? ` (${order.externalOrderId})` : ""}`;
     for (const to of adminTos) {
-      await sendTransactionalEmail({
-        to,
-        subject: adminSubject,
-        html: adminHtml,
-      });
+      try {
+        await sendTransactionalEmail({
+          to,
+          subject: adminSubject,
+          html: adminHtml,
+        });
+      } catch (e) {
+        console.error("[post-order-notify] admin email failed", order.id, to, e);
+      }
     }
   }
 
@@ -88,7 +97,11 @@ export async function sendPostOrderNotifications(order: Order): Promise<void> {
     const sms =
       `Wrrapd: Thanks for your order ${order.id}! Track: ${trackingUrl} ` +
       `Delivery window ${scheduledEtLabel}.`;
-    await sendTransactionalSms({ toE164: e164, body: sms.slice(0, 1500) });
+    try {
+      await sendTransactionalSms({ toE164: e164, body: sms.slice(0, 1500) });
+    } catch (e) {
+      console.error("[post-order-notify] customer SMS failed", order.id, e);
+    }
   }
 
   if (
@@ -104,17 +117,21 @@ export async function sendPostOrderNotifications(order: Order): Promise<void> {
       : "end of today (Eastern)";
 
     if (order.customerEmail?.trim()) {
-      await sendTransactionalEmail({
-        to: order.customerEmail.trim(),
-        subject: `Action needed: Wrrapd delivery schedule for order ${order.id}`,
-        html: deliveryChoiceEmailHtml({
-          customerName: order.customerName,
-          orderId: order.id,
-          datesList: order.amazonDeliveryDatesSnapshot.join(", "),
-          deadlineEtLabel: deadline,
-          choiceUrl,
-        }),
-      });
+      try {
+        await sendTransactionalEmail({
+          to: order.customerEmail.trim(),
+          subject: `Action needed: Wrrapd delivery schedule for order ${order.id}`,
+          html: deliveryChoiceEmailHtml({
+            customerName: order.customerName,
+            orderId: order.id,
+            datesList: order.amazonDeliveryDatesSnapshot.join(", "),
+            deadlineEtLabel: deadline,
+            choiceUrl,
+          }),
+        });
+      } catch (e) {
+        console.error("[post-order-notify] delivery-choice email failed", order.id, e);
+      }
     }
 
     if (e164) {
@@ -122,7 +139,17 @@ export async function sendPostOrderNotifications(order: Order): Promise<void> {
         `Wrrapd: Your Amazon items have different delivery dates (${order.amazonDeliveryDatesSnapshot.join(", ")}). ` +
         `We're planning one Wrrapd visit after the LAST Amazon date unless you choose faster: ${choiceUrl} ` +
         `Reply isn't supported — use the link by ${deadline}.`;
-      await sendTransactionalSms({ toE164: e164, body: m.slice(0, 1500) });
+      try {
+        await sendTransactionalSms({ toE164: e164, body: m.slice(0, 1500) });
+      } catch (e) {
+        console.error("[post-order-notify] delivery-choice SMS failed", order.id, e);
+      }
     }
   }
+
+  console.info("[post-order-notify] done", order.id, {
+    hadCustomerEmail: Boolean(order.customerEmail?.trim()),
+    adminEmails: adminTos.length,
+    hadSms: Boolean(e164),
+  });
 }

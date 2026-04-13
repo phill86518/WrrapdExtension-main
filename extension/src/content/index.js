@@ -6,7 +6,7 @@ import './content-legacy.js';
 import './lib/amazon-delivery-hints.js';
 
 /** Bump when verifying deploy — search Amazon tab DevTools console for this string. */
-export const WRRAPD_CONTENT_BUILD_TAG = '2026-04-12-mailgun-tracking+no-staging-alerts';
+export const WRRAPD_CONTENT_BUILD_TAG = '2026-04-12-tracking-only-button+mailgun-ok-log';
 console.info(
     '[Wrrapd] content bundle',
     WRRAPD_CONTENT_BUILD_TAG,

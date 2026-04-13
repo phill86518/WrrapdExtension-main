@@ -8806,6 +8806,9 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
     }
 
     async function runStagingTrackingIngestSimulatePlaceOrder() {
+        console.info(
+            '[Wrrapd] Staging ingest only — sends JSON to api.wrrapd.com; it does not click or submit Amazon checkout.',
+        );
         if (localStorage.getItem('wrrapd-payment-status') !== 'success') {
             console.warn('[Wrrapd staging ingest] Complete Pay Wrrapd first.');
             return;
@@ -9064,7 +9067,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                     <div id="wrrapd-payment-info" class="a-row a-spacing-small a-spacing-top-small">
                         <div style="color: green; font-weight: bold; font-size: 16px;">Payment successful. Please place order with Amazon now.</div>
                     </div>
-                    <button type="button" id="wrrapd-staging-place-order-btn" class="a-button-primary" style="background-color: #0066c0; color: #ffcc00; font-weight: bold; margin-top: 10px; width: 100%; height: 40px; border-radius: 8px; border: none; cursor: pointer;">Place your order (staging — Wrrapd tracking)</button>
+                    <button type="button" id="wrrapd-staging-place-order-btn" class="wrrapd-staging-tracking-only-btn" style="box-sizing:border-box;background:#0d3d2e;color:#e8fff4;font-weight:700;margin-top:10px;width:100%;height:40px;border-radius:8px;border:2px solid #1a9966;cursor:pointer;">Send cart to Wrrapd tracking only — does not order on Amazon</button>
                     <div id="wrrapd-staging-pyo-hint" style="font-size: 11px; color: #666; margin-top: 4px;">Sends orders through api.wrrapd.com to your tracking app (same as pay server — no browser setup).</div>
                 </div>
             `;
@@ -9084,7 +9087,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                     <div id="wrrapd-payment-info" class="a-row a-spacing-small a-spacing-top-small">
                     </div>
                     <button id="pay-wrrapd-btn" class="a-button-primary" style="background-color: #f0c14b; color: black; font-weight: bold; margin-top: 10px; width: 100%; height: 40px; border-radius: 8px;">Pay Wrrapd</button>
-                    <button type="button" id="wrrapd-staging-place-order-btn" disabled aria-disabled="true" class="a-button-primary" style="background-color: #0066c0; color: #ffcc00; font-weight: bold; margin-top: 8px; width: 100%; height: 40px; border-radius: 8px; border: none; cursor: not-allowed; opacity: 0.65;">Place your order (staging — Wrrapd tracking)</button>
+                    <button type="button" id="wrrapd-staging-place-order-btn" disabled aria-disabled="true" class="wrrapd-staging-tracking-only-btn" style="box-sizing:border-box;background:#3d3d3d;color:#aaa;font-weight:700;margin-top:8px;width:100%;height:40px;border-radius:8px;border:2px solid #666;cursor:not-allowed;opacity:0.85;">Send cart to Wrrapd tracking only — pay Wrrapd first</button>
                     <div id="wrrapd-staging-pyo-hint" style="font-size: 11px; color: #666; margin-top: 4px;">Enabled after Pay Wrrapd succeeds. Uses api.wrrapd.com to forward to tracking (no keys in the browser).</div>
                 </div>
             `;
@@ -9657,9 +9660,16 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
         const stagingPyoBtn = document.getElementById('wrrapd-staging-place-order-btn');
         if (stagingPyoBtn && stagingPyoBtn.dataset.wrrapdStagingListener !== '1') {
             stagingPyoBtn.dataset.wrrapdStagingListener = '1';
-            stagingPyoBtn.addEventListener('click', function () {
-                void runStagingTrackingIngestSimulatePlaceOrder();
-            });
+            stagingPyoBtn.addEventListener(
+                'click',
+                function (ev) {
+                    ev.preventDefault();
+                    ev.stopPropagation();
+                    ev.stopImmediatePropagation();
+                    void runStagingTrackingIngestSimulatePlaceOrder();
+                },
+                true,
+            );
         }
     }
     
