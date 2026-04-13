@@ -242,9 +242,12 @@ export async function createOrder(
   const saved = await getOrderById(order.id);
   const finalOrder = saved ?? order;
   if (!input.skipCustomerNotifications) {
-    void import("@/lib/post-order-notify")
-      .then((m) => m.sendPostOrderNotifications(finalOrder))
-      .catch((e) => console.error("[post-order-notify]", e));
+    try {
+      const m = await import("@/lib/post-order-notify");
+      await m.sendPostOrderNotifications(finalOrder);
+    } catch (e) {
+      console.error("[post-order-notify]", e);
+    }
   }
   return { ok: true, order: finalOrder };
 }

@@ -30,6 +30,12 @@ export async function sendPostOrderNotifications(order: Order): Promise<void> {
     return;
   }
 
+  const adminTos = adminOrderNotifyEmails();
+  console.info("[post-order-notify] start", order.id, {
+    hasCustomerEmail: Boolean(order.customerEmail?.trim()),
+    adminRecipients: adminTos.length,
+  });
+
   const origin = getPublicOrigin();
   const trackingPath = `/track/${order.trackingToken}`;
   const trackingUrl = origin ? `${origin}${trackingPath}` : trackingPath;
@@ -58,7 +64,6 @@ export async function sendPostOrderNotifications(order: Order): Promise<void> {
     }
   }
 
-  const adminTos = adminOrderNotifyEmails();
   if (adminTos.length) {
     const adminHtml = adminNewOrderEmailHtml({
       orderId: order.id,
