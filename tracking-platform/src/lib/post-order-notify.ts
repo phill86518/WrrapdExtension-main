@@ -15,6 +15,18 @@ import { formatInTimeZone } from "date-fns-tz";
 
 const NY = "America/New_York";
 
+export type PostOrderNotifySummary = {
+  skipped: boolean;
+  skipReason?: string;
+  mailgunEnvPresent: boolean;
+  twilioEnvPresent: boolean;
+  customerThankYouEmailSent: boolean;
+  adminEmailsSent: number;
+  customerSmsSent: boolean;
+  /** Short line for API / extension UI */
+  message: string;
+};
+
 function adminOrderNotifyEmails(): string[] {
   const raw = process.env.NOTIFY_ADMIN_ORDER_EMAILS?.trim();
   if (!raw) return [];
@@ -24,10 +36,38 @@ function adminOrderNotifyEmails(): string[] {
     .filter(Boolean);
 }
 
-export async function sendPostOrderNotifications(order: Order): Promise<void> {
+function envFlags() {
+  const mailgunEnvPresent = !!(
+    process.env.MAILGUN_API_KEY?.trim() && process.env.MAILGUN_DOMAIN?.trim()
+  );
+  const twilioEnvPresent = !!(
+    process.env.TWILIO_ACCOUNT_SID?.trim() &&
+    process.env.TWILIO_AUTH_TOKEN?.trim() &&
+    process.env.TWILIO_SMS_FROM?.trim()
+  );
+  return { mailgunEnvPresent, twilioEnvPresent };
+}
+
+export async function sendPostOrderNotifications(order: Order): Promise<PostOrderNotifySummary> {
+  const { mailgunEnvPresent, twilioEnvPresent } = envFlags();
+  const base: PostOrderNotifySummary = {
+    skipped: false,
+    mailgunEnvPresent,
+    twilioEnvPresent,
+    customerThankYouEmailSent: false,
+    adminEmailsSent: 0,
+    customerSmsSent: false,
+    message: "",
+  };
+
   if (process.env.TRACKING_NOTIFY_NEW_ORDERS === "false") {
     console.info("[post-order-notify] skipped (TRACKING_NOTIFY_NEW_ORDERS=false)", order.id);
-    return;
+    return {
+      ...base,
+      skipped: true,
+      skipReason: "TRACKING_NOTIFY_NEW_ORDERS=false",
+      message: "Notifications disabled by TRACKING_NOTIFY_NEW_ORDERS=false",
+    };
   }
 
   const adminTos = adminOrderNotifyEmails();
@@ -54,11 +94,12 @@ export async function sendPostOrderNotifications(order: Order): Promise<void> {
 
   if (order.customerEmail?.trim()) {
     try {
-      await sendTransactionalEmail({
+      const ok = await sendTransactionalEmail({
         to: order.customerEmail.trim(),
         subject: thankYouSubject,
         html: thankYouHtml,
       });
+      base.customerThankYouEmailSent = ok;
     } catch (e) {
       console.error("[post-order-notify] customer thank-you email failed", order.id, e);
     }
@@ -86,11 +127,12 @@ export async function sendPostOrderNotifications(order: Order): Promise<void> {
     const adminSubject = `New Wrrapd order ${order.id}${order.externalOrderId ? ` (${order.externalOrderId})` : ""}`;
     for (const to of adminTos) {
       try {
-        await sendTransactionalEmail({
+        const ok = await sendTransactionalEmail({
           to,
           subject: adminSubject,
           html: adminHtml,
         });
+        if (ok) base.adminEmailsSent += 1;
       } catch (e) {
         console.error("[post-order-notify] admin email failed", order.id, to, e);
       }
@@ -103,7 +145,8 @@ export async function sendPostOrderNotifications(order: Order): Promise<void> {
       `Wrrapd: Thanks for your order ${order.id}! Track: ${trackingUrl} ` +
       `Delivery window ${scheduledEtLabel}.`;
     try {
-      await sendTransactionalSms({ toE164: e164, body: sms.slice(0, 1500) });
+      const ok = await sendTransactionalSms({ toE164: e164, body: sms.slice(0, 1500) });
+      base.customerSmsSent = ok;
     } catch (e) {
       console.error("[post-order-notify] customer SMS failed", order.id, e);
     }
@@ -152,9 +195,34 @@ export async function sendPostOrderNotifications(order: Order): Promise<void> {
     }
   }
 
+  const parts: string[] = [];
+  if (!mailgunEnvPresent) {
+    parts.push("Mailgun env missing on Cloud Run (MAILGUN_API_KEY / MAILGUN_DOMAIN)");
+  } else if (order.customerEmail?.trim() && !base.customerThankYouEmailSent) {
+    parts.push("Customer thank-you email not queued (check Cloud Run logs [notify])");
+  } else if (order.customerEmail?.trim() && base.customerThankYouEmailSent) {
+    parts.push("Customer thank-you email queued");
+  }
+  if (adminTos.length && base.adminEmailsSent === 0 && mailgunEnvPresent) {
+    parts.push(`Admin emails 0/${adminTos.length} (check NOTIFY_ADMIN_ORDER_EMAILS and Mailgun logs)`);
+  } else if (adminTos.length) {
+    parts.push(`Admin emails ${base.adminEmailsSent}/${adminTos.length}`);
+  } else if (!adminTos.length) {
+    parts.push("No NOTIFY_ADMIN_ORDER_EMAILS set");
+  }
+  if (e164) {
+    parts.push(base.customerSmsSent ? "SMS queued" : "SMS not sent (check Twilio env / logs)");
+  } else {
+    parts.push("No US phone for SMS");
+  }
+  base.message = parts.join(" · ");
+
   console.info("[post-order-notify] done", order.id, {
     hadCustomerEmail: Boolean(order.customerEmail?.trim()),
-    adminEmails: adminTos.length,
+    adminEmails: base.adminEmailsSent,
     hadSms: Boolean(e164),
+    customerSmsSent: base.customerSmsSent,
   });
+
+  return base;
 }

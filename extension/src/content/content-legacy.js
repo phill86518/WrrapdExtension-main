@@ -402,6 +402,7 @@ import { isZipCodeAllowed } from './lib/zip-codes.js';
         
         // CRITICAL: Reset ALL flags when on cart page - fresh start for new checkout
         localStorage.removeItem('wrrapd-terms-accepted');
+        localStorage.removeItem('wrrapd-terms-gift-signature');
         localStorage.removeItem('wrrapd-should-change-address');
         localStorage.removeItem('wrrapd-addresses-changed');
 
@@ -1374,6 +1375,41 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
 
     }
 
+    /**
+     * When gift wrapping choices change (e.g. Amazon bag → Wrrapd), Terms must run again.
+     */
+    function wrrapdGiftOptionsTermsSignature(allItems) {
+        try {
+            const parts = [];
+            const keys = Object.keys(allItems || {}).sort();
+            for (let ki = 0; ki < keys.length; ki++) {
+                const key = keys[ki];
+                const product = allItems[key];
+                if (!product || !Array.isArray(product.options)) continue;
+                const asin = product.asin || key;
+                for (let i = 0; i < product.options.length; i++) {
+                    const o = product.options[i];
+                    const w = o.checkbox_wrrapd === true ? '1' : '0';
+                    const wrap = String(o.selected_wrapping_option || '');
+                    parts.push(`${asin}:${i}:${w}:${wrap}`);
+                }
+            }
+            return parts.join('|');
+        } catch (e) {
+            return 'err';
+        }
+    }
+
+    function wrrapdTermsAcceptedForCurrentGiftChoices(allItems) {
+        const sig = wrrapdGiftOptionsTermsSignature(allItems);
+        const stored = localStorage.getItem('wrrapd-terms-gift-signature');
+        return (
+            localStorage.getItem('wrrapd-terms-accepted') === 'true' &&
+            stored !== null &&
+            stored === sig
+        );
+    }
+
     async function overrideSaveGiftOptionsButtons() {
         console.log("[overrideSaveGiftOptionsButtons] Overriding Amazon's save buttons.");
     
@@ -1399,19 +1435,22 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                 
                 const allItems = getAllItemsFromLocalStorage();
                 
-                // CRITICAL: Check if addresses were already changed (flag-based check is most reliable)
-                // If addresses were changed, we're returning from address selection - don't intercept
+                // Match delegated handler: only skip if addresses are visible AND we already ran our address flow
                 const addressesChangedFlag = localStorage.getItem('wrrapd-addresses-changed') === 'true';
-                if (addressesChangedFlag) {
-                    console.log("[overrideSaveGiftOptionsButtons] Addresses were already changed - NOT intercepting. Allowing natural flow to Payment.");
-                    return; // Don't intercept - addresses already changed, proceed to payment
+                const addressesShown = areAddressesShownOnGiftOptionsPage();
+                if (addressesChangedFlag && addressesShown) {
+                    console.log(
+                        "[overrideSaveGiftOptionsButtons] Addresses changed + shown on gift page — NOT intercepting (return to payment).",
+                    );
+                    return;
                 }
                 
-                // CRITICAL: Never show Terms modal if Terms have already been accepted
-                const termsAccepted = localStorage.getItem('wrrapd-terms-accepted') === 'true';
+                const termsAccepted = wrrapdTermsAcceptedForCurrentGiftChoices(allItems);
                 if (termsAccepted) {
-                    console.log("[overrideSaveGiftOptionsButtons] Terms already accepted - NOT showing Terms modal again.");
-                    return; // Don't intercept - Terms already accepted
+                    console.log(
+                        "[overrideSaveGiftOptionsButtons] Terms already accepted for this gift configuration — NOT showing modal again.",
+                    );
+                    return;
                 }
                 
                 // MATCH OLD CODE: Use allItems (not filtered) to check for Wrrapd items
@@ -1429,6 +1468,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                     event.stopImmediatePropagation();
                     
                     // Show Terms & Conditions modal - only proceed when user clicks "Proceed"
+                    const giftTermsSignature = wrrapdGiftOptionsTermsSignature(allItems);
                     showTermsAndConditionsModal(() => {
                         console.log("[overrideSaveGiftOptionsButtons] User clicked Proceed. Continuing with address selection...");
                         
@@ -1609,7 +1649,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                                 }
                             })();
                         }
-                    });
+                    }, giftTermsSignature);
                     
                     return false;
             }
@@ -1672,11 +1712,12 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                     return; // Don't intercept - addresses already changed, proceed to payment
                 }
                 
-                // CRITICAL: Never show Terms modal if Terms have already been accepted
-                const termsAccepted = localStorage.getItem('wrrapd-terms-accepted') === 'true';
-                if (termsAccepted) {
-                    console.log("[overrideSaveGiftOptionsButtons] Delegated handler: Terms already accepted - NOT intercepting.");
-                    return; // Don't intercept - Terms already accepted
+                const itemsForTerms = getAllItemsFromLocalStorage();
+                if (wrrapdTermsAcceptedForCurrentGiftChoices(itemsForTerms)) {
+                    console.log(
+                        "[overrideSaveGiftOptionsButtons] Delegated handler: Terms already accepted for this gift configuration — NOT intercepting.",
+                    );
+                    return;
                 }
                 
                 console.log("[overrideSaveGiftOptionsButtons] Delegated handler caught click on save button");
@@ -3566,7 +3607,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
         // Loading screen should ONLY show after user clicks "here" on Terms modal
             // CRITICAL: Keep loading screen visible throughout entire address manipulation process
         const shouldChangeAddress = localStorage.getItem('wrrapd-should-change-address') === 'true';
-        const termsAccepted = localStorage.getItem('wrrapd-terms-accepted') === 'true';
+        const termsAccepted = wrrapdTermsAcceptedForCurrentGiftChoices(allItems);
         if (shouldChangeAddress && termsAccepted) {
             // Loading screen should already be showing (from Terms acceptance), but ensure it's on
             showLoadingScreen();
@@ -6687,9 +6728,9 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             if (wrrapdShouldChangeAddress) {
                 // CRITICAL: Verify Terms have been accepted BEFORE doing address manipulation
                 // Address manipulation should ONLY happen AFTER user clicks "here" on Terms modal
-                const termsAccepted = localStorage.getItem('wrrapd-terms-accepted') === 'true';
+                const termsAccepted = wrrapdTermsAcceptedForCurrentGiftChoices(allItems);
                 if (!termsAccepted) {
-                    console.log("[checkChangeAddress] Flag set but Terms NOT accepted yet - NOT doing address manipulation. Waiting for Terms acceptance.");
+                    console.log("[checkChangeAddress] Flag set but Terms NOT accepted for current gift choices - NOT doing address manipulation.");
                     return; // Don't do anything until Terms are accepted
                 }
                 
@@ -7291,18 +7332,16 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             return;
         }
         
-        // CRITICAL: Only proceed if Terms have been accepted
-        // Address manipulation should ONLY trigger after user clicks "here" to accept Terms & Conditions
-        const termsAccepted = localStorage.getItem('wrrapd-terms-accepted') === 'true';
+        const itemsForTerms = getAllItemsFromLocalStorage();
+        const termsAccepted = wrrapdTermsAcceptedForCurrentGiftChoices(itemsForTerms);
         if (!termsAccepted) {
-            console.log("[handleWrrapdAddressSelection] Terms not yet accepted - NOT proceeding with address manipulation.");
-            console.log("[handleWrrapdAddressSelection] Address manipulation will only trigger after Terms & Conditions are accepted.");
+            console.log("[handleWrrapdAddressSelection] Terms not accepted for current gift choices - NOT proceeding with address manipulation.");
             return;
         }
         
         isHandlingWrrapdAddressSelection = true;
         try {
-        const allItems = getAllItemsFromLocalStorage();
+        const allItems = itemsForTerms;
         const allItemsWrrapd = localStorage.getItem('wrrapd-all-items') === 'true';
         
             // CRITICAL: Loading screen should already be showing (from monitorURLChanges)
@@ -7864,7 +7903,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
         }
     }
     
-    function showTermsAndConditionsModal(onProceedCallback) {
+    function showTermsAndConditionsModal(onProceedCallback, giftTermsSignature) {
         console.log("[showTermsAndConditionsModal] Showing Terms & Conditions modal");
         
         // Check if modal already exists
@@ -8032,8 +8071,10 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             
             console.log("[showTermsAndConditionsModal] User clicked agreement link");
             
-            // Set flag that Terms have been accepted - modal should NEVER show again
             localStorage.setItem('wrrapd-terms-accepted', 'true');
+            if (giftTermsSignature != null && giftTermsSignature !== '') {
+                localStorage.setItem('wrrapd-terms-gift-signature', giftTermsSignature);
+            }
             
             // Show loading screen IMMEDIATELY before closing modal and calling callback
             showLoadingScreen();
@@ -8907,33 +8948,40 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                 );
                 return;
             }
-            if (data && data.ok) {
-                console.info(
-                    '[Wrrapd staging ingest] OK —',
-                    orders.length,
-                    'line item(s). Check Cloud Run logs / Mailgun / Twilio.',
-                );
+            if (data && Array.isArray(data.results)) {
+                const failed = data.results.filter((r) => !r.ok);
+                if (failed.length) {
+                    const lines = failed.map((r) => `Line ${(r.index || 0) + 1}: ${r.reason || 'failed'}`);
+                    console.error('[Wrrapd staging ingest] Partial failure:', lines.join(' | '));
+                    setStagingIngestStatus('Some lines failed: ' + lines.join(' · '), 'error');
+                    return;
+                }
+                data.results.forEach((r, idx) => {
+                    if (r.notify) {
+                        console.info('[Wrrapd staging ingest] notify line', idx + 1, r.notify);
+                    }
+                });
+                const notifyBits = data.results
+                    .map((r, idx) => {
+                        const n = r.notify;
+                        if (!n || !n.message) return '';
+                        return `Order ${idx + 1}: ${n.message}`;
+                    })
+                    .filter(Boolean);
+                console.info('[Wrrapd staging ingest] OK —', data.results.length, 'line(s).');
                 setStagingIngestStatus(
-                    'Sent ' +
-                        orders.length +
-                        ' order(s) to tracking. Thank-you email/SMS are sent by Cloud Run (Mailgun/Twilio). If nothing arrives, open Cloud Run logs and search for [notify] or [post-order-notify].',
-                    'ok',
+                    notifyBits.length
+                        ? notifyBits.join(' ')
+                        : 'Orders saved. If this text never shows Mailgun/Twilio status, redeploy api.wrrapd.com (proxy) + Cloud Run tracking.',
+                    notifyBits.some((b) => /missing|not sent|0\//i.test(b)) ? 'error' : 'ok',
                 );
                 return;
             }
-            if (data && Array.isArray(data.results)) {
-                const lines = data.results
-                    .filter((r) => !r.ok)
-                    .map((r) => `Line ${(r.index || 0) + 1}: ${r.reason || 'failed'}`);
-                console.error(
-                    '[Wrrapd staging ingest] Partial failure:',
-                    lines.length ? lines.join(' | ') : 'unexpected body',
-                );
+            if (data && data.ok) {
+                console.info('[Wrrapd staging ingest] OK (legacy body) —', orders.length, 'line item(s).');
                 setStagingIngestStatus(
-                    lines.length
-                        ? 'Some lines failed: ' + lines.join(' · ')
-                        : 'Unexpected response from api.wrrapd.com',
-                    'error',
+                    'Sent — redeploy pay server proxy to see email/SMS status per order.',
+                    'ok',
                 );
                 return;
             }
@@ -9696,6 +9744,12 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                                 const result = await response.json();
                                 if (result.success) {
                                     console.log('Payment and order processed successfully.');
+                                    if (result.warnings && result.warnings.length) {
+                                        console.warn(
+                                            '[Wrrapd process-payment] warnings (e.g. Mailgun):',
+                                            result.warnings,
+                                        );
+                                    }
                                 } else {
                                     console.error('Failed to process payment and order:', result.error);
                                 }

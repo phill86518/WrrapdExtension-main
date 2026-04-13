@@ -65,6 +65,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       ok: true,
       order: result.order,
+      notify: result.notify,
       trackingUrlPath: `/track/${result.order.trackingToken}`,
       notStoredYet: orderIngestFieldGuide().notStored,
     });

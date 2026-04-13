@@ -416,7 +416,12 @@ async function ingestOrderIntoTracking(orderPayload) {
         if (!resp.ok) {
             return { ok: false, skipped: false, reason: `ingest ${resp.status}: ${text.substring(0, 1200)}` };
         }
-        return { ok: true, skipped: false };
+        let notify;
+        try {
+            const j = JSON.parse(text);
+            if (j && typeof j === 'object' && j.notify) notify = j.notify;
+        } catch (_) { /* ignore */ }
+        return { ok: true, skipped: false, notify };
     } catch (e) {
         return { ok: false, skipped: false, reason: e && e.message ? e.message : String(e) };
     }
@@ -437,7 +442,7 @@ app.post('/api/proxy-tracking-ingest', async (req, res) => {
     const results = [];
     for (let i = 0; i < orders.length; i++) {
         const r = await ingestOrderIntoTracking(orders[i]);
-        results.push({ index: i, ok: r.ok, skipped: r.skipped, reason: r.reason });
+        results.push({ index: i, ok: r.ok, skipped: r.skipped, reason: r.reason, notify: r.notify });
     }
     const allOk = results.every((row) => row.ok);
     res.status(200).json({ ok: allOk, results });

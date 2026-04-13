@@ -6,7 +6,7 @@ import './content-legacy.js';
 import './lib/amazon-delivery-hints.js';
 
 /** Bump when verifying deploy — search Amazon tab DevTools console for this string. */
-export const WRRAPD_CONTENT_BUILD_TAG = '2026-04-13-postpay-staging-button-looks-enabled';
+export const WRRAPD_CONTENT_BUILD_TAG = '2026-04-14-terms-signature+notify-status+pay-warnings';
 console.info(
     '[Wrrapd] content bundle',
     WRRAPD_CONTENT_BUILD_TAG,

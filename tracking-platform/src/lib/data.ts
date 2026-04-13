@@ -184,7 +184,10 @@ export type CreateOrderInput = {
 
 export async function createOrder(
   input: CreateOrderInput,
-): Promise<{ ok: true; order: Order } | { ok: false; error: string }> {
+): Promise<
+  | { ok: true; order: Order; notify?: import("@/lib/post-order-notify").PostOrderNotifySummary }
+  | { ok: false; error: string }
+> {
   const scheduledAt = parseScheduledForInput(input.scheduledFor);
   const check = validateScheduledInstant(scheduledAt);
   if (!check.ok) {
@@ -241,15 +244,25 @@ export async function createOrder(
   }
   const saved = await getOrderById(order.id);
   const finalOrder = saved ?? order;
+  let notify: import("@/lib/post-order-notify").PostOrderNotifySummary | undefined;
   if (!input.skipCustomerNotifications) {
     try {
       const m = await import("@/lib/post-order-notify");
-      await m.sendPostOrderNotifications(finalOrder);
+      notify = await m.sendPostOrderNotifications(finalOrder);
     } catch (e) {
       console.error("[post-order-notify]", e);
+      notify = {
+        skipped: false,
+        mailgunEnvPresent: false,
+        twilioEnvPresent: false,
+        customerThankYouEmailSent: false,
+        adminEmailsSent: 0,
+        customerSmsSent: false,
+        message: `notify threw: ${e instanceof Error ? e.message : String(e)}`,
+      };
     }
   }
-  return { ok: true, order: finalOrder };
+  return { ok: true, order: finalOrder, ...(notify ? { notify } : {}) };
 }
 
 export async function listOrdersByStatus(status: "active" | "scheduled" | "past") {
