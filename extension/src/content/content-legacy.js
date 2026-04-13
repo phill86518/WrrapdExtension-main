@@ -8805,12 +8805,21 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
         return orderData;
     }
 
+    function setStagingIngestStatus(message, kind) {
+        const el = document.getElementById('wrrapd-staging-ingest-status');
+        if (!el) return;
+        el.textContent = message || '';
+        el.style.color =
+            kind === 'error' ? '#c40000' : kind === 'ok' ? '#067d17' : kind === 'pending' ? '#555' : '#333';
+    }
+
     async function runStagingTrackingIngestSimulatePlaceOrder() {
         console.info(
             '[Wrrapd] Staging ingest only — sends JSON to api.wrrapd.com; it does not click or submit Amazon checkout.',
         );
         if (localStorage.getItem('wrrapd-payment-status') !== 'success') {
             console.warn('[Wrrapd staging ingest] Complete Pay Wrrapd first.');
+            setStagingIngestStatus('Pay Wrrapd first — then use the green tracking button.', 'error');
             return;
         }
         const customerEmail = localStorage.getItem('wrrapd-checkout-customer-email');
@@ -8825,11 +8834,13 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             console.warn(
                 '[Wrrapd staging ingest] Missing checkout email/phone after pay — complete Pay Wrrapd again.',
             );
+            setStagingIngestStatus('Missing email/phone after pay — use Pay Wrrapd again.', 'error');
             return;
         }
         const orderData = buildWrrapdOrderDataFromLocalStorage();
         if (!orderData.length) {
             console.warn('[Wrrapd staging ingest] No Wrrapd line items in wrrapd-items.');
+            setStagingIngestStatus('No Wrrapd line items to send.', 'error');
             return;
         }
         const hints = readAmazonDeliveryHintsFromSessionStorage();
@@ -8838,6 +8849,8 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             (billingDetails && billingDetails.name) ||
             (customerEmail && customerEmail.split('@')[0]) ||
             'Customer';
+
+        setStagingIngestStatus('Sending to Wrrapd tracking…', 'pending');
 
         const orders = [];
         for (let i = 0; i < orderData.length; i++) {
@@ -8888,6 +8901,10 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                     resp.status,
                     text ? text.substring(0, 800) : '',
                 );
+                setStagingIngestStatus(
+                    'Tracking ingest failed (HTTP ' + resp.status + '). See console; check pay server + Cloud Run.',
+                    'error',
+                );
                 return;
             }
             if (data && data.ok) {
@@ -8895,6 +8912,12 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                     '[Wrrapd staging ingest] OK —',
                     orders.length,
                     'line item(s). Check Cloud Run logs / Mailgun / Twilio.',
+                );
+                setStagingIngestStatus(
+                    'Sent ' +
+                        orders.length +
+                        ' order(s) to tracking. Thank-you email/SMS are sent by Cloud Run (Mailgun/Twilio). If nothing arrives, open Cloud Run logs and search for [notify] or [post-order-notify].',
+                    'ok',
                 );
                 return;
             }
@@ -8906,14 +8929,22 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                     '[Wrrapd staging ingest] Partial failure:',
                     lines.length ? lines.join(' | ') : 'unexpected body',
                 );
+                setStagingIngestStatus(
+                    lines.length
+                        ? 'Some lines failed: ' + lines.join(' · ')
+                        : 'Unexpected response from api.wrrapd.com',
+                    'error',
+                );
                 return;
             }
             console.error('[Wrrapd staging ingest] Unexpected JSON from api.wrrapd.com');
+            setStagingIngestStatus('Unexpected response from api.wrrapd.com. See console.', 'error');
         } catch (e) {
             console.error(
                 '[Wrrapd staging ingest] Network error:',
                 e && e.message ? e.message : String(e),
             );
+            setStagingIngestStatus('Network error talking to api.wrrapd.com. See console.', 'error');
         }
     }
 
@@ -9068,6 +9099,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                         <div style="color: green; font-weight: bold; font-size: 16px;">Payment successful. Please place order with Amazon now.</div>
                     </div>
                     <button type="button" id="wrrapd-staging-place-order-btn" class="wrrapd-staging-tracking-only-btn" style="box-sizing:border-box;background:#0d3d2e;color:#e8fff4;font-weight:700;margin-top:10px;width:100%;height:40px;border-radius:8px;border:2px solid #1a9966;cursor:pointer;">Send cart to Wrrapd tracking only — does not order on Amazon</button>
+                    <div id="wrrapd-staging-ingest-status" role="status" aria-live="polite" style="font-size: 12px; margin-top: 8px; min-height: 1.2em;"></div>
                     <div id="wrrapd-staging-pyo-hint" style="font-size: 11px; color: #666; margin-top: 4px;">Sends orders through api.wrrapd.com to your tracking app (same as pay server — no browser setup).</div>
                 </div>
             `;
@@ -9379,8 +9411,30 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                             if (stagingPyo) {
                                 stagingPyo.disabled = false;
                                 stagingPyo.removeAttribute('aria-disabled');
+                                stagingPyo.style.boxSizing = 'border-box';
                                 stagingPyo.style.cursor = 'pointer';
                                 stagingPyo.style.opacity = '1';
+                                stagingPyo.style.background = '#0d3d2e';
+                                stagingPyo.style.color = '#e8fff4';
+                                stagingPyo.style.fontWeight = '700';
+                                stagingPyo.style.border = '2px solid #1a9966';
+                                stagingPyo.textContent =
+                                    'Send cart to Wrrapd tracking only — does not order on Amazon';
+                            }
+                            const stagingHint = document.getElementById('wrrapd-staging-pyo-hint');
+                            if (stagingHint) {
+                                stagingHint.textContent =
+                                    'Sends orders through api.wrrapd.com to your tracking app (same as pay server — no keys in the browser).';
+                            }
+                            if (stagingPyo && !document.getElementById('wrrapd-staging-ingest-status')) {
+                                const statusRow = document.createElement('div');
+                                statusRow.id = 'wrrapd-staging-ingest-status';
+                                statusRow.setAttribute('role', 'status');
+                                statusRow.setAttribute('aria-live', 'polite');
+                                statusRow.style.fontSize = '12px';
+                                statusRow.style.marginTop = '8px';
+                                statusRow.style.minHeight = '1.2em';
+                                stagingPyo.insertAdjacentElement('afterend', statusRow);
                             }
 
                             // Store payment status in localStorage
