@@ -405,13 +405,14 @@ function normalizeOrderItems(orderData) {
         const options = Array.isArray(item.options) ? item.options : [];
         for (const option of options) {
             if (!option || typeof option !== 'object') continue;
-            const isWrrapdLike =
-                option.checkbox_wrrapd === true ||
-                !!option.selected_wrapping_option ||
+            const hasDesignData =
                 !!option.selected_ai_design ||
                 !!option.uploaded_design_path ||
                 !!option.file_data_url ||
                 option.checkbox_flowers === true;
+            const isWrrapdLike =
+                option.checkbox_wrrapd === true ||
+                hasDesignData;
             if (!isWrrapdLike) continue;
             out.push({
                 asin: item.asin,
@@ -428,6 +429,11 @@ function normalizeOrderItems(orderData) {
                 deliveryInstructions: option.deliveryInstructions || null,
                 giftMessage: option.giftMessage || null,
                 senderName: option.senderName || null,
+                amazonDeliveryDate: option.amazonDeliveryDate || item.amazonDeliveryDate || null,
+                deliveryDate: option.deliveryDate || item.deliveryDate || null,
+                estimatedDeliveryDate: option.estimatedDeliveryDate || item.estimatedDeliveryDate || null,
+                arrivalDate: option.arrivalDate || item.arrivalDate || null,
+                shippingDate: option.shippingDate || item.shippingDate || null,
             });
         }
     }
@@ -924,7 +930,10 @@ app.post('/process-payment', async (req, res) => {
                 state: finalAddr.state || item.state || 'N/A',
                 postalCode: finalAddr.postalCode || finalAddr.postal_code || item.postalCode || '00000',
                 scheduledFor: computeScheduledForPlusOne(item),
-                externalOrderId: `${orderNumber}-${String(i + 1).padStart(2, '0')}`,
+                externalOrderId:
+                    normalizedOrderData.length === 1
+                        ? orderNumber
+                        : `${orderNumber}-${String(i + 1).padStart(2, '0')}`,
                 sourceNote: `Amazon order ${orderNumber} item ${i + 1}; auto scheduled (Amazon+1)`,
             };
             const ingestResult = await ingestOrderIntoTracking(ingestPayload);

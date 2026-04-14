@@ -8788,14 +8788,14 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             itemList.forEach((item) => {
                 if (!item || !item.options) return;
                 item.options.forEach((option) => {
+                    const hasDesignData =
+                        !!option.selected_ai_design ||
+                        !!option.uploaded_design_path ||
+                        !!option.file_data_url ||
+                        option.checkbox_flowers === true;
                     const isWrrapdLike =
                         option &&
-                        (option.checkbox_wrrapd === true ||
-                            !!option.selected_wrapping_option ||
-                            !!option.selected_ai_design ||
-                            !!option.uploaded_design_path ||
-                            !!option.file_data_url ||
-                            option.checkbox_flowers === true);
+                        (option.checkbox_wrrapd === true || hasDesignData);
                     if (!isWrrapdLike) return;
                     let deliveryInstructions = null;
                     try {

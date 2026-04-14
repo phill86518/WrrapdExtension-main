@@ -1,6 +1,7 @@
 import { formatInTimeZone } from "date-fns-tz";
 
 const NY = "America/New_York";
+const WRRAPD_LOGO_URL = "https://pay.wrrapd.com/img/wrrapd-logo-1-small.png";
 
 const wrap = (inner: string) => `<!DOCTYPE html>
 <html lang="en">
@@ -24,7 +25,7 @@ export function thankYouEmailHtml(input: {
 }): string {
   const inner = `
 <tr><td style="background:linear-gradient(135deg,#1a3d2e 0%,#2d5a47 50%,#c9a227 100%);padding:28px 24px;text-align:center;">
-  <div style="font-size:13px;letter-spacing:0.35em;text-transform:uppercase;color:rgba(255,255,255,0.85);">Wrrapd</div>
+  <img src="${escapeAttr(WRRAPD_LOGO_URL)}" alt="Wrrapd" style="display:block;margin:0 auto 6px;max-width:170px;height:auto;"/>
   <h1 style="margin:12px 0 0;font-size:26px;font-weight:600;color:#fff;line-height:1.2;">Thank you for your order</h1>
   <p style="margin:10px 0 0;font-size:15px;color:rgba(255,255,255,0.92);">Your gift is in caring hands.</p>
 </td></tr>

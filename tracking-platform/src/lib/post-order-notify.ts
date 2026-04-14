@@ -86,11 +86,12 @@ export async function sendPostOrderNotifications(order: Order): Promise<PostOrde
   const trackingUrl = origin ? `${origin}${trackingPath}` : trackingPath;
   const addressLine = `${order.addressLine1}, ${order.city}, ${order.state} ${order.postalCode}`;
   const scheduledEtLabel = formatOrderScheduleEt(order.scheduledFor);
+  const displayOrderId = order.externalOrderId?.trim() || order.id;
 
-  const thankYouSubject = `Thank you — Wrrapd order ${order.id}`;
+  const thankYouSubject = `Thank you — Wrrapd order ${displayOrderId}`;
   const thankYouHtml = thankYouEmailHtml({
     customerName: order.customerName,
-    orderId: order.id,
+    orderId: displayOrderId,
     trackingUrl,
     recipientName: order.recipientName,
     addressLine,
