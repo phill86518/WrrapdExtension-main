@@ -3,6 +3,7 @@ import {
   getPublicOrigin,
   sendTransactionalEmail,
   sendTransactionalSms,
+  smtpEnvConfigured,
   toUsE164,
 } from "@/lib/customer-notify";
 import {
@@ -19,6 +20,7 @@ export type PostOrderNotifySummary = {
   skipped: boolean;
   skipReason?: string;
   mailgunEnvPresent: boolean;
+  smtpEnvPresent: boolean;
   twilioEnvPresent: boolean;
   customerThankYouEmailSent: boolean;
   adminEmailsSent: number;
@@ -37,6 +39,7 @@ function adminOrderNotifyEmails(): string[] {
 }
 
 function envFlags() {
+  const smtpEnvPresent = smtpEnvConfigured();
   const mailgunEnvPresent = !!(
     process.env.MAILGUN_API_KEY?.trim() && process.env.MAILGUN_DOMAIN?.trim()
   );
@@ -45,14 +48,16 @@ function envFlags() {
     process.env.TWILIO_AUTH_TOKEN?.trim() &&
     process.env.TWILIO_SMS_FROM?.trim()
   );
-  return { mailgunEnvPresent, twilioEnvPresent };
+  return { smtpEnvPresent, mailgunEnvPresent, twilioEnvPresent };
 }
 
 export async function sendPostOrderNotifications(order: Order): Promise<PostOrderNotifySummary> {
-  const { mailgunEnvPresent, twilioEnvPresent } = envFlags();
+  const { smtpEnvPresent, mailgunEnvPresent, twilioEnvPresent } = envFlags();
+  const emailTransportPresent = smtpEnvPresent || mailgunEnvPresent;
   const base: PostOrderNotifySummary = {
     skipped: false,
     mailgunEnvPresent,
+    smtpEnvPresent,
     twilioEnvPresent,
     customerThankYouEmailSent: false,
     adminEmailsSent: 0,
@@ -196,15 +201,15 @@ export async function sendPostOrderNotifications(order: Order): Promise<PostOrde
   }
 
   const parts: string[] = [];
-  if (!mailgunEnvPresent) {
-    parts.push("Mailgun env missing on Cloud Run (MAILGUN_API_KEY / MAILGUN_DOMAIN)");
+  if (!emailTransportPresent) {
+    parts.push("No email transport on Cloud Run (set SMTP_HOST, SMTP_USER, SMTP_PASS or Mailgun vars)");
   } else if (order.customerEmail?.trim() && !base.customerThankYouEmailSent) {
-    parts.push("Customer thank-you email not queued (check Cloud Run logs [notify])");
+    parts.push("Customer thank-you email not sent (check Cloud Run logs [notify])");
   } else if (order.customerEmail?.trim() && base.customerThankYouEmailSent) {
-    parts.push("Customer thank-you email queued");
+    parts.push("Customer thank-you email sent");
   }
-  if (adminTos.length && base.adminEmailsSent === 0 && mailgunEnvPresent) {
-    parts.push(`Admin emails 0/${adminTos.length} (check NOTIFY_ADMIN_ORDER_EMAILS and Mailgun logs)`);
+  if (adminTos.length && base.adminEmailsSent === 0 && emailTransportPresent) {
+    parts.push(`Admin emails 0/${adminTos.length} (check NOTIFY_ADMIN_ORDER_EMAILS and email logs)`);
   } else if (adminTos.length) {
     parts.push(`Admin emails ${base.adminEmailsSent}/${adminTos.length}`);
   } else if (!adminTos.length) {

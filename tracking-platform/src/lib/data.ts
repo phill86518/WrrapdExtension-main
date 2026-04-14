@@ -254,6 +254,7 @@ export async function createOrder(
       notify = {
         skipped: false,
         mailgunEnvPresent: false,
+        smtpEnvPresent: false,
         twilioEnvPresent: false,
         customerThankYouEmailSent: false,
         adminEmailsSent: 0,

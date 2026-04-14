@@ -1,6 +1,8 @@
-/** Mailgun (email) + Twilio (SMS). Same provider family as pay.wrrapd.com — no Resend. */
+/** Mailgun or SMTP (e.g. SiteGround) for email; Twilio for SMS. */
 
-let warnedMailgun = false;
+import nodemailer from "nodemailer";
+
+let warnedNoEmailTransport = false;
 let warnedTwilio = false;
 
 export function getPublicOrigin(): string {
@@ -20,23 +22,79 @@ function mailgunApiBase(): string {
     : "https://api.mailgun.net/v3";
 }
 
+export function smtpEnvConfigured(): boolean {
+  return !!(
+    process.env.SMTP_HOST?.trim() &&
+    process.env.SMTP_USER?.trim() &&
+    process.env.SMTP_PASS?.trim()
+  );
+}
+
+function createNotifySmtpTransport() {
+  const port = parseInt(process.env.SMTP_PORT || "465", 10);
+  const secure =
+    process.env.SMTP_SECURE === "false"
+      ? false
+      : process.env.SMTP_SECURE === "true"
+        ? true
+        : port === 465;
+  return nodemailer.createTransport({
+    host: process.env.SMTP_HOST!.trim(),
+    port,
+    secure,
+    auth: {
+      user: process.env.SMTP_USER!.trim(),
+      pass: process.env.SMTP_PASS!.trim(),
+    },
+  });
+}
+
+async function sendTransactionalEmailSmtp(opts: {
+  to: string;
+  subject: string;
+  html: string;
+}): Promise<boolean> {
+  try {
+    const transporter = createNotifySmtpTransport();
+    const from =
+      process.env.NOTIFY_EMAIL_FROM?.trim() || "Wrrapd Orders <orders@wrrapd.com>";
+    const replyTo = process.env.NOTIFY_EMAIL_REPLY_TO?.trim();
+    await transporter.sendMail({
+      from,
+      to: opts.to,
+      subject: opts.subject,
+      html: opts.html,
+      replyTo: replyTo || undefined,
+    });
+    console.info("[notify] SMTP sent OK to", opts.to);
+    return true;
+  } catch (e) {
+    console.error("[notify] SMTP error:", e);
+    return false;
+  }
+}
+
 /**
- * Send HTML email via Mailgun (same API as WrrapdServer process-payment).
- * Env: MAILGUN_API_KEY, MAILGUN_DOMAIN (required). NOTIFY_EMAIL_FROM optional.
+ * Send HTML email: SMTP if SMTP_HOST+SMTP_USER+SMTP_PASS set, else Mailgun.
+ * Mailgun env: MAILGUN_API_KEY, MAILGUN_DOMAIN. NOTIFY_EMAIL_FROM optional for both.
  */
 export async function sendTransactionalEmail(opts: {
   to: string;
   subject: string;
   html: string;
 }): Promise<boolean> {
+  if (smtpEnvConfigured()) {
+    return sendTransactionalEmailSmtp(opts);
+  }
+
   const key = process.env.MAILGUN_API_KEY?.trim();
   const domain = process.env.MAILGUN_DOMAIN?.trim();
   if (!key || !domain) {
-    if (!warnedMailgun) {
+    if (!warnedNoEmailTransport) {
+      warnedNoEmailTransport = true;
       console.warn(
-        "[notify] MAILGUN_API_KEY / MAILGUN_DOMAIN not set — transactional emails skipped",
+        "[notify] No email transport: set SMTP_HOST, SMTP_USER, SMTP_PASS or MAILGUN_API_KEY + MAILGUN_DOMAIN",
       );
-      warnedMailgun = true;
     }
     return false;
   }

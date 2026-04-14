@@ -109,6 +109,105 @@ const mg = mailgun.client({
     key: process.env.MAILGUN_API_KEY
 });
 
+const nodemailer = require('nodemailer');
+
+function smtpReadyForPay() {
+    const h = process.env.SMTP_HOST?.trim();
+    const u = process.env.SMTP_USER?.trim();
+    const p = process.env.SMTP_PASS?.trim();
+    return !!(h && u && p);
+}
+
+function createPaySmtpTransport() {
+    const port = parseInt(process.env.SMTP_PORT || '465', 10);
+    const secure =
+        process.env.SMTP_SECURE === 'false'
+            ? false
+            : process.env.SMTP_SECURE === 'true'
+              ? true
+              : port === 465;
+    return nodemailer.createTransport({
+        host: process.env.SMTP_HOST.trim(),
+        port,
+        secure,
+        auth: {
+            user: process.env.SMTP_USER.trim(),
+            pass: process.env.SMTP_PASS.trim(),
+        },
+    });
+}
+
+/** Mailgun inline shape { filename, data } → nodemailer cid attachments (HTML uses cid:filename). */
+function inlineToNodemailer(inlineArr) {
+    if (!inlineArr || inlineArr.length === 0) return undefined;
+    return inlineArr.map((a) => ({
+        filename: a.filename,
+        content: a.data,
+        cid: a.filename,
+    }));
+}
+
+/**
+ * Order confirmation emails: SMTP (e.g. SiteGround) if SMTP_HOST+SMTP_USER+SMTP_PASS set, else Mailgun.
+ */
+async function sendProcessPaymentPairEmails(opts) {
+    const {
+        adminRecipients,
+        adminFrom,
+        adminSubject,
+        adminHtml,
+        adminAttachments,
+        customerTo,
+        customerFrom,
+        customerSubject,
+        customerHtml,
+        customerAttachments,
+        customerReplyTo,
+    } = opts;
+
+    if (smtpReadyForPay()) {
+        const transporter = createPaySmtpTransport();
+        return Promise.allSettled([
+            transporter.sendMail({
+                from: adminFrom,
+                to: adminRecipients,
+                subject: adminSubject,
+                html: adminHtml,
+                attachments: inlineToNodemailer(adminAttachments),
+            }),
+            transporter.sendMail({
+                from: customerFrom,
+                to: customerTo,
+                subject: customerSubject,
+                html: customerHtml,
+                replyTo: customerReplyTo || undefined,
+                attachments: inlineToNodemailer(customerAttachments),
+            }),
+        ]);
+    }
+
+    return Promise.allSettled([
+        mg.messages.create(process.env.MAILGUN_DOMAIN, {
+            from: adminFrom,
+            to: adminRecipients,
+            subject: adminSubject,
+            html: adminHtml,
+            ...(adminAttachments.length > 0 ? { inline: adminAttachments } : {}),
+        }),
+        mg.messages.create(process.env.MAILGUN_DOMAIN, {
+            from: customerFrom,
+            to: customerTo,
+            subject: customerSubject,
+            html: customerHtml,
+            'h:Reply-To': customerReplyTo,
+            'h:X-Mailgun-Attachments': 'inline',
+            'o:tag': 'order-confirmation',
+            'o:tracking': true,
+            ...(customerAttachments.length > 0 ? { inline: customerAttachments } : {}),
+        }),
+    ]);
+}
+
 // Initialize OpenAI client
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY
@@ -879,26 +978,23 @@ app.post('/process-payment', async (req, res) => {
         `;
 
         // Send emails (non-blocking from order persistence perspective)
-        const emailResults = await Promise.allSettled([
-            mg.messages.create(process.env.MAILGUN_DOMAIN, {
-                from: "Wrrapd <noreply@wrrapd.com>",
-                to: ["angel@wrrapd.com", "admin@wrrapd.com"],
-                subject: `New order #${orderNumber}`,
-                html: adminEmailBody,
-                ...(adminAttachments.length > 0 ? { inline: adminAttachments } : {})
-            }),
-            mg.messages.create(process.env.MAILGUN_DOMAIN, {
-                from: "Wrrapd Orders <orders@wrrapd.com>",
-                to: customerEmail,
-                subject: `Your Wrrapd Order Confirmation #${orderNumber}`,
-                html: customerEmailBody,
-                'h:Reply-To': 'support@wrrapd.com',
-                'h:X-Mailgun-Attachments': 'inline',
-                'o:tag': 'order-confirmation',
-                'o:tracking': true,
-                ...(customerAttachments.length > 0 ? { inline: customerAttachments } : {})
-            }),
-        ]);
+        const emailResults = await sendProcessPaymentPairEmails({
+            adminRecipients: ['angel@wrrapd.com', 'admin@wrrapd.com'],
+            adminFrom:
+                (smtpReadyForPay() && process.env.SMTP_FROM_ADMIN?.trim()) ||
+                'Wrrapd <noreply@wrrapd.com>',
+            adminSubject: `New order #${orderNumber}`,
+            adminHtml: adminEmailBody,
+            adminAttachments,
+            customerTo: customerEmail,
+            customerFrom:
+                (smtpReadyForPay() && process.env.SMTP_FROM_CUSTOMER?.trim()) ||
+                'Wrrapd Orders <orders@wrrapd.com>',
+            customerSubject: `Your Wrrapd Order Confirmation #${orderNumber}`,
+            customerHtml: customerEmailBody,
+            customerAttachments,
+            customerReplyTo: 'support@wrrapd.com',
+        });
 
         emailResults.forEach((r, idx) => {
             if (r.status === 'rejected') {
