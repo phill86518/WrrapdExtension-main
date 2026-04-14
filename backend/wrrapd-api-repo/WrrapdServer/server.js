@@ -165,6 +165,7 @@ async function sendProcessPaymentPairEmails(opts) {
         customerReplyTo,
     } = opts;
 
+    const smtpOnly = process.env.FORCE_SMTP_ONLY === 'true';
     if (smtpReadyForPay()) {
         const transporter = createPaySmtpTransport();
         return Promise.allSettled([
@@ -184,6 +185,13 @@ async function sendProcessPaymentPairEmails(opts) {
                 attachments: inlineToNodemailer(customerAttachments),
             }),
         ]);
+    }
+
+    if (smtpOnly) {
+        return [
+            { status: 'rejected', reason: new Error('SMTP required (FORCE_SMTP_ONLY=true) but SMTP env missing') },
+            { status: 'rejected', reason: new Error('SMTP required (FORCE_SMTP_ONLY=true) but SMTP env missing') },
+        ];
     }
 
     return Promise.allSettled([
@@ -396,13 +404,21 @@ const saveOrderToJsonFile = (orderData, paymentData, customerData, orderNumber) 
 };
 
 function normalizeOrderItems(orderData) {
-    if (Array.isArray(orderData)) return orderData;
-    if (!orderData || typeof orderData !== 'object') return [];
+    const srcItems = Array.isArray(orderData)
+        ? orderData
+        : (!orderData || typeof orderData !== 'object')
+            ? []
+            : Object.values(orderData);
 
     const out = [];
-    for (const item of Object.values(orderData)) {
+    for (const item of srcItems) {
         if (!item || typeof item !== 'object') continue;
         const options = Array.isArray(item.options) ? item.options : [];
+        if (!options.length && Array.isArray(orderData)) {
+            // Legacy array payloads may already be flattened as one row per selected Wrrapd item.
+            out.push(item);
+            continue;
+        }
         for (const option of options) {
             if (!option || typeof option !== 'object') continue;
             const hasDesignData =
@@ -492,6 +508,34 @@ function computeScheduledForPlusOne(orderItem) {
     return plusOne.toISOString();
 }
 
+function computeScheduledForPlusOneFromItems(items) {
+    const dates = [];
+    for (const item of items || []) {
+        const cands = [
+            item && item.amazonDeliveryDate,
+            item && item.deliveryDate,
+            item && item.estimatedDeliveryDate,
+            item && item.arrivalDate,
+            item && item.shippingDate,
+        ];
+        for (const c of cands) {
+            const d = parseDateCandidate(c);
+            if (d) {
+                dates.push(d);
+                break;
+            }
+        }
+    }
+    if (!dates.length) {
+        return computeScheduledForPlusOne((items && items[0]) || null);
+    }
+    dates.sort((a, b) => a.getTime() - b.getTime());
+    const base = dates[0];
+    const plusOne = new Date(base.getTime());
+    plusOne.setDate(plusOne.getDate() + 1);
+    return plusOne.toISOString();
+}
+
 function splitStreet(rawStreet) {
     if (!rawStreet || typeof rawStreet !== 'string') return { line1: '', line2: '' };
     const parts = rawStreet.split(',').map((x) => x.trim()).filter(Boolean);
@@ -546,7 +590,12 @@ app.post('/api/proxy-tracking-ingest', async (req, res) => {
     }
     const results = [];
     for (let i = 0; i < orders.length; i++) {
-        const r = await ingestOrderIntoTracking(orders[i]);
+        const payload = {
+            ...orders[i],
+            // Staging button should never customer-spam; production customer email comes from process-payment ingest.
+            skipCustomerNotifications: true,
+        };
+        const r = await ingestOrderIntoTracking(payload);
         results.push({ index: i, ok: r.ok, skipped: r.skipped, reason: r.reason, notify: r.notify });
     }
     const allOk = results.every((row) => row.ok);
@@ -909,36 +958,40 @@ app.post('/process-payment', async (req, res) => {
 
         const nonBlockingWarnings = [];
 
-        // Ingest into tracking platform (Admin/Driver/Customer) with scheduled = Amazon day + 1.
-        for (let i = 0; i < normalizedOrderData.length; i++) {
-            const item = normalizedOrderData[i] || {};
-            const finalAddr = finalShippingAddressFromCheckout || item.finalShippingAddress || item.shippingAddress || {};
+        // Ingest ONE tracking order for this checkout (prevents multi-email fan-out).
+        if (normalizedOrderData.length > 0) {
+            const firstItem = normalizedOrderData[0] || {};
+            const finalAddr = finalShippingAddressFromCheckout || firstItem.finalShippingAddress || firstItem.shippingAddress || {};
             const streetParts = splitStreet(finalAddr.street || '');
             const customerName =
                 (billingDetails && billingDetails.name) ||
                 (customerEmail && customerEmail.split('@')[0]) ||
                 'Customer';
             const recipientName = finalAddr.name || customerName;
+            const lineItems = normalizedOrderData.map((it) => ({
+                title: it.title || 'Wrapped item',
+                asin: it.asin || '',
+                imageUrl: it.imageUrl || '',
+                wrappingOption: it.selected_wrapping_option || '',
+            }));
             const ingestPayload = {
                 customerName,
                 customerPhone,
                 customerEmail,
                 recipientName,
-                addressLine1: streetParts.line1 || finalAddr.line1 || item.addressLine1 || 'N/A',
-                addressLine2: streetParts.line2 || finalAddr.line2 || item.addressLine2 || '',
-                city: finalAddr.city || item.city || 'N/A',
-                state: finalAddr.state || item.state || 'N/A',
-                postalCode: finalAddr.postalCode || finalAddr.postal_code || item.postalCode || '00000',
-                scheduledFor: computeScheduledForPlusOne(item),
-                externalOrderId:
-                    normalizedOrderData.length === 1
-                        ? orderNumber
-                        : `${orderNumber}-${String(i + 1).padStart(2, '0')}`,
-                sourceNote: `Amazon order ${orderNumber} item ${i + 1}; auto scheduled (Amazon+1)`,
+                addressLine1: streetParts.line1 || finalAddr.line1 || firstItem.addressLine1 || 'N/A',
+                addressLine2: streetParts.line2 || finalAddr.line2 || firstItem.addressLine2 || '',
+                city: finalAddr.city || firstItem.city || 'N/A',
+                state: finalAddr.state || firstItem.state || 'N/A',
+                postalCode: finalAddr.postalCode || finalAddr.postal_code || firstItem.postalCode || '00000',
+                scheduledFor: computeScheduledForPlusOneFromItems(normalizedOrderData),
+                externalOrderId: orderNumber,
+                sourceNote: `Amazon order ${orderNumber}; ${normalizedOrderData.length} Wrrapd item(s); auto scheduled (Amazon fastest +1)`,
+                lineItems,
             };
             const ingestResult = await ingestOrderIntoTracking(ingestPayload);
             if (!ingestResult.ok) {
-                nonBlockingWarnings.push(`tracking ingest item ${i + 1}: ${ingestResult.reason}`);
+                nonBlockingWarnings.push(`tracking ingest failed: ${ingestResult.reason}`);
             }
         }
 

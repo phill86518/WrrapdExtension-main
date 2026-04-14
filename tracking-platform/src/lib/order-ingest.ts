@@ -1,5 +1,5 @@
 import type { CreateOrderInput } from "@/lib/data";
-import type { Order } from "@/lib/types";
+import type { Order, OrderLineItem } from "@/lib/types";
 import {
   endOfCalendarDayAmericaNewYorkIso,
   wrrapdScheduledInstantFromAmazonDeliveryDateKey,
@@ -46,6 +46,8 @@ export type IngestOrderPayload = {
     email?: unknown;
   };
   customerEmail?: unknown;
+  skipCustomerNotifications?: unknown;
+  lineItems?: unknown;
 };
 
 export type IngestSuccess = {
@@ -90,6 +92,29 @@ function parseAmazonDateKeys(v: unknown): string[] | undefined {
   for (const x of v) {
     const k = str(x);
     if (k && isValidYyyyMmDd(k)) out.push(k);
+  }
+  return out.length ? out : undefined;
+}
+
+function parseLineItems(v: unknown, invalidFields: string[]): OrderLineItem[] | undefined {
+  if (v === undefined) return undefined;
+  if (!Array.isArray(v)) {
+    invalidFields.push("lineItems");
+    return undefined;
+  }
+  const out: OrderLineItem[] = [];
+  for (const it of v) {
+    if (!it || typeof it !== "object" || Array.isArray(it)) {
+      invalidFields.push("lineItems");
+      continue;
+    }
+    const row = it as Record<string, unknown>;
+    const title = str(row.title);
+    const asin = str(row.asin);
+    const imageUrl = str(row.imageUrl);
+    const wrappingOption = str(row.wrappingOption);
+    if (!title && !asin && !imageUrl && !wrappingOption) continue;
+    out.push({ ...(asin ? { asin } : {}), ...(title ? { title } : {}), ...(imageUrl ? { imageUrl } : {}), ...(wrappingOption ? { wrappingOption } : {}) });
   }
   return out.length ? out : undefined;
 }
@@ -192,6 +217,8 @@ export function parseIngestOrderPayload(body: unknown): IngestSuccess | IngestFa
 
   const externalOrderId = str(p.externalOrderId) || str(p.orderNumber);
   let sourceNote = str(p.sourceNote);
+  const lineItems = parseLineItems(p.lineItems, invalidFields);
+  const skipCustomerNotifications = p.skipCustomerNotifications === true;
 
   const missingFields: string[] = [];
   if (!customerName) missingFields.push("customerName");
@@ -241,6 +268,8 @@ export function parseIngestOrderPayload(body: unknown): IngestSuccess | IngestFa
       ...(externalOrderId ? { externalOrderId } : {}),
       ...(sourceNote ? { sourceNote } : {}),
       ...(customerEmail ? { customerEmail } : {}),
+      ...(lineItems?.length ? { lineItems } : {}),
+      ...(skipCustomerNotifications ? { skipCustomerNotifications: true } : {}),
       ...(deliveryPreferencePending
         ? {
             deliveryPreferencePending: true,

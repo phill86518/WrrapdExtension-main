@@ -16,6 +16,7 @@ import { assignStopSequences } from "@/lib/route-optimization";
 import { findDriverById, listRegisteredDrivers } from "@/lib/driver-registry";
 import { uploadProofDataUrl } from "@/lib/proof-storage";
 import type { CollectionReference } from "firebase-admin/firestore";
+import type { OrderLineItem } from "@/lib/types";
 
 const nowIso = () => new Date().toISOString();
 
@@ -178,6 +179,7 @@ export type CreateOrderInput = {
   amazonDeliveryDatesSnapshot?: string[];
   deliveryPreferencePending?: boolean;
   deliveryPreferenceRespondBy?: string;
+  lineItems?: OrderLineItem[];
   /** Admin / internal creates: set true to skip thank-you email & SMS */
   skipCustomerNotifications?: boolean;
 };
@@ -231,6 +233,7 @@ export async function createOrder(
           deliveryPreferenceToken: prefToken,
         }
       : {}),
+    ...(input.lineItems?.length ? { lineItems: [...input.lineItems] } : {}),
   };
   const ocCreate = getOrdersCollection();
   if (ocCreate) {

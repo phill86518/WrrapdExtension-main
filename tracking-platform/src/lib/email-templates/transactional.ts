@@ -22,7 +22,26 @@ export function thankYouEmailHtml(input: {
   recipientName: string;
   addressLine: string;
   scheduledEtLabel: string;
+  lineItems?: { title?: string; asin?: string; imageUrl?: string }[];
 }): string {
+  const wrappedRows = (input.lineItems || [])
+    .map((li) => {
+      const title = escapeHtml(li.title || "Wrapped item");
+      const asin = li.asin ? `<p style="margin:6px 0 0;font-size:12px;color:#666;">ASIN: ${escapeHtml(li.asin)}</p>` : "";
+      const img = li.imageUrl
+        ? `<img src="${escapeAttr(li.imageUrl)}" alt="${title}" style="width:64px;height:64px;object-fit:cover;border-radius:8px;border:1px solid #ddd;display:block;"/>`
+        : `<div style="width:64px;height:64px;border-radius:8px;border:1px solid #ddd;background:#f6f6f6;"></div>`;
+      return `<tr><td style="padding:10px 0;border-top:1px solid #ece8df;">
+        <table role="presentation" width="100%"><tr>
+          <td width="74" valign="top">${img}</td>
+          <td valign="top">
+            <p style="margin:0;font-size:14px;color:#222;font-weight:600;">${title}</p>
+            ${asin}
+          </td>
+        </tr></table>
+      </td></tr>`;
+    })
+    .join("");
   const inner = `
 <tr><td style="background:linear-gradient(135deg,#1a3d2e 0%,#2d5a47 50%,#c9a227 100%);padding:28px 24px;text-align:center;">
   <img src="${escapeAttr(WRRAPD_LOGO_URL)}" alt="Wrrapd" style="display:block;margin:0 auto 6px;max-width:170px;height:auto;"/>
@@ -45,6 +64,12 @@ export function thankYouEmailHtml(input: {
       <p style="margin:6px 0 0;font-size:14px;color:#555;line-height:1.45;">${escapeHtml(input.addressLine)}</p>
       <p style="margin:16px 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:0.12em;color:#6b6560;">Wrrapd delivery (Eastern)</p>
       <p style="margin:0;font-size:15px;color:#222;">${escapeHtml(input.scheduledEtLabel)}</p>
+      ${
+        wrappedRows
+          ? `<p style="margin:16px 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:0.12em;color:#6b6560;">Wrrapd-wrapped items</p>
+      <table role="presentation" width="100%">${wrappedRows}</table>`
+          : ""
+      }
       <p style="margin:20px 0 0;">
         <a href="${escapeAttr(input.trackingUrl)}" style="display:inline-block;background:#1a3d2e;color:#fff;text-decoration:none;padding:12px 22px;border-radius:8px;font-size:14px;font-weight:600;">Track your delivery</a>
       </p>
@@ -122,8 +147,22 @@ export function adminNewOrderEmailHtml(input: {
   sourceNote?: string;
   deliveryPreferencePending?: boolean;
   amazonDeliveryDatesSnapshot?: string[];
+  lineItems?: { title?: string; asin?: string; imageUrl?: string }[];
 }): string {
   const addr2 = input.addressLine2 ? `${escapeHtml(input.addressLine2)}, ` : "";
+  const wrappedRows = (input.lineItems || [])
+    .map((li) => {
+      const title = escapeHtml(li.title || "Wrapped item");
+      const asin = li.asin ? ` · ASIN ${escapeHtml(li.asin)}` : "";
+      const img = li.imageUrl
+        ? `<img src="${escapeAttr(li.imageUrl)}" alt="${title}" style="max-width:120px;max-height:120px;border:1px solid #ddd;border-radius:8px;margin-top:8px;"/>`
+        : "";
+      return `<div style="margin:10px 0;padding:10px;border:1px solid #e2e8f0;border-radius:8px;background:#fff;">
+        <p style="margin:0;font-size:14px;color:#0f172a;"><strong>${title}</strong>${asin}</p>
+        ${img}
+      </div>`;
+    })
+    .join("");
   const inner = `
 <tr><td style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);padding:24px;text-align:center;">
   <div style="font-size:12px;letter-spacing:0.25em;text-transform:uppercase;color:rgba(255,255,255,0.75);">Wrrapd Ops</div>
@@ -168,6 +207,11 @@ export function adminNewOrderEmailHtml(input: {
       ${
         input.sourceNote
           ? `<p style="margin:12px 0 0;font-size:13px;color:#475569;"><strong>Note:</strong> ${escapeHtml(input.sourceNote)}</p>`
+          : ""
+      }
+      ${
+        wrappedRows
+          ? `<p style="margin:14px 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:#64748b;">Wrrapd items</p>${wrappedRows}`
           : ""
       }
       <p style="margin:18px 0 0;">

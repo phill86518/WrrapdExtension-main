@@ -96,6 +96,7 @@ export async function sendPostOrderNotifications(order: Order): Promise<PostOrde
     recipientName: order.recipientName,
     addressLine,
     scheduledEtLabel,
+    lineItems: order.lineItems,
   });
 
   if (order.customerEmail?.trim()) {
@@ -129,6 +130,7 @@ export async function sendPostOrderNotifications(order: Order): Promise<PostOrde
       sourceNote: order.sourceNote,
       deliveryPreferencePending: order.deliveryPreferencePending,
       amazonDeliveryDatesSnapshot: order.amazonDeliveryDatesSnapshot,
+      lineItems: order.lineItems,
     });
     const adminSubject = `New Wrrapd order ${order.id}${order.externalOrderId ? ` (${order.externalOrderId})` : ""}`;
     for (const to of adminTos) {
@@ -174,10 +176,10 @@ export async function sendPostOrderNotifications(order: Order): Promise<PostOrde
       try {
         await sendTransactionalEmail({
           to: order.customerEmail.trim(),
-          subject: `Action needed: Wrrapd delivery schedule for order ${order.id}`,
+          subject: `Action needed: Wrrapd delivery schedule for order ${displayOrderId}`,
           html: deliveryChoiceEmailHtml({
             customerName: order.customerName,
-            orderId: order.id,
+            orderId: displayOrderId,
             datesList: order.amazonDeliveryDatesSnapshot.join(", "),
             deadlineEtLabel: deadline,
             choiceUrl,

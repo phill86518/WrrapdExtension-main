@@ -86,6 +86,13 @@ export async function sendTransactionalEmail(opts: {
   if (smtpEnvConfigured()) {
     return sendTransactionalEmailSmtp(opts);
   }
+  if (process.env.FORCE_SMTP_ONLY === "true") {
+    if (!warnedNoEmailTransport) {
+      warnedNoEmailTransport = true;
+      console.warn("[notify] FORCE_SMTP_ONLY=true but SMTP env missing; email skipped");
+    }
+    return false;
+  }
 
   const key = process.env.MAILGUN_API_KEY?.trim();
   const domain = process.env.MAILGUN_DOMAIN?.trim();

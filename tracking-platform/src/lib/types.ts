@@ -7,6 +7,13 @@ export type DeliveryStatus =
 
 export type OnboardingStatus = "pending" | "approved" | "rejected";
 
+export type OrderLineItem = {
+  asin?: string;
+  title?: string;
+  imageUrl?: string;
+  wrappingOption?: string;
+};
+
 export type Order = {
   id: string;
   customerName: string;
@@ -48,6 +55,8 @@ export type Order = {
   deliveryPreferenceToken?: string;
   /** together | earliest | together_deadline_default | set by customer */
   deliveryPreferenceChoice?: string;
+  /** Wrapped items included in this Wrrapd order (for notifications + ops context). */
+  lineItems?: OrderLineItem[];
 };
 
 export type Driver = {
