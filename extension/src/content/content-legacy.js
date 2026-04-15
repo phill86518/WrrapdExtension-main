@@ -155,6 +155,99 @@ import { isZipCodeAllowed } from './lib/zip-codes.js';
         }
     }
 
+    function titleFromGiftRow(itemContainer) {
+        if (!itemContainer) return '';
+        const itemTitleElement =
+            itemContainer.querySelector('span.a-truncate-cut') ||
+            itemContainer.querySelector('span.a-truncate-full') ||
+            itemContainer.querySelector('a.a-link-normal.a-color-base') ||
+            itemContainer.querySelector('.a-text-bold') ||
+            itemContainer.querySelector('span[class*="truncate"]') ||
+            itemContainer.querySelector('h2') ||
+            itemContainer.querySelector('h3') ||
+            itemContainer.querySelector('[data-item-title]') ||
+            itemContainer.querySelector('.item-title') ||
+            itemContainer.querySelector('a[href*="/dp/"]') ||
+            itemContainer.querySelector('a[href*="/gp/product/"]');
+        return ((itemTitleElement && (itemTitleElement.textContent || itemTitleElement.innerText)) || '')
+            .trim()
+            .substring(0, 35);
+    }
+
+    function resolveProductByRowTitle(allItems, itemTitle, rowIndex) {
+        if (!allItems || !itemTitle) return null;
+        let productObj = allItems[itemTitle];
+        if (!productObj) {
+            const savedTitles = Object.keys(allItems);
+            for (const savedTitle of savedTitles) {
+                const normalizedPageTitle = itemTitle.toLowerCase().replace(/\s+/g, ' ').trim();
+                const normalizedSavedTitle = savedTitle.toLowerCase().replace(/\s+/g, ' ').trim();
+                if (
+                    normalizedPageTitle.substring(0, 30) === normalizedSavedTitle.substring(0, 30) ||
+                    normalizedPageTitle.includes(normalizedSavedTitle) ||
+                    normalizedSavedTitle.includes(normalizedPageTitle)
+                ) {
+                    productObj = allItems[savedTitle];
+                    break;
+                }
+            }
+        }
+        if (!productObj) {
+            const savedTitles = Object.keys(allItems);
+            if (rowIndex < savedTitles.length) productObj = allItems[savedTitles[rowIndex]];
+        }
+        return productObj && Array.isArray(productObj.options) ? productObj : null;
+    }
+
+    /**
+     * Keep localStorage in sync with currently checked Wrrapd checkboxes on the gift page.
+     * This makes "first-time" and "came-back-and-changed-mind" workflows identical.
+     */
+    function syncWrrapdSelectionsFromGiftDom(allItems) {
+        try {
+            const rows = Array.from(document.querySelectorAll('[id^="item-"]'));
+            if (!rows.length || !allItems || typeof allItems !== 'object') return false;
+            const subItemIndexTracker = {};
+            let changed = false;
+
+            rows.forEach((itemContainer, index) => {
+                const wrrapdCheckbox = document.getElementById(`wrrapd-checkbox-${index}`);
+                if (!wrrapdCheckbox) return;
+                const itemTitle = titleFromGiftRow(itemContainer);
+                const productObj = resolveProductByRowTitle(allItems, itemTitle, index);
+                if (!productObj || !productObj.options.length) return;
+
+                const key = productObj.title || itemTitle || String(index);
+                const subIndex = subItemIndexTracker[key] || 0;
+                if (subIndex >= productObj.options.length) return;
+                const subItem = productObj.options[subIndex];
+                subItemIndexTracker[key] = subIndex + 1;
+                if (!subItem || typeof subItem !== 'object') return;
+
+                const shouldBeChecked = wrrapdCheckbox.checked === true;
+                if (subItem.checkbox_wrrapd !== shouldBeChecked) {
+                    subItem.checkbox_wrrapd = shouldBeChecked;
+                    if (!shouldBeChecked) {
+                        subItem.checkbox_flowers = false;
+                        subItem.checkbox_amazon_combine = false;
+                    } else if (!subItem.selected_wrapping_option) {
+                        subItem.selected_wrapping_option = 'wrrapd';
+                    }
+                    changed = true;
+                }
+            });
+
+            if (changed) {
+                saveAllItemsToLocalStorage(allItems);
+                console.log('[syncWrrapdSelectionsFromGiftDom] Synchronized gift-row Wrrapd checkboxes into localStorage.');
+            }
+            return changed;
+        } catch (e) {
+            console.warn('[syncWrrapdSelectionsFromGiftDom]', e);
+            return false;
+        }
+    }
+
     function syncAmazonDeliverToGreeting() {
         try {
             if (!window.location.href.includes('amazon.com')) return;
@@ -211,6 +304,7 @@ import { isZipCodeAllowed } from './lib/zip-codes.js';
                 }
 
                 const allItems = getAllItemsFromLocalStorage();
+                syncWrrapdSelectionsFromGiftDom(allItems);
 
                 // Check zip code for every page
                 // findAndStoreZipCodeFromCart();
@@ -1746,6 +1840,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                 const addressesShown = areAddressesShownOnGiftOptionsPage();
                 
                 const itemsForTerms = getAllItemsFromLocalStorage();
+                syncWrrapdSelectionsFromGiftDom(itemsForTerms);
                 const hasWrrapdInStorage = Object.values(itemsForTerms).some(
                     (p) => p.options && p.options.some((sub) => sub.checkbox_wrrapd),
                 );
