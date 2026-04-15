@@ -17,28 +17,34 @@ export function AdminCreateDeliveryForm({
 }) {
   const min = useMemo(() => minDatetimeLocal(), []);
 
+  const field =
+    "rounded-lg border border-zinc-200 bg-white px-3 py-2.5 text-sm text-zinc-900 shadow-sm placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900/10";
+
   return (
-    <form action={action} className="mt-3 grid gap-2 md:grid-cols-4">
-      <input required name="customerName" placeholder="Customer name" className="rounded border px-2 py-1" />
-      <input required name="customerPhone" placeholder="Customer phone" className="rounded border px-2 py-1" />
-      <input required name="recipientName" placeholder="Recipient name" className="rounded border px-2 py-1" />
-      <input required name="addressLine1" placeholder="Address line 1" className="rounded border px-2 py-1 md:col-span-2" />
-      <input required name="city" placeholder="City" className="rounded border px-2 py-1" />
-      <input required name="state" placeholder="State" className="rounded border px-2 py-1" />
-      <input required name="postalCode" placeholder="ZIP" className="rounded border px-2 py-1" />
+    <form action={action} className="mt-5 grid gap-3 md:grid-cols-4">
+      <input required name="customerName" placeholder="Customer name" className={field} />
+      <input required name="customerPhone" placeholder="Customer phone" className={field} />
+      <input required name="recipientName" placeholder="Recipient name" className={field} />
+      <input required name="addressLine1" placeholder="Address line 1" className={`${field} md:col-span-2`} />
+      <input required name="city" placeholder="City" className={field} />
+      <input required name="state" placeholder="State" className={field} />
+      <input required name="postalCode" placeholder="ZIP" className={field} />
       <input
         required
         type="datetime-local"
         name="scheduledFor"
         min={min}
         suppressHydrationWarning
-        className="rounded border px-2 py-1 md:col-span-2"
+        className={`${field} md:col-span-2`}
       />
-      <p className="text-xs text-slate-600 md:col-span-4">
+      <p className="text-xs leading-relaxed text-zinc-500 md:col-span-4">
         Past dates are disabled. Production logic is Amazon date + 1 day. Auto-allocation minimizes driver usage and only spills to a second driver when a day exceeds 10 stops.
       </p>
-      <button className="rounded bg-black px-3 py-1 text-white md:col-span-1" type="submit">
-        Create
+      <button
+        className="rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-zinc-800 md:col-span-4 md:max-w-xs"
+        type="submit"
+      >
+        Create delivery
       </button>
     </form>
   );

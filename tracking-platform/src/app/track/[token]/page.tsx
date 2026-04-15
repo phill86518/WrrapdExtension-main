@@ -24,7 +24,7 @@ export default async function TrackingPage({
   const { token } = await params;
   let order = await getOrderByTrackingToken(token);
   if (!order && token === DEMO_CUSTOMER_TRACKING_TOKEN) {
-    order = buildDemoSeedOrders().find((o) => o.trackingToken === token) ?? null;
+    order = buildDemoSeedOrders().find((o) => o.trackingToken === token);
   }
   if (!order) notFound();
 

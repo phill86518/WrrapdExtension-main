@@ -40,6 +40,14 @@ function adminOrderNotifyEmails(): string[] {
   return [...new Set(all.map((x) => x.toLowerCase()))];
 }
 
+/** Admins to BCC on the customer thank-you (same message as customer); excludes customer so we do not duplicate To. */
+function adminEmailsExcludingCustomer(customerEmail: string | undefined): string[] {
+  const admins = adminOrderNotifyEmails();
+  const ce = customerEmail?.trim().toLowerCase();
+  if (!ce) return admins;
+  return admins.filter((e) => e.toLowerCase() !== ce);
+}
+
 function envFlags() {
   const smtpEnvPresent = smtpEnvConfigured();
   const mailgunEnvPresent = !!(
@@ -104,23 +112,16 @@ export async function sendPostOrderNotifications(order: Order): Promise<PostOrde
 
   if (order.customerEmail?.trim()) {
     try {
+      const adminBcc = adminEmailsExcludingCustomer(order.customerEmail.trim());
       const ok = await sendTransactionalEmail({
         to: order.customerEmail.trim(),
         subject: thankYouSubject,
         html: thankYouHtml,
+        ...(adminBcc.length ? { bcc: adminBcc.join(", ") } : {}),
       });
       base.customerThankYouEmailSent = ok;
-      // Ops copy: admin inbox should receive exactly what customer received.
-      for (const to of adminTos) {
-        try {
-          await sendTransactionalEmail({
-            to,
-            subject: `[Customer copy] ${thankYouSubject}`,
-            html: thankYouHtml,
-          });
-        } catch (e) {
-          console.error("[post-order-notify] customer-copy email to admin failed", order.id, to, e);
-        }
+      if (ok && adminBcc.length) {
+        console.info("[post-order-notify] thank-you sent with admin BCC", order.id, { bccCount: adminBcc.length });
       }
     } catch (e) {
       console.error("[post-order-notify] customer thank-you email failed", order.id, e);
@@ -148,17 +149,16 @@ export async function sendPostOrderNotifications(order: Order): Promise<PostOrde
       lineItems: order.lineItems,
     });
     const adminSubject = `New Wrrapd order ${order.id}${order.externalOrderId ? ` (${order.externalOrderId})` : ""}`;
-    for (const to of adminTos) {
-      try {
-        const ok = await sendTransactionalEmail({
-          to,
-          subject: adminSubject,
-          html: adminHtml,
-        });
-        if (ok) base.adminEmailsSent += 1;
-      } catch (e) {
-        console.error("[post-order-notify] admin email failed", order.id, to, e);
-      }
+    try {
+      // One SMTP/Mailgun message to all admins avoids duplicate suppression and rate limits from back-to-back sends.
+      const ok = await sendTransactionalEmail({
+        to: adminTos.join(", "),
+        subject: adminSubject,
+        html: adminHtml,
+      });
+      if (ok) base.adminEmailsSent = adminTos.length;
+    } catch (e) {
+      console.error("[post-order-notify] admin new-order email failed", order.id, e);
     }
   }
 

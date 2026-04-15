@@ -84,9 +84,9 @@ async function deleteSelectedOrdersAction(formData: FormData) {
 }
 
 function orderRowClass(status: string) {
-  if (status === "en_route") return "bg-blue-50";
-  if (status === "delivered") return "bg-emerald-50";
-  if (status === "cancelled") return "bg-rose-50";
+  if (status === "en_route") return "border-l-4 border-l-sky-500 bg-sky-50/40";
+  if (status === "delivered") return "border-l-4 border-l-emerald-600 bg-emerald-50/35";
+  if (status === "cancelled") return "border-l-4 border-l-zinc-400 bg-zinc-100/80";
   return "bg-white";
 }
 
@@ -180,30 +180,43 @@ export default async function AdminPage({
   }
 
   return (
-    <main className="mx-auto max-w-7xl px-4 py-8">
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-3xl font-semibold">Command Center</h1>
+    <main className="min-h-screen bg-zinc-50/90">
+      <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight text-zinc-900">Command Center</h1>
+          <p className="mt-1 text-sm text-zinc-500">Scheduled deliveries and fleet oversight</p>
+        </div>
         <LogoutButton redirectPath="/admin" />
       </div>
 
-      <section className="mb-8 rounded-xl border p-4">
-        <h2 className="text-xl font-medium">Create Scheduled Delivery</h2>
+      <section className="mb-8 rounded-2xl border border-zinc-200/90 bg-white p-6 shadow-sm">
+        <h2 className="text-lg font-semibold text-zinc-900">Create scheduled delivery</h2>
+        <p className="mt-0.5 text-sm text-zinc-500">Manual entry for ops-created stops</p>
         <AdminCreateDeliveryForm action={createOrderAction} />
         {query.createError && (
-          <p className="mt-2 rounded border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">
+          <p className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900">
             {query.createError}
           </p>
         )}
       </section>
 
-      <section className="mb-8 grid gap-3 rounded-xl border p-4 md:grid-cols-2">
-        <a href="/admin/drivers" className="rounded border p-3 hover:bg-slate-50">
-          <h3 className="font-semibold">Driver Onboarding</h3>
-          <p className="text-sm text-slate-600">Approve/reject drivers and apply manual availability overrides.</p>
+      <section className="mb-10 grid gap-4 md:grid-cols-2">
+        <a
+          href="/admin/drivers"
+          className="group rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm transition hover:border-zinc-300 hover:shadow-md"
+        >
+          <h3 className="font-semibold text-zinc-900">Driver onboarding</h3>
+          <p className="mt-1 text-sm leading-relaxed text-zinc-600">
+            Approve or reject drivers and apply manual availability overrides.
+          </p>
         </a>
-        <a href="/admin/reports" className="rounded border p-3 hover:bg-slate-50">
-          <h3 className="font-semibold">Delivery Reports</h3>
-          <p className="text-sm text-slate-600">View daily metrics and export CSV for operations.</p>
+        <a
+          href="/admin/reports"
+          className="group rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm transition hover:border-zinc-300 hover:shadow-md"
+        >
+          <h3 className="font-semibold text-zinc-900">Delivery reports</h3>
+          <p className="mt-1 text-sm leading-relaxed text-zinc-600">View daily metrics and export CSV for operations.</p>
         </a>
       </section>
 
@@ -215,21 +228,29 @@ export default async function AdminPage({
         ].map((group) => {
           const deleteFormId = `delete-${group.title.toLowerCase().replace(/\s+/g, "-")}`;
           return (
-          <section key={group.title} className="rounded-xl border p-4">
-            <h2 className="text-xl font-medium">{group.title}</h2>
-            <form id={deleteFormId} action={deleteSelectedOrdersAction} className="mt-3 mb-2 flex items-center gap-2">
-              <SelectAllOrdersButton formId={deleteFormId} />
-              <button
-                className="rounded-md border border-slate-700 bg-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-900 shadow-sm transition hover:bg-slate-100 active:translate-y-px"
-                type="submit"
-              >
-                Delete selected
-              </button>
-              <span className="text-xs text-slate-500">Check orders below, then click delete selected.</span>
+          <section key={group.title} className="rounded-2xl border border-zinc-200/90 bg-white p-5 shadow-sm">
+            <h2 className="text-lg font-semibold text-zinc-900">{group.title}</h2>
+            <form
+              id={deleteFormId}
+              action={deleteSelectedOrdersAction}
+              className="mt-4 flex flex-col gap-3 border-b border-zinc-100 pb-4 sm:flex-row sm:flex-wrap sm:items-center"
+            >
+              <div className="flex flex-wrap items-center gap-2">
+                <SelectAllOrdersButton formId={deleteFormId} />
+                <button
+                  className="inline-flex items-center justify-center rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-800 shadow-sm transition hover:bg-red-50"
+                  type="submit"
+                >
+                  Delete selected
+                </button>
+              </div>
+              <span className="text-xs leading-snug text-zinc-500 sm:ml-auto sm:max-w-[220px] sm:text-right">
+                Select orders below, then delete. This cannot be undone.
+              </span>
             </form>
-            <div className="mt-3 space-y-3">
+            <div className="mt-4 space-y-3">
               {group.items.map((order) => (
-                <div key={order.id} className={`rounded-lg border p-3 ${orderRowClass(order.status)}`}>
+                <div key={order.id} className={`rounded-xl border border-zinc-200 p-4 shadow-sm ${orderRowClass(order.status)}`}>
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
                       <input
@@ -245,13 +266,13 @@ export default async function AdminPage({
                           {order.externalOrderId?.trim() || order.id}
                         </p>
                         {order.externalOrderId?.trim() && (
-                          <p className="text-[11px] text-slate-500">Internal ID: {order.id}</p>
+                          <p className="text-[11px] text-zinc-500">Internal ID: {order.id}</p>
                         )}
                       </div>
                     </div>
                     <div className="flex flex-wrap items-center justify-end gap-2">
                       {order.stopSequence != null && (
-                        <span className="rounded bg-slate-800 px-2 py-0.5 text-xs font-medium text-white">
+                        <span className="rounded-md bg-zinc-800 px-2 py-0.5 text-xs font-medium text-white">
                           Stop {order.stopSequence}
                         </span>
                       )}
@@ -259,13 +280,13 @@ export default async function AdminPage({
                     </div>
                   </div>
                   <p className="text-sm">{order.recipientName}</p>
-                  <p className="text-sm text-slate-600">
+                  <p className="text-sm text-zinc-600">
                     {order.addressLine1}, {order.city}, {order.state} {order.postalCode}
                   </p>
-                  <p className="mt-1 text-xs text-slate-600">Scheduled: {new Date(order.scheduledFor).toLocaleString()}</p>
+                  <p className="mt-1 text-xs text-zinc-600">Scheduled: {new Date(order.scheduledFor).toLocaleString()}</p>
                   <a
                     href={`/admin/orders/${order.id}`}
-                    className="mt-2 inline-block rounded-md border border-blue-700 bg-blue-100 px-2.5 py-1 text-sm font-medium text-blue-900 no-underline shadow-sm transition hover:bg-blue-50"
+                    className="mt-3 inline-flex items-center rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-sm font-medium text-zinc-800 no-underline shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50"
                   >
                     View details
                   </a>
@@ -275,7 +296,7 @@ export default async function AdminPage({
                     <select
                       name="status"
                       defaultValue={order.status}
-                      className="rounded border px-2 py-1 text-sm"
+                      className="rounded-lg border border-zinc-200 bg-white px-2 py-1.5 text-sm text-zinc-900 shadow-sm focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900/10"
                     >
                       <option value="scheduled">scheduled</option>
                       <option value="assigned">assigned</option>
@@ -284,7 +305,7 @@ export default async function AdminPage({
                       <option value="cancelled">cancelled</option>
                     </select>
                     <button
-                      className="rounded-md border border-sky-700 bg-sky-100 px-3 py-1 text-sm font-semibold text-sky-900 shadow-sm transition hover:bg-sky-50 active:translate-y-px"
+                      className="rounded-lg border border-zinc-300 bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition hover:bg-zinc-800"
                       type="submit"
                     >
                       Update status
@@ -296,16 +317,19 @@ export default async function AdminPage({
                       <input type="hidden" name="orderId" value={order.id} />
                       <button
                         type="submit"
-                        className="w-full rounded border border-amber-600 bg-amber-50 px-2 py-2 text-sm font-medium text-amber-950"
+                        className="w-full rounded-lg border border-zinc-300 bg-zinc-50 px-3 py-2 text-left text-sm font-medium text-zinc-800 transition hover:bg-zinc-100"
                       >
                         Reopen as assigned (clears proof & last GPS — use if completed by mistake)
                       </button>
                     </form>
                   )}
 
-                  <form action={assignDriverAction} className="mt-2 flex gap-2">
+                  <form action={assignDriverAction} className="mt-2 flex flex-wrap gap-2">
                     <input type="hidden" name="orderId" value={order.id} />
-                    <select name="driverId" className="rounded border px-2 py-1 text-sm">
+                    <select
+                      name="driverId"
+                      className="min-w-0 flex-1 rounded-lg border border-zinc-200 bg-white px-2 py-1.5 text-sm text-zinc-900 shadow-sm focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900/10 sm:flex-none sm:min-w-[10rem]"
+                    >
                       {drivers.map((d) => (
                         <option key={d.id} value={d.id}>
                           {d.name}
@@ -313,18 +337,19 @@ export default async function AdminPage({
                       ))}
                     </select>
                     <button
-                      className="rounded-md border border-emerald-700 bg-emerald-100 px-3 py-1 text-sm font-semibold text-emerald-900 shadow-sm transition hover:bg-emerald-50 active:translate-y-px"
+                      className="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-800 shadow-sm transition hover:bg-zinc-50"
                       type="submit"
                     >
-                      Assign
+                      Assign driver
                     </button>
                   </form>
                 </div>
               ))}
-              {group.items.length === 0 && <p className="text-sm text-slate-500">No orders yet.</p>}
+              {group.items.length === 0 && <p className="py-6 text-center text-sm text-zinc-500">No orders yet.</p>}
             </div>
           </section>
         )})}
+      </div>
       </div>
     </main>
   );

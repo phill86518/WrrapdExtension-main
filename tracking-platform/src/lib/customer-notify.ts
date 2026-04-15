@@ -53,17 +53,32 @@ async function sendTransactionalEmailSmtp(opts: {
   to: string;
   subject: string;
   html: string;
+  bcc?: string | string[];
 }): Promise<boolean> {
   try {
     const transporter = createNotifySmtpTransport();
-    const from =
-      process.env.NOTIFY_EMAIL_FROM?.trim() || "Wrrapd Orders <orders@wrrapd.com>";
+    const configuredFrom = process.env.NOTIFY_EMAIL_FROM?.trim();
+    const smtpUser = process.env.SMTP_USER?.trim();
+    const from = configuredFrom
+      ? configuredFrom.includes("<")
+        ? configuredFrom
+        : `Wrrapd Orders <${configuredFrom}>`
+      : smtpUser
+        ? `Wrrapd Orders <${smtpUser}>`
+        : "Wrrapd Orders <orders@wrrapd.com>";
     const replyTo = process.env.NOTIFY_EMAIL_REPLY_TO?.trim();
+    const bcc =
+      opts.bcc === undefined
+        ? undefined
+        : Array.isArray(opts.bcc)
+          ? opts.bcc.map((s) => s.trim()).filter(Boolean).join(", ")
+          : String(opts.bcc).trim() || undefined;
     await transporter.sendMail({
       from,
       to: opts.to,
       subject: opts.subject,
       html: opts.html,
+      ...(bcc ? { bcc } : {}),
       replyTo: replyTo || undefined,
     });
     console.info("[notify] SMTP sent OK to", opts.to);
@@ -82,6 +97,7 @@ export async function sendTransactionalEmail(opts: {
   to: string;
   subject: string;
   html: string;
+  bcc?: string | string[];
 }): Promise<boolean> {
   if (smtpEnvConfigured()) {
     return sendTransactionalEmailSmtp(opts);
@@ -113,6 +129,10 @@ export async function sendTransactionalEmail(opts: {
   params.set("to", opts.to);
   params.set("subject", opts.subject);
   params.set("html", opts.html);
+  if (opts.bcc) {
+    const bcc = Array.isArray(opts.bcc) ? opts.bcc.map((s) => s.trim()).filter(Boolean).join(", ") : opts.bcc.trim();
+    if (bcc) params.set("bcc", bcc);
+  }
   if (replyTo) {
     params.set("h:Reply-To", replyTo);
   }
