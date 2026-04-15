@@ -1,6 +1,7 @@
 import {
   assignDriver,
   createOrder,
+  deleteOrders,
   listDrivers,
   listOrdersByStatus,
   reopenOrderAsAssigned,
@@ -11,6 +12,7 @@ import { SameOriginLogoutLink } from "@/components/same-origin-logout-link";
 import { LogoutButton } from "@/components/logout-button";
 import { AdminCreateDeliveryForm } from "@/components/admin-create-delivery-form";
 import { PasswordField } from "@/components/password-field";
+import { SelectAllOrdersButton } from "@/components/select-all-orders-button";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -67,6 +69,17 @@ async function assignDriverAction(formData: FormData) {
 async function reopenAssignedAction(formData: FormData) {
   "use server";
   await reopenOrderAsAssigned(String(formData.get("orderId") || ""), "admin");
+  revalidatePath("/admin");
+}
+
+async function deleteSelectedOrdersAction(formData: FormData) {
+  "use server";
+  const ids = formData
+    .getAll("orderIds")
+    .map((v) => String(v || "").trim())
+    .filter(Boolean);
+  if (!ids.length) return;
+  await deleteOrders(ids, "admin");
   revalidatePath("/admin");
 }
 
@@ -199,14 +212,43 @@ export default async function AdminPage({
           { title: "Active Deliveries", items: active },
           { title: "Scheduled Deliveries", items: scheduled },
           { title: "Past Deliveries", items: past },
-        ].map((group) => (
+        ].map((group) => {
+          const deleteFormId = `delete-${group.title.toLowerCase().replace(/\s+/g, "-")}`;
+          return (
           <section key={group.title} className="rounded-xl border p-4">
             <h2 className="text-xl font-medium">{group.title}</h2>
+            <form id={deleteFormId} action={deleteSelectedOrdersAction} className="mt-3 mb-2 flex items-center gap-2">
+              <SelectAllOrdersButton formId={deleteFormId} />
+              <button
+                className="rounded-md border border-rose-700 bg-rose-200 px-3 py-1.5 text-sm font-semibold text-rose-900 shadow-sm transition hover:bg-rose-100 active:translate-y-px"
+                type="submit"
+              >
+                Delete selected
+              </button>
+              <span className="text-xs text-slate-500">Check orders below, then click delete selected.</span>
+            </form>
             <div className="mt-3 space-y-3">
               {group.items.map((order) => (
                 <div key={order.id} className={`rounded-lg border p-3 ${orderRowClass(order.status)}`}>
                   <div className="flex items-center justify-between gap-2">
-                    <p className="font-medium">{order.id}</p>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        name="orderIds"
+                        value={order.id}
+                        form={deleteFormId}
+                        className="h-4 w-4"
+                        title={`Select ${order.id} for deletion`}
+                      />
+                      <div className="leading-tight">
+                        <p className="font-medium">
+                          {order.externalOrderId?.trim() || order.id}
+                        </p>
+                        {order.externalOrderId?.trim() && (
+                          <p className="text-[11px] text-slate-500">Internal ID: {order.id}</p>
+                        )}
+                      </div>
+                    </div>
                     <div className="flex flex-wrap items-center justify-end gap-2">
                       {order.stopSequence != null && (
                         <span className="rounded bg-slate-800 px-2 py-0.5 text-xs font-medium text-white">
@@ -221,7 +263,10 @@ export default async function AdminPage({
                     {order.addressLine1}, {order.city}, {order.state} {order.postalCode}
                   </p>
                   <p className="mt-1 text-xs text-slate-600">Scheduled: {new Date(order.scheduledFor).toLocaleString()}</p>
-                  <a href={`/admin/orders/${order.id}`} className="mt-2 inline-block text-sm text-blue-700 underline">
+                  <a
+                    href={`/admin/orders/${order.id}`}
+                    className="mt-2 inline-block rounded-md border border-blue-700 bg-blue-100 px-2.5 py-1 text-sm font-medium text-blue-900 no-underline shadow-sm transition hover:bg-blue-50"
+                  >
                     View details
                   </a>
 
@@ -238,7 +283,10 @@ export default async function AdminPage({
                       <option value="delivered">delivered</option>
                       <option value="cancelled">cancelled</option>
                     </select>
-                    <button className="rounded border px-2 py-1 text-sm" type="submit">
+                    <button
+                      className="rounded-md border border-sky-700 bg-sky-100 px-3 py-1 text-sm font-semibold text-sky-900 shadow-sm transition hover:bg-sky-50 active:translate-y-px"
+                      type="submit"
+                    >
                       Update status
                     </button>
                   </form>
@@ -264,7 +312,10 @@ export default async function AdminPage({
                         </option>
                       ))}
                     </select>
-                    <button className="rounded border px-2 py-1 text-sm" type="submit">
+                    <button
+                      className="rounded-md border border-emerald-700 bg-emerald-100 px-3 py-1 text-sm font-semibold text-emerald-900 shadow-sm transition hover:bg-emerald-50 active:translate-y-px"
+                      type="submit"
+                    >
                       Assign
                     </button>
                   </form>
@@ -273,7 +324,7 @@ export default async function AdminPage({
               {group.items.length === 0 && <p className="text-sm text-slate-500">No orders yet.</p>}
             </div>
           </section>
-        ))}
+        )})}
       </div>
     </main>
   );
