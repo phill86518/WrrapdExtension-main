@@ -8235,13 +8235,14 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             console.log("[showTermsAndConditionsModal] User clicked agreement link");
             
             localStorage.setItem('wrrapd-terms-accepted', 'true');
-            if (giftTermsSignature != null && giftTermsSignature !== '') {
-                localStorage.setItem('wrrapd-terms-gift-signature', giftTermsSignature);
-            }
             localStorage.setItem('wrrapd-keep-loading-until-summary', 'true');
             try {
                 const allItems = getAllItemsFromLocalStorage();
                 syncWrrapdSelectionsFromGiftDom(allItems);
+                // Recompute signature at click-time so changed-mind flow matches current checkbox state.
+                const latestItems = getAllItemsFromLocalStorage();
+                const latestSig = wrrapdGiftOptionsTermsSignature(latestItems);
+                localStorage.setItem('wrrapd-terms-gift-signature', latestSig || giftTermsSignature || '');
             } catch (_) { /* best effort */ }
             
             // Show loading screen IMMEDIATELY before closing modal and calling callback
