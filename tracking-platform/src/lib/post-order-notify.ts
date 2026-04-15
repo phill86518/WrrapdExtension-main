@@ -31,11 +31,12 @@ export type PostOrderNotifySummary = {
 
 function adminOrderNotifyEmails(): string[] {
   const raw = process.env.NOTIFY_ADMIN_ORDER_EMAILS?.trim();
-  if (!raw) return [];
-  return raw
+  if (!raw) return ["admin@wrrapd.com"];
+  const parsed = raw
     .split(/[,;]/)
     .map((s) => s.trim())
     .filter(Boolean);
+  return parsed.length ? parsed : ["admin@wrrapd.com"];
 }
 
 function envFlags() {
@@ -91,6 +92,7 @@ export async function sendPostOrderNotifications(order: Order): Promise<PostOrde
   const thankYouSubject = `Thank you — Wrrapd order ${displayOrderId}`;
   const thankYouHtml = thankYouEmailHtml({
     customerName: order.customerName,
+    customerGreetingName: order.customerGreetingName,
     orderId: displayOrderId,
     trackingUrl,
     recipientName: order.recipientName,
@@ -164,12 +166,14 @@ export async function sendPostOrderNotifications(order: Order): Promise<PostOrde
     order.deliveryPreferencePending &&
     order.deliveryPreferenceToken &&
     order.amazonDeliveryDatesSnapshot &&
-    order.amazonDeliveryDatesSnapshot.length > 1
+    order.amazonDeliveryDatesSnapshot.length > 1 &&
+    (order.lineItems?.length ?? 0) > 1 &&
+    Boolean(order.externalOrderId?.trim())
   ) {
     const choicePath = `/delivery-choice?t=${encodeURIComponent(order.deliveryPreferenceToken)}`;
     const choiceUrl = origin ? `${origin}${choicePath}` : choicePath;
     const deadline = order.deliveryPreferenceRespondBy
-      ? formatInTimeZone(new Date(order.deliveryPreferenceRespondBy), NY, "EEEE, MMM d, yyyy · h:mm a zzz")
+      ? formatInTimeZone(new Date(order.deliveryPreferenceRespondBy), NY, "EEEE, MMM d, yyyy · h:mm a 'Eastern'")
       : "end of today (Eastern)";
 
     if (order.customerEmail?.trim()) {
@@ -179,6 +183,7 @@ export async function sendPostOrderNotifications(order: Order): Promise<PostOrde
           subject: `Action needed: Wrrapd delivery schedule for order ${displayOrderId}`,
           html: deliveryChoiceEmailHtml({
             customerName: order.customerName,
+            customerGreetingName: order.customerGreetingName,
             orderId: displayOrderId,
             datesList: order.amazonDeliveryDatesSnapshot.join(", "),
             deadlineEtLabel: deadline,

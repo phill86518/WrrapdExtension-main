@@ -416,24 +416,31 @@ function normalizeOrderItems(orderData) {
         const options = Array.isArray(item.options) ? item.options : [];
         if (!options.length && Array.isArray(orderData)) {
             // Legacy array payloads may already be flattened as one row per selected Wrrapd item.
-            out.push(item);
+            if (item.checkbox_wrrapd === true) {
+                out.push({ ...item, checkbox_wrrapd: true });
+            }
             continue;
         }
         for (const option of options) {
             if (!option || typeof option !== 'object') continue;
+            const wrapVal = String(option.selected_wrapping_option || '').toLowerCase();
+            const isOurWrappingChoice =
+                wrapVal === 'wrrapd' || wrapVal === 'ai' || wrapVal === 'upload';
             const hasDesignData =
                 !!option.selected_ai_design ||
                 !!option.uploaded_design_path ||
                 !!option.file_data_url ||
                 option.checkbox_flowers === true;
+            // Do not treat Amazon-only gift bag / other Amazon UI selections as Wrrapd rows.
             const isWrrapdLike =
                 option.checkbox_wrrapd === true ||
-                hasDesignData;
+                (hasDesignData && isOurWrappingChoice);
             if (!isWrrapdLike) continue;
             out.push({
                 asin: item.asin,
                 title: item.title,
                 imageUrl: item.imageUrl || null,
+                checkbox_wrrapd: option.checkbox_wrrapd === true,
                 checkbox_flowers: option.checkbox_flowers,
                 selected_flower_design: option.selected_flower_design || null,
                 selected_wrapping_option: option.selected_wrapping_option,
@@ -536,6 +543,22 @@ function computeScheduledForPlusOneFromItems(items) {
     return plusOne.toISOString();
 }
 
+function amazonDateKeyFromItem(orderItem) {
+    if (!orderItem) return null;
+    const cands = [
+        orderItem.amazonDeliveryDate,
+        orderItem.deliveryDate,
+        orderItem.estimatedDeliveryDate,
+        orderItem.arrivalDate,
+        orderItem.shippingDate,
+    ];
+    for (const c of cands) {
+        const d = parseDateCandidate(c);
+        if (d) return d.toISOString().slice(0, 10);
+    }
+    return null;
+}
+
 function splitStreet(rawStreet) {
     if (!rawStreet || typeof rawStreet !== 'string') return { line1: '', line2: '' };
     const parts = rawStreet.split(',').map((x) => x.trim()).filter(Boolean);
@@ -607,7 +630,15 @@ app.post('/process-payment', async (req, res) => {
         return res.status(403).send('Access forbidden.');
     }
 
-    const { paymentIntentId, orderData, customerEmail, customerPhone, orderNumber, billingDetails } = req.body;
+    const {
+        paymentIntentId,
+        orderData,
+        customerEmail,
+        customerPhone,
+        orderNumber,
+        billingDetails,
+        greetingFirstName,
+    } = req.body;
 
     // Validate that all parameters are present
     if (!paymentIntentId || !customerEmail || !customerPhone || !orderNumber) {
@@ -960,7 +991,8 @@ app.post('/process-payment', async (req, res) => {
 
         // Ingest ONE tracking order for this checkout (prevents multi-email fan-out).
         if (normalizedOrderData.length > 0) {
-            const firstItem = normalizedOrderData[0] || {};
+            const wrappedOnly = normalizedOrderData.filter((it) => it && it.checkbox_wrrapd === true);
+            const firstItem = wrappedOnly[0] || normalizedOrderData[0] || {};
             const finalAddr = finalShippingAddressFromCheckout || firstItem.finalShippingAddress || firstItem.shippingAddress || {};
             const streetParts = splitStreet(finalAddr.street || '');
             const customerName =
@@ -968,12 +1000,19 @@ app.post('/process-payment', async (req, res) => {
                 (customerEmail && customerEmail.split('@')[0]) ||
                 'Customer';
             const recipientName = finalAddr.name || customerName;
-            const lineItems = normalizedOrderData.map((it) => ({
+            const lineItems = wrappedOnly.map((it) => ({
                 title: it.title || 'Wrapped item',
                 asin: it.asin || '',
                 imageUrl: it.imageUrl || '',
                 wrappingOption: it.selected_wrapping_option || '',
             }));
+            const wrappedAmazonDays = [...new Set(
+                wrappedOnly
+                    .map((it) => amazonDateKeyFromItem(it))
+                    .filter((d) => !!d)
+            )].sort();
+            const needsCustomerChoice =
+                wrappedOnly.length > 1 && wrappedAmazonDays.length > 1;
             const ingestPayload = {
                 customerName,
                 customerPhone,
@@ -984,10 +1023,22 @@ app.post('/process-payment', async (req, res) => {
                 city: finalAddr.city || firstItem.city || 'N/A',
                 state: finalAddr.state || firstItem.state || 'N/A',
                 postalCode: finalAddr.postalCode || finalAddr.postal_code || firstItem.postalCode || '00000',
-                scheduledFor: computeScheduledForPlusOneFromItems(normalizedOrderData),
                 externalOrderId: orderNumber,
-                sourceNote: `Amazon order ${orderNumber}; ${normalizedOrderData.length} Wrrapd item(s); auto scheduled (Amazon fastest +1)`,
+                sourceNote: needsCustomerChoice
+                    ? `Amazon order ${orderNumber}; ${wrappedOnly.length} Wrrapd item(s) with different Amazon dates (${wrappedAmazonDays.join(', ')}); customer choice required.`
+                    : `Amazon order ${orderNumber}; ${wrappedOnly.length} Wrrapd item(s); auto scheduled (Amazon fastest +1)`,
                 lineItems,
+                ...(greetingFirstName && String(greetingFirstName).trim()
+                    ? { greetingFirstName: String(greetingFirstName).trim() }
+                    : {}),
+                ...(needsCustomerChoice
+                    ? {
+                        amazonDeliveryDays: wrappedAmazonDays,
+                        wrrapdAmazonGrouping: 'pending',
+                    }
+                    : {
+                        scheduledFor: computeScheduledForPlusOneFromItems(wrappedOnly.length ? wrappedOnly : normalizedOrderData),
+                    }),
             };
             const ingestResult = await ingestOrderIntoTracking(ingestPayload);
             if (!ingestResult.ok) {

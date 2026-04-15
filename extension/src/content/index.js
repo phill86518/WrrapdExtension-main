@@ -6,7 +6,7 @@ import './content-legacy.js';
 import './lib/amazon-delivery-hints.js';
 
 /** Bump when verifying deploy — search Amazon tab DevTools console for this string. */
-export const WRRAPD_CONTENT_BUILD_TAG = '2026-04-14-terms-signature+notify-status+pay-warnings';
+export const WRRAPD_CONTENT_BUILD_TAG = '2026-04-15-greeting+terms-return+wrapped-only+admin-fallback';
 console.info(
     '[Wrrapd] content bundle',
     WRRAPD_CONTENT_BUILD_TAG,

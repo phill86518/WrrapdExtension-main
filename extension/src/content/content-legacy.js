@@ -144,12 +144,49 @@ import { isZipCodeAllowed } from './lib/zip-codes.js';
     
     // ----------------------------------------------------- PAGE CONTROL -----------------------------------------------------
 
+    /**
+     * Amazon cart/checkout header: "Deliver to Roger" (#glow-ingress-line1) — first name for thank-you emails.
+     */
+    function domHasAnyWrrapdCheckboxChecked() {
+        try {
+            return Array.from(document.querySelectorAll('input[id^="wrrapd-checkbox-"]')).some((el) => el.checked);
+        } catch (_) {
+            return false;
+        }
+    }
+
+    function syncAmazonDeliverToGreeting() {
+        try {
+            if (!window.location.href.includes('amazon.com')) return;
+            const el =
+                document.getElementById('glow-ingress-line1') ||
+                document.querySelector('.nav-line-1.nav-progressive-content');
+            if (!el) return;
+            const text = (el.textContent || '').replace(/\s+/g, ' ').trim();
+            const m = text.match(/deliver\s+to\s+(.+)/i);
+            if (!m) return;
+            const after = m[1].trim();
+            const first = after.split(/\s+/)[0];
+            if (!first || first.length < 2) return;
+            const prev = localStorage.getItem('wrrapd-deliver-to-greeting');
+            if (prev !== first) {
+                localStorage.setItem('wrrapd-deliver-to-greeting', first);
+                console.log('[syncAmazonDeliverToGreeting] Stored greeting first name:', first);
+            }
+        } catch (e) {
+            console.warn('[syncAmazonDeliverToGreeting]', e);
+        }
+    }
+
     function monitorURLChanges() {
         let lastURL = null;
     
         const checkURLAndExecute = () => {
             const currentURL = window.location.href;
-    
+            if (currentURL.includes('amazon.com')) {
+                syncAmazonDeliverToGreeting();
+            }
+
             if (currentURL !== lastURL) {
                 lastURL = currentURL;
 
@@ -1435,12 +1472,21 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                 
                 const allItems = getAllItemsFromLocalStorage();
                 
-                // Match delegated handler: only skip if addresses are visible AND we already ran our address flow
                 const addressesChangedFlag = localStorage.getItem('wrrapd-addresses-changed') === 'true';
                 const addressesShown = areAddressesShownOnGiftOptionsPage();
-                if (addressesChangedFlag && addressesShown) {
+                const hasWrrapdInStorage = Object.values(allItems).some(
+                    (p) => p.options && p.options.some((sub) => sub.checkbox_wrrapd),
+                );
+                const wantsWrrapdNow = hasWrrapdInStorage || domHasAnyWrrapdCheckboxChecked();
+                if (addressesChangedFlag && addressesShown && wrrapdTermsAcceptedForCurrentGiftChoices(allItems)) {
                     console.log(
-                        "[overrideSaveGiftOptionsButtons] Addresses changed + shown on gift page — NOT intercepting (return to payment).",
+                        "[overrideSaveGiftOptionsButtons] Return-to-payment path — terms already match current choices — NOT intercepting.",
+                    );
+                    return;
+                }
+                if (addressesChangedFlag && addressesShown && !wantsWrrapdNow) {
+                    console.log(
+                        "[overrideSaveGiftOptionsButtons] Return-to-payment path — no Wrrapd selected (storage or DOM) — NOT intercepting.",
                     );
                     return;
                 }
@@ -1453,11 +1499,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                     return;
                 }
                 
-                // MATCH OLD CODE: Use allItems (not filtered) to check for Wrrapd items
-                // This ensures it works when "Add gift options" is clicked dynamically
-                const hasWrappedSubItem = Object.values(allItems).some(product => 
-                    product.options && product.options.some(subItem => subItem.checkbox_wrrapd)
-                );
+                const hasWrappedSubItem = wantsWrrapdNow;
 
                 if (hasWrappedSubItem) {
                     console.log("[overrideSaveGiftOptionsButtons] Wrrapd items detected - showing Terms & Conditions modal.");
@@ -1699,20 +1741,28 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                 // If addresses were changed, we're returning from address selection - don't intercept
                 const addressesChangedFlag = localStorage.getItem('wrrapd-addresses-changed') === 'true';
                 
-                // CRITICAL: Check if addresses are already shown before intercepting
+                // CrITICAL: Check if addresses are already shown before intercepting
                 // This could be addresses below items (multi-address) OR top address section (100% Wrrapd)
                 const addressesShown = areAddressesShownOnGiftOptionsPage();
                 
-                // Only skip interception if BOTH conditions are true:
-                // 1. Addresses are shown (visible on page)
-                // 2. Addresses were changed by our script (we're returning from address selection)
-                // If addresses are shown but NOT changed by our script, we still need to intercept to show Terms & Conditions
-                if (addressesShown && addressesChangedFlag) {
-                    console.log("[overrideSaveGiftOptionsButtons] Delegated handler: Addresses shown AND changed by script - NOT intercepting. Allowing natural flow to Payment.");
-                    return; // Don't intercept - addresses already changed, proceed to payment
+                const itemsForTerms = getAllItemsFromLocalStorage();
+                const hasWrrapdInStorage = Object.values(itemsForTerms).some(
+                    (p) => p.options && p.options.some((sub) => sub.checkbox_wrrapd),
+                );
+                const wantsWrrapdNow = hasWrrapdInStorage || domHasAnyWrrapdCheckboxChecked();
+                if (addressesShown && addressesChangedFlag && wrrapdTermsAcceptedForCurrentGiftChoices(itemsForTerms)) {
+                    console.log(
+                        "[overrideSaveGiftOptionsButtons] Delegated handler: return-to-payment — terms already match — NOT intercepting.",
+                    );
+                    return;
+                }
+                if (addressesShown && addressesChangedFlag && !wantsWrrapdNow) {
+                    console.log(
+                        "[overrideSaveGiftOptionsButtons] Delegated handler: return-to-payment — no Wrrapd — NOT intercepting.",
+                    );
+                    return;
                 }
                 
-                const itemsForTerms = getAllItemsFromLocalStorage();
                 if (wrrapdTermsAcceptedForCurrentGiftChoices(itemsForTerms)) {
                     console.log(
                         "[overrideSaveGiftOptionsButtons] Delegated handler: Terms already accepted for this gift configuration — NOT intercepting.",
@@ -2752,6 +2802,21 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                                 wrrapdCheckbox.dispatchEvent(new Event('change'));
                             }
                         }, true); // Use capture phase
+                    }
+
+                    if (amazonGiftBagCheckbox) {
+                        amazonGiftBagCheckbox.addEventListener('change', function () {
+                            try {
+                                if (!this.checked) return;
+                                subItem.checkbox_wrrapd = false;
+                                if (wrrapdCheckbox) wrrapdCheckbox.checked = false;
+                                saveItemToLocalStorage(productObj);
+                                localStorage.removeItem('wrrapd-terms-accepted');
+                                localStorage.removeItem('wrrapd-terms-gift-signature');
+                            } catch (e) {
+                                console.warn('[insertWrrapdOptions] Amazon gift-wrap checkbox listener:', e);
+                            }
+                        });
                     }
 
                     // Also prevent clicks on the entire wrrapd option div from bubbling
@@ -8788,6 +8853,9 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             itemList.forEach((item) => {
                 if (!item || !item.options) return;
                 item.options.forEach((option) => {
+                    const wrapVal = String(option.selected_wrapping_option || '').toLowerCase();
+                    const isOurWrappingChoice =
+                        wrapVal === 'wrrapd' || wrapVal === 'ai' || wrapVal === 'upload';
                     const hasDesignData =
                         !!option.selected_ai_design ||
                         !!option.uploaded_design_path ||
@@ -8795,7 +8863,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                         option.checkbox_flowers === true;
                     const isWrrapdLike =
                         option &&
-                        (option.checkbox_wrrapd === true || hasDesignData);
+                        (option.checkbox_wrrapd === true || (hasDesignData && isOurWrappingChoice));
                     if (!isWrrapdLike) return;
                     let deliveryInstructions = null;
                     try {
@@ -8825,6 +8893,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                         asin: item.asin,
                         title: item.title,
                         imageUrl: item.imageUrl || null,
+                        checkbox_wrrapd: option.checkbox_wrrapd === true,
                         checkbox_flowers: option.checkbox_flowers,
                         selected_flower_design: option.selected_flower_design || null,
                         selected_wrapping_option: option.selected_wrapping_option,
@@ -8837,6 +8906,11 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                         deliveryInstructions,
                         giftMessage: option.giftMessage || null,
                         senderName: option.senderName || null,
+                        amazonDeliveryDate: option.amazonDeliveryDate || item.amazonDeliveryDate || null,
+                        deliveryDate: option.deliveryDate || item.deliveryDate || null,
+                        estimatedDeliveryDate: option.estimatedDeliveryDate || item.estimatedDeliveryDate || null,
+                        arrivalDate: option.arrivalDate || item.arrivalDate || null,
+                        shippingDate: option.shippingDate || item.shippingDate || null,
                     });
                 });
             });
@@ -8899,10 +8973,12 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             const finalAddr = item.finalShippingAddress || item.shippingAddress || {};
             const streetParts = splitStreetForIngest(finalAddr.street || '');
             const recipientName = finalAddr.name || customerName;
+            const greet = localStorage.getItem('wrrapd-deliver-to-greeting');
             const payload = {
                 customerName,
                 customerPhone,
                 customerEmail,
+                ...(greet && greet.trim() ? { greetingFirstName: greet.trim() } : {}),
                 recipientName,
                 addressLine1: streetParts.line1 || finalAddr.line1 || 'N/A',
                 addressLine2: streetParts.line2 || finalAddr.line2 || '',
@@ -9488,99 +9564,8 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                             // Store payment status in localStorage
                             localStorage.setItem('wrrapd-payment-status', 'success');
 
-                            // Collect order data from localStorage
-                            const rawItems = localStorage.getItem('wrrapd-items');
-                            let orderData = [];
-
-                            try {
-                                const parsedItems = JSON.parse(rawItems);
-                
-                                if (parsedItems && typeof parsedItems === 'object') {
-                                    const itemList = Array.isArray(parsedItems) ? parsedItems : Object.values(parsedItems);
-                                    itemList.forEach(item => {
-                                        if (item && item.options) {
-                                            item.options.forEach(option => {
-                                                const isWrrapdLike =
-                                                    option && (
-                                                        option.checkbox_wrrapd === true ||
-                                                        !!option.selected_wrapping_option ||
-                                                        !!option.selected_ai_design ||
-                                                        !!option.uploaded_design_path ||
-                                                        !!option.file_data_url ||
-                                                        option.checkbox_flowers === true
-                                                    );
-                                                if (isWrrapdLike) {
-                                                    // Get the shipping address from the option
-                                                    const shippingAddress = option.shippingAddress;
-                                                    
-                                                    // Try to find matching delivery instructions
-                                                    let deliveryInstructions = null;
-                                                    try {
-                                                        deliveryInstructions = JSON.parse(localStorage.getItem('wrrapd-delivery-instructions'));
-                                                    } catch (error) {
-                                                        console.error('[Order Data] Error parsing delivery instructions:', error);
-                                                    }
-                                                    
-                                                    // Get AI generated image if it exists
-                                                    let aiImageData = null;
-                                                    if (option.selected_wrapping_option === 'ai' && option.selected_ai_design) {
-                                                        // Try to get the AI image data
-                                                        try {
-                                                            const aiDesignData = option.selected_ai_design;
-                                                            if (typeof aiDesignData === 'string') {
-                                                                // If it's a base64 string, include it
-                                                                aiImageData = aiDesignData;
-                                                            } else if (aiDesignData && aiDesignData.imageData) {
-                                                                aiImageData = aiDesignData.imageData;
-                                                            } else if (aiDesignData && aiDesignData.url) {
-                                                                aiImageData = aiDesignData.url;
-                                                            }
-                                                        } catch (e) {
-                                                            console.error('[Order Data] Error getting AI image:', e);
-                                                        }
-                                                    }
-                                                    
-                                                    // Get final shipping address (default Amazon address)
-                                                    let finalShippingAddress = null;
-                                                    try {
-                                                        const defaultAddressData = localStorage.getItem('wrrapd-default-address');
-                                                        if (defaultAddressData) {
-                                                            finalShippingAddress = JSON.parse(defaultAddressData);
-                                                        }
-                                                    } catch (e) {
-                                                        console.error('[Order Data] Error getting final shipping address:', e);
-                                                    }
-                                                    
-                                                    orderData.push({
-                                                        asin: item.asin,
-                                                        title: item.title,
-                                                        imageUrl: item.imageUrl || null,
-                                                        checkbox_flowers: option.checkbox_flowers,
-                                                        selected_flower_design: option.selected_flower_design || null,
-                                                        selected_wrapping_option: option.selected_wrapping_option,
-                                                        selected_ai_design: option.selected_ai_design || null,
-                                                        aiImageData: aiImageData, // AI generated image data for admin email
-                                                        uploaded_design_path: option.uploaded_design_path || null,
-                                                        occasion: option.occasion || null,
-                                                        shippingAddress: option.shippingAddress, // Wrrapd address
-                                                        finalShippingAddress: finalShippingAddress, // Final delivery address (default Amazon address)
-                                                        deliveryInstructions: deliveryInstructions,
-                                                        giftMessage: option.giftMessage || null,
-                                                        senderName: option.senderName || null,
-                                                        // special delivery instructions
-                                                        // time of order
-                                                        // day of order
-                                                        //time of delivery (empty)
-                                                        // day of delivery (empty)
-                                                    });
-                                                }
-                                            });
-                                        }
-                                    });
-                                }
-                            } catch (error) {
-                                console.error('Error parsing wrrapd-items from localStorage:', error);
-                            }
+                            // Same rows as staging ingest: only true Wrrapd selections (not Amazon gift-bag-only lines).
+                            const orderData = buildWrrapdOrderDataFromLocalStorage();
 
                             console.log('Order Data:', orderData);
                             if (!orderData.length) {
@@ -9728,6 +9713,8 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                                 // - Delivery instructions (deliveryInstructions from orderData)
                                 // - Sender names (senderName from each orderData item)
                                 // All this data is included in orderData array
+                                syncAmazonDeliverToGreeting();
+                                const greet = localStorage.getItem('wrrapd-deliver-to-greeting');
                                 const response = await fetch('https://api.wrrapd.com/process-payment', {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
@@ -9737,7 +9724,8 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                                         customerEmail,
                                         customerPhone,
                                         orderNumber,
-                                        billingDetails: billingDetails || null // Billing details from Stripe checkout
+                                        billingDetails: billingDetails || null, // Billing details from Stripe checkout
+                                        ...(greet && greet.trim() ? { greetingFirstName: greet.trim() } : {}),
                                     }),
                                 });
 
