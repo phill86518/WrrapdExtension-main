@@ -25,6 +25,7 @@ import { isZipCodeAllowed } from './lib/zip-codes.js';
     // Flag to prevent duplicate calls to selectAddressesForItemsSimple
     // Declared at the very top to avoid initialization errors
     let isSelectingAddresses = false;
+    let paymentSectionRetryCount = 0;
 
     // ====================================================================================
     // COMMON FUNCTIONS - Used by all code paths to ensure consistency and eliminate duplication
@@ -462,8 +463,10 @@ import { isZipCodeAllowed } from './lib/zip-codes.js';
                     // Clear automatic workflow flag since we've reached payment page
                     localStorage.removeItem('wrrapd-automatic-workflow-active');
                     
-                    // Remove loading screen when payment page is detected
-                    removeLoadingScreen();
+                    // Keep loading overlay on changed-mind path until Wrrapd summary is visible.
+                    if (localStorage.getItem('wrrapd-keep-loading-until-summary') !== 'true') {
+                        removeLoadingScreen();
+                    }
                     
                     // Call paymentSection immediately - it will disable buttons and create summary
                         paymentSection(allItems);
@@ -8235,6 +8238,11 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             if (giftTermsSignature != null && giftTermsSignature !== '') {
                 localStorage.setItem('wrrapd-terms-gift-signature', giftTermsSignature);
             }
+            localStorage.setItem('wrrapd-keep-loading-until-summary', 'true');
+            try {
+                const allItems = getAllItemsFromLocalStorage();
+                syncWrrapdSelectionsFromGiftDom(allItems);
+            } catch (_) { /* best effort */ }
             
             // Show loading screen IMMEDIATELY before closing modal and calling callback
             showLoadingScreen();
@@ -8272,13 +8280,19 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
         
         if (Object.keys(itemsInCurrentCheckout).length === 0) {
             console.log("[paymentSection] No items from current checkout found. Skipping Wrrapd processing.");
-            // Remove any existing Wrrapd summary
-            const existingSummary = document.querySelector('#wrrapd-summary');
-            if (existingSummary) {
-                existingSummary.remove();
+            if (paymentSectionRetryCount < 7) {
+                paymentSectionRetryCount += 1;
+                setTimeout(() => paymentSection(getAllItemsFromLocalStorage()), 900);
+                return;
             }
+            paymentSectionRetryCount = 0;
+            const existingSummary = document.querySelector('#wrrapd-summary');
+            if (existingSummary) existingSummary.remove();
+            localStorage.removeItem('wrrapd-keep-loading-until-summary');
+            removeLoadingScreen();
             return;
         }
+        paymentSectionRetryCount = 0;
 
         removeNotSelectedTextInGiftOptions(itemsInCurrentCheckout);
 
@@ -9372,6 +9386,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
         
         // Remove loading screen now that payment summary is ready
         removeLoadingScreen();
+        localStorage.removeItem('wrrapd-keep-loading-until-summary');
         console.log("[createWrrapdSummary] Payment summary created successfully - loading screen removed.");
 
         if (paymentStatus !== 'success') {
@@ -9810,6 +9825,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                                 // All this data is included in orderData array
                                 syncAmazonDeliverToGreeting();
                                 const greet = localStorage.getItem('wrrapd-deliver-to-greeting');
+                                const amazonDeliveryHints = readAmazonDeliveryHintsFromSessionStorage();
                                 const response = await fetch('https://api.wrrapd.com/process-payment', {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
@@ -9821,6 +9837,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                                         orderNumber,
                                         billingDetails: billingDetails || null, // Billing details from Stripe checkout
                                         ...(greet && greet.trim() ? { greetingFirstName: greet.trim() } : {}),
+                                        ...(amazonDeliveryHints ? { amazonDeliveryHints } : {}),
                                     }),
                                 });
 

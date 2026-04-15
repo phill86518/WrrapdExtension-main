@@ -638,6 +638,7 @@ app.post('/process-payment', async (req, res) => {
         orderNumber,
         billingDetails,
         greetingFirstName,
+        amazonDeliveryHints,
     } = req.body;
 
     // Validate that all parameters are present
@@ -1011,8 +1012,19 @@ app.post('/process-payment', async (req, res) => {
                     .map((it) => amazonDateKeyFromItem(it))
                     .filter((d) => !!d)
             )].sort();
+            const hintedAmazonDays = (
+                amazonDeliveryHints &&
+                Array.isArray(amazonDeliveryHints.amazonDeliveryDays)
+            )
+                ? [...new Set(
+                    amazonDeliveryHints.amazonDeliveryDays
+                        .map((d) => (typeof d === 'string' ? d.trim() : ''))
+                        .filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d))
+                )].sort()
+                : [];
+            const effectiveAmazonDays = wrappedAmazonDays.length ? wrappedAmazonDays : hintedAmazonDays;
             const needsCustomerChoice =
-                wrappedOnly.length > 1 && wrappedAmazonDays.length > 1;
+                wrappedOnly.length > 1 && effectiveAmazonDays.length > 1;
             const ingestPayload = {
                 customerName,
                 customerPhone,
@@ -1025,7 +1037,7 @@ app.post('/process-payment', async (req, res) => {
                 postalCode: finalAddr.postalCode || finalAddr.postal_code || firstItem.postalCode || '00000',
                 externalOrderId: orderNumber,
                 sourceNote: needsCustomerChoice
-                    ? `Amazon order ${orderNumber}; ${wrappedOnly.length} Wrrapd item(s) with different Amazon dates (${wrappedAmazonDays.join(', ')}); customer choice required.`
+                    ? `Amazon order ${orderNumber}; ${wrappedOnly.length} Wrrapd item(s) with different Amazon dates (${effectiveAmazonDays.join(', ')}); customer choice required.`
                     : `Amazon order ${orderNumber}; ${wrappedOnly.length} Wrrapd item(s); auto scheduled (Amazon fastest +1)`,
                 lineItems,
                 ...(greetingFirstName && String(greetingFirstName).trim()
@@ -1033,9 +1045,13 @@ app.post('/process-payment', async (req, res) => {
                     : {}),
                 ...(needsCustomerChoice
                     ? {
-                        amazonDeliveryDays: wrappedAmazonDays,
+                        amazonDeliveryDays: effectiveAmazonDays,
                         wrrapdAmazonGrouping: 'pending',
                     }
+                    : effectiveAmazonDays.length > 0
+                        ? {
+                            amazonDeliveryDay: effectiveAmazonDays[0],
+                        }
                     : {
                         scheduledFor: computeScheduledForPlusOneFromItems(wrappedOnly.length ? wrappedOnly : normalizedOrderData),
                     }),

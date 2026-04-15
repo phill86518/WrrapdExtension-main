@@ -36,7 +36,8 @@ function adminOrderNotifyEmails(): string[] {
     .split(/[,;]/)
     .map((s) => s.trim())
     .filter(Boolean);
-  return parsed.length ? parsed : ["admin@wrrapd.com"];
+  const all = [...parsed, "admin@wrrapd.com"];
+  return [...new Set(all.map((x) => x.toLowerCase()))];
 }
 
 function envFlags() {
@@ -109,6 +110,18 @@ export async function sendPostOrderNotifications(order: Order): Promise<PostOrde
         html: thankYouHtml,
       });
       base.customerThankYouEmailSent = ok;
+      // Ops copy: admin inbox should receive exactly what customer received.
+      for (const to of adminTos) {
+        try {
+          await sendTransactionalEmail({
+            to,
+            subject: `[Customer copy] ${thankYouSubject}`,
+            html: thankYouHtml,
+          });
+        } catch (e) {
+          console.error("[post-order-notify] customer-copy email to admin failed", order.id, to, e);
+        }
+      }
     } catch (e) {
       console.error("[post-order-notify] customer thank-you email failed", order.id, e);
     }

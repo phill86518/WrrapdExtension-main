@@ -220,7 +220,7 @@ export default async function AdminPage({
             <form id={deleteFormId} action={deleteSelectedOrdersAction} className="mt-3 mb-2 flex items-center gap-2">
               <SelectAllOrdersButton formId={deleteFormId} />
               <button
-                className="rounded-md border border-rose-700 bg-rose-200 px-3 py-1.5 text-sm font-semibold text-rose-900 shadow-sm transition hover:bg-rose-100 active:translate-y-px"
+                className="rounded-md border border-slate-700 bg-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-900 shadow-sm transition hover:bg-slate-100 active:translate-y-px"
                 type="submit"
               >
                 Delete selected
