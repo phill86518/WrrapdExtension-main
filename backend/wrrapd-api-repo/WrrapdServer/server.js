@@ -569,12 +569,31 @@ function splitStreet(rawStreet) {
     };
 }
 
+/** Align extension line suffix (`…-01`) with base Amazon ref for tracking ingest dedupe. */
+function canonicalTrackingExternalOrderId(raw) {
+    if (!raw || typeof raw !== 'string') return raw;
+    const s = raw.trim();
+    const parts = s.split('-');
+    if (parts.length >= 4 && /^\d{1,4}$/.test(parts[parts.length - 1])) {
+        return parts.slice(0, -1).join('-');
+    }
+    return s;
+}
+
 async function ingestOrderIntoTracking(orderPayload) {
     const ingestKey = process.env.INGEST_API_KEY;
     const ingestUrl = process.env.TRACKING_INGEST_URL || 'http://127.0.0.1:3000/api/orders/ingest';
     if (!ingestKey) {
         return { ok: false, skipped: true, reason: 'INGEST_API_KEY missing' };
     }
+
+    const payload =
+        orderPayload && typeof orderPayload.externalOrderId === 'string'
+            ? {
+                  ...orderPayload,
+                  externalOrderId: canonicalTrackingExternalOrderId(orderPayload.externalOrderId),
+              }
+            : orderPayload;
 
     try {
         const resp = await fetch(ingestUrl, {
@@ -583,7 +602,7 @@ async function ingestOrderIntoTracking(orderPayload) {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${ingestKey}`,
             },
-            body: JSON.stringify(orderPayload),
+            body: JSON.stringify(payload),
         });
         const text = await resp.text();
         if (!resp.ok) {
@@ -1056,7 +1075,7 @@ app.post('/process-payment', async (req, res) => {
                 city: finalAddr.city || firstItem.city || 'N/A',
                 state: finalAddr.state || firstItem.state || 'N/A',
                 postalCode: finalAddr.postalCode || finalAddr.postal_code || firstItem.postalCode || '00000',
-                externalOrderId: orderNumber,
+                externalOrderId: canonicalTrackingExternalOrderId(orderNumber),
                 sourceNote: needsCustomerChoice
                     ? `Amazon order ${orderNumber}; ${wrappedOnly.length} Wrrapd item(s) with different Amazon dates (${effectiveAmazonDays.join(', ')}); customer choice required.`
                     : `Amazon order ${orderNumber}; ${wrappedOnly.length} Wrrapd item(s); auto scheduled (Amazon fastest +1)`,

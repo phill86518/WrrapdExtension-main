@@ -1,11 +1,13 @@
 import Link from "next/link";
+import { WrrapdLogo } from "@/components/wrrapd-logo";
 import { DEMO_CUSTOMER_TRACKING_TOKEN } from "@/lib/demo-orders";
 
 export default function Home() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
       <main className="mx-auto max-w-5xl px-6 py-14">
-        <h1 className="text-4xl font-semibold">Wrrapd Delivery Command Platform</h1>
+        <WrrapdLogo className="h-12 w-auto max-w-[200px] brightness-0 invert" />
+        <h1 className="mt-4 text-4xl font-semibold">Delivery Command Platform</h1>
         <p className="mt-3 max-w-3xl text-slate-300">
           White-labeled tracking MVP running on a single Next.js app: admin command center,
           driver companion, and customer tracking page.

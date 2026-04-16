@@ -40,62 +40,54 @@ function thankYouGiftSummaryLine(li: OrderLineItem): string {
   return `<p style="margin:6px 0 0;font-size:12px;color:#555;line-height:1.4;">${bits.join(" · ")}</p>`;
 }
 
+/** Compact ops lines for admin new-order email (one item card). */
 function lineItemOpsGiftBlock(li: OrderLineItem): string {
   const parts: string[] = [];
+  const flowerBit = li.flowers
+    ? ` · Flowers yes${li.flowerDesign ? ` (${escapeHtml(li.flowerDesign)})` : ""}`
+    : " · Flowers no";
   parts.push(
-    `<p style="margin:8px 0 0;font-size:12px;text-transform:uppercase;letter-spacing:0.08em;color:#64748b;">Gift-wrapping</p>`,
+    `<p style="margin:0;font-size:12px;color:#0f172a;line-height:1.4;"><strong>Mode</strong> ${wrappingModeLabel(li.wrappingOption)}${flowerBit}</p>`,
   );
-  parts.push(
-    `<p style="margin:4px 0 0;font-size:13px;color:#0f172a;"><strong>Mode:</strong> ${wrappingModeLabel(li.wrappingOption)}</p>`,
-  );
-  if (li.flowers) {
-    parts.push(
-      `<p style="margin:4px 0 0;font-size:13px;color:#0f172a;"><strong>Flowers:</strong> Yes${
-        li.flowerDesign ? ` — ${escapeHtml(li.flowerDesign)}` : ""
-      }</p>`,
-    );
-  } else {
-    parts.push(`<p style="margin:4px 0 0;font-size:13px;color:#0f172a;"><strong>Flowers:</strong> No</p>`);
-  }
   if ((li.wrappingOption || "").toLowerCase() === "upload") {
     const fn = li.uploadedDesignFileName || (li.uploadedDesignPath ? li.uploadedDesignPath.split("/").pop() : "") || "";
     if (fn) {
       parts.push(
-        `<p style="margin:4px 0 0;font-size:13px;color:#0f172a;"><strong>Uploaded file:</strong> ${escapeHtml(fn)}</p>`,
+        `<p style="margin:3px 0 0;font-size:12px;color:#0f172a;"><strong>Upload</strong> ${escapeHtml(fn)}</p>`,
       );
     }
     if (li.uploadedDesignPath && li.uploadedDesignPath !== fn) {
       parts.push(
-        `<p style="margin:2px 0 0;font-size:12px;color:#64748b;word-break:break-all;"><strong>Path:</strong> ${escapeHtml(li.uploadedDesignPath)}</p>`,
+        `<p style="margin:2px 0 0;font-size:11px;color:#64748b;word-break:break-all;">${escapeHtml(li.uploadedDesignPath)}</p>`,
       );
     }
   }
   if ((li.wrappingOption || "").toLowerCase() === "ai") {
     if (li.aiDesignTitle) {
       parts.push(
-        `<p style="margin:4px 0 0;font-size:13px;color:#0f172a;"><strong>AI design title:</strong> ${escapeHtml(li.aiDesignTitle)}</p>`,
+        `<p style="margin:3px 0 0;font-size:12px;color:#0f172a;"><strong>AI</strong> ${escapeHtml(li.aiDesignTitle)}</p>`,
       );
     }
     if (li.aiDesignDescription) {
       parts.push(
-        `<p style="margin:4px 0 0;font-size:13px;color:#475569;line-height:1.45;"><strong>AI design description:</strong> ${escapeHtml(li.aiDesignDescription)}</p>`,
+        `<p style="margin:2px 0 0;font-size:11px;color:#475569;line-height:1.35;">${escapeHtml(li.aiDesignDescription)}</p>`,
       );
     }
   }
   if (li.occasion) {
-    parts.push(`<p style="margin:4px 0 0;font-size:13px;color:#0f172a;"><strong>Occasion:</strong> ${escapeHtml(li.occasion)}</p>`);
+    parts.push(`<p style="margin:3px 0 0;font-size:12px;color:#0f172a;"><strong>Occasion</strong> ${escapeHtml(li.occasion)}</p>`);
   }
   if (li.giftMessage) {
     parts.push(
-      `<p style="margin:4px 0 0;font-size:13px;color:#0f172a;"><strong>Gift message:</strong> ${escapeHtml(li.giftMessage)}</p>`,
+      `<p style="margin:3px 0 0;font-size:12px;color:#0f172a;"><strong>Message</strong> ${escapeHtml(li.giftMessage)}</p>`,
     );
   }
   if (li.senderName) {
     parts.push(
-      `<p style="margin:4px 0 0;font-size:13px;color:#0f172a;"><strong>Sender (on gift):</strong> ${escapeHtml(li.senderName)}</p>`,
+      `<p style="margin:2px 0 0;font-size:12px;color:#0f172a;"><strong>Sender</strong> ${escapeHtml(li.senderName)}</p>`,
     );
   }
-  return `<div style="margin-top:10px;padding:10px 12px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">${parts.join("")}</div>`;
+  return parts.join("");
 }
 
 export function thankYouEmailHtml(input: {
@@ -237,68 +229,90 @@ export function adminNewOrderEmailHtml(input: {
   lineItems?: OrderLineItem[];
 }): string {
   const addr2 = input.addressLine2 ? `${escapeHtml(input.addressLine2)}, ` : "";
+  const contactCell = [
+    escapeHtml(input.customerPhone),
+    input.customerEmail
+      ? `<a href="mailto:${escapeAttr(input.customerEmail)}" style="color:#1d4ed8;">${escapeHtml(input.customerEmail)}</a>`
+      : "",
+  ]
+    .filter(Boolean)
+    .join(" · ");
   const wrappedRows = (input.lineItems || [])
-    .map((li) => {
+    .map((li, idx) => {
       const title = escapeHtml(li.title || "Wrapped item");
-      const asin = li.asin ? ` · ASIN ${escapeHtml(li.asin)}` : "";
+      const asin = li.asin ? `ASIN ${escapeHtml(li.asin)}` : "";
       const img = li.imageUrl
-        ? `<img src="${escapeAttr(li.imageUrl)}" alt="${title}" style="max-width:120px;max-height:120px;border:1px solid #ddd;border-radius:8px;margin-top:8px;"/>`
+        ? `<img src="${escapeAttr(li.imageUrl)}" alt="" style="width:56px;height:56px;object-fit:cover;border:1px solid #cbd5e1;border-radius:6px;vertical-align:middle;"/>`
         : "";
-      return `<div style="margin:10px 0;padding:12px;border:1px solid #e2e8f0;border-radius:8px;background:#fff;">
-        <p style="margin:0;font-size:14px;color:#0f172a;"><strong>${title}</strong>${asin}</p>
-        ${img}
-        ${lineItemOpsGiftBlock(li)}
-      </div>`;
+      return `<table role="presentation" width="100%" style="margin:8px 0 0;border:1px solid #e2e8f0;border-radius:8px;background:#fff;"><tr><td style="padding:8px 10px;">
+        <p style="margin:0 0 4px;font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:#64748b;">Item ${idx + 1}</p>
+        <table role="presentation" width="100%"><tr>
+          <td width="64" valign="top" style="padding:0 8px 0 0;">${img || `<div style="width:56px;height:56px;border-radius:6px;background:#f1f5f9;border:1px solid #e2e8f0;"></div>`}</td>
+          <td valign="top" style="padding:0;">
+            <p style="margin:0;font-size:13px;font-weight:600;color:#0f172a;line-height:1.35;">${title}${asin ? ` <span style="font-weight:500;color:#475569;">· ${asin}</span>` : ""}</p>
+            <div style="margin:6px 0 0;padding:6px 8px;background:#f1f5f9;border-radius:6px;border:1px solid #e2e8f0;">${lineItemOpsGiftBlock(li)}</div>
+          </td>
+        </tr></table>
+      </td></tr></table>`;
     })
     .join("");
   const inner = `
-<tr><td style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);padding:24px;text-align:center;">
-  <div style="font-size:12px;letter-spacing:0.25em;text-transform:uppercase;color:rgba(255,255,255,0.75);">Wrrapd Ops</div>
-  <h1 style="margin:10px 0 0;font-size:22px;font-weight:600;color:#fff;">New order (tracking)</h1>
+<tr><td style="background:#1a1a2e;padding:8px 14px;border-bottom:1px solid rgba(255,255,255,0.08);">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr>
+    <td valign="middle" style="padding:0;">
+      <img src="${escapeAttr(WRRAPD_LOGO_URL)}" alt="Wrrapd" style="height:26px;width:auto;display:block;max-width:140px;"/>
+    </td>
+    <td valign="middle" align="right" style="padding:0 0 0 8px;">
+      <span style="font-size:9px;letter-spacing:0.22em;text-transform:uppercase;color:rgba(255,255,255,0.65);white-space:nowrap;">Ops</span>
+    </td>
+  </tr></table>
+  <p style="margin:4px 0 0;font-size:13px;font-weight:600;color:#fff;line-height:1.25;">New order · tracking</p>
 </td></tr>
-<tr><td style="padding:24px 28px;">
-  <table role="presentation" width="100%" style="background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0;">
-    <tr><td style="padding:18px 20px;">
-      <p style="margin:0 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:#64748b;">Order reference</p>
-      <p style="margin:0;font-size:17px;font-weight:700;color:#0f172a;">${escapeHtml(input.publicOrderRef)}</p>
-      <hr style="margin:16px 0;border:none;border-top:1px solid #e2e8f0;"/>
-      <p style="margin:0 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:#64748b;">Customer (gifter)</p>
-      <p style="margin:0;font-size:15px;color:#0f172a;">${escapeHtml(input.customerName)}</p>
-      <p style="margin:6px 0 0;font-size:14px;color:#334155;">${escapeHtml(input.customerPhone)}</p>
-      ${
-        input.customerEmail
-          ? `<p style="margin:6px 0 0;font-size:14px;color:#334155;"><a href="mailto:${escapeAttr(input.customerEmail)}" style="color:#1d4ed8;">${escapeHtml(input.customerEmail)}</a></p>`
-          : ""
-      }
-      <hr style="margin:16px 0;border:none;border-top:1px solid #e2e8f0;"/>
-      <p style="margin:0 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:#64748b;">Recipient / delivery</p>
-      <p style="margin:0;font-size:15px;font-weight:600;color:#0f172a;">${escapeHtml(input.recipientName)}</p>
-      <p style="margin:8px 0 0;font-size:14px;color:#334155;line-height:1.5;">
-        ${escapeHtml(input.addressLine1)}<br/>
-        ${addr2}${escapeHtml(input.city)}, ${escapeHtml(input.state)} ${escapeHtml(input.postalCode)}
-      </p>
-      <hr style="margin:16px 0;border:none;border-top:1px solid #e2e8f0;"/>
-      <p style="margin:0 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:#64748b;">Wrrapd window (ET)</p>
-      <p style="margin:0;font-size:15px;color:#0f172a;">${escapeHtml(input.scheduledEtLabel)}</p>
+<tr><td style="padding:12px 14px 16px;">
+  <table role="presentation" width="100%" style="background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">
+    <tr><td style="padding:10px 12px;">
+      <table role="presentation" width="100%" style="font-size:13px;line-height:1.35;color:#0f172a;">
+        <tr>
+          <td style="width:112px;padding:2px 8px 2px 0;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:#64748b;vertical-align:top;">Order</td>
+          <td style="padding:2px 0;font-weight:700;">${escapeHtml(input.publicOrderRef)}</td>
+        </tr>
+        <tr><td colspan="2" style="padding:6px 0 4px;border-bottom:1px solid #e2e8f0;"></td></tr>
+        <tr>
+          <td style="padding:6px 8px 2px 0;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:#64748b;vertical-align:top;">Customer</td>
+          <td style="padding:6px 0 2px;">
+            <span style="font-weight:600;">${escapeHtml(input.customerName)}</span><br/>
+            <span style="font-size:12px;color:#334155;">${contactCell}</span>
+          </td>
+        </tr>
+        <tr><td colspan="2" style="padding:4px 0 4px;border-bottom:1px solid #e2e8f0;"></td></tr>
+        <tr>
+          <td style="padding:6px 8px 2px 0;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:#64748b;vertical-align:top;">Deliver to</td>
+          <td style="padding:6px 0 2px;">
+            <span style="font-weight:600;">${escapeHtml(input.recipientName)}</span><br/>
+            <span style="font-size:12px;color:#334155;">${escapeHtml(input.addressLine1)} · ${addr2}${escapeHtml(input.city)}, ${escapeHtml(input.state)} ${escapeHtml(input.postalCode)}</span>
+          </td>
+        </tr>
+        <tr><td colspan="2" style="padding:4px 0 4px;border-bottom:1px solid #e2e8f0;"></td></tr>
+        <tr>
+          <td style="padding:6px 8px 2px 0;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:#64748b;vertical-align:top;">Window (ET)</td>
+          <td style="padding:6px 0 2px;font-size:13px;">${escapeHtml(input.scheduledEtLabel)}</td>
+        </tr>
+      </table>
       ${
         input.deliveryPreferencePending && input.amazonDeliveryDatesSnapshot?.length
-          ? `<p style="margin:12px 0 0;font-size:13px;color:#b45309;background:#fffbeb;padding:10px;border-radius:8px;border:1px solid #fcd34d;">
-              <strong>Delivery choice pending</strong> — Amazon dates: ${escapeHtml(input.amazonDeliveryDatesSnapshot.join(", "))}
+          ? `<p style="margin:8px 0 0;font-size:12px;color:#b45309;background:#fffbeb;padding:6px 8px;border-radius:6px;border:1px solid #fcd34d;line-height:1.35;">
+              <strong>Choice pending</strong> — Amazon: ${escapeHtml(input.amazonDeliveryDatesSnapshot.join(", "))}
             </p>`
           : ""
       }
       ${
         input.sourceNote
-          ? `<p style="margin:12px 0 0;font-size:13px;color:#475569;"><strong>Note:</strong> ${escapeHtml(input.sourceNote)}</p>`
+          ? `<p style="margin:6px 0 0;font-size:12px;color:#475569;line-height:1.35;"><strong>Note</strong> ${escapeHtml(input.sourceNote)}</p>`
           : ""
       }
-      ${
-        wrappedRows
-          ? `<p style="margin:14px 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:#64748b;">Items for gift-wrapping</p>${wrappedRows}`
-          : ""
-      }
-      <p style="margin:18px 0 0;">
-        <a href="${escapeAttr(input.trackingUrl)}" style="display:inline-block;background:#0f172a;color:#fff;text-decoration:none;padding:11px 20px;border-radius:8px;font-size:14px;font-weight:600;">Open in tracking app</a>
+      ${wrappedRows ? `<p style="margin:8px 0 4px;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:#64748b;">Gift-wrap items</p>${wrappedRows}` : ""}
+      <p style="margin:10px 0 0;">
+        <a href="${escapeAttr(input.trackingUrl)}" style="display:inline-block;background:#0f172a;color:#fff;text-decoration:none;padding:8px 16px;border-radius:6px;font-size:13px;font-weight:600;">Open in tracking app</a>
       </p>
     </td></tr>
   </table>

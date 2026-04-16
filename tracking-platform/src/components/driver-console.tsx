@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { formatDateKeyNy } from "@/lib/ny-date";
 
 type DriverOrder = {
   id: string;
@@ -11,9 +12,21 @@ type DriverOrder = {
   postalCode: string;
   status: string;
   stopSequence?: number;
+  scheduledFor: string;
 };
 
 export function DriverConsole({ orders }: { orders: DriverOrder[] }) {
+  const maxStopByNyDay = useMemo(() => {
+    const m = new Map<string, number>();
+    const routed = new Set(["scheduled", "assigned", "en_route"]);
+    for (const o of orders) {
+      if (o.stopSequence == null || !o.scheduledFor || !routed.has(o.status)) continue;
+      const day = formatDateKeyNy(o.scheduledFor);
+      m.set(day, Math.max(m.get(day) ?? 0, o.stopSequence));
+    }
+    return m;
+  }, [orders]);
+
   const [busyOrder, setBusyOrder] = useState<string | null>(null);
   const [offlineQueuedCount, setOfflineQueuedCount] = useState(0);
   const [proofFiles, setProofFiles] = useState<Record<string, File | null>>({});
@@ -212,6 +225,10 @@ export function DriverConsole({ orders }: { orders: DriverOrder[] }) {
             {order.stopSequence != null && (
               <span className="rounded bg-slate-900 px-2 py-0.5 text-xs font-semibold text-white">
                 Stop {order.stopSequence}
+                {(() => {
+                  const total = maxStopByNyDay.get(formatDateKeyNy(order.scheduledFor));
+                  return total != null && total > 1 ? ` of ${total}` : "";
+                })()}
               </span>
             )}
           </div>

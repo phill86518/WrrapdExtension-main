@@ -163,6 +163,74 @@ export async function unassignDeletedDriverOrders(driverId: string): Promise<voi
   await writeFallbackPayload(allocated);
 }
 
+/**
+ * Amazon-style refs sometimes repeat with a pack-line suffix (`…-6778201-01`).
+ * Treat the base id as one logical order for ingest dedupe.
+ */
+export function canonicalExternalOrderId(raw: string | undefined): string | undefined {
+  if (!raw?.trim()) return undefined;
+  const s = raw.trim();
+  const parts = s.split("-");
+  if (parts.length >= 4 && /^\d{1,4}$/.test(parts[parts.length - 1]!)) {
+    return parts.slice(0, -1).join("-");
+  }
+  return s;
+}
+
+function externalOrderIdVariants(id: string): string[] {
+  const t = id.trim();
+  const c = canonicalExternalOrderId(t);
+  return c && c !== t ? [t, c] : [t];
+}
+
+function externalOrderIdsOverlap(a: string | undefined, b: string | undefined): boolean {
+  if (!a?.trim() || !b?.trim()) return false;
+  const setB = new Set(externalOrderIdVariants(b));
+  return externalOrderIdVariants(a).some((x) => setB.has(x));
+}
+
+const OPEN_INGEST_STATUSES = new Set<DeliveryStatus>(["scheduled", "assigned", "en_route"]);
+
+/** Sort comparator: best candidate first (en_route > assigned > scheduled, then freshest, stable id). */
+function compareMergePrimary(a: Order, b: Order): number {
+  const pri = (s: Order["status"]) =>
+    s === "en_route" ? 3 : s === "assigned" ? 2 : s === "scheduled" ? 1 : 0;
+  const dp = pri(b.status) - pri(a.status);
+  if (dp !== 0) return dp;
+  const ta = new Date(a.updatedAt || a.createdAt).getTime();
+  const tb = new Date(b.updatedAt || b.createdAt).getTime();
+  if (ta !== tb) return tb - ta;
+  return a.id.localeCompare(b.id);
+}
+
+/** All open orders whose external id matches `externalRaw` or its canonical Amazon base. */
+async function findOpenOrdersForIngestMerge(
+  externalRaw: string | undefined,
+  fallbackOrders?: Order[],
+): Promise<Order[]> {
+  if (!externalRaw?.trim()) return [];
+  const variants = [...new Set(externalOrderIdVariants(externalRaw))];
+  const oc = getOrdersCollection();
+  if (oc) {
+    const byId = new Map<string, Order>();
+    for (const v of variants) {
+      const snap = await oc.where("externalOrderId", "==", v).limit(20).get();
+      for (const d of snap.docs) {
+        const o = d.data() as Order;
+        if (OPEN_INGEST_STATUSES.has(o.status)) byId.set(o.id, o);
+      }
+    }
+    return [...byId.values()];
+  }
+  const orders = fallbackOrders ?? (await readFallbackOrders());
+  const out: Order[] = [];
+  for (const o of orders) {
+    if (!o.externalOrderId || !OPEN_INGEST_STATUSES.has(o.status)) continue;
+    if (externalOrderIdsOverlap(o.externalOrderId, externalRaw)) out.push(o);
+  }
+  return out;
+}
+
 export type CreateOrderInput = {
   customerName: string;
   customerPhone: string;
@@ -197,6 +265,107 @@ export async function createOrder(
     return { ok: false, error: check.message };
   }
   const scheduledIso = scheduledAt.toISOString();
+
+  const storedExt =
+    input.externalOrderId?.trim()
+      ? (canonicalExternalOrderId(input.externalOrderId.trim()) ?? input.externalOrderId.trim())
+      : undefined;
+
+  const existingMatches =
+    storedExt && input.externalOrderId?.trim()
+      ? await findOpenOrdersForIngestMerge(input.externalOrderId)
+      : [];
+
+  if (existingMatches.length > 0) {
+    const existingOpen = [...existingMatches].sort(compareMergePrimary)[0]!;
+    const prefToken =
+      input.deliveryPreferencePending === true
+        ? randomBytes(32).toString("base64url")
+        : undefined;
+    const nextEmail = input.customerEmail?.trim() || existingOpen.customerEmail?.trim();
+    const merged: Order = {
+      ...existingOpen,
+      scheduledFor: scheduledIso,
+      externalOrderId: storedExt,
+      customerName: input.customerName,
+      customerPhone: input.customerPhone,
+      recipientName: input.recipientName,
+      addressLine1: input.addressLine1,
+      addressLine2: input.addressLine2?.trim() ? input.addressLine2.trim() : existingOpen.addressLine2,
+      city: input.city,
+      state: input.state,
+      postalCode: input.postalCode,
+      sourceNote: input.sourceNote ?? existingOpen.sourceNote,
+      updatedAt: nowIso(),
+      updatedBy: "ingest-merge",
+    };
+    if (nextEmail) merged.customerEmail = nextEmail;
+    else delete merged.customerEmail;
+    if (input.customerGreetingName?.trim()) {
+      merged.customerGreetingName = input.customerGreetingName.trim();
+    }
+    if (input.amazonDeliveryDatesSnapshot?.length) {
+      merged.amazonDeliveryDatesSnapshot = [...input.amazonDeliveryDatesSnapshot];
+    }
+    if (input.lineItems?.length) {
+      merged.lineItems = [...input.lineItems];
+    }
+    if (input.deliveryPreferencePending === true && prefToken) {
+      merged.deliveryPreferencePending = true;
+      if (input.deliveryPreferenceRespondBy) {
+        merged.deliveryPreferenceRespondBy = input.deliveryPreferenceRespondBy;
+      }
+      merged.deliveryPreferenceToken =
+        existingOpen.deliveryPreferencePending === true && existingOpen.deliveryPreferenceToken
+          ? existingOpen.deliveryPreferenceToken
+          : prefToken;
+    } else if (input.deliveryPreferencePending === false) {
+      delete merged.deliveryPreferencePending;
+      delete merged.deliveryPreferenceRespondBy;
+      delete merged.deliveryPreferenceToken;
+    }
+
+    const ocMerge = getOrdersCollection();
+    if (ocMerge) {
+      await ocMerge.doc(existingOpen.id).set(merged);
+      const dupIds = existingMatches.map((o) => o.id).filter((id) => id !== existingOpen.id);
+      await Promise.all(dupIds.map((id) => ocMerge.doc(id).delete()));
+      await runAutoAllocation();
+    } else {
+      const orders = await readFallbackOrders();
+      const filtered = orders.filter((o) => !existingMatches.some((m) => m.id === o.id));
+      filtered.push(merged);
+      const next = await applyAutoAllocationToOrders(filtered);
+      await writeFallbackPayload(next);
+    }
+    const saved = await getOrderById(existingOpen.id);
+    const finalOrder = saved ?? merged;
+    let notify: import("@/lib/post-order-notify").PostOrderNotifySummary | undefined;
+    if (!input.skipCustomerNotifications) {
+      const smtpEnvPresent = !!(process.env.SMTP_HOST?.trim() && process.env.SMTP_USER?.trim());
+      const mailgunEnvPresent = !!(
+        process.env.MAILGUN_API_KEY?.trim() && process.env.MAILGUN_DOMAIN?.trim()
+      );
+      const twilioEnvPresent = !!(
+        process.env.TWILIO_ACCOUNT_SID?.trim() &&
+        process.env.TWILIO_AUTH_TOKEN?.trim() &&
+        process.env.TWILIO_SMS_FROM?.trim()
+      );
+      notify = {
+        skipped: true,
+        skipReason: "merged-open-order-by-external-id",
+        mailgunEnvPresent,
+        smtpEnvPresent,
+        twilioEnvPresent,
+        customerThankYouEmailSent: false,
+        adminEmailsSent: 0,
+        customerSmsSent: false,
+        message: "Skipped notifications (updated existing open order with same external reference)",
+      };
+    }
+    return { ok: true, order: finalOrder, ...(notify ? { notify } : {}) };
+  }
+
   const id = `ord-${Math.floor(Math.random() * 9000 + 1000)}`;
   const prefToken =
     input.deliveryPreferencePending === true
@@ -220,7 +389,7 @@ export async function createOrder(
     state: input.state,
     postalCode: input.postalCode,
     scheduledFor: scheduledIso,
-    externalOrderId: input.externalOrderId,
+    externalOrderId: storedExt ?? input.externalOrderId,
     ...(input.customerEmail ? { customerEmail: input.customerEmail.trim() } : {}),
     ...(input.customerGreetingName?.trim()
       ? { customerGreetingName: input.customerGreetingName.trim() }

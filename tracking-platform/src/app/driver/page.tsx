@@ -12,6 +12,7 @@ import {
   upcomingWeekFromToday,
 } from "@/lib/availability-store";
 import { DriverAvailabilityPanel } from "@/components/driver-availability-panel";
+import { WrrapdLogo } from "@/components/wrrapd-logo";
 import { formatInTimeZone } from "date-fns-tz";
 import type { DayShiftAvailability } from "@/lib/types";
 
@@ -22,7 +23,8 @@ export default async function DriverPage() {
   if (!session || session.role !== "driver") {
     return (
       <main className="mx-auto min-h-screen max-w-xl px-4 py-10">
-        <h1 className="text-3xl font-semibold">Driver Companion Login</h1>
+        <WrrapdLogo className="h-10 w-auto max-w-[180px]" />
+        <h1 className="mt-3 text-3xl font-semibold">Driver Companion Login</h1>
         <p className="mt-2 text-sm text-slate-600">Sign in to access your delivery queue.</p>
         <DriverLoginForm />
       </main>
@@ -52,7 +54,8 @@ export default async function DriverPage() {
   if (profile.onboardingStatus !== "approved") {
     return (
       <main className="mx-auto max-w-xl px-4 py-8">
-        <h1 className="text-3xl font-semibold">Driver Companion</h1>
+        <WrrapdLogo className="h-10 w-auto max-w-[180px]" />
+        <h1 className="mt-3 text-3xl font-semibold">Driver Companion</h1>
         <p className="mt-2 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
           Your onboarding status is <strong>{profile.onboardingStatus}</strong>. You cannot receive deliveries until approved by admin.
         </p>
@@ -73,7 +76,8 @@ export default async function DriverPage() {
     <main className="mx-auto max-w-3xl px-4 py-6">
       <div className="mb-5 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-semibold">Driver Companion</h1>
+          <WrrapdLogo className="h-10 w-auto max-w-[180px]" />
+          <h1 className="mt-2 text-3xl font-semibold">Driver Companion</h1>
           <p className="text-sm text-slate-600">Welcome, {session.name}</p>
         </div>
         <LogoutButton redirectPath="/driver" />
@@ -98,6 +102,7 @@ export default async function DriverPage() {
               postalCode: o.postalCode,
               status: o.status,
               stopSequence: o.stopSequence,
+              scheduledFor: o.scheduledFor,
             }))}
           />
         </div>

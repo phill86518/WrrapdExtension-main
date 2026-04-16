@@ -116,3 +116,17 @@ export function assignStopSequences(orders: Order[]): Order[] {
     return rest;
   });
 }
+
+/**
+ * Max `stopSequence` per driver + Eastern calendar day (same key as routing).
+ * Used for admin/driver UI as "Stop 2 of 5" when multiple stops share a route day.
+ */
+export function maxStopSequenceByRouteKey(orders: Order[]): Map<string, number> {
+  const m = new Map<string, number>();
+  for (const o of orders) {
+    if (!o.driverId || o.stopSequence == null || !ROUTE_STATUSES.has(o.status)) continue;
+    const key = `${o.driverId}|${formatDateKeyNy(o.scheduledFor)}`;
+    m.set(key, Math.max(m.get(key) ?? 0, o.stopSequence));
+  }
+  return m;
+}

@@ -13,6 +13,10 @@ import { LogoutButton } from "@/components/logout-button";
 import { AdminCreateDeliverySection } from "@/components/admin-create-delivery-section";
 import { PasswordField } from "@/components/password-field";
 import { SelectAllOrdersButton } from "@/components/select-all-orders-button";
+import { WrrapdLogo } from "@/components/wrrapd-logo";
+import { maxStopSequenceByRouteKey } from "@/lib/route-optimization";
+import { formatDateKeyNy } from "@/lib/ny-date";
+import { formatInTimeZone } from "date-fns-tz";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -179,14 +183,16 @@ export default async function AdminPage({
     );
   }
 
+  const routeStopTotals = maxStopSequenceByRouteKey([...active, ...scheduled]);
+
   return (
     <main className="min-h-screen bg-gradient-to-br from-[#9aab9f] via-[#c5cfc9] to-[#a8b8ae]">
       <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
         <div className="mb-8 rounded-2xl border-2 border-[#1a3d2e]/40 bg-[#faf8f4] p-6 shadow-xl shadow-[#0f172a]/20 ring-1 ring-white/40">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#1a3d2e]/80">Wrrapd</p>
-              <h1 className="mt-1 text-3xl font-bold tracking-tight text-[#0f241c]">Command Center</h1>
+              <WrrapdLogo className="h-10 w-auto max-w-[180px] object-contain object-left" />
+              <h1 className="mt-2 text-3xl font-bold tracking-tight text-[#0f241c]">Command Center</h1>
               <p className="mt-1 text-sm font-medium text-[#2d4a38]">Scheduled deliveries and fleet oversight</p>
             </div>
             <div className="flex flex-wrap items-center gap-3">
@@ -283,6 +289,20 @@ export default async function AdminPage({
                       {order.stopSequence != null && (
                         <span className="rounded-lg bg-gradient-to-b from-[#1a3d2e] to-[#0f241c] px-2.5 py-1 text-xs font-bold text-white shadow-md">
                           Stop {order.stopSequence}
+                          {order.driverId
+                            ? (() => {
+                                const key = `${order.driverId}|${formatDateKeyNy(order.scheduledFor)}`;
+                                const total = routeStopTotals.get(key);
+                                const suffix =
+                                  total != null && total > 1 ? ` of ${total}` : "";
+                                const dayEt = formatInTimeZone(
+                                  new Date(order.scheduledFor),
+                                  "America/New_York",
+                                  "MMM d",
+                                );
+                                return `${suffix} · ${dayEt}`;
+                              })()
+                            : ""}
                         </span>
                       )}
                       <p className="text-xs font-bold uppercase tracking-wide text-[#2d5a47]">{order.status}</p>
