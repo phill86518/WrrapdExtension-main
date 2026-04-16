@@ -3,6 +3,15 @@ import { formatInTimeZone } from "date-fns-tz";
 const NY = "America/New_York";
 const WRRAPD_LOGO_URL = "https://pay.wrrapd.com/img/wrrapd-logo-1-small.png";
 
+function firstName(input: string): string {
+  const s = (input || "").trim();
+  if (!s) return "there";
+  const cleaned = s.replace(/[^A-Za-z\s'-]/g, " ").trim();
+  const token = cleaned.split(/\s+/).find(Boolean);
+  if (!token) return "there";
+  return token.charAt(0).toUpperCase() + token.slice(1).toLowerCase();
+}
+
 const wrap = (inner: string) => `<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="utf-8"/><meta name="viewport" content="width=device-width"/></head>
@@ -17,6 +26,7 @@ ${inner}
 
 export function thankYouEmailHtml(input: {
   customerName: string;
+  customerGreetingName?: string;
   orderId: string;
   trackingUrl: string;
   recipientName: string;
@@ -49,9 +59,9 @@ export function thankYouEmailHtml(input: {
   <p style="margin:10px 0 0;font-size:15px;color:rgba(255,255,255,0.92);">Your gift is in caring hands.</p>
 </td></tr>
 <tr><td style="padding:28px 28px 8px;">
-  <p style="margin:0;font-size:16px;color:#1a1a1a;">Hi ${escapeHtml(input.customerName)},</p>
+  <p style="margin:0;font-size:16px;color:#1a1a1a;">Hi ${escapeHtml(firstName(input.customerGreetingName || input.customerName))},</p>
   <p style="margin:14px 0 0;font-size:15px;line-height:1.55;color:#333;">
-    We're honored to wrap and deliver for you. Here is a summary of your Wrrapd delivery.
+    We're honored to gift-wrap for you. Here is a summary of your Wrrapd delivery.
   </p>
 </td></tr>
 <tr><td style="padding:8px 28px 24px;">
@@ -62,11 +72,11 @@ export function thankYouEmailHtml(input: {
       <p style="margin:16px 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:0.12em;color:#6b6560;">Recipient</p>
       <p style="margin:0;font-size:15px;color:#222;">${escapeHtml(input.recipientName)}</p>
       <p style="margin:6px 0 0;font-size:14px;color:#555;line-height:1.45;">${escapeHtml(input.addressLine)}</p>
-      <p style="margin:16px 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:0.12em;color:#6b6560;">Wrrapd delivery (Eastern)</p>
+      <p style="margin:16px 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:0.12em;color:#6b6560;">Wrrapd delivery</p>
       <p style="margin:0;font-size:15px;color:#222;">${escapeHtml(input.scheduledEtLabel)}</p>
       ${
         wrappedRows
-          ? `<p style="margin:16px 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:0.12em;color:#6b6560;">Wrrapd-wrapped items</p>
+          ? `<p style="margin:16px 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:0.12em;color:#6b6560;">Items for gift-wrapping</p>
       <table role="presentation" width="100%">${wrappedRows}</table>`
           : ""
       }
@@ -84,6 +94,7 @@ export function thankYouEmailHtml(input: {
 
 export function deliveryChoiceEmailHtml(input: {
   customerName: string;
+  customerGreetingName?: string;
   orderId: string;
   datesList: string;
   deadlineEtLabel: string;
@@ -94,7 +105,7 @@ export function deliveryChoiceEmailHtml(input: {
   <h1 style="margin:0;font-size:22px;font-weight:600;color:#fff;">Choose how we schedule your Wrrapd delivery</h1>
 </td></tr>
 <tr><td style="padding:26px 28px;">
-  <p style="margin:0;font-size:16px;color:#1a1a1a;">Hi ${escapeHtml(input.customerName)},</p>
+  <p style="margin:0;font-size:16px;color:#1a1a1a;">Hi ${escapeHtml(firstName(input.customerGreetingName || input.customerName))},</p>
   <p style="margin:14px 0 0;font-size:15px;line-height:1.55;color:#333;">
     Your Amazon gift-wrap items show <strong>different arrival dates</strong> (${escapeHtml(input.datesList)}).
     Your Wrrapd visit is currently planned <strong>after the last Amazon arrival</strong> (one combined trip).
@@ -126,10 +137,10 @@ function escapeAttr(s: string): string {
 export function formatOrderScheduleEt(scheduledForIso: string): string {
   const d = new Date(scheduledForIso);
   const day = formatInTimeZone(d, NY, "EEEE, MMMM d, yyyy");
-  return `${day} · 1:00–7:00 PM Eastern window`;
+  return `${day} · 1:00–7:00 PM ET`;
 }
 
-/** Internal / operations — matches legacy Mailgun-style detail for admin@wrrapd.com. */
+/** Internal / operations — detailed admin notification layout. */
 export function adminNewOrderEmailHtml(input: {
   orderId: string;
   externalOrderId?: string;
@@ -195,7 +206,7 @@ export function adminNewOrderEmailHtml(input: {
         ${addr2}${escapeHtml(input.city)}, ${escapeHtml(input.state)} ${escapeHtml(input.postalCode)}
       </p>
       <hr style="margin:16px 0;border:none;border-top:1px solid #e2e8f0;"/>
-      <p style="margin:0 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:#64748b;">Wrrapd window (Eastern)</p>
+      <p style="margin:0 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:#64748b;">Wrrapd window (ET)</p>
       <p style="margin:0;font-size:15px;color:#0f172a;">${escapeHtml(input.scheduledEtLabel)}</p>
       ${
         input.deliveryPreferencePending && input.amazonDeliveryDatesSnapshot?.length
@@ -211,7 +222,7 @@ export function adminNewOrderEmailHtml(input: {
       }
       ${
         wrappedRows
-          ? `<p style="margin:14px 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:#64748b;">Wrrapd items</p>${wrappedRows}`
+          ? `<p style="margin:14px 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:#64748b;">Items for gift-wrapping</p>${wrappedRows}`
           : ""
       }
       <p style="margin:18px 0 0;">

@@ -176,6 +176,7 @@ export type CreateOrderInput = {
   sourceNote?: string;
   externalOrderId?: string;
   customerEmail?: string;
+  customerGreetingName?: string;
   amazonDeliveryDatesSnapshot?: string[];
   deliveryPreferencePending?: boolean;
   deliveryPreferenceRespondBy?: string;
@@ -221,6 +222,9 @@ export async function createOrder(
     scheduledFor: scheduledIso,
     externalOrderId: input.externalOrderId,
     ...(input.customerEmail ? { customerEmail: input.customerEmail.trim() } : {}),
+    ...(input.customerGreetingName?.trim()
+      ? { customerGreetingName: input.customerGreetingName.trim() }
+      : {}),
     ...(input.amazonDeliveryDatesSnapshot?.length
       ? { amazonDeliveryDatesSnapshot: [...input.amazonDeliveryDatesSnapshot] }
       : {}),
@@ -548,4 +552,18 @@ export async function reopenOrderAsAssigned(id: string, updatedBy: string) {
     await writeFallbackPayload(allocated);
   }
   return next;
+}
+
+export async function deleteOrders(ids: string[], _updatedBy: string) {
+  const uniq = [...new Set(ids.map((x) => x.trim()).filter(Boolean))];
+  if (!uniq.length) return 0;
+  const oc = getOrdersCollection();
+  if (oc) {
+    await Promise.all(uniq.map((id) => oc.doc(id).delete()));
+    return uniq.length;
+  }
+  const orders = await readFallbackOrders();
+  const keep = orders.filter((o) => !uniq.includes(o.id));
+  await writeFallbackPayload(keep);
+  return uniq.length;
 }

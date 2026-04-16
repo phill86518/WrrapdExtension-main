@@ -29,23 +29,29 @@ export type PostOrderNotifySummary = {
   message: string;
 };
 
-function adminOrderNotifyEmails(): string[] {
-  const raw = process.env.NOTIFY_ADMIN_ORDER_EMAILS?.trim();
-  if (!raw) return ["admin@wrrapd.com"];
-  const parsed = raw
-    .split(/[,;]/)
-    .map((s) => s.trim())
+/** Default inbox for new-order alerts and thank-you BCC — never the transactional From address (orders@). */
+const OPS_INBOX_DEFAULT = "admin@wrrapd.com";
+
+/**
+ * Single recipient for new-order alerts and thank-you BCC.
+ * NOTIFY_OPS_ADMIN_EMAIL may list multiple addresses; we use only one non-orders@ address so SMTP does not put orders@ in To.
+ */
+function opsInboxRecipient(): string {
+  const raw = process.env.NOTIFY_OPS_ADMIN_EMAIL?.trim();
+  if (!raw) return OPS_INBOX_DEFAULT;
+  const parts = raw
+    .split(/[;,]/)
+    .map((s) => s.trim().toLowerCase())
     .filter(Boolean);
-  const all = [...parsed, "admin@wrrapd.com"];
-  return [...new Set(all.map((x) => x.toLowerCase()))];
+  const notOrders = parts.find((a) => a !== "orders@wrrapd.com");
+  return notOrders || OPS_INBOX_DEFAULT;
 }
 
-/** Admins to BCC on the customer thank-you (same message as customer); excludes customer so we do not duplicate To. */
-function adminEmailsExcludingCustomer(customerEmail: string | undefined): string[] {
-  const admins = adminOrderNotifyEmails();
+/** BCC on customer thank-you: same ops inbox only; skip if customer is already that address. */
+function thankYouBccRecipient(customerEmail: string | undefined, opsInbox: string): string | undefined {
   const ce = customerEmail?.trim().toLowerCase();
-  if (!ce) return admins;
-  return admins.filter((e) => e.toLowerCase() !== ce);
+  if (ce && ce === opsInbox.toLowerCase()) return undefined;
+  return opsInbox;
 }
 
 function envFlags() {
@@ -85,10 +91,10 @@ export async function sendPostOrderNotifications(order: Order): Promise<PostOrde
     };
   }
 
-  const adminTos = adminOrderNotifyEmails();
+  const opsInbox = opsInboxRecipient();
   console.info("[post-order-notify] start", order.id, {
     hasCustomerEmail: Boolean(order.customerEmail?.trim()),
-    adminRecipients: adminTos.length,
+    opsInbox,
   });
 
   const origin = getPublicOrigin();
@@ -112,54 +118,51 @@ export async function sendPostOrderNotifications(order: Order): Promise<PostOrde
 
   if (order.customerEmail?.trim()) {
     try {
-      const adminBcc = adminEmailsExcludingCustomer(order.customerEmail.trim());
+      const bcc = thankYouBccRecipient(order.customerEmail.trim(), opsInbox);
       const ok = await sendTransactionalEmail({
         to: order.customerEmail.trim(),
         subject: thankYouSubject,
         html: thankYouHtml,
-        ...(adminBcc.length ? { bcc: adminBcc.join(", ") } : {}),
+        ...(bcc ? { bcc } : {}),
       });
       base.customerThankYouEmailSent = ok;
-      if (ok && adminBcc.length) {
-        console.info("[post-order-notify] thank-you sent with admin BCC", order.id, { bccCount: adminBcc.length });
+      if (ok && bcc) {
+        console.info("[post-order-notify] thank-you sent with ops BCC", order.id, { bcc });
       }
     } catch (e) {
       console.error("[post-order-notify] customer thank-you email failed", order.id, e);
     }
   }
 
-  if (adminTos.length) {
-    const adminHtml = adminNewOrderEmailHtml({
-      orderId: order.id,
-      externalOrderId: order.externalOrderId,
-      customerName: order.customerName,
-      customerPhone: order.customerPhone,
-      customerEmail: order.customerEmail,
-      recipientName: order.recipientName,
-      addressLine1: order.addressLine1,
-      addressLine2: order.addressLine2,
-      city: order.city,
-      state: order.state,
-      postalCode: order.postalCode,
-      scheduledEtLabel,
-      trackingUrl,
-      sourceNote: order.sourceNote,
-      deliveryPreferencePending: order.deliveryPreferencePending,
-      amazonDeliveryDatesSnapshot: order.amazonDeliveryDatesSnapshot,
-      lineItems: order.lineItems,
+  const adminHtml = adminNewOrderEmailHtml({
+    orderId: order.id,
+    externalOrderId: order.externalOrderId,
+    customerName: order.customerName,
+    customerPhone: order.customerPhone,
+    customerEmail: order.customerEmail,
+    recipientName: order.recipientName,
+    addressLine1: order.addressLine1,
+    addressLine2: order.addressLine2,
+    city: order.city,
+    state: order.state,
+    postalCode: order.postalCode,
+    scheduledEtLabel,
+    trackingUrl,
+    sourceNote: order.sourceNote,
+    deliveryPreferencePending: order.deliveryPreferencePending,
+    amazonDeliveryDatesSnapshot: order.amazonDeliveryDatesSnapshot,
+    lineItems: order.lineItems,
+  });
+  const adminSubject = `New Wrrapd order ${order.id}${order.externalOrderId ? ` (${order.externalOrderId})` : ""}`;
+  try {
+    const ok = await sendTransactionalEmail({
+      to: opsInbox,
+      subject: adminSubject,
+      html: adminHtml,
     });
-    const adminSubject = `New Wrrapd order ${order.id}${order.externalOrderId ? ` (${order.externalOrderId})` : ""}`;
-    try {
-      // One SMTP/Mailgun message to all admins avoids duplicate suppression and rate limits from back-to-back sends.
-      const ok = await sendTransactionalEmail({
-        to: adminTos.join(", "),
-        subject: adminSubject,
-        html: adminHtml,
-      });
-      if (ok) base.adminEmailsSent = adminTos.length;
-    } catch (e) {
-      console.error("[post-order-notify] admin new-order email failed", order.id, e);
-    }
+    if (ok) base.adminEmailsSent = 1;
+  } catch (e) {
+    console.error("[post-order-notify] admin new-order email failed", order.id, e);
   }
 
   const e164 = toUsE164(order.customerPhone);
@@ -223,18 +226,16 @@ export async function sendPostOrderNotifications(order: Order): Promise<PostOrde
 
   const parts: string[] = [];
   if (!emailTransportPresent) {
-    parts.push("No email transport on Cloud Run (set SMTP_HOST, SMTP_USER, SMTP_PASS or Mailgun vars)");
+    parts.push("No email transport on Cloud Run (set SMTP_HOST, SMTP_USER, SMTP_PASS for SiteGround, or Mailgun vars as fallback)");
   } else if (order.customerEmail?.trim() && !base.customerThankYouEmailSent) {
     parts.push("Customer thank-you email not sent (check Cloud Run logs [notify])");
   } else if (order.customerEmail?.trim() && base.customerThankYouEmailSent) {
     parts.push("Customer thank-you email sent");
   }
-  if (adminTos.length && base.adminEmailsSent === 0 && emailTransportPresent) {
-    parts.push(`Admin emails 0/${adminTos.length} (check NOTIFY_ADMIN_ORDER_EMAILS and email logs)`);
-  } else if (adminTos.length) {
-    parts.push(`Admin emails ${base.adminEmailsSent}/${adminTos.length}`);
-  } else if (!adminTos.length) {
-    parts.push("No NOTIFY_ADMIN_ORDER_EMAILS set");
+  if (base.adminEmailsSent === 0 && emailTransportPresent) {
+    parts.push(`New-order alert not sent (check NOTIFY_OPS_ADMIN_EMAIL / ${opsInbox} and email logs)`);
+  } else if (base.adminEmailsSent > 0) {
+    parts.push(`New-order alert sent to ${opsInbox}`);
   }
   if (e164) {
     parts.push(base.customerSmsSent ? "SMS queued" : "SMS not sent (check Twilio env / logs)");

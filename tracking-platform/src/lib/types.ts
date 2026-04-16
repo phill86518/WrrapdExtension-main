@@ -46,6 +46,8 @@ export type Order = {
   /** Per driver + calendar day (ET): optimized stop order (1 = first after leaving depot) */
   stopSequence?: number;
   customerEmail?: string;
+  /** Amazon header "Deliver to {Name}" — used for thank-you salutation when set */
+  customerGreetingName?: string;
   /** Amazon YYYY-MM-DD values seen at ingest when customer must choose combined vs fastest Wrrapd */
   amazonDeliveryDatesSnapshot?: string[];
   deliveryPreferencePending?: boolean;

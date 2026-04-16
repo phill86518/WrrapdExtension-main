@@ -113,7 +113,7 @@ gcloud run deploy wrrapd-tracking \
   --set-env-vars APP_SESSION_SECRET=change-me,APP_ADMIN_PASSWORD=change-me,APP_DRIVER_PASSWORD=change-me
 ```
 
-In production, prefer **GitHub Actions → tracking-platform-cloud-run → Run workflow** so secrets and env are not pasted into the shell. Manual deploys must not drop existing Cloud Run env vars (Mailgun, Firestore, etc.); use the console **Edit & deploy new revision** or `--set-env-vars` / `--update-env-vars` only when you intend to change them.
+In production, prefer **GitHub Actions → tracking-platform-cloud-run → Run workflow** so secrets and env are not pasted into the shell. Manual deploys must not drop existing Cloud Run env vars (SMTP, Firestore, etc.); use the console **Edit & deploy new revision** or `--set-env-vars` / `--update-env-vars` only when you intend to change them.
 
 ### Production persistence (Firestore — required on Cloud Run)
 

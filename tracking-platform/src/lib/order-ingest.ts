@@ -46,6 +46,8 @@ export type IngestOrderPayload = {
     email?: unknown;
   };
   customerEmail?: unknown;
+  /** First name from Amazon "Deliver to …" header (extension) */
+  greetingFirstName?: unknown;
   skipCustomerNotifications?: unknown;
   lineItems?: unknown;
 };
@@ -155,6 +157,7 @@ export function parseIngestOrderPayload(body: unknown): IngestSuccess | IngestFa
   const customerEmail =
     str(p.customerEmail) ||
     str(p.buyer && typeof p.buyer === "object" ? (p.buyer as { email?: unknown }).email : undefined);
+  const customerGreetingName = str((p as { greetingFirstName?: unknown }).greetingFirstName);
   const addressLine1 = str(p.addressLine1) || str(sa?.line1);
   const addressLine2 = str(p.addressLine2) || str(sa?.line2);
   const city = str(p.city) || str(sa?.city);
@@ -268,6 +271,7 @@ export function parseIngestOrderPayload(body: unknown): IngestSuccess | IngestFa
       ...(externalOrderId ? { externalOrderId } : {}),
       ...(sourceNote ? { sourceNote } : {}),
       ...(customerEmail ? { customerEmail } : {}),
+      ...(customerGreetingName ? { customerGreetingName } : {}),
       ...(lineItems?.length ? { lineItems } : {}),
       ...(skipCustomerNotifications ? { skipCustomerNotifications: true } : {}),
       ...(deliveryPreferencePending
@@ -305,6 +309,7 @@ export function orderIngestFieldGuide(): {
       "customerName",
       "customerPhone",
       "customerEmail",
+      "customerGreetingName",
       "recipientName",
       "addressLine1",
       "addressLine2",
@@ -326,6 +331,7 @@ export function orderIngestFieldGuide(): {
       amazonDeliveryDays: "array of YYYY-MM-DD with wrrapdAmazonGrouping",
       wrrapdAmazonGrouping: "earliest | together | separate | pending (email/SMS choice)",
       customerEmail: "thank-you + delivery-choice emails",
+      greetingFirstName: "customerGreetingName (Amazon Deliver-to first name)",
       "buyer.email": "customerEmail",
       orderNumber: "externalOrderId (+ sourceNote)",
       "shippingAddress.line1": "addressLine1",

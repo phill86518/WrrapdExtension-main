@@ -10,7 +10,7 @@ import {
 import { getSession } from "@/lib/auth";
 import { SameOriginLogoutLink } from "@/components/same-origin-logout-link";
 import { LogoutButton } from "@/components/logout-button";
-import { AdminCreateDeliveryForm } from "@/components/admin-create-delivery-form";
+import { AdminCreateDeliverySection } from "@/components/admin-create-delivery-section";
 import { PasswordField } from "@/components/password-field";
 import { SelectAllOrdersButton } from "@/components/select-all-orders-button";
 import { revalidatePath } from "next/cache";
@@ -84,10 +84,10 @@ async function deleteSelectedOrdersAction(formData: FormData) {
 }
 
 function orderRowClass(status: string) {
-  if (status === "en_route") return "border-l-4 border-l-sky-500 bg-sky-50/40";
-  if (status === "delivered") return "border-l-4 border-l-emerald-600 bg-emerald-50/35";
-  if (status === "cancelled") return "border-l-4 border-l-zinc-400 bg-zinc-100/80";
-  return "bg-white";
+  if (status === "en_route") return "border-l-4 border-l-sky-500 bg-sky-50/50";
+  if (status === "delivered") return "border-l-4 border-l-emerald-600 bg-emerald-50/40";
+  if (status === "cancelled") return "border-l-4 border-l-slate-400 bg-slate-100/90";
+  return "bg-white/90";
 }
 
 export default async function AdminPage({
@@ -180,45 +180,39 @@ export default async function AdminPage({
   }
 
   return (
-    <main className="min-h-screen bg-zinc-50/90">
+    <main className="min-h-screen bg-gradient-to-b from-slate-100 via-white to-slate-50">
       <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-zinc-900">Command Center</h1>
-          <p className="mt-1 text-sm text-zinc-500">Scheduled deliveries and fleet oversight</p>
+        <div className="mb-10 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Command Center</h1>
+            <p className="mt-1 text-sm text-slate-500">Scheduled deliveries and fleet oversight</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <AdminCreateDeliverySection createOrderAction={createOrderAction} createError={query.createError} />
+            <LogoutButton redirectPath="/admin" />
+          </div>
         </div>
-        <LogoutButton redirectPath="/admin" />
-      </div>
 
-      <section className="mb-8 rounded-2xl border border-zinc-200/90 bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-zinc-900">Create scheduled delivery</h2>
-        <p className="mt-0.5 text-sm text-zinc-500">Manual entry for ops-created stops</p>
-        <AdminCreateDeliveryForm action={createOrderAction} />
-        {query.createError && (
-          <p className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900">
-            {query.createError}
-          </p>
-        )}
-      </section>
-
-      <section className="mb-10 grid gap-4 md:grid-cols-2">
-        <a
-          href="/admin/drivers"
-          className="group rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm transition hover:border-zinc-300 hover:shadow-md"
-        >
-          <h3 className="font-semibold text-zinc-900">Driver onboarding</h3>
-          <p className="mt-1 text-sm leading-relaxed text-zinc-600">
-            Approve or reject drivers and apply manual availability overrides.
-          </p>
-        </a>
-        <a
-          href="/admin/reports"
-          className="group rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm transition hover:border-zinc-300 hover:shadow-md"
-        >
-          <h3 className="font-semibold text-zinc-900">Delivery reports</h3>
-          <p className="mt-1 text-sm leading-relaxed text-zinc-600">View daily metrics and export CSV for operations.</p>
-        </a>
-      </section>
+        <section className="mb-10 grid gap-4 md:grid-cols-2">
+          <a
+            href="/admin/drivers"
+            className="group rounded-2xl border border-slate-200/90 bg-white/90 p-6 shadow-sm shadow-slate-900/5 backdrop-blur-sm transition hover:border-indigo-200 hover:shadow-md"
+          >
+            <h3 className="font-semibold text-slate-900">Driver onboarding</h3>
+            <p className="mt-1 text-sm leading-relaxed text-slate-600">
+              Approve or reject drivers and apply manual availability overrides.
+            </p>
+          </a>
+          <a
+            href="/admin/reports"
+            className="group rounded-2xl border border-slate-200/90 bg-white/90 p-6 shadow-sm shadow-slate-900/5 backdrop-blur-sm transition hover:border-indigo-200 hover:shadow-md"
+          >
+            <h3 className="font-semibold text-slate-900">Delivery reports</h3>
+            <p className="mt-1 text-sm leading-relaxed text-slate-600">
+              View daily metrics and export CSV for operations.
+            </p>
+          </a>
+        </section>
 
       <div className="grid gap-8 lg:grid-cols-3">
         {[
@@ -228,29 +222,35 @@ export default async function AdminPage({
         ].map((group) => {
           const deleteFormId = `delete-${group.title.toLowerCase().replace(/\s+/g, "-")}`;
           return (
-          <section key={group.title} className="rounded-2xl border border-zinc-200/90 bg-white p-5 shadow-sm">
-            <h2 className="text-lg font-semibold text-zinc-900">{group.title}</h2>
+          <section
+            key={group.title}
+            className="rounded-2xl border border-slate-200/90 bg-white/90 p-5 shadow-sm shadow-slate-900/5 backdrop-blur-sm"
+          >
+            <h2 className="text-lg font-semibold text-slate-900">{group.title}</h2>
             <form
               id={deleteFormId}
               action={deleteSelectedOrdersAction}
-              className="mt-4 flex flex-col gap-3 border-b border-zinc-100 pb-4 sm:flex-row sm:flex-wrap sm:items-center"
+              className="mt-4 flex flex-col gap-3 border-b border-slate-100 pb-4 sm:flex-row sm:flex-wrap sm:items-center"
             >
               <div className="flex flex-wrap items-center gap-2">
                 <SelectAllOrdersButton formId={deleteFormId} />
                 <button
-                  className="inline-flex items-center justify-center rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-800 shadow-sm transition hover:bg-red-50"
+                  className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:border-rose-300 hover:bg-rose-50 hover:text-rose-900"
                   type="submit"
                 >
                   Delete selected
                 </button>
               </div>
-              <span className="text-xs leading-snug text-zinc-500 sm:ml-auto sm:max-w-[220px] sm:text-right">
+              <span className="text-xs leading-snug text-slate-500 sm:ml-auto sm:max-w-[220px] sm:text-right">
                 Select orders below, then delete. This cannot be undone.
               </span>
             </form>
             <div className="mt-4 space-y-3">
               {group.items.map((order) => (
-                <div key={order.id} className={`rounded-xl border border-zinc-200 p-4 shadow-sm ${orderRowClass(order.status)}`}>
+                <div
+                  key={order.id}
+                  className={`rounded-xl border border-slate-200/90 p-4 shadow-sm ${orderRowClass(order.status)}`}
+                >
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
                       <input
@@ -258,35 +258,32 @@ export default async function AdminPage({
                         name="orderIds"
                         value={order.id}
                         form={deleteFormId}
-                        className="h-4 w-4"
+                        className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                         title={`Select ${order.id} for deletion`}
                       />
                       <div className="leading-tight">
-                        <p className="font-medium">
-                          {order.externalOrderId?.trim() || order.id}
-                        </p>
-                        {order.externalOrderId?.trim() && (
-                          <p className="text-[11px] text-zinc-500">Internal ID: {order.id}</p>
-                        )}
+                        <p className="font-medium text-slate-900">{order.externalOrderId?.trim() || order.id}</p>
                       </div>
                     </div>
                     <div className="flex flex-wrap items-center justify-end gap-2">
                       {order.stopSequence != null && (
-                        <span className="rounded-md bg-zinc-800 px-2 py-0.5 text-xs font-medium text-white">
+                        <span className="rounded-md bg-slate-800 px-2 py-0.5 text-xs font-medium text-white">
                           Stop {order.stopSequence}
                         </span>
                       )}
-                      <p className="text-xs uppercase tracking-wide">{order.status}</p>
+                      <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{order.status}</p>
                     </div>
                   </div>
-                  <p className="text-sm">{order.recipientName}</p>
-                  <p className="text-sm text-zinc-600">
+                  <p className="text-sm text-slate-800">{order.recipientName}</p>
+                  <p className="text-sm text-slate-600">
                     {order.addressLine1}, {order.city}, {order.state} {order.postalCode}
                   </p>
-                  <p className="mt-1 text-xs text-zinc-600">Scheduled: {new Date(order.scheduledFor).toLocaleString()}</p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    Scheduled: {new Date(order.scheduledFor).toLocaleString()}
+                  </p>
                   <a
                     href={`/admin/orders/${order.id}`}
-                    className="mt-3 inline-flex items-center rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-sm font-medium text-zinc-800 no-underline shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50"
+                    className="mt-3 inline-flex items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800 no-underline shadow-sm transition hover:border-indigo-300 hover:bg-indigo-50/60"
                   >
                     View details
                   </a>
@@ -296,7 +293,7 @@ export default async function AdminPage({
                     <select
                       name="status"
                       defaultValue={order.status}
-                      className="rounded-lg border border-zinc-200 bg-white px-2 py-1.5 text-sm text-zinc-900 shadow-sm focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900/10"
+                      className="rounded-xl border border-slate-200 bg-white px-2 py-2 text-sm text-slate-900 shadow-sm focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                     >
                       <option value="scheduled">scheduled</option>
                       <option value="assigned">assigned</option>
@@ -305,7 +302,7 @@ export default async function AdminPage({
                       <option value="cancelled">cancelled</option>
                     </select>
                     <button
-                      className="rounded-lg border border-zinc-300 bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition hover:bg-zinc-800"
+                      className="rounded-xl bg-gradient-to-b from-slate-800 to-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-slate-900/15 transition hover:from-slate-700 hover:to-slate-800"
                       type="submit"
                     >
                       Update status
@@ -317,7 +314,7 @@ export default async function AdminPage({
                       <input type="hidden" name="orderId" value={order.id} />
                       <button
                         type="submit"
-                        className="w-full rounded-lg border border-zinc-300 bg-zinc-50 px-3 py-2 text-left text-sm font-medium text-zinc-800 transition hover:bg-zinc-100"
+                        className="w-full rounded-xl border border-amber-200 bg-amber-50/80 px-3 py-2.5 text-left text-sm font-medium text-amber-950 transition hover:bg-amber-100/80"
                       >
                         Reopen as assigned (clears proof & last GPS — use if completed by mistake)
                       </button>
@@ -328,7 +325,7 @@ export default async function AdminPage({
                     <input type="hidden" name="orderId" value={order.id} />
                     <select
                       name="driverId"
-                      className="min-w-0 flex-1 rounded-lg border border-zinc-200 bg-white px-2 py-1.5 text-sm text-zinc-900 shadow-sm focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900/10 sm:flex-none sm:min-w-[10rem]"
+                      className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-2 py-2 text-sm text-slate-900 shadow-sm focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 sm:flex-none sm:min-w-[10rem]"
                     >
                       {drivers.map((d) => (
                         <option key={d.id} value={d.id}>
@@ -337,7 +334,7 @@ export default async function AdminPage({
                       ))}
                     </select>
                     <button
-                      className="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-800 shadow-sm transition hover:bg-zinc-50"
+                      className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm transition hover:border-indigo-300 hover:bg-indigo-50/50"
                       type="submit"
                     >
                       Assign driver
@@ -345,7 +342,7 @@ export default async function AdminPage({
                   </form>
                 </div>
               ))}
-              {group.items.length === 0 && <p className="py-6 text-center text-sm text-zinc-500">No orders yet.</p>}
+              {group.items.length === 0 && <p className="py-6 text-center text-sm text-slate-500">No orders yet.</p>}
             </div>
           </section>
         )})}

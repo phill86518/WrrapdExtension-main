@@ -1,4 +1,4 @@
-/** Mailgun or SMTP (e.g. SiteGround) for email; Twilio for SMS. */
+/** Email: SMTP (e.g. SiteGround) when SMTP_HOST+SMTP_USER+SMTP_PASS are set; else optional Mailgun. Twilio for SMS. */
 
 import nodemailer from "nodemailer";
 
@@ -90,8 +90,8 @@ async function sendTransactionalEmailSmtp(opts: {
 }
 
 /**
- * Send HTML email: SMTP if SMTP_HOST+SMTP_USER+SMTP_PASS set, else Mailgun.
- * Mailgun env: MAILGUN_API_KEY, MAILGUN_DOMAIN. NOTIFY_EMAIL_FROM optional for both.
+ * Send HTML email: prefers SMTP (SiteGround-style); if unset, uses Mailgun API when MAILGUN_API_KEY+MAILGUN_DOMAIN are set.
+ * NOTIFY_EMAIL_FROM optional for both paths.
  */
 export async function sendTransactionalEmail(opts: {
   to: string;

@@ -12,16 +12,18 @@ function minDatetimeLocal(): string {
 
 export function AdminCreateDeliveryForm({
   action,
+  inModal,
 }: {
   action: (formData: FormData) => void | Promise<void>;
+  inModal?: boolean;
 }) {
   const min = useMemo(() => minDatetimeLocal(), []);
 
   const field =
-    "rounded-lg border border-zinc-200 bg-white px-3 py-2.5 text-sm text-zinc-900 shadow-sm placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900/10";
+    "rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20";
 
   return (
-    <form action={action} className="mt-5 grid gap-3 md:grid-cols-4">
+    <form action={action} className={`grid gap-3 md:grid-cols-4 ${inModal ? "" : "mt-5"}`}>
       <input required name="customerName" placeholder="Customer name" className={field} />
       <input required name="customerPhone" placeholder="Customer phone" className={field} />
       <input required name="recipientName" placeholder="Recipient name" className={field} />
@@ -37,11 +39,11 @@ export function AdminCreateDeliveryForm({
         suppressHydrationWarning
         className={`${field} md:col-span-2`}
       />
-      <p className="text-xs leading-relaxed text-zinc-500 md:col-span-4">
+      <p className="text-xs leading-relaxed text-slate-500 md:col-span-4">
         Past dates are disabled. Production logic is Amazon date + 1 day. Auto-allocation minimizes driver usage and only spills to a second driver when a day exceeds 10 stops.
       </p>
       <button
-        className="rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-zinc-800 md:col-span-4 md:max-w-xs"
+        className="rounded-xl bg-gradient-to-b from-indigo-600 to-indigo-700 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-indigo-600/20 transition hover:from-indigo-500 hover:to-indigo-600 md:col-span-4 md:max-w-xs"
         type="submit"
       >
         Create delivery

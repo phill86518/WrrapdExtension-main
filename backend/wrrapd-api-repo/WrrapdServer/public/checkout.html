@@ -586,10 +586,16 @@
             async function syncGifteeCityStateFromZip() {
                 const zipInput = document.getElementById('postal_code');
                 const zip = zipInput.value.replace(/[^0-9]/g, '').substring(0, 5);
-                if (zip.length !== 5) return;
+                if (zip.length !== 5) {
+                    syncBillingFromDeliveryIfLinked();
+                    return;
+                }
                 try {
                     const r = await fetch(`https://api.zippopotam.us/us/${zip}`);
-                    if (!r.ok) return;
+                    if (!r.ok) {
+                        syncBillingFromDeliveryIfLinked();
+                        return;
+                    }
                     const data = await r.json();
                     const p = data.places && data.places[0];
                     if (p) {
@@ -599,6 +605,7 @@
                 } catch (e) {
                     /* ignore zippopotam lookup failures */
                 }
+                syncBillingFromDeliveryIfLinked();
             }
 
             const setDefaultAddress = () => {
@@ -622,34 +629,58 @@
                 document.getElementById('billing-country').value = 'US';
             };
 
+            function getDeliveryAddressFromForm() {
+                const line2El = document.getElementById('line2');
+                return {
+                    name: document.getElementById('name').value,
+                    line1: document.getElementById('line1').value,
+                    line2: line2El ? line2El.value : '',
+                    city: document.getElementById('city').value,
+                    state: document.getElementById('state').value,
+                    postal_code: document.getElementById('postal_code').value,
+                    country: document.getElementById('country').value || 'US',
+                };
+            }
+
+            function copyDeliveryToBillingFields() {
+                const d = getDeliveryAddressFromForm();
+                document.getElementById('billing-name').value = d.name || '';
+                document.getElementById('billing-line1').value = d.line1 || '';
+                document.getElementById('billing-line2').value = d.line2 || '';
+                document.getElementById('billing-city').value = d.city || '';
+                document.getElementById('billing-state').value = d.state || '';
+                document.getElementById('billing-postal_code').value = (d.postal_code || '')
+                    .replace(/[^0-9-]/g, '')
+                    .substring(0, 10);
+                document.getElementById('billing-country').value = d.country || 'US';
+            }
+
+            /** When "Billing same as delivery" is checked, billing fields stay a live mirror of delivery (including autocomplete). */
+            function syncBillingFromDeliveryIfLinked() {
+                const cb = document.getElementById('use-default-address');
+                if (!cb || !cb.checked) return;
+                copyDeliveryToBillingFields();
+                if (typeof scheduleBillingAddressValidation === 'function') scheduleBillingAddressValidation();
+                if (typeof updatePayButtonState === 'function') updatePayButtonState();
+            }
+
             // Handle checkbox change - show/hide billing address section
             document.getElementById('use-default-address').addEventListener('change', (event) => {
                 const billingSection = document.getElementById('billing-address-section');
                 
                 if (event.target.checked) {
                     billingSection.style.display = 'none';
-                    clearBillingAddressFields();
+                    copyDeliveryToBillingFields();
                 } else {
                     billingSection.style.display = 'block';
-                    if (payload && payload.address) {
-                        const a = payload.address;
-                        document.getElementById('billing-name').value = a.name || '';
-                        document.getElementById('billing-line1').value = a.street ? String(a.street).split(',')[0].trim() : '';
-                        document.getElementById('billing-line2').value = '';
-                        document.getElementById('billing-city').value = a.city || '';
-                        document.getElementById('billing-postal_code').value = (a.postalCode || '').replace(/[^0-9-]/g, '').substring(0, 10);
-                        document.getElementById('billing-state').value = a.state || '';
-                        const countryCode = a.country || 'US';
-                        const normalizedCountry = (countryCode === 'United States' || countryCode === 'USA') ? 'US' : 
-                                                   (countryCode === 'Canada' || countryCode === 'CA') ? 'CA' : countryCode;
-                        document.getElementById('billing-country').value = normalizedCountry;
-                    }
+                    copyDeliveryToBillingFields();
                 }
                 if (typeof scheduleBillingAddressValidation === 'function') scheduleBillingAddressValidation();
                 if (typeof updatePayButtonState === 'function') updatePayButtonState();
             });
 
             setDefaultAddress();
+            syncBillingFromDeliveryIfLinked();
             await syncGifteeCityStateFromZip();
 
             // Tiny inline message under ZIP only when ZIP is outside allowed delivery area
@@ -805,6 +836,7 @@
                 if (c.state) document.getElementById('state').value = c.state;
                 if (c.line1) document.getElementById('line1').value = c.line1;
                 if (c.line2 !== undefined) document.getElementById('line2').value = c.line2 || '';
+                syncBillingFromDeliveryIfLinked();
             }
 
             /** PREMISE-only was too strict for many real US addresses; still require meaningful geocode where possible. */
@@ -1212,6 +1244,7 @@
                         gifteeGoogleValidated = false;
                         lastGifteeValidationHint = validateShippingZipCode(zipVal).message || 'Fix ZIP code first.';
                         if (seq === gifteeValidationSeq) updatePayButtonState();
+                        syncBillingFromDeliveryIfLinked();
                         return;
                     }
                     const line1v = document.getElementById('line1').value.trim();
@@ -1222,6 +1255,7 @@
                         gifteeGoogleValidated = false;
                         lastGifteeValidationHint = 'Fill giftee name, street, city, and state.';
                         if (seq === gifteeValidationSeq) updatePayButtonState();
+                        syncBillingFromDeliveryIfLinked();
                         return;
                     }
                     const addr = {
@@ -1252,6 +1286,7 @@
                     gifteeGoogleValidated = !!r.valid;
                     lastGifteeValidationHint = r.valid ? '' : (r.message || 'Google could not confirm this street address. Check line 1 includes number and street.');
                     updatePayButtonState();
+                    syncBillingFromDeliveryIfLinked();
                 }, 700);
             }
 
@@ -1485,6 +1520,7 @@
                         if (city) document.getElementById('city').value = city;
                         if (state) document.getElementById('state').value = state;
                         if (postal) document.getElementById('postal_code').value = postal.replace(/[^0-9-]/g, '').substring(0, 10);
+                        syncBillingFromDeliveryIfLinked();
                         syncGifteeCityStateFromZip().then(function () {
                             updateGifteeZipOutsideDeliveryMessage();
                             if (typeof scheduleGifteeAddressValidation === 'function') scheduleGifteeAddressValidation();
@@ -1588,8 +1624,21 @@
             ['name', 'line1', 'city', 'state', 'postal_code'].forEach(function (id) {
                 const el = document.getElementById(id);
                 if (!el) return;
-                el.addEventListener('input', scheduleGifteeAddressValidation);
-                el.addEventListener('change', scheduleGifteeAddressValidation);
+                el.addEventListener('input', function () {
+                    scheduleGifteeAddressValidation();
+                    syncBillingFromDeliveryIfLinked();
+                });
+                el.addEventListener('change', function () {
+                    scheduleGifteeAddressValidation();
+                    syncBillingFromDeliveryIfLinked();
+                });
+                // Browser autofill / Places often commits without firing input; blur keeps billing in sync when linked.
+                el.addEventListener('blur', function () {
+                    syncBillingFromDeliveryIfLinked();
+                });
+                el.addEventListener('compositionend', function () {
+                    syncBillingFromDeliveryIfLinked();
+                });
             });
 
             document.getElementById('email').addEventListener('input', updatePayButtonState);
@@ -1738,6 +1787,8 @@
                             hasCorrections = true;
                         }
                     }
+
+                    syncBillingFromDeliveryIfLinked();
                     
                     // Show confirmation message for auto-corrected fields
                     if (hasCorrections && shippingValidation.correctedComponents) {
