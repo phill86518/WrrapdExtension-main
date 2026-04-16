@@ -77,9 +77,23 @@ export async function computeAssignmentsForOrders(
       if (hasShiftCoverage) approved.push(d);
     }
 
-    if (approved.length === 0) {
+    /** If no one is marked available for that shift, still assign to an approved driver (ops expects auto-assign). */
+    let assignPool = approved;
+    if (assignPool.length === 0) {
+      const onboarded: Driver[] = [];
+      for (const d of driversSorted) {
+        const p = await getDriverProfile(d.id);
+        if (p.onboardingStatus === "approved") onboarded.push(d);
+      }
+      assignPool = onboarded;
+    }
+
+    if (assignPool.length === 0) {
       continue;
     }
+
+    /** Fell back because no driver had shift availability — assign to lowest-rank approved driver anyway. */
+    const relaxedAvailability = approved.length === 0;
 
     const assignOne = async (o: Order, driver: Driver) => {
       const avail = await isDriverAvailableOnDate(
@@ -92,8 +106,15 @@ export async function computeAssignmentsForOrders(
       return avail;
     };
 
-    const primary = approved[0];
-    const secondary = approved[1];
+    const primary = assignPool[0];
+    const secondary = assignPool[1];
+
+    if (relaxedAvailability) {
+      for (const o of dayOrders) {
+        result.set(o.id, { driverId: primary.id, driverName: primary.name });
+      }
+      continue;
+    }
 
     if (dayOrders.length <= MAX_PER_PRIMARY_DRIVER) {
       for (const o of dayOrders) {

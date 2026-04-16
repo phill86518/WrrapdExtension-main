@@ -120,6 +120,9 @@ function parseLineItems(v: unknown, invalidFields: string[]): OrderLineItem[] | 
     const flowerDesign = str(row.flowerDesign);
     const uploadedDesignPath = str(row.uploadedDesignPath);
     const uploadedDesignFileName = str(row.uploadedDesignFileName);
+    const wrappingDesignImageUrl = str(row.wrappingDesignImageUrl);
+    const wrappingDesignStoragePath = str(row.wrappingDesignStoragePath);
+    const wrappingDesignFileName = str(row.wrappingDesignFileName);
     const aiDesignTitle = str(row.aiDesignTitle);
     const aiDesignDescription = str(row.aiDesignDescription);
     const giftMessage = str(row.giftMessage);
@@ -134,6 +137,9 @@ function parseLineItems(v: unknown, invalidFields: string[]): OrderLineItem[] | 
       ...(flowerDesign ? { flowerDesign } : {}),
       ...(uploadedDesignPath ? { uploadedDesignPath } : {}),
       ...(uploadedDesignFileName ? { uploadedDesignFileName } : {}),
+      ...(wrappingDesignImageUrl ? { wrappingDesignImageUrl } : {}),
+      ...(wrappingDesignStoragePath ? { wrappingDesignStoragePath } : {}),
+      ...(wrappingDesignFileName ? { wrappingDesignFileName } : {}),
       ...(aiDesignTitle ? { aiDesignTitle } : {}),
       ...(aiDesignDescription ? { aiDesignDescription } : {}),
       ...(giftMessage ? { giftMessage } : {}),

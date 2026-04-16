@@ -258,11 +258,15 @@
                 <span class="error-message"></span>
             </div>
         </div>
+        <div class="form-group">
+            <label for="gifter-full-name">Gifter&apos;s full name*</label>
+            <input type="text" id="gifter-full-name" name="gifter-full-name" required autocomplete="name" placeholder="Your name as the purchaser">
+        </div>
 
         <div class="heading-address">Delivery address (Giftee address)</div>
         <div class="form-group">
-            <label for="name">Giftee full name</label>
-            <input type="text" id="name" name="name" autocomplete="name" placeholder="Recipient name">
+            <label for="name">Giftee full name*</label>
+            <input type="text" id="name" name="name" required autocomplete="shipping name" placeholder="Recipient name">
         </div>
         <input type="hidden" id="line2" name="line2" value="">
         <div class="form-group">
@@ -644,7 +648,9 @@
 
             function copyDeliveryToBillingFields() {
                 const d = getDeliveryAddressFromForm();
-                document.getElementById('billing-name').value = d.name || '';
+                const gifterEl = document.getElementById('gifter-full-name');
+                const gifterName = gifterEl && gifterEl.value ? gifterEl.value.trim() : '';
+                document.getElementById('billing-name').value = gifterName || d.name || '';
                 document.getElementById('billing-line1').value = d.line1 || '';
                 document.getElementById('billing-line2').value = d.line2 || '';
                 document.getElementById('billing-city').value = d.city || '';
@@ -1408,13 +1414,14 @@
                         return;
                     }
                     const gifteeFilled =
+                        document.getElementById('gifter-full-name').value.trim() &&
                         document.getElementById('name').value.trim() &&
                         document.getElementById('line1').value.trim() &&
                         document.getElementById('city').value.trim() &&
                         document.getElementById('state').value.trim();
                     if (!gifteeFilled) {
                         submit.disabled = true;
-                        setHint('Fill giftee name, street address, city, and state.', true);
+                        setHint('Fill gifter full name, giftee name, street address, city, and state.', true);
                         return;
                     }
                     const gifteeOk = zipOk && gifteeFilled && gifteeGoogleValidated;
@@ -2156,8 +2163,13 @@
                         cardZipCode = (document.getElementById('billing-postal_code').value || '').replace(/[^0-9]/g, '').substring(0, 5);
                     }
 
+                    const gifterNameForCard = document.getElementById('gifter-full-name').value.trim();
                     const billingDetails = {
-                        name: useDefaultBilling ? finalShippingAddress.name : (billingAddress ? billingAddress.name : ''),
+                        name: useDefaultBilling
+                            ? gifterNameForCard
+                            : billingAddress
+                              ? billingAddress.name
+                              : gifterNameForCard,
                         email: email,
                         phone: phone,
                         address: {
@@ -2207,12 +2219,17 @@
                     }
 
                     if (window.opener) {
-                        window.opener.postMessage({
-                            status: 'success',
-                            paymentIntentId: paymentIntent.id,
-                            customerEmail: email,
-                            customerPhone: phone
-                        }, '*');
+                        window.opener.postMessage(
+                            {
+                                status: 'success',
+                                paymentIntentId: paymentIntent.id,
+                                customerEmail: email,
+                                customerPhone: phone,
+                                gifterFullName: gifterNameForCard,
+                                billingDetails: billingDetails,
+                            },
+                            '*'
+                        );
                     }
                     window.location.href = '/success';
                 } catch (error) {

@@ -244,6 +244,21 @@ export function adminNewOrderEmailHtml(input: {
       const img = li.imageUrl
         ? `<img src="${escapeAttr(li.imageUrl)}" alt="" style="width:56px;height:56px;object-fit:cover;border:1px solid #cbd5e1;border-radius:6px;vertical-align:middle;"/>`
         : "";
+      const wrapOpt = (li.wrappingOption || "").toLowerCase();
+      const hasDesign =
+        (wrapOpt === "ai" || wrapOpt === "upload") &&
+        !!(li.wrappingDesignImageUrl || li.wrappingDesignStoragePath);
+      const designThumb = li.wrappingDesignImageUrl
+        ? `<a href="${escapeAttr(li.wrappingDesignImageUrl)}" style="display:inline-block;line-height:0;" title="Open design image"
+            ><img src="${escapeAttr(li.wrappingDesignImageUrl)}" alt="Wrapping design" style="width:56px;height:56px;object-fit:cover;border:1px solid #94a3b8;border-radius:6px;vertical-align:middle;"/></a>`
+        : "";
+      const printLines =
+        li.wrappingDesignFileName || li.wrappingDesignStoragePath
+          ? `<p style="margin:4px 0 0;font-size:11px;color:#334155;line-height:1.35;">
+              <strong>Print file</strong> ${escapeHtml(li.wrappingDesignFileName || "—")}<br/>
+              <span style="font-size:10px;color:#64748b;">Storage (GCS)</span> <code style="font-size:10px;word-break:break-all;">${escapeHtml(li.wrappingDesignStoragePath || "")}</code>
+            </p>`
+          : "";
       return `<table role="presentation" width="100%" style="margin:8px 0 0;border:1px solid #e2e8f0;border-radius:8px;background:#fff;"><tr><td style="padding:8px 10px;">
         <p style="margin:0 0 4px;font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:#64748b;">Item ${idx + 1}</p>
         <table role="presentation" width="100%"><tr>
@@ -251,6 +266,18 @@ export function adminNewOrderEmailHtml(input: {
           <td valign="top" style="padding:0;">
             <p style="margin:0;font-size:13px;font-weight:600;color:#0f172a;line-height:1.35;">${title}${asin ? ` <span style="font-weight:500;color:#475569;">· ${asin}</span>` : ""}</p>
             <div style="margin:6px 0 0;padding:6px 8px;background:#f1f5f9;border-radius:6px;border:1px solid #e2e8f0;">${lineItemOpsGiftBlock(li)}</div>
+            ${
+              hasDesign
+                ? `<table role="presentation" width="100%" style="margin:8px 0 0;"><tr>
+              <td width="64" valign="top" style="padding:0 8px 0 0;">${designThumb || `<div style="width:56px;height:56px;border-radius:6px;background:#e2e8f0;border:1px dashed #94a3b8;font-size:9px;color:#64748b;text-align:center;line-height:1.1;padding:4px;">No preview URL</div>`}</td>
+              <td valign="top" style="padding:0;">
+                <p style="margin:0;font-size:10px;letter-spacing:0.06em;text-transform:uppercase;color:#64748b;">Gift-wrap design</p>
+                ${li.wrappingDesignImageUrl ? `<p style="margin:4px 0 0;font-size:12px;"><a href="${escapeAttr(li.wrappingDesignImageUrl)}" style="color:#1d4ed8;">Open full-size (printer)</a></p>` : ""}
+                ${printLines}
+              </td>
+            </tr></table>`
+                : ""
+            }
           </td>
         </tr></table>
       </td></tr></table>`;
@@ -266,19 +293,14 @@ export function adminNewOrderEmailHtml(input: {
       <span style="font-size:9px;letter-spacing:0.22em;text-transform:uppercase;color:rgba(255,255,255,0.65);white-space:nowrap;">Ops</span>
     </td>
   </tr></table>
-  <p style="margin:4px 0 0;font-size:13px;font-weight:600;color:#fff;line-height:1.25;">New order · tracking</p>
+  <p style="margin:4px 0 0;font-size:12px;font-weight:600;color:rgba(255,255,255,0.95);line-height:1.3;">${escapeHtml(input.publicOrderRef)} · new order · tracking</p>
 </td></tr>
 <tr><td style="padding:12px 14px 16px;">
   <table role="presentation" width="100%" style="background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">
     <tr><td style="padding:10px 12px;">
       <table role="presentation" width="100%" style="font-size:13px;line-height:1.35;color:#0f172a;">
         <tr>
-          <td style="width:112px;padding:2px 8px 2px 0;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:#64748b;vertical-align:top;">Order</td>
-          <td style="padding:2px 0;font-weight:700;">${escapeHtml(input.publicOrderRef)}</td>
-        </tr>
-        <tr><td colspan="2" style="padding:6px 0 4px;border-bottom:1px solid #e2e8f0;"></td></tr>
-        <tr>
-          <td style="padding:6px 8px 2px 0;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:#64748b;vertical-align:top;">Customer</td>
+          <td style="padding:6px 8px 2px 0;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:#64748b;vertical-align:top;">Customer (gifter)</td>
           <td style="padding:6px 0 2px;">
             <span style="font-weight:600;">${escapeHtml(input.customerName)}</span><br/>
             <span style="font-size:12px;color:#334155;">${contactCell}</span>

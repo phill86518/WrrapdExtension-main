@@ -4,7 +4,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { formatDateKeyNy } from "@/lib/ny-date";
 
 type DriverOrder = {
+  /** Firestore document id — use for API calls */
   id: string;
+  /** Same rule as admin: partner ref when set, else internal id */
+  publicOrderRef: string;
   recipientName: string;
   addressLine1: string;
   city: string;
@@ -221,7 +224,12 @@ export function DriverConsole({ orders }: { orders: DriverOrder[] }) {
       {orders.map((order) => (
         <div key={order.id} className="rounded-lg border p-4 shadow-sm">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <p className="font-semibold text-lg">{order.id}</p>
+            <div>
+              <p className="font-semibold text-lg leading-tight">{order.publicOrderRef}</p>
+              {order.publicOrderRef !== order.id && (
+                <p className="text-xs text-slate-500">Wrrapd ID: {order.id}</p>
+              )}
+            </div>
             {order.stopSequence != null && (
               <span className="rounded bg-slate-900 px-2 py-0.5 text-xs font-semibold text-white">
                 Stop {order.stopSequence}

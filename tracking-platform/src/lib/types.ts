@@ -18,6 +18,12 @@ export type OrderLineItem = {
   flowerDesign?: string;
   uploadedDesignPath?: string;
   uploadedDesignFileName?: string;
+  /** HTTPS URL for gift-wrap design preview (AI or upload) — email / admin */
+  wrappingDesignImageUrl?: string;
+  /** GCS object path in wrrapd-media (print / large-format workflow) */
+  wrappingDesignStoragePath?: string;
+  /** Basename for printer / ops */
+  wrappingDesignFileName?: string;
   aiDesignTitle?: string;
   aiDesignDescription?: string;
   giftMessage?: string;
@@ -26,6 +32,10 @@ export type OrderLineItem = {
 };
 
 export type Order = {
+  /**
+   * Wrrapd-internal primary key (Firestore document id), always `ord-…`, generated at ingest/create.
+   * Unrelated to Amazon’s order id; see `externalOrderId` for partner-facing reference.
+   */
   id: string;
   customerName: string;
   customerPhone: string;
@@ -52,7 +62,10 @@ export type Order = {
   updatedBy?: string;
   /** Amazon ship day + 1 in production; test phase uses planner dates */
   sourceNote?: string;
-  /** Wrrapd / Amazon style id when ingested from extension or partner (optional) */
+  /**
+   * Partner-facing reference when set (e.g. Amazon checkout id). Distinct from `id`.
+   * UI should prefer this for labels when present; `id` remains the system key for APIs.
+   */
   externalOrderId?: string;
   /** Per driver + calendar day (ET): optimized stop order (1 = first after leaving depot) */
   stopSequence?: number;

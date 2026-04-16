@@ -487,6 +487,30 @@ export async function listDriverOrders(driverId: string) {
   });
 }
 
+/** Delivered / cancelled orders for this driver (most recent first). Same data model as admin. */
+export async function listDriverPastOrders(driverId: string, limit = 80): Promise<Order[]> {
+  const profile = await getDriverProfile(driverId);
+  if (profile.onboardingStatus !== "approved") {
+    return [];
+  }
+  const oc = getOrdersCollection();
+  const orders = oc
+    ? ((await oc.get()).docs.map((doc) => doc.data() as Order) as Order[])
+    : await readFallbackOrders();
+  const mine = orders.filter(
+    (o) =>
+      o.driverId === driverId &&
+      (o.status === "delivered" || o.status === "cancelled"),
+  );
+  mine.sort((a, b) => {
+    const ta = new Date(a.updatedAt || a.scheduledFor).getTime();
+    const tb = new Date(b.updatedAt || b.scheduledFor).getTime();
+    if (tb !== ta) return tb - ta;
+    return b.id.localeCompare(a.id);
+  });
+  return mine.slice(0, limit);
+}
+
 export async function getOrderById(id: string) {
   const oc = getOrdersCollection();
   if (oc) {

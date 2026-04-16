@@ -1,5 +1,5 @@
 import { getSession } from "@/lib/auth";
-import { listDriverOrders } from "@/lib/data";
+import { listDriverOrders, listDriverPastOrders } from "@/lib/data";
 import { DriverConsole } from "@/components/driver-console";
 import { DriverInstallCard } from "@/components/driver-install-card";
 import { DriverLoginForm } from "@/components/driver-login-form";
@@ -11,7 +11,7 @@ import {
   getWeekAvailability,
   upcomingWeekFromToday,
 } from "@/lib/availability-store";
-import { DriverAvailabilityPanel } from "@/components/driver-availability-panel";
+import { DriverTopModals } from "@/components/driver-top-modals";
 import { WrrapdLogo } from "@/components/wrrapd-logo";
 import { formatInTimeZone } from "date-fns-tz";
 import type { DayShiftAvailability } from "@/lib/types";
@@ -23,7 +23,7 @@ export default async function DriverPage() {
   if (!session || session.role !== "driver") {
     return (
       <main className="mx-auto min-h-screen max-w-xl px-4 py-10">
-        <WrrapdLogo className="h-10 w-auto max-w-[180px]" />
+        <WrrapdLogo className="h-14 w-auto max-w-[220px]" />
         <h1 className="mt-3 text-3xl font-semibold">Driver Companion Login</h1>
         <p className="mt-2 text-sm text-slate-600">Sign in to access your delivery queue.</p>
         <DriverLoginForm />
@@ -32,6 +32,7 @@ export default async function DriverPage() {
   }
 
   const orders = await listDriverOrders(session.userId);
+  const pastOrdersRaw = await listDriverPastOrders(session.userId);
   const profile = await getDriverProfile(session.userId);
   const week = upcomingWeekFromToday();
   const existing = await getWeekAvailability(session.userId, week.weekStartMonday);
@@ -51,19 +52,32 @@ export default async function DriverPage() {
   const deadline = availabilityDeadlineForWeekMonday(week.weekStartMonday);
   const deadlineLabel = formatInTimeZone(deadline, "America/New_York", "EEE MMM d, h:mm a zzz");
 
+  const pastOrdersForModal = pastOrdersRaw.map((o) => ({
+    internalId: o.id,
+    publicOrderRef: o.externalOrderId?.trim() || o.id,
+    recipientName: o.recipientName,
+    addressLine1: o.addressLine1,
+    city: o.city,
+    state: o.state,
+    postalCode: o.postalCode,
+    status: o.status,
+    updatedAtIso: o.updatedAt,
+  }));
+
   if (profile.onboardingStatus !== "approved") {
     return (
       <main className="mx-auto max-w-xl px-4 py-8">
-        <WrrapdLogo className="h-10 w-auto max-w-[180px]" />
+        <WrrapdLogo className="h-14 w-auto max-w-[220px]" />
         <h1 className="mt-3 text-3xl font-semibold">Driver Companion</h1>
         <p className="mt-2 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
           Your onboarding status is <strong>{profile.onboardingStatus}</strong>. You cannot receive deliveries until approved by admin.
         </p>
-        <DriverAvailabilityPanel
+        <DriverTopModals
           weekStartMonday={week.weekStartMonday}
           days={week.days}
           initialDays={initialDays}
           deadlineLabel={deadlineLabel}
+          pastOrders={pastOrdersForModal}
         />
         <div className="mt-4">
           <DriverAccountPanel />
@@ -74,14 +88,21 @@ export default async function DriverPage() {
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-6">
-      <div className="mb-5 flex items-center justify-between">
+      <div className="mb-5 flex items-center justify-between gap-3">
         <div>
-          <WrrapdLogo className="h-10 w-auto max-w-[180px]" />
+          <WrrapdLogo className="h-14 w-auto max-w-[220px]" />
           <h1 className="mt-2 text-3xl font-semibold">Driver Companion</h1>
           <p className="text-sm text-slate-600">Welcome, {session.name}</p>
         </div>
         <LogoutButton redirectPath="/driver" />
       </div>
+      <DriverTopModals
+        weekStartMonday={week.weekStartMonday}
+        days={week.days}
+        initialDays={initialDays}
+        deadlineLabel={deadlineLabel}
+        pastOrders={pastOrdersForModal}
+      />
       <div className="mb-4">
         <DriverInstallCard />
       </div>
@@ -95,6 +116,7 @@ export default async function DriverPage() {
           <DriverConsole
             orders={orders.map((o) => ({
               id: o.id,
+              publicOrderRef: o.externalOrderId?.trim() || o.id,
               recipientName: o.recipientName,
               addressLine1: o.addressLine1,
               city: o.city,
@@ -107,12 +129,6 @@ export default async function DriverPage() {
           />
         </div>
       </section>
-      <DriverAvailabilityPanel
-        weekStartMonday={week.weekStartMonday}
-        days={week.days}
-        initialDays={initialDays}
-        deadlineLabel={deadlineLabel}
-      />
     </main>
   );
 }

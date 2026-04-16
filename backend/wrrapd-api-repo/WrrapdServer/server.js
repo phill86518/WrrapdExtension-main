@@ -337,6 +337,17 @@ app.get('/api/checkout-session-complete', async (req, res) => {
     }
 });
 
+/** Public HTTPS URL for objects stored in bucket `wrrapd-media` (path may be `folder/file.png`). */
+function publicWrrapdMediaUrl(objectPath) {
+    if (!objectPath || typeof objectPath !== 'string') return '';
+    const trimmed = objectPath.trim();
+    if (/^https?:\/\//i.test(trimmed)) return trimmed;
+    let p = trimmed.replace(/^gs:\/\/[^/]+\//, '');
+    if (p.startsWith('wrrapd-media/')) p = p.slice('wrrapd-media/'.length);
+    if (!p) return '';
+    return `https://storage.googleapis.com/wrrapd-media/${p.split('/').map(encodeURIComponent).join('/')}`;
+}
+
 // Helper function to download image from GCS for email attachment
 const getImageForEmail = async (filePath) => {
     if (!filePath) return null;
@@ -667,7 +678,7 @@ app.post('/process-payment', async (req, res) => {
     }
 
     const normalizedOrderData = normalizeOrderItems(orderData);
-    
+
     // Get Final shipping address from server storage (sent directly from checkout.html)
     let finalShippingAddressFromCheckout = null;
     if (global.finalShippingAddresses && global.finalShippingAddresses[orderNumber]) {
@@ -676,6 +687,24 @@ app.post('/process-payment', async (req, res) => {
         // Clean up after use
         delete global.finalShippingAddresses[orderNumber];
     }
+
+    // Checkout is source of truth for gift delivery — overwrite Amazon-scraped finalShippingAddress on every line item
+    if (finalShippingAddressFromCheckout) {
+        const snap = finalShippingAddressFromCheckout;
+        for (const it of normalizedOrderData) {
+            it.finalShippingAddress = {
+                name: snap.name,
+                street: snap.street,
+                city: snap.city,
+                state: snap.state,
+                postalCode: snap.postalCode,
+                country: snap.country,
+            };
+        }
+    }
+
+    const gifterFullName =
+        typeof req.body.gifterFullName === 'string' ? req.body.gifterFullName.trim() : '';
 
     try {
         // Verify the PaymentIntent with Stripe
@@ -747,7 +776,6 @@ app.post('/process-payment', async (req, res) => {
         
         // Process order items to collect images and build custom design HTML
         const processedItems = await Promise.all(normalizedOrderData.map(async (item, index) => {
-            // Use Final shipping address from checkout.html if available, otherwise use the one from orderData
             if (finalShippingAddressFromCheckout && !item.finalShippingAddress) {
                 item.finalShippingAddress = finalShippingAddressFromCheckout;
             }
@@ -1017,10 +1045,11 @@ app.post('/process-payment', async (req, res) => {
             const finalAddr = finalShippingAddressFromCheckout || firstItem.finalShippingAddress || firstItem.shippingAddress || {};
             const streetParts = splitStreet(finalAddr.street || '');
             const customerName =
+                gifterFullName ||
                 (billingDetails && billingDetails.name) ||
                 (customerEmail && customerEmail.split('@')[0]) ||
                 'Customer';
-            const recipientName = finalAddr.name || customerName;
+            const recipientName = (finalAddr.name && String(finalAddr.name).trim()) || customerName;
             const lineItems = wrappedOnly.map((it) => {
                 const ai =
                     it.selected_ai_design && typeof it.selected_ai_design === 'object'
@@ -1031,6 +1060,13 @@ app.post('/process-payment', async (req, res) => {
                     (it.uploaded_design_name && String(it.uploaded_design_name)) ||
                     (pathStr ? pathStr.split('/').pop() : '') ||
                     '';
+                const aiGcs = ai && ai.gcsPath ? String(ai.gcsPath) : '';
+                const designStoragePath = aiGcs || pathStr || '';
+                const designFileName = designStoragePath ? designStoragePath.split('/').pop() || '' : '';
+                const designImageUrl =
+                    publicWrrapdMediaUrl(aiGcs) ||
+                    publicWrrapdMediaUrl(pathStr) ||
+                    '';
                 return {
                     title: it.title || 'Wrapped item',
                     asin: it.asin || '',
@@ -1040,6 +1076,9 @@ app.post('/process-payment', async (req, res) => {
                     flowerDesign: it.selected_flower_design ? String(it.selected_flower_design) : '',
                     uploadedDesignPath: pathStr,
                     uploadedDesignFileName: uploadName,
+                    wrappingDesignImageUrl: designImageUrl || undefined,
+                    wrappingDesignStoragePath: designStoragePath || undefined,
+                    wrappingDesignFileName: designFileName || uploadName || undefined,
                     aiDesignTitle: ai && ai.title ? String(ai.title) : '',
                     aiDesignDescription: ai && ai.description ? String(ai.description) : '',
                     giftMessage: it.giftMessage ? String(it.giftMessage) : '',

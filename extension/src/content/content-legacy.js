@@ -9070,7 +9070,9 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
         }
         const hints = readAmazonDeliveryHintsFromSessionStorage();
         const orderNumber = localStorage.getItem('wrrapd-order-number') || 'unknown';
+        const gifterFromCheckout = (localStorage.getItem('wrrapd-checkout-gifter-full-name') || '').trim();
         const customerName =
+            gifterFromCheckout ||
             (billingDetails && billingDetails.name) ||
             (customerEmail && customerEmail.split('@')[0]) ||
             'Customer';
@@ -9551,6 +9553,10 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                         const customerEmail = event.data.customerEmail;
                         const customerPhone = event.data.customerPhone;
                         const billingDetails = event.data.billingDetails || null;
+                        const gifterFullName =
+                            typeof event.data.gifterFullName === 'string'
+                                ? event.data.gifterFullName.trim()
+                                : '';
 
                             try {
                                 if (customerEmail) {
@@ -9560,6 +9566,9 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                                     localStorage.setItem('wrrapd-checkout-customer-phone', customerPhone);
                                 }
                                 localStorage.setItem('wrrapd-checkout-billing', JSON.stringify(billingDetails));
+                                if (gifterFullName) {
+                                    localStorage.setItem('wrrapd-checkout-gifter-full-name', gifterFullName);
+                                }
                             } catch (e) {
                                 console.warn('[Payment] Could not persist checkout contact for staging ingest:', e);
                             }
@@ -9827,6 +9836,9 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                                 syncAmazonDeliverToGreeting();
                                 const greet = localStorage.getItem('wrrapd-deliver-to-greeting');
                                 const amazonDeliveryHints = readAmazonDeliveryHintsFromSessionStorage();
+                                const gifterFullNameStored = (
+                                    localStorage.getItem('wrrapd-checkout-gifter-full-name') || ''
+                                ).trim();
                                 const response = await fetch('https://api.wrrapd.com/process-payment', {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
@@ -9837,6 +9849,9 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                                         customerPhone,
                                         orderNumber,
                                         billingDetails: billingDetails || null, // Billing details from Stripe checkout
+                                        ...(gifterFullNameStored
+                                            ? { gifterFullName: gifterFullNameStored }
+                                            : {}),
                                         ...(greet && greet.trim() ? { greetingFirstName: greet.trim() } : {}),
                                         ...(amazonDeliveryHints ? { amazonDeliveryHints } : {}),
                                     }),
