@@ -116,7 +116,30 @@ function parseLineItems(v: unknown, invalidFields: string[]): OrderLineItem[] | 
     const imageUrl = str(row.imageUrl);
     const wrappingOption = str(row.wrappingOption);
     if (!title && !asin && !imageUrl && !wrappingOption) continue;
-    out.push({ ...(asin ? { asin } : {}), ...(title ? { title } : {}), ...(imageUrl ? { imageUrl } : {}), ...(wrappingOption ? { wrappingOption } : {}) });
+    const flowers = row.flowers === true || row.flowers === "true";
+    const flowerDesign = str(row.flowerDesign);
+    const uploadedDesignPath = str(row.uploadedDesignPath);
+    const uploadedDesignFileName = str(row.uploadedDesignFileName);
+    const aiDesignTitle = str(row.aiDesignTitle);
+    const aiDesignDescription = str(row.aiDesignDescription);
+    const giftMessage = str(row.giftMessage);
+    const senderName = str(row.senderName);
+    const occasion = str(row.occasion);
+    out.push({
+      ...(asin ? { asin } : {}),
+      ...(title ? { title } : {}),
+      ...(imageUrl ? { imageUrl } : {}),
+      ...(wrappingOption ? { wrappingOption } : {}),
+      ...(flowers ? { flowers: true } : {}),
+      ...(flowerDesign ? { flowerDesign } : {}),
+      ...(uploadedDesignPath ? { uploadedDesignPath } : {}),
+      ...(uploadedDesignFileName ? { uploadedDesignFileName } : {}),
+      ...(aiDesignTitle ? { aiDesignTitle } : {}),
+      ...(aiDesignDescription ? { aiDesignDescription } : {}),
+      ...(giftMessage ? { giftMessage } : {}),
+      ...(senderName ? { senderName } : {}),
+      ...(occasion ? { occasion } : {}),
+    });
   }
   return out.length ? out : undefined;
 }

@@ -1,4 +1,5 @@
 import { formatInTimeZone } from "date-fns-tz";
+import type { OrderLineItem } from "@/lib/types";
 
 const NY = "America/New_York";
 const WRRAPD_LOGO_URL = "https://pay.wrrapd.com/img/wrrapd-logo-1-small.png";
@@ -24,6 +25,79 @@ ${inner}
 </td></tr></table>
 </body></html>`;
 
+function wrappingModeLabel(code: string | undefined): string {
+  const c = (code || "").toLowerCase();
+  if (c === "wrrapd") return "Wrrapd selects wrapping";
+  if (c === "upload") return "Your uploaded design";
+  if (c === "ai") return "AI-generated design";
+  return code ? escapeHtml(code) : "—";
+}
+
+function thankYouGiftSummaryLine(li: OrderLineItem): string {
+  const bits: string[] = [wrappingModeLabel(li.wrappingOption)];
+  if (li.flowers) bits.push(li.flowerDesign ? `Flowers (${escapeHtml(li.flowerDesign)})` : "Flowers");
+  if (!bits.length) return "";
+  return `<p style="margin:6px 0 0;font-size:12px;color:#555;line-height:1.4;">${bits.join(" · ")}</p>`;
+}
+
+function lineItemOpsGiftBlock(li: OrderLineItem): string {
+  const parts: string[] = [];
+  parts.push(
+    `<p style="margin:8px 0 0;font-size:12px;text-transform:uppercase;letter-spacing:0.08em;color:#64748b;">Gift-wrapping</p>`,
+  );
+  parts.push(
+    `<p style="margin:4px 0 0;font-size:13px;color:#0f172a;"><strong>Mode:</strong> ${wrappingModeLabel(li.wrappingOption)}</p>`,
+  );
+  if (li.flowers) {
+    parts.push(
+      `<p style="margin:4px 0 0;font-size:13px;color:#0f172a;"><strong>Flowers:</strong> Yes${
+        li.flowerDesign ? ` — ${escapeHtml(li.flowerDesign)}` : ""
+      }</p>`,
+    );
+  } else {
+    parts.push(`<p style="margin:4px 0 0;font-size:13px;color:#0f172a;"><strong>Flowers:</strong> No</p>`);
+  }
+  if ((li.wrappingOption || "").toLowerCase() === "upload") {
+    const fn = li.uploadedDesignFileName || (li.uploadedDesignPath ? li.uploadedDesignPath.split("/").pop() : "") || "";
+    if (fn) {
+      parts.push(
+        `<p style="margin:4px 0 0;font-size:13px;color:#0f172a;"><strong>Uploaded file:</strong> ${escapeHtml(fn)}</p>`,
+      );
+    }
+    if (li.uploadedDesignPath && li.uploadedDesignPath !== fn) {
+      parts.push(
+        `<p style="margin:2px 0 0;font-size:12px;color:#64748b;word-break:break-all;"><strong>Path:</strong> ${escapeHtml(li.uploadedDesignPath)}</p>`,
+      );
+    }
+  }
+  if ((li.wrappingOption || "").toLowerCase() === "ai") {
+    if (li.aiDesignTitle) {
+      parts.push(
+        `<p style="margin:4px 0 0;font-size:13px;color:#0f172a;"><strong>AI design title:</strong> ${escapeHtml(li.aiDesignTitle)}</p>`,
+      );
+    }
+    if (li.aiDesignDescription) {
+      parts.push(
+        `<p style="margin:4px 0 0;font-size:13px;color:#475569;line-height:1.45;"><strong>AI design description:</strong> ${escapeHtml(li.aiDesignDescription)}</p>`,
+      );
+    }
+  }
+  if (li.occasion) {
+    parts.push(`<p style="margin:4px 0 0;font-size:13px;color:#0f172a;"><strong>Occasion:</strong> ${escapeHtml(li.occasion)}</p>`);
+  }
+  if (li.giftMessage) {
+    parts.push(
+      `<p style="margin:4px 0 0;font-size:13px;color:#0f172a;"><strong>Gift message:</strong> ${escapeHtml(li.giftMessage)}</p>`,
+    );
+  }
+  if (li.senderName) {
+    parts.push(
+      `<p style="margin:4px 0 0;font-size:13px;color:#0f172a;"><strong>Sender (on gift):</strong> ${escapeHtml(li.senderName)}</p>`,
+    );
+  }
+  return `<div style="margin-top:10px;padding:10px 12px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">${parts.join("")}</div>`;
+}
+
 export function thankYouEmailHtml(input: {
   customerName: string;
   customerGreetingName?: string;
@@ -32,12 +106,13 @@ export function thankYouEmailHtml(input: {
   recipientName: string;
   addressLine: string;
   scheduledEtLabel: string;
-  lineItems?: { title?: string; asin?: string; imageUrl?: string }[];
+  lineItems?: OrderLineItem[];
 }): string {
   const wrappedRows = (input.lineItems || [])
     .map((li) => {
       const title = escapeHtml(li.title || "Wrapped item");
       const asin = li.asin ? `<p style="margin:6px 0 0;font-size:12px;color:#666;">ASIN: ${escapeHtml(li.asin)}</p>` : "";
+      const gift = thankYouGiftSummaryLine(li);
       const img = li.imageUrl
         ? `<img src="${escapeAttr(li.imageUrl)}" alt="${title}" style="width:64px;height:64px;object-fit:cover;border-radius:8px;border:1px solid #ddd;display:block;"/>`
         : `<div style="width:64px;height:64px;border-radius:8px;border:1px solid #ddd;background:#f6f6f6;"></div>`;
@@ -47,6 +122,7 @@ export function thankYouEmailHtml(input: {
           <td valign="top">
             <p style="margin:0;font-size:14px;color:#222;font-weight:600;">${title}</p>
             ${asin}
+            ${gift}
           </td>
         </tr></table>
       </td></tr>`;
@@ -142,8 +218,8 @@ export function formatOrderScheduleEt(scheduledForIso: string): string {
 
 /** Internal / operations — detailed admin notification layout. */
 export function adminNewOrderEmailHtml(input: {
-  orderId: string;
-  externalOrderId?: string;
+  /** Amazon-style id or "Manual — …" — never internal ord-* */
+  publicOrderRef: string;
   customerName: string;
   customerPhone: string;
   customerEmail?: string;
@@ -158,7 +234,7 @@ export function adminNewOrderEmailHtml(input: {
   sourceNote?: string;
   deliveryPreferencePending?: boolean;
   amazonDeliveryDatesSnapshot?: string[];
-  lineItems?: { title?: string; asin?: string; imageUrl?: string }[];
+  lineItems?: OrderLineItem[];
 }): string {
   const addr2 = input.addressLine2 ? `${escapeHtml(input.addressLine2)}, ` : "";
   const wrappedRows = (input.lineItems || [])
@@ -168,9 +244,10 @@ export function adminNewOrderEmailHtml(input: {
       const img = li.imageUrl
         ? `<img src="${escapeAttr(li.imageUrl)}" alt="${title}" style="max-width:120px;max-height:120px;border:1px solid #ddd;border-radius:8px;margin-top:8px;"/>`
         : "";
-      return `<div style="margin:10px 0;padding:10px;border:1px solid #e2e8f0;border-radius:8px;background:#fff;">
+      return `<div style="margin:10px 0;padding:12px;border:1px solid #e2e8f0;border-radius:8px;background:#fff;">
         <p style="margin:0;font-size:14px;color:#0f172a;"><strong>${title}</strong>${asin}</p>
         ${img}
+        ${lineItemOpsGiftBlock(li)}
       </div>`;
     })
     .join("");
@@ -182,13 +259,8 @@ export function adminNewOrderEmailHtml(input: {
 <tr><td style="padding:24px 28px;">
   <table role="presentation" width="100%" style="background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0;">
     <tr><td style="padding:18px 20px;">
-      <p style="margin:0 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:#64748b;">Order ID</p>
-      <p style="margin:0;font-size:17px;font-weight:700;color:#0f172a;">${escapeHtml(input.orderId)}</p>
-      ${
-        input.externalOrderId
-          ? `<p style="margin:10px 0 0;font-size:13px;color:#475569;">External / Amazon ref: <strong>${escapeHtml(input.externalOrderId)}</strong></p>`
-          : ""
-      }
+      <p style="margin:0 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:#64748b;">Order reference</p>
+      <p style="margin:0;font-size:17px;font-weight:700;color:#0f172a;">${escapeHtml(input.publicOrderRef)}</p>
       <hr style="margin:16px 0;border:none;border-top:1px solid #e2e8f0;"/>
       <p style="margin:0 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:#64748b;">Customer (gifter)</p>
       <p style="margin:0;font-size:15px;color:#0f172a;">${escapeHtml(input.customerName)}</p>

@@ -21,7 +21,7 @@ export function SelectAllOrdersButton({ formId }: { formId: string }) {
     <button
       type="button"
       onClick={toggle}
-      className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-indigo-300 hover:bg-indigo-50/60 hover:text-slate-900"
+      className="inline-flex items-center justify-center rounded-xl bg-gradient-to-b from-[#1a3d2e] to-[#0f241c] px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-[#0f172a]/40 ring-1 ring-white/20 transition hover:from-[#234d3c] hover:to-[#1a3d2e] active:scale-[0.98]"
     >
       {allChecked ? "Clear all" : "Select all"}
     </button>

@@ -30,7 +30,7 @@ export function AdminCreateDeliverySection({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="group inline-flex items-center gap-2 rounded-xl bg-gradient-to-b from-indigo-600 to-indigo-700 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-600/25 transition hover:from-indigo-500 hover:to-indigo-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2"
+        className="group inline-flex items-center gap-2 rounded-xl bg-gradient-to-b from-emerald-500 to-emerald-700 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-emerald-900/40 ring-1 ring-white/30 transition hover:from-emerald-400 hover:to-emerald-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#faf8f4] active:scale-[0.98]"
       >
         <span className="text-lg leading-none font-light opacity-90">+</span>
         Manual delivery
@@ -49,18 +49,18 @@ export function AdminCreateDeliverySection({
             aria-label="Close dialog"
             onClick={() => setOpen(false)}
           />
-          <div className="relative z-10 max-h-[min(90vh,720px)] w-full max-w-2xl overflow-y-auto rounded-2xl border border-slate-200/80 bg-white p-6 shadow-2xl shadow-slate-900/15">
+          <div className="relative z-10 max-h-[min(90vh,720px)] w-full max-w-2xl overflow-y-auto rounded-2xl border-2 border-[#1a3d2e]/35 bg-[#faf8f4] p-6 shadow-2xl shadow-black/25 ring-1 ring-white/50">
             <div className="mb-4 flex items-start justify-between gap-4">
               <div>
-                <h2 id="manual-delivery-title" className="text-lg font-semibold tracking-tight text-slate-900">
+                <h2 id="manual-delivery-title" className="text-lg font-bold tracking-tight text-[#0f241c]">
                   Create scheduled delivery
                 </h2>
-                <p className="mt-0.5 text-sm text-slate-500">Rare manual entry for ops-created stops</p>
+                <p className="mt-0.5 text-sm font-medium text-[#2d4a38]">Rare manual entry for ops-created stops</p>
               </div>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                className="rounded-xl p-2 text-[#2d5a47] transition hover:bg-[#1a3d2e]/10 hover:text-[#0f241c]"
                 aria-label="Close"
               >
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>

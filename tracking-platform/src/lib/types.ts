@@ -11,7 +11,18 @@ export type OrderLineItem = {
   asin?: string;
   title?: string;
   imageUrl?: string;
+  /** Legacy: wrrapd | upload | ai */
   wrappingOption?: string;
+  flowers?: boolean;
+  /** e.g. flowers-1 … from extension */
+  flowerDesign?: string;
+  uploadedDesignPath?: string;
+  uploadedDesignFileName?: string;
+  aiDesignTitle?: string;
+  aiDesignDescription?: string;
+  giftMessage?: string;
+  senderName?: string;
+  occasion?: string;
 };
 
 export type Order = {

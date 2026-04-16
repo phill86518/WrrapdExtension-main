@@ -446,6 +446,7 @@ function normalizeOrderItems(orderData) {
                 selected_wrapping_option: option.selected_wrapping_option,
                 selected_ai_design: option.selected_ai_design || null,
                 uploaded_design_path: option.uploaded_design_path || null,
+                uploaded_design_name: option.uploaded_design_name || null,
                 occasion: option.occasion || null,
                 shippingAddress: option.shippingAddress,
                 finalShippingAddress: option.finalShippingAddress || null,
@@ -1001,12 +1002,32 @@ app.post('/process-payment', async (req, res) => {
                 (customerEmail && customerEmail.split('@')[0]) ||
                 'Customer';
             const recipientName = finalAddr.name || customerName;
-            const lineItems = wrappedOnly.map((it) => ({
-                title: it.title || 'Wrapped item',
-                asin: it.asin || '',
-                imageUrl: it.imageUrl || '',
-                wrappingOption: it.selected_wrapping_option || '',
-            }));
+            const lineItems = wrappedOnly.map((it) => {
+                const ai =
+                    it.selected_ai_design && typeof it.selected_ai_design === 'object'
+                        ? it.selected_ai_design
+                        : null;
+                const pathStr = it.uploaded_design_path ? String(it.uploaded_design_path) : '';
+                const uploadName =
+                    (it.uploaded_design_name && String(it.uploaded_design_name)) ||
+                    (pathStr ? pathStr.split('/').pop() : '') ||
+                    '';
+                return {
+                    title: it.title || 'Wrapped item',
+                    asin: it.asin || '',
+                    imageUrl: it.imageUrl || '',
+                    wrappingOption: it.selected_wrapping_option || '',
+                    flowers: !!it.checkbox_flowers,
+                    flowerDesign: it.selected_flower_design ? String(it.selected_flower_design) : '',
+                    uploadedDesignPath: pathStr,
+                    uploadedDesignFileName: uploadName,
+                    aiDesignTitle: ai && ai.title ? String(ai.title) : '',
+                    aiDesignDescription: ai && ai.description ? String(ai.description) : '',
+                    giftMessage: it.giftMessage ? String(it.giftMessage) : '',
+                    senderName: it.senderName ? String(it.senderName) : '',
+                    occasion: it.occasion ? String(it.occasion) : '',
+                };
+            });
             const wrappedAmazonDays = [...new Set(
                 wrappedOnly
                     .map((it) => amazonDateKeyFromItem(it))

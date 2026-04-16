@@ -102,13 +102,19 @@ export async function sendPostOrderNotifications(order: Order): Promise<PostOrde
   const trackingUrl = origin ? `${origin}${trackingPath}` : trackingPath;
   const addressLine = `${order.addressLine1}, ${order.city}, ${order.state} ${order.postalCode}`;
   const scheduledEtLabel = formatOrderScheduleEt(order.scheduledFor);
-  const displayOrderId = order.externalOrderId?.trim() || order.id;
+  /** Customer-facing reference only (no internal ord-*). */
+  const customerVisibleRef =
+    order.externalOrderId?.trim() || order.recipientName?.trim() || "your Wrrapd order";
+  const adminPublicOrderRef =
+    order.externalOrderId?.trim() ||
+    (order.sourceNote?.match(/Amazon order (\S+)/)?.[1]?.trim() ?? "") ||
+    `Manual — ${order.recipientName?.trim() || "Wrrapd"}`;
 
-  const thankYouSubject = `Thank you — Wrrapd order ${displayOrderId}`;
+  const thankYouSubject = `Thank you — Wrrapd order ${customerVisibleRef}`;
   const thankYouHtml = thankYouEmailHtml({
     customerName: order.customerName,
     customerGreetingName: order.customerGreetingName,
-    orderId: displayOrderId,
+    orderId: customerVisibleRef,
     trackingUrl,
     recipientName: order.recipientName,
     addressLine,
@@ -135,8 +141,7 @@ export async function sendPostOrderNotifications(order: Order): Promise<PostOrde
   }
 
   const adminHtml = adminNewOrderEmailHtml({
-    orderId: order.id,
-    externalOrderId: order.externalOrderId,
+    publicOrderRef: adminPublicOrderRef,
     customerName: order.customerName,
     customerPhone: order.customerPhone,
     customerEmail: order.customerEmail,
@@ -153,7 +158,9 @@ export async function sendPostOrderNotifications(order: Order): Promise<PostOrde
     amazonDeliveryDatesSnapshot: order.amazonDeliveryDatesSnapshot,
     lineItems: order.lineItems,
   });
-  const adminSubject = `New Wrrapd order ${order.id}${order.externalOrderId ? ` (${order.externalOrderId})` : ""}`;
+  const adminSubject = order.externalOrderId?.trim()
+    ? `New Wrrapd order ${order.externalOrderId.trim()}`
+    : `New Wrrapd order — ${order.recipientName?.trim() || "received"}`;
   try {
     const ok = await sendTransactionalEmail({
       to: opsInbox,
@@ -168,7 +175,7 @@ export async function sendPostOrderNotifications(order: Order): Promise<PostOrde
   const e164 = toUsE164(order.customerPhone);
   if (e164) {
     const sms =
-      `Wrrapd: Thanks for your order ${order.id}! Track: ${trackingUrl} ` +
+      `Wrrapd: Thanks for your order (${customerVisibleRef})! Track: ${trackingUrl} ` +
       `Delivery window ${scheduledEtLabel}.`;
     try {
       const ok = await sendTransactionalSms({ toE164: e164, body: sms.slice(0, 1500) });
@@ -196,11 +203,11 @@ export async function sendPostOrderNotifications(order: Order): Promise<PostOrde
       try {
         await sendTransactionalEmail({
           to: order.customerEmail.trim(),
-          subject: `Action needed: Wrrapd delivery schedule for order ${displayOrderId}`,
+          subject: `Action needed: Wrrapd delivery schedule for order ${customerVisibleRef}`,
           html: deliveryChoiceEmailHtml({
             customerName: order.customerName,
             customerGreetingName: order.customerGreetingName,
-            orderId: displayOrderId,
+            orderId: customerVisibleRef,
             datesList: order.amazonDeliveryDatesSnapshot.join(", "),
             deadlineEtLabel: deadline,
             choiceUrl,
