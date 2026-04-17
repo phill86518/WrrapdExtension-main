@@ -11,4 +11,4 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 npm install --save-dev @capacitor/core @capacitor/cli @capacitor/android
-echo "Capacitor packages installed. See mobile/admin and mobile/driver/capacitor.config.ts"
+echo "Capacitor packages installed. See mobile/admin and mobile/driver/capacitor.config.js"

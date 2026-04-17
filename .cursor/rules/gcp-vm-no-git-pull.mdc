@@ -1,0 +1,10 @@
+---
+description: Never use git pull on the production GCP VM; VM is deploy target
+alwaysApply: true
+---
+
+# GCP VM — never `git pull`
+
+- On the **production GCP VM** (e.g. **`wrrapd-server-1`**) at **`/home/phill/wrrapd-GCP`**: **do not run `git pull`**. Do not tell the user or any runbook to use `git pull` there.
+- The VM is a **deploy target**. Pull can merge `origin` over local working-tree changes, Capacitor/mobile churn, or half-applied deploy state.
+- **Preferred workflow**: develop and commit on a **dev machine**, **`git push`** to `origin`, then update the VM **without** `git pull` (e.g. `rsync`, CI artifact, or another process the team documents). If the team ever uses Git on the VM, only use flows they explicitly document — **default remains: no `git pull` on the GCP VM.**

@@ -4395,6 +4395,15 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
      */
     async function clickContinueAndProceedToPayment() {
         console.log("[clickContinueAndProceedToPayment] Starting automatic workflow...");
+
+        // "Make updates to your items" → Ship items to one address → main-column yellow Continue (not sidebar).
+        // Do not auto-click: customer must confirm; show coachmark + halo.
+        const shipOneContinue = wrrapdFindShipItemsToOneAddressContinueControl();
+        if (shipOneContinue) {
+            removeLoadingScreen();
+            wrrapdShowShipToOneAddressContinueCoachmark(shipOneContinue);
+            return;
+        }
         
         // Step 1: Find and click "Continue" button on multi-address page
         // Try multiple specific selectors first, then fall back to text-based search
@@ -6929,9 +6938,122 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
     }
 
     const WRRAPD_COACH_STYLE_ID = 'wrrapd-amazon-confirm-coach-style';
+    const WRRAPD_SHIP_ONE_COACH_ID = 'wrrapd-ship-one-address-coach-root';
 
     function wrrapdRemoveMultiAddressCoachmark() {
         document.querySelectorAll('.wrrapd-amazon-confirm-coach').forEach((el) => el.remove());
+    }
+
+    function wrrapdIsInCheckoutOrderSummaryRail(el) {
+        if (!el || !el.closest) return false;
+        return !!el.closest(
+            '#checkout-experience-right-column, #spc-order-summary, #orderSummaryPrimaryActionBtn, [data-feature-id="order-summary-primary-action"], [id*="order-summary-primary"]',
+        );
+    }
+
+    /** "Ship items to one address" link/label on Amazon item-update (Chewbacca) page — not the sidebar. */
+    function wrrapdFindShipItemsToOneAddressMarker() {
+        const candidates = document.querySelectorAll('a, span, div, p, li, button, h1, h2, h3');
+        for (const el of candidates) {
+            const t = (el.textContent || '').replace(/\s+/g, ' ').trim();
+            if (t.length > 180) continue;
+            if (/ship\s+items\s+to\s+one\s+address/i.test(t)) return el;
+        }
+        return null;
+    }
+
+    /**
+     * Yellow Continue under "Ship items to one address" (main column). Sidebar Continue is excluded.
+     */
+    function wrrapdFindShipItemsToOneAddressContinueControl() {
+        const marker = wrrapdFindShipItemsToOneAddressMarker();
+        if (!marker) return null;
+        const controls = document.querySelectorAll('input.a-button-input, input[type="submit"], button');
+        for (const inp of controls) {
+            if (!inp.offsetParent || inp.disabled) continue;
+            if (wrrapdIsInCheckoutOrderSummaryRail(inp)) continue;
+            const raw = (inp.value || inp.getAttribute('aria-label') || inp.textContent || '').trim().toLowerCase();
+            if (!raw.includes('continue')) continue;
+            if (raw.includes('place') && raw.includes('order')) continue;
+            if (raw.includes('save gift')) continue;
+            const pos = marker.compareDocumentPosition(inp);
+            if (!(pos & Node.DOCUMENT_POSITION_FOLLOWING)) continue;
+            const mr = marker.getBoundingClientRect();
+            const ir = inp.getBoundingClientRect();
+            if (mr.width && ir.width && Math.abs(ir.left - mr.left) < Math.max(520, window.innerWidth * 0.45)) {
+                return inp;
+            }
+        }
+        return null;
+    }
+
+    function wrrapdRemoveShipToOneAddressCoachmark() {
+        document.getElementById(WRRAPD_SHIP_ONE_COACH_ID)?.remove();
+        document.querySelectorAll('.wrrapd-ship-one-halo-target').forEach((el) => {
+            el.classList.remove('wrrapd-ship-one-halo-target');
+        });
+    }
+
+    function wrrapdEnsureShipOneCoachStyles() {
+        if (document.getElementById('wrrapd-ship-one-coach-styles')) return;
+        const st = document.createElement('style');
+        st.id = 'wrrapd-ship-one-coach-styles';
+        st.textContent = `
+            @keyframes wrrapd-coach-pulse{0%,100%{opacity:1;transform:translateY(0);}50%{opacity:0.45;transform:translateY(4px);}}
+            @keyframes wrrapd-ship-one-halo{0%,100%{box-shadow:0 0 0 0 rgba(180,83,9,0.55);}50%{box-shadow:0 0 0 12px rgba(180,83,9,0.12);}}
+            .wrrapd-ship-one-halo-target{
+                position:relative;
+                z-index:100002 !important;
+                border-radius:8px;
+                animation:wrrapd-ship-one-halo 1.4s ease-in-out infinite;
+            }
+        `;
+        document.head.appendChild(st);
+    }
+
+    /**
+     * Callout + arrow + halo on the main-column Continue after "Ship items to one address"
+     * (same two bullets as multi-address Amazon confirm UI).
+     */
+    function wrrapdShowShipToOneAddressContinueCoachmark(continueControl) {
+        const btn = continueControl || wrrapdFindShipItemsToOneAddressContinueControl();
+        if (!btn) return;
+
+        wrrapdRemoveShipToOneAddressCoachmark();
+        wrrapdEnsureShipOneCoachStyles();
+
+        const haloTarget = btn.closest('.a-button') || btn.parentElement || btn;
+        haloTarget.classList.add('wrrapd-ship-one-halo-target');
+
+        const wrap = document.createElement('div');
+        wrap.id = WRRAPD_SHIP_ONE_COACH_ID;
+        wrap.className = 'wrrapd-manual-address-hint';
+        wrap.setAttribute('role', 'region');
+        wrap.setAttribute('aria-label', 'Next step for Wrrapd shipping');
+        wrap.style.cssText =
+            'box-sizing:border-box;margin:12px 0 10px 0;padding:14px 16px;background:#fffef7;border:2px solid #c9a009;border-radius:8px;color:#0f172a;font:14px/1.5 Arial,Helvetica,sans-serif;max-width:100%;position:relative;z-index:100003;';
+
+        wrap.innerHTML = `
+            <div style="font-weight:700;margin-bottom:8px;">Confirm shipping on Amazon</div>
+            <ol style="margin:0 0 10px 20px;padding:0;">
+                <li style="margin-bottom:6px;">We’ve added the Wrrapd hub to your address book where needed.</li>
+                <li>Click <strong>Continue</strong> below so you agree that items may ship to Wrrapd for gift wrapping.</li>
+            </ol>
+            <div style="text-align:center;font-size:26px;line-height:1;color:#b45309;animation:wrrapd-coach-pulse 1.1s ease-in-out infinite;" aria-hidden="true">▼</div>
+        `;
+
+        const parent = haloTarget.parentElement;
+        if (parent) {
+            parent.insertBefore(wrap, haloTarget);
+        } else {
+            document.body.appendChild(wrap);
+        }
+
+        try {
+            haloTarget.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        } catch (_) {
+            /* ignore */
+        }
     }
 
     /**
@@ -7006,6 +7128,20 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             }
 
             console.log("[checkChangeAddress] Detected multi-address selection page. URL:", currentUrl);
+
+            // "Ship items to one address" main-column Continue: coachmark if present (DOM may render after paint).
+            setTimeout(() => {
+                try {
+                    if (!hasAnyWrrapdGiftWrapInCart(getAllItemsFromLocalStorage())) return;
+                    if (document.getElementById(WRRAPD_SHIP_ONE_COACH_ID)) return;
+                    if (wrrapdFindShipItemsToOneAddressContinueControl()) {
+                        removeLoadingScreen();
+                        wrrapdShowShipToOneAddressContinueCoachmark(null);
+                    }
+                } catch (_) {
+                    /* ignore */
+                }
+            }, 900);
             
             // CRITICAL: Check if Wrrapd address was just added - if so, Amazon auto-selected it for all items
             // We need to fix non-Wrrapd items by selecting default address for them

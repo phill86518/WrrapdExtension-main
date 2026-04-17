@@ -91,16 +91,16 @@ From the **monorepo root** (the directory that contains the `tracking-platform/`
 **Set the GCP project first** (empty `GOOGLE_CLOUD_PROJECT` produces `gcr.io//...` and breaks the build):
 
 ```bash
-gcloud config set project YOUR_GCP_PROJECT_ID
-# or: export GOOGLE_CLOUD_PROJECT=YOUR_GCP_PROJECT_ID
+gcloud config set project wrrapd-chrome-extension
+# or: export GOOGLE_CLOUD_PROJECT=wrrapd-chrome-extension
 ```
 
-Build and deploy (replace `YOUR_GCP_PROJECT_ID` if you skip `gcloud config set`):
+Build and deploy:
 
 ```bash
-cd /path/to/wrrapd-GCP   # e.g. /home/phill/wrrapd-GCP — use your real path, not literally "path/to"
+cd /home/phill/wrrapd-GCP
 
-PROJECT_ID=$(gcloud config get-value project)
+PROJECT_ID=wrrapd-chrome-extension
 TAG=$(git rev-parse --short HEAD)
 IMAGE="gcr.io/${PROJECT_ID}/wrrapd-tracking:${TAG}"
 

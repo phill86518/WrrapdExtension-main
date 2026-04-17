@@ -1,6 +1,9 @@
 # --- Monorepo (root) ---
 .DS_Store
-.cursor/
+# Cursor: ignore local IDE state, but keep shared agent rules in the repo
+.cursor/*
+!.cursor/rules/
+!.cursor/rules/**
 
 # Editor
 *.swp
