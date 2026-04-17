@@ -7005,7 +7005,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
     function wrrapdIsInCheckoutOrderSummaryRail(el) {
         if (!el || !el.closest) return false;
         return !!el.closest(
-            '#checkout-experience-right-column, #spc-order-summary, #orderSummaryPrimaryActionBtn, [data-feature-id="order-summary-primary-action"], [id*="order-summary-primary"]',
+            '#checkout-experience-right-column, #checkout-right-column, #right-grid, #spc-order-summary, #orderSummaryPrimaryActionBtn, [data-feature-id="order-summary-primary-action"], [data-feature-id*="order-summary"], [id*="order-summary-primary"], .checkout-right-column, aside[aria-label*="order summary" i]',
         );
     }
 
@@ -7029,15 +7029,18 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
         const marker = wrrapdFindShipItemsToOneAddressMarker();
         if (!marker) return null;
 
+        const mr = marker.getBoundingClientRect();
+        const markerMidX = mr.left + mr.width / 2;
+
         const scopedRoots = [];
         let n = marker;
-        for (let d = 0; d < 10 && n; d++) {
+        for (let d = 0; d < 12 && n; d++) {
             if (n.id === 'checkout-main' || (n.getAttribute && n.getAttribute('data-checkout-page'))) {
                 scopedRoots.push(n);
                 break;
             }
             const cn = (n.className || '').toString().toLowerCase();
-            if (cn.includes('checkout') && (cn.includes('column') || cn.includes('left'))) {
+            if (cn.includes('checkout') && (cn.includes('column') || cn.includes('left') || cn.includes('main'))) {
                 scopedRoots.push(n);
             }
             n = n.parentElement;
@@ -7060,6 +7063,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             collect(document.body);
         }
 
+        const scored = [];
         for (const inp of controls) {
             if (!inp.offsetParent || inp.disabled) continue;
             if (wrrapdIsInCheckoutOrderSummaryRail(inp)) continue;
@@ -7083,13 +7087,22 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             if (raw.includes('use these')) continue;
             const pos = marker.compareDocumentPosition(inp);
             if (!(pos & Node.DOCUMENT_POSITION_FOLLOWING)) continue;
-            const mr = marker.getBoundingClientRect();
+
             const ir = inp.getBoundingClientRect();
-            if (mr.width && ir.width && Math.abs(ir.left - mr.left) < Math.max(560, window.innerWidth * 0.55)) {
-                return inp;
-            }
+            if (!ir.width || !ir.height) continue;
+
+            const rowMidX = ir.left + ir.width / 2;
+            const horiz = Math.abs(rowMidX - markerMidX);
+            if (horiz > Math.max(380, window.innerWidth * 0.42)) continue;
+
+            const below = ir.top - mr.bottom;
+            const score = below >= -12 ? below + horiz * 0.12 : 8000 + Math.abs(below);
+            scored.push({ inp, score, below, horiz });
         }
-        return null;
+
+        if (!scored.length) return null;
+        scored.sort((a, b) => a.score - b.score);
+        return scored[0].inp;
     }
 
     function wrrapdRemoveShipToOneAddressCoachmark() {
