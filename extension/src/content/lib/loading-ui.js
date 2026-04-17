@@ -9,7 +9,7 @@ const SHIP_ONE_STYLE_ID = 'wrrapd-ship-one-guidance-styles';
 const SHIP_ONE_HALO_CLASS = 'wrrapd-ship-one-halo-target';
 
 let shipOneClickCapture = null;
-/** @type {{ root: HTMLElement; svg: SVGSVGElement; panel: HTMLElement; haloTarget: HTMLElement; continueEl: HTMLElement; mo: MutationObserver; onScroll: () => void; onResize: () => void; raf: number; moTimer: ReturnType<typeof setTimeout> | null } | null} */
+/** @type {{ root: HTMLElement; svg: SVGSVGElement; panel: HTMLElement; haloTarget: HTMLElement; continueEl: HTMLElement; maskId: string; refit: (() => HTMLElement | null) | null; mo: MutationObserver; onScroll: () => void; onResize: () => void; raf: number; moTimer: ReturnType<typeof setTimeout> | null; pendingRemove: ReturnType<typeof setTimeout> | null } | null} */
 let shipOneUi = null;
 
 function injectShipOneStylesOnce() {
@@ -133,12 +133,55 @@ export function removeLoadingScreen() {
   }
 }
 
+/**
+ * After Amazon re-renders checkout, the original Continue node can disconnect briefly or permanently.
+ * Re-resolve via refit() before tearing the UI down.
+ */
+function tryRefitShipOneTarget() {
+  if (!shipOneUi) return false;
+  let { continueEl, haloTarget, refit } = shipOneUi;
+  if (continueEl.isConnected && haloTarget.isConnected) return true;
+  if (typeof refit !== 'function') return false;
+  const n = refit();
+  if (!n || !n.isConnected) return false;
+  try {
+    haloTarget.classList.remove(SHIP_ONE_HALO_CLASS);
+  } catch (e) {
+    /* ignore */
+  }
+  shipOneUi.continueEl = n;
+  shipOneUi.haloTarget = n.closest('.a-button') || n;
+  shipOneUi.haloTarget.classList.add(SHIP_ONE_HALO_CLASS);
+  return true;
+}
+
 function layoutShipOneGuidance() {
   if (!shipOneUi) return;
-  const { svg, panel, haloTarget, continueEl } = shipOneUi;
+  const { svg, panel, maskId } = shipOneUi;
+  let { haloTarget, continueEl } = shipOneUi;
+
   if (!continueEl.isConnected || !haloTarget.isConnected) {
-    removeWrrapdShipToOneGuidanceOverlay();
-    return;
+    if (tryRefitShipOneTarget()) {
+      continueEl = shipOneUi.continueEl;
+      haloTarget = shipOneUi.haloTarget;
+    } else {
+      if (shipOneUi.pendingRemove) clearTimeout(shipOneUi.pendingRemove);
+      shipOneUi.pendingRemove = setTimeout(() => {
+        shipOneUi.pendingRemove = null;
+        if (!shipOneUi) return;
+        if (!tryRefitShipOneTarget()) {
+          removeWrrapdShipToOneGuidanceOverlay();
+        } else {
+          scheduleShipOneLayout();
+        }
+      }, 750);
+      return;
+    }
+  }
+
+  if (shipOneUi.pendingRemove) {
+    clearTimeout(shipOneUi.pendingRemove);
+    shipOneUi.pendingRemove = null;
   }
 
   const vw = window.innerWidth;
@@ -150,7 +193,6 @@ function layoutShipOneGuidance() {
   const hw = Math.min(vw, br.width + pad * 2);
   const hh = Math.min(vh, br.height + pad * 2);
 
-  const maskId = 'wrrapdShipOneSpotMask';
   const hole = svg.querySelector('[data-wrrapd="hole"]');
   const dim = svg.querySelector('[data-wrrapd="dim"]');
   const line = svg.querySelector('[data-wrrapd="arrow-line"]');
@@ -210,8 +252,9 @@ export function removeWrrapdShipToOneGuidanceOverlay() {
   }
 
   if (shipOneUi) {
-    const { root, mo, onScroll, onResize, haloTarget, moTimer } = shipOneUi;
+    const { root, mo, onScroll, onResize, haloTarget, moTimer, pendingRemove } = shipOneUi;
     if (moTimer) clearTimeout(moTimer);
+    if (pendingRemove) clearTimeout(pendingRemove);
     try {
       mo.disconnect();
     } catch (e) {
@@ -230,8 +273,12 @@ export function removeWrrapdShipToOneGuidanceOverlay() {
 /**
  * Spotlight (masked dimmer so the real Continue stays visible), zoom+halo on that button,
  * instruction card + arrow. Clicks on the Continue reach Amazon; capture hands off to loading screen.
+ *
+ * @param {HTMLElement} continueEl
+ * @param {{ refit?: () => HTMLElement | null }} [options] — Re-find Continue after Amazon DOM swaps (prevents flicker teardown).
  */
-export function showWrrapdShipToOneGuidanceOverlay(continueEl) {
+export function showWrrapdShipToOneGuidanceOverlay(continueEl, options = {}) {
+  const refit = typeof options.refit === 'function' ? options.refit : null;
   if (!continueEl || !continueEl.isConnected) {
     return;
   }
@@ -326,15 +373,21 @@ export function showWrrapdShipToOneGuidanceOverlay(continueEl) {
   window.addEventListener('scroll', onScroll, true);
   window.addEventListener('resize', onResize);
 
+  const checkoutRoot =
+    document.getElementById('checkout-main') ||
+    document.querySelector('[data-checkout-page]') ||
+    document.getElementById('checkout-experience-container') ||
+    document.body;
+
   const mo = new MutationObserver(() => {
     if (!shipOneUi) return;
     if (shipOneUi.moTimer) clearTimeout(shipOneUi.moTimer);
     shipOneUi.moTimer = setTimeout(() => {
       shipOneUi.moTimer = null;
       scheduleShipOneLayout();
-    }, 120);
+    }, 160);
   });
-  mo.observe(document.body, { childList: true, subtree: true, attributes: true });
+  mo.observe(checkoutRoot, { childList: true, subtree: true, attributes: false });
 
   shipOneUi = {
     root,
@@ -342,11 +395,14 @@ export function showWrrapdShipToOneGuidanceOverlay(continueEl) {
     panel,
     haloTarget,
     continueEl,
+    maskId,
+    refit,
     mo,
     onScroll,
     onResize,
     raf: 0,
     moTimer: null,
+    pendingRemove: null,
   };
 
   scheduleShipOneLayout();
@@ -354,12 +410,16 @@ export function showWrrapdShipToOneGuidanceOverlay(continueEl) {
   setTimeout(() => scheduleShipOneLayout(), 900);
 
   shipOneClickCapture = (ev) => {
+    if (!shipOneUi) return;
     const t = ev.target;
-    if (panel.contains(t)) return;
+    if (shipOneUi.panel.contains(t)) return;
+    tryRefitShipOneTarget();
+    const ht = shipOneUi.haloTarget;
+    const ce = shipOneUi.continueEl;
     const hit =
-      haloTarget.contains(t) ||
-      continueEl === t ||
-      (continueEl.contains && continueEl.contains(t));
+      ht.contains(t) ||
+      ce === t ||
+      (ce.contains && ce.contains(t));
     if (!hit) return;
     removeWrrapdShipToOneGuidanceOverlay();
     showLoadingScreen('Taking you to payment…');

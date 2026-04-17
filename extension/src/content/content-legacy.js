@@ -7119,7 +7119,9 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
     function wrrapdShowShipToOneAddressContinueCoachmark(continueControl) {
         const btn = continueControl || wrrapdFindShipItemsToOneAddressContinueControl();
         if (!btn) return;
-        showWrrapdShipToOneGuidanceOverlay(btn);
+        showWrrapdShipToOneGuidanceOverlay(btn, {
+            refit: () => wrrapdFindShipItemsToOneAddressContinueControl(),
+        });
     }
 
     /**
