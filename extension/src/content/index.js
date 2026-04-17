@@ -5,10 +5,8 @@
 import './content-legacy.js';
 import './lib/amazon-delivery-hints.js';
 
-/** Bump when verifying deploy — search Amazon tab DevTools console for this string. */
+/** Bump when verifying deploy — in DevTools: `window.__WRRAPD_CONTENT_BUILD_TAG__`. */
 export const WRRAPD_CONTENT_BUILD_TAG = '2026-04-15-terms-signature-hotfix+loading-parity';
-console.info(
-    '[Wrrapd] content bundle',
-    WRRAPD_CONTENT_BUILD_TAG,
-    '— if this line is missing after reload, Chrome is not using the built content.js.',
-);
+if (typeof window !== 'undefined') {
+    window.__WRRAPD_CONTENT_BUILD_TAG__ = WRRAPD_CONTENT_BUILD_TAG;
+}

@@ -44,6 +44,13 @@ import { isZipCodeAllowed } from './lib/zip-codes.js';
      * @returns {Promise<boolean>} - True if addresses were set successfully
      */
     async function ensureCorrectAddressesForAllItems(allItems) {
+        if (!hasAnyWrrapdGiftWrapInCart(allItems)) {
+            console.log(
+                '[ensureCorrectAddressesForAllItems] No Wrrapd gift-wrap in cart — skipping address automation.',
+            );
+            return false;
+        }
+
         console.log("[ensureCorrectAddressesForAllItems] Starting common address selection function...");
         
         // Step 1: Create identifier mapping for all items (always needed for multi-address page)
@@ -155,6 +162,22 @@ import { isZipCodeAllowed } from './lib/zip-codes.js';
             return Array.from(document.querySelectorAll('input[id^="wrrapd-checkbox-"]')).some((el) => el.checked);
         } catch (_) {
             return false;
+        }
+    }
+
+    /** True if at least one line item has Wrrapd gift-wrap — never hijack Amazon checkout without this. */
+    function hasAnyWrrapdGiftWrapInCart(allItems) {
+        try {
+            const items = allItems || {};
+            const fromStorage = Object.values(items).some(
+                (p) =>
+                    p &&
+                    Array.isArray(p.options) &&
+                    p.options.some((o) => o && o.checkbox_wrrapd === true),
+            );
+            return fromStorage || domHasAnyWrrapdCheckboxChecked();
+        } catch (_) {
+            return domHasAnyWrrapdCheckboxChecked();
         }
     }
 
@@ -335,7 +358,14 @@ import { isZipCodeAllowed } from './lib/zip-codes.js';
                     );
                     
                     console.log(`[monitorURLChanges] Has Wrrapd items: ${hasWrappedSubItem}`);
-                    
+
+                    if (!hasWrappedSubItem) {
+                        console.log(
+                            '[monitorURLChanges] No Wrrapd gift-wrap — skipping address-page automation.',
+                        );
+                        return;
+                    }
+
                     // CRITICAL: Show loading screen IMMEDIATELY when address page is detected
                     // This covers the page before any manipulation starts
                     showLoadingScreen();
@@ -360,13 +390,21 @@ import { isZipCodeAllowed } from './lib/zip-codes.js';
                 if (currentURL.includes('https://www.amazon.com/gp/buy/itemselect/handlers/display.html') ||
                     (currentURL.includes('/checkout/p/') && currentURL.includes('/itemselect') && currentURL.includes('useCase=multiAddress'))) {
                     console.log("[monitorURLChanges] Detected multiaddress page. ");
-                    
-                    // CRITICAL: Show loading screen IMMEDIATELY when multi-address page is detected
-                    showLoadingScreen();
-                    
-                    //checks if the address is changing to wrrapd
-                    // if so, it will continue with that task
-                    // if not, it will capture and save shipping address
+
+                    if (!hasAnyWrrapdGiftWrapInCart(allItems)) {
+                        console.log(
+                            '[monitorURLChanges] Multi-address page but no Wrrapd gift-wrap — not running Wrrapd automation.',
+                        );
+                        return;
+                    }
+
+                    // Manual Amazon confirmation: do not cover the page with the dark overlay
+                    if (wrrapdManualAddressTapsRequired()) {
+                        removeLoadingScreen();
+                    } else {
+                        showLoadingScreen();
+                    }
+
                     checkChangeAddress();
                     return;
                 }
@@ -3245,8 +3283,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                                                         <img src="${design.imageUrl}" 
                                                              alt="${design.title || `Design ${idx + 1}`}" 
                                                              style="max-width: 100%; max-height: 300px; border-radius: 4px; border: 1px solid #ddd; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: block;"
-                                                             onload="console.log('[AI Design Generation] Image loaded successfully:', this.src);"
-                                                             onerror="console.error('[AI Design Generation] Failed to load image:', this.src); this.parentElement.innerHTML='<div style=\\'padding: 20px; text-align: center; color: #999; border: 1px dashed #ddd; border-radius: 4px;\\'>Image unavailable<br><small>URL: ' + this.src.substring(0, 50) + '...</small></div>';">
+                                                             onerror="this.parentElement.innerHTML='<div style=\\'padding: 20px; text-align: center; color: #999; border: 1px dashed #ddd; border-radius: 4px;\\'>Image unavailable<br><small>URL: ' + this.src.substring(0, 50) + '...</small></div>';">
                                                         <div class="image-loading" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #999; display: none;">Loading image...</div>
                                                     </div>
                                                 ` : '<div style="margin-top: 10px; margin-left: 28px; padding: 20px; text-align: center; color: #999; border: 1px dashed #ddd; border-radius: 4px;">No image available</div>'}
@@ -3649,6 +3686,10 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
     }
     
     function attachOverlayButtons(allItems) {
+        if (!hasAnyWrrapdGiftWrapInCart(allItems)) {
+            return;
+        }
+
         console.log("[attachOverlayButtons] Searching Amazon buttons...");
     
         // CRITICAL: Check if addresses have already been changed OR if we're in the process of changing addresses
@@ -3713,9 +3754,17 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
     
     function multiSelectAddress(allItems) {
         console.log("[multiSelectAddress] Starting multi address selection page processing.");
-    
-        // CRITICAL: Show loading screen immediately to hide address manipulation
-        showLoadingScreen();
+
+        if (!hasAnyWrrapdGiftWrapInCart(allItems)) {
+            console.log('[multiSelectAddress] No Wrrapd gift-wrap — not intercepting multi-address page.');
+            return;
+        }
+
+        if (!wrrapdManualAddressTapsRequired()) {
+            showLoadingScreen();
+        } else {
+            removeLoadingScreen();
+        }
     
         // Primero, inyectar overlays (por si ya están listos los botones)
         attachOverlayButtons(allItems);
@@ -3766,6 +3815,13 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
         isSelectingAddresses = true;
         
         try {
+        if (!hasAnyWrrapdGiftWrapInCart(allItems)) {
+            console.log(
+                '[selectAddressesForItemsSimple] No Wrrapd gift-wrap — skipping multi-address automation.',
+            );
+            return;
+        }
+
         console.log("[selectAddressesForItemsSimple] Starting address selection for items...");
         
         // CRITICAL: Only show loading screen if Terms have been accepted
@@ -3774,8 +3830,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
         const shouldChangeAddress = localStorage.getItem('wrrapd-should-change-address') === 'true';
         const termsAccepted = wrrapdTermsAcceptedForCurrentGiftChoices(allItems);
         if (shouldChangeAddress && termsAccepted) {
-            // Loading screen should already be showing (from Terms acceptance), but ensure it's on
-            showLoadingScreen();
+            wrrapdShowAddressAutomationLoadingOrClear();
         }
         
         // OPTIMIZED: Start immediately - reduce wait time significantly
@@ -4222,7 +4277,13 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
             console.error(`[selectAddressesForItemsSimple] Cannot proceed - All addresses MUST be set correctly before returning to gift-options!`);
             const remainingASINs = Array.from(asinRequirements.keys()).filter(asin => !processedASINs.has(asin));
             console.error(`[selectAddressesForItemsSimple] Remaining ASINs that need addresses:`, remainingASINs);
-            
+
+            if (wrrapdManualAddressTapsRequired()) {
+                localStorage.removeItem('wrrapd-address-retry-count');
+                wrrapdShowMultiAddressAmazonConfirmUI();
+                return;
+            }
+
             // Keep loading screen visible
             showLoadingScreen();
             
@@ -4237,6 +4298,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
             if (retryCount < 3) {
                 localStorage.setItem('wrrapd-address-retry-count', String(retryCount + 1));
                 console.log(`[selectAddressesForItemsSimple] Retry attempt ${retryCount + 1}/3 - calling selectAddressesForItemsSimple again...`);
+                isSelectingAddresses = false;
                 // Recursive call to retry
                 return await selectAddressesForItemsSimple(allItems);
             } else {
@@ -4254,10 +4316,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
         
         // Clear retry counter on success
         localStorage.removeItem('wrrapd-address-retry-count');
-        
-        // CRITICAL: Keep loading screen visible during entire workflow
-        showLoadingScreen();
-        
+
         // CRITICAL: Set flag to indicate all addresses changed - this enables RETURN detection in giftSection()
         // Only set flag AFTER confirming all addresses were successfully set
         // CRITICAL: Also set a flag to prevent duplicate runs on multi-address page
@@ -4265,6 +4324,15 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
         localStorage.setItem('wrrapd-should-change-address', 'false');
         localStorage.setItem('wrrapd-multi-address-completed', 'true');
         console.log("[selectAddressesForItemsSimple] Set wrrapd-addresses-changed flag - all addresses successfully changed, proceeding to gift-options");
+
+        if (wrrapdManualAddressTapsRequired()) {
+            removeLoadingScreen();
+            wrrapdShowMultiAddressAmazonConfirmUI();
+            return;
+        }
+
+        // CRITICAL: Keep loading screen visible during entire workflow
+        showLoadingScreen();
         
         // CRITICAL: After addresses are changed, automatically click "Continue" to go back to gift options
         // Then automatically click "Save gift options" to proceed to Payment
@@ -4645,11 +4713,11 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
     /**
      * Select Wrrapd address from dropdown
      */
-    /**
-     * Select Wrrapd address from dropdown
-     */
     async function selectWrrapdAddressFromDropdown(dropdownActivator) {
         try {
+            // Each checkout line has its own dropdown; cached data-value/DOM from another row is invalid.
+            wrrapdAddressCache = null;
+
             console.log("[selectWrrapdAddressFromDropdown] Opening dropdown...");
             dropdownActivator.click();
             
@@ -6815,6 +6883,15 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
         return localStorage.getItem(WRRAPD_MANUAL_ADDRESS_TAPS_KEY) === '1';
     }
 
+    /** During manual Amazon confirmation, never trap the user behind the dark overlay. */
+    function wrrapdShowAddressAutomationLoadingOrClear() {
+        if (wrrapdManualAddressTapsRequired()) {
+            removeLoadingScreen();
+        } else {
+            showLoadingScreen();
+        }
+    }
+
     function wrrapdClearManualAddressTapsRequirement() {
         localStorage.removeItem(WRRAPD_MANUAL_ADDRESS_TAPS_KEY);
     }
@@ -6851,6 +6928,62 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
         anchorElement.parentElement.insertBefore(hint, anchorElement);
     }
 
+    const WRRAPD_COACH_STYLE_ID = 'wrrapd-amazon-confirm-coach-style';
+
+    function wrrapdRemoveMultiAddressCoachmark() {
+        document.querySelectorAll('.wrrapd-amazon-confirm-coach').forEach((el) => el.remove());
+    }
+
+    /**
+     * Multi-address / ship-to: after Wrrapd T&C, customer must tap Amazon's primary action
+     * (e.g. "Use these addresses") — show clear copy + flashing arrow; never leave the dark overlay up.
+     */
+    function wrrapdShowMultiAddressAmazonConfirmUI() {
+        wrrapdRemoveMultiAddressCoachmark();
+        removeLoadingScreen();
+
+        if (!document.getElementById(WRRAPD_COACH_STYLE_ID)) {
+            const st = document.createElement('style');
+            st.id = WRRAPD_COACH_STYLE_ID;
+            st.textContent =
+                '@keyframes wrrapd-coach-pulse{0%,100%{opacity:1;transform:translateY(0);}50%{opacity:0.45;transform:translateY(4px);}}';
+            document.head.appendChild(st);
+        }
+
+        const primary =
+            document.querySelector('#orderSummaryPrimaryActionBtn') ||
+            document.querySelector('[data-feature-id="order-summary-primary-action"]');
+        const btn =
+            primary?.querySelector?.('.a-button-input') ||
+            primary?.querySelector?.('input[type="submit"]') ||
+            primary?.querySelector?.('button');
+
+        const anchor = primary || btn;
+        if (!anchor || !anchor.parentElement) return;
+
+        const wrap = document.createElement('div');
+        wrap.className = 'wrrapd-amazon-confirm-coach wrrapd-manual-address-hint';
+        wrap.setAttribute('role', 'region');
+        wrap.setAttribute('aria-label', 'Confirm shipping on Amazon');
+        wrap.style.cssText =
+            'box-sizing:border-box;margin:12px 0;padding:14px 16px;background:#fffef7;border:2px solid #c9a009;border-radius:8px;color:#0f172a;font:14px/1.5 Arial,Helvetica,sans-serif;max-width:100%;position:relative;z-index:100001;';
+        wrap.innerHTML = `
+            <div style="font-weight:700;margin-bottom:8px;">Confirm shipping on Amazon</div>
+            <ol style="margin:0 0 10px 20px;padding:0;">
+                <li style="margin-bottom:6px;">We’ve added the Wrrapd hub to your address book where needed.</li>
+                <li>Click Amazon’s button below so you agree that items may ship to Wrrapd for gift wrapping.</li>
+            </ol>
+            <div style="text-align:center;font-size:26px;line-height:1;color:#b45309;animation:wrrapd-coach-pulse 1.1s ease-in-out infinite;" aria-hidden="true">▼</div>
+        `;
+        anchor.parentElement.insertBefore(wrap, anchor);
+
+        try {
+            anchor.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        } catch (_) {
+            /* ignore */
+        }
+    }
+
     async function checkChangeAddress() {
         console.log("[checkChangeAddress] Checking if address change is required.");
 
@@ -6864,6 +6997,14 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                                    (currentUrl.includes('multiAddress') || currentUrl.includes('useCase=multiAddress') || currentUrl.includes('multi-address'));
     
         if (isMultiAddressPage) {
+            if (!hasAnyWrrapdGiftWrapInCart(allItems)) {
+                removeLoadingScreen();
+                console.log(
+                    '[checkChangeAddress] Multi-address page but no Wrrapd gift-wrap — not running Wrrapd automation.',
+                );
+                return;
+            }
+
             console.log("[checkChangeAddress] Detected multi-address selection page. URL:", currentUrl);
             
             // CRITICAL: Check if Wrrapd address was just added - if so, Amazon auto-selected it for all items
@@ -6875,8 +7016,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                 // Clear the flag
                 localStorage.removeItem('wrrapd-address-just-added');
                 
-                // CRITICAL: Show loading screen IMMEDIATELY and keep it visible
-                showLoadingScreen();
+                wrrapdShowAddressAutomationLoadingOrClear();
                 
                 // Set flag to indicate we need to change addresses
                 localStorage.setItem('wrrapd-should-change-address', 'true');
@@ -6896,7 +7036,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                 localStorage.removeItem('wrrapd-addresses-changed');
                 localStorage.removeItem('wrrapd-multi-address-completed');
                 localStorage.setItem('wrrapd-should-change-address', 'true');
-                showLoadingScreen();
+                wrrapdShowAddressAutomationLoadingOrClear();
                 await ensureCorrectAddressesForAllItems(allItems);
                 return;
             }
@@ -6911,14 +7051,14 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                 // This ensures addresses are correct even if flags are set
                 console.log("[checkChangeAddress] Flags indicate addresses changed, but verifying they're actually correct...");
                 localStorage.setItem('wrrapd-should-change-address', 'true');
-                showLoadingScreen();
+                wrrapdShowAddressAutomationLoadingOrClear();
                 await ensureCorrectAddressesForAllItems(allItems);
                 return;
             } else {
                 // No flags set - addresses haven't been changed yet, so run address selection
                 console.log("[checkChangeAddress] Addresses not yet changed - running address selection...");
                 localStorage.setItem('wrrapd-should-change-address', 'true');
-                showLoadingScreen();
+                wrrapdShowAddressAutomationLoadingOrClear();
                 await ensureCorrectAddressesForAllItems(allItems);
                 return;
             }
@@ -6962,13 +7102,21 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
         
         // Not on multi-address page yet
         if (wrrapdShouldChangeAddress) {
+            if (!hasAnyWrrapdGiftWrapInCart(allItems)) {
+                console.log(
+                    '[checkChangeAddress] should-change-address set but no Wrrapd gift-wrap — clearing flag, no redirect.',
+                );
+                localStorage.setItem('wrrapd-should-change-address', 'false');
+                return;
+            }
+
             // Check if we need to redirect to multi-address page
             if (currentUrl.includes('amazon.com/gp/buy/payselect/handlers/display.html') || 
                 currentUrl.includes('amazon.com/gp/buy/spc/handlers/display.html') ||
                 currentUrl.includes('amazon.com/gp/buy/primeinterstitial/handlers/display.html')) {
                 // go to change multi address page
                 console.log("[checkChangeAddress] Showing loading screen before redirecting to address selection page.");
-                showLoadingScreen();
+                wrrapdShowAddressAutomationLoadingOrClear();
                 
                 // Small delay to ensure loading screen is visible, then navigate
                 setTimeout(() => {
@@ -6988,6 +7136,12 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
      */
     async function changeAddressForWrrapdItems(allItems) {
         console.log("[changeAddressForWrrapdItems] Start updating Amazon's shipping addresses.");
+
+        if (!hasAnyWrrapdGiftWrapInCart(allItems)) {
+            removeLoadingScreen();
+            console.log('[changeAddressForWrrapdItems] No Wrrapd gift-wrap — exiting.');
+            return;
+        }
 
         // 1) Confirm we are on the multi-address selection page
         if (!window.location.href.includes('https://www.amazon.com/gp/buy/itemselect/handlers/display.html?_from=cheetah&useCase=multiAddress')) {
@@ -7566,6 +7720,14 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             console.log("[handleWrrapdAddressSelection] Terms not accepted for current gift choices - NOT proceeding with address manipulation.");
             return;
         }
+
+        if (!hasAnyWrrapdGiftWrapInCart(itemsForTerms)) {
+            console.log(
+                '[handleWrrapdAddressSelection] No Wrrapd gift-wrap in cart — not running address automation.',
+            );
+            removeLoadingScreen();
+            return;
+        }
         
         isHandlingWrrapdAddressSelection = true;
         try {
@@ -7574,7 +7736,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
         
             // CRITICAL: Loading screen should already be showing (from monitorURLChanges)
             // But ensure it's visible and stays visible throughout
-        showLoadingScreen();
+        wrrapdShowAddressAutomationLoadingOrClear();
         
             // Wait for page to be fully loaded (reduced delay)
             await new Promise(r => setTimeout(r, 1500));
@@ -9122,21 +9284,9 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
         return orderData;
     }
 
-    function setStagingIngestStatus(message, kind) {
-        const el = document.getElementById('wrrapd-staging-ingest-status');
-        if (!el) return;
-        el.textContent = message || '';
-        el.style.color =
-            kind === 'error' ? '#c40000' : kind === 'ok' ? '#067d17' : kind === 'pending' ? '#555' : '#333';
-    }
-
     async function runStagingTrackingIngestSimulatePlaceOrder() {
-        console.info(
-            '[Wrrapd] Staging ingest only — sends JSON to api.wrrapd.com; it does not click or submit Amazon checkout.',
-        );
         if (localStorage.getItem('wrrapd-payment-status') !== 'success') {
             console.warn('[Wrrapd staging ingest] Complete Pay Wrrapd first.');
-            setStagingIngestStatus('Pay Wrrapd first — then use the green tracking button.', 'error');
             return;
         }
         const customerEmail = localStorage.getItem('wrrapd-checkout-customer-email');
@@ -9151,13 +9301,11 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             console.warn(
                 '[Wrrapd staging ingest] Missing checkout email/phone after pay — complete Pay Wrrapd again.',
             );
-            setStagingIngestStatus('Missing email/phone after pay — use Pay Wrrapd again.', 'error');
             return;
         }
         const orderData = buildWrrapdOrderDataFromLocalStorage();
         if (!orderData.length) {
             console.warn('[Wrrapd staging ingest] No Wrrapd line items in wrrapd-items.');
-            setStagingIngestStatus('No Wrrapd line items to send.', 'error');
             return;
         }
         const hints = readAmazonDeliveryHintsFromSessionStorage();
@@ -9168,8 +9316,6 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             (billingDetails && billingDetails.name) ||
             (customerEmail && customerEmail.split('@')[0]) ||
             'Customer';
-
-        setStagingIngestStatus('Sending to Wrrapd tracking…', 'pending');
 
         const orders = [];
         for (let i = 0; i < orderData.length; i++) {
@@ -9222,10 +9368,6 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                     resp.status,
                     text ? text.substring(0, 800) : '',
                 );
-                setStagingIngestStatus(
-                    'Tracking ingest failed (HTTP ' + resp.status + '). See console; check pay server + Cloud Run.',
-                    'error',
-                );
                 return;
             }
             if (data && Array.isArray(data.results)) {
@@ -9233,7 +9375,6 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                 if (failed.length) {
                     const lines = failed.map((r) => `Line ${(r.index || 0) + 1}: ${r.reason || 'failed'}`);
                     console.error('[Wrrapd staging ingest] Partial failure:', lines.join(' | '));
-                    setStagingIngestStatus('Some lines failed: ' + lines.join(' · '), 'error');
                     return;
                 }
                 data.results.forEach((r, idx) => {
@@ -9249,30 +9390,18 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                     })
                     .filter(Boolean);
                 console.info('[Wrrapd staging ingest] OK —', data.results.length, 'line(s).');
-                setStagingIngestStatus(
-                    notifyBits.length
-                        ? notifyBits.join(' ')
-                        : 'Orders saved. If this text never shows Mailgun/Twilio status, redeploy api.wrrapd.com (proxy) + Cloud Run tracking.',
-                    notifyBits.some((b) => /missing|not sent|0\//i.test(b)) ? 'error' : 'ok',
-                );
                 return;
             }
             if (data && data.ok) {
                 console.info('[Wrrapd staging ingest] OK (legacy body) —', orders.length, 'line item(s).');
-                setStagingIngestStatus(
-                    'Sent — redeploy pay server proxy to see email/SMS status per order.',
-                    'ok',
-                );
                 return;
             }
             console.error('[Wrrapd staging ingest] Unexpected JSON from api.wrrapd.com');
-            setStagingIngestStatus('Unexpected response from api.wrrapd.com. See console.', 'error');
         } catch (e) {
             console.error(
                 '[Wrrapd staging ingest] Network error:',
                 e && e.message ? e.message : String(e),
             );
-            setStagingIngestStatus('Network error talking to api.wrrapd.com. See console.', 'error');
         }
     }
 
@@ -9427,8 +9556,6 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                         <div style="color: green; font-weight: bold; font-size: 16px;">Payment successful. Please place order with Amazon now.</div>
                     </div>
                     <button type="button" id="wrrapd-staging-place-order-btn" class="wrrapd-staging-tracking-only-btn" style="box-sizing:border-box;background:#0d3d2e;color:#e8fff4;font-weight:700;margin-top:10px;width:100%;height:40px;border-radius:8px;border:2px solid #1a9966;cursor:pointer;">Send cart to Wrrapd tracking only — does not order on Amazon</button>
-                    <div id="wrrapd-staging-ingest-status" role="status" aria-live="polite" style="font-size: 12px; margin-top: 8px; min-height: 1.2em;"></div>
-                    <div id="wrrapd-staging-pyo-hint" style="font-size: 11px; color: #666; margin-top: 4px;">Sends orders through api.wrrapd.com to your tracking app (same as pay server — no browser setup).</div>
                 </div>
             `;
         } else {
@@ -9448,7 +9575,6 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                     </div>
                     <button id="pay-wrrapd-btn" class="a-button-primary" style="background-color: #f0c14b; color: black; font-weight: bold; margin-top: 10px; width: 100%; height: 40px; border-radius: 8px;">Pay Wrrapd</button>
                     <button type="button" id="wrrapd-staging-place-order-btn" disabled aria-disabled="true" class="wrrapd-staging-tracking-only-btn" style="box-sizing:border-box;background:#3d3d3d;color:#aaa;font-weight:700;margin-top:8px;width:100%;height:40px;border-radius:8px;border:2px solid #666;cursor:not-allowed;opacity:0.85;">Send cart to Wrrapd tracking only — pay Wrrapd first</button>
-                    <div id="wrrapd-staging-pyo-hint" style="font-size: 11px; color: #666; margin-top: 4px;">Enabled after Pay Wrrapd succeeds. Uses api.wrrapd.com to forward to tracking (no keys in the browser).</div>
                 </div>
             `;
         }
@@ -9758,21 +9884,6 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                                 stagingPyo.style.border = '2px solid #1a9966';
                                 stagingPyo.textContent =
                                     'Send cart to Wrrapd tracking only — does not order on Amazon';
-                            }
-                            const stagingHint = document.getElementById('wrrapd-staging-pyo-hint');
-                            if (stagingHint) {
-                                stagingHint.textContent =
-                                    'Sends orders through api.wrrapd.com to your tracking app (same as pay server — no keys in the browser).';
-                            }
-                            if (stagingPyo && !document.getElementById('wrrapd-staging-ingest-status')) {
-                                const statusRow = document.createElement('div');
-                                statusRow.id = 'wrrapd-staging-ingest-status';
-                                statusRow.setAttribute('role', 'status');
-                                statusRow.setAttribute('aria-live', 'polite');
-                                statusRow.style.fontSize = '12px';
-                                statusRow.style.marginTop = '8px';
-                                statusRow.style.minHeight = '1.2em';
-                                stagingPyo.insertAdjacentElement('afterend', statusRow);
                             }
 
                             // Store payment status in localStorage

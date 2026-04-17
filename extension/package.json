@@ -1,7 +1,8 @@
 {
   "private": true,
   "scripts": {
-    "build": "esbuild src/content/index.js --bundle --outfile=content.js --platform=browser --format=iife --legal-comments=none --minify",
+    "build": "esbuild src/content/index.js --bundle --outfile=content.js --platform=browser --format=iife --legal-comments=none --minify --drop:console --drop:debugger",
+    "build:dev": "esbuild src/content/index.js --bundle --outfile=content.js --platform=browser --format=iife --legal-comments=none --minify",
     "build:pretty": "esbuild src/content/index.js --bundle --outfile=content.js --platform=browser --format=iife --legal-comments=none"
   },
   "dependencies": {
