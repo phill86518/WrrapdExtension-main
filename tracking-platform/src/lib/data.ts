@@ -366,7 +366,8 @@ export async function createOrder(
     return { ok: true, order: finalOrder, ...(notify ? { notify } : {}) };
   }
 
-  const id = `ord-${Math.floor(Math.random() * 9000 + 1000)}`;
+  /** Distinct from Amazon order ids; high-entropy (not ord-1234). */
+  const id = `wrr-${randomBytes(10).toString("hex")}`;
   const prefToken =
     input.deliveryPreferencePending === true
       ? randomBytes(32).toString("base64url")

@@ -36,7 +36,7 @@ export default async function DriverPage() {
   const profile = await getDriverProfile(session.userId);
   const week = upcomingWeekFromToday();
   const existing = await getWeekAvailability(session.userId, week.weekStartMonday);
-  const initialDays = Object.fromEntries(
+  let initialDays = Object.fromEntries(
     week.days.map((d) => {
       const v = existing?.days[d];
       const normalized: DayShiftAvailability =
@@ -49,6 +49,13 @@ export default async function DriverPage() {
       return [d, normalized];
     })
   ) as Record<string, DayShiftAvailability>;
+
+  // Founder (Roger): always fully available for the upcoming week so routing can assign deliveries.
+  if (session.userId === "drv-1") {
+    initialDays = Object.fromEntries(
+      week.days.map((d) => [d, { morning: true, afternoon: true } as DayShiftAvailability])
+    ) as Record<string, DayShiftAvailability>;
+  }
   const deadline = availabilityDeadlineForWeekMonday(week.weekStartMonday);
   const deadlineLabel = formatInTimeZone(deadline, "America/New_York", "EEE MMM d, h:mm a zzz");
 

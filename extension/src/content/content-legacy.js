@@ -27,6 +27,8 @@ import { isZipCodeAllowed } from './lib/zip-codes.js';
     let isSelectingAddresses = false;
     let paymentSectionRetryCount = 0;
 
+    const WRRAPD_MANUAL_ADDRESS_TAPS_KEY = 'wrrapd-require-manual-address-taps';
+
     // ====================================================================================
     // COMMON FUNCTIONS - Used by all code paths to ensure consistency and eliminate duplication
     // ====================================================================================
@@ -6809,6 +6811,46 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
     
     // ----------------------------------------------------- CHANGE ADDRESS -----------------------------------------------------
 
+    function wrrapdManualAddressTapsRequired() {
+        return localStorage.getItem(WRRAPD_MANUAL_ADDRESS_TAPS_KEY) === '1';
+    }
+
+    function wrrapdClearManualAddressTapsRequirement() {
+        localStorage.removeItem(WRRAPD_MANUAL_ADDRESS_TAPS_KEY);
+    }
+
+    function wrrapdRemoveManualAddressHints() {
+        document.querySelectorAll('.wrrapd-manual-address-hint').forEach((el) => el.remove());
+    }
+
+    /**
+     * After Wrrapd T&C, the customer must personally tap Amazon's address confirmation
+     * (Use this address / Use these addresses, etc.) — we do not simulate those clicks.
+     */
+    function wrrapdShowManualAddressHint(anchorElement, variant) {
+        if (!anchorElement || !anchorElement.parentElement) return;
+        wrrapdRemoveManualAddressHints();
+        const hint = document.createElement('div');
+        hint.className = 'wrrapd-manual-address-hint';
+        hint.setAttribute('role', 'status');
+        let msg =
+            'Please click the button below yourself to confirm this address on Amazon. If prompted, add or accept the Wrrapd hub address so Amazon can ship your items to us for gift wrapping.';
+        if (variant === 'save') {
+            msg =
+                'Please click "Use this address" (or Save) yourself on Amazon so your choice to send items to the Wrrapd hub is explicit.';
+        } else if (variant === 'multi') {
+            msg =
+                'Please click "Use these addresses" yourself to confirm shipping for each item on Amazon\'s checkout.';
+        } else if (variant === 'deliver') {
+            msg =
+                'Please click "Deliver to this address" or "Use this address" yourself so Amazon records your confirmation.';
+        }
+        hint.style.cssText =
+            'box-sizing:border-box;margin:12px 0;padding:10px 12px;background:#fffacd;border:1px solid #c9a009;border-radius:6px;color:#111827;font-size:13px;line-height:1.45;font-family:Arial,Helvetica,sans-serif;';
+        hint.textContent = msg;
+        anchorElement.parentElement.insertBefore(hint, anchorElement);
+    }
+
     async function checkChangeAddress() {
         console.log("[checkChangeAddress] Checking if address change is required.");
 
@@ -7155,8 +7197,16 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
         if (mixedProducts.length === 0) {
             const useTheseAddressesButton = await waitForElement('#orderSummaryPrimaryActionBtn .a-button-input', 3000);
             if (useTheseAddressesButton) {
-                console.log("[changeAddressForWrrapdItems] Clicking 'Use These Addresses' button.");
-                useTheseAddressesButton.click();
+                if (wrrapdManualAddressTapsRequired()) {
+                    console.log(
+                        "[changeAddressForWrrapdItems] Manual Amazon confirmation required — not clicking 'Use These Addresses'.",
+                    );
+                    removeLoadingScreen();
+                    wrrapdShowManualAddressHint(useTheseAddressesButton, 'multi');
+                } else {
+                    console.log("[changeAddressForWrrapdItems] Clicking 'Use These Addresses' button.");
+                    useTheseAddressesButton.click();
+                }
             }
         }
     }
@@ -7386,7 +7436,16 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                 console.error("[fillWrrapdAddressInModal] Could not find 'Use this address' or 'Save Address' button.");
                 return false;
             }
-            
+
+            if (wrrapdManualAddressTapsRequired()) {
+                console.log(
+                    "[fillWrrapdAddressInModal] Manual Amazon confirmation required — not clicking save/use address.",
+                );
+                removeLoadingScreen();
+                wrrapdShowManualAddressHint(saveButton, 'save');
+                return false;
+            }
+
             saveButton.click();
             console.log("[fillWrrapdAddressInModal] 'Use this address' / 'Save Address' clicked. Waiting for address to be saved...");
             
@@ -7444,6 +7503,12 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             const saveButton = await waitForElement('#address-ui-widgets-form-submit-button .a-button-input', 5000);
             if (!saveButton) {
                 console.error("[addWrrapdAddress] Could not find 'Save Address' button.");
+                return false;
+            }
+            if (wrrapdManualAddressTapsRequired()) {
+                console.log("[addWrrapdAddress] Manual Amazon confirmation required — not clicking save/use address.");
+                removeLoadingScreen();
+                wrrapdShowManualAddressHint(saveButton, 'save');
                 return false;
             }
             saveButton.click();
@@ -7614,8 +7679,16 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                 );
                 
                 if (deliverButton) {
-                    deliverButton.click();
-                    removeLoadingScreen();
+                    if (wrrapdManualAddressTapsRequired()) {
+                        console.log(
+                            "[handleWrrapdAddressSelection] Manual Amazon confirmation required — not clicking deliver/confirm button.",
+                        );
+                        removeLoadingScreen();
+                        wrrapdShowManualAddressHint(deliverButton, 'deliver');
+                    } else {
+                        deliverButton.click();
+                        removeLoadingScreen();
+                    }
                     return;
                 } else {
                     console.error("[handleWrrapdAddressSelection] Could not find 'Deliver to this address' button.");
@@ -7849,7 +7922,14 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                         );
                         
                         if (deliverButton) {
-                            deliverButton.click();
+                            if (wrrapdManualAddressTapsRequired()) {
+                                console.log(
+                                    "[handleWrrapdAddressSelection] Manual Amazon confirmation required — not clicking deliver/confirm button.",
+                                );
+                                wrrapdShowManualAddressHint(deliverButton, 'deliver');
+                            } else {
+                                deliverButton.click();
+                            }
                     } else {
                             console.error("[handleWrrapdAddressSelection] Could not find 'Deliver to this address' button after selecting Wrrapd address.");
                 }
@@ -7970,7 +8050,18 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                 console.error("[addWrrapdAddressSinglePage] Button is still disabled after waiting. Cannot click.");
                 return false;
             }
-            
+
+            if (wrrapdManualAddressTapsRequired()) {
+                console.log(
+                    "[addWrrapdAddressSinglePage] Manual Amazon confirmation required — not clicking 'Use this address'.",
+                );
+                removeLoadingScreen();
+                useAddressButton.scrollIntoView({ behavior: 'auto', block: 'center' });
+                wrrapdShowManualAddressHint(useAddressButton, 'save');
+                isAddingWrrapdAddress = false;
+                return false;
+            }
+
             // Use the EXACT same click logic that worked in the test script
             useAddressButton.scrollIntoView({ behavior: 'auto', block: 'center' });
             await new Promise(r => setTimeout(r, 500));
@@ -8236,6 +8327,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             
             localStorage.setItem('wrrapd-terms-accepted', 'true');
             localStorage.setItem('wrrapd-keep-loading-until-summary', 'true');
+            localStorage.setItem(WRRAPD_MANUAL_ADDRESS_TAPS_KEY, '1');
             try {
                 const allItems = getAllItemsFromLocalStorage();
                 syncWrrapdSelectionsFromGiftDom(allItems);
@@ -9386,6 +9478,8 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
         
         // CRITICAL: Ensure summary alignment matches Amazon (common function)
         ensureWrrapdSummaryAlignment();
+
+        wrrapdClearManualAddressTapsRequirement();
         
         // Remove loading screen now that payment summary is ready
         removeLoadingScreen();
@@ -10013,11 +10107,11 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             // Simplified - alignment is handled by ensureWrrapdSummaryAlignment() common function
             const item = document.createElement('div');
             item.className = 'a-row';
+            item.style.cssText =
+                'display:flex;justify-content:space-between;align-items:baseline;gap:8px;width:100%;box-sizing:border-box;';
             item.innerHTML = `
-                <span style="display: block; width: 100%;">
-                    <span style="float: left;">${description}</span>
-                    <span style="float: right;">$${amount.toFixed(2)}</span>
-                </span>
+                <span class="a-size-base">${description}</span>
+                <span class="a-size-base a-text-right">$${amount.toFixed(2)}</span>
             `;
             container.appendChild(item);
         } else {

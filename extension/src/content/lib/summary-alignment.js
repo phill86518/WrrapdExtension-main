@@ -6,6 +6,7 @@ export function ensureWrrapdSummaryAlignment() {
   console.log('[ensureWrrapdSummaryAlignment] Ensuring Wrrapd summary alignment with Amazon...');
 
   const wrrapdSummaryItems = document.querySelector('#wrrapd-summary-items');
+  const wrrapdSummaryRoot = document.querySelector('#wrrapd-summary');
   if (!wrrapdSummaryItems) {
     console.warn('[ensureWrrapdSummaryAlignment] Wrrapd summary items container not found.');
     return;
@@ -17,40 +18,50 @@ export function ensureWrrapdSummaryAlignment() {
     return;
   }
 
-  const amazonItemsContainer = orderSummary.querySelector(
-    'ul, #subtotals-marketplace-table, [class*="subtotal"], [class*="items"]'
-  );
-  if (amazonItemsContainer) {
-    const itemsComputed = window.getComputedStyle(amazonItemsContainer);
-    const itemsStyle = [
-      itemsComputed.paddingLeft && itemsComputed.paddingLeft !== '0px'
-        ? `padding-left: ${itemsComputed.paddingLeft};`
-        : '',
-      itemsComputed.paddingRight && itemsComputed.paddingRight !== '0px'
-        ? `padding-right: ${itemsComputed.paddingRight};`
-        : '',
-      itemsComputed.marginLeft && itemsComputed.marginLeft !== '0px'
-        ? `margin-left: ${itemsComputed.marginLeft};`
-        : '',
-      itemsComputed.marginRight && itemsComputed.marginRight !== '0px'
-        ? `margin-right: ${itemsComputed.marginRight};`
-        : ''
-    ]
-      .filter((s) => s)
-      .join(' ');
+  // Prefer the same list Amazon uses for dollar lines (mobile + desktop).
+  const amazonSubtotals =
+    orderSummary.querySelector('#subtotals-marketplace-table') ||
+    orderSummary.querySelector('table.fixed-left-grid') ||
+    orderSummary.querySelector('ul');
 
-    if (itemsStyle) {
-      wrrapdSummaryItems.style.cssText += itemsStyle;
-      console.log(
-        '[ensureWrrapdSummaryAlignment] Applied Amazon items container styles to Wrrapd summary.'
-      );
+  const firstLine =
+    orderSummary.querySelector('#subtotals-marketplace-table li') ||
+    orderSummary.querySelector('.order-summary-line') ||
+    (amazonSubtotals ? amazonSubtotals.querySelector('li, tr') : null);
+
+  if (amazonSubtotals) {
+    const itemsComputed = window.getComputedStyle(amazonSubtotals);
+    wrrapdSummaryItems.style.paddingLeft = itemsComputed.paddingLeft;
+    wrrapdSummaryItems.style.paddingRight = itemsComputed.paddingRight;
+    if (itemsComputed.marginLeft && itemsComputed.marginLeft !== '0px') {
+      wrrapdSummaryItems.style.marginLeft = itemsComputed.marginLeft;
+    }
+    if (itemsComputed.marginRight && itemsComputed.marginRight !== '0px') {
+      wrrapdSummaryItems.style.marginRight = itemsComputed.marginRight;
+    }
+    console.log(
+      '[ensureWrrapdSummaryAlignment] Applied Amazon subtotals container styles to Wrrapd summary items.'
+    );
+  }
+
+  // Match the Wrrapd card outer box to Amazon's primary summary box padding when possible.
+  if (wrrapdSummaryRoot) {
+    const amazonBox =
+      orderSummary.querySelector('.a-box .a-box-inner') ||
+      orderSummary.querySelector('.a-box-inner') ||
+      orderSummary;
+    if (amazonBox && amazonBox !== orderSummary) {
+      const boxComputed = window.getComputedStyle(amazonBox);
+      const inner = wrrapdSummaryRoot.querySelector('.a-box-inner');
+      if (inner) {
+        inner.style.paddingLeft = boxComputed.paddingLeft;
+        inner.style.paddingRight = boxComputed.paddingRight;
+      }
     }
   }
 
-  const amazonItems = orderSummary.querySelectorAll('ul li, .a-row, [class*="a-row"]');
-  if (amazonItems.length > 0) {
-    const firstAmazonItem = amazonItems[0];
-    const computedStyle = window.getComputedStyle(firstAmazonItem);
+  if (firstLine) {
+    const computedStyle = window.getComputedStyle(firstLine);
     const itemStyle = {
       paddingLeft: computedStyle.paddingLeft,
       paddingRight: computedStyle.paddingRight,
@@ -81,9 +92,8 @@ export function ensureWrrapdSummaryAlignment() {
         .filter((s) => s)
         .join(' ');
 
-      const innerSpan = item.querySelector('span[style*="display"]');
-      if (innerSpan && itemStyleStr) {
-        innerSpan.style.cssText += itemStyleStr;
+      if (itemStyleStr) {
+        item.style.cssText += itemStyleStr;
       }
     });
 

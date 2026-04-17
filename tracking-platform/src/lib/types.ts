@@ -33,7 +33,7 @@ export type OrderLineItem = {
 
 export type Order = {
   /**
-   * Wrrapd-internal primary key (Firestore document id), always `ord-…`, generated at ingest/create.
+   * Wrrapd-internal primary key (Firestore document id), e.g. `wrr-` + hex, generated at ingest/create.
    * Unrelated to Amazon’s order id; see `externalOrderId` for partner-facing reference.
    */
   id: string;

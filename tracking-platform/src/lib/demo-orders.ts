@@ -51,7 +51,7 @@ export function buildDemoSeedOrders(): Order[] {
 
   const demo: Order[] = customers.map((c, i) => {
     const n = i + 1;
-    const id = `ord-20${String(n).padStart(2, "0")}`;
+    const id = `wrr-demo20${String(n).padStart(2, "0")}`;
     const isFirst = i === 0;
     return {
       id,
@@ -72,7 +72,7 @@ export function buildDemoSeedOrders(): Order[] {
   });
 
   const past: Order = {
-    id: "ord-0999",
+    id: "wrr-demo0999",
     customerName: "Jamie Brown",
     customerPhone: "+19045550102",
     recipientName: "Sam Carter",
