@@ -100,8 +100,9 @@ import { isZipCodeAllowed } from './lib/zip-codes.js';
             return true;
         } else {
             // On single address page - need to navigate to multi-address if mixed items
-            const allItemsWrrapd = localStorage.getItem('wrrapd-all-items') === 'true';
-            
+            const allItemsWrrapd = checkIfAllItemsWrrapd(allItems);
+            localStorage.setItem('wrrapd-all-items', allItemsWrrapd ? 'true' : 'false');
+
             if (allItemsWrrapd) {
                 // All items Wrrapd - select Wrrapd address and proceed
                 console.log("[ensureCorrectAddressesForAllItems] All items Wrrapd - selecting Wrrapd address on single page...");
@@ -2224,11 +2225,13 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
         }
         
         // Also check for any visible Wrrapd address text in the page (fallback)
-        const hasWrrapdAddress = Array.from(document.querySelectorAll('*')).some(el => {
+        const hasWrrapdAddress = Array.from(
+            document.querySelectorAll('[class*="address"], [data-testid*="address"], .a-box, .a-box-inner'),
+        ).some((el) => {
             const text = (el.textContent || el.innerText || '').trim();
-            return text.includes('PO BOX 26067') && text.includes('JACKSONVILLE') && text.includes('32226');
+            return wrrapdHubSignatureFromText(text);
         });
-        
+
         return hasWrrapdAddress;
     }
 
@@ -2251,6 +2254,118 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
         console.log(`[checkIfAllItemsWrrapd] Total items: ${totalSubItems}, Wrrapd items: ${wrrapdSubItems}, All Wrrapd: ${allWrrapd}`);
         
         return allWrrapd;
+    }
+
+    /**
+     * Detect Wrrapd hub text in Amazon address blocks (labels vary; avoid over-strict matching).
+     */
+    function wrrapdHubSignatureFromText(raw) {
+        const t = String(raw || '')
+            .toUpperCase()
+            .replace(/\s+/g, ' ')
+            .trim();
+        if (!t) return false;
+        const hasBrand = t.includes('WRRAPD');
+        const hasPo = (t.includes('PO BOX') || t.includes('P.O. BOX')) && t.includes('26067');
+        const hasJax = t.includes('JACKSONVILLE');
+        const hasZip = t.includes('32218') || t.includes('32226');
+        const hasFl = t.includes(' FL ') || t.endsWith(' FL') || t.includes(', FL,') || t.includes('FLORIDA');
+        if (hasBrand && (hasJax || hasZip || hasPo || hasFl)) return true;
+        if (hasPo && (hasJax || hasZip || hasFl)) return true;
+        return false;
+    }
+
+    function wrrapdListTitlesWithAnyWrrapdGiftWrap(allItems) {
+        const out = [];
+        for (const [title, product] of Object.entries(allItems || {})) {
+            if (!product || !Array.isArray(product.options)) continue;
+            if (product.options.some((o) => o && o.checkbox_wrrapd === true)) out.push(title);
+        }
+        return out;
+    }
+
+    function wrrapdRemoveAddressGiftMismatchModal() {
+        document.getElementById('wrrapd-address-gift-mismatch-overlay')?.remove();
+    }
+
+    function wrrapdShowAddressGiftMismatchModal(bodyText, itemTitles) {
+        wrrapdRemoveAddressGiftMismatchModal();
+        const wrap = document.createElement('div');
+        wrap.id = 'wrrapd-address-gift-mismatch-overlay';
+        wrap.setAttribute('role', 'alertdialog');
+        wrap.setAttribute('aria-modal', 'true');
+        wrap.setAttribute('aria-label', 'Wrrapd address required for gift-wrap');
+        wrap.style.cssText =
+            'position:fixed;inset:0;z-index:2147483646;background:rgba(15,23,42,0.88);display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;';
+        const inner = document.createElement('div');
+        inner.style.cssText =
+            'max-width:520px;background:#fff;border-radius:12px;padding:22px 24px;box-shadow:0 20px 50px rgba(0,0,0,0.35);color:#0f172a;line-height:1.5;font-size:15px;';
+        const h = document.createElement('div');
+        h.style.cssText = 'font-weight:700;font-size:18px;margin-bottom:10px;color:#b45309;';
+        h.textContent = 'Wrrapd gift-wrap needs the Wrrapd hub address';
+        const p = document.createElement('p');
+        p.style.margin = '0 0 12px';
+        p.textContent = bodyText;
+        inner.appendChild(h);
+        inner.appendChild(p);
+        const titles = itemTitles && itemTitles.length ? itemTitles : [];
+        if (titles.length) {
+            const sub = document.createElement('div');
+            sub.style.cssText = 'font-weight:600;margin-bottom:6px;font-size:14px;';
+            sub.textContent = 'Items with Wrrapd gift-wrap in this checkout:';
+            inner.appendChild(sub);
+            const ul = document.createElement('ul');
+            ul.style.cssText = 'margin:0 0 14px 20px;padding:0;';
+            for (const t of titles) {
+                const li = document.createElement('li');
+                li.textContent = t;
+                ul.appendChild(li);
+            }
+            inner.appendChild(ul);
+        }
+        const p2 = document.createElement('p');
+        p2.style.cssText = 'margin:0 0 16px;font-size:14px;color:#334155;';
+        p2.textContent =
+            'On Amazon, choose the Wrrapd hub for those lines, or go back and remove Wrrapd gift-wrap for anything shipping to your own address.';
+        inner.appendChild(p2);
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = "OK — I'll fix it on Amazon";
+        btn.style.cssText =
+            'padding:10px 18px;border-radius:8px;border:none;background:#1e293b;color:#fff;font-weight:600;cursor:pointer;font-size:14px;';
+        btn.addEventListener('click', () => wrrapdRemoveAddressGiftMismatchModal());
+        inner.appendChild(btn);
+        wrap.appendChild(inner);
+        document.body.appendChild(wrap);
+    }
+
+    function wrrapdGetDisplayedSingleAddressSelectionText() {
+        const sel = document.querySelector('.list-address-selected');
+        if (sel && (sel.textContent || '').replace(/\s+/g, ' ').trim().length > 12) {
+            return sel.textContent || '';
+        }
+        const checked = document.querySelector(
+            'input[type="radio"][name*="shipTo"]:checked, input[type="radio"][name*="ShipTo"]:checked, input[type="radio"]:checked',
+        );
+        if (checked) {
+            const box =
+                checked.closest(
+                    '.a-box, .a-box-inner, .a-row, li, label, .a-radio, [data-testid*="address"]',
+                ) || checked.parentElement;
+            return (box && box.textContent) || '';
+        }
+        return '';
+    }
+
+    function wrrapdMaybeShowSingleAddressGiftWrapMismatch(allItems) {
+        if (!hasAnyWrrapdGiftWrapInCart(allItems)) return;
+        const blob = wrrapdGetDisplayedSingleAddressSelectionText();
+        if (!blob || blob.replace(/\s+/g, ' ').trim().length < 24) return;
+        if (wrrapdHubSignatureFromText(blob)) return;
+        wrrapdShowAddressGiftMismatchModal(
+            'The address currently selected on Amazon does not look like the Wrrapd gift-wrap hub. Wrrapd-wrapped items must ship to the hub.',
+            wrrapdListTitlesWithAnyWrrapdGiftWrap(allItems),
+        );
     }
 
     /**
@@ -6985,7 +7100,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
         } else if (variant === 'multi') {
             msg =
                 'Please click "Use these addresses" yourself to confirm shipping for each item on Amazon\'s checkout.';
-        } else if (variant === 'deliver') {
+        } else         if (variant === 'deliver') {
             msg =
                 'Please click "Deliver to this address" or "Use this address" yourself so Amazon records your confirmation.';
         }
@@ -6993,6 +7108,15 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             'box-sizing:border-box;margin:12px 0;padding:10px 12px;background:#fffacd;border:1px solid #c9a009;border-radius:6px;color:#111827;font-size:13px;line-height:1.45;font-family:Arial,Helvetica,sans-serif;';
         hint.textContent = msg;
         anchorElement.parentElement.insertBefore(hint, anchorElement);
+        if (variant === 'deliver' && hasAnyWrrapdGiftWrapInCart(getAllItemsFromLocalStorage())) {
+            setTimeout(() => {
+                try {
+                    wrrapdMaybeShowSingleAddressGiftWrapMismatch(getAllItemsFromLocalStorage());
+                } catch (_) {
+                    /* ignore */
+                }
+            }, 2800);
+        }
     }
 
     const WRRAPD_COACH_STYLE_ID = 'wrrapd-amazon-confirm-coach-style';
@@ -8050,7 +8174,8 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
         isHandlingWrrapdAddressSelection = true;
         try {
         const allItems = itemsForTerms;
-        const allItemsWrrapd = localStorage.getItem('wrrapd-all-items') === 'true';
+        const allItemsWrrapd = checkIfAllItemsWrrapd(allItems);
+        localStorage.setItem('wrrapd-all-items', allItemsWrrapd ? 'true' : 'false');
         
             // CRITICAL: Loading screen should already be showing (from monitorURLChanges)
             // But ensure it's visible and stays visible throughout
@@ -8123,20 +8248,13 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             // Get the address container for this radio
             let addressContainer = radio.closest('.a-box, .a-box-inner, [class*="address"], label, [class*="radio"], [data-testid*="address"], .a-radio') || radio.parentElement;
             const addressText = addressContainer ? addressContainer.textContent?.trim() || '' : '';
-            
-            // Check if this is the Wrrapd address
-            const hasWrrapd = addressText.includes("Wrrapd") || addressText.includes("Wrrapd.com");
-            const hasPOBox = addressText.includes("PO BOX 26067") || addressText.includes("PO Box 26067");
-            const hasJacksonville = addressText.includes("JACKSONVILLE") || addressText.includes("Jacksonville");
-            const hasZip = addressText.includes("32218") || addressText.includes("32226");
-            const hasState = addressText.includes("FL") || addressText.includes("Florida");
-            
-            if ((hasWrrapd || hasPOBox) && hasJacksonville && hasZip && hasState) {
+
+            if (wrrapdHubSignatureFromText(addressText)) {
                 wrrapdAddressFound = true;
                 wrrapdAddressRadio = radio;
-                    break;
-                }
+                break;
             }
+        }
         
         // Step 3: Handle based on whether Wrrapd address was found
         if (wrrapdAddressFound && wrrapdAddressRadio) {
@@ -8173,6 +8291,10 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                 } else {
                     console.error("[handleWrrapdAddressSelection] Could not find 'Deliver to this address' button.");
                     removeLoadingScreen();
+                    wrrapdShowAddressGiftMismatchModal(
+                        'Amazon did not expose the usual “Deliver to this address” control while Wrrapd gift-wrap is in your cart. Scroll to the primary yellow button, or refresh and try again.',
+                        wrrapdListTitlesWithAnyWrrapdGiftWrap(allItems),
+                    );
                     return;
                 }
             } else {
@@ -8220,6 +8342,10 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                 } else {
                     console.error("[handleWrrapdAddressSelection] Could not find 'Deliver to multiple addresses' link.");
                     removeLoadingScreen();
+                    wrrapdShowAddressGiftMismatchModal(
+                        'Mixed cart: we could not find “Deliver to multiple addresses” so each line can ship to the right place. Use that link on Amazon if you see it, or turn off Wrrapd gift-wrap for items staying at your address.',
+                        wrrapdListTitlesWithAnyWrrapdGiftWrap(allItems),
+                    );
                     return;
                 }
             }
@@ -8241,6 +8367,10 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                     console.error("[handleWrrapdAddressSelection] Could not find 'Add a new delivery address' link.");
                     console.error("[handleWrrapdAddressSelection] This link ONLY exists on the single address selection page (when clicking 'Change' address).");
                     removeLoadingScreen();
+                    wrrapdShowAddressGiftMismatchModal(
+                        'We could not find the Wrrapd hub in the visible list and could not open “Add a new delivery address.” Expand “Show more addresses”, add the hub if missing, or remove Wrrapd gift-wrap for items not coming to us.',
+                        wrrapdListTitlesWithAnyWrrapdGiftWrap(allItems),
+                    );
                     return;
                 }
                 
@@ -8254,6 +8384,10 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                 if (!success) {
                     console.error("[handleWrrapdAddressSelection] Failed to add Wrrapd address.");
                     removeLoadingScreen();
+                    wrrapdShowAddressGiftMismatchModal(
+                        'Adding the Wrrapd hub address on Amazon did not complete. Finish adding it in Amazon’s form, or remove Wrrapd gift-wrap for items you are not sending to Wrrapd.',
+                        wrrapdListTitlesWithAnyWrrapdGiftWrap(allItems),
+                    );
                     return;
                 }
                 
