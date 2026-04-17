@@ -2,6 +2,46 @@
  * Match Wrrapd order-summary styling to Amazon's layout.
  */
 
+function findAmazonOrderSummaryForAlignment() {
+  const direct =
+    document.querySelector('#spc-order-summary') ||
+    document.querySelector('[data-testid="checkout-order-summary"]') ||
+    document.querySelector('[data-testid="order-summary"]') ||
+    document.querySelector('[data-feature-id*="order-summary"]') ||
+    document.querySelector('.spc-order-summary');
+
+  if (direct && direct.id !== 'wrrapd-summary') {
+    return direct;
+  }
+
+  const right = document.querySelector('#checkout-experience-right-column');
+  if (right) {
+    const nested =
+      right.querySelector('#spc-order-summary') ||
+      right.querySelector('[data-testid="checkout-order-summary"]') ||
+      right.querySelector('[data-testid="order-summary"]') ||
+      right.querySelector('[class*="order-summary"]');
+    if (nested && nested.id !== 'wrrapd-summary') {
+      return nested;
+    }
+  }
+
+  const candidates = document.querySelectorAll('[id*="order"], [class*="order"]');
+  for (const candidate of candidates) {
+    if (candidate.id === 'wrrapd-summary') continue;
+    const id = (candidate.id || '').toLowerCase();
+    const classes = (candidate.className || '').toString().toLowerCase();
+    if (
+      (id.includes('summary') || classes.includes('summary')) &&
+      (id.includes('spc') || classes.includes('spc') || id.includes('checkout'))
+    ) {
+      return candidate;
+    }
+  }
+
+  return right || null;
+}
+
 export function ensureWrrapdSummaryAlignment() {
   console.log('[ensureWrrapdSummaryAlignment] Ensuring Wrrapd summary alignment with Amazon...');
 
@@ -12,7 +52,7 @@ export function ensureWrrapdSummaryAlignment() {
     return;
   }
 
-  const orderSummary = document.querySelector('#spc-order-summary, [id*="order-summary"], .spc-order-summary');
+  const orderSummary = findAmazonOrderSummaryForAlignment();
   if (!orderSummary) {
     console.warn('[ensureWrrapdSummaryAlignment] Amazon order summary not found.');
     return;

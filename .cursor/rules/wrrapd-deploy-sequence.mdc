@@ -1,0 +1,23 @@
+---
+description: Mandatory VM-first deploy sequence (steps 1–4) and Windows sync — never reorder or prepend VM git pull by default.
+alwaysApply: true
+---
+
+# Wrrapd deployment sequence (do not forget)
+
+## Non-negotiable order for “give me deploy / copy-paste instructions”
+
+1. **SSH** to the GCP VM (user’s real `ssh` target, often `ssh admin_@wrrapd-server-1`).
+2. **VM — GitHub push first:** `cd /home/phill/wrrapd-GCP` → `git status` → `git add -A` → `git commit -m "…"` (skip commit if nothing to commit) → `git push origin main`.  
+   - Do **not** put `git pull origin main` before this unless the user explicitly asked to merge remote changes onto the VM first.
+3. **VM — Pay / API server:** `cd /home/phill/wrrapd-GCP/backend/wrrapd-api-repo/WrrapdServer` → `npm install` → `pm2 restart wrrapd-server` → `curl -sS http://127.0.0.1:8080/health` (optional: `pm2 logs wrrapd-server --lines 80`).
+4. **VM — Tracking (Cloud Run):** `cd /home/phill/wrrapd-GCP` → set `PROJECT_ID`, `TAG`, `IMAGE` → `gcloud builds submit tracking-platform --tag "$IMAGE" --project "$PROJECT_ID"` → `gcloud run deploy wrrapd-tracking …` → optional `gcloud run services describe … --format='value(status.url)'`.
+
+## After steps 1–4 (Windows — never use path `wrrapd-GCP`)
+
+- Repo root on Windows is the **GitHub clone folder** (docs default: `%USERPROFILE%\WrrapdExtension-main`), **not** `wrrapd-GCP`.
+- `cd` there → `git pull origin main` → `cd extension` → `npm install` → `npm run build` → Chrome **Reload** extension.
+
+## Workflow meaning
+
+Changes are made on the **GCP VM**, **pushed** to GitHub, then **pulled** on Windows to refresh the extension. Default instructions must not open with “pull on VM before push.”

@@ -15,7 +15,13 @@ import {
     removeAllItemsFromLocalStorage,
     saveDeliveryInstructions
 } from './lib/storage.js';
-import { hideLoadingScreen, showLoadingScreen, removeLoadingScreen } from './lib/loading-ui.js';
+import {
+    hideLoadingScreen,
+    showLoadingScreen,
+    removeLoadingScreen,
+    showWrrapdShipToOneGuidanceOverlay,
+    removeWrrapdShipToOneGuidanceOverlay,
+} from './lib/loading-ui.js';
 import { getValueByLabel, getElementValue, generateOrderNumber } from './lib/order-helpers.js';
 import { ensureWrrapdSummaryAlignment } from './lib/summary-alignment.js';
 import { isZipCodeAllowed } from './lib/zip-codes.js';
@@ -197,11 +203,40 @@ import { isZipCodeAllowed } from './lib/zip-codes.js';
             itemContainer.querySelector('a[href*="/gp/product/"]');
         return ((itemTitleElement && (itemTitleElement.textContent || itemTitleElement.innerText)) || '')
             .trim()
-            .substring(0, 35);
+            .substring(0, 200);
     }
 
-    function resolveProductByRowTitle(allItems, itemTitle, rowIndex) {
+    function titleTokensOverlapCount(pageTitle, savedTitle) {
+        const ta = pageTitle
+            .toLowerCase()
+            .split(/[^a-z0-9]+/)
+            .filter((t) => t.length > 2);
+        const tb = new Set(
+            savedTitle
+                .toLowerCase()
+                .split(/[^a-z0-9]+/)
+                .filter((t) => t.length > 2),
+        );
+        let n = 0;
+        for (const t of ta) {
+            if (tb.has(t)) n++;
+        }
+        return n;
+    }
+
+    function resolveProductByRowTitle(allItems, itemTitle, rowIndex, rowContainer) {
         if (!allItems || !itemTitle) return null;
+
+        const asinFromRow =
+            rowContainer?.dataset?.asin ||
+            rowContainer?.querySelector?.('[data-asin]')?.getAttribute?.('data-asin') ||
+            '';
+        if (asinFromRow) {
+            for (const p of Object.values(allItems)) {
+                if (p && p.asin === asinFromRow && Array.isArray(p.options)) return p;
+            }
+        }
+
         let productObj = allItems[itemTitle];
         if (!productObj) {
             const savedTitles = Object.keys(allItems);
@@ -211,7 +246,8 @@ import { isZipCodeAllowed } from './lib/zip-codes.js';
                 if (
                     normalizedPageTitle.substring(0, 30) === normalizedSavedTitle.substring(0, 30) ||
                     normalizedPageTitle.includes(normalizedSavedTitle) ||
-                    normalizedSavedTitle.includes(normalizedPageTitle)
+                    normalizedSavedTitle.includes(normalizedPageTitle) ||
+                    titleTokensOverlapCount(itemTitle, savedTitle) >= 2
                 ) {
                     productObj = allItems[savedTitle];
                     break;
@@ -240,14 +276,18 @@ import { isZipCodeAllowed } from './lib/zip-codes.js';
                 const wrrapdCheckbox = document.getElementById(`wrrapd-checkbox-${index}`);
                 if (!wrrapdCheckbox) return;
                 const itemTitle = titleFromGiftRow(itemContainer);
-                const productObj = resolveProductByRowTitle(allItems, itemTitle, index);
+                const productObj = resolveProductByRowTitle(allItems, itemTitle, index, itemContainer);
                 if (!productObj || !productObj.options.length) return;
 
-                const key = productObj.title || itemTitle || String(index);
-                const subIndex = subItemIndexTracker[key] || 0;
+                const trackerKey =
+                    Object.keys(allItems).find((k) => allItems[k] === productObj) ||
+                    productObj.title ||
+                    itemTitle ||
+                    String(index);
+                const subIndex = subItemIndexTracker[trackerKey] || 0;
                 if (subIndex >= productObj.options.length) return;
                 const subItem = productObj.options[subIndex];
-                subItemIndexTracker[key] = subIndex + 1;
+                subItemIndexTracker[trackerKey] = subIndex + 1;
                 if (!subItem || typeof subItem !== 'object') return;
 
                 const shouldBeChecked = wrrapdCheckbox.checked === true;
@@ -1449,7 +1489,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                     return;
                 }
     
-                const title = titleElement.innerText.trim().substring(0, 35);
+                const title = titleElement.innerText.trim().substring(0, 200);
                 const imageElement = item.querySelector('.sc-product-image');
                 const imageUrl = imageElement ? (imageElement.src || imageElement.getAttribute('src')) : null;
                 const quantityAttr = item.getAttribute('data-quantity');
@@ -2235,23 +2275,26 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                 continue;
             }
             
-            const itemTitle = itemTitleElement.textContent.trim().substring(0, 35);
+            const itemTitle = itemTitleElement.textContent.trim().substring(0, 200);
             console.log(`[captureGiftMessages] Processing item "${itemTitle}"`);
             
             // Get the product object from our stored data
-            const productObj = allItems[itemTitle];
+            const productObj = resolveProductByRowTitle(allItems, itemTitle, i, item);
             if (!productObj) {
                 console.warn(`[captureGiftMessages] No product found with title "${itemTitle}".`);
                 continue;
             }
+
+            const trackerKey =
+                Object.keys(allItems).find((k) => allItems[k] === productObj) || itemTitle;
             
             // Initialize the subitem index tracker for this title if it doesn't exist
-            if (typeof subItemIndexTracker[itemTitle] === 'undefined') {
-                subItemIndexTracker[itemTitle] = 0;
+            if (typeof subItemIndexTracker[trackerKey] === 'undefined') {
+                subItemIndexTracker[trackerKey] = 0;
             }
             
             // Get the current subindex for this product
-            const currentSubIndex = subItemIndexTracker[itemTitle];
+            const currentSubIndex = subItemIndexTracker[trackerKey];
             
             // Make sure there's a subitem at this index
             if (currentSubIndex >= productObj.options.length) {
@@ -2263,7 +2306,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
             const subItem = productObj.options[currentSubIndex];
             
             // Move the "pointer" forward
-            subItemIndexTracker[itemTitle] = currentSubIndex + 1;
+            subItemIndexTracker[trackerKey] = currentSubIndex + 1;
             
             // Only capture for items with Wrrapd selected
             if (subItem.checkbox_wrrapd) {
@@ -2348,7 +2391,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
             }
     
             // Try both textContent and innerText, as Amazon may use different methods
-            const itemTitle = (itemTitleElement.textContent || itemTitleElement.innerText || '').trim().substring(0, 35);
+            const itemTitle = (itemTitleElement.textContent || itemTitleElement.innerText || '').trim().substring(0, 200);
             if (!itemTitle || itemTitle.length < 5) {
                 console.warn(`[monitorAmazonGiftCheckbox] Row #${index}: Unable to retrieve title. Element found but no text. Selector: ${itemTitleElement.tagName}.${itemTitleElement.className}`);
                 console.warn(`[monitorAmazonGiftCheckbox] Row #${index}: Element HTML: ${itemTitleElement.outerHTML.substring(0, 200)}`);
@@ -2356,13 +2399,16 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
             }
     
             // Determine which subItem index to use for this row
-            const productObj = allItems[itemTitle];
+            const productObj = resolveProductByRowTitle(allItems, itemTitle, index, itemContainer);
             if (!productObj || !productObj.options || productObj.options.length === 0) {
                 console.error(`[monitorAmazonGiftCheckbox] Row #${index}: No matching product or no sub-items for "${itemTitle}".`);
                 return;
             }
+
+            const trackerKey =
+                Object.keys(allItems).find((k) => allItems[k] === productObj) || itemTitle;
     
-            const currentSubIndex = subItemIndexTracker[itemTitle] || 0;
+            const currentSubIndex = subItemIndexTracker[trackerKey] || 0;
             if (currentSubIndex >= productObj.options.length) {
                 console.warn(`[monitorAmazonGiftCheckbox] Row #${index}: No remaining sub-items for "${itemTitle}".`);
                 return;
@@ -2371,7 +2417,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
             // Grab the sub-item
             const subItem = productObj.options[currentSubIndex];
             // Move the "pointer" forward
-            subItemIndexTracker[itemTitle] = currentSubIndex + 1;
+            subItemIndexTracker[trackerKey] = currentSubIndex + 1;
     
             // Finally attach the event listener
             checkbox.addEventListener('change', function () {
@@ -2532,7 +2578,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
             // Strategy 1: Try standard Amazon selectors
             itemTitleElement = item.querySelector('span.a-truncate-cut, h3, h4, [class*="title"], [class*="product-name"], [data-testid*="title"]');
             if (itemTitleElement && itemTitleElement.innerText?.trim()) {
-                itemTitle = itemTitleElement.innerText.trim().substring(0, 35);
+                itemTitle = itemTitleElement.innerText.trim().substring(0, 200);
             }
             
             // Strategy 2: Try to find text that matches our saved product titles (PRIORITY - most reliable)
@@ -2553,7 +2599,8 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                         if (normalizedText === normalizedSavedTitle || 
                             normalizedText.substring(0, 30) === normalizedSavedTitle.substring(0, 30) ||
                             normalizedText.includes(normalizedSavedTitle) || 
-                            normalizedSavedTitle.includes(normalizedText)) {
+                            normalizedSavedTitle.includes(normalizedText) ||
+                            titleTokensOverlapCount(text, savedTitle) >= 2) {
                             itemTitleElement = el;
                             itemTitle = savedTitle; // Use the saved title for consistency
                             break;
@@ -2587,14 +2634,14 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                 if (bestMatch) {
                     itemTitleElement = bestMatch;
                     itemTitle = bestMatch.innerText?.trim() || bestMatch.textContent?.trim() || '';
-                    itemTitle = itemTitle.substring(0, 35);
+                    itemTitle = itemTitle.substring(0, 200);
                 }
             }
             
             // Strategy 4: If we still have the element but no title, try getting text directly
             if (itemTitleElement && (!itemTitle || itemTitle.length < 5)) {
                 itemTitle = itemTitleElement.innerText?.trim() || itemTitleElement.textContent?.trim() || '';
-                itemTitle = itemTitle.substring(0, 35);
+                itemTitle = itemTitle.substring(0, 200);
             }
             
             // Strategy 5: If all else fails, use position-based matching (use saved title directly)
@@ -2607,37 +2654,15 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                 }
             }
 
-
-            // Retrieve the product object from allItems - try exact match first
-            let productObj = allItems[itemTitle];
-            
-            // If no exact match, try to find a partial match (title might be slightly different)
-            if (!productObj) {
-                const savedTitles = Object.keys(allItems);
-                for (const savedTitle of savedTitles) {
-                    const normalizedPageTitle = itemTitle.toLowerCase().replace(/\s+/g, ' ').trim();
-                    const normalizedSavedTitle = savedTitle.toLowerCase().replace(/\s+/g, ' ').trim();
-                    
-                    if (normalizedPageTitle.substring(0, 30) === normalizedSavedTitle.substring(0, 30) ||
-                        normalizedPageTitle.includes(normalizedSavedTitle) ||
-                        normalizedSavedTitle.includes(normalizedPageTitle)) {
-                        productObj = allItems[savedTitle];
-                        break;
-                    }
-                }
-            }
-            
-            if (!productObj) {
-                const savedTitles = Object.keys(allItems);
-                if (i < savedTitles.length) {
-                    productObj = allItems[savedTitles[i]];
-                }
-            }
+            const productObj = resolveProductByRowTitle(allItems, itemTitle, i, item);
             
             if (!productObj) {
                 console.warn(`[insertWrrapdOptions] ⚠️ Skipping row #${i}: No matching data found for title "${itemTitle}".`);
                 continue;
             }
+
+            const trackerKey =
+                Object.keys(allItems).find((k) => allItems[k] === productObj) || itemTitle;
 
             // Make sure we have an array of sub-items in productObj.options
             if (!productObj.options || productObj.options.length === 0) {
@@ -2646,7 +2671,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
 
             // Determine which sub-item index we should use for this row.
             // If we haven't used any sub-items for this title yet, start at 0.
-            const nextIndex = subItemIndexTracker[itemTitle] || 0;
+            const nextIndex = subItemIndexTracker[trackerKey] || 0;
 
             // If we exceed the length, it means we have more rows in the Amazon UI
             // than sub-items in .options (which shouldn't happen normally, but just in case)
@@ -2658,7 +2683,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
             const subItem = productObj.options[nextIndex];
 
             // Increment our usage for this title
-            subItemIndexTracker[itemTitle] = nextIndex + 1;
+            subItemIndexTracker[trackerKey] = nextIndex + 1;
 
             // Grab the container to insert Wrrapd UI
             const giftOptionsContainer = item.querySelector('.a-section.a-spacing-micro.a-spacing-top-mini');
@@ -4400,7 +4425,6 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
         // Do not auto-click: customer must confirm; show coachmark + halo.
         const shipOneContinue = wrrapdFindShipItemsToOneAddressContinueControl();
         if (shipOneContinue) {
-            removeLoadingScreen();
             wrrapdShowShipToOneAddressContinueCoachmark(shipOneContinue);
             return;
         }
@@ -4623,20 +4647,54 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
      * Click "Save gift options" button on gift options page (with addresses shown)
      */
     async function clickSaveGiftOptionsButton() {
-        const saveButton = await waitForElement('#orderSummaryPrimaryActionBtn .a-button-input, .a-button-primary input, button[aria-label*="save"], button[aria-label*="continue"]', 5000);
-        
+        const primaryWrap =
+            document.querySelector('#orderSummaryPrimaryActionBtn') ||
+            document.querySelector('[data-feature-id="order-summary-primary-action"]');
+        let saveButton = primaryWrap?.querySelector?.('.a-button-input, input[type="submit"], button') || null;
+        if (!saveButton) {
+            saveButton = await waitForElement('#orderSummaryPrimaryActionBtn .a-button-input', 5000);
+        }
+
         if (!saveButton) {
             console.warn("[clickSaveGiftOptionsButton] Save gift options button not found. User will need to click manually.");
             return;
         }
-        
-        // CRITICAL: Verify this is NOT a "Place your order" button
-        const buttonText = (saveButton.textContent || saveButton.value || saveButton.getAttribute('aria-label') || '').toLowerCase();
+
+        const annEl =
+            primaryWrap?.querySelector?.('[id$="-announce"], .a-button-text') ||
+            saveButton.closest?.('.a-button')?.querySelector?.('[id$="-announce"], .a-button-text');
+        const announce = (annEl && annEl.textContent) || '';
+        const buttonText = (
+            `${announce} ${saveButton.textContent || ''} ${saveButton.value || ''} ${saveButton.getAttribute('aria-label') || ''}`
+        ).toLowerCase();
+
         if (buttonText.includes('place') && buttonText.includes('order')) {
             console.error("[clickSaveGiftOptionsButton] ⚠️ CRITICAL: Attempted to click 'Place your order' button! ABORTING!");
             return;
         }
-        
+
+        const giftUiPresent =
+            !!document.querySelector('#giftOptions') ||
+            !!document.querySelector('input[id^="toggle-gift-item-checkbox"]');
+        if (!giftUiPresent) {
+            console.warn('[clickSaveGiftOptionsButton] Gift options UI not present; refusing to click order-summary control.');
+            return;
+        }
+
+        const looksLikeGiftStep =
+            buttonText.includes('save gift') ||
+            buttonText.includes('gift options') ||
+            buttonText.includes('save options') ||
+            (buttonText.includes('continue') && !buttonText.includes('use these'));
+
+        if (!looksLikeGiftStep) {
+            console.warn(
+                '[clickSaveGiftOptionsButton] Order-summary button does not look like gift save/continue; refusing to click.',
+                buttonText.trim().slice(0, 120),
+            );
+            return;
+        }
+
         console.log("[clickSaveGiftOptionsButton] ✓ Found Save gift options button. Clicking to proceed to Payment...");
         
         // CRITICAL: Keep loading screen visible - ensure it's on and stays on
@@ -6755,11 +6813,11 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                 console.warn("[scrapeShippingAddressOnMulti] No title element found in this row.");
                 continue;
             }
-            const title = titleElement.innerText.trim().substring(0, 35);
+            const titleFull = titleElement.innerText.trim();
     
-            const productObj = allItems[title];
+            const productObj = resolveProductByRowTitle(allItems, titleFull, 0, row);
             if (!productObj) {
-                console.warn(`[scrapeShippingAddressOnMulti] Product "${title}" not found in allItems.`);
+                console.warn(`[scrapeShippingAddressOnMulti] Product "${titleFull.substring(0, 80)}" not found in allItems.`);
                 continue;
             }
             if (!productObj.options) {
@@ -6956,8 +7014,10 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
         const candidates = document.querySelectorAll('a, span, div, p, li, button, h1, h2, h3');
         for (const el of candidates) {
             const t = (el.textContent || '').replace(/\s+/g, ' ').trim();
-            if (t.length > 180) continue;
+            if (t.length > 220) continue;
             if (/ship\s+items\s+to\s+one\s+address/i.test(t)) return el;
+            if (/ship\s+.*\s+to\s+one\s+address/i.test(t)) return el;
+            if (/deliver\s+.*\s+one\s+address/i.test(t)) return el;
         }
         return null;
     }
@@ -6968,19 +7028,64 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
     function wrrapdFindShipItemsToOneAddressContinueControl() {
         const marker = wrrapdFindShipItemsToOneAddressMarker();
         if (!marker) return null;
-        const controls = document.querySelectorAll('input.a-button-input, input[type="submit"], button');
+
+        const scopedRoots = [];
+        let n = marker;
+        for (let d = 0; d < 10 && n; d++) {
+            if (n.id === 'checkout-main' || (n.getAttribute && n.getAttribute('data-checkout-page'))) {
+                scopedRoots.push(n);
+                break;
+            }
+            const cn = (n.className || '').toString().toLowerCase();
+            if (cn.includes('checkout') && (cn.includes('column') || cn.includes('left'))) {
+                scopedRoots.push(n);
+            }
+            n = n.parentElement;
+        }
+        const searchRoots = scopedRoots.length ? scopedRoots : [document.body];
+
+        const seen = new Set();
+        const controls = [];
+        const collect = (root) => {
+            root.querySelectorAll('input.a-button-input, input[type="submit"], button').forEach((inp) => {
+                if (seen.has(inp)) return;
+                seen.add(inp);
+                controls.push(inp);
+            });
+        };
+        for (const root of searchRoots) {
+            collect(root);
+        }
+        if (!controls.length) {
+            collect(document.body);
+        }
+
         for (const inp of controls) {
             if (!inp.offsetParent || inp.disabled) continue;
             if (wrrapdIsInCheckoutOrderSummaryRail(inp)) continue;
-            const raw = (inp.value || inp.getAttribute('aria-label') || inp.textContent || '').trim().toLowerCase();
+            const annId = inp.getAttribute('aria-labelledby');
+            let announceText = '';
+            if (annId) {
+                const parts = annId.split(/\s+/).filter(Boolean);
+                for (const id of parts) {
+                    const node = document.getElementById(id);
+                    if (node) {
+                        announceText += ` ${node.textContent || ''}`;
+                    }
+                }
+            }
+            const raw = `${announceText} ${inp.value || ''} ${inp.getAttribute('aria-label') || ''} ${inp.textContent || ''}`
+                .trim()
+                .toLowerCase();
             if (!raw.includes('continue')) continue;
             if (raw.includes('place') && raw.includes('order')) continue;
             if (raw.includes('save gift')) continue;
+            if (raw.includes('use these')) continue;
             const pos = marker.compareDocumentPosition(inp);
             if (!(pos & Node.DOCUMENT_POSITION_FOLLOWING)) continue;
             const mr = marker.getBoundingClientRect();
             const ir = inp.getBoundingClientRect();
-            if (mr.width && ir.width && Math.abs(ir.left - mr.left) < Math.max(520, window.innerWidth * 0.45)) {
+            if (mr.width && ir.width && Math.abs(ir.left - mr.left) < Math.max(560, window.innerWidth * 0.55)) {
                 return inp;
             }
         }
@@ -6988,72 +7093,20 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
     }
 
     function wrrapdRemoveShipToOneAddressCoachmark() {
+        removeWrrapdShipToOneGuidanceOverlay();
         document.getElementById(WRRAPD_SHIP_ONE_COACH_ID)?.remove();
         document.querySelectorAll('.wrrapd-ship-one-halo-target').forEach((el) => {
             el.classList.remove('wrrapd-ship-one-halo-target');
         });
     }
 
-    function wrrapdEnsureShipOneCoachStyles() {
-        if (document.getElementById('wrrapd-ship-one-coach-styles')) return;
-        const st = document.createElement('style');
-        st.id = 'wrrapd-ship-one-coach-styles';
-        st.textContent = `
-            @keyframes wrrapd-coach-pulse{0%,100%{opacity:1;transform:translateY(0);}50%{opacity:0.45;transform:translateY(4px);}}
-            @keyframes wrrapd-ship-one-halo{0%,100%{box-shadow:0 0 0 0 rgba(180,83,9,0.55);}50%{box-shadow:0 0 0 12px rgba(180,83,9,0.12);}}
-            .wrrapd-ship-one-halo-target{
-                position:relative;
-                z-index:100002 !important;
-                border-radius:8px;
-                animation:wrrapd-ship-one-halo 1.4s ease-in-out infinite;
-            }
-        `;
-        document.head.appendChild(st);
-    }
-
     /**
-     * Callout + arrow + halo on the main-column Continue after "Ship items to one address"
-     * (same two bullets as multi-address Amazon confirm UI).
+     * Full-viewport dimmer + main-column Continue handoff (see loading-ui.js).
      */
     function wrrapdShowShipToOneAddressContinueCoachmark(continueControl) {
         const btn = continueControl || wrrapdFindShipItemsToOneAddressContinueControl();
         if (!btn) return;
-
-        wrrapdRemoveShipToOneAddressCoachmark();
-        wrrapdEnsureShipOneCoachStyles();
-
-        const haloTarget = btn.closest('.a-button') || btn.parentElement || btn;
-        haloTarget.classList.add('wrrapd-ship-one-halo-target');
-
-        const wrap = document.createElement('div');
-        wrap.id = WRRAPD_SHIP_ONE_COACH_ID;
-        wrap.className = 'wrrapd-manual-address-hint';
-        wrap.setAttribute('role', 'region');
-        wrap.setAttribute('aria-label', 'Next step for Wrrapd shipping');
-        wrap.style.cssText =
-            'box-sizing:border-box;margin:12px 0 10px 0;padding:14px 16px;background:#fffef7;border:2px solid #c9a009;border-radius:8px;color:#0f172a;font:14px/1.5 Arial,Helvetica,sans-serif;max-width:100%;position:relative;z-index:100003;';
-
-        wrap.innerHTML = `
-            <div style="font-weight:700;margin-bottom:8px;">Confirm shipping on Amazon</div>
-            <ol style="margin:0 0 10px 20px;padding:0;">
-                <li style="margin-bottom:6px;">We’ve added the Wrrapd hub to your address book where needed.</li>
-                <li>Click <strong>Continue</strong> below so you agree that items may ship to Wrrapd for gift wrapping.</li>
-            </ol>
-            <div style="text-align:center;font-size:26px;line-height:1;color:#b45309;animation:wrrapd-coach-pulse 1.1s ease-in-out infinite;" aria-hidden="true">▼</div>
-        `;
-
-        const parent = haloTarget.parentElement;
-        if (parent) {
-            parent.insertBefore(wrap, haloTarget);
-        } else {
-            document.body.appendChild(wrap);
-        }
-
-        try {
-            haloTarget.scrollIntoView({ block: 'center', behavior: 'smooth' });
-        } catch (_) {
-            /* ignore */
-        }
+        showWrrapdShipToOneGuidanceOverlay(btn);
     }
 
     /**
@@ -7133,10 +7186,11 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             setTimeout(() => {
                 try {
                     if (!hasAnyWrrapdGiftWrapInCart(getAllItemsFromLocalStorage())) return;
-                    if (document.getElementById(WRRAPD_SHIP_ONE_COACH_ID)) return;
-                    if (wrrapdFindShipItemsToOneAddressContinueControl()) {
+                    if (document.getElementById('wrrapd-ship-one-guidance-overlay')) return;
+                    const el = wrrapdFindShipItemsToOneAddressContinueControl();
+                    if (el) {
                         removeLoadingScreen();
-                        wrrapdShowShipToOneAddressContinueCoachmark(null);
+                        wrrapdShowShipToOneAddressContinueCoachmark(el);
                     }
                 } catch (_) {
                     /* ignore */
@@ -7427,23 +7481,27 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                 const titleElem = row.querySelector('p.a-spacing-micro.a-size-base.a-text-bold');
                 if (!titleElem) continue;
                 const rowFullTitle = titleElem.innerText.trim();
-                const rowTitleKey = rowFullTitle.substring(0, 35);
+
+                const productObj = resolveProductByRowTitle(allItems, rowFullTitle, 0, row);
+                if (!productObj) continue;
+                const storageKey =
+                    Object.keys(allItems).find((k) => allItems[k] === productObj) || rowFullTitle.substring(0, 200);
 
                 // Skip if already processed
-                if (processedProducts.has(rowTitleKey)) {
-                    console.log(`[changeAddressForWrrapdItems] Skipping "${rowTitleKey}" - already processed.`);
+                if (processedProducts.has(storageKey)) {
+                    console.log(`[changeAddressForWrrapdItems] Skipping "${storageKey}" - already processed.`);
                     continue;
                 }
 
-                if (productsToChange.includes(rowTitleKey)) {
-                    console.log(`[changeAddressForWrrapdItems] Setting Wrrapd address for "${rowTitleKey}".`);
+                if (productsToChange.includes(storageKey)) {
+                    console.log(`[changeAddressForWrrapdItems] Setting Wrrapd address for "${storageKey}".`);
                     
-                    const success = await processAddressChange(row, rowTitleKey, 0);
+                    const success = await processAddressChange(row, storageKey, 0);
                     if (success) {
                         itemsRemaining--;
                         changedSomething = true;
-                        processedProducts.add(rowTitleKey); // Mark as processed
-                        console.log(`[changeAddressForWrrapdItems] Successfully set address for "${rowTitleKey}".`);
+                        processedProducts.add(storageKey); // Mark as processed
+                        console.log(`[changeAddressForWrrapdItems] Successfully set address for "${storageKey}".`);
 
                         // If this is the first item and we had to create a new address,
                         // reload the page to ensure the new address is available for selection
@@ -7466,7 +7524,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                         await new Promise(r => setTimeout(r, 1000));
                         break;
                     } else {
-                        console.warn(`[changeAddressForWrrapdItems] Could not set Wrrapd address for "${rowTitleKey}". Will retry after delay...`);
+                        console.warn(`[changeAddressForWrrapdItems] Could not set Wrrapd address for "${storageKey}". Will retry after delay...`);
                         await new Promise(r => setTimeout(r, 2000)); // Add delay before retrying
                     }
                 }
@@ -7501,53 +7559,171 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
         }
     }
 
-    async function processAddressChange(row, titleKey, subIndex) {
-        try {
-            console.log(`[processAddressChange] Starting address change for "${titleKey}"...`);
-            
-            // Use AI to find the address dropdown activator
-            let addressDropdownActivator = await findElementWithFallback(
-                'Address dropdown button or activator for selecting shipping address on Amazon multi-address page',
-                ['.lineitem-address .a-dropdown-container .a-button-text', '.a-dropdown-container .a-button-text', '[class*="dropdown"] [class*="button"]'],
-                'Amazon multi-address selection page with product rows, each row has an address dropdown',
-                ['Send to', 'Ship to']
-            );
-            
-            if (!addressDropdownActivator) {
-                // Fallback: try to find it within the row
-                const rowDropdown = row.querySelector('.a-dropdown-container .a-button-text') ||
-                                   row.querySelector('[class*="dropdown"] [class*="button"]') ||
-                                   row.querySelector('button[aria-label*="address"]');
-                if (rowDropdown) {
-                    console.log(`[processAddressChange] Found dropdown using fallback search within row.`);
-                    addressDropdownActivator = rowDropdown;
-                } else {
-                console.error(`[processAddressChange] "Send to" dropdown not found for "${titleKey}".`);
-                return false;
+    /**
+     * Activator for THIS row's ship-to dropdown only (never the first match on the page).
+     */
+    function findAddressDropdownActivatorInRow(row) {
+        if (!row || typeof row.querySelector !== 'function') return null;
+
+        const selectors = [
+            '.lineitem-address .a-dropdown-container .a-button-input',
+            '.lineitem-address .a-dropdown-container input.a-button-input',
+            '.lineitem-address .a-dropdown-container .a-button-text',
+            '.lineitem-address .a-dropdown-container .a-dropdown-prompt',
+            '.lineitem-address .a-dropdown-prompt',
+            '[class*="lineitem-address"] .a-dropdown-container .a-button-input',
+            '[class*="lineitem-address"] .a-dropdown-container .a-button-text',
+            '.address-dropdown .a-dropdown-container .a-button-text',
+            '.address-dropdown .a-button-text',
+            '[class*="address-dropdown"] .a-dropdown-container .a-button-input',
+        ];
+
+        for (const sel of selectors) {
+            try {
+                const el = row.querySelector(sel);
+                if (el && el.offsetParent !== null && !el.disabled) {
+                    return el;
+                }
+            } catch (e) {
+                /* ignore */
+            }
+        }
+
+        const col = row.querySelector(
+            '.lineitem-address, [class*="lineitem-address"], .address-dropdown, [class*="address-dropdown"]',
+        );
+        if (col) {
+            const dd = col.querySelector('.a-dropdown-container');
+            if (dd) {
+                const inner =
+                    dd.querySelector('.a-button-input') ||
+                    dd.querySelector('button:not([disabled])') ||
+                    dd.querySelector('.a-button-text, .a-dropdown-prompt');
+                if (inner && inner.offsetParent !== null && !inner.disabled) {
+                    return inner;
                 }
             }
+        }
 
-            // Try clicking dropdown up to 5 times if list doesn't appear
+        const fallback = row.querySelector('button[aria-label*="address" i], button[aria-label*="ship" i]');
+        if (fallback && fallback.offsetParent !== null && !fallback.disabled) {
+            return fallback;
+        }
+
+        return null;
+    }
+
+    /**
+     * Some Chewbacca layouts use a native HTML select for address per line.
+     */
+    function findNativeAddressSelectInRow(row) {
+        if (!row || typeof row.querySelectorAll !== 'function') return null;
+        const selects = row.querySelectorAll('select');
+        for (const sel of selects) {
+            if (!sel.offsetParent || sel.disabled) continue;
+            const nameId = `${sel.name || ''} ${sel.id || ''} ${sel.className || ''}`;
+            if (/quantity|qty/i.test(nameId)) continue;
+            const blob = Array.from(sel.options)
+                .map((o) => o.textContent || '')
+                .join(' ');
+            if (/JACKSONVILLE|PO BOX|Wrrapd|\d{5}/i.test(blob)) {
+                return sel;
+            }
+        }
+        return null;
+    }
+
+    async function trySelectWrrapdNativeSelectInRow(row, titleKey) {
+        const sel = findNativeAddressSelectInRow(row);
+        if (!sel) return false;
+
+        let wrrapdOption = null;
+        for (const o of sel.options) {
+            const t = o.textContent || '';
+            if (t.includes('Wrrapd.com') && t.includes('PO BOX 26067')) {
+                wrrapdOption = o;
+                break;
+            }
+        }
+        if (!wrrapdOption) {
+            for (const o of sel.options) {
+                const t = (o.textContent || '').toLowerCase();
+                if (t.includes('wrrapd') && (t.includes('26067') || t.includes('po box'))) {
+                    wrrapdOption = o;
+                    break;
+                }
+            }
+        }
+
+        if (!wrrapdOption) {
+            return false;
+        }
+
+        sel.value = wrrapdOption.value;
+        sel.dispatchEvent(new Event('change', { bubbles: true }));
+        sel.dispatchEvent(new Event('input', { bubbles: true }));
+        await new Promise((r) => setTimeout(r, 1500));
+
+        const productObj = retrieveItemFromLocalStorage(titleKey);
+        if (productObj && productObj.options) {
+            productObj.options.forEach((option) => {
+                if (option.checkbox_wrrapd) {
+                    option.amazonShippingAddress = buildWrrapdAddress();
+                }
+            });
+            saveItemToLocalStorage(productObj);
+        }
+        return true;
+    }
+
+    function findShowMoreInPopover(popover) {
+        if (!popover) return null;
+        let showMoreLink = popover.querySelector('[aria-label*="Show more" i], [aria-label*="See more" i]');
+        if (!showMoreLink) {
+            const links = popover.querySelectorAll('a, button');
+            for (const link of links) {
+                const text = (link.textContent || '').trim().toLowerCase();
+                if (text.includes('show more') || text.includes('see more')) {
+                    showMoreLink = link;
+                    break;
+                }
+            }
+        }
+        return showMoreLink;
+    }
+
+    async function processAddressChange(row, titleKey, subIndex) {
+        try {
+            console.log(`[processAddressChange] Starting address change for "${titleKey}" (row-scoped)...`);
+
+            if (await trySelectWrrapdNativeSelectInRow(row, titleKey)) {
+                console.log(`[processAddressChange] Set Wrrapd address via native <select> for "${titleKey}".`);
+                return true;
+            }
+
+            const addressDropdownActivator = findAddressDropdownActivatorInRow(row);
+            if (!addressDropdownActivator) {
+                console.error(`[processAddressChange] No address dropdown in this item row for "${titleKey}".`);
+                return false;
+            }
+
+            // Try clicking this row's dropdown up to 5 times if list doesn't appear
             let attempts = 0;
             let dropdownOptions = null;
             let popover = null;
 
             while (attempts < 5) {
-                console.log(`[processAddressChange] Attempt ${attempts + 1}: Clicking dropdown...`);
-                
-                // First ensure any existing dropdowns are closed
+                console.log(`[processAddressChange] Attempt ${attempts + 1}: Clicking row dropdown...`);
+
                 const existingPopovers = document.querySelectorAll('.a-popover');
                 if (existingPopovers.length > 0) {
-                    console.log(`[processAddressChange] Closing existing popovers...`);
                     document.body.click();
-                    await new Promise(r => setTimeout(r, 1000));
+                    await new Promise((r) => setTimeout(r, 800));
                 }
 
-                // Click the dropdown
                 addressDropdownActivator.click();
-                await new Promise(r => setTimeout(r, 1000));
+                await new Promise((r) => setTimeout(r, 1000));
 
-                // Wait for popover to appear
                 popover = await waitForElement('.a-popover', 3000);
                 if (!popover) {
                     console.log(`[processAddressChange] No popover appeared. Retrying...`);
@@ -7555,82 +7731,73 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                     continue;
                 }
 
-                // Wait specifically for the address list to load
                 dropdownOptions = await waitForElement('.a-popover ul.a-list-link li a', 3000, true);
-                
-                // If no options found, try clicking "Show more addresses" if it exists
+
                 if ((!dropdownOptions || dropdownOptions.length === 0) && popover) {
-                    const showMoreLink = await findElementWithFallback(
-                        'Show more addresses link in address dropdown popover',
-                        ['a:contains("Show more")', 'button:contains("Show more")', '.a-link-normal:contains("Show more")'],
-                        'Address dropdown popover with list of addresses',
-                        ['Show more addresses', 'Show more', 'See more addresses']
-                    );
-                    
+                    const showMoreLink = findShowMoreInPopover(popover);
                     if (showMoreLink) {
-                        console.log(`[processAddressChange] Found "Show more addresses" link. Clicking to expand...`);
+                        console.log(`[processAddressChange] Expanding "Show more" in this popover...`);
                         showMoreLink.click();
-                        await new Promise(r => setTimeout(r, 2000));
+                        await new Promise((r) => setTimeout(r, 2000));
                         dropdownOptions = await waitForElement('.a-popover ul.a-list-link li a', 3000, true);
                     }
                 }
-                
+
                 if (dropdownOptions && dropdownOptions.length > 0) {
-                    // Verify this is the address dropdown
                     let foundAddressOption = false;
                     for (const option of dropdownOptions) {
                         const text = option.textContent.trim();
-                        if (text.includes('JACKSONVILLE') || text.includes('Ship to a new address') || text.includes('Wrrapd.com')) {
+                        if (
+                            text.includes('JACKSONVILLE') ||
+                            text.includes('Ship to a new address') ||
+                            text.includes('Wrrapd.com') ||
+                            text.includes('PO BOX')
+                        ) {
                             foundAddressOption = true;
                             break;
                         }
                     }
 
                     if (foundAddressOption) {
-                        console.log(`[processAddressChange] Found address dropdown with ${dropdownOptions.length} options.`);
+                        console.log(`[processAddressChange] Address list OK (${dropdownOptions.length} options).`);
                         break;
-                    } else {
-                        console.log(`[processAddressChange] Wrong dropdown content. Closing and retrying...`);
-                        document.body.click();
-                        await new Promise(r => setTimeout(r, 2000));
                     }
+                    console.log(`[processAddressChange] Popover does not look like addresses; closing.`);
+                    document.body.click();
+                    await new Promise((r) => setTimeout(r, 1200));
                 } else {
-                    console.log(`[processAddressChange] No options found in dropdown. Retrying...`);
+                    console.log(`[processAddressChange] No options in popover. Retrying...`);
                 }
 
                 attempts++;
-                await new Promise(r => setTimeout(r, 2000));
+                await new Promise((r) => setTimeout(r, 1500));
             }
 
             if (!dropdownOptions || dropdownOptions.length === 0) {
-                console.warn(`[processAddressChange] No address options found for "${titleKey}" after ${attempts} attempts.`);
+                console.warn(`[processAddressChange] No address options for "${titleKey}" after ${attempts} attempts.`);
                 return false;
             }
 
             let newAddrLink = null;
             let wrrapdLink = null;
 
-            console.log(`[processAddressChange] Searching for Wrrapd address in ${dropdownOptions.length} options...`);
             for (const option of dropdownOptions) {
                 const optionText = option.textContent.trim();
-                console.log(`[processAddressChange] Checking option: "${optionText}"`);
-                if (optionText.includes("Wrrapd.com") && optionText.includes("PO BOX 26067")) {
+                if (optionText.includes('Wrrapd.com') && optionText.includes('PO BOX 26067')) {
                     wrrapdLink = option;
-                    console.log(`[processAddressChange] Found Wrrapd address option.`);
                 }
-                if (optionText.includes("Ship to a new address")) {
+                if (optionText.includes('Ship to a new address')) {
                     newAddrLink = option;
                 }
             }
 
             if (wrrapdLink) {
-                console.log(`[processAddressChange] Clicking Wrrapd address option for "${titleKey}"...`);
+                console.log(`[processAddressChange] Clicking Wrrapd address for "${titleKey}"...`);
                 wrrapdLink.click();
-                // Increase wait time after selecting existing Wrrapd address
-                await new Promise(r => setTimeout(r, 5000));
+                await new Promise((r) => setTimeout(r, 5000));
                 const productObj = retrieveItemFromLocalStorage(titleKey);
                 if (productObj && productObj.options) {
-                    productObj.options.forEach(option => {
+                    productObj.options.forEach((option) => {
                         if (option.checkbox_wrrapd) {
                             option.amazonShippingAddress = buildWrrapdAddress();
                         }
@@ -7641,7 +7808,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             }
 
             if (newAddrLink) {
-                console.log(`[processAddressChange] No Wrrapd address found. Creating new address for "${titleKey}"...`);
+                console.log(`[processAddressChange] Creating new address for "${titleKey}"...`);
                 newAddrLink.click();
                 const success = await addWrrapdAddress(titleKey, subIndex);
                 return success;
@@ -9646,7 +9813,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
         const wrrapdSummary = document.createElement('div');
         wrrapdSummary.id = 'wrrapd-summary';
         // Use the same classes as Amazon's order summary container
-        wrrapdSummary.className = orderSummary ? (orderSummary.className + ' a-row').trim() : 'a-row';
+        wrrapdSummary.className = 'a-row a-spacing-base wrrapd-checkout-summary-addon';
         
         // Match Amazon's outer margins exactly
         if (amazonOuterStyles.marginTop) wrrapdSummary.style.marginTop = amazonOuterStyles.marginTop;
@@ -10328,9 +10495,11 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             // Add the final total to the summary
             const totalRow = document.createElement('div');
             totalRow.className = 'a-row';
+            totalRow.style.cssText =
+                'display:grid;grid-template-columns:1fr auto;column-gap:12px;align-items:baseline;width:100%;box-sizing:border-box;margin-top:4px;';
             totalRow.innerHTML = `
-                <span class="a-color-price break-word" style="font-size: 18px; font-weight: bold;">Order total</span>
-                <span class="a-color-price break-word" style="float: right; font-size: 18px; font-weight: bold;">$${total.toFixed(2)}</span>
+                <span class="a-color-price break-word" style="font-size: 18px; font-weight: bold; text-align:left;">Order total</span>
+                <span class="a-color-price break-word" style="font-size: 18px; font-weight: bold; text-align:right; white-space:nowrap;">$${total.toFixed(2)}</span>
             `;
             wrrapdSummaryTotal.appendChild(totalRow);
 
@@ -10355,10 +10524,10 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             const item = document.createElement('div');
             item.className = 'a-row';
             item.style.cssText =
-                'display:flex;justify-content:space-between;align-items:baseline;gap:8px;width:100%;box-sizing:border-box;';
+                'display:grid;grid-template-columns:1fr auto;column-gap:12px;align-items:baseline;width:100%;box-sizing:border-box;text-align:left;';
             item.innerHTML = `
-                <span class="a-size-base">${description}</span>
-                <span class="a-size-base a-text-right">$${amount.toFixed(2)}</span>
+                <span class="a-size-base" style="text-align:left;justify-self:start;min-width:0;word-break:break-word;">${description}</span>
+                <span class="a-size-base a-text-right" style="text-align:right;white-space:nowrap;">$${amount.toFixed(2)}</span>
             `;
             container.appendChild(item);
         } else {
@@ -10548,11 +10717,11 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                     return;
                 }
     
-                const itemTitle = titleElement.textContent.trim().substring(0, 35);
+                const itemTitle = titleElement.textContent.trim().substring(0, 200);
                 console.log(`[reviewAndShippingSection] Processing item: "${itemTitle}"`);
     
                 // Verificar si el artículo coincide con los datos almacenados
-                const matchedItem = allItems[itemTitle];
+                const matchedItem = resolveProductByRowTitle(allItems, itemTitle, index, item);
                 if (!matchedItem) {
                     console.log(`[reviewAndShippingSection] No match found for: "${itemTitle}"`);
                     return;

@@ -1,10 +1,16 @@
 ---
-description: Never use git pull on the production GCP VM; VM is deploy target
+description: GCP VM Git — never pull; push commits to GitHub from the VM
 alwaysApply: true
 ---
 
-# GCP VM — never `git pull`
+# GCP VM — Git rules (`wrrapd-server-1`, `/home/phill/wrrapd-GCP`)
 
-- On the **production GCP VM** (e.g. **`wrrapd-server-1`**) at **`/home/phill/wrrapd-GCP`**: **do not run `git pull`**. Do not tell the user or any runbook to use `git pull` there.
-- The VM is a **deploy target**. Pull can merge `origin` over local working-tree changes, Capacitor/mobile churn, or half-applied deploy state.
-- **Preferred workflow**: develop and commit on a **dev machine**, **`git push`** to `origin`, then update the VM **without** `git pull` (e.g. `rsync`, CI artifact, or another process the team documents). If the team ever uses Git on the VM, only use flows they explicitly document — **default remains: no `git pull` on the GCP VM.**
+## Never `git pull` on the GCP VM
+
+- **Do not run `git pull`** on the production GCP VM. Do not recommend it in runbooks or agent replies for this host.
+- Pull can merge `origin` over local working-tree changes, Capacitor/mobile churn, or half-applied deploy state.
+
+## Always `git push` to GitHub **from the GCP VM** when shipping
+
+- After edits on the VM are committed, the agent must treat **`git push` from this VM to `origin` (GitHub)** as the normal way to publish — **do not stop at “commit locally”** or assume another machine will push.
+- Typical sequence on the VM: `cd /home/phill/wrrapd-GCP` → `git status` → `git add` (intended paths) → `git commit -m "…"` → **`git push`** → confirm the push succeeded (no “everything up-to-date” while the working tree is still dirty).
