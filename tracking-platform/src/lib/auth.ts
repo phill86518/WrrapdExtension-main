@@ -1,11 +1,12 @@
 import { SignJWT, jwtVerify } from "jose";
+import type { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { existsSync } from "fs";
 import { mkdir, readFile, writeFile } from "fs/promises";
 import path from "path";
 import { trackingRuntimeDoc } from "./tracking-firestore";
 
-const COOKIE_NAME = "wrrapd_session";
+export const SESSION_COOKIE_NAME = "wrrapd_session";
 
 type Session = {
   role: "admin" | "driver";
@@ -28,24 +29,43 @@ export async function createSessionToken(session: Session) {
     .sign(secret);
 }
 
-export async function setSessionCookie(token: string) {
-  const cookieStore = await cookies();
-  cookieStore.set(COOKIE_NAME, token, {
+function sessionCookieOptions() {
+  return {
     httpOnly: true,
-    sameSite: "lax",
+    sameSite: "lax" as const,
     secure: process.env.NODE_ENV === "production",
     path: "/",
+  };
+}
+
+/**
+ * Route handlers that return NextResponse.redirect() or NextResponse.json() must attach
+ * the session cookie to that response — cookies().set() from next/headers does not apply.
+ */
+export function applySessionCookieToResponse(response: NextResponse, token: string) {
+  response.cookies.set(SESSION_COOKIE_NAME, token, sessionCookieOptions());
+}
+
+export function clearSessionCookieOnResponse(response: NextResponse) {
+  response.cookies.set(SESSION_COOKIE_NAME, "", {
+    ...sessionCookieOptions(),
+    maxAge: 0,
   });
+}
+
+export async function setSessionCookie(token: string) {
+  const cookieStore = await cookies();
+  cookieStore.set(SESSION_COOKIE_NAME, token, sessionCookieOptions());
 }
 
 export async function clearSessionCookie() {
   const cookieStore = await cookies();
-  cookieStore.delete(COOKIE_NAME);
+  cookieStore.delete(SESSION_COOKIE_NAME);
 }
 
 export async function getSession(): Promise<Session | null> {
   const cookieStore = await cookies();
-  const raw = cookieStore.get(COOKIE_NAME)?.value;
+  const raw = cookieStore.get(SESSION_COOKIE_NAME)?.value;
   if (!raw) return null;
   try {
     const { payload } = await jwtVerify(raw, secret);

@@ -4665,7 +4665,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
     async function clickContinueAndProceedToPayment() {
         console.log("[clickContinueAndProceedToPayment] Starting automatic workflow...");
 
-        // "Make updates to your items" → Ship items to one address → main-column yellow Continue (not sidebar).
+        // "Make updates to your items" → Ship items to one address → Continue (order-summary preferred).
         // Do not auto-click: customer must confirm; show coachmark + halo.
         const shipOneContinue = wrrapdFindShipItemsToOneAddressContinueControl();
         if (shipOneContinue) {
@@ -7321,6 +7321,41 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
         );
     }
 
+    /** Order-summary (right rail) Continue on the ship-to-one step, when Amazon exposes it there. */
+    function wrrapdFindOrderSummaryShipOneContinueControl() {
+        if (!wrrapdFindShipItemsToOneAddressMarker()) return null;
+        const wraps = [
+            document.querySelector('#orderSummaryPrimaryActionBtn'),
+            document.querySelector('[data-feature-id="order-summary-primary-action"]'),
+        ].filter(Boolean);
+        for (const wrap of wraps) {
+            const inp =
+                wrap.querySelector('input.a-button-input') ||
+                wrap.querySelector('input[type="submit"]') ||
+                wrap.querySelector('button');
+            if (!inp || inp.disabled) continue;
+            if (!inp.offsetParent && inp.getClientRects().length === 0) continue;
+            const annId = inp.getAttribute('aria-labelledby');
+            let announceText = '';
+            if (annId) {
+                const parts = annId.split(/\s+/).filter(Boolean);
+                for (const id of parts) {
+                    const node = document.getElementById(id);
+                    if (node) announceText += ` ${node.textContent || ''}`;
+                }
+            }
+            const raw = `${announceText} ${inp.value || ''} ${inp.getAttribute('aria-label') || ''} ${inp.textContent || ''}`
+                .trim()
+                .toLowerCase();
+            if (!raw.includes('continue')) continue;
+            if (raw.includes('place') && raw.includes('order')) continue;
+            if (raw.includes('save gift')) continue;
+            if (raw.includes('use these')) continue;
+            return inp;
+        }
+        return null;
+    }
+
     /** "Ship items to one address" link/label on Amazon item-update (Chewbacca) page — not the sidebar. */
     function wrrapdFindShipItemsToOneAddressMarker() {
         const candidates = document.querySelectorAll('a, span, div, p, li, button, h1, h2, h3');
@@ -7334,10 +7369,8 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
         return null;
     }
 
-    /**
-     * Yellow Continue under "Ship items to one address" (main column). Sidebar Continue is excluded.
-     */
-    function wrrapdFindShipItemsToOneAddressContinueControl() {
+    /** Main-column Continue below the ship-to-one marker (excludes order-summary rail). */
+    function wrrapdFindShipItemsToOneAddressMainColumnContinueControl() {
         const marker = wrrapdFindShipItemsToOneAddressMarker();
         if (!marker) return null;
 
@@ -7417,6 +7450,16 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
         return scored[0].inp;
     }
 
+    /**
+     * Yellow Continue for the "Ship items to one address" step. Prefer order-summary Continue when present,
+     * otherwise the main-column Continue below the marker.
+     */
+    function wrrapdFindShipItemsToOneAddressContinueControl() {
+        const rail = wrrapdFindOrderSummaryShipOneContinueControl();
+        if (rail) return rail;
+        return wrrapdFindShipItemsToOneAddressMainColumnContinueControl();
+    }
+
     function wrrapdRemoveShipToOneAddressCoachmark() {
         removeWrrapdShipToOneGuidanceOverlay();
         document.getElementById(WRRAPD_SHIP_ONE_COACH_ID)?.remove();
@@ -7426,13 +7469,21 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
     }
 
     /**
-     * Full-viewport dimmer + main-column Continue handoff (see loading-ui.js).
+     * Full-viewport dimmer + Continue handoff (order-summary preferred; see loading-ui.js).
      */
     function wrrapdShowShipToOneAddressContinueCoachmark(continueControl) {
         const btn = continueControl || wrrapdFindShipItemsToOneAddressContinueControl();
         if (!btn) return;
         showWrrapdShipToOneGuidanceOverlay(btn, {
             refit: () => wrrapdFindShipItemsToOneAddressContinueControl(),
+            getHandoffTargets: () => {
+                const rail = wrrapdFindOrderSummaryShipOneContinueControl();
+                const main = wrrapdFindShipItemsToOneAddressMainColumnContinueControl();
+                const out = [];
+                if (rail) out.push(rail);
+                if (main && main !== rail) out.push(main);
+                return out;
+            },
         });
     }
 
@@ -7516,7 +7567,6 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                     if (document.getElementById('wrrapd-ship-one-guidance-overlay')) return;
                     const el = wrrapdFindShipItemsToOneAddressContinueControl();
                     if (el) {
-                        removeLoadingScreen();
                         wrrapdShowShipToOneAddressContinueCoachmark(el);
                     }
                 } catch (_) {

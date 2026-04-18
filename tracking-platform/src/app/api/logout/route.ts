@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { clearSessionCookie } from "@/lib/auth";
+import { clearSessionCookieOnResponse } from "@/lib/auth";
 import { resolvePublicOrigin } from "@/lib/public-origin";
 
 export async function POST() {
-  await clearSessionCookie();
-  return NextResponse.json({ ok: true });
+  const res = NextResponse.json({ ok: true });
+  clearSessionCookieOnResponse(res);
+  return res;
 }
 
 /** Only allow same-origin relative paths (open-redirect safe). */
@@ -15,7 +16,6 @@ function safeInternalPath(raw: string | null): string {
 }
 
 export async function GET(request: NextRequest) {
-  await clearSessionCookie();
   const path = safeInternalPath(request.nextUrl.searchParams.get("redirect"));
   const origin = resolvePublicOrigin(
     (name) => request.headers.get(name),
@@ -24,6 +24,7 @@ export async function GET(request: NextRequest) {
   const base = origin || request.nextUrl.origin;
   const url = new URL(path, base);
   const res = NextResponse.redirect(url, 302);
+  clearSessionCookieOnResponse(res);
   res.headers.set("Cache-Control", "no-store");
   return res;
 }

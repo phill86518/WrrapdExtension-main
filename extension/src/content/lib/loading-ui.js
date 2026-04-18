@@ -7,9 +7,12 @@ import { getAllItemsFromLocalStorage } from './storage.js';
 const SHIP_ONE_OVERLAY_ID = 'wrrapd-ship-one-guidance-overlay';
 const SHIP_ONE_STYLE_ID = 'wrrapd-ship-one-guidance-styles';
 const SHIP_ONE_HALO_CLASS = 'wrrapd-ship-one-halo-target';
+/** Amazon often swaps nodes briefly; avoid tearing the dimmer for transient disconnects. */
+const SHIP_ONE_DISCONNECT_GRACE_MS = 4200;
+const SHIP_ONE_MO_DEBOUNCE_MS = 320;
 
 let shipOneClickCapture = null;
-/** @type {{ root: HTMLElement; svg: SVGSVGElement; panel: HTMLElement; haloTarget: HTMLElement; continueEl: HTMLElement; maskId: string; refit: (() => HTMLElement | null) | null; mo: MutationObserver; onScroll: () => void; onResize: () => void; raf: number; moTimer: ReturnType<typeof setTimeout> | null; pendingRemove: ReturnType<typeof setTimeout> | null } | null} */
+/** @type {{ root: HTMLElement; svg: SVGSVGElement; panel: HTMLElement; haloTarget: HTMLElement; continueEl: HTMLElement; maskId: string; refit: (() => HTMLElement | null) | null; getHandoffTargets: (() => HTMLElement[]) | null; mo: MutationObserver; onScroll: () => void; onResize: () => void; raf: number; moTimer: ReturnType<typeof setTimeout> | null; pendingRemove: ReturnType<typeof setTimeout> | null } | null} */
 let shipOneUi = null;
 
 function injectShipOneStylesOnce() {
@@ -125,12 +128,104 @@ export function showLoadingScreen(
 }
 
 export function removeLoadingScreen() {
+  clearShipOneLoadingHandoffPoll();
   const loadingScreen = document.getElementById('loadingScreen');
   if (loadingScreen) {
     loadingScreen.remove();
   } else {
     console.warn('[removeLoadingScreen] No loading screen found to remove.');
   }
+}
+
+let shipOneLoadingHandoffIntervalId = null;
+let shipOneHandoffShowTimeoutId = null;
+
+function clearShipOneLoadingHandoffPoll() {
+  if (shipOneHandoffShowTimeoutId !== null) {
+    clearTimeout(shipOneHandoffShowTimeoutId);
+    shipOneHandoffShowTimeoutId = null;
+  }
+  if (shipOneLoadingHandoffIntervalId !== null) {
+    clearInterval(shipOneLoadingHandoffIntervalId);
+    shipOneLoadingHandoffIntervalId = null;
+  }
+}
+
+/**
+ * Ship-to-one Continue: avoid showing the blocking overlay in the same turn as the capture listener
+ * (so Amazon’s default action can run). Then clear the spinner when checkout advances or after a cap.
+ */
+function scheduleShipOneContinueLoadingHandoff() {
+  clearShipOneLoadingHandoffPoll();
+
+  const initialUrl = window.location.href;
+
+  shipOneHandoffShowTimeoutId = setTimeout(() => {
+    shipOneHandoffShowTimeoutId = null;
+    showLoadingScreen('Taking you to payment…');
+  }, 0);
+
+  const isPaymentUrl = (u) =>
+    u.includes('amazon.com/gp/buy/payselect/handlers/display.html') ||
+    (u.includes('/checkout/') && u.includes('/spc') && !u.includes('/gp/buy/spc/handlers/display.html'));
+
+  const isGiftUrl = (u) =>
+    u.includes('amazon.com/gp/buy/gift/handlers/display.html') ||
+    (u.includes('/checkout/') && u.includes('/gift'));
+
+  let attempts = 0;
+  const maxAttempts = 48;
+  const tickMs = 400;
+
+  shipOneLoadingHandoffIntervalId = setInterval(() => {
+    attempts += 1;
+    if (!document.getElementById('loadingScreen')) {
+      clearShipOneLoadingHandoffPoll();
+      return;
+    }
+
+    const u = window.location.href;
+
+    if (isGiftUrl(u)) {
+      clearShipOneLoadingHandoffPoll();
+      removeLoadingScreen();
+      return;
+    }
+
+    if (initialUrl.includes('itemselect') && !u.includes('itemselect')) {
+      clearShipOneLoadingHandoffPoll();
+      removeLoadingScreen();
+      return;
+    }
+
+    if (isPaymentUrl(u)) {
+      clearShipOneLoadingHandoffPoll();
+      try {
+        if (localStorage.getItem('wrrapd-keep-loading-until-summary') === 'true') {
+          return;
+        }
+      } catch (_) {
+        /* ignore */
+      }
+      removeLoadingScreen();
+      return;
+    }
+
+    if (attempts >= maxAttempts) {
+      clearShipOneLoadingHandoffPoll();
+      try {
+        if (
+          isPaymentUrl(u) &&
+          localStorage.getItem('wrrapd-keep-loading-until-summary') === 'true'
+        ) {
+          return;
+        }
+      } catch (_) {
+        /* ignore */
+      }
+      removeLoadingScreen();
+    }
+  }, tickMs);
 }
 
 /**
@@ -174,7 +269,7 @@ function layoutShipOneGuidance() {
         } else {
           scheduleShipOneLayout();
         }
-      }, 750);
+      }, SHIP_ONE_DISCONNECT_GRACE_MS);
       return;
     }
   }
@@ -275,17 +370,18 @@ export function removeWrrapdShipToOneGuidanceOverlay() {
  * instruction card + arrow. Clicks on the Continue reach Amazon; capture hands off to loading screen.
  *
  * @param {HTMLElement} continueEl
- * @param {{ refit?: () => HTMLElement | null }} [options] — Re-find Continue after Amazon DOM swaps (prevents flicker teardown).
+ * @param {{ refit?: () => HTMLElement | null; getHandoffTargets?: () => HTMLElement[] }} [options] — Re-find Continue after Amazon DOM swaps (prevents flicker teardown). Optional getHandoffTargets treats multiple Continues as valid for the loading handoff.
  */
 export function showWrrapdShipToOneGuidanceOverlay(continueEl, options = {}) {
   const refit = typeof options.refit === 'function' ? options.refit : null;
+  const getHandoffTargets =
+    typeof options.getHandoffTargets === 'function' ? options.getHandoffTargets : null;
   if (!continueEl || !continueEl.isConnected) {
     return;
   }
 
   removeWrrapdShipToOneGuidanceOverlay();
   removeWrrapdManualDeliverGuidanceOverlay();
-  removeLoadingScreen();
   injectShipOneStylesOnce();
 
   const haloTarget = continueEl.closest('.a-button') || continueEl;
@@ -327,7 +423,7 @@ export function showWrrapdShipToOneGuidanceOverlay(continueEl, options = {}) {
         <rect data-wrrapd="hole" x="0" y="0" width="1" height="1" rx="12" ry="12" fill="black"/>
       </mask>
     </defs>
-    <rect data-wrrapd="dim" width="${vw}" height="${vh}" fill="rgba(10,12,18,0.86)" mask="url(#${maskId})"/>
+    <rect data-wrrapd="dim" width="${vw}" height="${vh}" fill="rgba(8,10,16,0.92)" mask="url(#${maskId})"/>
     <path data-wrrapd="arrow-line" d="M0 0" fill="none" stroke="#fde68a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.95"/>
     <polygon data-wrrapd="arrow-head" points="0,0 0,0 0,0" fill="#fde68a" stroke="#ca8a04" stroke-width="1" opacity="0.98"/>
   `;
@@ -346,9 +442,9 @@ export function showWrrapdShipToOneGuidanceOverlay(continueEl, options = {}) {
     'pointer-events:auto',
     'box-sizing:border-box',
     'padding:16px 18px 18px',
-    'background:#0f172a',
+    'background:#1e293b',
     'color:#f8fafc',
-    'border:1px solid #334155',
+    'border:1px solid #475569',
     'border-radius:14px',
     'box-shadow:0 16px 48px rgba(0,0,0,0.55)',
     'font-size:15px',
@@ -357,12 +453,8 @@ export function showWrrapdShipToOneGuidanceOverlay(continueEl, options = {}) {
   ].join(';');
 
   panel.innerHTML = `
-    <div style="font-weight:700;font-size:17px;margin-bottom:10px;color:#fde68a;">Confirm shipping on Amazon</div>
-    <ol style="margin:0 0 10px 20px;padding:0;">
-      <li style="margin-bottom:8px;">We’ve added the Wrrapd hub to your address book where needed.</li>
-      <li>Use the yellow <strong>Continue</strong> directly <strong>below</strong> “Ship items to one address” — <em>not</em> the Continue in the order summary on the right.</li>
-    </ol>
-    <div style="font-size:13px;color:#94a3b8;">Follow the arrow. After you tap that Continue, the screen stays dark until the payment step is ready.</div>
+    <div style="font-weight:700;font-size:17px;margin-bottom:12px;color:#fde68a;">Confirm shipping on Amazon</div>
+    <p style="margin:0;font-size:15px;line-height:1.6;color:#f1f5f9;">We’ve added the Wrrapd hub to your address book - please accept by clicking <strong style="color:#fff;">here</strong> so that Wrrapd can receive your item(s) for gift-wrapping.</p>
   `;
 
   root.appendChild(svg);
@@ -386,7 +478,7 @@ export function showWrrapdShipToOneGuidanceOverlay(continueEl, options = {}) {
     shipOneUi.moTimer = setTimeout(() => {
       shipOneUi.moTimer = null;
       scheduleShipOneLayout();
-    }, 160);
+    }, SHIP_ONE_MO_DEBOUNCE_MS);
   });
   mo.observe(checkoutRoot, { childList: true, subtree: true, attributes: false });
 
@@ -398,6 +490,7 @@ export function showWrrapdShipToOneGuidanceOverlay(continueEl, options = {}) {
     continueEl,
     maskId,
     refit,
+    getHandoffTargets,
     mo,
     onScroll,
     onResize,
@@ -409,21 +502,32 @@ export function showWrrapdShipToOneGuidanceOverlay(continueEl, options = {}) {
   scheduleShipOneLayout();
   setTimeout(() => scheduleShipOneLayout(), 350);
   setTimeout(() => scheduleShipOneLayout(), 900);
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      scheduleShipOneLayout();
+      removeLoadingScreen();
+    });
+  });
 
   shipOneClickCapture = (ev) => {
     if (!shipOneUi) return;
     const t = ev.target;
     if (shipOneUi.panel.contains(t)) return;
     tryRefitShipOneTarget();
-    const ht = shipOneUi.haloTarget;
-    const ce = shipOneUi.continueEl;
-    const hit =
-      ht.contains(t) ||
-      ce === t ||
-      (ce.contains && ce.contains(t));
+    const rawTargets =
+      typeof shipOneUi.getHandoffTargets === 'function'
+        ? shipOneUi.getHandoffTargets()
+        : null;
+    const controls =
+      Array.isArray(rawTargets) && rawTargets.length ? rawTargets : [shipOneUi.continueEl];
+    const hit = controls.some((ce) => {
+      if (!ce) return false;
+      const ht = ce.closest('.a-button') || ce;
+      return ht.contains(t) || ce === t || (ce.contains && ce.contains(t));
+    });
     if (!hit) return;
     removeWrrapdShipToOneGuidanceOverlay();
-    showLoadingScreen('Taking you to payment…');
+    scheduleShipOneContinueLoadingHandoff();
   };
   document.addEventListener('click', shipOneClickCapture, true);
 }
@@ -560,7 +664,6 @@ export function showWrrapdManualDeliverGuidanceOverlay(continueEl, options = {})
 
   removeWrrapdManualDeliverGuidanceOverlay();
   removeWrrapdShipToOneGuidanceOverlay();
-  removeLoadingScreen();
   injectShipOneStylesOnce();
 
   const haloTarget = continueEl.closest('.a-button') || continueEl;
@@ -660,7 +763,7 @@ export function showWrrapdManualDeliverGuidanceOverlay(continueEl, options = {})
     manualDeliverUi.moTimer = setTimeout(() => {
       manualDeliverUi.moTimer = null;
       scheduleManualDeliverLayout();
-    }, 160);
+    }, SHIP_ONE_MO_DEBOUNCE_MS);
   });
   mo.observe(checkoutRoot, { childList: true, subtree: true, attributes: false });
 
@@ -683,6 +786,12 @@ export function showWrrapdManualDeliverGuidanceOverlay(continueEl, options = {})
   scheduleManualDeliverLayout();
   setTimeout(() => scheduleManualDeliverLayout(), 350);
   setTimeout(() => scheduleManualDeliverLayout(), 900);
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      scheduleManualDeliverLayout();
+      removeLoadingScreen();
+    });
+  });
 
   manualDeliverClickCapture = (ev) => {
     if (!manualDeliverUi) return;

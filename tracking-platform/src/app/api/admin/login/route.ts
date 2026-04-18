@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createSessionToken, setSessionCookie } from "@/lib/auth";
+import { applySessionCookieToResponse, createSessionToken } from "@/lib/auth";
 import { buildRedirectUrl } from "@/lib/url";
 
 export async function POST(request: NextRequest) {
@@ -14,6 +14,7 @@ export async function POST(request: NextRequest) {
     userId: "admin-1",
     name: "Admin",
   });
-  await setSessionCookie(token);
-  return NextResponse.redirect(buildRedirectUrl(request, "/admin"));
+  const res = NextResponse.redirect(buildRedirectUrl(request, "/admin"));
+  applySessionCookieToResponse(res, token);
+  return res;
 }

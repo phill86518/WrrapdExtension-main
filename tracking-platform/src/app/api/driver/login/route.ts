@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createSessionToken, setSessionCookie, verifyDriverPassword } from "@/lib/auth";
+import { applySessionCookieToResponse, createSessionToken, verifyDriverPassword } from "@/lib/auth";
 import { findDriverByName, listRegisteredDrivers } from "@/lib/driver-registry";
 
 export async function POST(request: NextRequest) {
@@ -22,6 +22,7 @@ export async function POST(request: NextRequest) {
     userId: selected.id,
     name: selected.name,
   });
-  await setSessionCookie(token);
-  return NextResponse.json({ ok: true });
+  const res = NextResponse.json({ ok: true });
+  applySessionCookieToResponse(res, token);
+  return res;
 }
