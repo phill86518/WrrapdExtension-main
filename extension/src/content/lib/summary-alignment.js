@@ -102,41 +102,12 @@ export function ensureWrrapdSummaryAlignment() {
 
   if (firstLine) {
     const computedStyle = window.getComputedStyle(firstLine);
-    const itemStyle = {
-      paddingLeft: computedStyle.paddingLeft,
-      paddingRight: computedStyle.paddingRight,
-      marginLeft: computedStyle.marginLeft,
-      marginRight: computedStyle.marginRight,
-      fontSize: computedStyle.fontSize,
-      lineHeight: computedStyle.lineHeight
-    };
-
-    const wrrapdItems = wrrapdSummaryItems.querySelectorAll('.a-row');
+    const wrrapdItems = wrrapdSummaryItems.querySelectorAll('.wrrapd-summary-line');
     wrrapdItems.forEach((item) => {
-      const itemStyleStr = [
-        itemStyle.paddingLeft && itemStyle.paddingLeft !== '0px'
-          ? `padding-left: ${itemStyle.paddingLeft};`
-          : '',
-        itemStyle.paddingRight && itemStyle.paddingRight !== '0px'
-          ? `padding-right: ${itemStyle.paddingRight};`
-          : '',
-        itemStyle.marginLeft && itemStyle.marginLeft !== '0px'
-          ? `margin-left: ${itemStyle.marginLeft};`
-          : '',
-        itemStyle.marginRight && itemStyle.marginRight !== '0px'
-          ? `margin-right: ${itemStyle.marginRight};`
-          : '',
-        itemStyle.fontSize ? `font-size: ${itemStyle.fontSize};` : '',
-        itemStyle.lineHeight ? `line-height: ${itemStyle.lineHeight};` : ''
-      ]
-        .filter((s) => s)
-        .join(' ');
-
-      if (itemStyleStr) {
-        item.style.cssText += itemStyleStr;
-      }
+      if (computedStyle.fontSize) item.style.fontSize = computedStyle.fontSize;
+      if (computedStyle.lineHeight) item.style.lineHeight = computedStyle.lineHeight;
     });
 
-    console.log('[ensureWrrapdSummaryAlignment] Updated all Wrrapd line items to match Amazon styles.');
+    console.log('[ensureWrrapdSummaryAlignment] Updated Wrrapd summary line typography to match Amazon.');
   }
 }

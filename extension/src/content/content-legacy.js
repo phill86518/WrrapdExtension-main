@@ -21,6 +21,8 @@ import {
     removeLoadingScreen,
     showWrrapdShipToOneGuidanceOverlay,
     removeWrrapdShipToOneGuidanceOverlay,
+    showWrrapdManualDeliverGuidanceOverlay,
+    removeWrrapdManualDeliverGuidanceOverlay,
 } from './lib/loading-ui.js';
 import { getValueByLabel, getElementValue, generateOrderNumber } from './lib/order-helpers.js';
 import { ensureWrrapdSummaryAlignment } from './lib/summary-alignment.js';
@@ -4923,11 +4925,19 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
             return;
         }
 
-        const looksLikeGiftStep =
+        let looksLikeGiftStep =
             buttonText.includes('save gift') ||
             buttonText.includes('gift options') ||
             buttonText.includes('save options') ||
             (buttonText.includes('continue') && !buttonText.includes('use these'));
+        if (
+            !looksLikeGiftStep &&
+            giftUiPresent &&
+            buttonText.includes('continue') &&
+            !buttonText.includes('place your order')
+        ) {
+            looksLikeGiftStep = true;
+        }
 
         if (!looksLikeGiftStep) {
             console.warn(
@@ -7210,38 +7220,62 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
         document.querySelectorAll('.wrrapd-amazon-primary-focus').forEach((el) => {
             el.classList.remove('wrrapd-amazon-primary-focus');
         });
+        removeWrrapdManualDeliverGuidanceOverlay();
     }
 
-    const WRRAPD_DELIVER_COACH_STYLE_ID = 'wrrapd-deliver-coach-styles';
-
-    function wrrapdInjectDeliverCoachStylesOnce() {
-        if (document.getElementById(WRRAPD_DELIVER_COACH_STYLE_ID)) return;
-        const st = document.createElement('style');
-        st.id = WRRAPD_DELIVER_COACH_STYLE_ID;
-        st.textContent = `
-            .wrrapd-amazon-primary-focus.a-button,
-            .wrrapd-amazon-primary-focus.a-button-primary {
-                outline: 3px solid #f59e0b !important;
-                outline-offset: 3px !important;
-                box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.5), 0 10px 28px rgba(245, 158, 11, 0.22) !important;
-                border-radius: 8px !important;
-            }
-            .wrrapd-manual-address-hint {
-                max-width: 100%;
-            }
-        `;
-        document.head.appendChild(st);
+    /**
+     * Main checkout column “Deliver to this address” / “Use this address” — not the order-summary rail.
+     */
+    function wrrapdFindMainColumnDeliverToAddressControl() {
+        const root =
+            document.getElementById('checkout-main') ||
+            document.querySelector('[data-checkout-page]') ||
+            document.getElementById('checkout-experience-container');
+        if (!root) return null;
+        const inputs = root.querySelectorAll(
+            'input.a-button-input, .a-button-primary input[type="submit"], .a-button-primary input, button',
+        );
+        for (const inp of inputs) {
+            if (wrrapdIsInCheckoutOrderSummaryRail(inp)) continue;
+            const wrap = inp.closest?.('.a-button, .a-button-primary');
+            const blob = (
+                `${inp.value || ''} ${inp.getAttribute('aria-label') || ''} ${wrap?.textContent || ''}`
+            ).toLowerCase();
+            if (blob.includes('deliver') && blob.includes('address')) return inp;
+            if (blob.includes('use this address')) return inp;
+        }
+        return null;
     }
 
     /**
      * After Wrrapd T&C, the customer must personally tap Amazon's address confirmation
      * (Use this address / Use these addresses, etc.) — we do not simulate those clicks.
      *
-     * Never insert the hint *inside* .a-button-inner (before the real input): that breaks Amazon’s
-     * flex layout and squishes the yellow button into a vertical strip. Mount after the full .a-button.
+     * Deliver / Use this address: full spotlight (see loading-ui) so we never break Amazon’s button layout.
      */
     function wrrapdShowManualAddressHint(anchorElement, variant) {
         if (!anchorElement || !anchorElement.isConnected) return;
+
+        if (variant === 'deliver') {
+            wrrapdRemoveManualAddressHints();
+            const mainCol = wrrapdFindMainColumnDeliverToAddressControl();
+            const target =
+                mainCol && mainCol.isConnected ? mainCol : anchorElement;
+            showWrrapdManualDeliverGuidanceOverlay(target, {
+                refit: () => wrrapdFindMainColumnDeliverToAddressControl(),
+            });
+            if (hasAnyWrrapdGiftWrapInCart(getAllItemsFromLocalStorage())) {
+                setTimeout(() => {
+                    try {
+                        wrrapdMaybeShowSingleAddressGiftWrapMismatch(getAllItemsFromLocalStorage());
+                    } catch (_) {
+                        /* ignore */
+                    }
+                }, 3200);
+            }
+            return;
+        }
+
         const amazonBtn =
             anchorElement.closest('.a-button-primary, .a-button') ||
             anchorElement.closest('[data-feature-id="order-summary-primary-action"] .a-button') ||
@@ -7249,7 +7283,6 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
         const mountHost = amazonBtn || anchorElement;
 
         wrrapdRemoveManualAddressHints();
-        wrrapdInjectDeliverCoachStylesOnce();
 
         const hint = document.createElement('div');
         hint.className = 'wrrapd-manual-address-hint';
@@ -7262,44 +7295,15 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
         } else if (variant === 'multi') {
             msg =
                 'Please click "Use these addresses" yourself to confirm shipping for each item on Amazon\'s checkout.';
-        } else if (variant === 'deliver') {
-            msg =
-                'Tap the full-width yellow Amazon button labeled “Deliver to this address” or “Use this address” (not the thin strip in the sidebar if it looks broken — use the main button in the address list). Amazon requires you to confirm this tap yourself.';
         }
-        const wrapStyle =
-            'box-sizing:border-box;margin:14px 0;padding:14px 16px;background:#fffbeb;border:2px solid #d97706;border-radius:10px;color:#0f172a;font-size:14px;line-height:1.5;font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;clear:both;width:100%;max-width:min(720px,100%);';
-        hint.style.cssText = wrapStyle;
-
-        if (variant === 'deliver') {
-            const title = document.createElement('div');
-            title.style.cssText =
-                'font-weight:800;font-size:16px;margin-bottom:8px;color:#92400e;letter-spacing:0.01em;';
-            title.textContent = 'Confirm on Amazon';
-            hint.appendChild(title);
-            const sub = document.createElement('div');
-            sub.style.cssText = 'font-weight:600;font-size:13px;margin-bottom:6px;color:#b45309;';
-            sub.textContent = 'Use the yellow button right below this box — it should look wide, not pencil-thin.';
-            hint.appendChild(sub);
-        }
-        const body = document.createElement('div');
-        body.textContent = msg;
-        hint.appendChild(body);
+        hint.style.cssText =
+            'box-sizing:border-box;margin:14px 0;padding:12px 14px;background:#fffbeb;border:1px solid #d97706;border-radius:8px;color:#0f172a;font-size:13px;line-height:1.45;font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;clear:both;width:100%;max-width:min(680px,100%);';
+        hint.textContent = msg;
 
         if (amazonBtn) {
-            amazonBtn.classList.add('wrrapd-amazon-primary-focus');
             amazonBtn.insertAdjacentElement('afterend', hint);
         } else {
             mountHost.insertAdjacentElement('afterend', hint);
-        }
-
-        if (variant === 'deliver' && hasAnyWrrapdGiftWrapInCart(getAllItemsFromLocalStorage())) {
-            setTimeout(() => {
-                try {
-                    wrrapdMaybeShowSingleAddressGiftWrapMismatch(getAllItemsFromLocalStorage());
-                } catch (_) {
-                    /* ignore */
-                }
-            }, 2800);
         }
     }
 
@@ -8446,6 +8450,11 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                         wrrapdShowManualAddressHint(deliverButton, 'deliver');
                     } else {
                         deliverButton.click();
+                        try {
+                            localStorage.setItem('wrrapd-addresses-changed', 'true');
+                        } catch (_) {
+                            /* ignore */
+                        }
                         removeLoadingScreen();
                     }
                     return;
@@ -8704,6 +8713,11 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                                 wrrapdShowManualAddressHint(deliverButton, 'deliver');
                             } else {
                                 deliverButton.click();
+                                try {
+                                    localStorage.setItem('wrrapd-addresses-changed', 'true');
+                                } catch (_) {
+                                    /* ignore */
+                                }
                             }
                     } else {
                             console.error("[handleWrrapdAddressSelection] Could not find 'Deliver to this address' button after selecting Wrrapd address.");
@@ -10804,12 +10818,12 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
 
             // Add the final total to the summary
             const totalRow = document.createElement('div');
-            totalRow.className = 'a-row';
+            totalRow.className = 'a-row wrrapd-summary-line';
             totalRow.style.cssText =
-                'display:grid;grid-template-columns:1fr auto;column-gap:12px;align-items:baseline;width:100%;box-sizing:border-box;margin-top:4px;';
+                'display:flex!important;flex-direction:row!important;justify-content:space-between!important;align-items:baseline!important;width:100%!important;gap:12px;box-sizing:border-box;margin-top:6px;';
             totalRow.innerHTML = `
-                <span class="a-color-price break-word" style="font-size: 18px; font-weight: bold; text-align:left;">Order total</span>
-                <span class="a-color-price break-word" style="font-size: 18px; font-weight: bold; text-align:right; white-space:nowrap;">$${total.toFixed(2)}</span>
+                <span class="a-color-price break-word" style="font-size:18px;font-weight:bold;text-align:left;flex:1;min-width:0;">Order total</span>
+                <span class="a-color-price break-word" style="font-size:18px;font-weight:bold;text-align:right;white-space:nowrap;flex:0 0 auto;">$${total.toFixed(2)}</span>
             `;
             wrrapdSummaryTotal.appendChild(totalRow);
 
@@ -10832,12 +10846,12 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             
             // Simplified - alignment is handled by ensureWrrapdSummaryAlignment() common function
             const item = document.createElement('div');
-            item.className = 'a-row';
+            item.className = 'a-row wrrapd-summary-line';
             item.style.cssText =
-                'display:grid;grid-template-columns:1fr auto;column-gap:12px;align-items:baseline;width:100%;box-sizing:border-box;text-align:left;';
+                'display:flex!important;flex-direction:row!important;justify-content:space-between!important;align-items:baseline!important;width:100%!important;gap:10px;box-sizing:border-box;';
             item.innerHTML = `
-                <span class="a-size-base" style="text-align:left;justify-self:start;min-width:0;word-break:break-word;">${description}</span>
-                <span class="a-size-base a-text-right" style="text-align:right;white-space:nowrap;">$${amount.toFixed(2)}</span>
+                <span class="a-size-base" style="text-align:left;flex:1;min-width:0;word-break:break-word;">${description}</span>
+                <span class="a-size-base a-text-right" style="text-align:right;white-space:nowrap;flex:0 0 auto;">$${amount.toFixed(2)}</span>
             `;
             container.appendChild(item);
         } else {

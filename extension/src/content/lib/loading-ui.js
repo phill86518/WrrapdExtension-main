@@ -284,6 +284,7 @@ export function showWrrapdShipToOneGuidanceOverlay(continueEl, options = {}) {
   }
 
   removeWrrapdShipToOneGuidanceOverlay();
+  removeWrrapdManualDeliverGuidanceOverlay();
   removeLoadingScreen();
   injectShipOneStylesOnce();
 
@@ -425,4 +426,282 @@ export function showWrrapdShipToOneGuidanceOverlay(continueEl, options = {}) {
     showLoadingScreen('Taking you to payment…');
   };
   document.addEventListener('click', shipOneClickCapture, true);
+}
+
+// ----- Manual “Deliver / Use this address” (Amazon requires customer tap; same spotlight UX as ship-one) -----
+const MANUAL_DELIVER_OVERLAY_ID = 'wrrapd-manual-deliver-guidance-overlay';
+
+let manualDeliverClickCapture = null;
+let manualDeliverUi = null;
+
+function tryRefitManualDeliverTarget() {
+  if (!manualDeliverUi) return false;
+  let { continueEl, haloTarget, refit } = manualDeliverUi;
+  if (continueEl.isConnected && haloTarget.isConnected) return true;
+  if (typeof refit !== 'function') return false;
+  const n = refit();
+  if (!n || !n.isConnected) return false;
+  try {
+    haloTarget.classList.remove(SHIP_ONE_HALO_CLASS);
+  } catch (e) {
+    /* ignore */
+  }
+  manualDeliverUi.continueEl = n;
+  manualDeliverUi.haloTarget = n.closest('.a-button') || n;
+  manualDeliverUi.haloTarget.classList.add(SHIP_ONE_HALO_CLASS);
+  return true;
+}
+
+function layoutManualDeliverGuidance() {
+  if (!manualDeliverUi) return;
+  const { svg, panel, maskId } = manualDeliverUi;
+  let { haloTarget, continueEl } = manualDeliverUi;
+
+  if (!continueEl.isConnected || !haloTarget.isConnected) {
+    if (!tryRefitManualDeliverTarget()) return;
+    continueEl = manualDeliverUi.continueEl;
+    haloTarget = manualDeliverUi.haloTarget;
+  }
+
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const pad = 18;
+  const br = haloTarget.getBoundingClientRect();
+  const hx = Math.max(0, br.left - pad);
+  const hy = Math.max(0, br.top - pad);
+  const hw = Math.min(vw, br.width + pad * 2);
+  const hh = Math.min(vh, br.height + pad * 2);
+
+  const hole = svg.querySelector('[data-wrrapd="hole"]');
+  const dim = svg.querySelector('[data-wrrapd="dim"]');
+  const line = svg.querySelector('[data-wrrapd="arrow-line"]');
+  const head = svg.querySelector('[data-wrrapd="arrow-head"]');
+
+  if (hole) {
+    hole.setAttribute('x', String(hx));
+    hole.setAttribute('y', String(hy));
+    hole.setAttribute('width', String(hw));
+    hole.setAttribute('height', String(hh));
+  }
+  if (dim) {
+    dim.setAttribute('width', String(vw));
+    dim.setAttribute('height', String(vh));
+    dim.setAttribute('mask', `url(#${maskId})`);
+  }
+
+  svg.setAttribute('viewBox', `0 0 ${vw} ${vh}`);
+  svg.setAttribute('width', String(vw));
+  svg.setAttribute('height', String(vh));
+
+  const pr = panel.getBoundingClientRect();
+  const cx = pr.left + pr.width / 2;
+  const cy = pr.bottom + 6;
+  const tx = br.left + br.width / 2;
+  const ty = br.top;
+
+  if (line && head) {
+    const midY = cy + (ty - cy) * 0.42;
+    const d = `M ${cx} ${cy} Q ${cx} ${midY} ${tx} ${ty}`;
+    line.setAttribute('d', d);
+    const tipX = tx;
+    const tipY = Math.max(ty - 4, br.top - 2);
+    head.setAttribute(
+      'points',
+      `${tipX},${tipY} ${tipX - 16},${tipY + 22} ${tipX + 16},${tipY + 22}`,
+    );
+  }
+}
+
+function scheduleManualDeliverLayout() {
+  if (!manualDeliverUi) return;
+  if (manualDeliverUi.raf) cancelAnimationFrame(manualDeliverUi.raf);
+  manualDeliverUi.raf = requestAnimationFrame(() => {
+    manualDeliverUi.raf = 0;
+    layoutManualDeliverGuidance();
+  });
+}
+
+export function removeWrrapdManualDeliverGuidanceOverlay() {
+  if (manualDeliverClickCapture) {
+    document.removeEventListener('click', manualDeliverClickCapture, true);
+    manualDeliverClickCapture = null;
+  }
+  if (manualDeliverUi) {
+    const { root, mo, onScroll, onResize, haloTarget, moTimer, pendingRemove } = manualDeliverUi;
+    if (moTimer) clearTimeout(moTimer);
+    if (pendingRemove) clearTimeout(pendingRemove);
+    try {
+      mo.disconnect();
+    } catch (e) {
+      /* ignore */
+    }
+    window.removeEventListener('scroll', onScroll, true);
+    window.removeEventListener('resize', onResize);
+    try {
+      haloTarget.classList.remove(SHIP_ONE_HALO_CLASS);
+    } catch (e) {
+      /* ignore */
+    }
+    root.remove();
+    manualDeliverUi = null;
+  } else {
+    document.getElementById(MANUAL_DELIVER_OVERLAY_ID)?.remove();
+  }
+}
+
+/**
+ * Spotlight + halo on Amazon’s Deliver/Use this address control (customer must tap; we do not synthesize it).
+ * @param {HTMLElement} continueEl
+ * @param {{ refit?: () => HTMLElement | null }} [options]
+ */
+export function showWrrapdManualDeliverGuidanceOverlay(continueEl, options = {}) {
+  const refit = typeof options.refit === 'function' ? options.refit : null;
+  if (!continueEl || !continueEl.isConnected) return;
+
+  removeWrrapdManualDeliverGuidanceOverlay();
+  removeWrrapdShipToOneGuidanceOverlay();
+  removeLoadingScreen();
+  injectShipOneStylesOnce();
+
+  const haloTarget = continueEl.closest('.a-button') || continueEl;
+  haloTarget.classList.add(SHIP_ONE_HALO_CLASS);
+
+  try {
+    haloTarget.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  } catch (e) {
+    /* ignore */
+  }
+
+  const maskId = `wrrapdManualDeliverMask-${Math.random().toString(36).slice(2, 9)}`;
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+
+  const root = document.createElement('div');
+  root.id = MANUAL_DELIVER_OVERLAY_ID;
+  root.setAttribute('role', 'presentation');
+  root.style.cssText = [
+    'position:fixed',
+    'inset:0',
+    'z-index:2147483638',
+    'pointer-events:none',
+    'font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif',
+  ].join(';');
+
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+  svg.setAttribute('width', String(vw));
+  svg.setAttribute('height', String(vh));
+  svg.setAttribute('viewBox', `0 0 ${vw} ${vh}`);
+  svg.style.cssText = 'position:fixed;left:0;top:0;z-index:2147483639;pointer-events:none;';
+
+  svg.innerHTML = `
+    <defs>
+      <mask id="${maskId}">
+        <rect width="${vw}" height="${vh}" fill="white"/>
+        <rect data-wrrapd="hole" x="0" y="0" width="1" height="1" rx="12" ry="12" fill="black"/>
+      </mask>
+    </defs>
+    <rect data-wrrapd="dim" width="${vw}" height="${vh}" fill="rgba(10,12,18,0.88)" mask="url(#${maskId})"/>
+    <path data-wrrapd="arrow-line" d="M0 0" fill="none" stroke="#fbcfe8" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.95"/>
+    <polygon data-wrrapd="arrow-head" points="0,0 0,0 0,0" fill="#fbcfe8" stroke="#db2777" stroke-width="1" opacity="0.98"/>
+  `;
+
+  const panel = document.createElement('div');
+  panel.setAttribute('role', 'dialog');
+  panel.setAttribute('aria-label', 'Wrrapd — confirm delivery address on Amazon');
+  panel.style.cssText = [
+    'position:fixed',
+    'top:14px',
+    'left:50%',
+    'transform:translateX(-50%)',
+    'width:min(640px,calc(100vw - 28px))',
+    'max-width:640px',
+    'margin:0',
+    'pointer-events:auto',
+    'box-sizing:border-box',
+    'padding:14px 16px 16px',
+    'background:linear-gradient(145deg,#1e1b4b 0%,#312e81 55%,#4c1d95 100%)',
+    'color:#f5f3ff',
+    'border:1px solid rgba(244,114,182,0.45)',
+    'border-radius:16px',
+    'box-shadow:0 18px 50px rgba(0,0,0,0.55),0 0 0 1px rgba(255,255,255,0.06) inset',
+    'font-size:14px',
+    'line-height:1.5',
+    'z-index:2147483647',
+  ].join(';');
+
+  panel.innerHTML = `
+    <div style="font-weight:800;font-size:17px;margin-bottom:8px;letter-spacing:0.02em;background:linear-gradient(90deg,#fde68a,#fbcfe8,#e9d5ff);-webkit-background-clip:text;background-clip:text;color:transparent;">Confirm on Amazon</div>
+    <ol style="margin:0 0 8px 18px;padding:0;font-size:12.5px;color:#e9d5ff;line-height:1.45;">
+      <li style="margin-bottom:6px;">We’ve added the Wrrapd hub to your Amazon address book where needed — handy for future gift-wrap checkouts.</li>
+      <li>Tap the yellow <strong style="color:#fff;">Deliver to this address</strong> or <strong style="color:#fff;">Use this address</strong> Amazon highlights for you — that authorizes items to ship to Wrrapd for gift wrapping.</li>
+    </ol>
+    <div style="font-size:11.5px;color:#c4b5fd;opacity:0.95;">Follow the arrow to the glowing button. We can’t tap it for you; once you do, checkout continues.</div>
+  `;
+
+  root.appendChild(svg);
+  root.appendChild(panel);
+  document.body.appendChild(root);
+
+  const onScroll = () => scheduleManualDeliverLayout();
+  const onResize = () => scheduleManualDeliverLayout();
+  window.addEventListener('scroll', onScroll, true);
+  window.addEventListener('resize', onResize);
+
+  const checkoutRoot =
+    document.getElementById('checkout-main') ||
+    document.querySelector('[data-checkout-page]') ||
+    document.getElementById('checkout-experience-container') ||
+    document.body;
+
+  const mo = new MutationObserver(() => {
+    if (!manualDeliverUi) return;
+    if (manualDeliverUi.moTimer) clearTimeout(manualDeliverUi.moTimer);
+    manualDeliverUi.moTimer = setTimeout(() => {
+      manualDeliverUi.moTimer = null;
+      scheduleManualDeliverLayout();
+    }, 160);
+  });
+  mo.observe(checkoutRoot, { childList: true, subtree: true, attributes: false });
+
+  manualDeliverUi = {
+    root,
+    svg,
+    panel,
+    haloTarget,
+    continueEl,
+    maskId,
+    refit,
+    mo,
+    onScroll,
+    onResize,
+    raf: 0,
+    moTimer: null,
+    pendingRemove: null,
+  };
+
+  scheduleManualDeliverLayout();
+  setTimeout(() => scheduleManualDeliverLayout(), 350);
+  setTimeout(() => scheduleManualDeliverLayout(), 900);
+
+  manualDeliverClickCapture = (ev) => {
+    if (!manualDeliverUi) return;
+    const t = ev.target;
+    if (manualDeliverUi.panel.contains(t)) return;
+    tryRefitManualDeliverTarget();
+    const ht = manualDeliverUi.haloTarget;
+    const ce = manualDeliverUi.continueEl;
+    const hit =
+      ht.contains(t) ||
+      ce === t ||
+      (ce.contains && ce.contains(t));
+    if (!hit) return;
+    try {
+      localStorage.setItem('wrrapd-addresses-changed', 'true');
+    } catch (e) {
+      /* ignore */
+    }
+    removeWrrapdManualDeliverGuidanceOverlay();
+  };
+  document.addEventListener('click', manualDeliverClickCapture, true);
 }
