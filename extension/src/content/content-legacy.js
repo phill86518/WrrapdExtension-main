@@ -2383,6 +2383,43 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
         document.body.appendChild(wrap);
     }
 
+    /**
+     * Amazon expanders often use <a href="javascript:void(0)...">. Calling .click() runs that URL and
+     * trips checkout CSP (“Running the JavaScript URL…”). Prefer aria/DOM expansion instead.
+     */
+    function wrrapdSafeExpandActivatorNoJavascriptUrl(activator) {
+        if (!activator) return false;
+        const href = String(
+            activator.href || (activator.getAttribute && activator.getAttribute('href')) || '',
+        )
+            .trim()
+            .toLowerCase();
+        const tag = (activator.tagName || '').toLowerCase();
+        if (tag === 'a' && href.startsWith('javascript:')) {
+            try {
+                activator.setAttribute('aria-expanded', 'true');
+            } catch (_) {
+                /* ignore */
+            }
+            document.querySelectorAll('.a-expander-collapsed-content').forEach((c) => {
+                try {
+                    c.style.display = '';
+                    c.setAttribute('aria-hidden', 'false');
+                } catch (_) {
+                    /* ignore */
+                }
+            });
+            return true;
+        }
+        try {
+            activator.setAttribute('aria-expanded', 'true');
+            activator.click();
+            return true;
+        } catch (_) {
+            return false;
+        }
+    }
+
     /** Expand collapsed address list so the hub row exists in the DOM. */
     function wrrapdClickShowMoreAddressesIfPresent() {
         const candidates = Array.from(document.querySelectorAll('a, button, span, div[role="button"]')).filter(
@@ -2394,24 +2431,12 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
         for (const el of candidates) {
             if (!el.offsetParent && el.getClientRects().length === 0) continue;
             const clickable = el.closest('a, button, [role="button"]') || el;
-            try {
-                clickable.click();
-                return true;
-            } catch (_) {
-                /* ignore */
-            }
+            if (wrrapdSafeExpandActivatorNoJavascriptUrl(clickable)) return true;
         }
         const expandIcon = document.querySelector('i.a-icon.a-icon-expand');
         if (expandIcon) {
             const expanderLink = expandIcon.closest('a') || expandIcon.parentElement;
-            if (expanderLink) {
-                try {
-                    expanderLink.click();
-                    return true;
-                } catch (_) {
-                    /* ignore */
-                }
-            }
+            if (wrrapdSafeExpandActivatorNoJavascriptUrl(expanderLink)) return true;
         }
         return false;
     }
@@ -7182,15 +7207,50 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
 
     function wrrapdRemoveManualAddressHints() {
         document.querySelectorAll('.wrrapd-manual-address-hint').forEach((el) => el.remove());
+        document.querySelectorAll('.wrrapd-amazon-primary-focus').forEach((el) => {
+            el.classList.remove('wrrapd-amazon-primary-focus');
+        });
+    }
+
+    const WRRAPD_DELIVER_COACH_STYLE_ID = 'wrrapd-deliver-coach-styles';
+
+    function wrrapdInjectDeliverCoachStylesOnce() {
+        if (document.getElementById(WRRAPD_DELIVER_COACH_STYLE_ID)) return;
+        const st = document.createElement('style');
+        st.id = WRRAPD_DELIVER_COACH_STYLE_ID;
+        st.textContent = `
+            .wrrapd-amazon-primary-focus.a-button,
+            .wrrapd-amazon-primary-focus.a-button-primary {
+                outline: 3px solid #f59e0b !important;
+                outline-offset: 3px !important;
+                box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.5), 0 10px 28px rgba(245, 158, 11, 0.22) !important;
+                border-radius: 8px !important;
+            }
+            .wrrapd-manual-address-hint {
+                max-width: 100%;
+            }
+        `;
+        document.head.appendChild(st);
     }
 
     /**
      * After Wrrapd T&C, the customer must personally tap Amazon's address confirmation
      * (Use this address / Use these addresses, etc.) — we do not simulate those clicks.
+     *
+     * Never insert the hint *inside* .a-button-inner (before the real input): that breaks Amazon’s
+     * flex layout and squishes the yellow button into a vertical strip. Mount after the full .a-button.
      */
     function wrrapdShowManualAddressHint(anchorElement, variant) {
-        if (!anchorElement || !anchorElement.parentElement) return;
+        if (!anchorElement || !anchorElement.isConnected) return;
+        const amazonBtn =
+            anchorElement.closest('.a-button-primary, .a-button') ||
+            anchorElement.closest('[data-feature-id="order-summary-primary-action"] .a-button') ||
+            anchorElement.closest('#orderSummaryPrimaryActionBtn .a-button');
+        const mountHost = amazonBtn || anchorElement;
+
         wrrapdRemoveManualAddressHints();
+        wrrapdInjectDeliverCoachStylesOnce();
+
         const hint = document.createElement('div');
         hint.className = 'wrrapd-manual-address-hint';
         hint.setAttribute('role', 'status');
@@ -7202,14 +7262,36 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
         } else if (variant === 'multi') {
             msg =
                 'Please click "Use these addresses" yourself to confirm shipping for each item on Amazon\'s checkout.';
-        } else         if (variant === 'deliver') {
+        } else if (variant === 'deliver') {
             msg =
-                'Please click "Deliver to this address" or "Use this address" yourself so Amazon records your confirmation.';
+                'Tap the full-width yellow Amazon button labeled “Deliver to this address” or “Use this address” (not the thin strip in the sidebar if it looks broken — use the main button in the address list). Amazon requires you to confirm this tap yourself.';
         }
-        hint.style.cssText =
-            'box-sizing:border-box;margin:12px 0;padding:10px 12px;background:#fffacd;border:1px solid #c9a009;border-radius:6px;color:#111827;font-size:13px;line-height:1.45;font-family:Arial,Helvetica,sans-serif;';
-        hint.textContent = msg;
-        anchorElement.parentElement.insertBefore(hint, anchorElement);
+        const wrapStyle =
+            'box-sizing:border-box;margin:14px 0;padding:14px 16px;background:#fffbeb;border:2px solid #d97706;border-radius:10px;color:#0f172a;font-size:14px;line-height:1.5;font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;clear:both;width:100%;max-width:min(720px,100%);';
+        hint.style.cssText = wrapStyle;
+
+        if (variant === 'deliver') {
+            const title = document.createElement('div');
+            title.style.cssText =
+                'font-weight:800;font-size:16px;margin-bottom:8px;color:#92400e;letter-spacing:0.01em;';
+            title.textContent = 'Confirm on Amazon';
+            hint.appendChild(title);
+            const sub = document.createElement('div');
+            sub.style.cssText = 'font-weight:600;font-size:13px;margin-bottom:6px;color:#b45309;';
+            sub.textContent = 'Use the yellow button right below this box — it should look wide, not pencil-thin.';
+            hint.appendChild(sub);
+        }
+        const body = document.createElement('div');
+        body.textContent = msg;
+        hint.appendChild(body);
+
+        if (amazonBtn) {
+            amazonBtn.classList.add('wrrapd-amazon-primary-focus');
+            amazonBtn.insertAdjacentElement('afterend', hint);
+        } else {
+            mountHost.insertAdjacentElement('afterend', hint);
+        }
+
         if (variant === 'deliver' && hasAnyWrrapdGiftWrapInCart(getAllItemsFromLocalStorage())) {
             setTimeout(() => {
                 try {
@@ -8301,47 +8383,11 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
         if (expandIcon) {
             const expanderLink = expandIcon.closest('a') || expandIcon.parentElement;
             if (expanderLink) {
-                // Check for javascript: URLs to avoid CSP errors
-                const href = expanderLink.href || expanderLink.getAttribute('href') || '';
-                if (href && href.startsWith('javascript:')) {
-                    // Manually expand instead
-                    expanderLink.setAttribute('aria-expanded', 'true');
-                    const collapsedContent = document.querySelector('.a-expander-collapsed-content');
-                    if (collapsedContent) {
-                        collapsedContent.style.display = '';
-                        collapsedContent.setAttribute('aria-hidden', 'false');
-                    }
-                } else {
-                expanderLink.setAttribute('aria-expanded', 'true');
-                const collapsedContent = document.querySelector('.a-expander-collapsed-content');
-                if (collapsedContent) {
-                    collapsedContent.style.display = '';
-                    collapsedContent.setAttribute('aria-hidden', 'false');
-                }
-                expanderLink.click();
-                }
+                wrrapdSafeExpandActivatorNoJavascriptUrl(expanderLink);
                 await new Promise(r => setTimeout(r, 2000));
             }
         } else if (expandLink) {
-            // Check for javascript: URLs to avoid CSP errors
-            const href = expandLink.href || expandLink.getAttribute('href') || '';
-            if (href && href.startsWith('javascript:')) {
-                // Manually expand instead
-                expandLink.setAttribute('aria-expanded', 'true');
-                const collapsedContent = document.querySelector('.a-expander-collapsed-content');
-                if (collapsedContent) {
-                    collapsedContent.style.display = '';
-                    collapsedContent.setAttribute('aria-hidden', 'false');
-                }
-            } else {
-            expandLink.setAttribute('aria-expanded', 'true');
-            const collapsedContent = document.querySelector('.a-expander-collapsed-content');
-            if (collapsedContent) {
-                collapsedContent.style.display = '';
-                collapsedContent.setAttribute('aria-hidden', 'false');
-            }
-            expandLink.click();
-            }
+            wrrapdSafeExpandActivatorNoJavascriptUrl(expandLink);
             await new Promise(r => setTimeout(r, 2000));
         }
 
