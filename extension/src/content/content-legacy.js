@@ -1625,6 +1625,18 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
         );
     }
 
+    /**
+     * Address automation runs after navigation; gift signature in storage can drift from minor
+     * localStorage/DOM sync differences while terms were still accepted. Repair signature once.
+     */
+    function wrrapdEnsureTermsMatchForAddressAutomation(allItems) {
+        if (wrrapdTermsAcceptedForCurrentGiftChoices(allItems)) return true;
+        if (localStorage.getItem('wrrapd-terms-accepted') !== 'true') return false;
+        const sig = wrrapdGiftOptionsTermsSignature(allItems);
+        localStorage.setItem('wrrapd-terms-gift-signature', sig);
+        return wrrapdTermsAcceptedForCurrentGiftChoices(allItems);
+    }
+
     async function overrideSaveGiftOptionsButtons() {
         console.log("[overrideSaveGiftOptionsButtons] Overriding Amazon's save buttons.");
     
@@ -2337,6 +2349,96 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
         inner.appendChild(btn);
         wrap.appendChild(inner);
         document.body.appendChild(wrap);
+    }
+
+    function wrrapdShowTermsRequiredBeforeAddressModal() {
+        wrrapdRemoveAddressGiftMismatchModal();
+        const wrap = document.createElement('div');
+        wrap.id = 'wrrapd-address-gift-mismatch-overlay';
+        wrap.setAttribute('role', 'alertdialog');
+        wrap.setAttribute('aria-modal', 'true');
+        wrap.setAttribute('aria-label', 'Wrrapd terms required');
+        wrap.style.cssText =
+            'position:fixed;inset:0;z-index:2147483646;background:rgba(15,23,42,0.88);display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;';
+        const inner = document.createElement('div');
+        inner.style.cssText =
+            'max-width:520px;background:#fff;border-radius:12px;padding:22px 24px;box-shadow:0 20px 50px rgba(0,0,0,0.35);color:#0f172a;line-height:1.5;font-size:15px;';
+        const h = document.createElement('div');
+        h.style.cssText = 'font-weight:700;font-size:18px;margin-bottom:10px;color:#b45309;';
+        h.textContent = 'Accept Wrrapd Terms before shipping';
+        const p = document.createElement('p');
+        p.style.margin = '0 0 12px';
+        p.textContent =
+            'Wrrapd could not confirm that Terms were accepted for your current gift-wrap choices. Go back to the gift options step, save, and complete the Wrrapd Terms modal — then return to this address page.';
+        inner.appendChild(h);
+        inner.appendChild(p);
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = 'OK';
+        btn.style.cssText =
+            'padding:10px 18px;border-radius:8px;border:none;background:#1e293b;color:#fff;font-weight:600;cursor:pointer;font-size:14px;';
+        btn.addEventListener('click', () => wrrapdRemoveAddressGiftMismatchModal());
+        inner.appendChild(btn);
+        wrap.appendChild(inner);
+        document.body.appendChild(wrap);
+    }
+
+    /** Expand collapsed address list so the hub row exists in the DOM. */
+    function wrrapdClickShowMoreAddressesIfPresent() {
+        const candidates = Array.from(document.querySelectorAll('a, button, span, div[role="button"]')).filter(
+            (el) => {
+                const t = (el.textContent || '').replace(/\s+/g, ' ').trim();
+                return /^show more addresses$/i.test(t) || /show more addresses/i.test(t);
+            },
+        );
+        for (const el of candidates) {
+            if (!el.offsetParent && el.getClientRects().length === 0) continue;
+            const clickable = el.closest('a, button, [role="button"]') || el;
+            try {
+                clickable.click();
+                return true;
+            } catch (_) {
+                /* ignore */
+            }
+        }
+        const expandIcon = document.querySelector('i.a-icon.a-icon-expand');
+        if (expandIcon) {
+            const expanderLink = expandIcon.closest('a') || expandIcon.parentElement;
+            if (expanderLink) {
+                try {
+                    expanderLink.click();
+                    return true;
+                } catch (_) {
+                    /* ignore */
+                }
+            }
+        }
+        return false;
+    }
+
+    function wrrapdCollectAddressRadioLikeControls() {
+        const root =
+            document.getElementById('checkout-main') ||
+            document.querySelector('[data-checkout-page]') ||
+            document.getElementById('checkout-experience-container') ||
+            document.body;
+        const set = new Set();
+        root.querySelectorAll('input[type="radio"]').forEach((el) => {
+            if (!wrrapdIsInCheckoutOrderSummaryRail(el)) set.add(el);
+        });
+        root.querySelectorAll('[role="radio"]').forEach((el) => {
+            if (!wrrapdIsInCheckoutOrderSummaryRail(el)) set.add(el);
+        });
+        return Array.from(set);
+    }
+
+    function wrrapdGetAddressTextNearControl(control) {
+        if (!control) return '';
+        const addressContainer =
+            control.closest(
+                '.a-box, .a-box-inner, [class*="address"], label, [class*="radio"], [data-testid*="address"], .a-radio, li, .a-row',
+            ) || control.parentElement;
+        return addressContainer ? addressContainer.textContent?.trim() || '' : '';
     }
 
     function wrrapdGetDisplayedSingleAddressSelectionText() {
@@ -8157,9 +8259,13 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
         }
         
         const itemsForTerms = getAllItemsFromLocalStorage();
-        const termsAccepted = wrrapdTermsAcceptedForCurrentGiftChoices(itemsForTerms);
+        const termsAccepted = wrrapdEnsureTermsMatchForAddressAutomation(itemsForTerms);
         if (!termsAccepted) {
-            console.log("[handleWrrapdAddressSelection] Terms not accepted for current gift choices - NOT proceeding with address manipulation.");
+            console.log(
+                "[handleWrrapdAddressSelection] Terms not accepted for current gift choices - NOT proceeding with address manipulation.",
+            );
+            removeLoadingScreen();
+            wrrapdShowTermsRequiredBeforeAddressModal();
             return;
         }
 
@@ -8183,9 +8289,12 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
         
             // Wait for page to be fully loaded (reduced delay)
             await new Promise(r => setTimeout(r, 1500));
+
+        // Step 1: Expand address list (hub may be below the fold or collapsed)
+        wrrapdClickShowMoreAddressesIfPresent();
+        await new Promise((r) => setTimeout(r, 600));
         
-        // Step 1: Look for "Show more addresses" and click it if it exists
-        // Find the expander icon or text
+        // Legacy expanders (some Amazon skins still use these)
         const expandIcon = document.querySelector('i.a-icon.a-icon-expand');
         const expandLink = Array.from(document.querySelectorAll('*')).find(el => el.textContent?.trim() === 'Show more addresses');
         
@@ -8235,25 +8344,24 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             }
             await new Promise(r => setTimeout(r, 2000));
         }
-        
-        // Step 2: Extract all addresses and find Wrrapd address
-        let wrrapdAddressFound = false;
-        let wrrapdAddressRadio = null;
-        
-        const allRadios = Array.from(document.querySelectorAll('input[type="radio"]'));
-        
-        for (let i = 0; i < allRadios.length; i++) {
-            const radio = allRadios[i];
-            
-            // Get the address container for this radio
-            let addressContainer = radio.closest('.a-box, .a-box-inner, [class*="address"], label, [class*="radio"], [data-testid*="address"], .a-radio') || radio.parentElement;
-            const addressText = addressContainer ? addressContainer.textContent?.trim() || '' : '';
 
-            if (wrrapdHubSignatureFromText(addressText)) {
-                wrrapdAddressFound = true;
-                wrrapdAddressRadio = radio;
-                break;
+        function findWrrapdAddressControl() {
+            const controls = wrrapdCollectAddressRadioLikeControls();
+            for (const control of controls) {
+                const addressText = wrrapdGetAddressTextNearControl(control);
+                if (wrrapdHubSignatureFromText(addressText)) {
+                    return { found: true, control };
+                }
             }
+            return { found: false, control: null };
+        }
+
+        // Step 2: Extract all addresses and find Wrrapd address
+        let { found: wrrapdAddressFound, control: wrrapdAddressRadio } = findWrrapdAddressControl();
+        if (!wrrapdAddressFound) {
+            wrrapdClickShowMoreAddressesIfPresent();
+            await new Promise((r) => setTimeout(r, 900));
+            ({ found: wrrapdAddressFound, control: wrrapdAddressRadio } = findWrrapdAddressControl());
         }
         
         // Step 3: Handle based on whether Wrrapd address was found
@@ -8264,8 +8372,15 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             
             if (allItemsWrrapd) {
                 // All items are Wrrapd - select Wrrapd radio button and click "Deliver to this address"
-                wrrapdAddressRadio.checked = true;
-                wrrapdAddressRadio.dispatchEvent(new Event('change', { bubbles: true }));
+                try {
+                    wrrapdAddressRadio.scrollIntoView({ block: 'center', behavior: 'instant' });
+                } catch (_) {
+                    /* ignore */
+                }
+                if ('checked' in wrrapdAddressRadio && wrrapdAddressRadio.type === 'radio') {
+                    wrrapdAddressRadio.checked = true;
+                    wrrapdAddressRadio.dispatchEvent(new Event('change', { bubbles: true }));
+                }
                 wrrapdAddressRadio.click();
                 await new Promise(r => setTimeout(r, 1000));
                 
