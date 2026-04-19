@@ -1,3 +1,6 @@
+# Illustrative Knative skeleton only — NOT a full production manifest.
+# Do NOT apply with placeholder passwords. Configure env + Secret Manager in Cloud Run console.
+# Deploying with only APP_* below would omit SMTP_*, TRACKING_PUBLIC_ORIGIN, Firestore, etc.
 apiVersion: serving.knative.dev/v1
 kind: Service
 metadata:
@@ -9,10 +12,3 @@ spec:
       timeoutSeconds: 300
       containers:
         - image: gcr.io/PROJECT_ID/wrrapd-tracking
-          env:
-            - name: APP_SESSION_SECRET
-              value: change-me
-            - name: APP_ADMIN_PASSWORD
-              value: change-me
-            - name: APP_DRIVER_PASSWORD
-              value: change-me

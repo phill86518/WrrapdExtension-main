@@ -95,7 +95,7 @@ gcloud config set project wrrapd-chrome-extension
 # or: export GOOGLE_CLOUD_PROJECT=wrrapd-chrome-extension
 ```
 
-Build and deploy:
+Build and deploy **new code only** (keeps every existing env var on the Cloud Run service — this is what you want):
 
 ```bash
 cd /home/phill/wrrapd-GCP
@@ -109,11 +109,24 @@ gcloud run deploy wrrapd-tracking \
   --image "$IMAGE" \
   --region us-central1 \
   --project "$PROJECT_ID" \
-  --allow-unauthenticated \
-  --set-env-vars APP_SESSION_SECRET=change-me,APP_ADMIN_PASSWORD=change-me,APP_DRIVER_PASSWORD=change-me
+  --allow-unauthenticated
 ```
 
-In production, prefer **GitHub Actions → tracking-platform-cloud-run → Run workflow** so secrets and env are not pasted into the shell. Manual deploys must not drop existing Cloud Run env vars (SMTP, Firestore, etc.); use the console **Edit & deploy new revision** or `--set-env-vars` / `--update-env-vars` only when you intend to change them.
+**Never** paste `--set-env-vars KEY=val,...` unless you intend to **delete every other** plaintext environment variable on that service. That flag **replaces the full env var list**, not a merge. To change one or two values without wiping the rest, use **`--update-env-vars`** (merges) or edit variables in the Cloud Run console.
+
+In production, prefer **GitHub Actions → tracking-platform-cloud-run → Run workflow** (it deploys **image only** and does not touch SMTP or other env).
+
+### If passwords / email “suddenly broke” after a deploy
+
+1. In [Cloud Run](https://console.cloud.google.com/run) → **wrrapd-tracking** → **Revisions**, open a **revision from before** the bad deploy.
+2. Expand **Containers** → **Variables & secrets** and **copy** the old `SMTP_*`, `TRACKING_PUBLIC_ORIGIN`, `NOTIFY_*`, real `APP_*` values (and anything else you had).
+3. **Edit & deploy new revision** on the latest service, paste those variables back, and save (or use `gcloud run services update wrrapd-tracking --update-env-vars ...` with a comma-separated list of **only** the keys you are changing).
+
+We cannot restore secret values from this Git repo (they should never have been committed). SiteGround SMTP credentials live in your SiteGround panel / password manager.
+
+### First-time or intentional password / session setup
+
+Set `APP_SESSION_SECRET`, `APP_ADMIN_PASSWORD`, and `APP_DRIVER_PASSWORD` **once** in the Cloud Run console (or `gcloud run services update ... --update-env-vars APP_SESSION_SECRET=...,APP_ADMIN_PASSWORD=...`). Do not use `--set-env-vars` for routine image deploys.
 
 ### Production persistence (Firestore — required on Cloud Run)
 

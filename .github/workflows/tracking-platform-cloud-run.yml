@@ -57,11 +57,13 @@ jobs:
           IMAGE_URI="gcr.io/${{ secrets.GCP_PROJECT_ID }}/wrrapd-tracking:${{ github.sha }}"
           gcloud builds submit tracking-platform --tag "$IMAGE_URI" --project "${{ secrets.GCP_PROJECT_ID }}"
           echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_ENV
+      # IMPORTANT: Do NOT use --set-env-vars here. It replaces *all* user-defined env vars on the
+      # service with only the keys you list (wiping SMTP_*, TRACKING_PUBLIC_ORIGIN, NOTIFY_*, etc.).
+      # Deploy the new image only; keep passwords and mail settings in Cloud Run / Secret Manager.
       - name: Deploy Cloud Run
         run: |
           gcloud run deploy "$SERVICE_NAME" \
             --image "$IMAGE_URI" \
             --region "$REGION" \
             --project "${{ secrets.GCP_PROJECT_ID }}" \
-            --allow-unauthenticated \
-            --set-env-vars APP_SESSION_SECRET=${{ secrets.APP_SESSION_SECRET }},APP_ADMIN_PASSWORD=${{ secrets.APP_ADMIN_PASSWORD }},APP_DRIVER_PASSWORD=${{ secrets.APP_DRIVER_PASSWORD }}
+            --allow-unauthenticated

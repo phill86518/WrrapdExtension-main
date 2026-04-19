@@ -84,8 +84,21 @@ export function ensureWrrapdSummaryAlignment() {
     );
   }
 
+  const totalEl = document.querySelector('#wrrapd-summary-total');
+  if (totalEl && amazonSubtotals) {
+    const tc = window.getComputedStyle(amazonSubtotals);
+    totalEl.style.paddingLeft = tc.paddingLeft;
+    totalEl.style.paddingRight = tc.paddingRight;
+    totalEl.style.marginLeft = tc.marginLeft || '0';
+    totalEl.style.marginRight = tc.marginRight || '0';
+    totalEl.style.boxSizing = 'border-box';
+  }
+
   // Match the Wrrapd card outer box to Amazon's primary summary box padding when possible.
   if (wrrapdSummaryRoot) {
+    wrrapdSummaryRoot.style.width = '100%';
+    wrrapdSummaryRoot.style.maxWidth = '100%';
+    wrrapdSummaryRoot.style.boxSizing = 'border-box';
     const amazonBox =
       orderSummary.querySelector('.a-box .a-box-inner') ||
       orderSummary.querySelector('.a-box-inner') ||
@@ -96,6 +109,14 @@ export function ensureWrrapdSummaryAlignment() {
       if (inner) {
         inner.style.paddingLeft = boxComputed.paddingLeft;
         inner.style.paddingRight = boxComputed.paddingRight;
+        inner.style.boxSizing = 'border-box';
+      }
+    } else {
+      const oc = window.getComputedStyle(orderSummary);
+      const inner = wrrapdSummaryRoot.querySelector('.a-box-inner');
+      if (inner) {
+        inner.style.paddingLeft = oc.paddingLeft;
+        inner.style.paddingRight = oc.paddingRight;
       }
     }
   }

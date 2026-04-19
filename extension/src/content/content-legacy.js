@@ -452,9 +452,17 @@ import { isZipCodeAllowed } from './lib/zip-codes.js';
                     return;
                 }
     
-                // Gift options page - check both old and new URL formats
-                if (currentURL.includes('amazon.com/gp/buy/gift/handlers/display.html') ||
-                    (currentURL.includes('/checkout/') && currentURL.includes('/gift'))) {
+                // Gift options page — legacy URL, /gift path, OR modern /checkout/ without /gift in path (DOM heading)
+                const giftLegacyUrl =
+                    currentURL.includes('amazon.com/gp/buy/gift/handlers/display.html') ||
+                    (currentURL.includes('/checkout/') && currentURL.includes('/gift'));
+                const giftModernNoPathSegment =
+                    currentURL.includes('/checkout/') &&
+                    !currentURL.includes('/spc') &&
+                    !currentURL.includes('payselect') &&
+                    !currentURL.includes('/itemselect') &&
+                    wrrapdDomLooksLikeGiftOptionsStep();
+                if (giftLegacyUrl || giftModernNoPathSegment) {
                     console.log("%c[monitorURLChanges] ✓✓✓ GIFT OPTIONS PAGE DETECTED ✓✓✓", "color: purple; font-weight: bold; font-size: 14px;");
                     console.log("[monitorURLChanges] Gift options URL:", currentURL);
                     console.log("[monitorURLChanges] Checking for saved cart data...");
@@ -1552,6 +1560,40 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
         ];
         return acceptableCategories.includes(category);
     }
+
+    /** New checkout can omit `/gift` in the URL while still showing the gift step. */
+    function wrrapdDomLooksLikeGiftOptionsStep() {
+        try {
+            if (document.querySelector('#giftOptions')) return true;
+            if (document.querySelector('input[id^="toggle-gift-item-checkbox"]')) return true;
+            if (document.querySelector('[data-testid*="gift"]')) return true;
+            const hs = document.querySelectorAll('h1, h2, h3, h4, [class*="heading"]');
+            for (let i = 0; i < hs.length; i++) {
+                const t = (hs[i].textContent || '').replace(/\s+/g, ' ').trim();
+                if (t.length > 90) continue;
+                if (/choose\s+gift\s+options/i.test(t)) return true;
+            }
+        } catch (e) {
+            /* ignore */
+        }
+        return false;
+    }
+
+    function wrrapdFindMainColumnSaveGiftButton() {
+        const root =
+            document.querySelector('#checkout-main') ||
+            document.querySelector('[data-checkout-page]') ||
+            document.body;
+        const inputs = root.querySelectorAll('input.a-button-input, input[type="submit"], button');
+        for (let i = 0; i < inputs.length; i++) {
+            const inp = inputs[i];
+            if (!inp || inp.disabled) continue;
+            const blob = `${inp.value || ''} ${inp.getAttribute('aria-label') || ''} ${inp.textContent || ''}`.toLowerCase();
+            if (blob.includes('place') && blob.includes('order')) continue;
+            if (blob.includes('save') && blob.includes('gift')) return inp;
+        }
+        return null;
+    }
     
     // ----------------------------------------------------- GIFT SECTION -----------------------------------------------------
 
@@ -1566,19 +1608,30 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
         // If addresses were changed (flag is true), we're returning from address selection
         // In this case, ONLY click "Save gift options" and return
         if (addressesChangedFlag) {
+            if (window.__WRRAPD_GIFT_RETURN_AUTOSAVE_INFLIGHT) {
+                console.log('[giftSection] Gift return autosave already in progress — skip duplicate giftSection().');
+                return;
+            }
+            window.__WRRAPD_GIFT_RETURN_AUTOSAVE_INFLIGHT = true;
             console.log("[giftSection] ✓✓✓ RETURN DETECTED (addressesChangedFlag=true) - clicking 'Save gift options' to proceed to Payment...");
-            
-            // Clear the flags
-            localStorage.setItem('wrrapd-addresses-changed', 'false');
-            localStorage.setItem('wrrapd-should-change-address', 'false');
-            localStorage.setItem('wrrapd-multi-address-completed', 'false');
-            
-            // Wait a bit for page to settle, then automatically click Save gift options
-            setTimeout(async () => {
-                await clickSaveGiftOptionsButton();
-            }, 1500);
-            
-            // Return immediately - do NOT run any other processing
+            showLoadingScreen();
+            (async () => {
+                try {
+                    const waitMs = [500, 900, 1200, 1800, 2600, 3600, 5000, 7000];
+                    for (let i = 0; i < waitMs.length; i++) {
+                        await new Promise((r) => setTimeout(r, waitMs[i] - (i > 0 ? waitMs[i - 1] : 0)));
+                        if (await clickSaveGiftOptionsButton({ relaxed: true })) {
+                            return;
+                        }
+                    }
+                    console.warn('[giftSection] Auto Save gift options did not succeed after retries.');
+                } finally {
+                    window.__WRRAPD_GIFT_RETURN_AUTOSAVE_INFLIGHT = false;
+                    localStorage.setItem('wrrapd-addresses-changed', 'false');
+                    localStorage.setItem('wrrapd-should-change-address', 'false');
+                    localStorage.setItem('wrrapd-multi-address-completed', 'false');
+                }
+            })();
             return;
         }
         
@@ -4888,41 +4941,62 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
     }
     
     /**
-     * Click "Save gift options" button on gift options page (with addresses shown)
+     * Click "Save gift options" (order summary or main column). @returns {Promise<boolean>}
+     * @param {{ relaxed?: boolean }} [options] relaxed=true widens checks (return-from-address flow).
      */
-    async function clickSaveGiftOptionsButton() {
-        const primaryWrap =
+    async function clickSaveGiftOptionsButton(options) {
+        const relaxed = options && options.relaxed === true;
+        let primaryWrap =
             document.querySelector('#orderSummaryPrimaryActionBtn') ||
             document.querySelector('[data-feature-id="order-summary-primary-action"]');
         let saveButton = primaryWrap?.querySelector?.('.a-button-input, input[type="submit"], button') || null;
         if (!saveButton) {
             saveButton = await waitForElement('#orderSummaryPrimaryActionBtn .a-button-input', 5000);
         }
+        if (!saveButton && relaxed) {
+            saveButton = wrrapdFindMainColumnSaveGiftButton();
+        }
 
         if (!saveButton) {
             console.warn("[clickSaveGiftOptionsButton] Save gift options button not found. User will need to click manually.");
-            return;
+            return false;
         }
 
+        const wrapForAnnounce = saveButton.closest?.('.a-button') || primaryWrap;
         const annEl =
             primaryWrap?.querySelector?.('[id$="-announce"], .a-button-text') ||
-            saveButton.closest?.('.a-button')?.querySelector?.('[id$="-announce"], .a-button-text');
+            wrapForAnnounce?.querySelector?.('[id$="-announce"], .a-button-text');
         const announce = (annEl && annEl.textContent) || '';
-        const buttonText = (
+        let buttonText = (
             `${announce} ${saveButton.textContent || ''} ${saveButton.value || ''} ${saveButton.getAttribute('aria-label') || ''}`
         ).toLowerCase();
 
         if (buttonText.includes('place') && buttonText.includes('order')) {
-            console.error("[clickSaveGiftOptionsButton] ⚠️ CRITICAL: Attempted to click 'Place your order' button! ABORTING!");
-            return;
+            if (relaxed) {
+                const alt = wrrapdFindMainColumnSaveGiftButton();
+                if (alt && alt !== saveButton) {
+                    saveButton = alt;
+                    const w2 = saveButton.closest?.('.a-button');
+                    const a2 = w2?.querySelector?.('[id$="-announce"], .a-button-text');
+                    const ann2 = (a2 && a2.textContent) || '';
+                    buttonText = `${ann2} ${saveButton.textContent || ''} ${saveButton.value || ''} ${saveButton.getAttribute('aria-label') || ''}`.toLowerCase();
+                } else {
+                    console.error("[clickSaveGiftOptionsButton] ⚠️ CRITICAL: Attempted to click 'Place your order' button! ABORTING!");
+                    return false;
+                }
+            } else {
+                console.error("[clickSaveGiftOptionsButton] ⚠️ CRITICAL: Attempted to click 'Place your order' button! ABORTING!");
+                return false;
+            }
         }
 
-        const giftUiPresent =
+        const giftUiStrict =
             !!document.querySelector('#giftOptions') ||
             !!document.querySelector('input[id^="toggle-gift-item-checkbox"]');
+        const giftUiPresent = giftUiStrict || (relaxed && wrrapdDomLooksLikeGiftOptionsStep());
         if (!giftUiPresent) {
             console.warn('[clickSaveGiftOptionsButton] Gift options UI not present; refusing to click order-summary control.');
-            return;
+            return false;
         }
 
         let looksLikeGiftStep =
@@ -4938,13 +5012,22 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
         ) {
             looksLikeGiftStep = true;
         }
+        if (
+            !looksLikeGiftStep &&
+            relaxed &&
+            giftUiPresent &&
+            !(buttonText.includes('place') && buttonText.includes('order')) &&
+            (buttonText.includes('save') || buttonText.includes('gift') || buttonText.includes('continue'))
+        ) {
+            looksLikeGiftStep = true;
+        }
 
         if (!looksLikeGiftStep) {
             console.warn(
                 '[clickSaveGiftOptionsButton] Order-summary button does not look like gift save/continue; refusing to click.',
                 buttonText.trim().slice(0, 120),
             );
-            return;
+            return false;
         }
 
         console.log("[clickSaveGiftOptionsButton] ✓ Found Save gift options button. Clicking to proceed to Payment...");
@@ -5010,7 +5093,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
         
         // Check immediately
         if (checkPaymentPage()) {
-            return;
+            return true;
         }
         
         // Poll for payment page (timeout after 15 seconds)
@@ -5026,6 +5109,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                 }
             }
         }, 500);
+        return true;
     }
     
     
