@@ -13,6 +13,7 @@ import {
 } from "@/lib/scheduling";
 import { getDriverProfile } from "@/lib/driver-profiles";
 import { assignStopSequences } from "@/lib/route-optimization";
+import { formatDateKeyNy } from "@/lib/ny-date";
 import { findDriverById, listRegisteredDrivers } from "@/lib/driver-registry";
 import { uploadProofDataUrl } from "@/lib/proof-storage";
 import type { CollectionReference } from "firebase-admin/firestore";
@@ -445,9 +446,10 @@ export async function createOrder(
 
 export async function listOrdersByStatus(status: "active" | "scheduled" | "past") {
   const oc = getOrdersCollection();
-  const orders = oc
+  const raw = oc
     ? ((await oc.get()).docs.map((doc) => doc.data() as Order) as Order[])
     : await readFallbackOrders();
+  const orders = assignStopSequences(raw);
   if (status === "active") {
     return orders.filter((o) => o.status === "assigned" || o.status === "en_route");
   }
@@ -472,19 +474,23 @@ export async function listDriverOrders(driverId: string) {
     return [];
   }
   const oc = getOrdersCollection();
-  const orders = oc
+  const raw = oc
     ? ((await oc.get()).docs.map((doc) => doc.data() as Order) as Order[])
     : await readFallbackOrders();
+  const orders = assignStopSequences(raw);
   const mine = orders.filter(
     (o) =>
       o.driverId === driverId &&
       (o.status === "assigned" || o.status === "en_route" || o.status === "scheduled"),
   );
   return mine.sort((a, b) => {
+    const da = formatDateKeyNy(a.scheduledFor);
+    const db = formatDateKeyNy(b.scheduledFor);
+    if (da !== db) return da.localeCompare(db);
     const sa = a.stopSequence ?? 9999;
     const sb = b.stopSequence ?? 9999;
     if (sa !== sb) return sa - sb;
-    return new Date(a.scheduledFor).getTime() - new Date(b.scheduledFor).getTime() || a.id.localeCompare(b.id);
+    return a.id.localeCompare(b.id);
   });
 }
 

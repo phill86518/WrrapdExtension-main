@@ -115,9 +115,12 @@ export default async function DriverPage() {
       </div>
       <DriverAccountPanel />
       <section className="mb-8 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-        <h2 className="text-xl font-semibold text-slate-900">Today&apos;s deliveries</h2>
+        <h2 className="text-xl font-semibold text-slate-900">Your assigned deliveries</h2>
         <p className="mt-1 text-sm text-slate-600">
-          Stops assigned to you in the admin command center appear here (route order by stop number).
+          Each card shows the <strong>Wrrapd delivery day (U.S. Eastern)</strong> — Amazon +1 calendar day, 1–7 PM
+          window. <strong>Stop numbers are per day</strong> (same driver + same Eastern date); orders on different days
+          each start at Stop 1. Stops are ordered with a nearest-neighbor + 2-opt heuristic from the Northeast Jax hub
+          (ZIP 32218 area).
         </p>
         <div className="mt-4">
           <DriverConsole

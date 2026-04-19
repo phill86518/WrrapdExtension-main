@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { formatDateKeyNy } from "@/lib/ny-date";
+import { formatInTimeZone } from "date-fns-tz";
 
 type DriverOrder = {
   /** Firestore document id — use for API calls */
@@ -234,12 +235,20 @@ export function DriverConsole({ orders }: { orders: DriverOrder[] }) {
               <span className="rounded bg-slate-900 px-2 py-0.5 text-xs font-semibold text-white">
                 Stop {order.stopSequence}
                 {(() => {
-                  const total = maxStopByNyDay.get(formatDateKeyNy(order.scheduledFor));
-                  return total != null && total > 1 ? ` of ${total}` : "";
+                  const dayKey = formatDateKeyNy(order.scheduledFor);
+                  const dayShort = formatInTimeZone(new Date(order.scheduledFor), "America/New_York", "MMM d");
+                  const total = maxStopByNyDay.get(dayKey);
+                  const ofPart = total != null && total > 1 ? ` of ${total}` : "";
+                  return ` · ${dayShort}${ofPart}`;
                 })()}
               </span>
             )}
           </div>
+          <p className="text-sm font-medium text-slate-800">
+            Wrrapd day (ET):{" "}
+            {formatInTimeZone(new Date(order.scheduledFor), "America/New_York", "EEEE, MMM d, yyyy")}
+            <span className="font-normal text-slate-600"> · 1:00–7:00 PM route window</span>
+          </p>
           <p className="text-sm">
             {order.recipientName} - {order.addressLine1}, {order.city}, {order.state} {order.postalCode}
           </p>

@@ -38,9 +38,6 @@ export function resolvePublicOrigin(
   headerGetter: HeaderGetter,
   fallbackNextOrigin?: string,
 ): string {
-  const env = process.env.TRACKING_PUBLIC_ORIGIN?.trim().replace(/\/$/, "");
-  if (env) return env;
-
   const rawForwardedHost = headerGetter("x-forwarded-host");
   const rawHost = headerGetter("host");
   const protoRaw =
@@ -54,6 +51,8 @@ export function resolvePublicOrigin(
     return `${proto}://${hostFirst}`;
   };
 
+  // Prefer the request's real host first so session cookies stay on the same hostname as login
+  // (TRACKING_PUBLIC_ORIGIN alone caused redirects to a different host → "login twice").
   const fromForwarded = tryHost(rawForwardedHost);
   if (fromForwarded) return fromForwarded;
 
@@ -64,6 +63,9 @@ export function resolvePublicOrigin(
     originFromUrlString(headerGetter("referer")) ??
     originFromUrlString(headerGetter("referrer"));
   if (fromReferer) return fromReferer;
+
+  const env = process.env.TRACKING_PUBLIC_ORIGIN?.trim().replace(/\/$/, "");
+  if (env) return env;
 
   if (fallbackNextOrigin) {
     try {

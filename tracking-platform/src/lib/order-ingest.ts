@@ -233,14 +233,13 @@ export function parseIngestOrderPayload(body: unknown): IngestSuccess | IngestFa
       }
       const needsCustomerChoice =
         keys.length > 1 && (groupingExplicit === undefined || groupingExplicit === "pending");
+      // Default to earliest Amazon day (+1 → fastest Wrrapd). "Together" / last-day is explicit only.
       const pick =
         keys.length <= 1
           ? keys[0]!
           : groupingExplicit === "together"
             ? keys[keys.length - 1]!
-            : groupingExplicit === "earliest"
-              ? keys[0]!
-              : keys[keys.length - 1]!;
+            : keys[0]!;
       if (needsCustomerChoice && keys.length > 1) {
         deliveryPreferencePending = true;
         amazonDeliveryDatesSnapshot = [...keys];
@@ -290,7 +289,7 @@ export function parseIngestOrderPayload(body: unknown): IngestSuccess | IngestFa
   if (!sourceNote && (amazonDaySingle || amazonDaysArr?.length)) {
     const daysLabel = amazonDaysArr?.length ? amazonDaysArr.join(", ") : amazonDaySingle!;
     sourceNote = deliveryPreferencePending
-      ? `Amazon deliveries ${daysLabel} — Wrrapd scheduled after last Amazon date by default; customer may switch to fastest by ${deliveryPreferenceRespondBy} ET deadline.`
+      ? `Amazon deliveries ${daysLabel} — provisional Wrrapd schedule uses earliest Amazon date (fastest +1); customer may choose one-trip after last Amazon date by ${deliveryPreferenceRespondBy} ET.`
       : `Amazon delivery ${daysLabel} → Wrrapd +1 day @ 14:00 ET`;
   } else if (!sourceNote && externalOrderId) {
     sourceNote = `Ingested order ${externalOrderId}`;

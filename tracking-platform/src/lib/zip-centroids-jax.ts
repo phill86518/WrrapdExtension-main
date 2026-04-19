@@ -1,7 +1,10 @@
 import type { Order } from "./types";
 
-/** Jacksonville-area hub for “start route here” heuristics (downtown). */
-export const DEFAULT_DEPOT = { lat: 30.3322, lng: -81.6557 };
+/**
+ * Route start heuristic: Northeast Jax / ~32218 hub (Broward-area staging).
+ * Nearest-neighbor + 2-opt order stops from here to approximate driving distance.
+ */
+export const DEFAULT_DEPOT = { lat: 30.374, lng: -81.648 };
 
 /**
  * Approximate ZIP centroids for Northeast Florida (no external geocoder).

@@ -4066,7 +4066,8 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
     
                 // Guardar en localStorage
                 localStorage.setItem('wrrapd-default-address', JSON.stringify(addressObject));
-                snapshotGifteeIntendedAddressIfApplicable(addressObject);
+                // Do NOT snapshot giftee here: this is the account default ("Deliver to" list), not the
+                // per-line recipient for Wrrapd-wrapped items. Snapshotting overwrote Jane with Roger on mixed carts.
                 console.log("[extractDefaultAddress] Address saved to localStorage:", addressObject);
     
                 return addressObject;
@@ -10216,17 +10217,18 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
      * Staging ingest must match the giftee row (snapshot + per-line shipping), not the Wrrapd PO default.
      */
     function resolveTrackingIngestAddress(item) {
+        const ship = item.shippingAddress;
+        if (ship && typeof ship === 'object') {
+            const hasBits = !!(ship.street || ship.line1 || ship.city || ship.postalCode || ship.postal_code);
+            if (hasBits && !isLikelyWrrapdWarehouseAddress(ship)) return ship;
+        }
         const giftee = readGifteeIntendedAddressForIngest();
         if (giftee && !isLikelyWrrapdWarehouseAddress(giftee)) return giftee;
-        const ship = item.shippingAddress;
-        if (ship && typeof ship === 'object' && Object.keys(ship).length && !isLikelyWrrapdWarehouseAddress(ship)) {
-            return ship;
-        }
         const fin = item.finalShippingAddress;
         if (fin && typeof fin === 'object' && Object.keys(fin).length && !isLikelyWrrapdWarehouseAddress(fin)) {
             return fin;
         }
-        return item.finalShippingAddress || item.shippingAddress || {};
+        return item.shippingAddress || item.finalShippingAddress || {};
     }
 
     function splitStreetForIngest(rawStreet) {
@@ -10236,6 +10238,28 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             line1: parts[0] || rawStreet.trim(),
             line2: parts.slice(1).join(', '),
         };
+    }
+
+    /** First YYYY-MM-DD found in line-level Amazon delivery strings (Eastern calendar keys). */
+    function wrrapdExtractYyyyMmDdFromItemDeliveryFields(item) {
+        if (!item || typeof item !== 'object') return null;
+        const candidates = [
+            item.amazonDeliveryDate,
+            item.deliveryDate,
+            item.estimatedDeliveryDate,
+            item.arrivalDate,
+            item.shippingDate,
+        ];
+        const ymd = /^\d{4}-\d{2}-\d{2}$/;
+        for (let i = 0; i < candidates.length; i++) {
+            const c = candidates[i];
+            if (typeof c !== 'string') continue;
+            const t = c.trim();
+            if (ymd.test(t)) return t;
+            const m = t.match(/\b(20\d{2}-\d{2}-\d{2})\b/);
+            if (m) return m[1];
+        }
+        return null;
     }
 
     function readAmazonDeliveryHintsFromSessionStorage() {
@@ -10391,11 +10415,14 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             };
             if (hints && Array.isArray(hints.amazonDeliveryDays) && hints.amazonDeliveryDays.length > 0) {
                 payload.amazonDeliveryDays = hints.amazonDeliveryDays;
-                payload.wrrapdAmazonGrouping = hints.wrrapdAmazonGrouping || 'pending';
+                payload.wrrapdAmazonGrouping = hints.wrrapdAmazonGrouping || 'earliest';
             } else {
-                payload.amazonDeliveryDay = new Date().toLocaleDateString('en-CA', {
-                    timeZone: 'America/New_York',
-                });
+                const fromLine = wrrapdExtractYyyyMmDdFromItemDeliveryFields(item);
+                payload.amazonDeliveryDay = fromLine
+                    ? fromLine
+                    : new Date().toLocaleDateString('en-CA', {
+                          timeZone: 'America/New_York',
+                      });
             }
             orders.push(payload);
         }
