@@ -618,9 +618,12 @@ function pickTrackingRecipientAddressForIngest({ wrappedOnly, finalShippingAddre
         if (isLikelyWrrapdWarehouseAddressObj(n)) return null;
         return n;
     };
-    // Explicit giftee from the extension (wrrapd-giftee-intended-address) beats Amazon-scraped line shipping,
-    // which is often still the account default address even when the gift is addressed to someone else.
-    let u = tryAddr(gifteeOriginalAddress);
+    // pay.wrrapd.com posts the customer's "Final shipping address" right before Stripe confirms payment.
+    // Prefer it over extension-local snapshots, which may still be the Amazon account default ("Deliver to Roger").
+    let u = tryAddr(finalShippingAddressFromCheckout);
+    if (u) return u;
+    // Extension snapshot (wrrapd-giftee-intended-address) when checkout cache was unavailable.
+    u = tryAddr(gifteeOriginalAddress);
     if (u) return u;
     for (const it of wrappedOnly || []) {
         u = tryAddr(it && it.gifteeRecipientAddress);
@@ -630,8 +633,6 @@ function pickTrackingRecipientAddressForIngest({ wrappedOnly, finalShippingAddre
         u = tryAddr(it && it.shippingAddress);
         if (u) return u;
     }
-    u = tryAddr(finalShippingAddressFromCheckout);
-    if (u) return u;
     const first = (wrappedOnly && wrappedOnly[0]) || {};
     u = tryAddr(first.finalShippingAddress) || tryAddr(first.shippingAddress);
     if (u) return u;
@@ -1097,8 +1098,10 @@ app.post('/process-payment', async (req, res) => {
 
         const nonBlockingWarnings = [];
 
-        /** Giftee row for ingest + process-payment admin email (block scope below). */
+        /** Giftee row for ingest + legacy pay emails when ingest does not run or fails (block scope below). */
         let trackingGifteeForEmail = normalizeAddressShape({});
+        /** When true, tracking Cloud Run already sent thank-you + ops emails — skip legacy pair from this server. */
+        let trackingIngestHandledNotifications = false;
 
         // Ingest ONE tracking order for this checkout (prevents multi-email fan-out).
         if (normalizedOrderData.length > 0) {
@@ -1202,10 +1205,12 @@ app.post('/process-payment', async (req, res) => {
             const ingestResult = await ingestOrderIntoTracking(ingestPayload);
             if (!ingestResult.ok) {
                 nonBlockingWarnings.push(`tracking ingest failed: ${ingestResult.reason}`);
+            } else {
+                trackingIngestHandledNotifications = true;
             }
         }
 
-        // Admin email template
+        // Admin email template (legacy pay server path — only if tracking did not already notify)
         const adminEmailBody = `
             <div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto;">
                 <h1 style="color: #333;">New Payment Received</h1>
@@ -1251,32 +1256,39 @@ app.post('/process-payment', async (req, res) => {
             </div>
         `;
 
-        // Send emails (non-blocking from order persistence perspective)
-        const emailResults = await sendProcessPaymentPairEmails({
-            adminRecipients: ['angel@wrrapd.com', 'admin@wrrapd.com'],
-            adminFrom:
-                (smtpReadyForPay() && process.env.SMTP_FROM_ADMIN?.trim()) ||
-                'Wrrapd <noreply@wrrapd.com>',
-            adminSubject: `New order #${orderNumber}`,
-            adminHtml: adminEmailBody,
-            adminAttachments,
-            customerTo: customerEmail,
-            customerFrom:
-                (smtpReadyForPay() && process.env.SMTP_FROM_CUSTOMER?.trim()) ||
-                'Wrrapd Orders <orders@wrrapd.com>',
-            customerSubject: `Your Wrrapd Order Confirmation #${orderNumber}`,
-            customerHtml: customerEmailBody,
-            customerAttachments,
-            customerReplyTo: 'support@wrrapd.com',
-        });
+        // Legacy SMTP pair ("New order #…" / "Your Wrrapd Order Confirmation #…") — skip when tracking ingest
+        // succeeded; Cloud Run already sent "New Wrrapd order …" + "Thank you — Wrrapd order …".
+        if (!trackingIngestHandledNotifications) {
+            const emailResults = await sendProcessPaymentPairEmails({
+                adminRecipients: ['angel@wrrapd.com', 'admin@wrrapd.com'],
+                adminFrom:
+                    (smtpReadyForPay() && process.env.SMTP_FROM_ADMIN?.trim()) ||
+                    'Wrrapd <noreply@wrrapd.com>',
+                adminSubject: `New order #${orderNumber}`,
+                adminHtml: adminEmailBody,
+                adminAttachments,
+                customerTo: customerEmail,
+                customerFrom:
+                    (smtpReadyForPay() && process.env.SMTP_FROM_CUSTOMER?.trim()) ||
+                    'Wrrapd Orders <orders@wrrapd.com>',
+                customerSubject: `Your Wrrapd Order Confirmation #${orderNumber}`,
+                customerHtml: customerEmailBody,
+                customerAttachments,
+                customerReplyTo: 'support@wrrapd.com',
+            });
 
-        emailResults.forEach((r, idx) => {
-            if (r.status === 'rejected') {
-                const label = idx === 0 ? 'admin email' : 'customer email';
-                const msg = r.reason && r.reason.message ? r.reason.message : String(r.reason);
-                nonBlockingWarnings.push(`${label} failed: ${msg}`);
-            }
-        });
+            emailResults.forEach((r, idx) => {
+                if (r.status === 'rejected') {
+                    const label = idx === 0 ? 'admin email' : 'customer email';
+                    const msg = r.reason && r.reason.message ? r.reason.message : String(r.reason);
+                    nonBlockingWarnings.push(`${label} failed: ${msg}`);
+                }
+            });
+        } else {
+            console.info(
+                `[process-payment] Skipping legacy pay-server email pair for ${orderNumber} (tracking ingest sent notifications).`,
+            );
+        }
 
         if (nonBlockingWarnings.length > 0) {
             console.warn(`[process-payment] non-blocking warnings for ${orderNumber}:`, nonBlockingWarnings);
