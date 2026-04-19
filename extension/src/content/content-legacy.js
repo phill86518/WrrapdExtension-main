@@ -1657,9 +1657,37 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
         for (let i = 0; i < inputs.length; i++) {
             const inp = inputs[i];
             if (!inp || inp.disabled) continue;
-            const blob = `${inp.value || ''} ${inp.getAttribute('aria-label') || ''} ${inp.textContent || ''}`.toLowerCase();
+            const wrap = inp.closest?.('.a-button');
+            const ann = wrap?.querySelector?.('[id$="-announce"], .a-button-text');
+            const annText = (ann && ann.textContent) || '';
+            const blob = `${inp.value || ''} ${inp.getAttribute('aria-label') || ''} ${annText} ${inp.textContent || ''}`.toLowerCase();
             if (blob.includes('place') && blob.includes('order')) continue;
-            if (blob.includes('save') && blob.includes('gift')) return inp;
+            if ((blob.includes('save') && blob.includes('gift')) || /save\s+gift\s+options/i.test(blob)) return inp;
+        }
+        return null;
+    }
+
+    /**
+     * Chewbacca multi-address gift step often has no order-summary primary CTA; Amazon uses a
+     * secondary continue input (same nodes overrideSaveGiftOptionsButtons watches).
+     * @returns {HTMLInputElement|HTMLButtonElement|null}
+     */
+    function wrrapdFindChewbaccaSecondaryGiftSaveButton() {
+        try {
+            const bySlot = document.querySelector(
+                'input[data-csa-c-slot-id="checkout-secondary-continue-giftselect"]',
+            );
+            if (bySlot && !bySlot.disabled) return bySlot;
+            const byId = document.querySelector('#checkout-secondary-continue-button-id input.a-button-input');
+            if (byId && !byId.disabled) return byId;
+            const href = (window.location.href || '').toLowerCase();
+            const giftish = href.includes('/gift') || wrrapdDomLooksLikeGiftOptionsStep();
+            if (giftish) {
+                const byTest = document.querySelector('input[data-testid="secondary-continue-button"]');
+                if (byTest && !byTest.disabled) return byTest;
+            }
+        } catch (e) {
+            /* ignore */
         }
         return null;
     }
@@ -1688,8 +1716,8 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
             wrrapdTrace('gift', 'return-from-address autosave start');
             (async () => {
                 try {
-                    // Each attempt waits inside clickSaveGiftOptionsButton for real payment URL (several seconds).
-                    const gaps = [300, 700, 1400, 2200, 3200, 4500, 6000];
+                    // Short gaps: clickSaveGiftOptionsButton no longer blocks ~5s per miss on Chewbacca gift layout.
+                    const gaps = [80, 180, 350, 600, 1000, 1600, 2400];
                     let savedOk = false;
                     for (let i = 0; i < gaps.length; i++) {
                         await new Promise((r) => setTimeout(r, gaps[i]));
@@ -5066,10 +5094,27 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
             document.querySelector('[data-feature-id="order-summary-primary-action"]');
         let saveButton = primaryWrap?.querySelector?.('.a-button-input, input[type="submit"], button') || null;
         if (!saveButton) {
-            saveButton = await waitForElement('#orderSummaryPrimaryActionBtn .a-button-input', 5000);
+            saveButton = wrrapdFindChewbaccaSecondaryGiftSaveButton();
         }
-        if (!saveButton && relaxed) {
+        if (!saveButton) {
             saveButton = wrrapdFindMainColumnSaveGiftButton();
+        }
+        const primaryWaitMs = relaxed ? 1400 : 5000;
+        if (!saveButton) {
+            saveButton = await waitForElement(
+                '#orderSummaryPrimaryActionBtn .a-button-input, [data-feature-id="order-summary-primary-action"] .a-button-input',
+                primaryWaitMs,
+            );
+        }
+        if (!saveButton) {
+            const secondaryWaitMs = relaxed ? 2000 : 2500;
+            saveButton = await waitForElement(
+                'input[data-csa-c-slot-id="checkout-secondary-continue-giftselect"], #checkout-secondary-continue-button-id input.a-button-input, input[data-testid="secondary-continue-button"]',
+                secondaryWaitMs,
+            );
+        }
+        if (!saveButton) {
+            saveButton = wrrapdFindChewbaccaSecondaryGiftSaveButton() || wrrapdFindMainColumnSaveGiftButton();
         }
 
         if (!saveButton) {
@@ -5197,6 +5242,18 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                 navigated = await wrrapdWaitForPaymentUrlAfterGift(9000, 120);
             }
             if (!navigated) {
+                const secAlt = wrrapdFindChewbaccaSecondaryGiftSaveButton();
+                if (secAlt && secAlt !== saveButton) {
+                    console.log('[clickSaveGiftOptionsButton] relaxed: trying Chewbacca secondary Save gift control');
+                    try {
+                        secAlt.click();
+                    } catch (e3b) {
+                        console.warn('[clickSaveGiftOptionsButton] relaxed: secondary alt click failed', e3b);
+                    }
+                    navigated = await wrrapdWaitForPaymentUrlAfterGift(8000, 120);
+                }
+            }
+            if (!navigated) {
                 const alt = wrrapdFindMainColumnSaveGiftButton();
                 if (alt && alt !== saveButton) {
                     console.log('[clickSaveGiftOptionsButton] relaxed: trying main-column Save gift control');
@@ -5244,6 +5301,18 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                 }
             }
             navigated = await wrrapdWaitForPaymentUrlAfterGift(14000, 200);
+        }
+
+        if (!navigated && wrrapdDomLooksLikeGiftOptionsStep()) {
+            const secRetry = wrrapdFindChewbaccaSecondaryGiftSaveButton();
+            if (secRetry) {
+                try {
+                    secRetry.click();
+                } catch (e4) {
+                    console.warn('[clickSaveGiftOptionsButton] gift-step secondary retry click failed', e4);
+                }
+                navigated = await wrrapdWaitForPaymentUrlAfterGift(8000, 120);
+            }
         }
 
         if (navigated) {
