@@ -6,7 +6,7 @@ import './content-legacy.js';
 import './lib/amazon-delivery-hints.js';
 
 /** Bump when verifying deploy — in DevTools: `window.__WRRAPD_CONTENT_BUILD_TAG__`. */
-export const WRRAPD_CONTENT_BUILD_TAG = '2026-04-15-ingest-giftee+hints-ui+gift-retry';
+export const WRRAPD_CONTENT_BUILD_TAG = '2026-04-18-process-payment-giftee+server-schedule';
 if (typeof window !== 'undefined') {
     window.__WRRAPD_CONTENT_BUILD_TAG__ = WRRAPD_CONTENT_BUILD_TAG;
 }

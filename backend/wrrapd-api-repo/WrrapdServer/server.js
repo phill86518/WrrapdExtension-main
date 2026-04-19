@@ -461,6 +461,7 @@ function normalizeOrderItems(orderData) {
                 occasion: option.occasion || null,
                 shippingAddress: option.shippingAddress,
                 finalShippingAddress: option.finalShippingAddress || null,
+                gifteeRecipientAddress: option.gifteeRecipientAddress || null,
                 deliveryInstructions: option.deliveryInstructions || null,
                 giftMessage: option.giftMessage || null,
                 senderName: option.senderName || null,
@@ -549,7 +550,8 @@ function computeScheduledForPlusOneFromItems(items) {
         return computeScheduledForPlusOne((items && items[0]) || null);
     }
     dates.sort((a, b) => a.getTime() - b.getTime());
-    const base = dates[0];
+    // Combined-trip rule: Wrrapd runs after the **last** Amazon delivery promise among line items.
+    const base = dates[dates.length - 1];
     const plusOne = new Date(base.getTime());
     plusOne.setDate(plusOne.getDate() + 1);
     return plusOne.toISOString();
@@ -578,6 +580,60 @@ function splitStreet(rawStreet) {
         line1: parts[0] || rawStreet.trim(),
         line2: parts.slice(1).join(', '),
     };
+}
+
+function isLikelyWrrapdWarehouseAddressObj(addr) {
+    if (!addr || typeof addr !== 'object') return false;
+    const blob = `${addr.name || ''} ${addr.street || ''} ${addr.line1 || ''}`.toLowerCase();
+    return (
+        blob.includes('wrrapd') ||
+        (blob.includes('po box') && blob.includes('26067')) ||
+        (blob.includes('32226') && blob.includes('jacksonville'))
+    );
+}
+
+/** Normalize to { name, street, city, state, postalCode, country } for ingest + emails. */
+function normalizeAddressShape(addr) {
+    if (!addr || typeof addr !== 'object') return {};
+    const street = String(addr.street || addr.line1 || '').trim();
+    return {
+        name: addr.name != null ? String(addr.name).trim() : '',
+        street,
+        line1: addr.line1 != null ? String(addr.line1).trim() : street,
+        line2: addr.line2 != null ? String(addr.line2).trim() : '',
+        city: String(addr.city || '').trim(),
+        state: String(addr.state || '').trim(),
+        postalCode: String(addr.postalCode || addr.postal_code || '').trim(),
+        country: addr.country != null ? String(addr.country).trim() : '',
+    };
+}
+
+/**
+ * Tracking + Command Center should show the **giftee** row, not the Wrrapd hub / Amazon default row.
+ */
+function pickTrackingRecipientAddressForIngest({ wrappedOnly, finalShippingAddressFromCheckout, gifteeOriginalAddress }) {
+    const tryAddr = (a) => {
+        const n = normalizeAddressShape(a);
+        if (!n.street && !n.line1) return null;
+        if (isLikelyWrrapdWarehouseAddressObj(n)) return null;
+        return n;
+    };
+    let u = tryAddr(gifteeOriginalAddress);
+    if (u) return u;
+    for (const it of wrappedOnly || []) {
+        u = tryAddr(it && it.gifteeRecipientAddress);
+        if (u) return u;
+    }
+    for (const it of wrappedOnly || []) {
+        u = tryAddr(it && it.shippingAddress);
+        if (u) return u;
+    }
+    u = tryAddr(finalShippingAddressFromCheckout);
+    if (u) return u;
+    const first = (wrappedOnly && wrappedOnly[0]) || {};
+    u = tryAddr(first.finalShippingAddress) || tryAddr(first.shippingAddress);
+    if (u) return u;
+    return normalizeAddressShape(finalShippingAddressFromCheckout || first.finalShippingAddress || first.shippingAddress || {});
 }
 
 /** Align extension line suffix (`…-01`) with base Amazon ref for tracking ingest dedupe. */
@@ -670,6 +726,7 @@ app.post('/process-payment', async (req, res) => {
         billingDetails,
         greetingFirstName,
         amazonDeliveryHints,
+        gifteeOriginalAddress,
     } = req.body;
 
     // Validate that all parameters are present
@@ -1038,12 +1095,20 @@ app.post('/process-payment', async (req, res) => {
 
         const nonBlockingWarnings = [];
 
+        /** Giftee row for ingest + process-payment admin email (block scope below). */
+        let trackingGifteeForEmail = normalizeAddressShape({});
+
         // Ingest ONE tracking order for this checkout (prevents multi-email fan-out).
         if (normalizedOrderData.length > 0) {
             const wrappedOnly = normalizedOrderData.filter((it) => it && it.checkbox_wrrapd === true);
             const firstItem = wrappedOnly[0] || normalizedOrderData[0] || {};
-            const finalAddr = finalShippingAddressFromCheckout || firstItem.finalShippingAddress || firstItem.shippingAddress || {};
-            const streetParts = splitStreet(finalAddr.street || '');
+            const finalAddr = pickTrackingRecipientAddressForIngest({
+                wrappedOnly,
+                finalShippingAddressFromCheckout,
+                gifteeOriginalAddress,
+            });
+            trackingGifteeForEmail = finalAddr;
+            const streetParts = splitStreet(finalAddr.street || finalAddr.line1 || '');
             const customerName =
                 gifterFullName ||
                 (billingDetails && billingDetails.name) ||
@@ -1109,8 +1174,8 @@ app.post('/process-payment', async (req, res) => {
                 customerPhone,
                 customerEmail,
                 recipientName,
-                addressLine1: streetParts.line1 || finalAddr.line1 || firstItem.addressLine1 || 'N/A',
-                addressLine2: streetParts.line2 || finalAddr.line2 || firstItem.addressLine2 || '',
+                addressLine1: streetParts.line1 || finalAddr.line1 || 'N/A',
+                addressLine2: streetParts.line2 || finalAddr.line2 || '',
                 city: finalAddr.city || firstItem.city || 'N/A',
                 state: finalAddr.state || firstItem.state || 'N/A',
                 postalCode: finalAddr.postalCode || finalAddr.postal_code || firstItem.postalCode || '00000',
@@ -1129,7 +1194,8 @@ app.post('/process-payment', async (req, res) => {
                     }
                     : effectiveAmazonDays.length > 0
                         ? {
-                            amazonDeliveryDay: effectiveAmazonDays[0],
+                            // After **last** Amazon arrival (combined default), matches extension hints + ingest.
+                            amazonDeliveryDay: effectiveAmazonDays[effectiveAmazonDays.length - 1],
                         }
                     : {
                         scheduledFor: computeScheduledForPlusOneFromItems(wrappedOnly.length ? wrappedOnly : normalizedOrderData),
@@ -1150,12 +1216,14 @@ app.post('/process-payment', async (req, res) => {
                 
                 <div style="margin: 20px 0; padding: 15px; background-color: #f2f2f2; border-radius: 5px;">
                     <h2 style="margin-top: 0; color: #333;">Customer Information</h2>
-                    <p><strong>Name (Giftee):</strong> ${(finalShippingAddressFromCheckout ? finalShippingAddressFromCheckout.name : (normalizedOrderData && normalizedOrderData.length > 0 && normalizedOrderData[0].finalShippingAddress ? normalizedOrderData[0].finalShippingAddress.name : null)) || billingDetails?.name || 'N/A'}</p>
+                    <p><strong>Name (Giftee):</strong> ${(trackingGifteeForEmail.name && String(trackingGifteeForEmail.name).trim()) || billingDetails?.name || 'N/A'}</p>
                     <p><strong>Email (Gifter):</strong> ${customerEmail}</p>
                     <p><strong>Phone (Gifter):</strong> ${customerPhone}</p>
-                    ${(finalShippingAddressFromCheckout || (normalizedOrderData && normalizedOrderData.length > 0 && normalizedOrderData[0].finalShippingAddress)) ? 
-                      `<p><strong>Final Shipping Address (Giftee):</strong> ${(finalShippingAddressFromCheckout || normalizedOrderData[0].finalShippingAddress).name || 'N/A'}, ${(finalShippingAddressFromCheckout || normalizedOrderData[0].finalShippingAddress).street || 'N/A'}, ${(finalShippingAddressFromCheckout || normalizedOrderData[0].finalShippingAddress).city || 'N/A'}, ${(finalShippingAddressFromCheckout || normalizedOrderData[0].finalShippingAddress).state || 'N/A'} ${(finalShippingAddressFromCheckout || normalizedOrderData[0].finalShippingAddress).postalCode || 'N/A'}, ${(finalShippingAddressFromCheckout || normalizedOrderData[0].finalShippingAddress).country || 'N/A'}</p>` : 
-                      ''}
+                    ${
+                        trackingGifteeForEmail && (trackingGifteeForEmail.street || trackingGifteeForEmail.line1)
+                            ? `<p><strong>Delivery address (Giftee):</strong> ${trackingGifteeForEmail.name || 'N/A'}, ${trackingGifteeForEmail.street || trackingGifteeForEmail.line1 || 'N/A'}, ${trackingGifteeForEmail.city || 'N/A'}, ${trackingGifteeForEmail.state || 'N/A'} ${trackingGifteeForEmail.postalCode || 'N/A'}${trackingGifteeForEmail.country ? `, ${trackingGifteeForEmail.country}` : ''}</p>`
+                            : ''
+                    }
                     ${billingDetails && billingDetails.address && (!finalShippingAddressFromCheckout || 
                       (billingDetails.address.line1 !== finalShippingAddressFromCheckout.street?.split(',')[0]?.trim())) ? 
                       `<p><strong>Billing Address (Gifter):</strong> ${billingDetails.name || 'N/A'}, ${billingDetails.address.line1 || 'N/A'}${billingDetails.address.line2 ? ', ' + billingDetails.address.line2 : ''}, ${billingDetails.address.city || 'N/A'}, ${billingDetails.address.state || 'N/A'} ${billingDetails.address.postal_code || 'N/A'}, ${billingDetails.address.country || 'N/A'}</p>` : 

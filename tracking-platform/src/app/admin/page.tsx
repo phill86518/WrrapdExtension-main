@@ -313,7 +313,12 @@ export default async function AdminPage({
                     {order.addressLine1}, {order.city}, {order.state} {order.postalCode}
                   </p>
                   <p className="mt-1 text-xs font-medium text-[#3d5c47]">
-                    Scheduled: {new Date(order.scheduledFor).toLocaleString()}
+                    Scheduled:{" "}
+                    {formatInTimeZone(
+                      new Date(order.scheduledFor),
+                      "America/New_York",
+                      "M/d/yyyy, h:mm:ss a zzz",
+                    )}
                   </p>
                   <a
                     href={`/admin/orders/${order.id}`}

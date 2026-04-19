@@ -1617,10 +1617,11 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
             showLoadingScreen();
             (async () => {
                 try {
-                    const waitMs = [500, 900, 1200, 1800, 2600, 3600, 5000, 7000];
+                    // Each attempt waits inside clickSaveGiftOptionsButton for real payment URL (several seconds).
+                    const gaps = [450, 1200, 2000, 2500];
                     let savedOk = false;
-                    for (let i = 0; i < waitMs.length; i++) {
-                        await new Promise((r) => setTimeout(r, waitMs[i] - (i > 0 ? waitMs[i - 1] : 0)));
+                    for (let i = 0; i < gaps.length; i++) {
+                        await new Promise((r) => setTimeout(r, gaps[i]));
                         if (await clickSaveGiftOptionsButton({ relaxed: true })) {
                             savedOk = true;
                             break;
@@ -4947,6 +4948,24 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
         });
     }
     
+    function wrrapdUrlLooksLikeAmazonPaymentStep(href) {
+        const u = href || window.location.href || '';
+        return (
+            u.includes('amazon.com/gp/buy/payselect/handlers/display.html') ||
+            (u.includes('/checkout/') && u.includes('/spc') && !u.includes('/gp/buy/spc/handlers/display.html'))
+        );
+    }
+
+    /** @returns {Promise<boolean>} true only after URL shows Amazon payment step */
+    async function wrrapdWaitForPaymentUrlAfterGift(maxMs, stepMs) {
+        const deadline = Date.now() + maxMs;
+        while (Date.now() < deadline) {
+            if (wrrapdUrlLooksLikeAmazonPaymentStep()) return true;
+            await new Promise((r) => setTimeout(r, stepMs));
+        }
+        return false;
+    }
+
     /**
      * Click "Save gift options" (order summary or main column). @returns {Promise<boolean>}
      * @param {{ relaxed?: boolean }} [options] relaxed=true widens checks (return-from-address flow).
@@ -5048,92 +5067,104 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
         // Set a flag to indicate this is a programmatic click that should proceed to payment
         // This prevents any existing event handlers from intercepting
         localStorage.setItem('wrrapd-programmatic-click-to-payment', 'true');
-        
-        // Use a timeout to clear the flag in case something goes wrong
+
         setTimeout(() => {
             localStorage.removeItem('wrrapd-programmatic-click-to-payment');
-        }, 5000);
-        
-        // CRITICAL: Submit the form directly instead of clicking button
-        // This avoids triggering event handlers that might prevent default and cause 500 errors
+        }, 20000);
+
         const form = saveButton.closest('form');
-        if (form) {
-            console.log("[clickSaveGiftOptionsButton] Submitting form directly to avoid event handler issues");
+        let navigated = false;
+
+        if (relaxed) {
+            // Return-from-address: Amazon’s SPA often needs a real click (React/AUI handlers).
+            // Raw HTMLFormElement.submit() frequently no-ops or bounces back to gift without navigation.
             try {
-                // Submit the form directly - this is more reliable than clicking
-                form.submit();
-            } catch (e) {
-                console.warn("[clickSaveGiftOptionsButton] Form.submit() failed, trying button click:", e);
-                // Fallback to clicking if form.submit() fails - but verify it's not "Place your order"
-                const fallbackText = (saveButton.textContent || saveButton.value || saveButton.getAttribute('aria-label') || '').toLowerCase();
-                if (!(fallbackText.includes('place') && fallbackText.includes('order'))) {
                 saveButton.click();
-                } else {
-                    console.error("[clickSaveGiftOptionsButton] ⚠️ CRITICAL: Fallback button is 'Place your order'! ABORTING!");
-                }
+            } catch (e0) {
+                console.warn('[clickSaveGiftOptionsButton] relaxed: primary click failed', e0);
             }
-            if (relaxed) {
-                await new Promise((r) => setTimeout(r, 800));
-                const href = window.location.href || '';
-                const onPayment =
-                    href.includes('amazon.com/gp/buy/payselect/handlers/display.html') ||
-                    (href.includes('/checkout/') && href.includes('/spc') && !href.includes('/gp/buy/spc/handlers/display.html'));
-                if (!onPayment && wrrapdDomLooksLikeGiftOptionsStep()) {
-                    console.log(
-                        '[clickSaveGiftOptionsButton] relaxed: still on gift step after form.submit — firing native click()',
-                    );
-                    try {
-                        saveButton.click();
-                    } catch (e2) {
-                        console.warn('[clickSaveGiftOptionsButton] follow-up click failed:', e2);
+            navigated = await wrrapdWaitForPaymentUrlAfterGift(1400, 80);
+            if (!navigated && form) {
+                try {
+                    if (typeof form.requestSubmit === 'function') {
+                        form.requestSubmit(saveButton);
+                    } else {
+                        form.submit();
                     }
+                } catch (e1) {
+                    console.warn('[clickSaveGiftOptionsButton] relaxed: requestSubmit/submit failed', e1);
+                }
+                navigated = await wrrapdWaitForPaymentUrlAfterGift(2200, 80);
+            }
+            if (!navigated && wrrapdDomLooksLikeGiftOptionsStep()) {
+                try {
+                    saveButton.click();
+                } catch (e2) {
+                    console.warn('[clickSaveGiftOptionsButton] relaxed: second click failed', e2);
+                }
+                navigated = await wrrapdWaitForPaymentUrlAfterGift(9000, 120);
+            }
+            if (!navigated) {
+                const alt = wrrapdFindMainColumnSaveGiftButton();
+                if (alt && alt !== saveButton) {
+                    console.log('[clickSaveGiftOptionsButton] relaxed: trying main-column Save gift control');
+                    try {
+                        alt.click();
+                    } catch (e3) {
+                        console.warn('[clickSaveGiftOptionsButton] relaxed: alt click failed', e3);
+                    }
+                    navigated = await wrrapdWaitForPaymentUrlAfterGift(9000, 120);
                 }
             }
         } else {
-            // No form found, use click - but verify it's not "Place your order"
-            const clickText = (saveButton.textContent || saveButton.value || saveButton.getAttribute('aria-label') || '').toLowerCase();
-            if (!(clickText.includes('place') && clickText.includes('order'))) {
-            console.log("[clickSaveGiftOptionsButton] No form found, using direct click");
-            saveButton.click();
+            if (form) {
+                console.log("[clickSaveGiftOptionsButton] Submitting form directly to avoid event handler issues");
+                try {
+                    form.submit();
+                } catch (e) {
+                    console.warn("[clickSaveGiftOptionsButton] Form.submit() failed, trying button click:", e);
+                    const fallbackText = (
+                        saveButton.textContent ||
+                        saveButton.value ||
+                        saveButton.getAttribute('aria-label') ||
+                        ''
+                    ).toLowerCase();
+                    if (!(fallbackText.includes('place') && fallbackText.includes('order'))) {
+                        saveButton.click();
+                    } else {
+                        console.error(
+                            "[clickSaveGiftOptionsButton] ⚠️ CRITICAL: Fallback button is 'Place your order'! ABORTING!",
+                        );
+                    }
+                }
             } else {
-                console.error("[clickSaveGiftOptionsButton] ⚠️ CRITICAL: Button is 'Place your order'! ABORTING!");
-            }
-        }
-        
-        console.log("[clickSaveGiftOptionsButton] ✓ Clicked Save gift options button. Should proceed to Payment page.");
-        
-        // Wait for navigation to payment page and remove loading screen when payment page is detected
-        const checkPaymentPage = () => {
-            const currentURL = window.location.href;
-            const isPaymentPage = currentURL.includes('amazon.com/gp/buy/payselect/handlers/display.html') ||
-                (currentURL.includes('/checkout/') && currentURL.includes('/spc') && !currentURL.includes('/gp/buy/spc/handlers/display.html'));
-            if (isPaymentPage) {
-                console.log("[clickSaveGiftOptionsButton] Payment page detected, removing loading screen");
-                removeLoadingScreen();
-                return true;
-            }
-            return false;
-        };
-        
-        // Check immediately
-        if (checkPaymentPage()) {
-            return true;
-        }
-        
-        // Poll for payment page (timeout after 15 seconds)
-        let attempts = 0;
-        const maxAttempts = 30; // 15 seconds (500ms * 30)
-        const interval = setInterval(() => {
-            attempts++;
-            if (checkPaymentPage() || attempts >= maxAttempts) {
-                clearInterval(interval);
-                if (attempts >= maxAttempts) {
-                    console.warn("[clickSaveGiftOptionsButton] Timeout waiting for payment page, removing loading screen anyway");
-                    removeLoadingScreen();
+                const clickText = (
+                    saveButton.textContent ||
+                    saveButton.value ||
+                    saveButton.getAttribute('aria-label') ||
+                    ''
+                ).toLowerCase();
+                if (!(clickText.includes('place') && clickText.includes('order'))) {
+                    console.log("[clickSaveGiftOptionsButton] No form found, using direct click");
+                    saveButton.click();
+                } else {
+                    console.error("[clickSaveGiftOptionsButton] ⚠️ CRITICAL: Button is 'Place your order'! ABORTING!");
                 }
             }
-        }, 500);
-        return true;
+            navigated = await wrrapdWaitForPaymentUrlAfterGift(14000, 200);
+        }
+
+        if (navigated) {
+            console.log('[clickSaveGiftOptionsButton] Payment step reached after Save gift options.');
+            removeLoadingScreen();
+            return true;
+        }
+
+        console.warn(
+            '[clickSaveGiftOptionsButton] Payment URL not detected after Save gift — returning false so giftSection can retry.',
+        );
+        removeLoadingScreen();
+        return false;
     }
     
     
@@ -10091,6 +10122,10 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                         occasion: option.occasion || null,
                         shippingAddress: option.shippingAddress,
                         finalShippingAddress,
+                        gifteeRecipientAddress: resolveTrackingIngestAddress({
+                            shippingAddress: option.shippingAddress,
+                            finalShippingAddress,
+                        }),
                         deliveryInstructions,
                         giftMessage: option.giftMessage || null,
                         senderName: option.senderName || null,
@@ -10443,9 +10478,30 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
 
             // Initialize pay button logic
             document.getElementById('pay-wrrapd-btn').addEventListener('click', async function () {
+                const payBtn = document.getElementById('pay-wrrapd-btn');
+                if (!payBtn || payBtn.dataset.wrrapdPayInFlight === '1') {
+                    return;
+                }
+                payBtn.dataset.wrrapdPayInFlight = '1';
+                payBtn.disabled = true;
+                payBtn.setAttribute('aria-disabled', 'true');
+                payBtn.style.cursor = 'not-allowed';
+                payBtn.style.opacity = '0.75';
+                payBtn.style.backgroundColor = '#9ca3af';
+                payBtn.style.color = '#1f2937';
+                payBtn.textContent = 'Opening payment…';
+
                 console.log("[createWrrapdSummary] 'Pay Wrrapd' button clicked. Initiating payment.");
 
                 if (!total || total <= 0) {
+                    payBtn.dataset.wrrapdPayInFlight = '0';
+                    payBtn.disabled = false;
+                    payBtn.removeAttribute('aria-disabled');
+                    payBtn.style.cursor = '';
+                    payBtn.style.opacity = '';
+                    payBtn.style.backgroundColor = '#f0c14b';
+                    payBtn.style.color = 'black';
+                    payBtn.textContent = 'Pay Wrrapd';
                     alert('Invalid total amount. Please check your order.');
                     return;
                 }
@@ -10453,6 +10509,14 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                 try {
                     const addressData = localStorage.getItem('wrrapd-default-address');
                     if (!addressData) {
+                        payBtn.dataset.wrrapdPayInFlight = '0';
+                        payBtn.disabled = false;
+                        payBtn.removeAttribute('aria-disabled');
+                        payBtn.style.cursor = '';
+                        payBtn.style.opacity = '';
+                        payBtn.style.backgroundColor = '#f0c14b';
+                        payBtn.style.color = 'black';
+                        payBtn.textContent = 'Pay Wrrapd';
                         alert('Default address information is missing. Please set your address before proceeding.');
                         return;
                     }
@@ -10575,6 +10639,14 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                     );
 
                     if (!popup) {
+                        payBtn.dataset.wrrapdPayInFlight = '0';
+                        payBtn.disabled = false;
+                        payBtn.removeAttribute('aria-disabled');
+                        payBtn.style.cursor = '';
+                        payBtn.style.opacity = '';
+                        payBtn.style.backgroundColor = '#f0c14b';
+                        payBtn.style.color = 'black';
+                        payBtn.textContent = 'Pay Wrrapd';
                         alert('Please allow popups for this website to complete the payment.');
                         return;
                     }
@@ -10868,12 +10940,19 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                                 const gifterFullNameStored = (
                                     localStorage.getItem('wrrapd-checkout-gifter-full-name') || ''
                                 ).trim();
+                                let gifteeOriginalAddressForServer = null;
+                                try {
+                                    const rawGiftee = localStorage.getItem('wrrapd-giftee-intended-address');
+                                    if (rawGiftee) gifteeOriginalAddressForServer = JSON.parse(rawGiftee);
+                                } catch (_) {
+                                    gifteeOriginalAddressForServer = null;
+                                }
                                 const response = await fetch('https://api.wrrapd.com/process-payment', {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({
                                         paymentIntentId,
-                                        orderData, // Contains all required info: finalShippingAddress, aiImageData, giftMessage, deliveryInstructions, senderName
+                                        orderData, // finalShippingAddress may be hub; gifteeRecipientAddress + gifteeOriginalAddress are source of truth for tracking
                                         customerEmail,
                                         customerPhone,
                                         orderNumber,
@@ -10883,6 +10962,10 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                                             : {}),
                                         ...(greet && greet.trim() ? { greetingFirstName: greet.trim() } : {}),
                                         ...(amazonDeliveryHints ? { amazonDeliveryHints } : {}),
+                                        ...(gifteeOriginalAddressForServer &&
+                                        typeof gifteeOriginalAddressForServer === 'object'
+                                            ? { gifteeOriginalAddress: gifteeOriginalAddressForServer }
+                                            : {}),
                                     }),
                                 });
 
@@ -10905,6 +10988,17 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
 
                 } catch (error) {
                     console.error("[createWrrapdSummary] Error during payment:", error);
+                    const pb = document.getElementById('pay-wrrapd-btn');
+                    if (pb) {
+                        pb.dataset.wrrapdPayInFlight = '0';
+                        pb.disabled = false;
+                        pb.removeAttribute('aria-disabled');
+                        pb.style.cursor = '';
+                        pb.style.opacity = '';
+                        pb.style.backgroundColor = '#f0c14b';
+                        pb.style.color = 'black';
+                        pb.textContent = 'Pay Wrrapd';
+                    }
                     alert('Failed to initiate the payment. Please try again.');
                 }
             });
