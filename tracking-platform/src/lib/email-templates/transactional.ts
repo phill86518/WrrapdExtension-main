@@ -129,7 +129,7 @@ export function thankYouEmailHtml(input: {
   <p style="margin:10px 0 0;font-size:15px;color:rgba(255,255,255,0.92);">Your gift is in caring hands.</p>
 </td></tr>
 <tr><td style="padding:28px 28px 8px;">
-  <p style="margin:0;font-size:16px;color:#1a1a1a;">Hi ${escapeHtml(firstName(input.customerGreetingName || input.customerName))},</p>
+  <p style="margin:0;font-size:16px;color:#1a1a1a;">Hi ${escapeHtml(firstName(input.customerName))},</p>
   <p style="margin:14px 0 0;font-size:15px;line-height:1.55;color:#333;">
     We're honored to gift-wrap for you. Here is a summary of your Wrrapd delivery.
   </p>
@@ -175,7 +175,7 @@ export function deliveryChoiceEmailHtml(input: {
   <h1 style="margin:0;font-size:22px;font-weight:600;color:#fff;">Choose how we schedule your Wrrapd delivery</h1>
 </td></tr>
 <tr><td style="padding:26px 28px;">
-  <p style="margin:0;font-size:16px;color:#1a1a1a;">Hi ${escapeHtml(firstName(input.customerGreetingName || input.customerName))},</p>
+  <p style="margin:0;font-size:16px;color:#1a1a1a;">Hi ${escapeHtml(firstName(input.customerName))},</p>
   <p style="margin:14px 0 0;font-size:15px;line-height:1.55;color:#333;">
     Your Amazon gift-wrap items show <strong>different arrival dates</strong> (${escapeHtml(input.datesList)}).
     Your Wrrapd visit is currently planned <strong>after the last Amazon arrival</strong> (one combined trip).
@@ -222,8 +222,8 @@ function pickAmazonYmdKeyForWrrapdSchedule(order: {
   if (snap.length === 0) return undefined;
   if (snap.length === 1) return snap[0];
   const ch = order.deliveryPreferenceChoice;
-  if (ch === "earliest") return snap[0]!;
-  return snap[snap.length - 1]!;
+  if (ch === "together" || ch === "together_deadline_default") return snap[snap.length - 1]!;
+  return snap[0]!;
 }
 
 /**

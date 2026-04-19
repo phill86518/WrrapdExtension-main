@@ -10398,12 +10398,10 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             const finalAddr = resolveTrackingIngestAddress(item);
             const streetParts = splitStreetForIngest(finalAddr.street || '');
             const recipientName = finalAddr.name || customerName;
-            const greet = localStorage.getItem('wrrapd-deliver-to-greeting');
             const payload = {
                 customerName,
                 customerPhone,
                 customerEmail,
-                ...(greet && greet.trim() ? { greetingFirstName: greet.trim() } : {}),
                 recipientName,
                 addressLine1: streetParts.line1 || finalAddr.line1 || 'N/A',
                 addressLine2: streetParts.line2 || finalAddr.line2 || '',
@@ -11154,7 +11152,6 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                                 // - Sender names (senderName from each orderData item)
                                 // All this data is included in orderData array
                                 syncAmazonDeliverToGreeting();
-                                const greet = localStorage.getItem('wrrapd-deliver-to-greeting');
                                 const amazonDeliveryHints = readAmazonDeliveryHintsFromSessionStorage();
                                 const gifterFullNameStored = (
                                     localStorage.getItem('wrrapd-checkout-gifter-full-name') || ''
@@ -11179,7 +11176,6 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                                         ...(gifterFullNameStored
                                             ? { gifterFullName: gifterFullNameStored }
                                             : {}),
-                                        ...(greet && greet.trim() ? { greetingFirstName: greet.trim() } : {}),
                                         ...(amazonDeliveryHints ? { amazonDeliveryHints } : {}),
                                         ...(gifteeOriginalAddressForServer &&
                                         typeof gifteeOriginalAddressForServer === 'object'

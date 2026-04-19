@@ -550,8 +550,8 @@ function computeScheduledForPlusOneFromItems(items) {
         return computeScheduledForPlusOne((items && items[0]) || null);
     }
     dates.sort((a, b) => a.getTime() - b.getTime());
-    // Combined-trip rule: Wrrapd runs after the **last** Amazon delivery promise among line items.
-    const base = dates[dates.length - 1];
+    // Fastest Wrrapd: anchor on the **earliest** Amazon promise among wrapped lines (same as tracking ingest earliest).
+    const base = dates[0];
     const plusOne = new Date(base.getTime());
     plusOne.setDate(plusOne.getDate() + 1);
     return plusOne.toISOString();
@@ -618,8 +618,8 @@ function pickTrackingRecipientAddressForIngest({ wrappedOnly, finalShippingAddre
         if (isLikelyWrrapdWarehouseAddressObj(n)) return null;
         return n;
     };
-    let u = tryAddr(gifteeOriginalAddress);
-    if (u) return u;
+    // Prefer per-line giftee (extension) before a single global snapshot — snapshot is often the account default (Roger).
+    let u;
     for (const it of wrappedOnly || []) {
         u = tryAddr(it && it.gifteeRecipientAddress);
         if (u) return u;
@@ -628,6 +628,8 @@ function pickTrackingRecipientAddressForIngest({ wrappedOnly, finalShippingAddre
         u = tryAddr(it && it.shippingAddress);
         if (u) return u;
     }
+    u = tryAddr(gifteeOriginalAddress);
+    if (u) return u;
     u = tryAddr(finalShippingAddressFromCheckout);
     if (u) return u;
     const first = (wrappedOnly && wrappedOnly[0]) || {};
@@ -1181,21 +1183,17 @@ app.post('/process-payment', async (req, res) => {
                 postalCode: finalAddr.postalCode || finalAddr.postal_code || firstItem.postalCode || '00000',
                 externalOrderId: canonicalTrackingExternalOrderId(orderNumber),
                 sourceNote: needsCustomerChoice
-                    ? `Amazon order ${orderNumber}; ${wrappedOnly.length} Wrrapd item(s) with different Amazon dates (${effectiveAmazonDays.join(', ')}); customer choice required.`
+                    ? `Amazon order ${orderNumber}; ${wrappedOnly.length} Wrrapd item(s); Amazon dates ${effectiveAmazonDays.join(', ')}; Wrrapd +1 after earliest (fastest).`
                     : `Amazon order ${orderNumber}; ${wrappedOnly.length} Wrrapd item(s); auto scheduled (Amazon fastest +1)`,
                 lineItems,
-                ...(greetingFirstName && String(greetingFirstName).trim()
-                    ? { greetingFirstName: String(greetingFirstName).trim() }
-                    : {}),
                 ...(needsCustomerChoice
                     ? {
                         amazonDeliveryDays: effectiveAmazonDays,
-                        wrrapdAmazonGrouping: 'pending',
+                        wrrapdAmazonGrouping: 'earliest',
                     }
                     : effectiveAmazonDays.length > 0
                         ? {
-                            // After **last** Amazon arrival (combined default), matches extension hints + ingest.
-                            amazonDeliveryDay: effectiveAmazonDays[effectiveAmazonDays.length - 1],
+                            amazonDeliveryDay: effectiveAmazonDays[0],
                         }
                     : {
                         scheduledFor: computeScheduledForPlusOneFromItems(wrappedOnly.length ? wrappedOnly : normalizedOrderData),

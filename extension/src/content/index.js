@@ -13,7 +13,7 @@ import './content-legacy.js';
 import './lib/amazon-delivery-hints.js';
 
 /** Bump when verifying deploy — in DevTools: `window.__WRRAPD_CONTENT_BUILD_TAG__`. */
-export const WRRAPD_CONTENT_BUILD_TAG = '2026-04-16-giftee-ingest+earliest-amazon';
+export const WRRAPD_CONTENT_BUILD_TAG = '2026-04-17-ingest-no-deliverto-greeting';
 if (typeof window !== 'undefined') {
     window.__WRRAPD_CONTENT_BUILD_TAG__ = WRRAPD_CONTENT_BUILD_TAG;
     initWrrapdCheckoutDebug({ tag: WRRAPD_CONTENT_BUILD_TAG });
