@@ -25,6 +25,7 @@ import {
     showWrrapdManualDeliverGuidanceOverlay,
     removeWrrapdManualDeliverGuidanceOverlay,
 } from './lib/loading-ui.js';
+import { wrrapdTrace } from './lib/wrrapd-debug.js';
 import { getValueByLabel, getElementValue, generateOrderNumber } from './lib/order-helpers.js';
 import { ensureWrrapdSummaryAlignment } from './lib/summary-alignment.js';
 import { isZipCodeAllowed } from './lib/zip-codes.js';
@@ -427,6 +428,7 @@ import { isZipCodeAllowed } from './lib/zip-codes.js';
                             wrrapdDomLooksLikeCheckoutAddressPage()));
                 
                 if (isAddressPage) {
+                    wrrapdTrace('monitor', 'ADDRESS PAGE', { href: currentURL.slice(0, 260) });
                     console.log("[monitorURLChanges] ===== ADDRESS PAGE DETECTED ===== ");
                     console.log(`[monitorURLChanges] Current URL: ${currentURL}`);
                     
@@ -472,6 +474,7 @@ import { isZipCodeAllowed } from './lib/zip-codes.js';
 
                 // Multiaddress / per-line ship page — new URLs often omit useCase=multiAddress
                 if (wrrapdUrlIsCheckoutMultiItemShipStep(currentURL)) {
+                    wrrapdTrace('monitor', 'MULTI-ITEM / itemselect', { href: currentURL.slice(0, 260) });
                     console.log("[monitorURLChanges] Detected multiaddress page. ");
 
                     if (!hasAnyWrrapdGiftWrapInCart(allItems)) {
@@ -1682,6 +1685,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
             console.log("[giftSection] ✓✓✓ RETURN DETECTED (addressesChangedFlag=true) - clicking 'Save gift options' to proceed to Payment...");
             cancelShipOneCheckoutLoadingHandoff();
             showLoadingScreen('Taking you to payment…');
+            wrrapdTrace('gift', 'return-from-address autosave start');
             (async () => {
                 try {
                     // Each attempt waits inside clickSaveGiftOptionsButton for real payment URL (several seconds).
@@ -1689,8 +1693,12 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                     let savedOk = false;
                     for (let i = 0; i < gaps.length; i++) {
                         await new Promise((r) => setTimeout(r, gaps[i]));
+                        wrrapdTrace('gift', `save-gift attempt ${i + 1}/${gaps.length}`, {
+                            href: window.location.href.slice(0, 220),
+                        });
                         if (await clickSaveGiftOptionsButton({ relaxed: true })) {
                             savedOk = true;
+                            wrrapdTrace('gift', 'save-gift → payment detected');
                             break;
                         }
                     }
@@ -1698,6 +1706,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                         console.warn(
                             '[giftSection] Auto Save gift options did not succeed after retries — keeping wrrapd-addresses-changed so giftSection can retry.',
                         );
+                        wrrapdTrace('gift', 'save-gift FAILED all retries → removeLoadingScreen');
                         removeLoadingScreen();
                     } else {
                         localStorage.setItem('wrrapd-addresses-changed', 'false');
@@ -5065,6 +5074,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
 
         if (!saveButton) {
             console.warn("[clickSaveGiftOptionsButton] Save gift options button not found. User will need to click manually.");
+            wrrapdTrace('click-save-gift', 'no saveButton', { relaxed: !!relaxed });
             return false;
         }
 
@@ -5102,6 +5112,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
         const giftUiPresent = giftUiStrict || (relaxed && wrrapdDomLooksLikeGiftOptionsStep());
         if (!giftUiPresent) {
             console.warn('[clickSaveGiftOptionsButton] Gift options UI not present; refusing to click order-summary control.');
+            wrrapdTrace('click-save-gift', 'no gift UI', { relaxed: !!relaxed, href: window.location.href.slice(0, 200) });
             return false;
         }
 
@@ -5133,6 +5144,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                 '[clickSaveGiftOptionsButton] Order-summary button does not look like gift save/continue; refusing to click.',
                 buttonText.trim().slice(0, 120),
             );
+            wrrapdTrace('click-save-gift', 'button text not gift step', { relaxed: !!relaxed, buttonText: buttonText.trim().slice(0, 120) });
             return false;
         }
 
@@ -5243,6 +5255,13 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
         console.warn(
             '[clickSaveGiftOptionsButton] Payment URL not detected after Save gift — returning false so giftSection can retry.',
         );
+        wrrapdTrace('click-save-gift', 'payment not reached after save', {
+            relaxed: !!relaxed,
+            href: window.location.href.slice(0, 240),
+            domPayment: wrrapdDomLooksLikeAmazonPaymentStep(),
+            urlPayment: wrrapdUrlLooksLikeAmazonPaymentStep(),
+            domGift: wrrapdDomLooksLikeGiftOptionsStep(),
+        });
         removeLoadingScreen();
         return false;
     }
@@ -8651,6 +8670,11 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
         const allItemsWrrapd = checkIfAllItemsWrrapd(allItems);
         localStorage.setItem('wrrapd-all-items', allItemsWrrapd ? 'true' : 'false');
         const manualTaps = wrrapdManualAddressTapsRequired();
+        wrrapdTrace('address', 'handleWrrapdAddressSelection start', {
+            manualTaps,
+            allItemsWrrapd,
+            href: window.location.href.slice(0, 260),
+        });
 
             // CRITICAL: Loading screen should already be showing (from monitorURLChanges)
             // But ensure it's visible and stays visible throughout
@@ -8730,6 +8754,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                         console.log(
                             "[handleWrrapdAddressSelection] Manual Amazon confirmation required — not clicking deliver/confirm button.",
                         );
+                        wrrapdTrace('address', 'manual deliver hint (all Wrrapd path)');
                         cancelShipOneCheckoutLoadingHandoff();
                         wrrapdShowManualAddressHint(deliverButton, 'deliver');
                     } else {
@@ -8994,6 +9019,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                                 console.log(
                                     "[handleWrrapdAddressSelection] Manual Amazon confirmation required — not clicking deliver/confirm button.",
                                 );
+                                wrrapdTrace('address', 'manual deliver hint (post-add path)');
                                 cancelShipOneCheckoutLoadingHandoff();
                                 wrrapdShowManualAddressHint(deliverButton, 'deliver');
                             } else {

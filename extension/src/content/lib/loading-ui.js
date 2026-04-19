@@ -3,6 +3,7 @@
  */
 
 import { getAllItemsFromLocalStorage } from './storage.js';
+import { wrrapdTrace } from './wrrapd-debug.js';
 
 const SHIP_ONE_OVERLAY_ID = 'wrrapd-ship-one-guidance-overlay';
 const SHIP_ONE_STYLE_ID = 'wrrapd-ship-one-guidance-styles';
@@ -153,6 +154,7 @@ function clearShipOneLoadingHandoffPoll() {
 
 /** Stop ship-to-one “Taking you to payment…” polling without removing #loadingScreen (e.g. before gift return). */
 export function cancelShipOneCheckoutLoadingHandoff() {
+  wrrapdTrace('ship-handoff', 'cancelShipOneCheckoutLoadingHandoff');
   clearShipOneLoadingHandoffPoll();
 }
 
@@ -190,6 +192,7 @@ function scheduleShipOneContinueLoadingHandoff() {
   clearShipOneLoadingHandoffPoll();
 
   const initialUrl = window.location.href;
+  wrrapdTrace('ship-handoff', 'scheduleShipOneContinueLoadingHandoff', { initialUrl: initialUrl.slice(0, 220) });
   /** Amazon often routes itemselect → address → gift before payment; never drop the overlay mid-leg. */
   let giftHandoffCopyApplied = false;
 
@@ -239,25 +242,32 @@ function scheduleShipOneContinueLoadingHandoff() {
   shipOneLoadingHandoffIntervalId = setInterval(() => {
     attempts += 1;
     if (!document.getElementById('loadingScreen')) {
+      wrrapdTrace('ship-handoff', 'poll exit (no loadingScreen)');
       clearShipOneLoadingHandoffPoll();
       return;
     }
 
     const u = window.location.href;
     const h = u.toLowerCase();
+    if (attempts === 1 || attempts % 5 === 0) {
+      wrrapdTrace('ship-handoff', 'poll tick', { attempts, href: u.slice(0, 220) });
+    }
 
     if (isAddressUrl(u)) {
+      wrrapdTrace('ship-handoff', 'branch address → clear poll + setup copy');
       clearShipOneLoadingHandoffPoll();
       showLoadingScreen('Setting up your Wrrapd hub address…');
       return;
     }
 
     if (isPrimeInterstitialUrl(u)) {
+      wrrapdTrace('ship-handoff', 'branch prime interstitial');
       showLoadingScreen('Finishing Amazon checkout…');
       return;
     }
 
     if (isPaymentUrl(u)) {
+      wrrapdTrace('ship-handoff', 'branch payment → remove overlay');
       clearShipOneLoadingHandoffPoll();
       try {
         if (localStorage.getItem('wrrapd-keep-loading-until-summary') === 'true') {
@@ -283,6 +293,7 @@ function scheduleShipOneContinueLoadingHandoff() {
     if (onGiftStep) {
       if (!giftHandoffCopyApplied) {
         giftHandoffCopyApplied = true;
+        wrrapdTrace('ship-handoff', 'branch gift → Finishing gift options copy');
         showLoadingScreen('Finishing gift options…');
       }
       return;
@@ -293,6 +304,7 @@ function scheduleShipOneContinueLoadingHandoff() {
     }
 
     if (attempts >= maxAttempts) {
+      wrrapdTrace('ship-handoff', 'maxAttempts → remove overlay', { attempts, href: u.slice(0, 220) });
       clearShipOneLoadingHandoffPoll();
       try {
         if (
@@ -466,12 +478,14 @@ export function showWrrapdShipToOneGuidanceOverlay(continueEl, options = {}) {
   removeWrrapdShipToOneGuidanceOverlay();
   removeWrrapdManualDeliverGuidanceOverlay();
   injectShipOneStylesOnce();
+  wrrapdTrace('overlay', 'showWrrapdShipToOneGuidanceOverlay mount');
 
   try {
     const ls = document.getElementById('loadingScreen');
     if (ls) {
       ls.style.zIndex = '2147483635';
       ls.style.pointerEvents = 'none';
+      wrrapdTrace('overlay', 'lower #loadingScreen z-index under ship-one spotlight');
     }
   } catch (_) {
     /* ignore */
@@ -602,6 +616,7 @@ export function showWrrapdShipToOneGuidanceOverlay(continueEl, options = {}) {
       if (shipOneUi) {
         shipOneUi.pendingLoadingDrop = setTimeout(() => {
           if (shipOneUi) shipOneUi.pendingLoadingDrop = null;
+          wrrapdTrace('overlay', 'ship-one delayed removeLoadingScreen');
           removeLoadingScreen();
         }, 480);
       }
@@ -766,12 +781,14 @@ export function showWrrapdManualDeliverGuidanceOverlay(continueEl, options = {})
   removeWrrapdManualDeliverGuidanceOverlay();
   removeWrrapdShipToOneGuidanceOverlay();
   injectShipOneStylesOnce();
+  wrrapdTrace('overlay', 'showWrrapdManualDeliverGuidanceOverlay mount');
 
   try {
     const ls = document.getElementById('loadingScreen');
     if (ls) {
       ls.style.zIndex = '2147483635';
       ls.style.pointerEvents = 'none';
+      wrrapdTrace('overlay', 'lower #loadingScreen z-index under manual-deliver spotlight');
     }
   } catch (_) {
     /* ignore */
@@ -904,6 +921,7 @@ export function showWrrapdManualDeliverGuidanceOverlay(continueEl, options = {})
       if (manualDeliverUi) {
         manualDeliverUi.pendingLoadingDrop = setTimeout(() => {
           if (manualDeliverUi) manualDeliverUi.pendingLoadingDrop = null;
+          wrrapdTrace('overlay', 'manual-deliver delayed removeLoadingScreen');
           removeLoadingScreen();
         }, 480);
       }
