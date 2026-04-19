@@ -13,10 +13,34 @@ import {
 } from "@/lib/availability-store";
 import { DriverTopModals } from "@/components/driver-top-modals";
 import { WrrapdLogo } from "@/components/wrrapd-logo";
-import { formatInTimeZone } from "date-fns-tz";
+import { formatInTimeZone, toDate } from "date-fns-tz";
+import { formatDateKeyNy } from "@/lib/ny-date";
 import type { DayShiftAvailability } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
+
+const NY = "America/New_York";
+
+function labelForNyDateKey(dateKey: string): string {
+  return formatInTimeZone(toDate(`${dateKey}T12:00:00`, { timeZone: NY }), NY, "EEE MMM d, yyyy");
+}
+
+function driverDeliveriesHeading(orders: { scheduledFor: string }[]): { title: string; subtitleExtra?: string } {
+  if (!orders.length) {
+    return { title: "Your assigned deliveries" };
+  }
+  const keys = [...new Set(orders.map((o) => formatDateKeyNy(o.scheduledFor)))].sort();
+  if (keys.length === 1) {
+    return {
+      title: `Deliveries for ${labelForNyDateKey(keys[0])}`,
+      subtitleExtra: "If you have stops on other days, they appear in separate groups below.",
+    };
+  }
+  return {
+    title: "Your assigned deliveries",
+    subtitleExtra: `Eastern delivery days in this queue: ${keys.map(labelForNyDateKey).join(" · ")}.`,
+  };
+}
 
 export default async function DriverPage() {
   const session = await getSession();
@@ -32,6 +56,7 @@ export default async function DriverPage() {
   }
 
   const orders = await listDriverOrders(session.userId);
+  const deliveriesHead = driverDeliveriesHeading(orders);
   const pastOrdersRaw = await listDriverPastOrders(session.userId);
   const profile = await getDriverProfile(session.userId);
   const week = upcomingWeekFromToday();
@@ -115,12 +140,13 @@ export default async function DriverPage() {
       </div>
       <DriverAccountPanel />
       <section className="mb-8 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-        <h2 className="text-xl font-semibold text-slate-900">Your assigned deliveries</h2>
+        <h2 className="text-xl font-semibold text-slate-900">{deliveriesHead.title}</h2>
         <p className="mt-1 text-sm text-slate-600">
           Each card shows the <strong>Wrrapd delivery day (U.S. Eastern)</strong> — Amazon +1 calendar day, 1–7 PM
           window. <strong>Stop numbers are per day</strong> (same driver + same Eastern date); orders on different days
           each start at Stop 1. Stops are ordered with a nearest-neighbor + 2-opt heuristic from the Northeast Jax hub
           (ZIP 32218 area).
+          {deliveriesHead.subtitleExtra ? ` ${deliveriesHead.subtitleExtra}` : ""}
         </p>
         <div className="mt-4">
           <DriverConsole

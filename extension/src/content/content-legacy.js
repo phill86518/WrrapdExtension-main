@@ -10217,13 +10217,15 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
      * Staging ingest must match the giftee row (snapshot + per-line shipping), not the Wrrapd PO default.
      */
     function resolveTrackingIngestAddress(item) {
+        // Intended giftee (wrrapd-giftee-intended-address) must win over Amazon line shipping:
+        // checkout often still has the account default "Deliver to Roger" on the line while the gift goes elsewhere.
+        const giftee = readGifteeIntendedAddressForIngest();
+        if (giftee && !isLikelyWrrapdWarehouseAddress(giftee)) return giftee;
         const ship = item.shippingAddress;
         if (ship && typeof ship === 'object') {
             const hasBits = !!(ship.street || ship.line1 || ship.city || ship.postalCode || ship.postal_code);
             if (hasBits && !isLikelyWrrapdWarehouseAddress(ship)) return ship;
         }
-        const giftee = readGifteeIntendedAddressForIngest();
-        if (giftee && !isLikelyWrrapdWarehouseAddress(giftee)) return giftee;
         const fin = item.finalShippingAddress;
         if (fin && typeof fin === 'object' && Object.keys(fin).length && !isLikelyWrrapdWarehouseAddress(fin)) {
             return fin;

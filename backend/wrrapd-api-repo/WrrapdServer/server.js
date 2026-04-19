@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('dotenv').config({ path: require('path').join(__dirname, '.env') });
 
 const express = require('express');
 const bodyParser = require('body-parser');
@@ -618,8 +618,10 @@ function pickTrackingRecipientAddressForIngest({ wrappedOnly, finalShippingAddre
         if (isLikelyWrrapdWarehouseAddressObj(n)) return null;
         return n;
     };
-    // Prefer per-line giftee (extension) before a single global snapshot — snapshot is often the account default (Roger).
-    let u;
+    // Explicit giftee from the extension (wrrapd-giftee-intended-address) beats Amazon-scraped line shipping,
+    // which is often still the account default address even when the gift is addressed to someone else.
+    let u = tryAddr(gifteeOriginalAddress);
+    if (u) return u;
     for (const it of wrappedOnly || []) {
         u = tryAddr(it && it.gifteeRecipientAddress);
         if (u) return u;
@@ -628,8 +630,6 @@ function pickTrackingRecipientAddressForIngest({ wrappedOnly, finalShippingAddre
         u = tryAddr(it && it.shippingAddress);
         if (u) return u;
     }
-    u = tryAddr(gifteeOriginalAddress);
-    if (u) return u;
     u = tryAddr(finalShippingAddressFromCheckout);
     if (u) return u;
     const first = (wrappedOnly && wrappedOnly[0]) || {};
