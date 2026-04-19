@@ -1,4 +1,6 @@
 import { formatInTimeZone } from "date-fns-tz";
+import { formatDateKeyNy } from "@/lib/ny-date";
+import { wrrapdScheduledInstantFromAmazonDeliveryDateKey } from "@/lib/scheduling";
 import type { OrderLineItem } from "@/lib/types";
 
 const NY = "America/New_York";
@@ -208,6 +210,45 @@ export function formatOrderScheduleEt(scheduledForIso: string): string {
   return `${day} · 1:00–7:00 PM ET`;
 }
 
+const YMD_SNAP = /^\d{4}-\d{2}-\d{2}$/;
+
+function pickAmazonYmdKeyForWrrapdSchedule(order: {
+  amazonDeliveryDatesSnapshot?: string[];
+  deliveryPreferenceChoice?: string;
+}): string | undefined {
+  const raw = order.amazonDeliveryDatesSnapshot;
+  if (!raw?.length) return undefined;
+  const snap = [...new Set(raw.map((x) => x.trim()).filter((k) => YMD_SNAP.test(k)))].sort();
+  if (snap.length === 0) return undefined;
+  if (snap.length === 1) return snap[0];
+  const ch = order.deliveryPreferenceChoice;
+  if (ch === "earliest") return snap[0]!;
+  return snap[snap.length - 1]!;
+}
+
+/**
+ * Customer thank-you, admin alert, SMS — same Wrrapd **calendar** day as Command Center / tracking
+ * when we can infer the Amazon anchor from `amazonDeliveryDatesSnapshot` (repairs legacy rows where
+ * `scheduledFor` matched Amazon +0).
+ */
+export function formatWrrapdDeliveryWindowEtForNotifications(order: {
+  scheduledFor: string;
+  amazonDeliveryDatesSnapshot?: string[];
+  deliveryPreferenceChoice?: string;
+}): string {
+  const key = pickAmazonYmdKeyForWrrapdSchedule(order);
+  if (!key) return formatOrderScheduleEt(order.scheduledFor);
+  try {
+    const expectedIso = wrrapdScheduledInstantFromAmazonDeliveryDateKey(key);
+    if (formatDateKeyNy(order.scheduledFor) !== formatDateKeyNy(expectedIso)) {
+      return formatOrderScheduleEt(expectedIso);
+    }
+  } catch {
+    /* ignore */
+  }
+  return formatOrderScheduleEt(order.scheduledFor);
+}
+
 /** Internal / operations — detailed admin notification layout. */
 export function adminNewOrderEmailHtml(input: {
   /** Amazon-style id or "Manual — …" — never internal ord-* */
@@ -323,7 +364,8 @@ export function adminNewOrderEmailHtml(input: {
       ${
         input.deliveryPreferencePending && input.amazonDeliveryDatesSnapshot?.length
           ? `<p style="margin:8px 0 0;font-size:12px;color:#b45309;background:#fffbeb;padding:6px 8px;border-radius:6px;border:1px solid #fcd34d;line-height:1.35;">
-              <strong>Choice pending</strong> — Amazon: ${escapeHtml(input.amazonDeliveryDatesSnapshot.join(", "))}
+              <strong>Choice pending</strong> — Amazon arrival date(s): ${escapeHtml(input.amazonDeliveryDatesSnapshot.join(", "))}.
+              Wrrapd’s default route is the <strong>next calendar day</strong> after the last of these (see window above).
             </p>`
           : ""
       }

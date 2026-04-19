@@ -193,7 +193,14 @@ export function parseIngestOrderPayload(body: unknown): IngestSuccess | IngestFa
   const state = str(p.state) || str(sa?.state);
   const postalCode =
     str(p.postalCode) || str(p.zipCode) || str(sa?.postalCode) || str(sa?.zip);
-  let scheduledFor = str(p.scheduledFor) || str(p.deliveryDate);
+  /**
+   * Only explicit `scheduledFor` starts here. Do not merge `deliveryDate` yet: when
+   * `amazonDeliveryDay(s)` are present, `deliveryDate` is almost always Amazon’s “Arriving …”
+   * calendar day; using it as `scheduledFor` bypassed the +1 Wrrapd rule and made emails/portals
+   * show Amazon +0 instead of Wrrapd +1.
+   */
+  let scheduledFor: string | undefined = str(p.scheduledFor);
+  const deliveryDateStr = str(p.deliveryDate);
 
   const amazonDaySingle = str(p.amazonDeliveryDay);
   const amazonDaysArr = parseAmazonDateKeys(p.amazonDeliveryDays);
@@ -245,6 +252,10 @@ export function parseIngestOrderPayload(body: unknown): IngestSuccess | IngestFa
         invalidFields.push("amazonDeliveryDay");
       }
     }
+  }
+
+  if (!scheduledFor) {
+    scheduledFor = deliveryDateStr;
   }
 
   const externalOrderId = str(p.externalOrderId) || str(p.orderNumber);
@@ -355,7 +366,8 @@ export function orderIngestFieldGuide(): {
     ],
     acceptedAliases: {
       zipCode: "postalCode",
-      deliveryDate: "scheduledFor (or use amazonDeliveryDay)",
+      deliveryDate:
+        "fallback when no scheduledFor and no amazonDeliveryDay(s); ignored when Amazon keys are present (+1 ET rule applies)",
       amazonDeliveryDay: "YYYY-MM-DD Eastern → Wrrapd scheduled +1 day 14:00 ET",
       amazonDeliveryDays: "array of YYYY-MM-DD with wrrapdAmazonGrouping",
       wrrapdAmazonGrouping: "earliest | together | separate | pending (email/SMS choice)",

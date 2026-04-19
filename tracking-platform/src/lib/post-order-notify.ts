@@ -9,7 +9,7 @@ import {
 import {
   adminNewOrderEmailHtml,
   deliveryChoiceEmailHtml,
-  formatOrderScheduleEt,
+  formatWrrapdDeliveryWindowEtForNotifications,
   thankYouEmailHtml,
 } from "@/lib/email-templates/transactional";
 import { formatInTimeZone } from "date-fns-tz";
@@ -101,7 +101,11 @@ export async function sendPostOrderNotifications(order: Order): Promise<PostOrde
   const trackingPath = `/track/${order.trackingToken}`;
   const trackingUrl = origin ? `${origin}${trackingPath}` : trackingPath;
   const addressLine = `${order.addressLine1}, ${order.city}, ${order.state} ${order.postalCode}`;
-  const scheduledEtLabel = formatOrderScheduleEt(order.scheduledFor);
+  const scheduledEtLabel = formatWrrapdDeliveryWindowEtForNotifications({
+    scheduledFor: order.scheduledFor,
+    amazonDeliveryDatesSnapshot: order.amazonDeliveryDatesSnapshot,
+    deliveryPreferenceChoice: order.deliveryPreferenceChoice,
+  });
   /** Customer-facing reference only (no internal ord-*). */
   const customerVisibleRef =
     order.externalOrderId?.trim() || order.recipientName?.trim() || "your Wrrapd order";

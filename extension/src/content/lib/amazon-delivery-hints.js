@@ -120,6 +120,11 @@ function extractFromPostData(itemContainer) {
   return keys;
 }
 
+/**
+ * Prefer headline / column delivery copy over `data-postdata` shipment timestamps.
+ * Mixing both often produced a date **one day after** the Amazon-shown "Arriving …" line,
+ * which then became **+2 calendar days** after the server applies Wrrapd's +1 rule.
+ */
 function extractDateKeysFromContainer(itemContainer) {
   const keys = new Set();
 
@@ -129,8 +134,6 @@ function extractDateKeysFromContainer(itemContainer) {
     const k = parseArrivingOrToday(el.textContent || '');
     if (k) keys.add(k);
   }
-
-  for (const k of extractFromPostData(itemContainer)) keys.add(k);
 
   const radios = Array.from(itemContainer.querySelectorAll('input[type="radio"]'));
   for (const r of radios) {
@@ -148,6 +151,10 @@ function extractDateKeysFromContainer(itemContainer) {
     if (t.length > 120) continue;
     const k = parseMonthDayYear(t) || parseArrivingOrToday(t);
     if (k) keys.add(k);
+  }
+
+  if (keys.size === 0) {
+    for (const k of extractFromPostData(itemContainer)) keys.add(k);
   }
 
   return [...keys];

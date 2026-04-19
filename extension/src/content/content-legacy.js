@@ -1618,18 +1618,25 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
             (async () => {
                 try {
                     const waitMs = [500, 900, 1200, 1800, 2600, 3600, 5000, 7000];
+                    let savedOk = false;
                     for (let i = 0; i < waitMs.length; i++) {
                         await new Promise((r) => setTimeout(r, waitMs[i] - (i > 0 ? waitMs[i - 1] : 0)));
                         if (await clickSaveGiftOptionsButton({ relaxed: true })) {
-                            return;
+                            savedOk = true;
+                            break;
                         }
                     }
-                    console.warn('[giftSection] Auto Save gift options did not succeed after retries.');
+                    if (!savedOk) {
+                        console.warn(
+                            '[giftSection] Auto Save gift options did not succeed after retries — keeping wrrapd-addresses-changed so giftSection can retry.',
+                        );
+                    } else {
+                        localStorage.setItem('wrrapd-addresses-changed', 'false');
+                        localStorage.setItem('wrrapd-should-change-address', 'false');
+                        localStorage.setItem('wrrapd-multi-address-completed', 'false');
+                    }
                 } finally {
                     window.__WRRAPD_GIFT_RETURN_AUTOSAVE_INFLIGHT = false;
-                    localStorage.setItem('wrrapd-addresses-changed', 'false');
-                    localStorage.setItem('wrrapd-should-change-address', 'false');
-                    localStorage.setItem('wrrapd-multi-address-completed', 'false');
                 }
             })();
             return;
@@ -5063,6 +5070,23 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                 saveButton.click();
                 } else {
                     console.error("[clickSaveGiftOptionsButton] ⚠️ CRITICAL: Fallback button is 'Place your order'! ABORTING!");
+                }
+            }
+            if (relaxed) {
+                await new Promise((r) => setTimeout(r, 800));
+                const href = window.location.href || '';
+                const onPayment =
+                    href.includes('amazon.com/gp/buy/payselect/handlers/display.html') ||
+                    (href.includes('/checkout/') && href.includes('/spc') && !href.includes('/gp/buy/spc/handlers/display.html'));
+                if (!onPayment && wrrapdDomLooksLikeGiftOptionsStep()) {
+                    console.log(
+                        '[clickSaveGiftOptionsButton] relaxed: still on gift step after form.submit — firing native click()',
+                    );
+                    try {
+                        saveButton.click();
+                    } catch (e2) {
+                        console.warn('[clickSaveGiftOptionsButton] follow-up click failed:', e2);
+                    }
                 }
             }
         } else {
@@ -9943,6 +9967,45 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
         return itemsInCheckout;
     }
 
+    function readGifteeIntendedAddressForIngest() {
+        try {
+            const raw = localStorage.getItem('wrrapd-giftee-intended-address');
+            if (!raw) return null;
+            const o = JSON.parse(raw);
+            if (!o || typeof o !== 'object') return null;
+            const street = String(o.street || '').trim();
+            const city = String(o.city || '').trim();
+            if (!street || !city) return null;
+            return {
+                name: String(o.name || '').trim() || null,
+                street,
+                city,
+                state: String(o.state || '').trim() || null,
+                postalCode: String(o.postalCode || '').trim() || null,
+                country: o.country || null,
+            };
+        } catch (_) {
+            return null;
+        }
+    }
+
+    /**
+     * Staging ingest must match the giftee row (snapshot + per-line shipping), not the Wrrapd PO default.
+     */
+    function resolveTrackingIngestAddress(item) {
+        const giftee = readGifteeIntendedAddressForIngest();
+        if (giftee && !isLikelyWrrapdWarehouseAddress(giftee)) return giftee;
+        const ship = item.shippingAddress;
+        if (ship && typeof ship === 'object' && Object.keys(ship).length && !isLikelyWrrapdWarehouseAddress(ship)) {
+            return ship;
+        }
+        const fin = item.finalShippingAddress;
+        if (fin && typeof fin === 'object' && Object.keys(fin).length && !isLikelyWrrapdWarehouseAddress(fin)) {
+            return fin;
+        }
+        return item.finalShippingAddress || item.shippingAddress || {};
+    }
+
     function splitStreetForIngest(rawStreet) {
         if (!rawStreet || typeof rawStreet !== 'string') return { line1: '', line2: '' };
         const parts = rawStreet.split(',').map((x) => x.trim()).filter(Boolean);
@@ -10081,7 +10144,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
         const orders = [];
         for (let i = 0; i < orderData.length; i++) {
             const item = orderData[i];
-            const finalAddr = item.finalShippingAddress || item.shippingAddress || {};
+            const finalAddr = resolveTrackingIngestAddress(item);
             const streetParts = splitStreetForIngest(finalAddr.street || '');
             const recipientName = finalAddr.name || customerName;
             const greet = localStorage.getItem('wrrapd-deliver-to-greeting');

@@ -1,5 +1,5 @@
 import { getOrderByDeliveryPreferenceToken } from "@/lib/data";
-import { formatOrderScheduleEt } from "@/lib/email-templates/transactional";
+import { formatWrrapdDeliveryWindowEtForNotifications } from "@/lib/email-templates/transactional";
 import { formatInTimeZone } from "date-fns-tz";
 import { submitDeliveryPreference } from "./actions";
 
@@ -54,7 +54,14 @@ export default async function DeliveryChoicePage({
         </p>
         <p className="mt-2 text-sm leading-relaxed text-slate-700">
           Right now your Wrrapd delivery is set for{" "}
-          <strong>{formatOrderScheduleEt(order.scheduledFor)}</strong> — that follows the{" "}
+          <strong>
+            {formatWrrapdDeliveryWindowEtForNotifications({
+              scheduledFor: order.scheduledFor,
+              amazonDeliveryDatesSnapshot: order.amazonDeliveryDatesSnapshot,
+              deliveryPreferenceChoice: order.deliveryPreferenceChoice,
+            })}
+          </strong>{" "}
+          — that follows the{" "}
           <strong>last</strong> Amazon arrival (one combined trip).
         </p>
         <p className="mt-2 text-sm font-medium text-amber-950">
