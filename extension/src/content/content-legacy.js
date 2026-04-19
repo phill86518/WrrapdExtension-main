@@ -409,12 +409,11 @@ import { isZipCodeAllowed } from './lib/zip-codes.js';
                         return;
                     }
 
-                    // CRITICAL: Show loading screen IMMEDIATELY when address page is detected
-                    // This covers the page before any manipulation starts
-                    showLoadingScreen();
-                    
-                    // ALWAYS call handleWrrapdAddressSelection on address page (it will check internally)
-                    console.log("[monitorURLChanges] Scheduling handleWrrapdAddressSelection in 3 seconds...");
+                    // Full-screen dimmer immediately so the raw address step is not flashed pre-automation
+                    showLoadingScreen('Setting up your Wrrapd hub address…');
+
+                    // Short delay: DOM for new checkout address step is often unstable for ~200–500ms
+                    console.log("[monitorURLChanges] Scheduling handleWrrapdAddressSelection shortly…");
                     setTimeout(() => {
                         console.log("[monitorURLChanges] ===== NOW CALLING handleWrrapdAddressSelection() ===== ");
                         try {
@@ -424,7 +423,7 @@ import { isZipCodeAllowed } from './lib/zip-codes.js';
                         } catch (err) {
                             console.error("[monitorURLChanges] Exception calling handleWrrapdAddressSelection:", err);
                         }
-                    }, 3000);
+                    }, 450);
                     return;
                 }
                 // ===== END ADDRESS PAGE CHECK =====
@@ -7632,7 +7631,6 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
      */
     function wrrapdShowMultiAddressAmazonConfirmUI() {
         wrrapdRemoveMultiAddressCoachmark();
-        removeLoadingScreen();
 
         if (!document.getElementById(WRRAPD_COACH_STYLE_ID)) {
             const st = document.createElement('style');
@@ -7651,7 +7649,10 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             primary?.querySelector?.('button');
 
         const anchor = primary || btn;
-        if (!anchor || !anchor.parentElement) return;
+        if (!anchor || !anchor.parentElement) {
+            removeLoadingScreen();
+            return;
+        }
 
         const wrap = document.createElement('div');
         wrap.className = 'wrrapd-amazon-confirm-coach wrrapd-manual-address-hint';
@@ -7668,6 +7669,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             <div style="text-align:center;font-size:26px;line-height:1;color:#b45309;animation:wrrapd-coach-pulse 1.1s ease-in-out infinite;" aria-hidden="true">▼</div>
         `;
         anchor.parentElement.insertBefore(wrap, anchor);
+        removeLoadingScreen();
 
         try {
             anchor.scrollIntoView({ block: 'center', behavior: 'smooth' });
