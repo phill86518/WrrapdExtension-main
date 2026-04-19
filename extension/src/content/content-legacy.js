@@ -37,6 +37,19 @@ import { isZipCodeAllowed } from './lib/zip-codes.js';
 
     const WRRAPD_MANUAL_ADDRESS_TAPS_KEY = 'wrrapd-require-manual-address-taps';
 
+    /**
+     * Chewbacca "Make updates to your items" / per-line ship step.
+     * New checkout often uses `/checkout/p/{id}/itemselect` without `useCase=multiAddress` (and casing varies).
+     */
+    function wrrapdUrlIsCheckoutMultiItemShipStep(href) {
+        const u = (href || window.location.href || '').toLowerCase();
+        if (u.includes('/checkout/p/') && u.includes('/itemselect')) return true;
+        if (u.includes('gp/buy/itemselect/handlers/display.html')) {
+            return u.includes('multiaddress') || u.includes('multi-address') || u.includes('usecase=multi');
+        }
+        return false;
+    }
+
     // ====================================================================================
     // COMMON FUNCTIONS - Used by all code paths to ensure consistency and eliminate duplication
     // ====================================================================================
@@ -92,9 +105,8 @@ import { isZipCodeAllowed } from './lib/zip-codes.js';
         
         // Step 2: Check if we're on single address page or multi-address page
         const currentUrl = window.location.href;
-        const isMultiAddressPage = currentUrl.includes('itemselect') && 
-                                   (currentUrl.includes('multiAddress') || currentUrl.includes('useCase=multiAddress') || currentUrl.includes('multi-address'));
-        
+        const isMultiAddressPage = wrrapdUrlIsCheckoutMultiItemShipStep(currentUrl);
+
         if (isMultiAddressPage) {
             // Already on multi-address page - use the common selection function
             console.log("[ensureCorrectAddressesForAllItems] Already on multi-address page - calling selectAddressesForItemsSimple...");
@@ -428,9 +440,8 @@ import { isZipCodeAllowed } from './lib/zip-codes.js';
                 }
                 // ===== END ADDRESS PAGE CHECK =====
 
-                // Multiaddress page - check both old and new URL formats
-                if (currentURL.includes('https://www.amazon.com/gp/buy/itemselect/handlers/display.html') ||
-                    (currentURL.includes('/checkout/p/') && currentURL.includes('/itemselect') && currentURL.includes('useCase=multiAddress'))) {
+                // Multiaddress / per-line ship page — new URLs often omit useCase=multiAddress
+                if (wrrapdUrlIsCheckoutMultiItemShipStep(currentURL)) {
                     console.log("[monitorURLChanges] Detected multiaddress page. ");
 
                     if (!hasAnyWrrapdGiftWrapInCart(allItems)) {
@@ -540,11 +551,9 @@ import { isZipCodeAllowed } from './lib/zip-codes.js';
                 //     waitForPageReady('#address-ui-widgets-enterAddressFullName', () => restoreDefaultAddresses(allItems));
                 // }
     
-                // Payment page - check for both old format and new SPC (Smart Place Order) checkout pipeline
-                // New format: /checkout/p/.../spc (Smart Place Order payment page)
-                // Old format: /gp/buy/payselect/handlers/display.html
-                const isPaymentPage = currentURL.includes('amazon.com/gp/buy/payselect/handlers/display.html') ||
-                    (currentURL.includes('/checkout/') && currentURL.includes('/spc') && !currentURL.includes('/gp/buy/spc/handlers/display.html'));
+                // Payment page — URL and/or order-summary CTA (SPA may lag on href)
+                const isPaymentPage =
+                    wrrapdUrlLooksLikeAmazonPaymentStep(currentURL) || wrrapdDomLooksLikeAmazonPaymentStep();
                 
                 if (isPaymentPage) {
                     console.log("%c[monitorURLChanges] ✓✓✓ PAYMENT PAGE DETECTED ✓✓✓", "color: green; font-weight: bold; font-size: 14px;");
@@ -1578,6 +1587,34 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
         return false;
     }
 
+    function wrrapdOrderSummaryPrimaryActionLabelLower() {
+        try {
+            const primaryWrap =
+                document.querySelector('#orderSummaryPrimaryActionBtn') ||
+                document.querySelector('[data-feature-id="order-summary-primary-action"]');
+            if (!primaryWrap) return '';
+            return (primaryWrap.textContent || '').replace(/\s+/g, ' ').trim().toLowerCase();
+        } catch (e) {
+            return '';
+        }
+    }
+
+    /** When Amazon keeps an opaque /checkout URL, payment is still inferable from the order-summary CTA. */
+    function wrrapdDomLooksLikeAmazonPaymentStep() {
+        try {
+            if (wrrapdDomLooksLikeGiftOptionsStep()) return false;
+            const u = (window.location.href || '').toLowerCase();
+            if (!u.includes('amazon')) return false;
+            if (!(u.includes('/checkout/') || u.includes('payselect'))) return false;
+            const label = wrrapdOrderSummaryPrimaryActionLabelLower();
+            if (label.includes('place your order') || label.includes('place order')) return true;
+            if (u.includes('/checkout/p/') && u.includes('/payment')) return true;
+            return false;
+        } catch (e) {
+            return false;
+        }
+    }
+
     function wrrapdFindMainColumnSaveGiftButton() {
         const root =
             document.querySelector('#checkout-main') ||
@@ -1613,7 +1650,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
             }
             window.__WRRAPD_GIFT_RETURN_AUTOSAVE_INFLIGHT = true;
             console.log("[giftSection] ✓✓✓ RETURN DETECTED (addressesChangedFlag=true) - clicking 'Save gift options' to proceed to Payment...");
-            showLoadingScreen();
+            showLoadingScreen('Taking you to payment…');
             (async () => {
                 try {
                     // Each attempt waits inside clickSaveGiftOptionsButton for real payment URL (several seconds).
@@ -2040,7 +2077,8 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                 );
 
             // Don't show loading screen if we're on payment page or payment summary already exists
-            const isPaymentPage = window.location.href.includes('/spc') || window.location.href.includes('payselect');
+            const isPaymentPage =
+                wrrapdUrlLooksLikeAmazonPaymentStep() || wrrapdDomLooksLikeAmazonPaymentStep();
             const paymentSummaryExists = document.querySelector('#wrrapd-summary') !== null;
             
             if (hasWrappedSubItem && localStorage.getItem('wrrapd-should-change-address') !== 'true' && !isPaymentPage && !paymentSummaryExists) {
@@ -4948,18 +4986,19 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
     }
     
     function wrrapdUrlLooksLikeAmazonPaymentStep(href) {
-        const u = href || window.location.href || '';
-        return (
-            u.includes('amazon.com/gp/buy/payselect/handlers/display.html') ||
-            (u.includes('/checkout/') && u.includes('/spc') && !u.includes('/gp/buy/spc/handlers/display.html'))
-        );
+        const u = (href || window.location.href || '').toLowerCase();
+        if (u.includes('amazon.com/gp/buy/payselect/handlers/display.html')) return true;
+        if (u.includes('/checkout/') && u.includes('/spc') && !u.includes('/gp/buy/spc/handlers/display.html')) return true;
+        if (u.includes('amazon.com') && u.includes('/checkout/p/') && u.includes('/payment')) return true;
+        return false;
     }
 
-    /** @returns {Promise<boolean>} true only after URL shows Amazon payment step */
+    /** @returns {Promise<boolean>} true after URL or DOM indicates Amazon payment step */
     async function wrrapdWaitForPaymentUrlAfterGift(maxMs, stepMs) {
         const deadline = Date.now() + maxMs;
         while (Date.now() < deadline) {
             if (wrrapdUrlLooksLikeAmazonPaymentStep()) return true;
+            if (wrrapdDomLooksLikeAmazonPaymentStep()) return true;
             await new Promise((r) => setTimeout(r, stepMs));
         }
         return false;
@@ -4971,6 +5010,16 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
      */
     async function clickSaveGiftOptionsButton(options) {
         const relaxed = options && options.relaxed === true;
+        if (relaxed) {
+            const giftReadyDeadline = Date.now() + 16000;
+            while (Date.now() < giftReadyDeadline) {
+                const giftUiStrict =
+                    !!document.querySelector('#giftOptions') ||
+                    !!document.querySelector('input[id^="toggle-gift-item-checkbox"]');
+                if (giftUiStrict || wrrapdDomLooksLikeGiftOptionsStep()) break;
+                await new Promise((r) => setTimeout(r, 200));
+            }
+        }
         let primaryWrap =
             document.querySelector('#orderSummaryPrimaryActionBtn') ||
             document.querySelector('[data-feature-id="order-summary-primary-action"]');
@@ -5810,8 +5859,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                 // The "Add a new delivery address" link ONLY exists on the initial address selection page (when clicking 'Change' address)
                 // It does NOT exist on the multi-address page, modals, or any other place
                 const currentURL = window.location.href;
-                const isMultiAddressPage = currentURL.includes('itemselect/handlers/display.html') ||
-                    (currentURL.includes('/checkout/p/') && currentURL.includes('/itemselect') && currentURL.includes('useCase=multiAddress'));
+                const isMultiAddressPage = wrrapdUrlIsCheckoutMultiItemShipStep(currentURL);
                 
                 if (isMultiAddressPage) {
                     console.error("[selectWrrapdAddressFromDropdown] ✗✗✗ CRITICAL: Wrrapd address not found on multi-address page, but 'Add a new delivery address' link does NOT exist on this page!");
@@ -7482,9 +7530,13 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                     if (node) announceText += ` ${node.textContent || ''}`;
                 }
             }
-            const raw = `${announceText} ${inp.value || ''} ${inp.getAttribute('aria-label') || ''} ${inp.textContent || ''}`
+            let raw = `${announceText} ${inp.value || ''} ${inp.getAttribute('aria-label') || ''} ${inp.textContent || ''}`
                 .trim()
                 .toLowerCase();
+            if (!raw.includes('continue')) {
+                const innerTxt = (wrap.querySelector('.a-button-text')?.textContent || '').trim().toLowerCase();
+                raw = `${raw} ${innerTxt}`.trim();
+            }
             if (!raw.includes('continue')) continue;
             if (raw.includes('place') && raw.includes('order')) continue;
             if (raw.includes('save gift')) continue;
@@ -7496,6 +7548,13 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
 
     /** "Ship items to one address" link/label on Amazon item-update (Chewbacca) page — not the sidebar. */
     function wrrapdFindShipItemsToOneAddressMarker() {
+        for (const el of document.querySelectorAll('a[href], button, span[role="button"]')) {
+            const t = (el.textContent || '').replace(/\s+/g, ' ').trim();
+            if (t.length > 120) continue;
+            if (/ship\s+items\s+to\s+one\s+address/i.test(t)) return el;
+            if (/ship\s+.*\s+to\s+one\s+address/i.test(t)) return el;
+            if (/deliver\s+.*\s+one\s+address/i.test(t)) return el;
+        }
         const candidates = document.querySelectorAll('a, span, div, p, li, button, h1, h2, h3');
         for (const el of candidates) {
             const t = (el.textContent || '').replace(/\s+/g, ' ').trim();
@@ -7561,18 +7620,23 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                     }
                 }
             }
-            const raw = `${announceText} ${inp.value || ''} ${inp.getAttribute('aria-label') || ''} ${inp.textContent || ''}`
+            let raw = `${announceText} ${inp.value || ''} ${inp.getAttribute('aria-label') || ''} ${inp.textContent || ''}`
                 .trim()
                 .toLowerCase();
+            if (!raw.includes('continue')) {
+                const btnWrap = inp.closest('.a-button');
+                const innerTxt = (btnWrap?.querySelector('.a-button-text')?.textContent || '').trim().toLowerCase();
+                raw = `${raw} ${innerTxt}`.trim();
+            }
             if (!raw.includes('continue')) continue;
             if (raw.includes('place') && raw.includes('order')) continue;
             if (raw.includes('save gift')) continue;
             if (raw.includes('use these')) continue;
-            const pos = marker.compareDocumentPosition(inp);
-            if (!(pos & Node.DOCUMENT_POSITION_FOLLOWING)) continue;
 
             const ir = inp.getBoundingClientRect();
             if (!ir.width || !ir.height) continue;
+            // Chewbacca DOM order can invert vs layout; use geometry relative to the ship-to-one hint.
+            if (ir.top < mr.top - 48) continue;
 
             const rowMidX = ir.left + ir.width / 2;
             const horiz = Math.abs(rowMidX - markerMidX);
@@ -7685,11 +7749,9 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
 
         const wrrapdShouldChangeAddress = localStorage.getItem('wrrapd-should-change-address') === 'true';
         const currentUrl = window.location.href;
-        
-        // Check if we're on a multi-address selection page (flexible URL matching)
-        const isMultiAddressPage = currentUrl.includes('itemselect') && 
-                                   (currentUrl.includes('multiAddress') || currentUrl.includes('useCase=multiAddress') || currentUrl.includes('multi-address'));
-    
+
+        const isMultiAddressPage = wrrapdUrlIsCheckoutMultiItemShipStep(currentUrl);
+
         if (isMultiAddressPage) {
             if (!hasAnyWrrapdGiftWrapInCart(allItems)) {
                 removeLoadingScreen();
@@ -7701,8 +7763,8 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
 
             console.log("[checkChangeAddress] Detected multi-address selection page. URL:", currentUrl);
 
-            // "Ship items to one address" main-column Continue: coachmark if present (DOM may render after paint).
-            setTimeout(() => {
+            // Ship-to-one Continue: DOM often hydrates late; retry so mixed carts still get the spotlight.
+            const tryShipOneCoachmark = () => {
                 try {
                     if (!hasAnyWrrapdGiftWrapInCart(getAllItemsFromLocalStorage())) return;
                     if (document.getElementById('wrrapd-ship-one-guidance-overlay')) return;
@@ -7713,7 +7775,8 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                 } catch (_) {
                     /* ignore */
                 }
-            }, 900);
+            };
+            [350, 900, 1800, 3200, 5200, 8000].forEach((ms) => setTimeout(tryShipOneCoachmark, ms));
             
             // CRITICAL: Check if Wrrapd address was just added - if so, Amazon auto-selected it for all items
             // We need to fix non-Wrrapd items by selecting default address for them
@@ -9958,8 +10021,9 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
         
         const itemsInCheckout = {};
         const currentURL = window.location.href;
-        const isPaymentPage = currentURL.includes('/spc') || currentURL.includes('payselect');
-        
+        const isPaymentPage =
+            wrrapdUrlLooksLikeAmazonPaymentStep(currentURL) || wrrapdDomLooksLikeAmazonPaymentStep();
+
         // On payment page, be more lenient - check if items have Wrrapd selected
         // On other pages, check if items appear on the page
         if (isPaymentPage) {

@@ -10,13 +10,35 @@ alwaysApply: true
 1. **SSH** to the GCP VM (user’s real `ssh` target, often `ssh admin_@wrrapd-server-1`).
 2. **VM — GitHub push first:** `cd /home/phill/wrrapd-GCP` → `git status` → `git add -A` → `git commit -m "…"` (skip commit if nothing to commit) → `git push origin main`.  
    - Do **not** put `git pull origin main` before this unless the user explicitly asked to merge remote changes onto the VM first.
-3. **VM — Pay / API server:** `cd /home/phill/wrrapd-GCP/backend/wrrapd-api-repo/WrrapdServer` → `npm install` → `pm2 restart wrrapd-server` → `curl -sS http://127.0.0.1:8080/health` (optional: `pm2 logs wrrapd-server --lines 80`).
+3. **VM — Pay / API server (`wrrapd-server`):** Only when **`backend/wrrapd-api-repo/WrrapdServer`** (or its deps) changed — extension-only or tracking-only skips this. Commands: `cd /home/phill/wrrapd-GCP/backend/wrrapd-api-repo/WrrapdServer` → `npm install` → `pm2 restart wrrapd-server` → `curl -sS http://127.0.0.1:8080/health` (optional: `pm2 logs wrrapd-server --lines 80`). This runs on the **GCP VM**, not on Windows.
 4. **VM — Tracking (Cloud Run):** `cd /home/phill/wrrapd-GCP` → set `PROJECT_ID`, `TAG`, `IMAGE` → `gcloud builds submit tracking-platform --tag "$IMAGE" --project "$PROJECT_ID"` → `gcloud run deploy wrrapd-tracking …` → optional `gcloud run services describe … --format='value(status.url)'`.
 
-## After steps 1–4 (Windows — never use path `wrrapd-GCP`)
+## After steps 1–4 (Windows — extension build; **not** the GCP VM)
 
-- Repo root on Windows is the **GitHub clone folder** (docs default: `%USERPROFILE%\WrrapdExtension-main`), **not** `wrrapd-GCP`.
-- `cd` there → `git pull origin main` → `cd extension` → `npm install` → `npm run build` → Chrome **Reload** extension.
+- **Authoritative Windows clone (Roger):**  
+  `C:\Roger_Documents\Wrap-O-Matic\WRRAPD\CHROME EXTENSION\WrrapdExtension-main (main)`  
+  Git Bash: `/c/Roger_Documents/Wrap-O-Matic/WRRAPD/CHROME EXTENSION/WrrapdExtension-main (main)`
+- That folder is the **GitHub clone** used for the Chrome extension on Windows — **not** `/home/phill/wrrapd-GCP` (VM only). Never tell Roger to `cd` into `wrrapd-GCP` on Windows for the extension.
+
+### Roger’s Windows commands (every time, from repo root)
+
+```bash
+git restore extension/content.js
+git pull origin main
+cd extension
+npm install
+npm run build
+cd ..
+```
+
+Then Chrome → Extensions → Wrrapd → **Reload**. (`git restore extension/content.js` drops local/generated `content.js` so `pull` is not blocked by merge or dirty bundle.)
+
+### `wrrapd-server` restart — when?
+
+- **Yes, on the GCP VM** after backend deploys, when **`WrrapdServer`** code or config changed: `pm2 restart wrrapd-server` (step 3 above). Pay endpoints, proxies, health, etc. pick up changes only after restart.
+- **No on Windows** for normal flow — Windows does not run `wrrapd-server` for production.
+- **Extension-only** pull + build on Windows: **no** server restart (Chrome loads the new `content.js` after Reload).
+- **Tracking-platform only** (Cloud Run): **no** `pm2` — deploy the new Cloud Run image (step 4).
 
 ## Workflow meaning
 

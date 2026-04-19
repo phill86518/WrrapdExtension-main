@@ -153,21 +153,29 @@ function clearShipOneLoadingHandoffPoll() {
 
 /**
  * Ship-to-one Continue: avoid showing the blocking overlay in the same turn as the capture listener
- * (so Amazon’s default action can run). Then clear the spinner when checkout advances or after a cap.
+ * (so Amazon’s default action can run). Clear the overlay only on payment (or after a cap);
+ * intermediate legs (address, gift) must not remove it or the default loading copy can reappear.
  */
 function scheduleShipOneContinueLoadingHandoff() {
   clearShipOneLoadingHandoffPoll();
 
   const initialUrl = window.location.href;
+  /** Amazon often routes itemselect → address → gift before payment; never drop the overlay mid-leg. */
+  let giftHandoffCopyApplied = false;
 
   shipOneHandoffShowTimeoutId = setTimeout(() => {
     shipOneHandoffShowTimeoutId = null;
     showLoadingScreen('Taking you to payment…');
   }, 0);
 
-  const isPaymentUrl = (u) =>
-    u.includes('amazon.com/gp/buy/payselect/handlers/display.html') ||
-    (u.includes('/checkout/') && u.includes('/spc') && !u.includes('/gp/buy/spc/handlers/display.html'));
+  const isPaymentUrl = (u) => {
+    const h = (u || '').toLowerCase();
+    return (
+      h.includes('amazon.com/gp/buy/payselect/handlers/display.html') ||
+      (h.includes('/checkout/') && h.includes('/spc') && !h.includes('/gp/buy/spc/handlers/display.html')) ||
+      (h.includes('amazon.com') && h.includes('/checkout/p/') && h.includes('/payment'))
+    );
+  };
 
   const isGiftUrl = (u) =>
     u.includes('amazon.com/gp/buy/gift/handlers/display.html') ||
@@ -187,14 +195,14 @@ function scheduleShipOneContinueLoadingHandoff() {
     const u = window.location.href;
 
     if (isGiftUrl(u)) {
-      clearShipOneLoadingHandoffPoll();
-      removeLoadingScreen();
+      if (!giftHandoffCopyApplied) {
+        giftHandoffCopyApplied = true;
+        showLoadingScreen('Finishing gift options…');
+      }
       return;
     }
 
     if (initialUrl.includes('itemselect') && !u.includes('itemselect')) {
-      clearShipOneLoadingHandoffPoll();
-      removeLoadingScreen();
       return;
     }
 
