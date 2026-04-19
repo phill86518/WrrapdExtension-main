@@ -9380,9 +9380,9 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                 localStorage.setItem('wrrapd-terms-gift-signature', latestSig || giftTermsSignature || '');
             } catch (_) { /* best effort */ }
             
-            // Show loading screen IMMEDIATELY before closing modal and calling callback
-            showLoadingScreen();
-            
+            // Full-screen dimmer before navigation so the address step is not flashed between modal and coachmark
+            showLoadingScreen('Continuing checkout…');
+
             modal.remove();
             
             // Call the callback to proceed

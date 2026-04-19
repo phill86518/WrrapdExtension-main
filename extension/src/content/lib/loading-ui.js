@@ -12,7 +12,7 @@ const SHIP_ONE_DISCONNECT_GRACE_MS = 4200;
 const SHIP_ONE_MO_DEBOUNCE_MS = 320;
 
 let shipOneClickCapture = null;
-/** @type {{ root: HTMLElement; svg: SVGSVGElement; panel: HTMLElement; haloTarget: HTMLElement; continueEl: HTMLElement; maskId: string; refit: (() => HTMLElement | null) | null; getHandoffTargets: (() => HTMLElement[]) | null; mo: MutationObserver; onScroll: () => void; onResize: () => void; raf: number; moTimer: ReturnType<typeof setTimeout> | null; pendingRemove: ReturnType<typeof setTimeout> | null } | null} */
+/** @type {{ root: HTMLElement; svg: SVGSVGElement; panel: HTMLElement; haloTarget: HTMLElement; continueEl: HTMLElement; maskId: string; refit: (() => HTMLElement | null) | null; getHandoffTargets: (() => HTMLElement[]) | null; mo: MutationObserver; onScroll: () => void; onResize: () => void; raf: number; moTimer: ReturnType<typeof setTimeout> | null; pendingRemove: ReturnType<typeof setTimeout> | null; pendingLoadingDrop: ReturnType<typeof setTimeout> | null } | null} */
 let shipOneUi = null;
 
 function injectShipOneStylesOnce() {
@@ -151,10 +151,22 @@ function clearShipOneLoadingHandoffPoll() {
   }
 }
 
+function wrrapdCheckoutGiftDomLikely() {
+  try {
+    return !!(
+      document.querySelector('#giftOptions') ||
+      document.querySelector('input[id^="toggle-gift-item-checkbox"]')
+    );
+  } catch (_) {
+    return false;
+  }
+}
+
 /**
  * Ship-to-one Continue: avoid showing the blocking overlay in the same turn as the capture listener
  * (so Amazon’s default action can run). Clear the overlay only on payment (or after a cap);
- * intermediate legs (address, gift) must not remove it or the default loading copy can reappear.
+ * intermediate legs (address, gift, prime interstitial) update copy and/or end this poll so we never
+ * sit on “Taking you to payment…” while Amazon is on address/gift.
  */
 function scheduleShipOneContinueLoadingHandoff() {
   clearShipOneLoadingHandoffPoll();
@@ -177,9 +189,26 @@ function scheduleShipOneContinueLoadingHandoff() {
     );
   };
 
-  const isGiftUrl = (u) =>
-    u.includes('amazon.com/gp/buy/gift/handlers/display.html') ||
-    (u.includes('/checkout/') && u.includes('/gift'));
+  const isGiftUrl = (u) => {
+    const h = (u || '').toLowerCase();
+    return (
+      h.includes('amazon.com/gp/buy/gift/handlers/display.html') ||
+      (h.includes('/checkout/') && h.includes('/gift'))
+    );
+  };
+
+  const isAddressUrl = (u) => {
+    const h = (u || '').toLowerCase();
+    return (
+      (h.includes('/checkout/p/') && h.includes('/address')) ||
+      h.includes('gp/buy/addressselect/handlers/display.html')
+    );
+  };
+
+  const isPrimeInterstitialUrl = (u) => {
+    const h = (u || '').toLowerCase();
+    return h.includes('primeinterstitial');
+  };
 
   let attempts = 0;
   const maxAttempts = 48;
@@ -193,16 +222,16 @@ function scheduleShipOneContinueLoadingHandoff() {
     }
 
     const u = window.location.href;
+    const h = u.toLowerCase();
 
-    if (isGiftUrl(u)) {
-      if (!giftHandoffCopyApplied) {
-        giftHandoffCopyApplied = true;
-        showLoadingScreen('Finishing gift options…');
-      }
+    if (isAddressUrl(u)) {
+      clearShipOneLoadingHandoffPoll();
+      showLoadingScreen('Setting up your Wrrapd hub address…');
       return;
     }
 
-    if (initialUrl.includes('itemselect') && !u.includes('itemselect')) {
+    if (isPrimeInterstitialUrl(u)) {
+      showLoadingScreen('Finishing Amazon checkout…');
       return;
     }
 
@@ -216,6 +245,28 @@ function scheduleShipOneContinueLoadingHandoff() {
         /* ignore */
       }
       removeLoadingScreen();
+      return;
+    }
+
+    const onGiftStep =
+      isGiftUrl(u) ||
+      (h.includes('/checkout/') &&
+        !h.includes('/itemselect') &&
+        !h.includes('/address') &&
+        !h.includes('/spc') &&
+        !h.includes('payselect') &&
+        !h.includes('/payment') &&
+        wrrapdCheckoutGiftDomLikely());
+
+    if (onGiftStep) {
+      if (!giftHandoffCopyApplied) {
+        giftHandoffCopyApplied = true;
+        showLoadingScreen('Finishing gift options…');
+      }
+      return;
+    }
+
+    if (initialUrl.includes('itemselect') && !u.includes('itemselect')) {
       return;
     }
 
@@ -355,7 +406,9 @@ export function removeWrrapdShipToOneGuidanceOverlay() {
   }
 
   if (shipOneUi) {
-    const { root, mo, onScroll, onResize, haloTarget, moTimer, pendingRemove } = shipOneUi;
+    const { root, mo, onScroll, onResize, haloTarget, moTimer, pendingRemove, pendingLoadingDrop } =
+      shipOneUi;
+    if (pendingLoadingDrop) clearTimeout(pendingLoadingDrop);
     if (moTimer) clearTimeout(moTimer);
     if (pendingRemove) clearTimeout(pendingRemove);
     try {
@@ -391,6 +444,16 @@ export function showWrrapdShipToOneGuidanceOverlay(continueEl, options = {}) {
   removeWrrapdShipToOneGuidanceOverlay();
   removeWrrapdManualDeliverGuidanceOverlay();
   injectShipOneStylesOnce();
+
+  try {
+    const ls = document.getElementById('loadingScreen');
+    if (ls) {
+      ls.style.zIndex = '2147483635';
+      ls.style.pointerEvents = 'none';
+    }
+  } catch (_) {
+    /* ignore */
+  }
 
   const haloTarget = continueEl.closest('.a-button') || continueEl;
   haloTarget.classList.add(SHIP_ONE_HALO_CLASS);
@@ -505,6 +568,7 @@ export function showWrrapdShipToOneGuidanceOverlay(continueEl, options = {}) {
     raf: 0,
     moTimer: null,
     pendingRemove: null,
+    pendingLoadingDrop: null,
   };
 
   scheduleShipOneLayout();
@@ -513,7 +577,12 @@ export function showWrrapdShipToOneGuidanceOverlay(continueEl, options = {}) {
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
       scheduleShipOneLayout();
-      removeLoadingScreen();
+      if (shipOneUi) {
+        shipOneUi.pendingLoadingDrop = setTimeout(() => {
+          if (shipOneUi) shipOneUi.pendingLoadingDrop = null;
+          removeLoadingScreen();
+        }, 480);
+      }
     });
   });
 
@@ -639,7 +708,9 @@ export function removeWrrapdManualDeliverGuidanceOverlay() {
     manualDeliverClickCapture = null;
   }
   if (manualDeliverUi) {
-    const { root, mo, onScroll, onResize, haloTarget, moTimer, pendingRemove } = manualDeliverUi;
+    const { root, mo, onScroll, onResize, haloTarget, moTimer, pendingRemove, pendingLoadingDrop } =
+      manualDeliverUi;
+    if (pendingLoadingDrop) clearTimeout(pendingLoadingDrop);
     if (moTimer) clearTimeout(moTimer);
     if (pendingRemove) clearTimeout(pendingRemove);
     try {
@@ -673,6 +744,16 @@ export function showWrrapdManualDeliverGuidanceOverlay(continueEl, options = {})
   removeWrrapdManualDeliverGuidanceOverlay();
   removeWrrapdShipToOneGuidanceOverlay();
   injectShipOneStylesOnce();
+
+  try {
+    const ls = document.getElementById('loadingScreen');
+    if (ls) {
+      ls.style.zIndex = '2147483635';
+      ls.style.pointerEvents = 'none';
+    }
+  } catch (_) {
+    /* ignore */
+  }
 
   const haloTarget = continueEl.closest('.a-button') || continueEl;
   haloTarget.classList.add(SHIP_ONE_HALO_CLASS);
@@ -789,6 +870,7 @@ export function showWrrapdManualDeliverGuidanceOverlay(continueEl, options = {})
     raf: 0,
     moTimer: null,
     pendingRemove: null,
+    pendingLoadingDrop: null,
   };
 
   scheduleManualDeliverLayout();
@@ -797,7 +879,12 @@ export function showWrrapdManualDeliverGuidanceOverlay(continueEl, options = {})
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
       scheduleManualDeliverLayout();
-      removeLoadingScreen();
+      if (manualDeliverUi) {
+        manualDeliverUi.pendingLoadingDrop = setTimeout(() => {
+          if (manualDeliverUi) manualDeliverUi.pendingLoadingDrop = null;
+          removeLoadingScreen();
+        }, 480);
+      }
     });
   });
 
