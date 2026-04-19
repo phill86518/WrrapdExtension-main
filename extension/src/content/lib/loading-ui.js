@@ -151,11 +151,29 @@ function clearShipOneLoadingHandoffPoll() {
   }
 }
 
+/** Stop ship-to-one “Taking you to payment…” polling without removing #loadingScreen (e.g. before gift return). */
+export function cancelShipOneCheckoutLoadingHandoff() {
+  clearShipOneLoadingHandoffPoll();
+}
+
 function wrrapdCheckoutGiftDomLikely() {
   try {
     return !!(
       document.querySelector('#giftOptions') ||
       document.querySelector('input[id^="toggle-gift-item-checkbox"]')
+    );
+  } catch (_) {
+    return false;
+  }
+}
+
+function wrrapdDomLooksLikeCheckoutAddressStep() {
+  try {
+    return !!(
+      document.querySelector('[data-testid*="Address"]') ||
+      document.querySelector('#address-list') ||
+      document.querySelector('[id*="address-ui-widgets"]') ||
+      document.querySelector('input[data-testid="Address_selectShipToThisAddress"]')
     );
   } catch (_) {
     return false;
@@ -199,10 +217,14 @@ function scheduleShipOneContinueLoadingHandoff() {
 
   const isAddressUrl = (u) => {
     const h = (u || '').toLowerCase();
-    return (
-      (h.includes('/checkout/p/') && h.includes('/address')) ||
-      h.includes('gp/buy/addressselect/handlers/display.html')
-    );
+    if (h.includes('gp/buy/addressselect/handlers/display.html')) return true;
+    if (!h.includes('/checkout/p/')) return false;
+    if (h.includes('/itemselect') || h.includes('/gift') || h.includes('/spc')) return false;
+    if (h.includes('/address')) return true;
+    if (h.includes('deliveryaddress') || h.includes('shippingaddress') || h.includes('shipaddress'))
+      return true;
+    if (h.includes('address') && (h.includes('select') || h.includes('change'))) return true;
+    return wrrapdDomLooksLikeCheckoutAddressStep();
   };
 
   const isPrimeInterstitialUrl = (u) => {

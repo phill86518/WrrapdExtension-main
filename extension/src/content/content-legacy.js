@@ -19,6 +19,7 @@ import {
     hideLoadingScreen,
     showLoadingScreen,
     removeLoadingScreen,
+    cancelShipOneCheckoutLoadingHandoff,
     showWrrapdShipToOneGuidanceOverlay,
     removeWrrapdShipToOneGuidanceOverlay,
     showWrrapdManualDeliverGuidanceOverlay,
@@ -352,6 +353,20 @@ import { isZipCodeAllowed } from './lib/zip-codes.js';
         }
     }
 
+    /** Chewbacca address step often omits `/address` in the path; fall back to DOM. */
+    function wrrapdDomLooksLikeCheckoutAddressPage() {
+        try {
+            return !!(
+                document.querySelector('[data-testid*="Address"]') ||
+                document.querySelector('#address-list') ||
+                document.querySelector('[id*="address-ui-widgets"]') ||
+                document.querySelector('input[data-testid="Address_selectShipToThisAddress"]')
+            );
+        } catch (e) {
+            return false;
+        }
+    }
+
     function monitorURLChanges() {
         let lastURL = null;
     
@@ -394,7 +409,22 @@ import { isZipCodeAllowed } from './lib/zip-codes.js';
                 const hasCheckoutP = currentURL.includes('/checkout/p/');
                 const hasAddress = currentURL.includes('/address');
                 const hasAddressSelect = currentURL.includes('addressselect');
-                const isAddressPage = (hasCheckoutP && hasAddress) || hasAddressSelect;
+                const cu = currentURL.toLowerCase();
+                const checkoutNonPipelineStep =
+                    hasCheckoutP &&
+                    !cu.includes('/itemselect') &&
+                    !cu.includes('/gift') &&
+                    !cu.includes('/spc') &&
+                    !cu.includes('payselect') &&
+                    !cu.includes('/payment');
+                const isAddressPage =
+                    (hasCheckoutP && hasAddress) ||
+                    hasAddressSelect ||
+                    (checkoutNonPipelineStep &&
+                        (cu.includes('address') ||
+                            cu.includes('deliveryaddress') ||
+                            cu.includes('shipaddress') ||
+                            wrrapdDomLooksLikeCheckoutAddressPage()));
                 
                 if (isAddressPage) {
                     console.log("[monitorURLChanges] ===== ADDRESS PAGE DETECTED ===== ");
@@ -424,8 +454,8 @@ import { isZipCodeAllowed } from './lib/zip-codes.js';
                     // Full-screen dimmer immediately so the raw address step is not flashed pre-automation
                     showLoadingScreen('Setting up your Wrrapd hub address…');
 
-                    // Short delay: DOM for new checkout address step is often unstable for ~200–500ms
-                    console.log("[monitorURLChanges] Scheduling handleWrrapdAddressSelection shortly…");
+                    // Run ASAP — loading overlay already hides the transition
+                    console.log("[monitorURLChanges] Scheduling handleWrrapdAddressSelection (immediate)…");
                     setTimeout(() => {
                         console.log("[monitorURLChanges] ===== NOW CALLING handleWrrapdAddressSelection() ===== ");
                         try {
@@ -435,7 +465,7 @@ import { isZipCodeAllowed } from './lib/zip-codes.js';
                         } catch (err) {
                             console.error("[monitorURLChanges] Exception calling handleWrrapdAddressSelection:", err);
                         }
-                    }, 450);
+                    }, 0);
                     return;
                 }
                 // ===== END ADDRESS PAGE CHECK =====
@@ -1650,11 +1680,12 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
             }
             window.__WRRAPD_GIFT_RETURN_AUTOSAVE_INFLIGHT = true;
             console.log("[giftSection] ✓✓✓ RETURN DETECTED (addressesChangedFlag=true) - clicking 'Save gift options' to proceed to Payment...");
+            cancelShipOneCheckoutLoadingHandoff();
             showLoadingScreen('Taking you to payment…');
             (async () => {
                 try {
                     // Each attempt waits inside clickSaveGiftOptionsButton for real payment URL (several seconds).
-                    const gaps = [450, 1200, 2000, 2500];
+                    const gaps = [300, 700, 1400, 2200, 3200, 4500, 6000];
                     let savedOk = false;
                     for (let i = 0; i < gaps.length; i++) {
                         await new Promise((r) => setTimeout(r, gaps[i]));
@@ -1667,6 +1698,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                         console.warn(
                             '[giftSection] Auto Save gift options did not succeed after retries — keeping wrrapd-addresses-changed so giftSection can retry.',
                         );
+                        removeLoadingScreen();
                     } else {
                         localStorage.setItem('wrrapd-addresses-changed', 'false');
                         localStorage.setItem('wrrapd-should-change-address', 'false');
@@ -7388,13 +7420,9 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
         return localStorage.getItem(WRRAPD_MANUAL_ADDRESS_TAPS_KEY) === '1';
     }
 
-    /** During manual Amazon confirmation, never trap the user behind the dark overlay. */
+    /** Keep a full-screen dimmer during address automation (manual taps use spotlight on top via z-index). */
     function wrrapdShowAddressAutomationLoadingOrClear() {
-        if (wrrapdManualAddressTapsRequired()) {
-            removeLoadingScreen();
-        } else {
-            showLoadingScreen();
-        }
+        showLoadingScreen('Setting up your Wrrapd hub address…');
     }
 
     function wrrapdClearManualAddressTapsRequirement() {
@@ -8622,31 +8650,33 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
         const allItems = itemsForTerms;
         const allItemsWrrapd = checkIfAllItemsWrrapd(allItems);
         localStorage.setItem('wrrapd-all-items', allItemsWrrapd ? 'true' : 'false');
-        
+        const manualTaps = wrrapdManualAddressTapsRequired();
+
             // CRITICAL: Loading screen should already be showing (from monitorURLChanges)
             // But ensure it's visible and stays visible throughout
         wrrapdShowAddressAutomationLoadingOrClear();
-        
-            // Wait for page to be fully loaded (reduced delay)
-            await new Promise(r => setTimeout(r, 1500));
+
+            // Manual path only needs a short settle; full automation waits longer for DOM
+            await new Promise((r) => setTimeout(r, manualTaps ? 120 : 900));
 
         // Step 1: Expand address list (hub may be below the fold or collapsed)
         wrrapdClickShowMoreAddressesIfPresent();
-        await new Promise((r) => setTimeout(r, 600));
+        await new Promise((r) => setTimeout(r, manualTaps ? 250 : 600));
         
         // Legacy expanders (some Amazon skins still use these)
         const expandIcon = document.querySelector('i.a-icon.a-icon-expand');
         const expandLink = Array.from(document.querySelectorAll('*')).find(el => el.textContent?.trim() === 'Show more addresses');
+        const expandWaitMs = manualTaps ? 550 : 2000;
         
         if (expandIcon) {
             const expanderLink = expandIcon.closest('a') || expandIcon.parentElement;
             if (expanderLink) {
                 wrrapdSafeExpandActivatorNoJavascriptUrl(expanderLink);
-                await new Promise(r => setTimeout(r, 2000));
+                await new Promise((r) => setTimeout(r, expandWaitMs));
             }
         } else if (expandLink) {
             wrrapdSafeExpandActivatorNoJavascriptUrl(expandLink);
-            await new Promise(r => setTimeout(r, 2000));
+            await new Promise((r) => setTimeout(r, expandWaitMs));
         }
 
         function findWrrapdAddressControl() {
@@ -8700,7 +8730,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                         console.log(
                             "[handleWrrapdAddressSelection] Manual Amazon confirmation required — not clicking deliver/confirm button.",
                         );
-                        removeLoadingScreen();
+                        cancelShipOneCheckoutLoadingHandoff();
                         wrrapdShowManualAddressHint(deliverButton, 'deliver');
                     } else {
                         deliverButton.click();
@@ -8964,6 +8994,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                                 console.log(
                                     "[handleWrrapdAddressSelection] Manual Amazon confirmation required — not clicking deliver/confirm button.",
                                 );
+                                cancelShipOneCheckoutLoadingHandoff();
                                 wrrapdShowManualAddressHint(deliverButton, 'deliver');
                             } else {
                                 deliverButton.click();
