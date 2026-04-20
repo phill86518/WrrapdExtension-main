@@ -84,6 +84,21 @@ Still use HTTPS in front (load balancer, Cloud Run, or reverse proxy) before you
 
 Change these with env vars before production deployment.
 
+## Giftee name and address (Admin, Driver, `/track`)
+
+These UIs **do not** call checkout or re-read `checkout.html`. They only show what is stored on the **Firestore `orders` document**:
+
+- **Recipient name:** `recipientName`
+- **Address:** `addressLine1`, optional `addressLine2`, `city`, `state`, `postalCode`
+
+Those fields are written when the order is created or merged through **`POST /api/orders/ingest`** (this app’s ingest API). The **Wrrapd pay server** (`backend/wrrapd-api-repo/WrrapdServer/server.js`) builds that ingest payload after payment; giftee rows should come from **checkout** first: the shopper’s final gift address posted from `checkout.html` to `/api/store-final-shipping-address` (and the same shape in `process-payment` when provided), via `pickTrackingRecipientAddressForIngest` → `recipientName` / street / city / state / ZIP in the ingest body.
+
+If Admin/Driver still look wrong while emails look right, typical causes are: **(1)** the order document was ingested or merged **before** the pay server preferred checkout, **(2)** a later extension/staging ingest merged onto the same `externalOrderId` and overwrote recipient fields (see merge logic in `src/lib/data.ts`), or **(3)** Cloud Run is running an old build. Fixing display in this repo without fixing ingest will not change existing Firestore rows.
+
+## Customer and admin email content
+
+**Do not change** thank-you, ops/admin, delivery-choice, or other transactional email **copy, templates, or which `Order` fields populate them** unless the product owner **explicitly** asks for that change. Relevant paths include `src/lib/post-order-notify.ts` and `src/lib/email-templates/`. Legacy HTML emails emitted by the pay server are similarly sensitive.
+
 ## Cloud Run Deployment
 
 From the **monorepo root** (the directory that contains the `tracking-platform/` folder), not inside `tracking-platform` unless you adjust paths.
