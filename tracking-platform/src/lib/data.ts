@@ -284,19 +284,41 @@ export async function createOrder(
         ? randomBytes(32).toString("base64url")
         : undefined;
     const nextEmail = input.customerEmail?.trim() || existingOpen.customerEmail?.trim();
+    /**
+     * Extension "staging simulate place order" sends one ingest per cart line with ids like
+     * `…-6778201-01`, which canonicalize to the same Amazon base as process-payment (`…-6778201`).
+     * That merge was overwriting the checkout-confirmed giftee (pay flow) with Amazon-line defaults.
+     */
+    const incomingStagingSimulate = /staging simulate place order/i.test(input.sourceNote || "");
+    const existingFromStagingSimulate = /staging simulate place order/i.test(
+      existingOpen.sourceNote || "",
+    );
+    const preserveGifteeFromCheckout =
+      incomingStagingSimulate &&
+      !existingFromStagingSimulate &&
+      Boolean(
+        (existingOpen.recipientName || "").trim() &&
+          (existingOpen.addressLine1 || "").trim(),
+      );
     const merged: Order = {
       ...existingOpen,
       scheduledFor: scheduledIso,
       externalOrderId: storedExt,
       customerName: input.customerName,
       customerPhone: input.customerPhone,
-      recipientName: input.recipientName,
-      addressLine1: input.addressLine1,
-      addressLine2: input.addressLine2?.trim() ? input.addressLine2.trim() : existingOpen.addressLine2,
-      city: input.city,
-      state: input.state,
-      postalCode: input.postalCode,
-      sourceNote: input.sourceNote ?? existingOpen.sourceNote,
+      recipientName: preserveGifteeFromCheckout ? existingOpen.recipientName : input.recipientName,
+      addressLine1: preserveGifteeFromCheckout ? existingOpen.addressLine1 : input.addressLine1,
+      addressLine2: preserveGifteeFromCheckout
+        ? existingOpen.addressLine2
+        : input.addressLine2?.trim()
+          ? input.addressLine2.trim()
+          : existingOpen.addressLine2,
+      city: preserveGifteeFromCheckout ? existingOpen.city : input.city,
+      state: preserveGifteeFromCheckout ? existingOpen.state : input.state,
+      postalCode: preserveGifteeFromCheckout ? existingOpen.postalCode : input.postalCode,
+      sourceNote: preserveGifteeFromCheckout
+        ? existingOpen.sourceNote
+        : input.sourceNote ?? existingOpen.sourceNote,
       updatedAt: nowIso(),
       updatedBy: "ingest-merge",
     };
