@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { startTransition, useEffect, useState } from "react";
 import { AdminCreateDeliveryForm } from "@/components/admin-create-delivery-form";
 
 export function AdminCreateDeliverySection({
@@ -22,7 +22,10 @@ export function AdminCreateDeliverySection({
   }, [open]);
 
   useEffect(() => {
-    if (createError) setOpen(true);
+    if (!createError) return;
+    startTransition(() => {
+      setOpen(true);
+    });
   }, [createError]);
 
   return (

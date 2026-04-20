@@ -782,7 +782,8 @@ export async function reopenOrderAsAssigned(id: string, updatedBy: string) {
   return next;
 }
 
-export async function deleteOrders(ids: string[], _updatedBy: string) {
+export async function deleteOrders(ids: string[], updatedBy: string) {
+  void updatedBy;
   const uniq = [...new Set(ids.map((x) => x.trim()).filter(Boolean))];
   if (!uniq.length) return 0;
   const oc = getOrdersCollection();
