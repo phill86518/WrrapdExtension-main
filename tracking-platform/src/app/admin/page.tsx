@@ -14,7 +14,6 @@ import { AdminCreateDeliverySection } from "@/components/admin-create-delivery-s
 import { PasswordField } from "@/components/password-field";
 import { SelectAllOrdersButton } from "@/components/select-all-orders-button";
 import { WrrapdLogo } from "@/components/wrrapd-logo";
-import { orderRecipientForDisplay } from "@/lib/order-display";
 import { maxStopSequenceByRouteKey } from "@/lib/route-optimization";
 import { formatDateKeyNy } from "@/lib/ny-date";
 import { formatInTimeZone } from "date-fns-tz";
@@ -325,17 +324,12 @@ export default async function AdminPage({
                       <p className="text-xs font-bold uppercase tracking-wide text-[#2d5a47]">{order.status}</p>
                     </div>
                   </div>
-                  {(() => {
-                    const d = orderRecipientForDisplay(order);
-                    return (
-                      <>
-                        <p className="text-sm font-medium text-[#0f241c]">{d.recipientName}</p>
-                        <p className="text-sm text-[#2d4a38]">
-                          {d.addressLine1}, {d.city}, {d.state} {d.postalCode}
-                        </p>
-                      </>
-                    );
-                  })()}
+                  <>
+                    <p className="text-sm font-medium text-[#0f241c]">{order.recipientName}</p>
+                    <p className="text-sm text-[#2d4a38]">
+                      {order.addressLine1}, {order.city}, {order.state} {order.postalCode}
+                    </p>
+                  </>
                   <p className="mt-1 text-xs font-medium text-[#3d5c47]">
                     Scheduled:{" "}
                     {formatInTimeZone(

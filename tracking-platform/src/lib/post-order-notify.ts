@@ -12,7 +12,6 @@ import {
   formatWrrapdDeliveryWindowEtForNotifications,
   thankYouEmailHtml,
 } from "@/lib/email-templates/transactional";
-import { orderRecipientForDisplay } from "@/lib/order-display";
 import { formatInTimeZone } from "date-fns-tz";
 
 const NY = "America/New_York";
@@ -101,8 +100,7 @@ export async function sendPostOrderNotifications(order: Order): Promise<PostOrde
   const origin = getPublicOrigin();
   const trackingPath = `/track/${order.trackingToken}`;
   const trackingUrl = origin ? `${origin}${trackingPath}` : trackingPath;
-  const deliver = orderRecipientForDisplay(order);
-  const addressLine = `${deliver.addressLine1}, ${deliver.city}, ${deliver.state} ${deliver.postalCode}`;
+  const addressLine = `${order.addressLine1}, ${order.city}, ${order.state} ${order.postalCode}`;
   const scheduledEtLabel = formatWrrapdDeliveryWindowEtForNotifications({
     scheduledFor: order.scheduledFor,
     amazonDeliveryDatesSnapshot: order.amazonDeliveryDatesSnapshot,
@@ -110,11 +108,11 @@ export async function sendPostOrderNotifications(order: Order): Promise<PostOrde
   });
   /** Customer-facing reference only (no internal ord-*). */
   const customerVisibleRef =
-    order.externalOrderId?.trim() || deliver.recipientName?.trim() || "your Wrrapd order";
+    order.externalOrderId?.trim() || order.recipientName?.trim() || "your Wrrapd order";
   const adminPublicOrderRef =
     order.externalOrderId?.trim() ||
     (order.sourceNote?.match(/Amazon order (\S+)/)?.[1]?.trim() ?? "") ||
-    `Manual — ${deliver.recipientName?.trim() || "Wrrapd"}`;
+    `Manual — ${order.recipientName?.trim() || "Wrrapd"}`;
 
   const thankYouSubject = `Thank you — Wrrapd order ${customerVisibleRef}`;
   const thankYouHtml = thankYouEmailHtml({
@@ -122,7 +120,7 @@ export async function sendPostOrderNotifications(order: Order): Promise<PostOrde
     customerGreetingName: order.customerGreetingName,
     orderId: customerVisibleRef,
     trackingUrl,
-    recipientName: deliver.recipientName,
+    recipientName: order.recipientName,
     addressLine,
     scheduledEtLabel,
     lineItems: order.lineItems,
@@ -151,12 +149,12 @@ export async function sendPostOrderNotifications(order: Order): Promise<PostOrde
     customerName: order.customerName,
     customerPhone: order.customerPhone,
     customerEmail: order.customerEmail,
-    recipientName: deliver.recipientName,
-    addressLine1: deliver.addressLine1,
-    addressLine2: deliver.addressLine2,
-    city: deliver.city,
-    state: deliver.state,
-    postalCode: deliver.postalCode,
+    recipientName: order.recipientName,
+    addressLine1: order.addressLine1,
+    addressLine2: order.addressLine2,
+    city: order.city,
+    state: order.state,
+    postalCode: order.postalCode,
     scheduledEtLabel,
     trackingUrl,
     sourceNote: order.sourceNote,
@@ -166,7 +164,7 @@ export async function sendPostOrderNotifications(order: Order): Promise<PostOrde
   });
   const adminSubject = order.externalOrderId?.trim()
     ? `New Wrrapd order ${order.externalOrderId.trim()}`
-    : `New Wrrapd order — ${deliver.recipientName?.trim() || "received"}`;
+    : `New Wrrapd order — ${order.recipientName?.trim() || "received"}`;
   try {
     const ok = await sendTransactionalEmail({
       to: opsInbox,

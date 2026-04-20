@@ -1,7 +1,6 @@
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { getOrderById } from "@/lib/data";
-import { orderRecipientForDisplay } from "@/lib/order-display";
 import { getSession } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -18,8 +17,6 @@ export default async function AdminOrderDetailPage({
   const { id } = await params;
   const order = await getOrderById(id);
   if (!order) notFound();
-  const d = orderRecipientForDisplay(order);
-
   return (
     <main className="mx-auto max-w-3xl px-4 py-8">
       <a href="/admin" className="text-sm text-blue-700 underline">
@@ -28,7 +25,7 @@ export default async function AdminOrderDetailPage({
       <h1 className="mt-3 text-3xl font-semibold">Order {order.id}</h1>
       <div className="mt-5 space-y-3 rounded-lg border p-4">
         <p>
-          <span className="font-medium">Recipient:</span> {d.recipientName}
+          <span className="font-medium">Recipient:</span> {order.recipientName}
         </p>
         <p>
           <span className="font-medium">Status:</span> {order.status}
@@ -42,7 +39,8 @@ export default async function AdminOrderDetailPage({
           <span className="font-medium">Driver:</span> {order.driverName || "Unassigned"}
         </p>
         <p>
-          <span className="font-medium">Address:</span> {d.addressLine1}, {d.city}, {d.state} {d.postalCode}
+          <span className="font-medium">Address:</span> {order.addressLine1}, {order.city}, {order.state}{" "}
+          {order.postalCode}
         </p>
         <p>
           <span className="font-medium">ETA:</span> {order.etaMinutes ? `${order.etaMinutes} min` : "N/A"}
