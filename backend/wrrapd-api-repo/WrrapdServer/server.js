@@ -776,6 +776,7 @@ app.post('/process-payment', async (req, res) => {
         greetingFirstName,
         amazonDeliveryHints,
         gifteeOriginalAddress,
+        finalShippingAddress: finalShippingAddressFromClient,
     } = req.body;
 
     // Validate that all parameters are present
@@ -785,13 +786,33 @@ app.post('/process-payment', async (req, res) => {
 
     const normalizedOrderData = normalizeOrderItems(orderData);
 
-    // Get Final shipping address from server storage (sent directly from checkout.html)
+    // Prefer in-memory map (checkout.html POST to store-final-shipping-address before Stripe).
+    // Fall back to extension body (postMessage echo) when global is missing — e.g. fetch failed or another server instance.
     let finalShippingAddressFromCheckout = null;
     if (global.finalShippingAddresses && global.finalShippingAddresses[orderNumber]) {
         finalShippingAddressFromCheckout = global.finalShippingAddresses[orderNumber];
         console.log(`[process-payment] Using Final shipping address from checkout.html for order ${orderNumber}`);
-        // Clean up after use
         delete global.finalShippingAddresses[orderNumber];
+    } else if (finalShippingAddressFromClient && typeof finalShippingAddressFromClient === 'object') {
+        const f = finalShippingAddressFromClient;
+        const street = typeof f.street === 'string' ? f.street.trim() : '';
+        const postal =
+            (typeof f.postalCode === 'string' && f.postalCode.trim()) ||
+            (typeof f.postal_code === 'string' && f.postal_code.trim()) ||
+            '';
+        if (street || postal) {
+            finalShippingAddressFromCheckout = {
+                name: typeof f.name === 'string' ? f.name : '',
+                street: street || (typeof f.line1 === 'string' ? f.line1.trim() : ''),
+                city: typeof f.city === 'string' ? f.city : '',
+                state: typeof f.state === 'string' ? f.state : '',
+                postalCode: postal,
+                country: typeof f.country === 'string' && f.country.trim() ? f.country.trim() : 'US',
+            };
+            console.log(
+                `[process-payment] Using finalShippingAddress from extension process-payment body for order ${orderNumber}`,
+            );
+        }
     }
 
     // Checkout is source of truth for gift delivery — overwrite Amazon-scraped finalShippingAddress on every line item
