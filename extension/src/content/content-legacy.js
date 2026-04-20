@@ -10888,6 +10888,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                         const customerEmail = event.data.customerEmail;
                         const customerPhone = event.data.customerPhone;
                         const billingDetails = event.data.billingDetails || null;
+                        const checkoutFinalShippingAddress = event.data.finalShippingAddress || null;
                         const gifterFullName =
                             typeof event.data.gifterFullName === 'string'
                                 ? event.data.gifterFullName.trim()
@@ -11175,6 +11176,10 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                                         customerPhone,
                                         orderNumber,
                                         billingDetails: billingDetails || null, // Billing details from Stripe checkout
+                                        ...(checkoutFinalShippingAddress &&
+                                        typeof checkoutFinalShippingAddress === 'object'
+                                            ? { finalShippingAddress: checkoutFinalShippingAddress }
+                                            : {}),
                                         ...(gifterFullNameStored
                                             ? { gifterFullName: gifterFullNameStored }
                                             : {}),
