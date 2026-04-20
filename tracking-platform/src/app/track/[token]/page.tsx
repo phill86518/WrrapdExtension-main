@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import { formatInTimeZone } from "date-fns-tz";
 import { getOrderByTrackingToken } from "@/lib/data";
 import { buildDemoSeedOrders, DEMO_CUSTOMER_TRACKING_TOKEN } from "@/lib/demo-orders";
+import { orderRecipientForDisplay } from "@/lib/order-display";
+import type { Order } from "@/lib/types";
 import {
   TrackingLiveExperience,
   type TrackingPublicSnapshot,
@@ -11,26 +13,17 @@ export const dynamic = "force-dynamic";
 
 const NY = "America/New_York";
 
-function toSnapshot(order: {
-  status: string;
-  etaMinutes?: number;
-  driverName?: string;
-  latestLocation?: { lat: number; lng: number; updatedAt: string };
-  addressLine1: string;
-  city: string;
-  state: string;
-  postalCode: string;
-  proofPhotoUrl?: string;
-}): TrackingPublicSnapshot {
+function toSnapshot(order: Order): TrackingPublicSnapshot {
+  const d = orderRecipientForDisplay(order);
   return {
     status: order.status,
     etaMinutes: order.etaMinutes ?? null,
     driverName: order.driverName ?? null,
     latestLocation: order.latestLocation ?? null,
-    addressLine1: order.addressLine1,
-    city: order.city,
-    state: order.state,
-    postalCode: order.postalCode,
+    addressLine1: d.addressLine1,
+    city: d.city,
+    state: d.state,
+    postalCode: d.postalCode,
     proofPhotoUrl: order.proofPhotoUrl ?? null,
   };
 }

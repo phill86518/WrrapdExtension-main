@@ -7,6 +7,16 @@ export type DeliveryStatus =
 
 export type OnboardingStatus = "pending" | "approved" | "rejected";
 
+/** Immutable giftee row from pay-server ingest — preferred for portals + emails when present. */
+export type IngestDeliverToSnapshot = {
+  recipientName: string;
+  addressLine1: string;
+  addressLine2?: string;
+  city: string;
+  state: string;
+  postalCode: string;
+};
+
 export type OrderLineItem = {
   asin?: string;
   title?: string;
@@ -83,6 +93,11 @@ export type Order = {
   deliveryPreferenceChoice?: string;
   /** Wrapped items included in this Wrrapd order (for notifications + ops context). */
   lineItems?: OrderLineItem[];
+  /**
+   * Pay ingest only: canonical giftee snapshot (same resolution as thank-you / ops emails).
+   * Survives staging re-ingest merges that would otherwise clobber top-level recipient fields.
+   */
+  ingestDeliverTo?: IngestDeliverToSnapshot;
 };
 
 export type Driver = {

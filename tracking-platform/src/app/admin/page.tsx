@@ -7,13 +7,14 @@ import {
   reopenOrderAsAssigned,
   updateOrderStatus,
 } from "@/lib/data";
-import { getSession } from "@/lib/auth";
+import { createSessionToken, getSession, setSessionCookie } from "@/lib/auth";
 import { SameOriginLogoutLink } from "@/components/same-origin-logout-link";
 import { LogoutButton } from "@/components/logout-button";
 import { AdminCreateDeliverySection } from "@/components/admin-create-delivery-section";
 import { PasswordField } from "@/components/password-field";
 import { SelectAllOrdersButton } from "@/components/select-all-orders-button";
 import { WrrapdLogo } from "@/components/wrrapd-logo";
+import { orderRecipientForDisplay } from "@/lib/order-display";
 import { maxStopSequenceByRouteKey } from "@/lib/route-optimization";
 import { formatDateKeyNy } from "@/lib/ny-date";
 import { formatInTimeZone } from "date-fns-tz";
@@ -21,6 +22,22 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
+
+async function adminLoginAction(formData: FormData) {
+  "use server";
+  const password = String(formData.get("password") || "").trim();
+  const expected = (process.env.APP_ADMIN_PASSWORD || "admin123").trim();
+  if (password !== expected) {
+    redirect("/admin?error=1");
+  }
+  const token = await createSessionToken({
+    role: "admin",
+    userId: "admin-1",
+    name: "Admin",
+  });
+  await setSessionCookie(token);
+  redirect("/admin");
+}
 
 /** Next may pass string | string[]; normalize so we never render invalid React children. */
 function pickSearchParam(v: string | string[] | undefined): string | undefined {
@@ -121,7 +138,7 @@ export default async function AdminPage({
           (default <code className="rounded bg-slate-100 px-1">admin123</code> if unset). Driver login uses{" "}
           <code className="rounded bg-slate-100 px-1">APP_DRIVER_PASSWORD</code> — the two can be identical.
         </p>
-        <form action="/api/admin/login" method="post" className="mt-6 space-y-4 rounded-lg border p-6">
+        <form action={adminLoginAction} className="mt-6 space-y-4 rounded-lg border p-6">
           <PasswordField name="password" placeholder="Admin password" autoComplete="current-password" />
           <button className="rounded bg-black px-4 py-2 text-white" type="submit">
             Sign in
@@ -308,10 +325,17 @@ export default async function AdminPage({
                       <p className="text-xs font-bold uppercase tracking-wide text-[#2d5a47]">{order.status}</p>
                     </div>
                   </div>
-                  <p className="text-sm font-medium text-[#0f241c]">{order.recipientName}</p>
-                  <p className="text-sm text-[#2d4a38]">
-                    {order.addressLine1}, {order.city}, {order.state} {order.postalCode}
-                  </p>
+                  {(() => {
+                    const d = orderRecipientForDisplay(order);
+                    return (
+                      <>
+                        <p className="text-sm font-medium text-[#0f241c]">{d.recipientName}</p>
+                        <p className="text-sm text-[#2d4a38]">
+                          {d.addressLine1}, {d.city}, {d.state} {d.postalCode}
+                        </p>
+                      </>
+                    );
+                  })()}
                   <p className="mt-1 text-xs font-medium text-[#3d5c47]">
                     Scheduled:{" "}
                     {formatInTimeZone(

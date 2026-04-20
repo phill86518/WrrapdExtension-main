@@ -1,5 +1,5 @@
 import type { CreateOrderInput } from "@/lib/data";
-import type { Order, OrderLineItem } from "@/lib/types";
+import type { IngestDeliverToSnapshot, Order, OrderLineItem } from "@/lib/types";
 import {
   endOfCalendarDayAmericaNewYorkIso,
   wrrapdScheduledInstantFromAmazonDeliveryDateKey,
@@ -50,6 +50,8 @@ export type IngestOrderPayload = {
   greetingFirstName?: unknown;
   skipCustomerNotifications?: unknown;
   lineItems?: unknown;
+  /** Pay ingest: canonical giftee row — preferred over shippingAddress fallbacks. */
+  ingestDeliverTo?: unknown;
 };
 
 export type IngestSuccess = {
@@ -68,6 +70,26 @@ function str(v: unknown): string | undefined {
   if (typeof v !== "string") return undefined;
   const t = v.trim();
   return t.length ? t : undefined;
+}
+
+function parseIngestDeliverTo(raw: unknown): IngestDeliverToSnapshot | undefined {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return undefined;
+  const o = raw as Record<string, unknown>;
+  const recipientName = str(o.recipientName);
+  const addressLine1 = str(o.addressLine1);
+  const city = str(o.city);
+  const state = str(o.state);
+  const postalCode = str(o.postalCode);
+  if (!recipientName || !addressLine1 || !city || !state || !postalCode) return undefined;
+  const addressLine2 = str(o.addressLine2);
+  return {
+    recipientName,
+    addressLine1,
+    ...(addressLine2 ? { addressLine2 } : {}),
+    city,
+    state,
+    postalCode,
+  };
 }
 
 const YMD = /^\d{4}-\d{2}-\d{2}$/;
@@ -181,18 +203,28 @@ export function parseIngestOrderPayload(body: unknown): IngestSuccess | IngestFa
   const customerPhone =
     str(p.customerPhone) ||
     str(p.buyer && typeof p.buyer === "object" ? p.buyer.phone : undefined);
+  const ingestDeliverTo = parseIngestDeliverTo(p.ingestDeliverTo);
   const recipientName =
-    str(p.recipientName) || str(sa?.name) || customerName;
+    ingestDeliverTo?.recipientName ||
+    str(p.recipientName) ||
+    str(sa?.name) ||
+    customerName;
   const customerEmail =
     str(p.customerEmail) ||
     str(p.buyer && typeof p.buyer === "object" ? (p.buyer as { email?: unknown }).email : undefined);
   const customerGreetingName = str((p as { greetingFirstName?: unknown }).greetingFirstName);
-  const addressLine1 = str(p.addressLine1) || str(sa?.line1);
-  const addressLine2 = str(p.addressLine2) || str(sa?.line2);
-  const city = str(p.city) || str(sa?.city);
-  const state = str(p.state) || str(sa?.state);
+  const addressLine1 =
+    ingestDeliverTo?.addressLine1 || str(p.addressLine1) || str(sa?.line1);
+  const addressLine2 =
+    ingestDeliverTo?.addressLine2 || str(p.addressLine2) || str(sa?.line2);
+  const city = ingestDeliverTo?.city || str(p.city) || str(sa?.city);
+  const state = ingestDeliverTo?.state || str(p.state) || str(sa?.state);
   const postalCode =
-    str(p.postalCode) || str(p.zipCode) || str(sa?.postalCode) || str(sa?.zip);
+    ingestDeliverTo?.postalCode ||
+    str(p.postalCode) ||
+    str(p.zipCode) ||
+    str(sa?.postalCode) ||
+    str(sa?.zip);
   /**
    * Only explicit `scheduledFor` starts here. Do not merge `deliveryDate` yet: when
    * `amazonDeliveryDay(s)` are present, `deliveryDate` is almost always Amazon’s “Arriving …”
@@ -313,6 +345,7 @@ export function parseIngestOrderPayload(body: unknown): IngestSuccess | IngestFa
       ...(customerGreetingName ? { customerGreetingName } : {}),
       ...(lineItems?.length ? { lineItems } : {}),
       ...(skipCustomerNotifications ? { skipCustomerNotifications: true } : {}),
+      ...(ingestDeliverTo ? { ingestDeliverTo } : {}),
       ...(deliveryPreferencePending
         ? {
             deliveryPreferencePending: true,

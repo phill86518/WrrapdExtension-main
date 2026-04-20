@@ -15,6 +15,7 @@ import { DriverTopModals } from "@/components/driver-top-modals";
 import { WrrapdLogo } from "@/components/wrrapd-logo";
 import { formatInTimeZone, toDate } from "date-fns-tz";
 import { formatDateKeyNy } from "@/lib/ny-date";
+import { orderRecipientForDisplay } from "@/lib/order-display";
 import type { DayShiftAvailability } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -84,17 +85,20 @@ export default async function DriverPage() {
   const deadline = availabilityDeadlineForWeekMonday(week.weekStartMonday);
   const deadlineLabel = formatInTimeZone(deadline, "America/New_York", "EEE MMM d, h:mm a zzz");
 
-  const pastOrdersForModal = pastOrdersRaw.map((o) => ({
-    internalId: o.id,
-    publicOrderRef: o.externalOrderId?.trim() || o.id,
-    recipientName: o.recipientName,
-    addressLine1: o.addressLine1,
-    city: o.city,
-    state: o.state,
-    postalCode: o.postalCode,
-    status: o.status,
-    updatedAtIso: o.updatedAt,
-  }));
+  const pastOrdersForModal = pastOrdersRaw.map((o) => {
+    const d = orderRecipientForDisplay(o);
+    return {
+      internalId: o.id,
+      publicOrderRef: o.externalOrderId?.trim() || o.id,
+      recipientName: d.recipientName,
+      addressLine1: d.addressLine1,
+      city: d.city,
+      state: d.state,
+      postalCode: d.postalCode,
+      status: o.status,
+      updatedAtIso: o.updatedAt,
+    };
+  });
 
   if (profile.onboardingStatus !== "approved") {
     return (
@@ -150,18 +154,21 @@ export default async function DriverPage() {
         </p>
         <div className="mt-4">
           <DriverConsole
-            orders={orders.map((o) => ({
-              id: o.id,
-              publicOrderRef: o.externalOrderId?.trim() || o.id,
-              recipientName: o.recipientName,
-              addressLine1: o.addressLine1,
-              city: o.city,
-              state: o.state,
-              postalCode: o.postalCode,
-              status: o.status,
-              stopSequence: o.stopSequence,
-              scheduledFor: o.scheduledFor,
-            }))}
+            orders={orders.map((o) => {
+              const d = orderRecipientForDisplay(o);
+              return {
+                id: o.id,
+                publicOrderRef: o.externalOrderId?.trim() || o.id,
+                recipientName: d.recipientName,
+                addressLine1: d.addressLine1,
+                city: d.city,
+                state: d.state,
+                postalCode: d.postalCode,
+                status: o.status,
+                stopSequence: o.stopSequence,
+                scheduledFor: o.scheduledFor,
+              };
+            })}
           />
         </div>
       </section>

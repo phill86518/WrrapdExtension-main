@@ -2,7 +2,13 @@ import { randomBytes, randomUUID } from "crypto";
 import { existsSync } from "fs";
 import { mkdir, readFile, writeFile } from "fs/promises";
 import path from "path";
-import type { Order, DeliveryStatus, OrdersFilePayload } from "@/lib/types";
+import type {
+  DeliveryStatus,
+  IngestDeliverToSnapshot,
+  Order,
+  OrderLineItem,
+  OrdersFilePayload,
+} from "@/lib/types";
 import { getFirestoreDb } from "@/lib/firebase-admin";
 import { buildDemoSeedOrders } from "@/lib/demo-orders";
 import { computeAssignmentsForOrders } from "@/lib/allocation";
@@ -17,10 +23,8 @@ import { formatDateKeyNy } from "@/lib/ny-date";
 import { findDriverById, listRegisteredDrivers } from "@/lib/driver-registry";
 import { uploadProofDataUrl } from "@/lib/proof-storage";
 import type { CollectionReference } from "firebase-admin/firestore";
-import type { OrderLineItem } from "@/lib/types";
-
 const nowIso = () => new Date().toISOString();
-const TRACKING_MERGE_VERSION = "tracking-merge-v2026-04-20-e1";
+const TRACKING_MERGE_VERSION = "tracking-merge-v2026-04-21-a1";
 
 const ORDERS_FILE_VERSION = 4;
 
@@ -253,7 +257,23 @@ export type CreateOrderInput = {
   lineItems?: OrderLineItem[];
   /** Admin / internal creates: set true to skip thank-you email & SMS */
   skipCustomerNotifications?: boolean;
+  /** Pay ingest: canonical giftee snapshot (preferred over top-level recipient fields when set). */
+  ingestDeliverTo?: IngestDeliverToSnapshot;
 };
+
+function applyIngestDeliverToToOrderFields<T extends Order>(o: T): T {
+  const d = o.ingestDeliverTo;
+  if (!d?.recipientName?.trim() || !d.addressLine1?.trim()) return o;
+  return {
+    ...o,
+    recipientName: d.recipientName.trim(),
+    addressLine1: d.addressLine1.trim(),
+    addressLine2: d.addressLine2?.trim() ? d.addressLine2.trim() : o.addressLine2,
+    city: d.city.trim(),
+    state: d.state.trim(),
+    postalCode: d.postalCode.trim(),
+  };
+}
 
 export async function createOrder(
   input: CreateOrderInput,
@@ -302,7 +322,7 @@ export async function createOrder(
       Boolean(
         (existingOpen.recipientName || "").trim() && (existingOpen.addressLine1 || "").trim(),
       );
-    const merged: Order = {
+    const merged: Order = applyIngestDeliverToToOrderFields({
       ...existingOpen,
       scheduledFor: preserveCheckoutAgainstStaging
         ? existingOpen.scheduledFor || scheduledIso
@@ -325,7 +345,8 @@ export async function createOrder(
         : `${input.sourceNote ?? existingOpen.sourceNote ?? "Ingest merge"} [${TRACKING_MERGE_VERSION}]`,
       updatedAt: nowIso(),
       updatedBy: TRACKING_MERGE_VERSION,
-    };
+      ingestDeliverTo: input.ingestDeliverTo ?? existingOpen.ingestDeliverTo,
+    });
     if (nextEmail) merged.customerEmail = nextEmail;
     else delete merged.customerEmail;
     if (input.customerGreetingName?.trim()) {
@@ -401,7 +422,7 @@ export async function createOrder(
     input.deliveryPreferencePending === true
       ? randomBytes(32).toString("base64url")
       : undefined;
-  const order: Order = {
+  const order: Order = applyIngestDeliverToToOrderFields({
     id,
     trackingToken: randomUUID(),
     status: "scheduled",
@@ -437,7 +458,8 @@ export async function createOrder(
         }
       : {}),
     ...(input.lineItems?.length ? { lineItems: [...input.lineItems] } : {}),
-  };
+    ...(input.ingestDeliverTo ? { ingestDeliverTo: input.ingestDeliverTo } : {}),
+  });
   const ocCreate = getOrdersCollection();
   if (ocCreate) {
     await ocCreate.doc(order.id).set(order);

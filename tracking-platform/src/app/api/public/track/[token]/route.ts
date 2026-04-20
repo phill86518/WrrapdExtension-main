@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getOrderByTrackingToken } from "@/lib/data";
+import { orderRecipientForDisplay } from "@/lib/order-display";
 import { buildDemoSeedOrders, DEMO_CUSTOMER_TRACKING_TOKEN } from "@/lib/demo-orders";
 
 export const dynamic = "force-dynamic";
@@ -22,15 +23,16 @@ export async function GET(_request: Request, { params }: { params: Promise<{ tok
     return NextResponse.json({ error: "not found" }, { status: 404 });
   }
 
+  const d = orderRecipientForDisplay(order);
   return NextResponse.json({
     status: order.status,
     etaMinutes: order.etaMinutes ?? null,
     driverName: order.driverName ?? null,
     latestLocation: order.latestLocation ?? null,
-    addressLine1: order.addressLine1,
-    city: order.city,
-    state: order.state,
-    postalCode: order.postalCode,
+    addressLine1: d.addressLine1,
+    city: d.city,
+    state: d.state,
+    postalCode: d.postalCode,
     proofPhotoUrl: order.proofPhotoUrl ?? null,
   });
 }

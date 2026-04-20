@@ -503,7 +503,7 @@ function parseDateCandidate(raw) {
     return null;
 }
 
-const WRRAPD_INGEST_VERSION = 'ingest-v2026-04-20-e1';
+const WRRAPD_INGEST_VERSION = 'ingest-v2026-04-21-a1';
 
 /**
  * Amazon "arriving …" strings are shopper-local (Eastern). Never use UTC midnight YYYY-MM-DD
@@ -669,12 +669,12 @@ function pickTrackingRecipientAddressForIngest({ wrappedOnly, finalShippingAddre
         return n;
     };
     let u;
+    u = tryAddr(gifteeOriginalAddress);
+    if (u) return u;
     for (const it of wrappedOnly || []) {
         u = tryAddr(it && it.gifteeRecipientAddress);
         if (u) return u;
     }
-    u = tryAddr(gifteeOriginalAddress);
-    if (u) return u;
     u = tryAddr(finalShippingAddressFromCheckout);
     if (u) return u;
     for (const it of wrappedOnly || []) {
@@ -1244,16 +1244,25 @@ app.post('/process-payment', async (req, res) => {
             const needsCustomerChoice =
                 wrappedOnly.length > 1 && effectiveAmazonDays.length > 1;
             const fallbackAmazonDay = inferAmazonDateKeyFromItems(wrappedOnly.length ? wrappedOnly : normalizedOrderData);
-            const ingestPayload = {
-                customerName,
-                customerPhone,
-                customerEmail,
+            const ingestDeliverTo = {
                 recipientName,
                 addressLine1: streetParts.line1 || finalAddr.line1 || 'N/A',
                 addressLine2: streetParts.line2 || finalAddr.line2 || '',
                 city: finalAddr.city || firstItem.city || 'N/A',
                 state: finalAddr.state || firstItem.state || 'N/A',
                 postalCode: finalAddr.postalCode || finalAddr.postal_code || firstItem.postalCode || '00000',
+            };
+            const ingestPayload = {
+                customerName,
+                customerPhone,
+                customerEmail,
+                recipientName,
+                addressLine1: ingestDeliverTo.addressLine1,
+                addressLine2: ingestDeliverTo.addressLine2,
+                city: ingestDeliverTo.city,
+                state: ingestDeliverTo.state,
+                postalCode: ingestDeliverTo.postalCode,
+                ingestDeliverTo,
                 externalOrderId: canonicalTrackingExternalOrderId(orderNumber),
                 sourceNote: needsCustomerChoice
                     ? `Amazon order ${orderNumber}; ${wrappedOnly.length} Wrrapd item(s); Amazon dates ${effectiveAmazonDays.join(', ')}; Wrrapd +1 after earliest (fastest). [${WRRAPD_INGEST_VERSION}]`

@@ -764,6 +764,16 @@ export function removeWrrapdManualDeliverGuidanceOverlay() {
     }
     root.remove();
     manualDeliverUi = null;
+    try {
+      const ls = document.getElementById('loadingScreen');
+      if (ls) {
+        ls.style.zIndex = '';
+        ls.style.pointerEvents = '';
+      }
+    } catch (e) {
+      /* ignore */
+    }
+    removeLoadingScreen();
   } else {
     document.getElementById(MANUAL_DELIVER_OVERLAY_ID)?.remove();
   }
@@ -918,13 +928,6 @@ export function showWrrapdManualDeliverGuidanceOverlay(continueEl, options = {})
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
       scheduleManualDeliverLayout();
-      if (manualDeliverUi) {
-        manualDeliverUi.pendingLoadingDrop = setTimeout(() => {
-          if (manualDeliverUi) manualDeliverUi.pendingLoadingDrop = null;
-          wrrapdTrace('overlay', 'manual-deliver delayed removeLoadingScreen');
-          removeLoadingScreen();
-        }, 480);
-      }
     });
   });
 
