@@ -656,6 +656,10 @@ function normalizeAddressShape(addr) {
 
 /**
  * Tracking + Command Center should show the **giftee** row, not the Wrrapd hub / Amazon default row.
+ *
+ * Priority: Amazon per-line "Deliver to …" and extension snapshots before pay.wrrapd.com final shipping.
+ * Checkout final shipping is usually correct for street/ZIP, but the **name** often stays the Amazon
+ * account holder (e.g. gifter) while line-level `gifteeRecipientAddress` matches what the shopper saw.
  */
 function pickTrackingRecipientAddressForIngest({ wrappedOnly, finalShippingAddressFromCheckout, gifteeOriginalAddress }) {
     const tryAddr = (a) => {
@@ -664,17 +668,15 @@ function pickTrackingRecipientAddressForIngest({ wrappedOnly, finalShippingAddre
         if (isLikelyWrrapdWarehouseAddressObj(n)) return null;
         return n;
     };
-    // pay.wrrapd.com posts the customer's "Final shipping address" right before Stripe confirms payment.
-    // Prefer it over extension-local snapshots, which may still be the Amazon account default header.
-    let u = tryAddr(finalShippingAddressFromCheckout);
-    if (u) return u;
-    // Extension snapshot (wrrapd-giftee-intended-address) when checkout cache was unavailable.
-    u = tryAddr(gifteeOriginalAddress);
-    if (u) return u;
+    let u;
     for (const it of wrappedOnly || []) {
         u = tryAddr(it && it.gifteeRecipientAddress);
         if (u) return u;
     }
+    u = tryAddr(gifteeOriginalAddress);
+    if (u) return u;
+    u = tryAddr(finalShippingAddressFromCheckout);
+    if (u) return u;
     for (const it of wrappedOnly || []) {
         u = tryAddr(it && it.shippingAddress);
         if (u) return u;
