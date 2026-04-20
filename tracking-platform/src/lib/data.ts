@@ -293,31 +293,34 @@ export async function createOrder(
     const existingFromStagingSimulate = /staging simulate place order/i.test(
       existingOpen.sourceNote || "",
     );
-    const preserveGifteeFromCheckout =
-      incomingStagingSimulate &&
-      !existingFromStagingSimulate &&
+    /** Staging re-ingest must not clobber pay/checkout ingest (giftee, Wrrapd +1 schedule, Amazon snapshot). */
+    const preserveCheckoutAgainstStaging =
+      incomingStagingSimulate && !existingFromStagingSimulate;
+    const preserveGifteeFields =
+      preserveCheckoutAgainstStaging &&
       Boolean(
-        (existingOpen.recipientName || "").trim() &&
-          (existingOpen.addressLine1 || "").trim(),
+        (existingOpen.recipientName || "").trim() && (existingOpen.addressLine1 || "").trim(),
       );
     const merged: Order = {
       ...existingOpen,
-      scheduledFor: scheduledIso,
+      scheduledFor: preserveCheckoutAgainstStaging
+        ? existingOpen.scheduledFor || scheduledIso
+        : scheduledIso,
       externalOrderId: storedExt,
       customerName: input.customerName,
       customerPhone: input.customerPhone,
-      recipientName: preserveGifteeFromCheckout ? existingOpen.recipientName : input.recipientName,
-      addressLine1: preserveGifteeFromCheckout ? existingOpen.addressLine1 : input.addressLine1,
-      addressLine2: preserveGifteeFromCheckout
+      recipientName: preserveGifteeFields ? existingOpen.recipientName : input.recipientName,
+      addressLine1: preserveGifteeFields ? existingOpen.addressLine1 : input.addressLine1,
+      addressLine2: preserveGifteeFields
         ? existingOpen.addressLine2
         : input.addressLine2?.trim()
           ? input.addressLine2.trim()
           : existingOpen.addressLine2,
-      city: preserveGifteeFromCheckout ? existingOpen.city : input.city,
-      state: preserveGifteeFromCheckout ? existingOpen.state : input.state,
-      postalCode: preserveGifteeFromCheckout ? existingOpen.postalCode : input.postalCode,
-      sourceNote: preserveGifteeFromCheckout
-        ? existingOpen.sourceNote
+      city: preserveGifteeFields ? existingOpen.city : input.city,
+      state: preserveGifteeFields ? existingOpen.state : input.state,
+      postalCode: preserveGifteeFields ? existingOpen.postalCode : input.postalCode,
+      sourceNote: preserveCheckoutAgainstStaging
+        ? existingOpen.sourceNote || (input.sourceNote ?? existingOpen.sourceNote)
         : input.sourceNote ?? existingOpen.sourceNote,
       updatedAt: nowIso(),
       updatedBy: "ingest-merge",
@@ -327,25 +330,27 @@ export async function createOrder(
     if (input.customerGreetingName?.trim()) {
       merged.customerGreetingName = input.customerGreetingName.trim();
     }
-    if (input.amazonDeliveryDatesSnapshot?.length) {
+    if (input.amazonDeliveryDatesSnapshot?.length && !preserveCheckoutAgainstStaging) {
       merged.amazonDeliveryDatesSnapshot = [...input.amazonDeliveryDatesSnapshot];
     }
     if (input.lineItems?.length) {
       merged.lineItems = [...input.lineItems];
     }
-    if (input.deliveryPreferencePending === true && prefToken) {
-      merged.deliveryPreferencePending = true;
-      if (input.deliveryPreferenceRespondBy) {
-        merged.deliveryPreferenceRespondBy = input.deliveryPreferenceRespondBy;
+    if (!preserveCheckoutAgainstStaging) {
+      if (input.deliveryPreferencePending === true && prefToken) {
+        merged.deliveryPreferencePending = true;
+        if (input.deliveryPreferenceRespondBy) {
+          merged.deliveryPreferenceRespondBy = input.deliveryPreferenceRespondBy;
+        }
+        merged.deliveryPreferenceToken =
+          existingOpen.deliveryPreferencePending === true && existingOpen.deliveryPreferenceToken
+            ? existingOpen.deliveryPreferenceToken
+            : prefToken;
+      } else if (input.deliveryPreferencePending === false) {
+        delete merged.deliveryPreferencePending;
+        delete merged.deliveryPreferenceRespondBy;
+        delete merged.deliveryPreferenceToken;
       }
-      merged.deliveryPreferenceToken =
-        existingOpen.deliveryPreferencePending === true && existingOpen.deliveryPreferenceToken
-          ? existingOpen.deliveryPreferenceToken
-          : prefToken;
-    } else if (input.deliveryPreferencePending === false) {
-      delete merged.deliveryPreferencePending;
-      delete merged.deliveryPreferenceRespondBy;
-      delete merged.deliveryPreferenceToken;
     }
 
     const ocMerge = getOrdersCollection();

@@ -503,6 +503,36 @@ function parseDateCandidate(raw) {
     return null;
 }
 
+/**
+ * Amazon "arriving …" strings are shopper-local (Eastern). Never use UTC midnight YYYY-MM-DD
+ * from toISOString() — it shifts the calendar day backward vs NY.
+ */
+function amazonCalendarYmdFromDeliveryField(raw) {
+    if (raw == null) return null;
+    const t = typeof raw === 'string' ? raw.trim() : '';
+    if (!t) return null;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(t)) return t;
+    const emb = t.match(/\b(20\d{2}-\d{2}-\d{2})\b/);
+    if (emb) return emb[1];
+    const d = parseDateCandidate(t);
+    if (!d || Number.isNaN(d.getTime())) return null;
+    try {
+        const parts = new Intl.DateTimeFormat('en-CA', {
+            timeZone: 'America/New_York',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+        }).formatToParts(d);
+        const y = parts.find((p) => p.type === 'year')?.value;
+        const m = parts.find((p) => p.type === 'month')?.value;
+        const day = parts.find((p) => p.type === 'day')?.value;
+        if (!y || !m || !day) return null;
+        return `${y}-${m}-${day}`;
+    } catch (_) {
+        return null;
+    }
+}
+
 function computeScheduledForPlusOne(orderItem) {
     const cands = [
         orderItem && orderItem.amazonDeliveryDate,
@@ -567,8 +597,8 @@ function amazonDateKeyFromItem(orderItem) {
         orderItem.shippingDate,
     ];
     for (const c of cands) {
-        const d = parseDateCandidate(c);
-        if (d) return d.toISOString().slice(0, 10);
+        const key = amazonCalendarYmdFromDeliveryField(typeof c === 'string' ? c : '');
+        if (key) return key;
     }
     return null;
 }
