@@ -178,7 +178,7 @@ import { isZipCodeAllowed } from './lib/zip-codes.js';
     // ----------------------------------------------------- PAGE CONTROL -----------------------------------------------------
 
     /**
-     * Amazon cart/checkout header: "Deliver to Roger" (#glow-ingress-line1) — first name for thank-you emails.
+     * Amazon cart/checkout header: "Deliver to <name>" (#glow-ingress-line1) — first name for thank-you emails.
      */
     function domHasAnyWrrapdCheckboxChecked() {
         try {
@@ -4067,7 +4067,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                 // Guardar en localStorage
                 localStorage.setItem('wrrapd-default-address', JSON.stringify(addressObject));
                 // Do NOT snapshot giftee here: this is the account default ("Deliver to" list), not the
-                // per-line recipient for Wrrapd-wrapped items. Snapshotting overwrote Jane with Roger on mixed carts.
+                // per-line recipient for Wrrapd-wrapped items. Snapshotting can overwrite real giftee data on mixed carts.
                 console.log("[extractDefaultAddress] Address saved to localStorage:", addressObject);
     
                 return addressObject;
@@ -10218,7 +10218,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
      */
     function resolveTrackingIngestAddress(item) {
         // Intended giftee (wrrapd-giftee-intended-address) must win over Amazon line shipping:
-        // checkout often still has the account default "Deliver to Roger" on the line while the gift goes elsewhere.
+        // checkout often still has the account default deliver-to row while the gift goes elsewhere.
         const giftee = readGifteeIntendedAddressForIngest();
         if (giftee && !isLikelyWrrapdWarehouseAddress(giftee)) return giftee;
         const ship = item.shippingAddress;

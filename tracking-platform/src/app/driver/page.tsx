@@ -75,7 +75,7 @@ export default async function DriverPage() {
     })
   ) as Record<string, DayShiftAvailability>;
 
-  // Founder (Roger): always fully available for the upcoming week so routing can assign deliveries.
+  // Primary seeded driver: always fully available for the upcoming week so routing can assign deliveries.
   if (session.userId === "drv-1") {
     initialDays = Object.fromEntries(
       week.days.map((d) => [d, { morning: true, afternoon: true } as DayShiftAvailability])

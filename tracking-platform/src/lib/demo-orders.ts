@@ -15,7 +15,7 @@ const customers: Array<{
   state: string;
   postalCode: string;
 }> = [
-  { customerName: "Avery Cole", customerPhone: "+19045550110", recipientName: "Casey Johnson", addressLine1: "8137 Broward Cove Rd", city: "Jacksonville", state: "FL", postalCode: "32218" },
+  { customerName: "Avery Cole", customerPhone: "+19045550110", recipientName: "John Doe", addressLine1: "123 Abracadabra Ln", city: "Jacksonville", state: "FL", postalCode: "32222" },
   { customerName: "Blake Reed", customerPhone: "+19045550111", recipientName: "Drew Martinez", addressLine1: "4455 Atlantic Blvd", city: "Jacksonville", state: "FL", postalCode: "32207" },
   { customerName: "Cameron Diaz", customerPhone: "+19045550112", recipientName: "Emery Chen", addressLine1: "1200 San Jose Blvd", city: "Jacksonville", state: "FL", postalCode: "32217" },
   { customerName: "Dana Scott", customerPhone: "+19045550113", recipientName: "Finley Brooks", addressLine1: "88 Riverside Ave", city: "Jacksonville", state: "FL", postalCode: "32204" },

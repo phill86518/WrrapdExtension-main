@@ -649,7 +649,7 @@ function pickTrackingRecipientAddressForIngest({ wrappedOnly, finalShippingAddre
         return n;
     };
     // pay.wrrapd.com posts the customer's "Final shipping address" right before Stripe confirms payment.
-    // Prefer it over extension-local snapshots, which may still be the Amazon account default ("Deliver to Roger").
+    // Prefer it over extension-local snapshots, which may still be the Amazon account default header.
     let u = tryAddr(finalShippingAddressFromCheckout);
     if (u) return u;
     // Extension snapshot (wrrapd-giftee-intended-address) when checkout cache was unavailable.
@@ -2085,7 +2085,7 @@ app.get('/api/valid-addresses', (req, res) => {
     const validAddresses = [
         // Example addresses - replace with your actual valid address directory
         // Format: { line1: 'Street Address', city: 'City', state: 'State Code', postalCode: 'ZIP', country: 'US' }
-        { line1: '8137 BROWARD COVE RD', city: 'JACKSONVILLE', state: 'FL', postalCode: '32218', country: 'US' },
+        { line1: '123 ABRACADABRA LN', city: 'JACKSONVILLE', state: 'FL', postalCode: '32222', country: 'US' },
         { line1: '117 W DUVAL ST STE 300', city: 'JACKSONVILLE', state: 'FL', postalCode: '32202', country: 'US' },
         // Add more valid addresses here from your directory
     ];
