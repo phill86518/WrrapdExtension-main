@@ -503,7 +503,7 @@ function parseDateCandidate(raw) {
     return null;
 }
 
-const WRRAPD_INGEST_VERSION = 'ingest-v2026-04-20-e1';
+const WRRAPD_INGEST_VERSION = 'ingest-v2026-04-21-checkout-giftee';
 
 /**
  * Amazon "arriving …" strings are shopper-local (Eastern). Never use UTC midnight YYYY-MM-DD
@@ -655,11 +655,11 @@ function normalizeAddressShape(addr) {
 }
 
 /**
- * Tracking + Command Center should show the **giftee** row, not the Wrrapd hub / Amazon default row.
+ * Giftee row for tracking ingest, thank-you path, and legacy pay emails.
  *
- * Priority: Amazon per-line "Deliver to …" and extension snapshots before pay.wrrapd.com final shipping.
- * Checkout final shipping is usually correct for street/ZIP, but the **name** often stays the Amazon
- * account holder (e.g. gifter) while line-level `gifteeRecipientAddress` matches what the shopper saw.
+ * **Checkout wins:** `finalShippingAddressFromCheckout` is what the shopper entered and POSTed from
+ * checkout.html (`/api/store-final-shipping-address`) before Stripe — name + street + city + ZIP.
+ * Only if that is missing or unusable do we fall back to extension/Amazon snapshots.
  */
 function pickTrackingRecipientAddressForIngest({ wrappedOnly, finalShippingAddressFromCheckout, gifteeOriginalAddress }) {
     const tryAddr = (a) => {
@@ -669,14 +669,14 @@ function pickTrackingRecipientAddressForIngest({ wrappedOnly, finalShippingAddre
         return n;
     };
     let u;
+    u = tryAddr(finalShippingAddressFromCheckout);
+    if (u) return u;
     u = tryAddr(gifteeOriginalAddress);
     if (u) return u;
     for (const it of wrappedOnly || []) {
         u = tryAddr(it && it.gifteeRecipientAddress);
         if (u) return u;
     }
-    u = tryAddr(finalShippingAddressFromCheckout);
-    if (u) return u;
     for (const it of wrappedOnly || []) {
         u = tryAddr(it && it.shippingAddress);
         if (u) return u;
