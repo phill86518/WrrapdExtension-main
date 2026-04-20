@@ -503,6 +503,8 @@ function parseDateCandidate(raw) {
     return null;
 }
 
+const WRRAPD_INGEST_VERSION = 'ingest-v2026-04-20-e1';
+
 /**
  * Amazon "arriving …" strings are shopper-local (Eastern). Never use UTC midnight YYYY-MM-DD
  * from toISOString() — it shifts the calendar day backward vs NY.
@@ -556,6 +558,20 @@ function computeScheduledForPlusOne(orderItem) {
     const plusOne = new Date(base.getTime());
     plusOne.setDate(plusOne.getDate() + 1);
     return plusOne.toISOString();
+}
+
+function inferAmazonDateKeyFromItems(items) {
+    for (const item of items || []) {
+        const key = amazonDateKeyFromItem(item);
+        if (key) return key;
+    }
+    const todayNy = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'America/New_York',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+    }).format(new Date());
+    return todayNy;
 }
 
 function computeScheduledForPlusOneFromItems(items) {
@@ -1204,6 +1220,7 @@ app.post('/process-payment', async (req, res) => {
             const effectiveAmazonDays = wrappedAmazonDays.length ? wrappedAmazonDays : hintedAmazonDays;
             const needsCustomerChoice =
                 wrappedOnly.length > 1 && effectiveAmazonDays.length > 1;
+            const fallbackAmazonDay = inferAmazonDateKeyFromItems(wrappedOnly.length ? wrappedOnly : normalizedOrderData);
             const ingestPayload = {
                 customerName,
                 customerPhone,
@@ -1216,8 +1233,8 @@ app.post('/process-payment', async (req, res) => {
                 postalCode: finalAddr.postalCode || finalAddr.postal_code || firstItem.postalCode || '00000',
                 externalOrderId: canonicalTrackingExternalOrderId(orderNumber),
                 sourceNote: needsCustomerChoice
-                    ? `Amazon order ${orderNumber}; ${wrappedOnly.length} Wrrapd item(s); Amazon dates ${effectiveAmazonDays.join(', ')}; Wrrapd +1 after earliest (fastest).`
-                    : `Amazon order ${orderNumber}; ${wrappedOnly.length} Wrrapd item(s); auto scheduled (Amazon fastest +1)`,
+                    ? `Amazon order ${orderNumber}; ${wrappedOnly.length} Wrrapd item(s); Amazon dates ${effectiveAmazonDays.join(', ')}; Wrrapd +1 after earliest (fastest). [${WRRAPD_INGEST_VERSION}]`
+                    : `Amazon order ${orderNumber}; ${wrappedOnly.length} Wrrapd item(s); auto scheduled (Amazon fastest +1). [${WRRAPD_INGEST_VERSION}]`,
                 lineItems,
                 ...(needsCustomerChoice
                     ? {
@@ -1229,7 +1246,8 @@ app.post('/process-payment', async (req, res) => {
                             amazonDeliveryDay: effectiveAmazonDays[0],
                         }
                     : {
-                        scheduledFor: computeScheduledForPlusOneFromItems(wrappedOnly.length ? wrappedOnly : normalizedOrderData),
+                        // Always prefer Amazon date key input so tracking computes +1 day in America/New_York.
+                        amazonDeliveryDay: fallbackAmazonDay,
                     }),
             };
             const ingestResult = await ingestOrderIntoTracking(ingestPayload);

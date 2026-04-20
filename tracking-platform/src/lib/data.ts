@@ -20,6 +20,7 @@ import type { CollectionReference } from "firebase-admin/firestore";
 import type { OrderLineItem } from "@/lib/types";
 
 const nowIso = () => new Date().toISOString();
+const TRACKING_MERGE_VERSION = "tracking-merge-v2026-04-20-e1";
 
 const ORDERS_FILE_VERSION = 4;
 
@@ -320,10 +321,10 @@ export async function createOrder(
       state: preserveGifteeFields ? existingOpen.state : input.state,
       postalCode: preserveGifteeFields ? existingOpen.postalCode : input.postalCode,
       sourceNote: preserveCheckoutAgainstStaging
-        ? existingOpen.sourceNote || (input.sourceNote ?? existingOpen.sourceNote)
-        : input.sourceNote ?? existingOpen.sourceNote,
+        ? `${existingOpen.sourceNote || (input.sourceNote ?? existingOpen.sourceNote) || "Ingest merge"} [${TRACKING_MERGE_VERSION}]`
+        : `${input.sourceNote ?? existingOpen.sourceNote ?? "Ingest merge"} [${TRACKING_MERGE_VERSION}]`,
       updatedAt: nowIso(),
-      updatedBy: "ingest-merge",
+      updatedBy: TRACKING_MERGE_VERSION,
     };
     if (nextEmail) merged.customerEmail = nextEmail;
     else delete merged.customerEmail;
