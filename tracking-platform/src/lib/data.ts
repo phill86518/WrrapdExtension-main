@@ -18,7 +18,7 @@ import { findDriverById, listRegisteredDrivers } from "@/lib/driver-registry";
 import { uploadProofDataUrl } from "@/lib/proof-storage";
 import type { CollectionReference } from "firebase-admin/firestore";
 const nowIso = () => new Date().toISOString();
-const TRACKING_MERGE_VERSION = "tracking-merge-v2026-04-23-pay-giftee-lock";
+const TRACKING_MERGE_VERSION = "tracking-merge-v2026-04-21-pay-lock-source";
 
 const ORDERS_FILE_VERSION = 4;
 
@@ -295,17 +295,22 @@ export async function createOrder(
     /** Staging re-ingest must not clobber pay/checkout ingest (giftee, Wrrapd +1 schedule, Amazon snapshot). */
     const preserveCheckoutAgainstStaging =
       incomingStagingSimulate && !existingFromStagingSimulate;
-    /** Pay-server ingest notes include `Amazon order …` and `[ingest-v…]`. */
+    /**
+     * Pay-server ingest notes include `Amazon order …` and `[ingest-v…]`.
+     * Incoming must show the ingest tag: extension/staging copy often mentions "Amazon" but is
+     * not pay — treating that as "pay-like" flipped `preserveGifteeFields` off and clobbered checkout.
+     */
     const existingLooksLikePayIngest =
-      /\bAmazon order\b/i.test(existingOpen.sourceNote || "") ||
-      /\bingest-v\d{4}-\d{2}-\d{2}/i.test(existingOpen.sourceNote || "");
-    const incomingLooksLikePayIngest =
-      /\bAmazon order\b/i.test(input.sourceNote || "") ||
-      /\bingest-v\d{4}-\d{2}-\d{2}/i.test(input.sourceNote || "");
+      /\bingest-v\d{4}-\d{2}-\d{2}/i.test(existingOpen.sourceNote || "") ||
+      /\bAmazon order\b/i.test(existingOpen.sourceNote || "");
+    const incomingLooksLikePayIngest = /\bingest-v\d{4}-\d{2}-\d{2}/i.test(input.sourceNote || "");
     const hasGifteeRow =
       Boolean(
         (existingOpen.recipientName || "").trim() && (existingOpen.addressLine1 || "").trim(),
       );
+    /** Non-pay ingests (extension, partners) must not replace Wrrapd schedule on pay-backed rows. */
+    const lockPayBackedRow =
+      existingLooksLikePayIngest && !incomingLooksLikePayIngest && hasGifteeRow;
     /**
      * Lock checkout giftee on pay-backed orders: staging re-ingest must not overwrite, and neither
      * should any other non-pay ingest (wrong Amazon row, etc.). Pay-over-pay merges still replace.
@@ -314,11 +319,24 @@ export async function createOrder(
       hasGifteeRow &&
       ((incomingStagingSimulate && existingLooksLikePayIngest) ||
         (existingLooksLikePayIngest && !incomingLooksLikePayIngest));
+    const mergedSourceNote = (() => {
+      if (preserveCheckoutAgainstStaging) {
+        return `${existingOpen.sourceNote || (input.sourceNote ?? existingOpen.sourceNote) || "Ingest merge"} [${TRACKING_MERGE_VERSION}]`;
+      }
+      const incoming = (input.sourceNote ?? "").trim() || "Ingest merge";
+      const prior = (existingOpen.sourceNote || "").trim();
+      if (lockPayBackedRow && prior) {
+        return `${prior} · merge: ${incoming} [${TRACKING_MERGE_VERSION}]`;
+      }
+      return `${input.sourceNote ?? existingOpen.sourceNote ?? "Ingest merge"} [${TRACKING_MERGE_VERSION}]`;
+    })();
     const merged: Order = {
       ...existingOpen,
       scheduledFor: preserveCheckoutAgainstStaging
         ? existingOpen.scheduledFor || scheduledIso
-        : scheduledIso,
+        : lockPayBackedRow
+          ? existingOpen.scheduledFor || scheduledIso
+          : scheduledIso,
       externalOrderId: storedExt,
       customerName: input.customerName,
       customerPhone: input.customerPhone,
@@ -332,9 +350,7 @@ export async function createOrder(
       city: preserveGifteeFields ? existingOpen.city : input.city,
       state: preserveGifteeFields ? existingOpen.state : input.state,
       postalCode: preserveGifteeFields ? existingOpen.postalCode : input.postalCode,
-      sourceNote: preserveCheckoutAgainstStaging
-        ? `${existingOpen.sourceNote || (input.sourceNote ?? existingOpen.sourceNote) || "Ingest merge"} [${TRACKING_MERGE_VERSION}]`
-        : `${input.sourceNote ?? existingOpen.sourceNote ?? "Ingest merge"} [${TRACKING_MERGE_VERSION}]`,
+      sourceNote: mergedSourceNote,
       updatedAt: nowIso(),
       updatedBy: TRACKING_MERGE_VERSION,
     };
@@ -343,7 +359,11 @@ export async function createOrder(
     if (input.customerGreetingName?.trim()) {
       merged.customerGreetingName = input.customerGreetingName.trim();
     }
-    if (input.amazonDeliveryDatesSnapshot?.length && !preserveCheckoutAgainstStaging) {
+    if (
+      input.amazonDeliveryDatesSnapshot?.length &&
+      !preserveCheckoutAgainstStaging &&
+      !lockPayBackedRow
+    ) {
       merged.amazonDeliveryDatesSnapshot = [...input.amazonDeliveryDatesSnapshot];
     }
     if (input.lineItems?.length) {
