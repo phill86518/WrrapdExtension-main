@@ -29,7 +29,7 @@ type DriverOrder = {
 const NY = "America/New_York";
 
 /** Bumped when driver queue UI changes — if you do not see this under the title, you are not on the latest deploy. */
-export const DRIVER_QUEUE_UI_REV = "2026-04-23";
+export const DRIVER_QUEUE_UI_REV = "2026-04-24";
 
 function monthTitleYm(ym: string): string {
   const d = toDate(`${ym}-01T12:00:00`, { timeZone: NY });

@@ -503,7 +503,7 @@ function parseDateCandidate(raw) {
     return null;
 }
 
-const WRRAPD_INGEST_VERSION = 'ingest-v2026-04-21-checkout-giftee';
+const WRRAPD_INGEST_VERSION = 'ingest-v2026-04-21-checkout-giftee-persist';
 
 /**
  * Amazon "arriving …" strings are shopper-local (Eastern). Never use UTC midnight YYYY-MM-DD
@@ -654,11 +654,79 @@ function normalizeAddressShape(addr) {
     };
 }
 
+/** Same shape as checkout `finalShippingAddressForServer` / process-payment body. */
+function coerceFinalShippingFromPaymentPayload(f) {
+    if (!f || typeof f !== 'object') return null;
+    const street = typeof f.street === 'string' ? f.street.trim() : '';
+    const postal =
+        (typeof f.postalCode === 'string' && f.postalCode.trim()) ||
+        (typeof f.postal_code === 'string' && f.postal_code.trim()) ||
+        '';
+    const streetOrLine1 =
+        street || (typeof f.line1 === 'string' ? f.line1.trim() : '');
+    if (!streetOrLine1 && !postal) return null;
+    return {
+        name: typeof f.name === 'string' ? f.name : '',
+        street: streetOrLine1,
+        city: typeof f.city === 'string' ? f.city : '',
+        state: typeof f.state === 'string' ? f.state : '',
+        postalCode: postal,
+        country: typeof f.country === 'string' && f.country.trim() ? f.country.trim() : 'US',
+    };
+}
+
+function pendingFinalShippingFilePath(orderNumber) {
+    const safe = String(orderNumber || '').replace(/[^a-zA-Z0-9_.-]/g, '_');
+    const ordersDir = path.join(__dirname, 'orders');
+    return path.join(ordersDir, `.pending-final-shipping-${safe}.json`);
+}
+
+function persistPendingFinalShippingToDisk(orderNumber, finalShippingAddress) {
+    try {
+        const ordersDir = path.join(__dirname, 'orders');
+        if (!fs.existsSync(ordersDir)) {
+            fs.mkdirSync(ordersDir, { recursive: true });
+        }
+        const p = pendingFinalShippingFilePath(orderNumber);
+        fs.writeFileSync(
+            p,
+            JSON.stringify({ storedAt: Date.now(), finalShippingAddress }),
+            'utf8',
+        );
+    } catch (e) {
+        console.error('[API] persistPendingFinalShippingToDisk:', e && e.message ? e.message : e);
+    }
+}
+
+function unlinkPendingFinalShippingFile(orderNumber) {
+    try {
+        const p = pendingFinalShippingFilePath(orderNumber);
+        if (fs.existsSync(p)) fs.unlinkSync(p);
+    } catch (_) {
+        /* ignore */
+    }
+}
+
+function readAndConsumePendingFinalShippingFromDisk(orderNumber) {
+    try {
+        const p = pendingFinalShippingFilePath(orderNumber);
+        if (!fs.existsSync(p)) return null;
+        const raw = fs.readFileSync(p, 'utf8');
+        fs.unlinkSync(p);
+        const j = JSON.parse(raw);
+        if (!j || typeof j !== 'object' || !j.finalShippingAddress) return null;
+        return j.finalShippingAddress;
+    } catch (e) {
+        console.error('[process-payment] read pending final shipping file:', e && e.message ? e.message : e);
+        return null;
+    }
+}
+
 /**
  * Giftee row for tracking ingest, thank-you path, and legacy pay emails.
  *
- * **Checkout wins:** `finalShippingAddressFromCheckout` is what the shopper entered and POSTed from
- * checkout.html (`/api/store-final-shipping-address`) before Stripe — name + street + city + ZIP.
+ * **Checkout wins:** `finalShippingAddressFromCheckout` comes from (in order) the checkout postMessage
+ * on `process-payment`, the store-final in-memory map, or a disk pending file from store-final (PM2-safe).
  * Only if that is missing or unusable do we fall back to extension/Amazon snapshots.
  */
 function pickTrackingRecipientAddressForIngest({ wrappedOnly, finalShippingAddressFromCheckout, gifteeOriginalAddress }) {
@@ -788,33 +856,28 @@ app.post('/process-payment', async (req, res) => {
 
     const normalizedOrderData = normalizeOrderItems(orderData);
 
-    // Prefer in-memory map (checkout.html POST to store-final-shipping-address before Stripe).
-    // Fall back to extension body (postMessage echo) when global is missing — e.g. fetch failed or another server instance.
-    let finalShippingAddressFromCheckout = null;
+    // Checkout giftee source (priority):
+    // 1) process-payment body from checkout postMessage (always tied to this payment; survives PM2 multi-worker).
+    // 2) in-memory map from store-final-shipping-address on this worker.
+    // 3) disk file written by store-final (shared across workers on this host).
+    const fromClient = coerceFinalShippingFromPaymentPayload(finalShippingAddressFromClient);
+    let fromGlobal = null;
     if (global.finalShippingAddresses && global.finalShippingAddresses[orderNumber]) {
-        finalShippingAddressFromCheckout = global.finalShippingAddresses[orderNumber];
-        console.log(`[process-payment] Using Final shipping address from checkout.html for order ${orderNumber}`);
+        fromGlobal = coerceFinalShippingFromPaymentPayload(global.finalShippingAddresses[orderNumber]);
         delete global.finalShippingAddresses[orderNumber];
-    } else if (finalShippingAddressFromClient && typeof finalShippingAddressFromClient === 'object') {
-        const f = finalShippingAddressFromClient;
-        const street = typeof f.street === 'string' ? f.street.trim() : '';
-        const postal =
-            (typeof f.postalCode === 'string' && f.postalCode.trim()) ||
-            (typeof f.postal_code === 'string' && f.postal_code.trim()) ||
-            '';
-        if (street || postal) {
-            finalShippingAddressFromCheckout = {
-                name: typeof f.name === 'string' ? f.name : '',
-                street: street || (typeof f.line1 === 'string' ? f.line1.trim() : ''),
-                city: typeof f.city === 'string' ? f.city : '',
-                state: typeof f.state === 'string' ? f.state : '',
-                postalCode: postal,
-                country: typeof f.country === 'string' && f.country.trim() ? f.country.trim() : 'US',
-            };
-            console.log(
-                `[process-payment] Using finalShippingAddress from extension process-payment body for order ${orderNumber}`,
-            );
-        }
+    }
+    let fromDisk = null;
+    if (!fromClient && !fromGlobal) {
+        fromDisk = coerceFinalShippingFromPaymentPayload(
+            readAndConsumePendingFinalShippingFromDisk(orderNumber),
+        );
+    } else {
+        unlinkPendingFinalShippingFile(orderNumber);
+    }
+    let finalShippingAddressFromCheckout = fromClient || fromGlobal || fromDisk;
+    if (finalShippingAddressFromCheckout) {
+        const src = fromClient ? 'postMessage body' : fromGlobal ? 'memory' : 'disk';
+        console.log(`[process-payment] Final shipping (giftee) for order ${orderNumber} from ${src}`);
     }
 
     // Checkout is source of truth for gift delivery — overwrite Amazon-scraped finalShippingAddress on every line item
@@ -2040,7 +2103,8 @@ app.post('/api/store-final-shipping-address', (req, res) => {
     }
     
     global.finalShippingAddresses[orderNumber] = finalShippingAddress;
-    console.log(`[API] Stored Final shipping address for order ${orderNumber}`);
+    persistPendingFinalShippingToDisk(orderNumber, finalShippingAddress);
+    console.log(`[API] Stored Final shipping address for order ${orderNumber} (memory + disk)`);
     
     res.status(200).json({ success: true });
 });
@@ -2076,36 +2140,6 @@ app.get('/data/allowed-zip-codes.json', (req, res) => {
     }
     
     res.sendFile(filePath);
-});
-
-// Endpoint to store Final shipping address (called directly from checkout.html)
-app.post('/api/store-final-shipping-address', (req, res) => {
-    // Set CORS headers
-    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
-    res.header('Access-Control-Allow-Credentials', 'true');
-    res.header('Access-Control-Allow-Methods', 'POST, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-    
-    if (!req.isApiDomain) {
-        return res.status(403).send('Access forbidden.');
-    }
-    
-    const { orderNumber, finalShippingAddress } = req.body;
-    
-    if (!orderNumber || !finalShippingAddress) {
-        return res.status(400).json({ error: 'Missing orderNumber or finalShippingAddress' });
-    }
-    
-    // Store in a simple in-memory cache (or you could use Redis/database)
-    // This will be retrieved when process-payment is called
-    if (!global.finalShippingAddresses) {
-        global.finalShippingAddresses = {};
-    }
-    
-    global.finalShippingAddresses[orderNumber] = finalShippingAddress;
-    console.log(`[API] Stored Final shipping address for order ${orderNumber}`);
-    
-    res.status(200).json({ success: true });
 });
 
 // Endpoint to get valid addresses for dropdown

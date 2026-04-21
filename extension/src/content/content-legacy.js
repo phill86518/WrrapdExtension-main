@@ -11166,25 +11166,28 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                                 } catch (_) {
                                     gifteeOriginalAddressForServer = null;
                                 }
+                                const hasCheckoutGiftee =
+                                    checkoutFinalShippingAddress &&
+                                    typeof checkoutFinalShippingAddress === 'object';
                                 const response = await fetch('https://api.wrrapd.com/process-payment', {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({
                                         paymentIntentId,
-                                        orderData, // finalShippingAddress may be hub; gifteeRecipientAddress + gifteeOriginalAddress are source of truth for tracking
+                                        orderData,
                                         customerEmail,
                                         customerPhone,
                                         orderNumber,
-                                        billingDetails: billingDetails || null, // Billing details from Stripe checkout
-                                        ...(checkoutFinalShippingAddress &&
-                                        typeof checkoutFinalShippingAddress === 'object'
+                                        billingDetails: billingDetails || null,
+                                        ...(hasCheckoutGiftee
                                             ? { finalShippingAddress: checkoutFinalShippingAddress }
                                             : {}),
                                         ...(gifterFullNameStored
                                             ? { gifterFullName: gifterFullNameStored }
                                             : {}),
                                         ...(amazonDeliveryHints ? { amazonDeliveryHints } : {}),
-                                        ...(gifteeOriginalAddressForServer &&
+                                        ...(!hasCheckoutGiftee &&
+                                        gifteeOriginalAddressForServer &&
                                         typeof gifteeOriginalAddressForServer === 'object'
                                             ? { gifteeOriginalAddress: gifteeOriginalAddressForServer }
                                             : {}),

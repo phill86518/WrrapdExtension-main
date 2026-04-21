@@ -1,5 +1,6 @@
 node_modules/
 no-upload/
+orders/.pending-final-shipping-*.json
 .env
 server-test.js
 venv/
