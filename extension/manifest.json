@@ -3,6 +3,7 @@
   "name": "Wrrapd",
   "version": "1.4.0",
   "description": "Enhance your gifting experience with Wrrapd",
+  "homepage_url": "https://wrrapd.com/",
   "permissions": [
     "scripting",
     "webNavigation",

@@ -13,8 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Wrrapd Tracking Platform",
-  description: "Admin, driver, and customer delivery tracking experience.",
+  title: "Wrrapd — Gifting & delivery tracking",
+  description:
+    "Wrrapd Chrome extension for Amazon checkout, plus live delivery tracking and team tools on Google Cloud.",
   applicationName: "W",
   icons: {
     icon: "/icons/w-mark.svg",
