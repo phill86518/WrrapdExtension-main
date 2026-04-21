@@ -14,8 +14,9 @@ type Session = {
   name: string;
 };
 
+/** Trim so Secret Manager / console pastes with trailing newline do not change keys across deploys. */
 const secret = new TextEncoder().encode(
-  process.env.APP_SESSION_SECRET || "local-dev-secret-change-in-prod",
+  (process.env.APP_SESSION_SECRET || "local-dev-secret-change-in-prod").trim(),
 );
 const dataDir = path.join(process.cwd(), ".data");
 const authFilePath = path.join(dataDir, "auth.json");
@@ -74,7 +75,7 @@ export async function getSession(): Promise<Session | null> {
   const raw = cookieStore.get(SESSION_COOKIE_NAME)?.value;
   if (!raw) return null;
   try {
-    const { payload } = await jwtVerify(raw, secret);
+    const { payload } = await jwtVerify(raw, secret, { clockTolerance: 120 });
     return payload as Session;
   } catch {
     return null;

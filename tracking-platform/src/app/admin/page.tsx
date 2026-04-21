@@ -7,7 +7,7 @@ import {
   reopenOrderAsAssigned,
   updateOrderStatus,
 } from "@/lib/data";
-import { createSessionToken, getSession, setSessionCookie } from "@/lib/auth";
+import { getSession } from "@/lib/auth";
 import { SameOriginLogoutLink } from "@/components/same-origin-logout-link";
 import { LogoutButton } from "@/components/logout-button";
 import { AdminCreateDeliverySection } from "@/components/admin-create-delivery-section";
@@ -21,22 +21,6 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
-
-async function adminLoginAction(formData: FormData) {
-  "use server";
-  const password = String(formData.get("password") || "").trim();
-  const expected = (process.env.APP_ADMIN_PASSWORD || "admin123").trim();
-  if (password !== expected) {
-    redirect("/admin?error=1");
-  }
-  const token = await createSessionToken({
-    role: "admin",
-    userId: "admin-1",
-    name: "Admin",
-  });
-  await setSessionCookie(token);
-  redirect("/admin");
-}
 
 /** Next may pass string | string[]; normalize so we never render invalid React children. */
 function pickSearchParam(v: string | string[] | undefined): string | undefined {
@@ -137,7 +121,7 @@ export default async function AdminPage({
           (default <code className="rounded bg-slate-100 px-1">admin123</code> if unset). Driver login uses{" "}
           <code className="rounded bg-slate-100 px-1">APP_DRIVER_PASSWORD</code> — the two can be identical.
         </p>
-        <form action={adminLoginAction} className="mt-6 space-y-4 rounded-lg border p-6">
+        <form action="/api/admin/login" method="post" className="mt-6 space-y-4 rounded-lg border p-6">
           <PasswordField name="password" placeholder="Admin password" autoComplete="current-password" />
           <button className="rounded bg-black px-4 py-2 text-white" type="submit">
             Sign in

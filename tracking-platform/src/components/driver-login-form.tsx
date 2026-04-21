@@ -15,6 +15,8 @@ export function DriverLoginForm() {
     const response = await fetch("/api/driver/login", {
       method: "POST",
       body: formData,
+      credentials: "include",
+      cache: "no-store",
     });
     setLoading(false);
     if (!response.ok) {
