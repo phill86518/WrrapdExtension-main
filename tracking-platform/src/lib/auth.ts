@@ -21,11 +21,15 @@ const dataDir = path.join(process.cwd(), ".data");
 const authFilePath = path.join(dataDir, "auth.json");
 const defaultDriverPassword = process.env.APP_DRIVER_PASSWORD || "driver123";
 
+/** Admin + driver JWT and browser cookie lifetime (keep in sync). */
+const SESSION_MAX_AGE_SEC = 12 * 60 * 60;
+
 export async function createSessionToken(session: Session) {
+  const exp = Math.floor(Date.now() / 1000) + SESSION_MAX_AGE_SEC;
   return await new SignJWT(session)
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
-    .setExpirationTime("12h")
+    .setExpirationTime(exp)
     .sign(secret);
 }
 
@@ -35,6 +39,8 @@ function sessionCookieOptions() {
     sameSite: "lax" as const,
     secure: process.env.NODE_ENV === "production",
     path: "/",
+    /** Without maxAge, many browsers treat this as a session cookie and drop it on tab close or under memory pressure. */
+    maxAge: SESSION_MAX_AGE_SEC,
   };
 }
 
