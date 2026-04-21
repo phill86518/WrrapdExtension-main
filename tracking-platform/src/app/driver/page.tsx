@@ -19,8 +19,7 @@ import type { DayShiftAvailability } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-const DRIVER_QUEUE_HELP =
-  "Each card shows the Wrrapd delivery day (U.S. Eastern) — Amazon +1 calendar day, 1–7 PM window. Stop numbers are per day (same driver + same Eastern date). Tap Today, a date chip, or a day in the month grid to list only stops scheduled on that Eastern calendar day.";
+const DRIVER_QUEUE_HELP = "Tap Today, a date, or the calendar to see stops for that day.";
 
 export default async function DriverPage() {
   const session = await getSession();
@@ -122,14 +121,8 @@ export default async function DriverPage() {
         <DriverInstallCard />
       </div>
       <DriverAccountPanel />
-      {/* Plain server HTML (searchable in View Source) — Next RSC often hides client strings inside streamed payloads. */}
-      <p className="mb-2 text-center text-[11px] leading-snug text-slate-500">
-        Tracking deploy:{" "}
-        <span className="font-mono text-slate-700">{process.env.K_REVISION ?? "local-dev"}</span>
-        {" · "}
-        <span data-wrrapd-driver-build="eastern-calendar-queue-2026-04-25">
-          Eastern-day queue + calendar (if this line is missing, this is not the latest Cloud Run revision)
-        </span>
+      <p className="mb-2 text-center text-[11px] text-slate-400" data-wrrapd-driver-build="queue-v2">
+        <span className="font-mono text-slate-500">{process.env.K_REVISION ?? "local"}</span>
       </p>
       <section className="mb-8 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
         <DriverConsole
