@@ -16,6 +16,17 @@ function safeInternalPath(raw: string | null): string {
 }
 
 export async function GET(request: NextRequest) {
+  /** Deploy probe on the same handler path that already returns 302 on Cloud Run. */
+  if (request.nextUrl.searchParams.get("__wrrapdBuild") === "1") {
+    return NextResponse.json(
+      {
+        marker: "wrrapd-build-via-logout-get",
+        kRevision: process.env.K_REVISION ?? null,
+        timeUtc: new Date().toISOString(),
+      },
+      { headers: { "Cache-Control": "no-store" } },
+    );
+  }
   const path = safeInternalPath(request.nextUrl.searchParams.get("redirect"));
   const origin = resolvePublicOrigin(
     (name) => request.headers.get(name),
