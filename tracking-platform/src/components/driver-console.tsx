@@ -29,7 +29,7 @@ type DriverOrder = {
 const NY = "America/New_York";
 
 /** Bumped when driver queue UI changes — if you do not see this under the title, you are not on the latest deploy. */
-export const DRIVER_QUEUE_UI_REV = "2026-04-24";
+export const DRIVER_QUEUE_UI_REV = "2026-04-25-driver-calendar";
 
 function monthTitleYm(ym: string): string {
   const d = toDate(`${ym}-01T12:00:00`, { timeZone: NY });
@@ -93,6 +93,11 @@ export function DriverConsole({
   const otherDayKeys = useMemo(
     () => [...countsByDay.keys()].filter((k) => k !== todayNyKey).sort(),
     [countsByDay, todayNyKey],
+  );
+
+  const allStopDayKeys = useMemo(
+    () => [...countsByDay.keys()].filter((k) => k.length > 0).sort(),
+    [countsByDay],
   );
 
   const headingTitle =
@@ -289,14 +294,21 @@ export function DriverConsole({
       <div>
         <h2 className="text-xl font-semibold text-slate-900">{headingTitle}</h2>
         <p className="mt-1 text-sm text-slate-600">{description}</p>
+        <p className="mt-1 text-sm font-medium text-slate-800">
+          {filteredOrders.length} stop{filteredOrders.length === 1 ? "" : "s"} for{" "}
+          <span className="text-emerald-800">{calendarDayLabelNy(selectedDayKey)}</span> (Eastern)
+        </p>
         <p className="mt-1 text-xs text-slate-400">
-          Wrrapd web driver UI · rev {DRIVER_QUEUE_UI_REV} · heading uses America/New_York calendar days; use Today and
-          the month grid below to switch days.
+          Wrrapd web driver UI · rev {DRIVER_QUEUE_UI_REV} · list is filtered by Eastern calendar date of each stop.
         </p>
       </div>
 
       <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
         <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">Select day (Eastern)</p>
+        <p className="mt-1 text-xs text-slate-600">
+          Tap <strong>Today</strong>, a <strong>date chip</strong> below, or a <strong>day in the calendar</strong> to
+          show only deliveries scheduled on that Eastern date.
+        </p>
         <div className="mt-2 flex flex-wrap gap-2">
           <button
             type="button"
@@ -331,6 +343,41 @@ export function DriverConsole({
             </button>
           ))}
         </div>
+
+        {allStopDayKeys.length > 0 ? (
+          <div className="mt-3 rounded-md border border-slate-200 bg-white p-2">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">All scheduled days</p>
+            <div className="mt-1.5 flex max-h-32 flex-wrap gap-1.5 overflow-y-auto">
+              {allStopDayKeys.map((k) => {
+                const isSel = k === selectedDayKey;
+                const isTodayChip = k === todayNyKey;
+                return (
+                  <button
+                    key={k}
+                    type="button"
+                    onClick={() => {
+                      setSelectedDayKey(k);
+                      setMonthYm(nyMonthContainingDateKey(k));
+                    }}
+                    className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                      isSel
+                        ? "bg-slate-900 text-white"
+                        : isTodayChip
+                          ? "border border-amber-400 bg-amber-50 text-amber-950 hover:bg-amber-100"
+                          : "border border-slate-300 bg-white text-slate-800 hover:bg-slate-100"
+                    }`}
+                  >
+                    {formatInTimeZone(toDate(`${k}T12:00:00`, { timeZone: NY }), NY, "EEE MMM d")}
+                    <span className={isSel ? "text-slate-200" : "text-slate-500"}>
+                      {" "}
+                      ({countsByDay.get(k) ?? 0})
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
 
         <div className="mt-4 flex items-center justify-between gap-2">
           <button
@@ -368,7 +415,10 @@ export function DriverConsole({
               <button
                 key={cellKey}
                 type="button"
-                onClick={() => setSelectedDayKey(cellKey)}
+                onClick={() => {
+                  setSelectedDayKey(cellKey);
+                  setMonthYm(nyMonthContainingDateKey(cellKey));
+                }}
                 className={`flex aspect-square flex-col items-center justify-center rounded border text-sm font-medium ${
                   isSelected
                     ? "border-slate-900 bg-slate-900 text-white"

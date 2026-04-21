@@ -7,6 +7,16 @@ export function nowInNy(): Date {
   return toDate(new Date(), { timeZone: NY });
 }
 
+function numericFromFirestoreField(v: unknown): number | null {
+  if (v == null || v === "") return null;
+  if (typeof v === "number" && !Number.isNaN(v)) return v;
+  if (typeof v === "string") {
+    const n = Number(v);
+    return Number.isNaN(n) ? null : n;
+  }
+  return null;
+}
+
 /** Normalize Firestore Timestamp, ISO string, or Date for Eastern calendar keys. */
 export function toInstantDate(value: unknown): Date {
   if (value == null) return new Date(NaN);
@@ -22,13 +32,24 @@ export function toInstantDate(value: unknown): Date {
         /* fall through */
       }
     }
-    const sec = o.seconds ?? o._seconds;
-    if (typeof sec === "number") {
-      const ns = typeof o.nanoseconds === "number" ? o.nanoseconds : 0;
+    const sec = numericFromFirestoreField(o.seconds ?? o._seconds);
+    if (sec != null) {
+      const nsRaw = o.nanoseconds ?? o._nanoseconds;
+      const ns = numericFromFirestoreField(nsRaw) ?? 0;
       return new Date(sec * 1000 + ns / 1e6);
     }
   }
   return new Date(NaN);
+}
+
+/**
+ * Stable ISO string for `scheduledFor` when passing orders from Server Components to the client.
+ * Firestore Timestamps often JSON-serialize to `{ seconds, nanoseconds }` without `toDate()`.
+ */
+export function scheduledForToIsoString(value: unknown): string {
+  const d = toInstantDate(value);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toISOString();
 }
 
 export function formatDateKeyNy(iso: string | Date | unknown): string {

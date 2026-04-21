@@ -14,13 +14,13 @@ import {
 import { DriverTopModals } from "@/components/driver-top-modals";
 import { WrrapdLogo } from "@/components/wrrapd-logo";
 import { formatInTimeZone } from "date-fns-tz";
-import { formatDateKeyNy, initialDriverDayKeyNy } from "@/lib/ny-date";
+import { formatDateKeyNy, initialDriverDayKeyNy, scheduledForToIsoString } from "@/lib/ny-date";
 import type { DayShiftAvailability } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
 const DRIVER_QUEUE_HELP =
-  "Each card shows the Wrrapd delivery day (U.S. Eastern) — Amazon +1 calendar day, 1–7 PM window. Stop numbers are per day (same driver + same Eastern date); orders on different days each start at Stop 1. Stops are ordered with a nearest-neighbor + 2-opt heuristic from the Northeast Jax hub (ZIP 32218 area). Use Today or the calendar to view only that Eastern day.";
+  "Each card shows the Wrrapd delivery day (U.S. Eastern) — Amazon +1 calendar day, 1–7 PM window. Stop numbers are per day (same driver + same Eastern date). Tap Today, a date chip, or a day in the month grid to list only stops scheduled on that Eastern calendar day.";
 
 export default async function DriverPage() {
   const session = await getSession();
@@ -138,7 +138,7 @@ export default async function DriverPage() {
               postalCode: o.postalCode,
               status: o.status,
               stopSequence: o.stopSequence,
-              scheduledFor: o.scheduledFor,
+              scheduledFor: scheduledForToIsoString(o.scheduledFor) || String(o.scheduledFor ?? ""),
             };
           })}
         />
