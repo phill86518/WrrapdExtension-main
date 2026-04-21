@@ -219,12 +219,15 @@ export function parseIngestOrderPayload(body: unknown): IngestSuccess | IngestFa
     str(sa?.postalCode) ||
     str(sa?.zip);
   /**
-   * Only explicit `scheduledFor` starts here. Do not merge `deliveryDate` yet: when
-   * `amazonDeliveryDay(s)` are present, `deliveryDate` is almost always Amazon’s “Arriving …”
-   * calendar day; using it as `scheduledFor` bypassed the +1 Wrrapd rule and made emails/portals
-   * show Amazon +0 instead of Wrrapd +1.
+   * `deliveryDate` is usually Amazon’s “Arriving …” calendar day — never use it as final `scheduledFor`
+   * when we have `amazonDeliveryDay(s)` (those drive Wrrapd +1 in America/New_York).
+   *
+   * When Amazon calendar key(s) are present, **always** derive `scheduledFor` from them. A client
+   * may still send `scheduledFor` at Amazon +0 (same calendar day as Amazon); honoring it bypassed
+   * the +1 rule and made emails, admin, and driver show the wrong Wrrapd day.
    */
-  let scheduledFor: string | undefined = str(p.scheduledFor);
+  const explicitScheduledFor = str(p.scheduledFor);
+  let scheduledFor: string | undefined = explicitScheduledFor;
   const deliveryDateStr = str(p.deliveryDate);
 
   const amazonDaySingle = str(p.amazonDeliveryDay);
@@ -239,42 +242,41 @@ export function parseIngestOrderPayload(body: unknown): IngestSuccess | IngestFa
     invalidFields.push("amazonDeliveryDay");
   }
 
-  if (!scheduledFor && (amazonDaySingle || amazonDaysArr?.length)) {
-    if (!invalidFields.includes("amazonDeliveryDay")) {
-      const keys: string[] = [];
-      if (amazonDaysArr?.length) {
-        keys.push(...[...new Set(amazonDaysArr)].sort());
-      } else if (amazonDaySingle) {
-        keys.push(amazonDaySingle);
-      }
-      if (keys.length > 1 && groupingExplicit === "separate") {
-        return {
-          ok: false,
-          missingFields: [],
-          invalidFields: ["wrrapdAmazonGrouping", "amazonDeliveryDays"],
-          message:
-            "wrrapdAmazonGrouping=separate requires one ingest per Amazon delivery date (single amazonDeliveryDay per request).",
-        };
-      }
-      const needsCustomerChoice =
-        keys.length > 1 && (groupingExplicit === undefined || groupingExplicit === "pending");
-      // Default to earliest Amazon day (+1 → fastest Wrrapd). "Together" / last-day is explicit only.
-      const pick =
-        keys.length <= 1
-          ? keys[0]!
-          : groupingExplicit === "together"
-            ? keys[keys.length - 1]!
-            : keys[0]!;
-      if (needsCustomerChoice && keys.length > 1) {
-        deliveryPreferencePending = true;
-        amazonDeliveryDatesSnapshot = [...keys];
-        deliveryPreferenceRespondBy = endOfCalendarDayAmericaNewYorkIso();
-      }
-      try {
-        scheduledFor = wrrapdScheduledInstantFromAmazonDeliveryDateKey(pick);
-      } catch {
-        invalidFields.push("amazonDeliveryDay");
-      }
+  if ((amazonDaySingle || amazonDaysArr?.length) && !invalidFields.includes("amazonDeliveryDay")) {
+    const keys: string[] = [];
+    if (amazonDaysArr?.length) {
+      keys.push(...[...new Set(amazonDaysArr)].sort());
+    } else if (amazonDaySingle) {
+      keys.push(amazonDaySingle);
+    }
+    if (keys.length > 1 && groupingExplicit === "separate") {
+      return {
+        ok: false,
+        missingFields: [],
+        invalidFields: ["wrrapdAmazonGrouping", "amazonDeliveryDays"],
+        message:
+          "wrrapdAmazonGrouping=separate requires one ingest per Amazon delivery date (single amazonDeliveryDay per request).",
+      };
+    }
+    const needsCustomerChoice =
+      keys.length > 1 && (groupingExplicit === undefined || groupingExplicit === "pending");
+    // Default to earliest Amazon day (+1 → fastest Wrrapd). "Together" / last-day is explicit only.
+    const pick =
+      keys.length <= 1
+        ? keys[0]!
+        : groupingExplicit === "together"
+          ? keys[keys.length - 1]!
+          : keys[0]!;
+    // Persist Amazon anchor day(s) on every ingest so emails can repair display vs `scheduledFor`.
+    amazonDeliveryDatesSnapshot = [...keys];
+    if (needsCustomerChoice && keys.length > 1) {
+      deliveryPreferencePending = true;
+      deliveryPreferenceRespondBy = endOfCalendarDayAmericaNewYorkIso();
+    }
+    try {
+      scheduledFor = wrrapdScheduledInstantFromAmazonDeliveryDateKey(pick);
+    } catch {
+      invalidFields.push("amazonDeliveryDay");
     }
   }
 
@@ -342,8 +344,10 @@ export function parseIngestOrderPayload(body: unknown): IngestSuccess | IngestFa
         ? {
             deliveryPreferencePending: true,
             deliveryPreferenceRespondBy,
-            amazonDeliveryDatesSnapshot,
           }
+        : {}),
+      ...(amazonDeliveryDatesSnapshot?.length
+        ? { amazonDeliveryDatesSnapshot: [...amazonDeliveryDatesSnapshot] }
         : {}),
     },
   };
@@ -390,6 +394,8 @@ export function orderIngestFieldGuide(): {
     ],
     acceptedAliases: {
       zipCode: "postalCode",
+      scheduledFor:
+        "optional; when amazonDeliveryDay(s) are present they always define the Wrrapd day (+1 ET) and this field is ignored",
       deliveryDate:
         "fallback when no scheduledFor and no amazonDeliveryDay(s); ignored when Amazon keys are present (+1 ET rule applies)",
       amazonDeliveryDay: "YYYY-MM-DD Eastern → Wrrapd scheduled +1 day 14:00 ET",

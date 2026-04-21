@@ -503,7 +503,7 @@ function parseDateCandidate(raw) {
     return null;
 }
 
-const WRRAPD_INGEST_VERSION = 'ingest-v2026-04-25-checkout-giftee-only';
+const WRRAPD_INGEST_VERSION = 'ingest-v2026-04-21-amazon-plus-one-wins';
 
 /**
  * Amazon "arriving …" strings are shopper-local (Eastern). Never use UTC midnight YYYY-MM-DD

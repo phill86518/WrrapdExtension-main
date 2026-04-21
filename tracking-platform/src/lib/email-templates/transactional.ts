@@ -1,5 +1,5 @@
 import { formatInTimeZone } from "date-fns-tz";
-import { formatDateKeyNy } from "@/lib/ny-date";
+import { formatDateKeyNy, toInstantDate } from "@/lib/ny-date";
 import { wrrapdScheduledInstantFromAmazonDeliveryDateKey } from "@/lib/scheduling";
 import type { OrderLineItem } from "@/lib/types";
 
@@ -205,8 +205,10 @@ function escapeAttr(s: string): string {
 }
 
 export function formatOrderScheduleEt(scheduledForIso: string): string {
-  const d = new Date(scheduledForIso);
-  const day = formatInTimeZone(d, NY, "EEEE, MMMM d, yyyy");
+  const d = toInstantDate(scheduledForIso);
+  const day = Number.isNaN(d.getTime())
+    ? scheduledForIso
+    : formatInTimeZone(d, NY, "EEEE, MMMM d, yyyy");
   return `${day} · 1:00–7:00 PM ET`;
 }
 
