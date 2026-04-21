@@ -1,8 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { formatDateKeyNy } from "@/lib/ny-date";
-import { formatInTimeZone } from "date-fns-tz";
+import { getISODay } from "date-fns";
+import {
+  calendarDayLabelNy,
+  formatDateKeyNy,
+  listDateKeysInNyMonth,
+  nyMonthContainingDateKey,
+  shiftNyMonthYm,
+} from "@/lib/ny-date";
+import { formatInTimeZone, toDate } from "date-fns-tz";
 
 type DriverOrder = {
   /** Firestore document id — use for API calls */
@@ -19,17 +26,73 @@ type DriverOrder = {
   scheduledFor: string;
 };
 
-export function DriverConsole({ orders }: { orders: DriverOrder[] }) {
+const NY = "America/New_York";
+
+function monthTitleYm(ym: string): string {
+  const d = toDate(`${ym}-01T12:00:00`, { timeZone: NY });
+  return formatInTimeZone(d, NY, "MMMM yyyy");
+}
+
+function buildSunFirstGrid(monthDayKeys: string[]): (string | null)[] {
+  if (!monthDayKeys.length) return [];
+  const firstKey = monthDayKeys[0]!;
+  const first = toDate(`${firstKey}T12:00:00`, { timeZone: NY });
+  const pad = getISODay(first) % 7;
+  const cells: (string | null)[] = [...Array(pad).fill(null), ...monthDayKeys];
+  while (cells.length % 7 !== 0) cells.push(null);
+  while (cells.length < 42) cells.push(null);
+  return cells.slice(0, 42);
+}
+
+export function DriverConsole({
+  orders,
+  todayNyKey,
+  description,
+}: {
+  orders: DriverOrder[];
+  /** Eastern calendar date for "today" (from server clock for stable SSR + hydration). */
+  todayNyKey: string;
+  description: string;
+}) {
+  const [selectedDayKey, setSelectedDayKey] = useState(todayNyKey);
+  const [monthYm, setMonthYm] = useState(nyMonthContainingDateKey(todayNyKey));
+
+  const countsByDay = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const o of orders) {
+      const k = formatDateKeyNy(o.scheduledFor);
+      m.set(k, (m.get(k) ?? 0) + 1);
+    }
+    return m;
+  }, [orders]);
+
+  const filteredOrders = useMemo(
+    () => orders.filter((o) => formatDateKeyNy(o.scheduledFor) === selectedDayKey),
+    [orders, selectedDayKey],
+  );
+
   const maxStopByNyDay = useMemo(() => {
     const m = new Map<string, number>();
     const routed = new Set(["scheduled", "assigned", "en_route"]);
-    for (const o of orders) {
+    for (const o of filteredOrders) {
       if (o.stopSequence == null || !o.scheduledFor || !routed.has(o.status)) continue;
       const day = formatDateKeyNy(o.scheduledFor);
       m.set(day, Math.max(m.get(day) ?? 0, o.stopSequence));
     }
     return m;
-  }, [orders]);
+  }, [filteredOrders]);
+
+  const monthDayKeys = useMemo(() => listDateKeysInNyMonth(monthYm), [monthYm]);
+  const gridCells = useMemo(() => buildSunFirstGrid(monthDayKeys), [monthDayKeys]);
+  const otherDayKeys = useMemo(
+    () => [...countsByDay.keys()].filter((k) => k !== todayNyKey).sort(),
+    [countsByDay, todayNyKey],
+  );
+
+  const headingTitle =
+    selectedDayKey === todayNyKey
+      ? "Today's deliveries (Eastern)"
+      : `Deliveries for ${calendarDayLabelNy(selectedDayKey)}`;
 
   const [busyOrder, setBusyOrder] = useState<string | null>(null);
   const [offlineQueuedCount, setOfflineQueuedCount] = useState(0);
@@ -217,12 +280,111 @@ export function DriverConsole({ orders }: { orders: DriverOrder[] }) {
 
   return (
     <div className="space-y-4">
+      <div>
+        <h2 className="text-xl font-semibold text-slate-900">{headingTitle}</h2>
+        <p className="mt-1 text-sm text-slate-600">{description}</p>
+      </div>
+
+      <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+        <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">Select day (Eastern)</p>
+        <div className="mt-2 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedDayKey(todayNyKey);
+              setMonthYm(nyMonthContainingDateKey(todayNyKey));
+            }}
+            className={`rounded-full px-3 py-1.5 text-sm font-medium ${
+              selectedDayKey === todayNyKey
+                ? "bg-slate-900 text-white"
+                : "border border-slate-300 bg-white text-slate-800 hover:bg-slate-100"
+            }`}
+          >
+            Today
+          </button>
+          {otherDayKeys.map((k) => (
+            <button
+              key={k}
+              type="button"
+              onClick={() => {
+                setSelectedDayKey(k);
+                setMonthYm(nyMonthContainingDateKey(k));
+              }}
+              className={`rounded-full px-3 py-1.5 text-sm font-medium ${
+                selectedDayKey === k
+                  ? "bg-slate-900 text-white"
+                  : "border border-slate-300 bg-white text-slate-800 hover:bg-slate-100"
+              }`}
+            >
+              {calendarDayLabelNy(k)}
+              <span className="ml-1 text-xs opacity-80">({countsByDay.get(k) ?? 0})</span>
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-4 flex items-center justify-between gap-2">
+          <button
+            type="button"
+            className="rounded border border-slate-300 bg-white px-2 py-1 text-sm text-slate-800"
+            onClick={() => setMonthYm((m) => shiftNyMonthYm(m, -1))}
+            aria-label="Previous month"
+          >
+            ←
+          </button>
+          <span className="text-sm font-semibold text-slate-900">{monthTitleYm(monthYm)}</span>
+          <button
+            type="button"
+            className="rounded border border-slate-300 bg-white px-2 py-1 text-sm text-slate-800"
+            onClick={() => setMonthYm((m) => shiftNyMonthYm(m, 1))}
+            aria-label="Next month"
+          >
+            →
+          </button>
+        </div>
+        <div className="mt-2 grid grid-cols-7 gap-1 text-center text-[11px] font-medium text-slate-500">
+          {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
+            <div key={d}>{d}</div>
+          ))}
+        </div>
+        <div className="mt-1 grid grid-cols-7 gap-1">
+          {gridCells.map((cellKey, idx) => {
+            if (!cellKey) {
+              return <div key={`e-${idx}`} className="aspect-square rounded border border-transparent" />;
+            }
+            const count = countsByDay.get(cellKey) ?? 0;
+            const isSelected = cellKey === selectedDayKey;
+            const isTodayCell = cellKey === todayNyKey;
+            return (
+              <button
+                key={cellKey}
+                type="button"
+                onClick={() => setSelectedDayKey(cellKey)}
+                className={`flex aspect-square flex-col items-center justify-center rounded border text-sm font-medium ${
+                  isSelected
+                    ? "border-slate-900 bg-slate-900 text-white"
+                    : count > 0
+                      ? "border-emerald-500 bg-emerald-50 text-emerald-950 hover:bg-emerald-100"
+                      : "border-slate-200 bg-white text-slate-700 hover:bg-slate-100"
+                } ${isTodayCell && !isSelected ? "ring-1 ring-amber-400" : ""}`}
+              >
+                <span>{Number(cellKey.slice(8, 10))}</span>
+                {count > 0 ? (
+                  <span className={`text-[10px] font-normal ${isSelected ? "text-slate-200" : "text-emerald-800"}`}>
+                    {count} stop{count === 1 ? "" : "s"}
+                  </span>
+                ) : null}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {offlineQueuedCount > 0 && (
         <div className="rounded border border-amber-500 bg-amber-50 p-3 text-sm text-amber-900">
           {offlineQueuedCount} GPS update(s) queued offline. They will auto-sync when connectivity returns.
         </div>
       )}
-      {orders.map((order) => (
+      {filteredOrders.map((order) => (
         <div key={order.id} className="rounded-lg border p-4 shadow-sm">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <div>
@@ -316,6 +478,12 @@ export function DriverConsole({ orders }: { orders: DriverOrder[] }) {
         <p className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm text-slate-600">
           No stops assigned to you yet. When admin assigns orders to your name, they will list here with Start
           delivery, GPS, and proof photo.
+        </p>
+      )}
+      {orders.length > 0 && filteredOrders.length === 0 && (
+        <p className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm text-slate-600">
+          No assigned stops for {calendarDayLabelNy(selectedDayKey)}. Use the calendar or quick day buttons to
+          switch to a day with deliveries.
         </p>
       )}
     </div>
