@@ -28,6 +28,9 @@ type DriverOrder = {
 
 const NY = "America/New_York";
 
+/** Bumped when driver queue UI changes — if you do not see this under the title, you are not on the latest deploy. */
+export const DRIVER_QUEUE_UI_REV = "2026-04-23";
+
 function monthTitleYm(ym: string): string {
   const d = toDate(`${ym}-01T12:00:00`, { timeZone: NY });
   return formatInTimeZone(d, NY, "MMMM yyyy");
@@ -286,6 +289,10 @@ export function DriverConsole({
       <div>
         <h2 className="text-xl font-semibold text-slate-900">{headingTitle}</h2>
         <p className="mt-1 text-sm text-slate-600">{description}</p>
+        <p className="mt-1 text-xs text-slate-400">
+          Wrrapd web driver UI · rev {DRIVER_QUEUE_UI_REV} · heading uses America/New_York calendar days; use Today and
+          the month grid below to switch days.
+        </p>
       </div>
 
       <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">

@@ -7,8 +7,9 @@ Single-codebase delivery tracking platform built for low volume and GCP free-tie
 - **Phase 1 (Command Center):** `/admin`
   - Login, create order, active/scheduled/past views
   - Assign driver, update status, view order details
-- **Phase 2 (Driver Companion):** `/driver`
+- **Phase 2 (Driver Companion):** `/driver` (this repo — Next.js on Cloud Run)
   - Mobile login, start delivery, GPS broadcast, proof upload
+  - Queue shows **“Today’s deliveries (Eastern)”** only for the real Eastern calendar today, with a **month day-picker** and chips for other assigned days. If your screen shows **“Pending deliveries”**, store pickers, or **“Today’s deliveries.”** without “(Eastern)” and **no calendar**, that is a **different app or an old cached WebView** — open the current **`https://…run.app/driver`** from this project’s Cloud Run deploy instead.
 - **Phase 3 (Customer Experience):** `/track/[token]`
   - Live status, ETA, map iframe, proof-of-delivery photo
 

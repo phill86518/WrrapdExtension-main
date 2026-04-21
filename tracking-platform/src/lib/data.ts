@@ -18,7 +18,7 @@ import { findDriverById, listRegisteredDrivers } from "@/lib/driver-registry";
 import { uploadProofDataUrl } from "@/lib/proof-storage";
 import type { CollectionReference } from "firebase-admin/firestore";
 const nowIso = () => new Date().toISOString();
-const TRACKING_MERGE_VERSION = "tracking-merge-v2026-04-22-giftee-preserve";
+const TRACKING_MERGE_VERSION = "tracking-merge-v2026-04-23-pay-giftee-lock";
 
 const ORDERS_FILE_VERSION = 4;
 
@@ -295,16 +295,25 @@ export async function createOrder(
     /** Staging re-ingest must not clobber pay/checkout ingest (giftee, Wrrapd +1 schedule, Amazon snapshot). */
     const preserveCheckoutAgainstStaging =
       incomingStagingSimulate && !existingFromStagingSimulate;
-    /** Pay-server ingest notes include `Amazon order …` and `[ingest-v…]` — never replace checkout giftee with staging. */
+    /** Pay-server ingest notes include `Amazon order …` and `[ingest-v…]`. */
     const existingLooksLikePayIngest =
       /\bAmazon order\b/i.test(existingOpen.sourceNote || "") ||
       /\bingest-v\d{4}-\d{2}-\d{2}/i.test(existingOpen.sourceNote || "");
-    const preserveGifteeFields =
+    const incomingLooksLikePayIngest =
+      /\bAmazon order\b/i.test(input.sourceNote || "") ||
+      /\bingest-v\d{4}-\d{2}-\d{2}/i.test(input.sourceNote || "");
+    const hasGifteeRow =
       Boolean(
         (existingOpen.recipientName || "").trim() && (existingOpen.addressLine1 || "").trim(),
-      ) &&
-      (incomingStagingSimulate &&
-        (existingLooksLikePayIngest || !existingFromStagingSimulate));
+      );
+    /**
+     * Lock checkout giftee on pay-backed orders: staging re-ingest must not overwrite, and neither
+     * should any other non-pay ingest (wrong Amazon row, etc.). Pay-over-pay merges still replace.
+     */
+    const preserveGifteeFields =
+      hasGifteeRow &&
+      ((incomingStagingSimulate && existingLooksLikePayIngest) ||
+        (existingLooksLikePayIngest && !incomingLooksLikePayIngest));
     const merged: Order = {
       ...existingOpen,
       scheduledFor: preserveCheckoutAgainstStaging
