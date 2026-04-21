@@ -503,7 +503,7 @@ function parseDateCandidate(raw) {
     return null;
 }
 
-const WRRAPD_INGEST_VERSION = 'ingest-v2026-04-21-amazon-plus-one-wins';
+const WRRAPD_INGEST_VERSION = 'ingest-v2026-04-22-prefer-checkout-amazon-hints';
 
 /**
  * Amazon "arriving …" strings are shopper-local (Eastern). Never use UTC midnight YYYY-MM-DD
@@ -1317,7 +1317,13 @@ app.post('/process-payment', async (req, res) => {
                         .filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d))
                 )].sort()
                 : [];
-            const effectiveAmazonDays = wrappedAmazonDays.length ? wrappedAmazonDays : hintedAmazonDays;
+            /**
+             * Prefer extension/checkout `amazonDeliveryHints` (headline + selected radio) over
+             * per-line `amazonDateKeyFromItem` scrapes. Amazon line payloads often carry UTC-midnight
+             * instants that format one calendar day *earlier* in Eastern than the UI "Arriving …" date,
+             * which made Wrrapd +1 land on the wrong day (e.g. Apr 22 vs headline Apr 23 → expect Apr 24).
+             */
+            const effectiveAmazonDays = hintedAmazonDays.length ? hintedAmazonDays : wrappedAmazonDays;
             const needsCustomerChoice =
                 wrappedOnly.length > 1 && effectiveAmazonDays.length > 1;
             const fallbackAmazonDay = inferAmazonDateKeyFromItems(wrappedOnly.length ? wrappedOnly : normalizedOrderData);
