@@ -13,7 +13,7 @@ import {
 } from "@/lib/scheduling";
 import { getDriverProfile } from "@/lib/driver-profiles";
 import { assignStopSequences } from "@/lib/route-optimization";
-import { formatDateKeyNy } from "@/lib/ny-date";
+import { formatDateKeyNy, toInstantDate } from "@/lib/ny-date";
 import { findDriverById, listRegisteredDrivers } from "@/lib/driver-registry";
 import { uploadProofDataUrl } from "@/lib/proof-storage";
 import type { CollectionReference } from "firebase-admin/firestore";
@@ -570,8 +570,8 @@ export async function listDriverPastOrders(driverId: string, limit = 80): Promis
       (o.status === "delivered" || o.status === "cancelled"),
   );
   mine.sort((a, b) => {
-    const ta = new Date(a.updatedAt || a.scheduledFor).getTime();
-    const tb = new Date(b.updatedAt || b.scheduledFor).getTime();
+    const ta = toInstantDate(a.updatedAt || a.scheduledFor).getTime();
+    const tb = toInstantDate(b.updatedAt || b.scheduledFor).getTime();
     if (tb !== ta) return tb - ta;
     return b.id.localeCompare(a.id);
   });

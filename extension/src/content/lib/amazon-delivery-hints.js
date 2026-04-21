@@ -79,12 +79,12 @@ function parseMonthDayYear(text, ref = new Date()) {
     if (skew > 90 * 86400000) year += 1;
     else if (skew < -300 * 86400000) year -= 1;
   }
-  const d = new Date(year, month, day);
-  if (d.getMonth() !== month || d.getDate() !== day) return null;
-  const y = d.getFullYear();
-  const mo = String(d.getMonth() + 1).padStart(2, '0');
-  const da = String(d.getDate()).padStart(2, '0');
-  return `${y}-${mo}-${da}`;
+  const test = new Date(year, month, day);
+  if (test.getMonth() !== month || test.getDate() !== day) return null;
+  /** Do not round-trip through Date getters for the string (browser TZ vs intended calendar). */
+  const mo = String(month + 1).padStart(2, '0');
+  const da = String(day).padStart(2, '0');
+  return `${year}-${mo}-${da}`;
 }
 
 function parseArrivingOrToday(text) {
@@ -98,6 +98,15 @@ function parseArrivingOrToday(text) {
   return null;
 }
 
+/** Epoch ms from Amazon is often UTC-midnight anchored; formatting that instant in NY can be the *previous* Eastern calendar day. */
+function ymdFromEpochMsNy(ms) {
+  const d = new Date(typeof ms === 'string' ? parseInt(ms, 10) : ms);
+  if (Number.isNaN(d.getTime())) return null;
+  const u = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 12, 0, 0);
+  const ymd = new Date(u).toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+  return /^\d{4}-\d{2}-\d{2}$/.test(ymd) ? ymd : null;
+}
+
 function extractFromPostData(itemContainer) {
   const keys = new Set();
   for (const el of itemContainer.querySelectorAll('[data-postdata]')) {
@@ -109,8 +118,8 @@ function extractFromPostData(itemContainer) {
       if (pm != null) {
         const ms = typeof pm === 'string' ? parseInt(pm, 10, 10) : Number(pm);
         if (Number.isFinite(ms)) {
-          const ymd = new Date(ms).toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
-          if (/^\d{4}-\d{2}-\d{2}$/.test(ymd)) keys.add(ymd);
+          const ymd = ymdFromEpochMsNy(ms);
+          if (ymd) keys.add(ymd);
         }
       }
     } catch (_) {
@@ -129,7 +138,14 @@ function extractDateKeysFromContainer(itemContainer) {
   const keys = new Set();
 
   for (const el of itemContainer.querySelectorAll(
-    'h2.address-promise-text .break-word, h2.address-promise-text span.break-word, .address-promise-text .break-word',
+    [
+      'h2.address-promise-text .break-word',
+      'h2.address-promise-text span.break-word',
+      '.address-promise-text .break-word',
+      '[data-testid*="delivery-promise"] .break-word',
+      '[data-testid*="DeliveryPromise"] .break-word',
+      '.checkout-experience-delivery-promise .break-word',
+    ].join(', '),
   )) {
     const k = parseArrivingOrToday(el.textContent || '');
     if (k) keys.add(k);

@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { formatInTimeZone } from "date-fns-tz";
+import { toInstantDate } from "@/lib/ny-date";
 import { getOrderByTrackingToken } from "@/lib/data";
 import { buildDemoSeedOrders, DEMO_CUSTOMER_TRACKING_TOKEN } from "@/lib/demo-orders";
 import type { Order } from "@/lib/types";
@@ -38,7 +39,7 @@ export default async function TrackingPage({
   }
   if (!order) notFound();
 
-  const wrrapdDayLabel = formatInTimeZone(new Date(order.scheduledFor), NY, "EEEE, MMMM d, yyyy");
+  const wrrapdDayLabel = formatInTimeZone(toInstantDate(order.scheduledFor), NY, "EEEE, MMMM d, yyyy");
   const initial = toSnapshot(order);
 
   return (

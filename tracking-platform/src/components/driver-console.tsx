@@ -8,6 +8,7 @@ import {
   listDateKeysInNyMonth,
   nyMonthContainingDateKey,
   shiftNyMonthYm,
+  toInstantDate,
 } from "@/lib/ny-date";
 import { formatInTimeZone, toDate } from "date-fns-tz";
 
@@ -458,7 +459,11 @@ export function DriverConsole({
                 Stop {order.stopSequence}
                 {(() => {
                   const dayKey = formatDateKeyNy(order.scheduledFor);
-                  const dayShort = formatInTimeZone(new Date(order.scheduledFor), "America/New_York", "MMM d");
+                  const dayShort = formatInTimeZone(
+                    toInstantDate(order.scheduledFor),
+                    "America/New_York",
+                    "MMM d",
+                  );
                   const total = maxStopByNyDay.get(dayKey);
                   const ofPart = total != null && total > 1 ? ` of ${total}` : "";
                   return ` · ${dayShort}${ofPart}`;
@@ -468,7 +473,7 @@ export function DriverConsole({
           </div>
           <p className="text-sm font-medium text-slate-800">
             Wrrapd day (ET):{" "}
-            {formatInTimeZone(new Date(order.scheduledFor), "America/New_York", "EEEE, MMM d, yyyy")}
+            {formatInTimeZone(toInstantDate(order.scheduledFor), "America/New_York", "EEEE, MMM d, yyyy")}
             <span className="font-normal text-slate-600"> · 1:00–7:00 PM route window</span>
           </p>
           <p className="text-sm">

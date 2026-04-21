@@ -21,7 +21,14 @@ function numericFromFirestoreField(v: unknown): number | null {
 export function toInstantDate(value: unknown): Date {
   if (value == null) return new Date(NaN);
   if (value instanceof Date) return value;
-  if (typeof value === "string") return new Date(value);
+  if (typeof value === "string") {
+    const s = value.trim();
+    /** `new Date("YYYY-MM-DD")` is UTC midnight → previous calendar evening in Eastern. */
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+      return toDate(`${s}T12:00:00`, { timeZone: NY });
+    }
+    return new Date(s);
+  }
   if (typeof value === "object") {
     const o = value as Record<string, unknown>;
     if (typeof o.toDate === "function") {
@@ -76,7 +83,7 @@ export function isPastCalendarDayNy(dateKey: string, now: Date = new Date()): bo
 
 /** True if instant is before start of today in NY (cannot schedule in the past). */
 export function isScheduledInstantInPastNy(iso: string, now: Date = new Date()): boolean {
-  const t = new Date(iso).getTime();
+  const t = toInstantDate(iso).getTime();
   const todayKey = formatDateKeyNy(now);
   const startToday = startOfCalendarDayNyMs(todayKey);
   return t < startToday;

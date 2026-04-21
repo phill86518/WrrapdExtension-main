@@ -15,7 +15,7 @@ import { PasswordField } from "@/components/password-field";
 import { SelectAllOrdersButton } from "@/components/select-all-orders-button";
 import { WrrapdLogo } from "@/components/wrrapd-logo";
 import { maxStopSequenceByRouteKey } from "@/lib/route-optimization";
-import { formatDateKeyNy } from "@/lib/ny-date";
+import { formatDateKeyNy, toInstantDate } from "@/lib/ny-date";
 import { formatInTimeZone } from "date-fns-tz";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -296,7 +296,7 @@ export default async function AdminPage({
                                 const suffix =
                                   total != null && total > 1 ? ` of ${total}` : "";
                                 const dayEt = formatInTimeZone(
-                                  new Date(order.scheduledFor),
+                                  toInstantDate(order.scheduledFor),
                                   "America/New_York",
                                   "MMM d",
                                 );
@@ -317,7 +317,7 @@ export default async function AdminPage({
                   <p className="mt-1 text-xs font-medium text-[#3d5c47]">
                     Scheduled:{" "}
                     {formatInTimeZone(
-                      new Date(order.scheduledFor),
+                      toInstantDate(order.scheduledFor),
                       "America/New_York",
                       "M/d/yyyy, h:mm:ss a zzz",
                     )}
