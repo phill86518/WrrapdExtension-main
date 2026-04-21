@@ -503,7 +503,7 @@ function parseDateCandidate(raw) {
     return null;
 }
 
-const WRRAPD_INGEST_VERSION = 'ingest-v2026-04-21-checkout-giftee-persist';
+const WRRAPD_INGEST_VERSION = 'ingest-v2026-04-25-checkout-giftee-only';
 
 /**
  * Amazon "arriving …" strings are shopper-local (Eastern). Never use UTC midnight YYYY-MM-DD
@@ -1239,18 +1239,32 @@ app.post('/process-payment', async (req, res) => {
         if (normalizedOrderData.length > 0) {
             const wrappedOnly = normalizedOrderData.filter((it) => it && it.checkbox_wrrapd === true);
             const firstItem = wrappedOnly[0] || normalizedOrderData[0] || {};
-            const finalAddr = pickTrackingRecipientAddressForIngest({
-                wrappedOnly,
-                finalShippingAddressFromCheckout,
-                gifteeOriginalAddress,
-            });
-            trackingGifteeForEmail = finalAddr;
-            const streetParts = splitStreet(finalAddr.street || finalAddr.line1 || '');
             const customerName =
                 gifterFullName ||
                 (billingDetails && billingDetails.name) ||
                 (customerEmail && customerEmail.split('@')[0]) ||
                 'Customer';
+            /**
+             * Firestore/admin/driver must match what the shopper typed on pay.wrrapd.com checkout.
+             * When we have checkout POST / postMessage / disk final shipping, use ONLY that — do not
+             * fall through to Amazon line items (Roger / default address) for ingest.
+             */
+            let finalAddr = null;
+            if (finalShippingAddressFromCheckout) {
+                const n = normalizeAddressShape(finalShippingAddressFromCheckout);
+                if ((n.street || n.line1) && !isLikelyWrrapdWarehouseAddressObj(n)) {
+                    finalAddr = n;
+                }
+            }
+            if (!finalAddr) {
+                finalAddr = pickTrackingRecipientAddressForIngest({
+                    wrappedOnly,
+                    finalShippingAddressFromCheckout: null,
+                    gifteeOriginalAddress,
+                });
+            }
+            trackingGifteeForEmail = finalAddr;
+            const streetParts = splitStreet(finalAddr.street || finalAddr.line1 || '');
             const recipientName = (finalAddr.name && String(finalAddr.name).trim()) || customerName;
             const lineItems = wrappedOnly.map((it) => {
                 const ai =
@@ -1317,6 +1331,15 @@ app.post('/process-payment', async (req, res) => {
                 city: finalAddr.city || firstItem.city || 'N/A',
                 state: finalAddr.state || firstItem.state || 'N/A',
                 postalCode: finalAddr.postalCode || finalAddr.postal_code || firstItem.postalCode || '00000',
+                /** Tracking ingest prefers this over shippingAddress / Amazon aliases (order-ingest). */
+                gifteeAddress: {
+                    name: recipientName,
+                    line1: streetParts.line1 || finalAddr.line1 || 'N/A',
+                    line2: streetParts.line2 || finalAddr.line2 || '',
+                    city: finalAddr.city || firstItem.city || 'N/A',
+                    state: finalAddr.state || firstItem.state || 'N/A',
+                    postalCode: finalAddr.postalCode || finalAddr.postal_code || firstItem.postalCode || '00000',
+                },
                 externalOrderId: canonicalTrackingExternalOrderId(orderNumber),
                 sourceNote: needsCustomerChoice
                     ? `Amazon order ${orderNumber}; ${wrappedOnly.length} Wrrapd item(s); Amazon dates ${effectiveAmazonDays.join(', ')}; Wrrapd +1 after earliest (fastest). [${WRRAPD_INGEST_VERSION}]`

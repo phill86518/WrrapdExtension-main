@@ -40,6 +40,16 @@ export type IngestOrderPayload = {
     postalCode?: unknown;
     zip?: unknown;
   };
+  /** Wrrapd checkout: wins over recipientName + shippingAddress for giftee row (admin/driver/emails). */
+  gifteeAddress?: {
+    name?: unknown;
+    line1?: unknown;
+    line2?: unknown;
+    city?: unknown;
+    state?: unknown;
+    postalCode?: unknown;
+    zip?: unknown;
+  };
   buyer?: {
     name?: unknown;
     phone?: unknown;
@@ -169,11 +179,18 @@ export function parseIngestOrderPayload(body: unknown): IngestSuccess | IngestFa
   if (p.shippingAddress !== undefined && (typeof p.shippingAddress !== "object" || p.shippingAddress === null)) {
     invalidFields.push("shippingAddress");
   }
+  if (p.gifteeAddress !== undefined && (typeof p.gifteeAddress !== "object" || p.gifteeAddress === null)) {
+    invalidFields.push("gifteeAddress");
+  }
   if (p.buyer !== undefined && (typeof p.buyer !== "object" || p.buyer === null)) {
     invalidFields.push("buyer");
   }
 
   const sa = p.shippingAddress && typeof p.shippingAddress === "object" ? p.shippingAddress : undefined;
+  const ga =
+    p.gifteeAddress && typeof p.gifteeAddress === "object" && !Array.isArray(p.gifteeAddress)
+      ? p.gifteeAddress
+      : undefined;
 
   const customerName =
     str(p.customerName) ||
@@ -182,6 +199,7 @@ export function parseIngestOrderPayload(body: unknown): IngestSuccess | IngestFa
     str(p.customerPhone) ||
     str(p.buyer && typeof p.buyer === "object" ? p.buyer.phone : undefined);
   const recipientName =
+    str(ga?.name) ||
     str(p.recipientName) ||
     str(sa?.name) ||
     customerName;
@@ -189,11 +207,13 @@ export function parseIngestOrderPayload(body: unknown): IngestSuccess | IngestFa
     str(p.customerEmail) ||
     str(p.buyer && typeof p.buyer === "object" ? (p.buyer as { email?: unknown }).email : undefined);
   const customerGreetingName = str((p as { greetingFirstName?: unknown }).greetingFirstName);
-  const addressLine1 = str(p.addressLine1) || str(sa?.line1);
-  const addressLine2 = str(p.addressLine2) || str(sa?.line2);
-  const city = str(p.city) || str(sa?.city);
-  const state = str(p.state) || str(sa?.state);
+  const addressLine1 = str(ga?.line1) || str(p.addressLine1) || str(sa?.line1);
+  const addressLine2 = str(ga?.line2) || str(p.addressLine2) || str(sa?.line2);
+  const city = str(ga?.city) || str(p.city) || str(sa?.city);
+  const state = str(ga?.state) || str(p.state) || str(sa?.state);
   const postalCode =
+    str(ga?.postalCode) ||
+    str(ga?.zip) ||
     str(p.postalCode) ||
     str(p.zipCode) ||
     str(sa?.postalCode) ||
@@ -381,6 +401,7 @@ export function orderIngestFieldGuide(): {
       orderNumber: "externalOrderId (+ sourceNote)",
       "shippingAddress.line1": "addressLine1",
       "shippingAddress.name": "recipientName (fallback)",
+      "gifteeAddress.*": "preferred giftee from Wrrapd checkout (overrides shippingAddress + top-level name/address)",
       "buyer.name": "customerName",
       "buyer.phone": "customerPhone",
     },
