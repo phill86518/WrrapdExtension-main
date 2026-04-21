@@ -47,15 +47,18 @@ function buildSunFirstGrid(monthDayKeys: string[]): (string | null)[] {
 export function DriverConsole({
   orders,
   todayNyKey,
+  initialSelectedDayKey,
   description,
 }: {
   orders: DriverOrder[];
   /** Eastern calendar date for "today" (from server clock for stable SSR + hydration). */
   todayNyKey: string;
+  /** First day shown: today if there are stops today, else earliest Eastern day with assigned stops. */
+  initialSelectedDayKey: string;
   description: string;
 }) {
-  const [selectedDayKey, setSelectedDayKey] = useState(todayNyKey);
-  const [monthYm, setMonthYm] = useState(nyMonthContainingDateKey(todayNyKey));
+  const [selectedDayKey, setSelectedDayKey] = useState(initialSelectedDayKey);
+  const [monthYm, setMonthYm] = useState(nyMonthContainingDateKey(initialSelectedDayKey));
 
   const countsByDay = useMemo(() => {
     const m = new Map<string, number>();

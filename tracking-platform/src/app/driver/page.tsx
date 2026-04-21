@@ -14,7 +14,7 @@ import {
 import { DriverTopModals } from "@/components/driver-top-modals";
 import { WrrapdLogo } from "@/components/wrrapd-logo";
 import { formatInTimeZone } from "date-fns-tz";
-import { formatDateKeyNy } from "@/lib/ny-date";
+import { formatDateKeyNy, initialDriverDayKeyNy } from "@/lib/ny-date";
 import type { DayShiftAvailability } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -37,6 +37,7 @@ export default async function DriverPage() {
 
   const orders = await listDriverOrders(session.userId);
   const todayNyKey = formatDateKeyNy(new Date());
+  const initialDriverDayKey = initialDriverDayKeyNy(todayNyKey, orders);
   const pastOrdersRaw = await listDriverPastOrders(session.userId);
   const profile = await getDriverProfile(session.userId);
   const week = upcomingWeekFromToday();
@@ -124,6 +125,7 @@ export default async function DriverPage() {
       <section className="mb-8 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
         <DriverConsole
           todayNyKey={todayNyKey}
+          initialSelectedDayKey={initialDriverDayKey}
           description={DRIVER_QUEUE_HELP}
           orders={orders.map((o) => {
             return {

@@ -18,7 +18,7 @@ import { findDriverById, listRegisteredDrivers } from "@/lib/driver-registry";
 import { uploadProofDataUrl } from "@/lib/proof-storage";
 import type { CollectionReference } from "firebase-admin/firestore";
 const nowIso = () => new Date().toISOString();
-const TRACKING_MERGE_VERSION = "tracking-merge-v2026-04-20-e1";
+const TRACKING_MERGE_VERSION = "tracking-merge-v2026-04-22-giftee-preserve";
 
 const ORDERS_FILE_VERSION = 4;
 
@@ -295,11 +295,16 @@ export async function createOrder(
     /** Staging re-ingest must not clobber pay/checkout ingest (giftee, Wrrapd +1 schedule, Amazon snapshot). */
     const preserveCheckoutAgainstStaging =
       incomingStagingSimulate && !existingFromStagingSimulate;
+    /** Pay-server ingest notes include `Amazon order …` and `[ingest-v…]` — never replace checkout giftee with staging. */
+    const existingLooksLikePayIngest =
+      /\bAmazon order\b/i.test(existingOpen.sourceNote || "") ||
+      /\bingest-v\d{4}-\d{2}-\d{2}/i.test(existingOpen.sourceNote || "");
     const preserveGifteeFields =
-      preserveCheckoutAgainstStaging &&
       Boolean(
         (existingOpen.recipientName || "").trim() && (existingOpen.addressLine1 || "").trim(),
-      );
+      ) &&
+      (incomingStagingSimulate &&
+        (existingLooksLikePayIngest || !existingFromStagingSimulate));
     const merged: Order = {
       ...existingOpen,
       scheduledFor: preserveCheckoutAgainstStaging

@@ -7,13 +7,39 @@ export function nowInNy(): Date {
   return toDate(new Date(), { timeZone: NY });
 }
 
-export function formatDateKeyNy(iso: string | Date): string {
-  const d = typeof iso === "string" ? new Date(iso) : iso;
+/** Normalize Firestore Timestamp, ISO string, or Date for Eastern calendar keys. */
+export function toInstantDate(value: unknown): Date {
+  if (value == null) return new Date(NaN);
+  if (value instanceof Date) return value;
+  if (typeof value === "string") return new Date(value);
+  if (typeof value === "object") {
+    const o = value as Record<string, unknown>;
+    if (typeof o.toDate === "function") {
+      try {
+        const d = (o.toDate as () => Date)();
+        if (d instanceof Date && !Number.isNaN(d.getTime())) return d;
+      } catch {
+        /* fall through */
+      }
+    }
+    const sec = o.seconds ?? o._seconds;
+    if (typeof sec === "number") {
+      const ns = typeof o.nanoseconds === "number" ? o.nanoseconds : 0;
+      return new Date(sec * 1000 + ns / 1e6);
+    }
+  }
+  return new Date(NaN);
+}
+
+export function formatDateKeyNy(iso: string | Date | unknown): string {
+  const d = toInstantDate(iso);
+  if (Number.isNaN(d.getTime())) return "";
   return formatInTimeZone(d, NY, "yyyy-MM-dd");
 }
 
-export function hourNy(iso: string | Date): number {
-  const d = typeof iso === "string" ? new Date(iso) : iso;
+export function hourNy(iso: string | Date | unknown): number {
+  const d = toInstantDate(iso);
+  if (Number.isNaN(d.getTime())) return 0;
   return Number.parseInt(formatInTimeZone(d, NY, "H"), 10);
 }
 
@@ -37,7 +63,21 @@ export function isScheduledInstantInPastNy(iso: string, now: Date = new Date()):
 
 /** Human label for a calendar day in Eastern (e.g. Wed Apr 23, 2026). */
 export function calendarDayLabelNy(dateKey: string): string {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) return dateKey;
   return formatInTimeZone(toDate(`${dateKey}T12:00:00`, { timeZone: NY }), NY, "EEE MMM d, yyyy");
+}
+
+/** First Eastern day to show in driver queue: today if there are stops today, else earliest assigned day. */
+export function initialDriverDayKeyNy(
+  todayNyKey: string,
+  orders: { scheduledFor: string | unknown }[],
+): string {
+  const keys = [
+    ...new Set(orders.map((o) => formatDateKeyNy(o.scheduledFor)).filter((k) => k.length > 0)),
+  ].sort();
+  if (keys.length === 0) return todayNyKey;
+  if (keys.includes(todayNyKey)) return todayNyKey;
+  return keys[0]!;
 }
 
 /** All `yyyy-MM-dd` keys for days in that Eastern calendar month (`yyyy-MM`). */
