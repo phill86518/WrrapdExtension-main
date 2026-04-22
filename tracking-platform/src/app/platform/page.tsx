@@ -10,10 +10,10 @@ export default function PlatformHubPage() {
     <div className="min-h-screen bg-slate-950 text-slate-100">
       <main className="mx-auto max-w-5xl px-6 py-14">
         <Link
-          href="/"
+          href="/admin"
           className="text-sm text-slate-400 underline-offset-4 hover:text-slate-200 hover:underline"
         >
-          ← wrrapd.com
+          ← Command center
         </Link>
         <WrrapdLogo className="mt-6 h-12 w-auto max-w-[200px] brightness-0 invert" />
         <h1 className="mt-4 text-4xl font-semibold">Delivery command platform</h1>
