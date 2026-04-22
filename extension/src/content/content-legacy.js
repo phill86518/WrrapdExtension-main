@@ -36,8 +36,54 @@ import { isZipCodeAllowed } from './lib/zip-codes.js';
     // Declared at the very top to avoid initialization errors
     let isSelectingAddresses = false;
     let paymentSectionRetryCount = 0;
+    /** Document-level listener installed after Pay Wrrapd succeeds (same path as former green button). */
+    let wrrapdPlaceOrderIngestListenerAttached = false;
+    /** Dedupe: fire ingest once per `wrrapd-order-number` per page life. */
+    let wrrapdPlaceOrderIngestFiredForOrder = '';
 
     const WRRAPD_MANUAL_ADDRESS_TAPS_KEY = 'wrrapd-require-manual-address-taps';
+
+    function wrrapdElementIsOrInsidePlaceYourOrderControl(node) {
+        let el = node;
+        for (let depth = 0; depth < 14 && el; depth += 1) {
+            const tag = (el.tagName || '').toUpperCase();
+            if (tag === 'BUTTON' || tag === 'INPUT' || tag === 'SPAN' || tag === 'A') {
+                const text = (
+                    el.textContent ||
+                    el.value ||
+                    el.getAttribute('aria-label') ||
+                    ''
+                ).toLowerCase();
+                if (text.includes('place your order') || text.includes('place order')) {
+                    return true;
+                }
+            }
+            el = el.parentElement;
+        }
+        return false;
+    }
+
+    /**
+     * Retired green "Send cart to Wrrapd tracking only" button: same `runStagingTrackingIngestSimulatePlaceOrder`
+     * now runs on the shopper's first real press of Amazon's Place your order (capture `pointerdown`).
+     */
+    function wrrapdAttachPostPayPlaceOrderTrackingIngestOnce() {
+        if (wrrapdPlaceOrderIngestListenerAttached) return;
+        if (localStorage.getItem('wrrapd-payment-status') !== 'success') return;
+        wrrapdPlaceOrderIngestListenerAttached = true;
+        document.addEventListener(
+            'pointerdown',
+            function wrrapdPostPayPlaceOrderPointerDown(ev) {
+                if (localStorage.getItem('wrrapd-payment-status') !== 'success') return;
+                if (!wrrapdElementIsOrInsidePlaceYourOrderControl(ev.target)) return;
+                const orderNumber = localStorage.getItem('wrrapd-order-number') || 'unknown';
+                if (wrrapdPlaceOrderIngestFiredForOrder === orderNumber) return;
+                wrrapdPlaceOrderIngestFiredForOrder = orderNumber;
+                void runStagingTrackingIngestSimulatePlaceOrder();
+            },
+            true,
+        );
+    }
 
     /**
      * Chewbacca "Make updates to your items" / per-line ship step.
@@ -10411,7 +10457,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                 state: finalAddr.state || 'N/A',
                 postalCode: finalAddr.postalCode || finalAddr.postal_code || '00000',
                 externalOrderId: `${orderNumber}-${String(i + 1).padStart(2, '0')}`,
-                sourceNote: `Staging simulate Place order — ${orderNumber} item ${i + 1}; Amazon delivery hints from checkout`,
+                sourceNote: `Amazon Place your order — ${orderNumber} item ${i + 1}; tracking ingest from checkout`,
             };
             if (hints && Array.isArray(hints.amazonDeliveryDays) && hints.amazonDeliveryDays.length > 0) {
                 payload.amazonDeliveryDays = hints.amazonDeliveryDays;
@@ -10631,9 +10677,8 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                     </div>
                     <hr class="a-spacing-mini a-divider-normal">
                     <div id="wrrapd-payment-info" class="a-row a-spacing-small a-spacing-top-small">
-                        <div style="color: green; font-weight: bold; font-size: 16px;">Payment successful. Please place order with Amazon now.</div>
+                        <div style="color: green; font-weight: bold; font-size: 16px;">Payment successful. Use Amazon's <strong>Place your order</strong> below to finish checkout. Wrrapd tracking syncs automatically when you place the order.</div>
                     </div>
-                    <button type="button" id="wrrapd-staging-place-order-btn" class="wrrapd-staging-tracking-only-btn" style="box-sizing:border-box;background:#0d3d2e;color:#e8fff4;font-weight:700;margin-top:10px;width:100%;height:40px;border-radius:8px;border:2px solid #1a9966;cursor:pointer;">Send cart to Wrrapd tracking only — does not order on Amazon</button>
                 </div>
             `;
         } else {
@@ -10652,7 +10697,6 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                     <div id="wrrapd-payment-info" class="a-row a-spacing-small a-spacing-top-small">
                     </div>
                     <button id="pay-wrrapd-btn" class="a-button-primary" style="background-color: #f0c14b; color: black; font-weight: bold; margin-top: 10px; width: 100%; height: 40px; border-radius: 8px;">Pay Wrrapd</button>
-                    <button type="button" id="wrrapd-staging-place-order-btn" disabled aria-disabled="true" class="wrrapd-staging-tracking-only-btn" style="box-sizing:border-box;background:#3d3d3d;color:#aaa;font-weight:700;margin-top:8px;width:100%;height:40px;border-radius:8px;border:2px solid #666;cursor:not-allowed;opacity:0.85;">Send cart to Wrrapd tracking only — pay Wrrapd first</button>
                 </div>
             `;
         }
@@ -10689,6 +10733,10 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
         removeLoadingScreen();
         localStorage.removeItem('wrrapd-keep-loading-until-summary');
         console.log("[createWrrapdSummary] Payment summary created successfully - loading screen removed.");
+
+        if (localStorage.getItem('wrrapd-payment-status') === 'success') {
+            wrrapdAttachPostPayPlaceOrderTrackingIngestOnce();
+        }
 
         if (paymentStatus !== 'success') {
             // Buttons are already disabled by disablePlaceOrderButtons() in paymentSection()
@@ -10976,7 +11024,8 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                                     paymentInfo.style.color = 'green';
                                     paymentInfo.style.fontWeight = 'bold';
                                     paymentInfo.style.fontSize = '16px';
-                                    paymentInfo.textContent = 'Payment successful. Please place order with Amazon now.';
+                                    paymentInfo.innerHTML =
+                                        'Payment successful. Use Amazon\'s <strong>Place your order</strong> below to finish checkout. Wrrapd tracking syncs automatically when you place the order.';
                                     paymentInfoContainer.appendChild(paymentInfo);
                                 }
                             }
@@ -10987,20 +11036,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                                 payButton.remove();
                             }
 
-                            const stagingPyo = document.getElementById('wrrapd-staging-place-order-btn');
-                            if (stagingPyo) {
-                                stagingPyo.disabled = false;
-                                stagingPyo.removeAttribute('aria-disabled');
-                                stagingPyo.style.boxSizing = 'border-box';
-                                stagingPyo.style.cursor = 'pointer';
-                                stagingPyo.style.opacity = '1';
-                                stagingPyo.style.background = '#0d3d2e';
-                                stagingPyo.style.color = '#e8fff4';
-                                stagingPyo.style.fontWeight = '700';
-                                stagingPyo.style.border = '2px solid #1a9966';
-                                stagingPyo.textContent =
-                                    'Send cart to Wrrapd tracking only — does not order on Amazon';
-                            }
+                            wrrapdAttachPostPayPlaceOrderTrackingIngestOnce();
 
                             // Store payment status in localStorage
                             localStorage.setItem('wrrapd-payment-status', 'success');
@@ -11227,21 +11263,6 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                     alert('Failed to initiate the payment. Please try again.');
                 }
             });
-        }
-
-        const stagingPyoBtn = document.getElementById('wrrapd-staging-place-order-btn');
-        if (stagingPyoBtn && stagingPyoBtn.dataset.wrrapdStagingListener !== '1') {
-            stagingPyoBtn.dataset.wrrapdStagingListener = '1';
-            stagingPyoBtn.addEventListener(
-                'click',
-                function (ev) {
-                    ev.preventDefault();
-                    ev.stopPropagation();
-                    ev.stopImmediatePropagation();
-                    void runStagingTrackingIngestSimulatePlaceOrder();
-                },
-                true,
-            );
         }
     }
     
