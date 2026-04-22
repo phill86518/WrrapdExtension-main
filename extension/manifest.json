@@ -1,9 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Wrrapd",
-  "version": "1.4.4",
+  "version": "1.4.0",
   "description": "Enhance your gifting experience with Wrrapd",
-  "homepage_url": "https://wrrapd.com/",
   "permissions": [
     "scripting",
     "webNavigation",

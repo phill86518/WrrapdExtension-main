@@ -1,20 +1,8 @@
 /**
- * Checkout flow diagnostics (dev / `npm run build:dev` only).
- * `npm run build` sets __WRRAPD_SHIP__=true: trace buffer, HUD hooks, and verbose console are disabled;
- * esbuild `--drop:console` strips remaining console.* from the bundle.
- *
- * DevTools (dev build): `wrrapdDumpTrace()`; `wrrapdTraceEnableHud()`; or
- * `localStorage.setItem('wrrapd-trace','1')` then reload.
+ * Checkout flow diagnostics — survives `esbuild` when console is dropped.
+ * DevTools: `wrrapdDumpTrace()` copy JSON; `wrrapdTraceEnableHud()` on-screen lines;
+ * or `localStorage.setItem('wrrapd-trace','1')` then reload Amazon checkout tab.
  */
-/* global __WRRAPD_SHIP__ */
-
-function wrrapdShipBundle() {
-  try {
-    return typeof __WRRAPD_SHIP__ !== 'undefined' && __WRRAPD_SHIP__;
-  } catch (_) {
-    return false;
-  }
-}
 
 const MAX_TRACE = 600;
 const HUD_MAX_LINES = 16;
@@ -91,7 +79,6 @@ function appendDebugHud(entry) {
  */
 export function wrrapdTrace(cat, msg, data) {
   try {
-    if (wrrapdShipBundle()) return;
     if (typeof window === 'undefined') return;
     if (!window.__WRRAPD_TRACE__) window.__WRRAPD_TRACE__ = [];
     const entry = {
@@ -104,6 +91,19 @@ export function wrrapdTrace(cat, msg, data) {
     window.__WRRAPD_TRACE__.push(entry);
     while (window.__WRRAPD_TRACE__.length > MAX_TRACE) window.__WRRAPD_TRACE__.shift();
     appendDebugHud(entry);
+    try {
+      if (
+        typeof console !== 'undefined' &&
+        console.warn &&
+        (window.__WRRAPD_LOG_VERBOSE__ === true ||
+          localStorage.getItem('wrrapd-trace') === '1' ||
+          localStorage.getItem('wrrapd-debug-checkout') === '1')
+      ) {
+        console.warn('[Wrrapd]', cat, msg, entry.data);
+      }
+    } catch (_) {
+      /* ignore */
+    }
   } catch (_) {
     /* ignore */
   }
@@ -118,7 +118,6 @@ export function wrrapdTraceEnableHud() {
  */
 export function initWrrapdCheckoutDebug(opts) {
   if (typeof window === 'undefined') return;
-  if (wrrapdShipBundle()) return;
   const tag = (opts && opts.tag) || window.__WRRAPD_CONTENT_BUILD_TAG__ || '?';
   window.wrrapdDumpTrace = () => JSON.stringify(window.__WRRAPD_TRACE__ || [], null, 2);
   window.wrrapdClearTrace = () => {

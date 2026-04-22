@@ -1,7 +1,3 @@
 no-upload-code/
 node_modules/
 .DS_Store
-
-# Generated store upload tree (README is tracked)
-CHROME WEB STORE/*
-!CHROME WEB STORE/README.md
