@@ -1,3 +1,5 @@
+import { wrrapdIsAmazonAccountSignedIn } from './amazon-account-signed-in.js';
+
 /**
  * Scrapes Amazon checkout for **Wrrapd-address line items only** (never other recipients’ dates).
  * sessionStorage wrrapd-amazon-delivery-hints-v1 → { amazonDeliveryDays, wrrapdAmazonGrouping }
@@ -199,6 +201,14 @@ function collectWrrapdOrderItemRoots() {
 function refreshWrrapdAmazonDeliveryHints() {
   try {
     if (!location.hostname.includes('amazon.com')) return;
+    if (!wrrapdIsAmazonAccountSignedIn()) {
+      try {
+        sessionStorage.removeItem(STORAGE_KEY);
+      } catch (_) {
+        /* ignore */
+      }
+      return;
+    }
     const roots = collectWrrapdOrderItemRoots();
     const allKeys = new Set();
     for (const root of roots) {

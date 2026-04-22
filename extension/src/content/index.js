@@ -9,11 +9,12 @@
  * Production bundle no longer drops `console` so `[Wrrapd]` logs are visible if you add them.
  */
 import { initWrrapdCheckoutDebug } from './lib/wrrapd-debug.js';
+import './lib/amazon-account-signed-in.js';
 import './lib/amazon-delivery-hints.js';
 import './content-legacy.js';
 
 /** Bump when verifying deploy — in DevTools: `window.__WRRAPD_CONTENT_BUILD_TAG__`. */
-export const WRRAPD_CONTENT_BUILD_TAG = '2026-04-22-wrrapd-hints-wrrapd-only-radios';
+export const WRRAPD_CONTENT_BUILD_TAG = '2026-04-23-amazon-signed-in-pyo-only';
 if (typeof window !== 'undefined') {
     window.__WRRAPD_CONTENT_BUILD_TAG__ = WRRAPD_CONTENT_BUILD_TAG;
     initWrrapdCheckoutDebug({ tag: WRRAPD_CONTENT_BUILD_TAG });

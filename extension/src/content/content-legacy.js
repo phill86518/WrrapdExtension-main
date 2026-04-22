@@ -366,6 +366,33 @@ import { isZipCodeAllowed } from './lib/zip-codes.js';
         }
     }
 
+    function wrrapdIsAmazonAccountSignedInSafe() {
+        try {
+            return typeof window.wrrapdIsAmazonAccountSignedIn === 'function' && window.wrrapdIsAmazonAccountSignedIn();
+        } catch (_) {
+            return false;
+        }
+    }
+
+    function wrrapdTeardownWrrapdExtensionUi() {
+        try {
+            enablePlaceOrderButtons();
+        } catch (_) {}
+        try {
+            enableCheckoutButtons();
+        } catch (_) {}
+        try {
+            const s = document.querySelector('#wrrapd-summary');
+            if (s) s.remove();
+        } catch (_) {}
+        try {
+            removeLoadingScreen();
+        } catch (_) {}
+        try {
+            sessionStorage.removeItem('wrrapd-amazon-delivery-hints-v1');
+        } catch (_) {}
+    }
+
     /** Chewbacca address step often omits `/address` in the path; fall back to DOM. */
     function wrrapdDomLooksLikeCheckoutAddressPage() {
         try {
@@ -382,11 +409,34 @@ import { isZipCodeAllowed } from './lib/zip-codes.js';
 
     function monitorURLChanges() {
         let lastURL = null;
-    
+        let lastSignedIn = undefined;
+
+        const isCommercePageForWrrapd = (u) =>
+            u.includes('amazon.com/gp/buy/itemselect/handlers/display.html') ||
+            u.includes('amazon.com/gp/buy/gift/handlers/display.html') ||
+            u.includes('/checkout/') ||
+            u.includes('/gift') ||
+            u.includes('amazon.com/gp/cart/view.html') ||
+            u.includes('amazon.com/cart') ||
+            u.includes('amazon.com/gp/buy/payselect/handlers/display.html') ||
+            u.includes('amazon.com/gp/buy/spc/handlers/display.html') ||
+            u.includes('amazon.com/gp/buy/primeinterstitial/handlers/display.html') ||
+            u.includes('amazon.com/gp/buy/addressselect/handlers/display.html');
+
         const checkURLAndExecute = () => {
             const currentURL = window.location.href;
             if (currentURL.includes('amazon.com')) {
                 syncAmazonDeliverToGreeting();
+            }
+
+            const isRelevantPage = isCommercePageForWrrapd(currentURL);
+            const signedIn = wrrapdIsAmazonAccountSignedInSafe();
+            if (isRelevantPage && !signedIn) {
+                wrrapdTeardownWrrapdExtensionUi();
+            }
+            if (signedIn !== lastSignedIn) {
+                lastSignedIn = signedIn;
+                lastURL = null;
             }
 
             if (currentURL !== lastURL) {
@@ -395,19 +445,6 @@ import { isZipCodeAllowed } from './lib/zip-codes.js';
                 // Initialize delivery instructions monitoring on every page
                 monitorDeliveryInstructions();
 
-                // Check if this is a page we should process
-                const isRelevantPage = 
-                    currentURL.includes('amazon.com/gp/buy/itemselect/handlers/display.html') ||
-                    currentURL.includes('amazon.com/gp/buy/gift/handlers/display.html') ||
-                    currentURL.includes('/checkout/') ||  // New checkout flow URLs (gift, address, etc.)
-                    currentURL.includes('/gift') ||  // Gift options in new checkout flow
-                    currentURL.includes('amazon.com/gp/cart/view.html') ||
-                    currentURL.includes('amazon.com/cart') ||
-                    currentURL.includes('amazon.com/gp/buy/payselect/handlers/display.html') ||
-                    currentURL.includes('amazon.com/gp/buy/spc/handlers/display.html') ||
-                    currentURL.includes('amazon.com/gp/buy/primeinterstitial/handlers/display.html') ||
-                    currentURL.includes('amazon.com/gp/buy/addressselect/handlers/display.html');
-                
                 if (!isRelevantPage) {
                     return;
                 }
@@ -675,6 +712,13 @@ import { isZipCodeAllowed } from './lib/zip-codes.js';
      * cartPage - Called when user is on the Amazon cart page
      ************************************************************/
     function cartPage() {
+        if (!wrrapdIsAmazonAccountSignedInSafe()) {
+            console.log('[cartPage] Amazon session not signed in — skip Wrrapd cart flow.');
+            try {
+                enableCheckoutButtons();
+            } catch (_) {}
+            return;
+        }
         //reset wrrapd-payment-status
         localStorage.setItem('wrrapd-payment-status', 'reset');
         
@@ -1239,6 +1283,9 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
      * overrideProceedToCheckoutButton - Overwrites the checkout button
      *****************************************************************/
     async function overrideProceedToCheckoutButton() {
+        if (!wrrapdIsAmazonAccountSignedInSafe()) {
+            return;
+        }
         // First, try to intercept ALL form submissions in the checkout box area as a safety net
         const checkoutBox = document.querySelector('#sc-buy-box');
         if (checkoutBox) {
@@ -1708,6 +1755,10 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
 
     function giftSection() {
         console.log("[giftSection] ===== FUNCTION CALLED ===== ");
+        if (!wrrapdIsAmazonAccountSignedInSafe()) {
+            console.log('[giftSection] Amazon session not signed in — skip.');
+            return;
+        }
         const allItems = getAllItemsFromLocalStorage();
         
         // CRITICAL: Only check the flag - don't rely on DOM detection which can be wrong
@@ -2880,6 +2931,10 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
      *   5) Attach listeners that update that sub-item
      *****************************************************************/
     async function insertWrrapdOptions(allItems) {
+        if (!wrrapdIsAmazonAccountSignedInSafe()) {
+            console.log('[insertWrrapdOptions] Amazon session not signed in — skip.');
+            return;
+        }
 
         // Key: title, Value: next sub-item index to use.
         let subItemIndexTracker = {};
@@ -7873,6 +7928,10 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
 
     async function checkChangeAddress() {
         console.log("[checkChangeAddress] Checking if address change is required.");
+        if (!wrrapdIsAmazonAccountSignedInSafe()) {
+            console.log('[checkChangeAddress] Amazon session not signed in — skip.');
+            return;
+        }
 
         const allItems = getAllItemsFromLocalStorage();
 
@@ -8726,7 +8785,12 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             console.warn("[handleWrrapdAddressSelection] Already handling address selection - preventing duplicate call!");
             return;
         }
-        
+        if (!wrrapdIsAmazonAccountSignedInSafe()) {
+            console.log('[handleWrrapdAddressSelection] Amazon session not signed in — skip.');
+            removeLoadingScreen();
+            return;
+        }
+
         const itemsForTerms = getAllItemsFromLocalStorage();
         const termsAccepted = wrrapdEnsureTermsMatchForAddressAutomation(itemsForTerms);
         if (!termsAccepted) {
@@ -9549,6 +9613,12 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
 
     function paymentSection(allItems) {
         console.log("[paymentSection] Entering payment section.");
+        if (!wrrapdIsAmazonAccountSignedInSafe()) {
+            console.log('[paymentSection] Amazon session not signed in — Wrrapd inactive.');
+            wrrapdTeardownWrrapdExtensionUi();
+            paymentSectionRetryCount = 0;
+            return;
+        }
 
         // CRITICAL: Only process items that are actually in the current checkout
         const itemsInCurrentCheckout = filterItemsInCurrentCheckout(allItems);
@@ -9623,6 +9693,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
         const insertedKeys = new Set(); // Track by URL to allow re-insertion on navigation
         
         const tryInsertWrrapdOptions = () => {
+            if (!wrrapdIsAmazonAccountSignedInSafe()) return;
             const currentURL = window.location.href;
             const urlKey = currentURL.split('?')[0]; // Use base URL as key
             
@@ -10329,8 +10400,8 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
     }
 
     /**
-     * After Pay Wrrapd succeeds, send tracking ingest on the real Amazon "Place your order" control
-     * (same work the removed green staging button did), then allow Amazon's submit to proceed.
+     * After Pay Wrrapd succeeds, send tracking ingest on the real Amazon "Place your order" control,
+     * then allow Amazon's submit to proceed.
      */
     function attachWrrapdPlaceOrderTrackingHook() {
         if (localStorage.getItem('wrrapd-payment-status') !== 'success') return;
@@ -10365,6 +10436,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             async function wrrapdPlaceOrderCapture(ev) {
                 if (window.__WRRAPD_PYO_RESUBMIT__) return;
                 if (localStorage.getItem('wrrapd-payment-status') !== 'success') return;
+                if (!wrrapdIsAmazonAccountSignedInSafe()) return;
                 if (wrrapdPlaceOrderTrackingBusy) return;
                 const rawT = ev.target;
                 const t = rawT && rawT.nodeType === 1 ? rawT : rawT && rawT.parentElement;
@@ -10507,6 +10579,10 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
         } catch (_) {
             /* ignore */
         }
+        if (!wrrapdIsAmazonAccountSignedInSafe()) {
+            console.warn('[Wrrapd staging ingest] Amazon session not signed in — skipped.');
+            return;
+        }
         if (localStorage.getItem('wrrapd-payment-status') !== 'success') {
             console.warn('[Wrrapd staging ingest] Complete Pay Wrrapd first.');
             return;
@@ -10628,46 +10704,12 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
         }
     }
 
-    /** Green test control: POST tracking ingest without placing the Amazon order (after Pay Wrrapd). */
-    function wireWrrapdStagingTrackingTestButton() {
-        if (localStorage.getItem('wrrapd-payment-status') !== 'success') return;
-        let btn = document.getElementById('wrrapd-staging-place-order-btn');
-        if (!btn) {
-            const summary = document.getElementById('wrrapd-summary');
-            if (!summary) return;
-            btn = document.createElement('button');
-            btn.id = 'wrrapd-staging-place-order-btn';
-            btn.type = 'button';
-            btn.className = 'a-button-primary';
-            btn.style.cssText =
-                'background-color:#16a34a;color:#fff;font-weight:bold;margin-top:12px;width:100%;height:40px;border-radius:8px;border:none;cursor:pointer;';
-            btn.textContent = 'Send to Wrrapd tracking (test — does not place Amazon order)';
-            const paymentInfo = document.getElementById('wrrapd-payment-info');
-            if (paymentInfo && paymentInfo.parentNode) {
-                paymentInfo.parentNode.insertBefore(btn, paymentInfo.nextSibling);
-            } else {
-                summary.appendChild(btn);
-            }
-        }
-        if (btn.dataset.wrrapdStagingWired === '1') return;
-        btn.dataset.wrrapdStagingWired = '1';
-        btn.addEventListener('click', async function () {
-            if (btn.dataset.wrrapdInFlight === '1') return;
-            btn.dataset.wrrapdInFlight = '1';
-            btn.disabled = true;
-            btn.style.opacity = '0.85';
-            try {
-                await runStagingTrackingIngestSimulatePlaceOrder();
-            } finally {
-                btn.dataset.wrrapdInFlight = '0';
-                btn.disabled = false;
-                btn.style.opacity = '1';
-            }
-        });
-    }
-
     function createWrrapdSummary() {
         console.log("[createWrrapdSummary] Attempting to create Wrrapd summary section.");
+        if (!wrrapdIsAmazonAccountSignedInSafe()) {
+            console.log('[createWrrapdSummary] Amazon session not signed in — skip.');
+            return;
+        }
     
         // Check if the Wrrapd summary already exists
         if (document.querySelector('#wrrapd-summary')) {
@@ -10816,7 +10858,6 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                     <div id="wrrapd-payment-info" class="a-row a-spacing-small a-spacing-top-small">
                         <div style="color: green; font-weight: bold; font-size: 16px;">Payment successful. Please place order with Amazon now.</div>
                     </div>
-                    <button type="button" id="wrrapd-staging-place-order-btn" class="a-button-primary" style="background-color:#16a34a;color:#fff;font-weight:bold;margin-top:12px;width:100%;height:40px;border-radius:8px;border:none;cursor:pointer;">Send to Wrrapd tracking (test — does not place Amazon order)</button>
                 </div>
             `;
         } else {
@@ -10871,10 +10912,6 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
         removeLoadingScreen();
         localStorage.removeItem('wrrapd-keep-loading-until-summary');
         console.log("[createWrrapdSummary] Payment summary created successfully - loading screen removed.");
-
-        if (paymentStatus === 'success') {
-            wireWrrapdStagingTrackingTestButton();
-        }
 
         if (paymentStatus !== 'success') {
             // Buttons are already disabled by disablePlaceOrderButtons() in paymentSection()
@@ -11177,7 +11214,6 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
 
                             // Store payment status in localStorage
                             localStorage.setItem('wrrapd-payment-status', 'success');
-                            wireWrrapdStagingTrackingTestButton();
 
                             // Same rows as staging ingest: only true Wrrapd selections (not Amazon gift-bag-only lines).
                             const orderData = buildWrrapdOrderDataFromLocalStorage();
@@ -11651,6 +11687,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
     // ----------------------------------------------------- OFFERS SECTION  ------------------------------------------------------
 
     function offersSection(allItems) {
+        if (!wrrapdIsAmazonAccountSignedInSafe()) return;
         removeNotSelectedTextInGiftOptions(allItems);
     }
 
@@ -11658,6 +11695,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
 
     function reviewAndShippingSection() {
         console.log("[reviewAndShippingSection] Entering review and shipping section.");
+        if (!wrrapdIsAmazonAccountSignedInSafe()) return;
 
         const allItems = getAllItemsFromLocalStorage();
         
