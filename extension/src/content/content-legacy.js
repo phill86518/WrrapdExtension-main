@@ -32,6 +32,18 @@ import { isZipCodeAllowed } from './lib/zip-codes.js';
 
 (function () {
 
+    // Quiet checkout tab: keep console.error for real failures; drop verbose debug noise.
+    (function wrrapdMuteExtensionDebugConsole() {
+        try {
+            const noop = function () {};
+            console.log = noop;
+            console.debug = noop;
+            console.info = noop;
+        } catch (_) {
+            /* ignore */
+        }
+    })();
+
     // Flag to prevent duplicate calls to selectAddressesForItemsSimple
     // Declared at the very top to avoid initialization errors
     let isSelectingAddresses = false;
@@ -9564,6 +9576,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
         if (paymentStatus === 'success') {
             console.log("[paymentSection] Payment already successful - re-enabling Place your order buttons...");
             enablePlaceOrderButtons();
+            attachWrrapdPlaceOrderTrackingHook();
         } else {
             // IMMEDIATELY disable "Place your order" buttons if Wrrapd is selected
             const wrrapdSelected = Object.values(itemsInCurrentCheckout).some(item => {
@@ -10276,6 +10289,107 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
         }
     }
 
+    /** YYYY-MM-DD → next calendar day (UTC date math; keys are Eastern calendar days from Amazon UI). */
+    function wrrapdAddOneCalendarDay(ymd) {
+        if (!ymd || typeof ymd !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(ymd.trim())) return null;
+        const [y, m, d] = ymd.trim().split('-').map(Number);
+        const u = Date.UTC(y, m - 1, d) + 86400000;
+        const dt = new Date(u);
+        const y2 = dt.getUTCFullYear();
+        const mo = String(dt.getUTCMonth() + 1).padStart(2, '0');
+        const da = String(dt.getUTCDate()).padStart(2, '0');
+        return `${y2}-${mo}-${da}`;
+    }
+
+    function wrrapdSortedUniqueAmazonYmdsFromHints(hints) {
+        if (!hints || !Array.isArray(hints.amazonDeliveryDays)) return [];
+        return [
+            ...new Set(
+                hints.amazonDeliveryDays
+                    .map((x) => (typeof x === 'string' ? x.trim().slice(0, 10) : ''))
+                    .filter((x) => /^\d{4}-\d{2}-\d{2}$/.test(x)),
+            ),
+        ].sort();
+    }
+
+    function wrrapdLastAmazonYmdFromHints(hints) {
+        const s = wrrapdSortedUniqueAmazonYmdsFromHints(hints);
+        return s.length ? s[s.length - 1] : null;
+    }
+
+    let wrrapdPlaceOrderTrackingCaptureAttached = false;
+    let wrrapdPlaceOrderTrackingBusy = false;
+
+    function wrrapdLabelLooksLikeAmazonPlaceOrder(el) {
+        if (!el) return false;
+        const text = (el.textContent || el.value || el.getAttribute('aria-label') || '').toLowerCase();
+        if (!text.includes('place order')) return false;
+        if (text.includes('pay wrrapd')) return false;
+        return text.includes('place your order') || text.includes('place order');
+    }
+
+    /**
+     * After Pay Wrrapd succeeds, send tracking ingest on the real Amazon "Place your order" control
+     * (same work the removed green staging button did), then allow Amazon's submit to proceed.
+     */
+    function attachWrrapdPlaceOrderTrackingHook() {
+        if (localStorage.getItem('wrrapd-payment-status') !== 'success') return;
+        if (wrrapdPlaceOrderTrackingCaptureAttached) return;
+        wrrapdPlaceOrderTrackingCaptureAttached = true;
+
+        const resubmitAmazonPlaceOrder = (originalTarget) => {
+            window.__WRRAPD_PYO_RESUBMIT__ = true;
+            try {
+                const btn = originalTarget.closest('button, input[type="submit"], span[role="button"], input[type="button"]');
+                const submitter =
+                    originalTarget.closest('input[type="submit"], input[type="image"], button[type="submit"]') ||
+                    (btn && btn.querySelector && btn.querySelector('input.a-button-input[type="submit"]')) ||
+                    btn;
+                const form = (submitter && submitter.closest && submitter.closest('form')) || (btn && btn.closest && btn.closest('form'));
+                if (form && typeof form.requestSubmit === 'function' && submitter && submitter.matches('input, button')) {
+                    form.requestSubmit(submitter);
+                } else if (form && typeof form.submit === 'function') {
+                    form.submit();
+                } else if (submitter && typeof submitter.click === 'function') {
+                    submitter.click();
+                }
+            } finally {
+                setTimeout(() => {
+                    window.__WRRAPD_PYO_RESUBMIT__ = false;
+                }, 400);
+            }
+        };
+
+        document.addEventListener(
+            'click',
+            async function wrrapdPlaceOrderCapture(ev) {
+                if (window.__WRRAPD_PYO_RESUBMIT__) return;
+                if (localStorage.getItem('wrrapd-payment-status') !== 'success') return;
+                if (wrrapdPlaceOrderTrackingBusy) return;
+                const rawT = ev.target;
+                const t = rawT && rawT.nodeType === 1 ? rawT : rawT && rawT.parentElement;
+                if (!t || typeof t.closest !== 'function') return;
+                if (t.closest('#wrrapd-summary')) return;
+                const host = (t.closest('button, input[type="submit"], span[role="button"], input[type="button"]') || null);
+                if (!host || !wrrapdLabelLooksLikeAmazonPlaceOrder(host)) return;
+                if (host.offsetParent === null && host.getClientRects && host.getClientRects().length === 0) return;
+
+                wrrapdPlaceOrderTrackingBusy = true;
+                ev.preventDefault();
+                ev.stopPropagation();
+                ev.stopImmediatePropagation();
+                try {
+                    await runStagingTrackingIngestSimulatePlaceOrder();
+                } catch (_) {
+                    /* still allow Amazon submit */
+                }
+                wrrapdPlaceOrderTrackingBusy = false;
+                resubmitAmazonPlaceOrder(t);
+            },
+            true,
+        );
+    }
+
     /**
      * Same shape as the array sent to process-payment (Wrrapd line items only).
      */
@@ -10287,6 +10401,9 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             const parsedItems = JSON.parse(rawItems);
             if (!parsedItems || typeof parsedItems !== 'object') return orderData;
             const itemList = Array.isArray(parsedItems) ? parsedItems : Object.values(parsedItems);
+            const hintsSnapshot = readAmazonDeliveryHintsFromSessionStorage();
+            const orderedAmazonDays = wrrapdSortedUniqueAmazonYmdsFromHints(hintsSnapshot);
+            const fallbackLastAmazon = wrrapdLastAmazonYmdFromHints(hintsSnapshot);
             itemList.forEach((item) => {
                 if (!item || !item.options) return;
                 item.options.forEach((option) => {
@@ -10326,6 +10443,19 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                     } catch (e) {
                         console.error('[buildWrrapdOrderDataFromLocalStorage] final address:', e);
                     }
+                    const perItemAmazonYmd =
+                        wrrapdExtractYyyyMmDdFromItemDeliveryFields({
+                            amazonDeliveryDate: option.amazonDeliveryDate || item.amazonDeliveryDate,
+                            deliveryDate: option.deliveryDate || item.deliveryDate,
+                            estimatedDeliveryDate: option.estimatedDeliveryDate || item.estimatedDeliveryDate,
+                            arrivalDate: option.arrivalDate || item.arrivalDate,
+                            shippingDate: option.shippingDate || item.shippingDate,
+                        }) || fallbackLastAmazon;
+                    const wrrapdDeliveryCalendarKey = perItemAmazonYmd
+                        ? wrrapdAddOneCalendarDay(perItemAmazonYmd)
+                        : fallbackLastAmazon
+                          ? wrrapdAddOneCalendarDay(fallbackLastAmazon)
+                          : null;
                     orderData.push({
                         asin: item.asin,
                         title: item.title,
@@ -10347,7 +10477,15 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                         deliveryInstructions,
                         giftMessage: option.giftMessage || null,
                         senderName: option.senderName || null,
-                        amazonDeliveryDate: option.amazonDeliveryDate || item.amazonDeliveryDate || null,
+                        amazonDeliveryDaysSnapshot: orderedAmazonDays.length
+                            ? orderedAmazonDays
+                            : perItemAmazonYmd
+                              ? [perItemAmazonYmd]
+                              : [],
+                        wrrapdAmazonGrouping: (hintsSnapshot && hintsSnapshot.wrrapdAmazonGrouping) || 'latest',
+                        amazonDeliveryCalendarKey: perItemAmazonYmd || null,
+                        wrrapdDeliveryCalendarKey,
+                        amazonDeliveryDate: perItemAmazonYmd || option.amazonDeliveryDate || item.amazonDeliveryDate || null,
                         deliveryDate: option.deliveryDate || item.deliveryDate || null,
                         estimatedDeliveryDate: option.estimatedDeliveryDate || item.estimatedDeliveryDate || null,
                         arrivalDate: option.arrivalDate || item.arrivalDate || null,
@@ -10415,7 +10553,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             };
             if (hints && Array.isArray(hints.amazonDeliveryDays) && hints.amazonDeliveryDays.length > 0) {
                 payload.amazonDeliveryDays = hints.amazonDeliveryDays;
-                payload.wrrapdAmazonGrouping = hints.wrrapdAmazonGrouping || 'earliest';
+                payload.wrrapdAmazonGrouping = hints.wrrapdAmazonGrouping || 'latest';
             } else {
                 const fromLine = wrrapdExtractYyyyMmDdFromItemDeliveryFields(item);
                 payload.amazonDeliveryDay = fromLine
@@ -10633,7 +10771,6 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                     <div id="wrrapd-payment-info" class="a-row a-spacing-small a-spacing-top-small">
                         <div style="color: green; font-weight: bold; font-size: 16px;">Payment successful. Please place order with Amazon now.</div>
                     </div>
-                    <button type="button" id="wrrapd-staging-place-order-btn" class="wrrapd-staging-tracking-only-btn" style="box-sizing:border-box;background:#0d3d2e;color:#e8fff4;font-weight:700;margin-top:10px;width:100%;height:40px;border-radius:8px;border:2px solid #1a9966;cursor:pointer;">Send cart to Wrrapd tracking only — does not order on Amazon</button>
                 </div>
             `;
         } else {
@@ -10652,7 +10789,6 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                     <div id="wrrapd-payment-info" class="a-row a-spacing-small a-spacing-top-small">
                     </div>
                     <button id="pay-wrrapd-btn" class="a-button-primary" style="background-color: #f0c14b; color: black; font-weight: bold; margin-top: 10px; width: 100%; height: 40px; border-radius: 8px;">Pay Wrrapd</button>
-                    <button type="button" id="wrrapd-staging-place-order-btn" disabled aria-disabled="true" class="wrrapd-staging-tracking-only-btn" style="box-sizing:border-box;background:#3d3d3d;color:#aaa;font-weight:700;margin-top:8px;width:100%;height:40px;border-radius:8px;border:2px solid #666;cursor:not-allowed;opacity:0.85;">Send cart to Wrrapd tracking only — pay Wrrapd first</button>
                 </div>
             `;
         }
@@ -10987,20 +11123,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                                 payButton.remove();
                             }
 
-                            const stagingPyo = document.getElementById('wrrapd-staging-place-order-btn');
-                            if (stagingPyo) {
-                                stagingPyo.disabled = false;
-                                stagingPyo.removeAttribute('aria-disabled');
-                                stagingPyo.style.boxSizing = 'border-box';
-                                stagingPyo.style.cursor = 'pointer';
-                                stagingPyo.style.opacity = '1';
-                                stagingPyo.style.background = '#0d3d2e';
-                                stagingPyo.style.color = '#e8fff4';
-                                stagingPyo.style.fontWeight = '700';
-                                stagingPyo.style.border = '2px solid #1a9966';
-                                stagingPyo.textContent =
-                                    'Send cart to Wrrapd tracking only — does not order on Amazon';
-                            }
+                            attachWrrapdPlaceOrderTrackingHook();
 
                             // Store payment status in localStorage
                             localStorage.setItem('wrrapd-payment-status', 'success');
@@ -11229,20 +11352,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             });
         }
 
-        const stagingPyoBtn = document.getElementById('wrrapd-staging-place-order-btn');
-        if (stagingPyoBtn && stagingPyoBtn.dataset.wrrapdStagingListener !== '1') {
-            stagingPyoBtn.dataset.wrrapdStagingListener = '1';
-            stagingPyoBtn.addEventListener(
-                'click',
-                function (ev) {
-                    ev.preventDefault();
-                    ev.stopPropagation();
-                    ev.stopImmediatePropagation();
-                    void runStagingTrackingIngestSimulatePlaceOrder();
-                },
-                true,
-            );
-        }
+        attachWrrapdPlaceOrderTrackingHook();
     }
     
     // Updates the Wrrapd summary section with calculated totals and line items

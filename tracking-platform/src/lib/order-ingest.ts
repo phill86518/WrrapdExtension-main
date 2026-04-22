@@ -24,7 +24,7 @@ export type IngestOrderPayload = {
   amazonDeliveryDays?: unknown;
   /**
    * `earliest` — schedule after the **first** Amazon date (fastest Wrrapd delivery).
-   * `together` — schedule after the **last** Amazon date (one trip after all Amazon drops).
+   * `together` / extension `latest` — schedule after the **last** Amazon date (+1 Wrrapd day @ 14:00 ET).
    * `separate` — not supported in a single ingest body; submit one request per Amazon date.
    */
   wrrapdAmazonGrouping?: unknown;

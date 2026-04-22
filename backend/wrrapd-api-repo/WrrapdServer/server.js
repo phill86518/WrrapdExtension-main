@@ -596,8 +596,8 @@ function computeScheduledForPlusOneFromItems(items) {
         return computeScheduledForPlusOne((items && items[0]) || null);
     }
     dates.sort((a, b) => a.getTime() - b.getTime());
-    // Fastest Wrrapd: anchor on the **earliest** Amazon promise among wrapped lines (same as tracking ingest earliest).
-    const base = dates[0];
+    // Wrrapd +1 after the **latest** Amazon promise when multiple lines differ (matches extension "latest" grouping).
+    const base = dates[dates.length - 1];
     const plusOne = new Date(base.getTime());
     plusOne.setDate(plusOne.getDate() + 1);
     return plusOne.toISOString();
@@ -1324,8 +1324,14 @@ app.post('/process-payment', async (req, res) => {
              * which made Wrrapd +1 land on the wrong day (e.g. Apr 22 vs headline Apr 23 → expect Apr 24).
              */
             const effectiveAmazonDays = hintedAmazonDays.length ? hintedAmazonDays : wrappedAmazonDays;
-            const needsCustomerChoice =
-                wrappedOnly.length > 1 && effectiveAmazonDays.length > 1;
+            const hintedGroupingRaw =
+                amazonDeliveryHints && typeof amazonDeliveryHints.wrrapdAmazonGrouping === 'string'
+                    ? amazonDeliveryHints.wrrapdAmazonGrouping.trim().toLowerCase()
+                    : '';
+            const hintedGrouping =
+                hintedGroupingRaw === 'earliest' || hintedGroupingRaw === 'fastest' || hintedGroupingRaw === 'first'
+                    ? 'earliest'
+                    : 'latest';
             const fallbackAmazonDay = inferAmazonDateKeyFromItems(wrappedOnly.length ? wrappedOnly : normalizedOrderData);
             const ingestPayload = {
                 customerName,
@@ -1347,19 +1353,17 @@ app.post('/process-payment', async (req, res) => {
                     postalCode: finalAddr.postalCode || finalAddr.postal_code || firstItem.postalCode || '00000',
                 },
                 externalOrderId: canonicalTrackingExternalOrderId(orderNumber),
-                sourceNote: needsCustomerChoice
-                    ? `Amazon order ${orderNumber}; ${wrappedOnly.length} Wrrapd item(s); Amazon dates ${effectiveAmazonDays.join(', ')}; Wrrapd +1 after earliest (fastest). [${WRRAPD_INGEST_VERSION}]`
-                    : `Amazon order ${orderNumber}; ${wrappedOnly.length} Wrrapd item(s); auto scheduled (Amazon fastest +1). [${WRRAPD_INGEST_VERSION}]`,
+                sourceNote: `Amazon order ${orderNumber}; ${wrappedOnly.length} Wrrapd item(s); Amazon dates ${
+                    effectiveAmazonDays.join(', ') || fallbackAmazonDay
+                }; Wrrapd +1 (${
+                    hintedGrouping === 'earliest' ? 'after earliest' : 'after latest'
+                } Amazon day). [${WRRAPD_INGEST_VERSION}]`,
                 lineItems,
-                ...(needsCustomerChoice
+                ...(effectiveAmazonDays.length > 0
                     ? {
                         amazonDeliveryDays: effectiveAmazonDays,
-                        wrrapdAmazonGrouping: 'earliest',
+                        wrrapdAmazonGrouping: hintedGrouping === 'earliest' ? 'earliest' : 'latest',
                     }
-                    : effectiveAmazonDays.length > 0
-                        ? {
-                            amazonDeliveryDay: effectiveAmazonDays[0],
-                        }
                     : {
                         // Always prefer Amazon date key input so tracking computes +1 day in America/New_York.
                         amazonDeliveryDay: fallbackAmazonDay,

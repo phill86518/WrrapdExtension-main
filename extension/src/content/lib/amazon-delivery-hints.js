@@ -2,7 +2,8 @@
  * Scrapes Amazon checkout (Chewbacca / item blocks) for Wrrapd warehouse line items.
  * sessionStorage wrrapd-amazon-delivery-hints-v1 → { amazonDeliveryDays, wrrapdAmazonGrouping }
  *
- * Multi-date → grouping "earliest" by default (fastest Wrrapd +1). Server may still flag choice when grouping is "pending".
+ * Dates are calendar keys (YYYY-MM-DD); tracking treats each as nominal 2:00 p.m. America/New_York.
+ * Multi-date → grouping "latest" (last Amazon day + 1 for Wrrapd — see tracking order-ingest).
  */
 
 const STORAGE_KEY = 'wrrapd-amazon-delivery-hints-v1';
@@ -191,7 +192,7 @@ function refreshWrrapdAmazonDeliveryHints() {
       for (const k of extractDateKeysFromContainer(root)) allKeys.add(k);
     }
     const sorted = [...allKeys].sort();
-    const grouping = 'earliest';
+    const grouping = 'latest';
     const payload = {
       amazonDeliveryDays: sorted,
       wrrapdAmazonGrouping: grouping,
@@ -199,8 +200,8 @@ function refreshWrrapdAmazonDeliveryHints() {
       href: location.href,
     };
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
-  } catch (e) {
-    console.warn('[wrrapd-amazon-delivery-hints]', e);
+  } catch (_) {
+    /* ignore scrape errors */
   }
 }
 
