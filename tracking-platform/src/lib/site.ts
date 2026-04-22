@@ -14,7 +14,7 @@ export function supportEmailDisplay(): string {
   return process.env.NEXT_PUBLIC_SUPPORT_EMAIL?.trim() || "support@wrrapd.com";
 }
 
-/** Show default login hints on /platform (root `/` redirects to `/admin`). */
+/** Show default login hints on the ops hub at `/` (and dev `/platform` redirect). */
 export function showPlatformLoginHints(): boolean {
   return (
     process.env.NODE_ENV === "development" ||

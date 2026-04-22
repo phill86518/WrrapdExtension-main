@@ -1,6 +1,5 @@
-import { redirect } from "next/navigation";
+import { PlatformHub } from "@/components/platform-hub";
 
-/** For this deployment, the app home is the admin Command Center (not the marketing hub). */
 export default function Home() {
-  redirect("/admin");
+  return <PlatformHub />;
 }

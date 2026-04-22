@@ -16,6 +16,19 @@ type SessionPayload = {
 const secret = getSessionSecretBytes();
 
 export async function middleware(request: NextRequest) {
+  const pathname = request.nextUrl.pathname;
+  /** Case aliases (Windows / typed URLs); lowercase routes are canonical. */
+  if (pathname === "/Admin" || pathname.startsWith("/Admin/")) {
+    const u = request.nextUrl.clone();
+    u.pathname = `/admin${pathname.slice("/Admin".length)}`;
+    return NextResponse.redirect(u);
+  }
+  if (pathname === "/Driver" || pathname.startsWith("/Driver/")) {
+    const u = request.nextUrl.clone();
+    u.pathname = `/driver${pathname.slice("/Driver".length)}`;
+    return NextResponse.redirect(u);
+  }
+
   const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
   if (!token) return NextResponse.next();
   try {
@@ -42,5 +55,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/driver/:path*"],
+  matcher: ["/admin/:path*", "/driver/:path*", "/Admin", "/Admin/:path*", "/Driver", "/Driver/:path*"],
 };
