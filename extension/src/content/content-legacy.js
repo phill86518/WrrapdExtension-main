@@ -10500,6 +10500,13 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
     }
 
     async function runStagingTrackingIngestSimulatePlaceOrder() {
+        try {
+            if (typeof window.__WRRAPD_REFRESH_AMAZON_DELIVERY_HINTS__ === 'function') {
+                window.__WRRAPD_REFRESH_AMAZON_DELIVERY_HINTS__();
+            }
+        } catch (_) {
+            /* ignore */
+        }
         if (localStorage.getItem('wrrapd-payment-status') !== 'success') {
             console.warn('[Wrrapd staging ingest] Complete Pay Wrrapd first.');
             return;
@@ -10619,6 +10626,44 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                 e && e.message ? e.message : String(e),
             );
         }
+    }
+
+    /** Green test control: POST tracking ingest without placing the Amazon order (after Pay Wrrapd). */
+    function wireWrrapdStagingTrackingTestButton() {
+        if (localStorage.getItem('wrrapd-payment-status') !== 'success') return;
+        let btn = document.getElementById('wrrapd-staging-place-order-btn');
+        if (!btn) {
+            const summary = document.getElementById('wrrapd-summary');
+            if (!summary) return;
+            btn = document.createElement('button');
+            btn.id = 'wrrapd-staging-place-order-btn';
+            btn.type = 'button';
+            btn.className = 'a-button-primary';
+            btn.style.cssText =
+                'background-color:#16a34a;color:#fff;font-weight:bold;margin-top:12px;width:100%;height:40px;border-radius:8px;border:none;cursor:pointer;';
+            btn.textContent = 'Send to Wrrapd tracking (test — does not place Amazon order)';
+            const paymentInfo = document.getElementById('wrrapd-payment-info');
+            if (paymentInfo && paymentInfo.parentNode) {
+                paymentInfo.parentNode.insertBefore(btn, paymentInfo.nextSibling);
+            } else {
+                summary.appendChild(btn);
+            }
+        }
+        if (btn.dataset.wrrapdStagingWired === '1') return;
+        btn.dataset.wrrapdStagingWired = '1';
+        btn.addEventListener('click', async function () {
+            if (btn.dataset.wrrapdInFlight === '1') return;
+            btn.dataset.wrrapdInFlight = '1';
+            btn.disabled = true;
+            btn.style.opacity = '0.85';
+            try {
+                await runStagingTrackingIngestSimulatePlaceOrder();
+            } finally {
+                btn.dataset.wrrapdInFlight = '0';
+                btn.disabled = false;
+                btn.style.opacity = '1';
+            }
+        });
     }
 
     function createWrrapdSummary() {
@@ -10771,6 +10816,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                     <div id="wrrapd-payment-info" class="a-row a-spacing-small a-spacing-top-small">
                         <div style="color: green; font-weight: bold; font-size: 16px;">Payment successful. Please place order with Amazon now.</div>
                     </div>
+                    <button type="button" id="wrrapd-staging-place-order-btn" class="a-button-primary" style="background-color:#16a34a;color:#fff;font-weight:bold;margin-top:12px;width:100%;height:40px;border-radius:8px;border:none;cursor:pointer;">Send to Wrrapd tracking (test — does not place Amazon order)</button>
                 </div>
             `;
         } else {
@@ -10825,6 +10871,10 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
         removeLoadingScreen();
         localStorage.removeItem('wrrapd-keep-loading-until-summary');
         console.log("[createWrrapdSummary] Payment summary created successfully - loading screen removed.");
+
+        if (paymentStatus === 'success') {
+            wireWrrapdStagingTrackingTestButton();
+        }
 
         if (paymentStatus !== 'success') {
             // Buttons are already disabled by disablePlaceOrderButtons() in paymentSection()
@@ -11127,6 +11177,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
 
                             // Store payment status in localStorage
                             localStorage.setItem('wrrapd-payment-status', 'success');
+                            wireWrrapdStagingTrackingTestButton();
 
                             // Same rows as staging ingest: only true Wrrapd selections (not Amazon gift-bag-only lines).
                             const orderData = buildWrrapdOrderDataFromLocalStorage();
@@ -11278,6 +11329,13 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                                 // - Sender names (senderName from each orderData item)
                                 // All this data is included in orderData array
                                 syncAmazonDeliverToGreeting();
+                                try {
+                                    if (typeof window.__WRRAPD_REFRESH_AMAZON_DELIVERY_HINTS__ === 'function') {
+                                        window.__WRRAPD_REFRESH_AMAZON_DELIVERY_HINTS__();
+                                    }
+                                } catch (_) {
+                                    /* ignore */
+                                }
                                 const amazonDeliveryHints = readAmazonDeliveryHintsFromSessionStorage();
                                 const gifterFullNameStored = (
                                     localStorage.getItem('wrrapd-checkout-gifter-full-name') || ''

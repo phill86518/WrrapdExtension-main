@@ -1,9 +1,10 @@
 /**
- * Scrapes Amazon checkout (Chewbacca / item blocks) for Wrrapd warehouse line items.
+ * Scrapes Amazon checkout for **Wrrapd-address line items only** (never other recipients’ dates).
  * sessionStorage wrrapd-amazon-delivery-hints-v1 → { amazonDeliveryDays, wrrapdAmazonGrouping }
  *
- * Dates are calendar keys (YYYY-MM-DD); tracking treats each as nominal 2:00 p.m. America/New_York.
- * Multi-date → grouping "latest" (last Amazon day + 1 for Wrrapd — see tracking order-ingest).
+ * Per Wrrapd shipment: use the **checked** delivery-speed radio’s date (Amazon’s chosen option).
+ * Multiple Wrrapd lines → collect those dates, sort, grouping "latest" (max Amazon day + 1 on server).
+ * Calendar keys are YYYY-MM-DD (nominal 2:00 p.m. America/New_York downstream).
  */
 
 const STORAGE_KEY = 'wrrapd-amazon-delivery-hints-v1';
@@ -16,11 +17,17 @@ function isWrrapdItemContainer(container) {
     (containerText.includes('Wrrapd') && containerText.includes('32226-6067')) ||
     (containerText.includes('Wrrapd') && containerText.includes('JACKSONVILLE')) ||
     containerText.includes('Wrrapd PO BOX 26067');
-  const hasNonWrrapdRecipient =
-    containerText.includes('Delivering to') &&
-    !containerText.includes('Wrrapd') &&
-    containerText.match(/Delivering to\s+[A-Z][a-z]+/);
-  return hasWrrapdRecipient && !hasNonWrrapdRecipient;
+  if (!hasWrrapdRecipient) return false;
+  /** Reject merged DOM regions that also describe shipment to someone other than Wrrapd. */
+  if (/Delivering to\s/i.test(containerText)) {
+    const deliverMatches = [...containerText.matchAll(/Delivering to\s+([^,\n]+)/gi)];
+    for (const m of deliverMatches) {
+      const frag = (m[1] || '').trim();
+      if (!frag) continue;
+      if (!/^Wrrapd\b/i.test(frag)) return false;
+    }
+  }
+  return true;
 }
 
 const MONTHS = [
@@ -122,19 +129,11 @@ function extractFromPostData(itemContainer) {
 }
 
 /**
- * Prefer headline / column delivery copy over `data-postdata` shipment timestamps.
- * Mixing both often produced a date **one day after** the Amazon-shown "Arriving …" line,
- * which then became **+2 calendar days** after the server applies Wrrapd's +1 rule.
+ * Only the **selected** delivery option counts (checked radio). Do not scrape unselected
+ * speed tiers or sibling non-Wrrapd blocks — that pulled Roger’s Apr 23/27 into Wrrapd’s hint array.
  */
 function extractDateKeysFromContainer(itemContainer) {
   const keys = new Set();
-
-  for (const el of itemContainer.querySelectorAll(
-    'h2.address-promise-text .break-word, h2.address-promise-text span.break-word, .address-promise-text .break-word',
-  )) {
-    const k = parseArrivingOrToday(el.textContent || '');
-    if (k) keys.add(k);
-  }
 
   const radios = Array.from(itemContainer.querySelectorAll('input[type="radio"]'));
   for (const r of radios) {
@@ -147,11 +146,16 @@ function extractDateKeysFromContainer(itemContainer) {
     if (k) keys.add(k);
   }
 
-  for (const el of itemContainer.querySelectorAll('.col-delivery-message span, .delivery-message-rush span')) {
-    const t = el.textContent || '';
-    if (t.length > 120) continue;
-    const k = parseMonthDayYear(t) || parseArrivingOrToday(t);
-    if (k) keys.add(k);
+  if (keys.size === 0) {
+    for (const el of itemContainer.querySelectorAll(
+      'h2.address-promise-text .break-word, h2.address-promise-text span.break-word, .address-promise-text .break-word',
+    )) {
+      const k = parseArrivingOrToday(el.textContent || '');
+      if (k) {
+        keys.add(k);
+        break;
+      }
+    }
   }
 
   if (keys.size === 0) {
@@ -182,13 +186,22 @@ function collectOrderItemRoots() {
   return out;
 }
 
+/** Prefer per-shipment checkout rows so we do not merge another recipient’s item tree. */
+function collectWrrapdOrderItemRoots() {
+  const roots = new Set();
+  for (const el of document.querySelectorAll('[id^="checkout-item-block-"], .checkout-experience-item-block')) {
+    if (isWrrapdItemContainer(el)) roots.add(el);
+  }
+  if (roots.size > 0) return [...roots];
+  return collectOrderItemRoots().filter((el) => isWrrapdItemContainer(el));
+}
+
 function refreshWrrapdAmazonDeliveryHints() {
   try {
     if (!location.hostname.includes('amazon.com')) return;
-    const roots = collectOrderItemRoots();
+    const roots = collectWrrapdOrderItemRoots();
     const allKeys = new Set();
     for (const root of roots) {
-      if (!isWrrapdItemContainer(root)) continue;
       for (const k of extractDateKeysFromContainer(root)) allKeys.add(k);
     }
     const sorted = [...allKeys].sort();
@@ -228,6 +241,10 @@ function bootAmazonDeliveryHints() {
   } catch (_) {
     /* ignore */
   }
+}
+
+if (typeof window !== 'undefined') {
+  window.__WRRAPD_REFRESH_AMAZON_DELIVERY_HINTS__ = refreshWrrapdAmazonDeliveryHints;
 }
 
 if (typeof document !== 'undefined') {
