@@ -1,5 +1,6 @@
 import type { Order } from "./types";
 import { formatDateKeyNy } from "./ny-date";
+import { wrrapdScheduledInstantIsoForUi } from "./order-schedule-display";
 import { DEFAULT_DEPOT, approxCoordsForOrder } from "./zip-centroids-jax";
 
 type LatLng = { lat: number; lng: number };
@@ -92,7 +93,7 @@ export function assignStopSequences(orders: Order[]): Order[] {
   const byKey = new Map<string, Order[]>();
   for (const o of orders) {
     if (!o.driverId || !ROUTE_STATUSES.has(o.status)) continue;
-    const day = formatDateKeyNy(o.scheduledFor);
+    const day = formatDateKeyNy(wrrapdScheduledInstantIsoForUi(o));
     const key = `${o.driverId}|${day}`;
     const list = byKey.get(key) ?? [];
     list.push(o);
@@ -125,7 +126,7 @@ export function maxStopSequenceByRouteKey(orders: Order[]): Map<string, number> 
   const m = new Map<string, number>();
   for (const o of orders) {
     if (!o.driverId || o.stopSequence == null || !ROUTE_STATUSES.has(o.status)) continue;
-    const key = `${o.driverId}|${formatDateKeyNy(o.scheduledFor)}`;
+    const key = `${o.driverId}|${formatDateKeyNy(wrrapdScheduledInstantIsoForUi(o))}`;
     m.set(key, Math.max(m.get(key) ?? 0, o.stopSequence));
   }
   return m;

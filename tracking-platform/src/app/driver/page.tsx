@@ -14,7 +14,8 @@ import {
 import { DriverTopModals } from "@/components/driver-top-modals";
 import { WrrapdLogo } from "@/components/wrrapd-logo";
 import { formatInTimeZone } from "date-fns-tz";
-import { formatDateKeyNy, initialDriverDayKeyNy, scheduledForToIsoString } from "@/lib/ny-date";
+import { formatDateKeyNy, initialDriverDayKeyNy } from "@/lib/ny-date";
+import { wrrapdScheduledInstantIsoForUi } from "@/lib/order-schedule-display";
 import type { DayShiftAvailability } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -35,8 +36,20 @@ export default async function DriverPage() {
   }
 
   const orders = await listDriverOrders(session.userId);
+  const ordersForConsole = orders.map((o) => ({
+    id: o.id,
+    publicOrderRef: o.externalOrderId?.trim() || o.id,
+    recipientName: o.recipientName,
+    addressLine1: o.addressLine1,
+    city: o.city,
+    state: o.state,
+    postalCode: o.postalCode,
+    status: o.status,
+    stopSequence: o.stopSequence,
+    scheduledFor: wrrapdScheduledInstantIsoForUi(o),
+  }));
   const todayNyKey = formatDateKeyNy(new Date());
-  const initialDriverDayKey = initialDriverDayKeyNy(todayNyKey, orders);
+  const initialDriverDayKey = initialDriverDayKeyNy(todayNyKey, ordersForConsole);
   const pastOrdersRaw = await listDriverPastOrders(session.userId);
   const profile = await getDriverProfile(session.userId);
   const week = upcomingWeekFromToday();
@@ -129,20 +142,7 @@ export default async function DriverPage() {
           todayNyKey={todayNyKey}
           initialSelectedDayKey={initialDriverDayKey}
           description={DRIVER_QUEUE_HELP}
-          orders={orders.map((o) => {
-            return {
-              id: o.id,
-              publicOrderRef: o.externalOrderId?.trim() || o.id,
-              recipientName: o.recipientName,
-              addressLine1: o.addressLine1,
-              city: o.city,
-              state: o.state,
-              postalCode: o.postalCode,
-              status: o.status,
-              stopSequence: o.stopSequence,
-              scheduledFor: scheduledForToIsoString(o.scheduledFor) || String(o.scheduledFor ?? ""),
-            };
-          })}
+          orders={ordersForConsole}
         />
       </section>
     </main>

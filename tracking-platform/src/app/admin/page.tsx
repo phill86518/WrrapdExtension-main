@@ -16,6 +16,7 @@ import { SelectAllOrdersButton } from "@/components/select-all-orders-button";
 import { WrrapdLogo } from "@/components/wrrapd-logo";
 import { maxStopSequenceByRouteKey } from "@/lib/route-optimization";
 import { formatDateKeyNy, toInstantDate } from "@/lib/ny-date";
+import { wrrapdScheduledInstantIsoForUi } from "@/lib/order-schedule-display";
 import { formatInTimeZone } from "date-fns-tz";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -266,7 +267,9 @@ export default async function AdminPage({
               </span>
             </form>
             <div className="mt-4 space-y-3">
-              {group.items.map((order) => (
+              {group.items.map((order) => {
+                const displayScheduledIso = wrrapdScheduledInstantIsoForUi(order);
+                return (
                 <div
                   key={order.id}
                   className={`rounded-xl border-2 border-[#1a3d2e]/20 p-4 shadow-md ${orderRowClass(order.status)}`}
@@ -291,12 +294,12 @@ export default async function AdminPage({
                           Stop {order.stopSequence}
                           {order.driverId
                             ? (() => {
-                                const key = `${order.driverId}|${formatDateKeyNy(order.scheduledFor)}`;
+                                const key = `${order.driverId}|${formatDateKeyNy(displayScheduledIso)}`;
                                 const total = routeStopTotals.get(key);
                                 const suffix =
                                   total != null && total > 1 ? ` of ${total}` : "";
                                 const dayEt = formatInTimeZone(
-                                  toInstantDate(order.scheduledFor),
+                                  toInstantDate(displayScheduledIso),
                                   "America/New_York",
                                   "MMM d",
                                 );
@@ -317,7 +320,7 @@ export default async function AdminPage({
                   <p className="mt-1 text-xs font-medium text-[#3d5c47]">
                     Scheduled:{" "}
                     {formatInTimeZone(
-                      toInstantDate(order.scheduledFor),
+                      toInstantDate(displayScheduledIso),
                       "America/New_York",
                       "M/d/yyyy, h:mm:ss a zzz",
                     )}
@@ -382,7 +385,8 @@ export default async function AdminPage({
                     </button>
                   </form>
                 </div>
-              ))}
+              );
+              })}
               {group.items.length === 0 && (
                 <p className="py-8 text-center text-sm font-medium text-[#2d4a38]">No orders yet.</p>
               )}

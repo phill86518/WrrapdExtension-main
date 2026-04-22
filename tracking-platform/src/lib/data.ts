@@ -14,6 +14,7 @@ import {
 import { getDriverProfile } from "@/lib/driver-profiles";
 import { assignStopSequences } from "@/lib/route-optimization";
 import { formatDateKeyNy, toInstantDate } from "@/lib/ny-date";
+import { wrrapdScheduledInstantIsoForUi } from "@/lib/order-schedule-display";
 import { findDriverById, listRegisteredDrivers } from "@/lib/driver-registry";
 import { uploadProofDataUrl } from "@/lib/proof-storage";
 import type { CollectionReference } from "firebase-admin/firestore";
@@ -544,8 +545,8 @@ export async function listDriverOrders(driverId: string) {
       (o.status === "assigned" || o.status === "en_route" || o.status === "scheduled"),
   );
   return mine.sort((a, b) => {
-    const da = formatDateKeyNy(a.scheduledFor);
-    const db = formatDateKeyNy(b.scheduledFor);
+    const da = formatDateKeyNy(wrrapdScheduledInstantIsoForUi(a));
+    const db = formatDateKeyNy(wrrapdScheduledInstantIsoForUi(b));
     if (da !== db) return da.localeCompare(db);
     const sa = a.stopSequence ?? 9999;
     const sb = b.stopSequence ?? 9999;

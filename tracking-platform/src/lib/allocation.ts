@@ -1,5 +1,6 @@
 import type { Order, Driver } from "./types";
 import { formatDateKeyNy, hourNy } from "./ny-date";
+import { wrrapdScheduledInstantIsoForUi } from "./order-schedule-display";
 import { isDriverAvailableOnDate, type ShiftKey } from "./availability-store";
 import { getDriverProfile } from "./driver-profiles";
 
@@ -25,7 +26,7 @@ export async function computeAssignmentsForOrders(
   const schedulable = input.orders.filter((o) => o.status === "scheduled" || o.status === "assigned");
   const byDay = new Map<string, Order[]>();
   for (const o of schedulable) {
-    const key = formatDateKeyNy(o.scheduledFor);
+    const key = formatDateKeyNy(wrrapdScheduledInstantIsoForUi(o));
     const list = byDay.get(key) ?? [];
     list.push(o);
     byDay.set(key, list);
@@ -33,8 +34,9 @@ export async function computeAssignmentsForOrders(
 
   for (const [, dayOrders] of byDay) {
     dayOrders.sort((a, b) => a.id.localeCompare(b.id));
-    const dateKey = formatDateKeyNy(dayOrders[0].scheduledFor);
-    const shiftForOrder = (o: Order): ShiftKey => (hourNy(o.scheduledFor) < 13 ? "morning" : "afternoon");
+    const dateKey = formatDateKeyNy(wrrapdScheduledInstantIsoForUi(dayOrders[0]));
+    const shiftForOrder = (o: Order): ShiftKey =>
+      hourNy(wrrapdScheduledInstantIsoForUi(o)) < 13 ? "morning" : "afternoon";
 
     /** Solo mode: assign every order on this day to one driver (e.g. Roger). Weekly availability is ignored so ingest/admin flow always gets a driver. */
     const soloId = process.env.TRACKING_SOLO_DRIVER_ID?.trim();

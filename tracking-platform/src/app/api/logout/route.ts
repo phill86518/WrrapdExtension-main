@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
   const base = origin || request.nextUrl.origin;
   const url = new URL(path, base);
   const res = NextResponse.redirect(url, 302);
-  clearSessionCookieOnResponse(res);
+  /** GET must not clear the session — prefetchers and crawlers hit links; use POST /api/logout to sign out. */
   res.headers.set("Cache-Control", "no-store");
   return res;
 }

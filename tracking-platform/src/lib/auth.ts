@@ -5,8 +5,9 @@ import { existsSync } from "fs";
 import { mkdir, readFile, writeFile } from "fs/promises";
 import path from "path";
 import { trackingRuntimeDoc } from "./tracking-firestore";
+import { SESSION_COOKIE_NAME, SESSION_MAX_AGE_SEC, getSessionSecretBytes } from "./session-constants";
 
-export const SESSION_COOKIE_NAME = "wrrapd_session";
+export { SESSION_COOKIE_NAME };
 
 type Session = {
   role: "admin" | "driver";
@@ -14,16 +15,10 @@ type Session = {
   name: string;
 };
 
-/** Trim so Secret Manager / console pastes with trailing newline do not change keys across deploys. */
-const secret = new TextEncoder().encode(
-  (process.env.APP_SESSION_SECRET || "local-dev-secret-change-in-prod").trim(),
-);
+const secret = getSessionSecretBytes();
 const dataDir = path.join(process.cwd(), ".data");
 const authFilePath = path.join(dataDir, "auth.json");
 const defaultDriverPassword = process.env.APP_DRIVER_PASSWORD || "driver123";
-
-/** Admin + driver JWT and browser cookie lifetime (keep in sync). */
-const SESSION_MAX_AGE_SEC = 12 * 60 * 60;
 
 export async function createSessionToken(session: Session) {
   const exp = Math.floor(Date.now() / 1000) + SESSION_MAX_AGE_SEC;
@@ -75,7 +70,7 @@ export async function getSession(): Promise<Session | null> {
   const raw = cookieStore.get(SESSION_COOKIE_NAME)?.value;
   if (!raw) return null;
   try {
-    const { payload } = await jwtVerify(raw, secret, { clockTolerance: 120 });
+    const { payload } = await jwtVerify(raw, secret, { clockTolerance: 300 });
     return payload as Session;
   } catch {
     return null;

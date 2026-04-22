@@ -1,6 +1,6 @@
 import { formatInTimeZone } from "date-fns-tz";
-import { formatDateKeyNy, toInstantDate } from "@/lib/ny-date";
-import { wrrapdScheduledInstantFromAmazonDeliveryDateKey } from "@/lib/scheduling";
+import { toInstantDate } from "@/lib/ny-date";
+import { wrrapdScheduledInstantIsoForUi } from "@/lib/order-schedule-display";
 import type { OrderLineItem } from "@/lib/types";
 
 const NY = "America/New_York";
@@ -212,22 +212,6 @@ export function formatOrderScheduleEt(scheduledForIso: string): string {
   return `${day} · 1:00–7:00 PM ET`;
 }
 
-const YMD_SNAP = /^\d{4}-\d{2}-\d{2}$/;
-
-function pickAmazonYmdKeyForWrrapdSchedule(order: {
-  amazonDeliveryDatesSnapshot?: string[];
-  deliveryPreferenceChoice?: string;
-}): string | undefined {
-  const raw = order.amazonDeliveryDatesSnapshot;
-  if (!raw?.length) return undefined;
-  const snap = [...new Set(raw.map((x) => x.trim()).filter((k) => YMD_SNAP.test(k)))].sort();
-  if (snap.length === 0) return undefined;
-  if (snap.length === 1) return snap[0];
-  const ch = order.deliveryPreferenceChoice;
-  if (ch === "together" || ch === "together_deadline_default") return snap[snap.length - 1]!;
-  return snap[0]!;
-}
-
 /**
  * Customer thank-you, admin alert, SMS — same Wrrapd **calendar** day as Command Center / tracking
  * when we can infer the Amazon anchor from `amazonDeliveryDatesSnapshot` (repairs legacy rows where
@@ -238,17 +222,7 @@ export function formatWrrapdDeliveryWindowEtForNotifications(order: {
   amazonDeliveryDatesSnapshot?: string[];
   deliveryPreferenceChoice?: string;
 }): string {
-  const key = pickAmazonYmdKeyForWrrapdSchedule(order);
-  if (!key) return formatOrderScheduleEt(order.scheduledFor);
-  try {
-    const expectedIso = wrrapdScheduledInstantFromAmazonDeliveryDateKey(key);
-    if (formatDateKeyNy(order.scheduledFor) !== formatDateKeyNy(expectedIso)) {
-      return formatOrderScheduleEt(expectedIso);
-    }
-  } catch {
-    /* ignore */
-  }
-  return formatOrderScheduleEt(order.scheduledFor);
+  return formatOrderScheduleEt(wrrapdScheduledInstantIsoForUi(order));
 }
 
 /** Internal / operations — detailed admin notification layout. */

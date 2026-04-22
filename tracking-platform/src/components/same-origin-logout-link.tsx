@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
-/** Logout URL using the browser’s real origin (avoids bad Host/localhost from the server). */
+/** Same behavior as LogoutButton — never uses GET /api/logout (GET does not clear session). */
 export function SameOriginLogoutLink({
   redirectPath,
   className,
@@ -12,16 +12,22 @@ export function SameOriginLogoutLink({
   className?: string;
   children: React.ReactNode;
 }) {
-  const qs = `?redirect=${encodeURIComponent(redirectPath)}`;
-  const [href, setHref] = useState(`/api/logout${qs}`);
-
-  useEffect(() => {
-    setHref(`${window.location.origin}/api/logout${qs}`);
-  }, [qs]);
-
+  const [busy, setBusy] = useState(false);
   return (
-    <a href={href} className={className}>
+    <button
+      type="button"
+      className={className}
+      disabled={busy}
+      onClick={async () => {
+        setBusy(true);
+        try {
+          await fetch("/api/logout", { method: "POST", credentials: "include", cache: "no-store" });
+        } finally {
+          window.location.assign(redirectPath);
+        }
+      }}
+    >
       {children}
-    </a>
+    </button>
   );
 }
