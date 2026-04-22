@@ -32,8 +32,8 @@ function readWrrapdCheckoutAsinsFromLocalStorage() {
     if (!parsedItems || typeof parsedItems !== 'object') return out;
     const itemList = Array.isArray(parsedItems) ? parsedItems : Object.values(parsedItems);
     for (const item of itemList) {
-      if (!item || !item.asin || !item.options) continue;
-      const asin = normalizeAsin(item.asin);
+      if (!item || !item.options) continue;
+      const asin = normalizeAsin(item.asin != null ? String(item.asin) : '');
       if (!asin) continue;
       for (const option of item.options) {
         if (!option) continue;
@@ -275,21 +275,19 @@ function collectOrderItemRoots() {
   return out;
 }
 
+/** Coalesced refresh so MutationObserver storms on Amazon checkout do not peg the main thread. */
+let wrrapdHintsRefreshScheduled = false;
 function refreshWrrapdAmazonDeliveryHints() {
   try {
     if (!location.hostname.includes('amazon.com')) return;
     const wrrapdAsins = readWrrapdCheckoutAsinsFromLocalStorage();
     const grouping = 'earliest';
     if (wrrapdAsins.size === 0) {
-      sessionStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({
-          amazonDeliveryDays: [],
-          wrrapdAmazonGrouping: grouping,
-          updatedAt: Date.now(),
-          href: location.href,
-        }),
-      );
+      try {
+        sessionStorage.removeItem(STORAGE_KEY);
+      } catch (_) {
+        /* ignore */
+      }
       return;
     }
 
@@ -314,6 +312,15 @@ function refreshWrrapdAmazonDeliveryHints() {
   }
 }
 
+function scheduleRefreshWrrapdAmazonDeliveryHints() {
+  if (wrrapdHintsRefreshScheduled) return;
+  wrrapdHintsRefreshScheduled = true;
+  setTimeout(() => {
+    wrrapdHintsRefreshScheduled = false;
+    refreshWrrapdAmazonDeliveryHints();
+  }, 450);
+}
+
 function shouldWatchPage() {
   const p = `${location.pathname}${location.search}`.toLowerCase();
   return (
@@ -327,11 +334,11 @@ function shouldWatchPage() {
 
 function bootAmazonDeliveryHints() {
   if (!shouldWatchPage()) return;
-  refreshWrrapdAmazonDeliveryHints();
-  const t = setInterval(refreshWrrapdAmazonDeliveryHints, 2500);
+  scheduleRefreshWrrapdAmazonDeliveryHints();
+  const t = setInterval(() => scheduleRefreshWrrapdAmazonDeliveryHints(), 2500);
   setTimeout(() => clearInterval(t), 180000);
   try {
-    const obs = new MutationObserver(() => refreshWrrapdAmazonDeliveryHints());
+    const obs = new MutationObserver(() => scheduleRefreshWrrapdAmazonDeliveryHints());
     obs.observe(document.body, { childList: true, subtree: true });
     setTimeout(() => obs.disconnect(), 120000);
   } catch (_) {
