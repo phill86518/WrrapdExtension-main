@@ -1,5 +1,7 @@
 # Wrrapd Chrome Extension - Complete Conversation History
 
+> **Archival / narrative.** This document captures historical context and old `content.js`-centric notes. For **current** build paths, Amazon sign-in gating, Place-your-order ingest, and deploy steps, use **[README.md](README.md)** and monorepo **[DEPLOYMENT.md](../DEPLOYMENT.md)**.
+
 ## Overview
 This document contains a comprehensive history of all conversations and changes made to the Wrrapd Chrome Extension, specifically the `content.js` file.
 

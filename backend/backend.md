@@ -1,15 +1,27 @@
-# PYTHON BACKEND RULES (Flask)
+# Backend — Wrrapd (`backend/`)
 
-You are working in the Python backend folder (`backend/`).
+## What “the backend” is in this repo
 
-Important facts:
-- This is the real, live backend code (`app.py` and related files).
-- This is the version that is actually deployed and used by the Chrome Extension.
-- Any files with the same name in the `extension/` folder are only reference/informational copies and are **NOT** the production version.
+Production services for Wrrapd are primarily:
 
-When the user asks you to refactor, add features, or modify backend code:
-- Always edit files inside the `backend/` folder.
-- Never suggest editing files inside the `extension/` folder for backend logic.
-- The `extension/` folder's Python files are for reference only.
+| Area | Path | Runtime | Notes |
+|------|------|---------|--------|
+| **Pay / API / ingest proxy** | `wrrapd-api-repo/WrrapdServer/` | **Node** (`server.js`) | Stripe, `checkout.html`, Mailgun, Firestore, routes such as `process-payment`, proxy to tracking ingest. **PM2 name: `wrrapd-server`.** |
 
-Always be explicit: "I am editing the real backend in the backend/ folder..."
+Other directories under `backend/` may contain helpers or historical artifacts; treat **`WrrapdServer`** as the source of truth for the live API unless a task explicitly points elsewhere.
+
+## Editing rules
+
+- Implement and deploy **Node** changes in **`backend/wrrapd-api-repo/WrrapdServer/`**.
+- Do **not** use copies of server code inside **`extension/`** as the place to fix production API behavior.
+- After deploying server changes on the GCP VM: **`pm2 restart wrrapd-server`** and **`curl http://127.0.0.1:8080/health`**.
+
+## Deploy and ops
+
+- **Copy-paste sequence:** [../DEPLOYMENT.md](../DEPLOYMENT.md)
+- **PM2:** [wrrapd-api-repo/WrrapdServer/README-PM2.md](wrrapd-api-repo/WrrapdServer/README-PM2.md)
+- **Server README:** [wrrapd-api-repo/WrrapdServer/README.md](wrrapd-api-repo/WrrapdServer/README.md)
+
+## Ingest / tracking
+
+Order rows and emails often depend on **`WRRAPD_INGEST_VERSION`** and ingest merge logic in `server.js` plus the **Chrome extension** payload (Amazon delivery hints, giftee address). If Admin/Driver/email disagree, verify extension version, hint keys, and Firestore merge history (see `tracking-platform/README.md`).

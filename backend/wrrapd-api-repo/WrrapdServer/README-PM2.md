@@ -1,6 +1,9 @@
 # Wrrapd Server - PM2 Setup Guide
 
+Monorepo **copy-paste deploy** (when to restart PM2 vs Cloud Run vs Windows extension): **[../../../DEPLOYMENT.md](../../../DEPLOYMENT.md)**.
+
 ## Problem
+
 The server was crashing after a few hours, requiring manual restarts. This setup uses PM2 to automatically restart the server if it crashes.
 
 ## Installation

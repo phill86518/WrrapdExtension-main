@@ -13,6 +13,14 @@ Single-codebase delivery tracking platform built for low volume and GCP free-tie
 - **Phase 3 (Customer Experience):** `/track/[token]`
   - Live status, ETA, map iframe, proof-of-delivery photo
 
+## Site routes (this deploy)
+
+- **`/`** — Ops hub (“Delivery command platform”): links to **Command center** (`/admin`), **Driver companion** (`/driver`), and demo **Customer tracking**.
+- **`/admin`** — Admin login and command center.
+- **`/driver`** — Driver companion.
+- **`/platform`** — Redirects to **`/`** (bookmark compatibility).
+- **`/Admin`** / **`/Driver`** — Middleware redirects to **`/admin`** / **`/driver`** (canonical URLs are lowercase).
+
 ## Local Run
 
 1. Copy environment template:
@@ -101,6 +109,8 @@ If Admin/Driver still look wrong while emails look right, typical causes are: **
 **Do not change** thank-you, ops/admin, delivery-choice, or other transactional email **copy, templates, or which `Order` fields populate them** unless the product owner **explicitly** asks for that change. Relevant paths include `src/lib/post-order-notify.ts` and `src/lib/email-templates/`. Legacy HTML emails emitted by the pay server are similarly sensitive.
 
 ## Cloud Run Deployment
+
+The same commands are collected (with VM push and PM2) in the monorepo **[DEPLOYMENT.md](../DEPLOYMENT.md)**.
 
 From the **monorepo root** (the directory that contains the `tracking-platform/` folder), not inside `tracking-platform` unless you adjust paths.
 

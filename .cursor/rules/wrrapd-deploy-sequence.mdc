@@ -5,6 +5,8 @@ alwaysApply: true
 
 # Wrrapd deployment sequence (do not forget)
 
+Human-readable **copy-paste blocks** (same order): monorepo **[DEPLOYMENT.md](../../DEPLOYMENT.md)** at repo root.
+
 ## Non-negotiable order for “give me deploy / copy-paste instructions”
 
 1. **SSH** to the GCP VM (user’s real `ssh` target, often `ssh admin_@wrrapd-server-1`).

@@ -1,32 +1,32 @@
-# Wrrapd Project - Overall Development Workflow
+# Wrrapd — Cursor notes (monorepo + extension)
 
-**Monorepo:** One Git repository (e.g. [`phill86518/WrrapdExtension-main`](https://github.com/phill86518/WrrapdExtension-main/)) contains both `extension/` and `backend/`. Clone once; commit/push from the repo root on GCP.
+## Repository
 
-This is a full-stack project with two main parts:
+One Git repo (e.g. [`phill86518/WrrapdExtension-main`](https://github.com/phill86518/WrrapdExtension-main/)) contains **`extension/`**, **`backend/`**, and **`tracking-platform/`**. Clone once; commit from the repo root.
 
-## 1. Chrome Extension (`extension/` folder on GCP + local Windows copy)
-- Manifest V3 Chrome Extension.
-- `content.js` is the large monolithic file (~579 KB) we are actively refactoring.
-- The **live testable version** is on the user's **Windows PC** (loaded as "Load unpacked" in Chrome).
-- Files on Windows are used for real-time testing on Amazon.com.
+## Extension (`extension/`)
 
-## 2. Python Backend (`backend/` folder on GCP)
-- Real, production Flask server (`app.py` and related files).
-- This is the live backend that the Chrome Extension calls.
+- **Manifest V3** Chrome extension; content script matches **www.amazon.com** (see `manifest.json`).
+- **Production bundle:** `npm run build` in `extension/` writes root **`content.js`** from **`src/content/index.js`** and dependencies (including `content-legacy.js`).
+- **`content.js` is generated** — edit **`src/content/`** and rebuild; do not treat root `content.js` as the only source of truth.
+- Shared logic is progressively moved into **`src/content/lib/*.js`**.
 
-## Development Workflow Rules (Very Important)
-- Refactoring and new code development happens primarily on **GCP**.
-- After making changes on GCP (especially to `extension/`), the user will:
-  1. Commit and push to GitHub from GCP.
-  2. Pull the changes on their **Windows PC**.
-  3. Test the updated extension in Chrome.
-- GCP will become "bulkier" with new modules, API endpoints, and helper files.
-- The Windows PC version must remain functional for live testing at all times.
-- Never suggest changes to files inside `extension/` on GCP that would break the Windows testing version.
+## Backend (real production)
 
-When suggesting refactors:
-- Always specify which folder you are editing.
-- Prefer moving logic from `content.js` into clean backend API endpoints.
-- Keep the Windows extension functional after each sync.
+- The **live pay/API server** is **Node** in **`backend/wrrapd-api-repo/WrrapdServer/`** (`server.js`, Stripe, proxies, ingest, `public/checkout.html`).
+- Runs under **PM2** as **`wrrapd-server`** on the GCP VM (see `README-PM2.md` in that folder).
+- **Not** the same as any old reference copies of Python files under `extension/` (ignore those for production edits).
 
-You are working in a combined workspace with full visibility of both sides.
+## Tracking app
+
+- **`tracking-platform/`** — Next.js (admin, driver, customer tracking). Deployed to **GCP Cloud Run** (`wrrapd-tracking`). See `tracking-platform/README.md`.
+
+## Workflow
+
+1. Implement on **GCP VM** (or any dev machine), **`git push origin main`** from monorepo root when ready.
+2. Roger’s **Windows** clone: **`git pull`**, **`cd extension && npm run build`**, Chrome **Reload** on the extension.
+3. Do **not** recommend **`git pull` on the production GCP VM** as a default step before push (see repo `.cursor/rules/gcp-vm-no-git-pull.mdc`).
+
+## Deploy commands (canonical)
+
+**[DEPLOYMENT.md](../../DEPLOYMENT.md)** at monorepo root — copy-paste SSH, push, PM2, Cloud Run, Windows extension.

@@ -1,19 +1,17 @@
-# CHROME EXTENSION RULES (Manifest V3)
+# Chrome extension folder (`extension/`)
 
-You are working in the Chrome Extension folder (`extension/`).
+## Facts
 
-Important facts:
-- This is the Chrome Extension codebase (Manifest V3).
-- `content.js` is the large monolithic file we are refactoring and migrating pieces from.
-- Files like `app.py`, `check_server_logs.sh`, etc. inside this folder are **REFERENCE COPIES ONLY** for information purposes.
-- They are **NOT** the live/production versions.
-- The real, functional backend code lives in the `backend/` folder.
+- **Manifest V3** extension for **Amazon.com** checkout and cart flows.
+- **Authoritative source:** `src/content/` (entry `src/content/index.js`). **`content.js`** in the extension root is the **esbuild bundle output** — regenerate with **`npm run build`** (or `npm run build:pretty`).
+- **Backend for pay/API:** lives in **`../backend/wrrapd-api-repo/WrrapdServer/`** (Node). Edit there for `api.wrrapd.com` / Stripe / ingest — not under `extension/`.
 
-When the user asks you to refactor or modify backend-related code:
-- Always work in the `backend/` folder.
-- Never suggest changes to `app.py` or similar files inside the `extension/` folder.
-- The `extension/` folder's Python files are for reference only.
+## When editing
 
-Be very clear when answering: specify which folder you are referring to.
+- Prefer small, focused changes in **`src/content/lib/`** for new cross-cutting helpers.
+- **`content-legacy.js`** remains large; migrate carefully and rebuild after every change.
+- After edits: **`cd extension && npm run build`** before Chrome Reload.
 
-There are no such redundancies on the GCP backend folder structure since they are production level files.
+## Deploy
+
+Windows build steps and paths: **`extension/README.md`**. Full stack: **`DEPLOYMENT.md`** at repo root.

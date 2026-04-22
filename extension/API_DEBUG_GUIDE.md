@@ -1,5 +1,7 @@
 # API Debugging Guide - generate-ideas Endpoint
 
+> **Note:** This file is a **focused debugging note** for the generate-ideas / AI flow. It is not the canonical deploy or architecture spec. For shipping and ops, use the monorepo **[DEPLOYMENT.md](../DEPLOYMENT.md)** and **[README.md](../README.md)**.
+
 ## Current Issue
 The `/generate-ideas` endpoint is returning a 500 Internal Server Error, likely due to incorrect or missing request payload fields.
 
