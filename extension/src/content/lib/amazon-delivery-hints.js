@@ -323,11 +323,17 @@ function scheduleRefreshWrrapdAmazonDeliveryHints() {
 
 function shouldWatchPage() {
   const p = `${location.pathname}${location.search}`.toLowerCase();
+  /**
+   * Do not attach the hints MutationObserver on the shopping cart page — it is very chatty there and
+   * can interfere with “Proceed to checkout” / gift-step navigation. Hints are only needed on checkout.
+   */
+  if ((p.includes('/gp/cart') || p.includes('/cart')) && !p.includes('checkout')) {
+    return false;
+  }
   return (
     p.includes('checkout') ||
     p.includes('buy') ||
     p.includes('order') ||
-    p.includes('cart') ||
     p.includes('gp/')
   );
 }

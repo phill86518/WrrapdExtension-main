@@ -28,7 +28,7 @@ import {
 import { wrrapdTrace } from './lib/wrrapd-debug.js';
 import { getValueByLabel, getElementValue, generateOrderNumber } from './lib/order-helpers.js';
 import { ensureWrrapdSummaryAlignment } from './lib/summary-alignment.js';
-import { isZipCodeAllowed } from './lib/zip-codes.js';
+import { isZipCodeAllowed, zipAllowlistApplies } from './lib/zip-codes.js';
 
 (function () {
 
@@ -3142,8 +3142,35 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
             // Increment our usage for this title
             subItemIndexTracker[trackerKey] = nextIndex + 1;
 
-            // Grab the container to insert Wrrapd UI
-            const giftOptionsContainer = item.querySelector('.a-section.a-spacing-micro.a-spacing-top-mini');
+            // Grab the container to insert Wrrapd UI (Amazon changes class stacks frequently)
+            function findGiftOptionsInsertContainer(row) {
+                const selectors = [
+                    '.a-section.a-spacing-micro.a-spacing-top-mini',
+                    '.a-spacing-micro.a-spacing-top-mini',
+                    '.a-section.a-spacing-top-micro',
+                    '.checkout-gift-option-message',
+                    '[data-testid*="gift-option"] .a-section',
+                    '[data-testid*="GiftOption"] .a-section',
+                ];
+                for (const sel of selectors) {
+                    const el = row.querySelector(sel);
+                    if (el) return el;
+                }
+                const bag =
+                    row.querySelector('input[id*="gift-wrap"]') ||
+                    row.querySelector('input[id*="giftWrap"]') ||
+                    row.querySelector('input[id*="digital-gift"]');
+                if (bag) {
+                    return (
+                        bag.closest('.a-section.a-spacing-micro') ||
+                        bag.closest('.a-section') ||
+                        bag.parentElement
+                    );
+                }
+                return row.querySelector('.a-section') || row;
+            }
+
+            const giftOptionsContainer = findGiftOptionsInsertContainer(item);
             const emailRecipientCheckbox = item.querySelector(`input#digital-gift-message-checkbox-${i}`);
             const amazonGiftBagCheckbox = item.querySelector(`input#gift-wrap-checkbox-${i}`);
 
@@ -3158,8 +3185,9 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                 wrrapdOptionDiv.className = 'a-section a-spacing-small a-spacing-top-small a-padding-none wrrapd-option';
 
                 const isAllowed = await isZipCodeAllowed(subItem);
-                const hasZipCode = subItem?.shippingAddress?.postalCode;
-                const shouldShowWrrapd = isAllowed || !hasZipCode;
+                const hasZipCode = !!(subItem?.shippingAddress?.postalCode);
+                /** Show Wrrapd unless we have a positive allowlist AND a zip that is explicitly disallowed. */
+                const shouldShowWrrapd = !hasZipCode || isAllowed || !zipAllowlistApplies();
 
                 if (shouldShowWrrapd) {
                     wrrapdOptionDiv.innerHTML = `

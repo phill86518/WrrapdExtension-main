@@ -28,6 +28,11 @@ export async function loadAllowedZipCodes() {
   return allowedZipCodes;
 }
 
+/** When false, callers should not hide Wrrapd UI solely for “zip not in list” (empty list / load failure). */
+export function zipAllowlistApplies() {
+  return zipCodesLoaded && allowedZipCodes.length > 0;
+}
+
 export async function isZipCodeAllowed(subItem) {
   console.log('[isZipCodeAllowed] Checking if zip code is allowed.');
 
