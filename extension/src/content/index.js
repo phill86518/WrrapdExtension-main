@@ -10,7 +10,7 @@ import './content-legacy.js';
 import './lib/amazon-delivery-hints.js';
 
 /** Bump when verifying deploy — in DevTools: `window.__WRRAPD_CONTENT_BUILD_TAG__`. */
-export const WRRAPD_CONTENT_BUILD_TAG = '2026-04-21-place-order-ingest-no-green-btn';
+export const WRRAPD_CONTENT_BUILD_TAG = '2026-04-21-hints-wrrapd-asins-only';
 if (typeof window !== 'undefined') {
     window.__WRRAPD_CONTENT_BUILD_TAG__ = WRRAPD_CONTENT_BUILD_TAG;
     initWrrapdCheckoutDebug({ tag: WRRAPD_CONTENT_BUILD_TAG });

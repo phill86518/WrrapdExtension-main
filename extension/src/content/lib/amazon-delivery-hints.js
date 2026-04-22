@@ -1,11 +1,89 @@
 /**
- * Scrapes Amazon checkout (Chewbacca / item blocks) for Wrrapd warehouse line items.
+ * Scrapes Amazon checkout (Chewbacca / item blocks) for **Wrrapd line items only**.
+ * Uses `localStorage` `wrrapd-items` (same Wrrapd rules as `buildWrrapdOrderDataFromLocalStorage`) so
+ * delivery radios / copy for non-Wrrapd items never affect `amazonDeliveryDays`.
+ *
  * sessionStorage wrrapd-amazon-delivery-hints-v1 → { amazonDeliveryDays, wrrapdAmazonGrouping }
  *
- * Multi-date → grouping "earliest" by default (fastest Wrrapd +1). Server may still flag choice when grouping is "pending".
+ * Multi-date → sorted ascending (oldest first); server +1 uses earliest by default.
  */
 
 const STORAGE_KEY = 'wrrapd-amazon-delivery-hints-v1';
+
+function normalizeAsin(raw) {
+  const t = String(raw || '')
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, '');
+  if (t.length === 10) return t;
+  return null;
+}
+
+/**
+ * ASINs that are Wrrapd gift-wrap lines in the current cart (mirrors content-legacy buildWrrapd filter).
+ * @returns {Set<string>}
+ */
+function readWrrapdCheckoutAsinsFromLocalStorage() {
+  const out = new Set();
+  try {
+    const raw = localStorage.getItem('wrrapd-items');
+    if (!raw) return out;
+    const parsedItems = JSON.parse(raw);
+    if (!parsedItems || typeof parsedItems !== 'object') return out;
+    const itemList = Array.isArray(parsedItems) ? parsedItems : Object.values(parsedItems);
+    for (const item of itemList) {
+      if (!item || !item.asin || !item.options) continue;
+      const asin = normalizeAsin(item.asin);
+      if (!asin) continue;
+      for (const option of item.options) {
+        if (!option) continue;
+        const wrapVal = String(option.selected_wrapping_option || '').toLowerCase();
+        const isOurWrappingChoice =
+          wrapVal === 'wrrapd' || wrapVal === 'ai' || wrapVal === 'upload';
+        const hasDesignData =
+          !!option.selected_ai_design ||
+          !!option.uploaded_design_path ||
+          !!option.file_data_url ||
+          option.checkbox_flowers === true;
+        const isWrrapdLike =
+          option.checkbox_wrrapd === true || (hasDesignData && isOurWrappingChoice);
+        if (isWrrapdLike) out.add(asin);
+      }
+    }
+  } catch (_) {
+    /* ignore */
+  }
+  return out;
+}
+
+/**
+ * Best-effort ASIN for an Amazon checkout line block (Chewbacca / item tile).
+ * @param {Element} root
+ * @returns {string | null}
+ */
+function extractAsinFromCheckoutItemRoot(root) {
+  if (!root || root.nodeType !== 1) return null;
+  const seen = root.querySelectorAll('[data-asin]');
+  for (const el of seen) {
+    const a = normalizeAsin(el.getAttribute('data-asin'));
+    if (a) return a;
+  }
+  for (const aEl of root.querySelectorAll('a[href*="/dp/"], a[href*="/gp/product/"], a[href*="asin="]')) {
+    const href = aEl.getAttribute('href') || '';
+    const m1 = href.match(/\/(?:dp|gp\/product)\/([A-Z0-9]{10})/i);
+    if (m1) return normalizeAsin(m1[1]);
+    const m2 = href.match(/[?&]asin=([A-Z0-9]{10})/i);
+    if (m2) return normalizeAsin(m2[1]);
+  }
+  const id = root.getAttribute('id') || '';
+  if (id.includes('checkout-item-block') || id.startsWith('item-')) {
+    for (const part of id.split(/[-_]/)) {
+      const a = normalizeAsin(part);
+      if (a) return a;
+    }
+  }
+  return null;
+}
 
 function isWrrapdItemContainer(container) {
   const containerText = container.textContent || '';
@@ -200,14 +278,30 @@ function collectOrderItemRoots() {
 function refreshWrrapdAmazonDeliveryHints() {
   try {
     if (!location.hostname.includes('amazon.com')) return;
+    const wrrapdAsins = readWrrapdCheckoutAsinsFromLocalStorage();
+    const grouping = 'earliest';
+    if (wrrapdAsins.size === 0) {
+      sessionStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          amazonDeliveryDays: [],
+          wrrapdAmazonGrouping: grouping,
+          updatedAt: Date.now(),
+          href: location.href,
+        }),
+      );
+      return;
+    }
+
     const roots = collectOrderItemRoots();
     const allKeys = new Set();
     for (const root of roots) {
+      const domAsin = extractAsinFromCheckoutItemRoot(root);
+      if (!domAsin || !wrrapdAsins.has(domAsin)) continue;
       if (!isWrrapdItemContainer(root)) continue;
       for (const k of extractDateKeysFromContainer(root)) allKeys.add(k);
     }
     const sorted = [...allKeys].sort();
-    const grouping = 'earliest';
     const payload = {
       amazonDeliveryDays: sorted,
       wrrapdAmazonGrouping: grouping,
