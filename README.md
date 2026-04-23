@@ -41,7 +41,7 @@ Adjust if your home directory differs. See [backend/wrrapd-api-repo/WrrapdServer
 
 ## Product / engineering notes (high level)
 
-- **Amazon sign-in:** The extension treats the shopper as active only when the nav greeting is signed-in (`#nav-link-accountList-nav-line-1` is not “Hello, sign in”). See `extension/src/content/lib/amazon-account-signed-in.js`.
+- **Amazon sign-in:** Gated on nav text when present; on **cart / checkout / gp/buy** we assume the tab is signed-in unless we see an explicit **“Hello, sign in”** (checkout often omits `#nav-link-accountList-nav-line-1` until late). See `extension/src/content/lib/amazon-account-signed-in.js`.
 - **Place your order:** After **Pay Wrrapd** succeeds, tracking ingest runs on Amazon’s real **Place your order** control, then Amazon submit proceeds.
 - **Delivery dates:** Hints use **Wrrapd-address** shipment rows and **checked** delivery radios only; multi-address must not merge other recipients’ dates (`amazon-delivery-hints.js`).
 - **Tracking UI:** Firestore-backed; ingest from pay server / extension must match expected recipient fields (see `tracking-platform/README.md`).
