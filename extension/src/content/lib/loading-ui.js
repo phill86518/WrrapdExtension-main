@@ -133,8 +133,6 @@ export function removeLoadingScreen() {
   const loadingScreen = document.getElementById('loadingScreen');
   if (loadingScreen) {
     loadingScreen.remove();
-  } else {
-    console.warn('[removeLoadingScreen] No loading screen found to remove.');
   }
 }
 

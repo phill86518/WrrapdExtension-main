@@ -40,7 +40,7 @@ Full stack deploy order (VM push, PM2, Cloud Run, Windows): **[../DEPLOYMENT.md]
 
 Includes, among others:
 
-- `amazon-account-signed-in.js` — Detects Amazon signed-in state via `#nav-link-accountList-nav-line-1` (vs “Hello, sign in”). Extension checkout behavior is gated on this.
+- `amazon-account-signed-in.js` — Detects signed-in state: explicit **“Hello, sign in”** in the account nav → inactive; **“Hello, &lt;Name&gt;”** on line-1 → active. On **cart / checkout / gp/buy** URLs the full navbar is often missing—if we do not see an explicit sign-in greeting, we **assume active** (same authenticated tab; not server-side cookie scraping).
 - `amazon-delivery-hints.js` — Scrapes Wrrapd shipment **checked** delivery radios; writes `sessionStorage` for ingest / `process-payment`.
 - `wrrapd-debug.js` — Optional HUD / trace (`localStorage wrrapd-trace=1`, etc.).
 - Other helpers: `dom-utils.js`, `storage.js`, `loading-ui.js`, `order-helpers.js`, `summary-alignment.js`, `zip-codes.js`, etc.
