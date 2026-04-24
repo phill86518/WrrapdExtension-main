@@ -10,6 +10,7 @@ const Mailgun = require('mailgun.js');
 const OpenAI = require('openai');
 const { Storage } = require('@google-cloud/storage');
 const fs = require('fs');
+const crypto = require('crypto');
 const QRCode = require('qrcode');
 const https = require('https');
 const http = require('http');
@@ -378,6 +379,49 @@ const getImageForEmail = async (filePath) => {
     }
 };
 
+/** Lowercase trimmed email for cross-system joins (WordPress, future claim API). */
+function normalizeCustomerEmail(email) {
+    if (email == null || typeof email !== 'string') return null;
+    const t = email.trim().toLowerCase();
+    return t.includes('@') ? t : null;
+}
+
+/**
+ * Stable Wrrapd customer id per normalized email (Phase 1 — guest → account backfill prep).
+ * Persists under `customers/email_to_customer_id.json` next to `orders/`.
+ */
+function getOrCreateWrrapdCustomerId(emailNorm) {
+    if (!emailNorm) return null;
+    const customersDir = path.join(__dirname, 'customers');
+    const indexPath = path.join(customersDir, 'email_to_customer_id.json');
+    try {
+        if (!fs.existsSync(customersDir)) {
+            fs.mkdirSync(customersDir, { recursive: true });
+        }
+        let map = {};
+        if (fs.existsSync(indexPath)) {
+            try {
+                map = JSON.parse(fs.readFileSync(indexPath, 'utf8')) || {};
+            } catch (_) {
+                map = {};
+            }
+        }
+        if (map[emailNorm] && typeof map[emailNorm] === 'string') {
+            return map[emailNorm];
+        }
+        const id =
+            typeof crypto.randomUUID === 'function'
+                ? crypto.randomUUID()
+                : `wc-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 14)}`;
+        map[emailNorm] = id;
+        fs.writeFileSync(indexPath, JSON.stringify(map, null, 2), 'utf8');
+        return id;
+    } catch (e) {
+        console.error('[customers] getOrCreateWrrapdCustomerId failed:', e && e.message ? e.message : e);
+        return null;
+    }
+}
+
 // Function to save order data to a JSON file
 const saveOrderToJsonFile = (orderData, paymentData, customerData, orderNumber) => {
     // Create 'orders' directory if it doesn't exist
@@ -391,6 +435,11 @@ const saveOrderToJsonFile = (orderData, paymentData, customerData, orderNumber) 
     const filename = `order_${timestamp}.json`;
     const filePath = path.join(ordersDir, filename);
 
+    const customerEmailNorm = normalizeCustomerEmail(
+        customerData && customerData.email != null ? String(customerData.email) : '',
+    );
+    const wrrapdCustomerId = getOrCreateWrrapdCustomerId(customerEmailNorm);
+
     // Prepare the data to be saved
     const saveData = {
         orderNumber: orderNumber,
@@ -403,8 +452,11 @@ const saveOrderToJsonFile = (orderData, paymentData, customerData, orderNumber) 
         },
         customer: {
             email: customerData.email,
-            phone: customerData.phone
-        }
+            phone: customerData.phone,
+            ...(customerEmailNorm ? { emailNorm: customerEmailNorm } : {}),
+        },
+        ...(customerEmailNorm ? { customerEmailNorm } : {}),
+        ...(wrrapdCustomerId ? { wrrapdCustomerId } : {}),
     };
 
     // Write the data to the file
@@ -1333,10 +1385,14 @@ app.post('/process-payment', async (req, res) => {
                     ? 'earliest'
                     : 'latest';
             const fallbackAmazonDay = inferAmazonDateKeyFromItems(wrappedOnly.length ? wrappedOnly : normalizedOrderData);
+            const payEmailNorm = normalizeCustomerEmail(customerEmail);
+            const payWrrapdCustomerId = getOrCreateWrrapdCustomerId(payEmailNorm);
             const ingestPayload = {
                 customerName,
                 customerPhone,
                 customerEmail,
+                ...(payEmailNorm ? { customerEmailNorm: payEmailNorm } : {}),
+                ...(payWrrapdCustomerId ? { wrrapdCustomerId: payWrrapdCustomerId } : {}),
                 recipientName,
                 addressLine1: streetParts.line1 || finalAddr.line1 || 'N/A',
                 addressLine2: streetParts.line2 || finalAddr.line2 || '',

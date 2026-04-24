@@ -56,6 +56,10 @@ export type IngestOrderPayload = {
     email?: unknown;
   };
   customerEmail?: unknown;
+  /** Lowercase trimmed gifter email (optional; derived from customerEmail when omitted). */
+  customerEmailNorm?: unknown;
+  /** Stable Wrrapd customer id from pay server (optional). */
+  wrrapdCustomerId?: unknown;
   /** First name from Amazon "Deliver to …" header (extension) */
   greetingFirstName?: unknown;
   skipCustomerNotifications?: unknown;
@@ -206,6 +210,10 @@ export function parseIngestOrderPayload(body: unknown): IngestSuccess | IngestFa
   const customerEmail =
     str(p.customerEmail) ||
     str(p.buyer && typeof p.buyer === "object" ? (p.buyer as { email?: unknown }).email : undefined);
+  const customerEmailNorm =
+    str(p.customerEmailNorm)?.toLowerCase() ||
+    (customerEmail ? customerEmail.toLowerCase() : undefined);
+  const wrrapdCustomerId = str((p as { wrrapdCustomerId?: unknown }).wrrapdCustomerId);
   const customerGreetingName = str((p as { greetingFirstName?: unknown }).greetingFirstName);
   const addressLine1 = str(ga?.line1) || str(p.addressLine1) || str(sa?.line1);
   const addressLine2 = str(ga?.line2) || str(p.addressLine2) || str(sa?.line2);
@@ -337,6 +345,8 @@ export function parseIngestOrderPayload(body: unknown): IngestSuccess | IngestFa
       ...(externalOrderId ? { externalOrderId } : {}),
       ...(sourceNote ? { sourceNote } : {}),
       ...(customerEmail ? { customerEmail } : {}),
+      ...(customerEmailNorm ? { customerEmailNorm } : {}),
+      ...(wrrapdCustomerId ? { wrrapdCustomerId } : {}),
       ...(customerGreetingName ? { customerGreetingName } : {}),
       ...(lineItems?.length ? { lineItems } : {}),
       ...(skipCustomerNotifications ? { skipCustomerNotifications: true } : {}),
@@ -377,6 +387,8 @@ export function orderIngestFieldGuide(): {
       "customerName",
       "customerPhone",
       "customerEmail",
+      "customerEmailNorm",
+      "wrrapdCustomerId",
       "customerGreetingName",
       "recipientName",
       "addressLine1",
@@ -402,6 +414,8 @@ export function orderIngestFieldGuide(): {
       amazonDeliveryDays: "array of YYYY-MM-DD with wrrapdAmazonGrouping",
       wrrapdAmazonGrouping: "earliest | together | separate | pending (email/SMS choice)",
       customerEmail: "thank-you + delivery-choice emails",
+      customerEmailNorm: "optional; defaults to lowercase customerEmail when omitted",
+      wrrapdCustomerId: "optional stable id from pay server (Phase 1 customer registry)",
       greetingFirstName: "customerGreetingName (Amazon Deliver-to first name)",
       "buyer.email": "customerEmail",
       orderNumber: "externalOrderId (+ sourceNote)",

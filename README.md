@@ -6,7 +6,7 @@ Single Git repository for the **Chrome extension** (Amazon checkout), the **Node
 
 | Path | What it is |
 |------|------------|
-| [`extension/`](extension/) | Manifest V3 extension — Chrome **Load unpacked** → this folder. Source under `src/content/`; bundled to root `content.js`. |
+| [`extension/`](extension/) | Manifest V3 extension — [Chrome Web Store](https://chromewebstore.google.com/detail/wrrapd/eampapdpkmnnbfdojhmbpckpljnbpapo) for shoppers; **Load unpacked** for dev. Source under `src/content/`; bundled to root `content.js`. |
 | [`backend/wrrapd-api-repo/WrrapdServer/`](backend/wrrapd-api-repo/WrrapdServer/) | Node `server.js`, `public/checkout.html`, PM2 process **`wrrapd-server`**, Stripe, proxies, order ingest. |
 | [`tracking-platform/`](tracking-platform/) | Next.js app: ops hub at `/`, admin `/admin`, driver `/driver`, public `/track/[token]`. Deployed to **Cloud Run** (`wrrapd-tracking`). |
 
@@ -14,6 +14,10 @@ Single Git repository for the **Chrome extension** (Amazon checkout), the **Node
 
 - **Remote:** [`phill86518/WrrapdExtension-main`](https://github.com/phill86518/WrrapdExtension-main/)
 - **Clone:** `git clone https://github.com/phill86518/WrrapdExtension-main.git`
+
+## Chrome Web Store (public install)
+
+- **Wrrapd (live):** [Chrome Web Store listing](https://chromewebstore.google.com/detail/wrrapd/eampapdpkmnnbfdojhmbpckpljnbpapo)
 
 ## Copy-paste deployment (canonical)
 
@@ -51,6 +55,10 @@ Adjust if your home directory differs. See [backend/wrrapd-api-repo/WrrapdServer
 | Doc | Purpose |
 |-----|---------|
 | **[DEPLOYMENT.md](DEPLOYMENT.md)** | **Copy-paste deploy commands (canonical)** |
+| [docs/CUSTOMER-ACCOUNTS-AND-ORDER-HISTORY.md](docs/CUSTOMER-ACCOUNTS-AND-ORDER-HISTORY.md) | Guest vs account, order backfill, customer numbers, SQL vs JSON vs Supabase |
+| [docs/INTEGRATION-MAP.md](docs/INTEGRATION-MAP.md) | Extension ↔ pay server ↔ tracking ↔ WordPress (and `wrrapd-logins` GCP) |
+| [docs/WORDPRESS-SITE-EDITS-LOG.md](docs/WORDPRESS-SITE-EDITS-LOG.md) | Changelog of Elementor / Hello CSS / DB-touch site work |
+| [docs/GCP-WRRAPD-LOGINS-ACCESS.md](docs/GCP-WRRAPD-LOGINS-ACCESS.md) | IAM and `gcloud`: access `wrrapd-logins` vs `wrrapd-chrome-extension` |
 | [extension/README.md](extension/README.md) | Extension build, Windows paths, content layout |
 | [extension/.cursor/root.md](extension/.cursor/root.md) | Cursor / monorepo workflow |
 | [backend/backend.md](backend/backend.md) | Backend (Node) conventions |

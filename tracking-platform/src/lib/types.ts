@@ -70,6 +70,10 @@ export type Order = {
   /** Per driver + calendar day (ET): optimized stop order (1 = first after leaving depot) */
   stopSequence?: number;
   customerEmail?: string;
+  /** Lowercase trimmed gifter email — join key for WordPress / future “my orders” (pay server Phase 1). */
+  customerEmailNorm?: string;
+  /** Stable id per `customerEmailNorm` from pay server `customers/email_to_customer_id.json`. */
+  wrrapdCustomerId?: string;
   /** Amazon header "Deliver to {Name}" — used for thank-you salutation when set */
   customerGreetingName?: string;
   /** Amazon YYYY-MM-DD values seen at ingest when customer must choose combined vs fastest Wrrapd */

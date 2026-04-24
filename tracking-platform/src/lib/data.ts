@@ -245,6 +245,8 @@ export type CreateOrderInput = {
   sourceNote?: string;
   externalOrderId?: string;
   customerEmail?: string;
+  customerEmailNorm?: string;
+  wrrapdCustomerId?: string;
   customerGreetingName?: string;
   amazonDeliveryDatesSnapshot?: string[];
   deliveryPreferencePending?: boolean;
@@ -357,6 +359,12 @@ export async function createOrder(
     };
     if (nextEmail) merged.customerEmail = nextEmail;
     else delete merged.customerEmail;
+    if (input.customerEmailNorm?.trim()) {
+      merged.customerEmailNorm = input.customerEmailNorm.trim().toLowerCase();
+    }
+    if (input.wrrapdCustomerId?.trim()) {
+      merged.wrrapdCustomerId = input.wrrapdCustomerId.trim();
+    }
     if (input.customerGreetingName?.trim()) {
       merged.customerGreetingName = input.customerGreetingName.trim();
     }
@@ -454,6 +462,10 @@ export async function createOrder(
     scheduledFor: scheduledIso,
     externalOrderId: storedExt ?? input.externalOrderId,
     ...(input.customerEmail ? { customerEmail: input.customerEmail.trim() } : {}),
+    ...(input.customerEmailNorm?.trim()
+      ? { customerEmailNorm: input.customerEmailNorm.trim().toLowerCase() }
+      : {}),
+    ...(input.wrrapdCustomerId?.trim() ? { wrrapdCustomerId: input.wrrapdCustomerId.trim() } : {}),
     ...(input.customerGreetingName?.trim()
       ? { customerGreetingName: input.customerGreetingName.trim() }
       : {}),

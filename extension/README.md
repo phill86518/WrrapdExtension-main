@@ -1,5 +1,7 @@
 # Wrrapd Extension
 
+**Public install:** [Wrrapd on the Chrome Web Store](https://chromewebstore.google.com/detail/wrrapd/eampapdpkmnnbfdojhmbpckpljnbpapo). For development, use **Load unpacked** on this folder after `npm run build`.
+
 Manifest V3 content script for **www.amazon.com** (see `manifest.json`). Checkout UX, gift options, Wrrapd pay summary, and post-pay **Place your order** integration.
 
 ## Windows — where to build (Roger’s machine)

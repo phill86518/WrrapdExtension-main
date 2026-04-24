@@ -134,6 +134,10 @@ Then **Chrome → Extensions → Wrrapd → Reload**.
 ## Related docs
 
 - Monorepo overview: [README.md](README.md)
+- Customer accounts + order history (spec): [docs/CUSTOMER-ACCOUNTS-AND-ORDER-HISTORY.md](docs/CUSTOMER-ACCOUNTS-AND-ORDER-HISTORY.md)
+- Integration map (extension / API / tracking / WordPress): [docs/INTEGRATION-MAP.md](docs/INTEGRATION-MAP.md)
+- WordPress site edits log (Elementor, global CSS): [docs/WORDPRESS-SITE-EDITS-LOG.md](docs/WORDPRESS-SITE-EDITS-LOG.md)
+- GCP IAM: `wrrapd-logins` vs `wrrapd-chrome-extension`: [docs/GCP-WRRAPD-LOGINS-ACCESS.md](docs/GCP-WRRAPD-LOGINS-ACCESS.md)
 - Extension build and paths: [extension/README.md](extension/README.md)
 - PM2 details: [backend/wrrapd-api-repo/WrrapdServer/README-PM2.md](backend/wrrapd-api-repo/WrrapdServer/README-PM2.md)
 - Tracking app + Cloud Run notes: [tracking-platform/README.md](tracking-platform/README.md)
