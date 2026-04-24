@@ -54,6 +54,19 @@ If `_elementor_data` is huge, phpMyAdmin may truncate results — narrow with `A
 
 ---
 
+## WordPress “Revisions” vs Elementor (why “Restore This Revision” can leave Elementor empty)
+
+The **Compare Revisions** screen only reliably restores what WordPress stores on the **`posts` row** (title, slug, classic `post_content`, etc.). **Elementor’s real layout** lives in **`postmeta`** (typically **`_elementor_data`**, **`_elementor_edit_mode`**, **`_elementor_template_type`**, CSS cache keys).
+
+Unless your setup explicitly versioned that meta into **revisions** (Elementor Pro / addons can help), clicking **“Restore This Revision”** can bring back **old HTML in post_content** while the **live Elementor JSON is still empty or out of sync** — which matches an Elementor canvas that only says **“Drag widget here”**.
+
+**What usually works better for Elementor layouts:**
+
+- Open the page → **Edit with Elementor** → **History** (clock / revisions inside the Elementor UI), not only WP’s revision screen; or  
+- Restore a **full database backup** on **staging**, copy the page (Save as Template / duplicate), import to production.
+
+---
+
 ## 3) If the layout lived on **[My Orders]** and looks “gone” now
 
 - **Elementor**: open that page → **History** (clock icon) → try **older revisions**.
