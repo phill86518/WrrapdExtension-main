@@ -8,6 +8,10 @@ WordPress + Elementor + Hello theme content mostly lives **in the production dat
 
 ## Recent changes
 
+### 2026-04 — Orders shortcode `layout="studio"` (dashboard + editable overlays)
+
+- **Monorepo:** `[wrrapd_review_orders layout="studio"]` — full-width dashboard UI, occasion browse filter, mapped pay-server fields, customer **occasion label** + **notes** saved in **`wrrapd_order_line_overlays`** user meta via **`admin-ajax.php?action=wrrapd_save_order_line_overlay`**. Remove legacy Jet listing on the same page.
+
 ### 2026-04 — Orders shortcode `layout="cards"` (Jet listing vs pay-server)
 
 - **Monorepo:** `[wrrapd_review_orders layout="cards"]` — card UI + occasion `<select>` filter from pay-server JSON; remove JetEngine “Associated Id / No. of Files” listing on the same page if both appear.

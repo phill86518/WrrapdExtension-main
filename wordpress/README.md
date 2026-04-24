@@ -16,21 +16,23 @@ define( 'WRRAPD_INTERNAL_API_KEY', 'paste-the-same-secret-as-WRRAPD_INTERNAL_CLA
 The `[wrrapd_review_orders]` shortcode **only outputs the table block you add**; it does not remove other Elementor widgets. If you had a richer “My orders” layout (dates, giftee, occasions, design, comments), use **that** page: add one **Shortcode** widget (or embed the shortcode inside a column) and keep your existing form/list widgets. A separate minimal **“My Orders”** page is optional.
 
 1. Edit the page that should show pay-server orders (logged-in users only — the one with your full layout if you prefer).
-2. Add a **Shortcode** widget with either:
+2. Add a **Shortcode** widget. Pick **one** layout:
+
+**Recommended — “studio” layout** (single cohesive dashboard: hero, **browse-by-occasion** dropdown, mapped checkout fields, **your occasion label** select with common presets, **your notes**, save per gift row into **user meta** — then reload):
 
 ```text
-[wrrapd_review_orders]
+[wrrapd_review_orders layout="studio"]
 ```
 
-or a **card layout** (recommended on restored Elementor pages — navy/gold styling, **occasion dropdown** filter built from your real orders):
+**Card layout** (lighter, no editable overlays):
 
 ```text
 [wrrapd_review_orders layout="cards"]
 ```
 
-**Important:** If you still see columns named **“Associated Id”**, **“No. of Files”**, etc., that is **not** this shortcode — it is almost always **JetEngine (or similar) listing** reading old WordPress/CPT data. **Delete that listing widget** (or its section) in Elementor **Navigator**, then keep only **one** Shortcode widget with `layout="cards"` (or `rich` if you prefer a table). Two widgets = two different data sources on top of each other.
+**Important:** If you still see columns named **“Associated Id”**, **“No. of Files”**, etc., that is **not** this shortcode — it is almost always **JetEngine (or similar) listing** reading old WordPress/CPT data. **Delete that listing widget** (or its section) in Elementor **Navigator**, then keep **only one** Shortcode (usually `layout="studio"`).
 
-Older table layout:
+Older compact table:
 
 ```text
 [wrrapd_review_orders layout="rich"]
