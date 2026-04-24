@@ -11386,6 +11386,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                                 const hasCheckoutGiftee =
                                     checkoutFinalShippingAddress &&
                                     typeof checkoutFinalShippingAddress === 'object';
+                                const checkoutInvoicePayload = buildCheckoutInvoiceSnapshotForServer();
                                 const response = await fetch('https://api.wrrapd.com/process-payment', {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
@@ -11407,6 +11408,9 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                                         gifteeOriginalAddressForServer &&
                                         typeof gifteeOriginalAddressForServer === 'object'
                                             ? { gifteeOriginalAddress: gifteeOriginalAddressForServer }
+                                            : {}),
+                                        ...(checkoutInvoicePayload
+                                            ? { checkoutInvoice: checkoutInvoicePayload }
                                             : {}),
                                     }),
                                 });
@@ -11449,6 +11453,73 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
         attachWrrapdPlaceOrderTrackingHook();
     }
     
+    /** Same dollar math as updateWrrapdSummary — sent to process-payment for WordPress order receipt. */
+    function buildCheckoutInvoiceSnapshotForServer() {
+        try {
+            const allItems = getAllItemsFromLocalStorage();
+            const itemsInCurrentCheckout = filterItemsInCurrentCheckout(allItems);
+            if (Object.keys(itemsInCurrentCheckout).length === 0) {
+                return null;
+            }
+
+            let giftWrapTotal = 0;
+            let flowersTotal = 0;
+            let customDesignTotal = 0;
+
+            Object.values(itemsInCurrentCheckout).forEach((item) => {
+                if (item.options) {
+                    item.options.forEach((option) => {
+                        if (option.checkbox_wrrapd) {
+                            giftWrapTotal += 6.99;
+                            if (option.selected_wrapping_option === 'ai') {
+                                customDesignTotal += 2.99;
+                            } else if (option.selected_wrapping_option === 'upload') {
+                                customDesignTotal += 1.99;
+                            }
+                        }
+                        if (option.checkbox_flowers) {
+                            flowersTotal += 17.99;
+                        }
+                    });
+                }
+            });
+
+            const taxRate = getTaxRatePercentage() / 100;
+            const subtotal = giftWrapTotal + flowersTotal + customDesignTotal;
+            const estimatedTax = subtotal * taxRate;
+            const total = subtotal + estimatedTax;
+
+            const lines = [];
+            if (giftWrapTotal > 0) {
+                lines.push({ label: 'Gift-wrapping', amount: Math.round(giftWrapTotal * 100) / 100 });
+            }
+            if (customDesignTotal > 0) {
+                lines.push({
+                    label: 'Custom Design Fee',
+                    amount: Math.round(customDesignTotal * 100) / 100,
+                });
+            }
+            if (flowersTotal > 0) {
+                lines.push({ label: 'Flowers', amount: Math.round(flowersTotal * 100) / 100 });
+            }
+            lines.push({ label: 'Total before tax:', amount: Math.round(subtotal * 100) / 100 });
+            lines.push({
+                label: 'Estimated tax to be collected:',
+                amount: Math.round(estimatedTax * 100) / 100,
+            });
+
+            return {
+                lines,
+                subtotal: Math.round(subtotal * 100) / 100,
+                estimatedTax: Math.round(estimatedTax * 100) / 100,
+                total: Math.round(total * 100) / 100,
+            };
+        } catch (e) {
+            console.warn('[buildCheckoutInvoiceSnapshotForServer]', e);
+            return null;
+        }
+    }
+
     // Updates the Wrrapd summary section with calculated totals and line items
     function updateWrrapdSummary() {
         console.log("[updateWrrapdSummary] Updating Wrrapd summary.");

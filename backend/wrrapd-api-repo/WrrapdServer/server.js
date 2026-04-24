@@ -422,8 +422,34 @@ function getOrCreateWrrapdCustomerId(emailNorm) {
     }
 }
 
+function sanitizeCheckoutInvoiceForStorage(raw) {
+    if (!raw || typeof raw !== 'object') return null;
+    const linesIn = Array.isArray(raw.lines) ? raw.lines : [];
+    const outLines = [];
+    for (const row of linesIn.slice(0, 40)) {
+        if (!row || typeof row !== 'object') continue;
+        const label = typeof row.label === 'string' ? row.label.trim().slice(0, 160) : '';
+        if (!label) continue;
+        const amount =
+            typeof row.amount === 'number' && Number.isFinite(row.amount)
+                ? Math.round(row.amount * 100) / 100
+                : null;
+        const o = { label };
+        if (amount !== null) o.amount = amount;
+        outLines.push(o);
+    }
+    const num = (x) =>
+        typeof x === 'number' && Number.isFinite(x) ? Math.round(x * 100) / 100 : null;
+    return {
+        lines: outLines,
+        subtotal: num(raw.subtotal),
+        estimatedTax: num(raw.estimatedTax),
+        total: num(raw.total),
+    };
+}
+
 // Function to save order data to a JSON file
-const saveOrderToJsonFile = (orderData, paymentData, customerData, orderNumber) => {
+const saveOrderToJsonFile = (orderData, paymentData, customerData, orderNumber, checkoutInvoice) => {
     // Create 'orders' directory if it doesn't exist
     const ordersDir = path.join(__dirname, 'orders');
     if (!fs.existsSync(ordersDir)) {
@@ -441,6 +467,7 @@ const saveOrderToJsonFile = (orderData, paymentData, customerData, orderNumber) 
     const wrrapdCustomerId = getOrCreateWrrapdCustomerId(customerEmailNorm);
 
     // Prepare the data to be saved
+    const ci = sanitizeCheckoutInvoiceForStorage(checkoutInvoice);
     const saveData = {
         orderNumber: orderNumber,
         timestamp: new Date().toISOString(),
@@ -457,6 +484,7 @@ const saveOrderToJsonFile = (orderData, paymentData, customerData, orderNumber) 
         },
         ...(customerEmailNorm ? { customerEmailNorm } : {}),
         ...(wrrapdCustomerId ? { wrrapdCustomerId } : {}),
+        ...(ci && ci.lines && ci.lines.length ? { checkoutInvoice: ci } : {}),
     };
 
     // Write the data to the file
@@ -739,7 +767,8 @@ function summarizeOrderForWpList(data) {
     else if (items && typeof items === 'object') lineItemCount = Object.keys(items).length;
     const pay = data.payment && typeof data.payment === 'object' ? data.payment : null;
     const lines = summarizeWrrapdLinesFromOrderRecord(data);
-    /** Short invoice-style rows for WordPress studio (no Amazon product titles). */
+    const persistedCi = sanitizeCheckoutInvoiceForStorage(data.checkoutInvoice);
+    /** Short invoice-style rows when checkout snapshot was not stored (no Amazon product titles). */
     const invoiceLines = lines.map((ln, idx) => {
         const raw =
             (ln.designLabel && String(ln.designLabel).trim()) ||
@@ -769,6 +798,7 @@ function summarizeOrderForWpList(data) {
         wrrapdLineCount: lines.length,
         lines,
         invoiceLines,
+        checkoutInvoice: persistedCi && persistedCi.lines && persistedCi.lines.length ? persistedCi : null,
     };
 }
 
@@ -1236,6 +1266,7 @@ app.post('/process-payment', async (req, res) => {
         amazonDeliveryHints,
         gifteeOriginalAddress,
         finalShippingAddress: finalShippingAddressFromClient,
+        checkoutInvoice,
     } = req.body;
 
     // Validate that all parameters are present
@@ -1313,10 +1344,16 @@ app.post('/process-payment', async (req, res) => {
         console.log(`Using order number: ${orderNumber}`);
 
         // Save order data to a local JSON file
-        saveOrderToJsonFile(normalizedOrderData, paymentIntent, {
-            email: customerEmail,
-            phone: customerPhone
-        }, orderNumber);
+        saveOrderToJsonFile(
+            normalizedOrderData,
+            paymentIntent,
+            {
+                email: customerEmail,
+                phone: customerPhone,
+            },
+            orderNumber,
+            checkoutInvoice,
+        );
         
         // Generate QR code for the order
         const qrData = {

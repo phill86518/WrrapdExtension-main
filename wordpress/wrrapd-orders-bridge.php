@@ -635,64 +635,104 @@ function wrrapd_studio_design_kind_label( array $ln ) {
 }
 
 /**
- * Invoice-style summary for the studio middle column (gift-wrap rows, no Amazon product titles).
+ * @param float|int $n Dollar amount.
+ */
+function wrrapd_money_usd( $n ) {
+	return '$' . number_format( (float) $n, 2, '.', ',' );
+}
+
+/**
+ * Receipt block at bottom of studio order (checkout snapshot when available).
  *
  * @param array<string, mixed>              $order Order payload from API.
- * @param array<int, array<string, mixed>> $lines Normalized gift lines (fallback if invoiceLines missing).
+ * @param array<int, array<string, mixed>> $lines Normalized gift lines (fallback only).
  */
 function wrrapd_studio_order_summary_html( array $order, array $lines ) {
 	$pay   = isset( $order['payment'] ) && is_array( $order['payment'] ) ? $order['payment'] : null;
 	$cents = isset( $pay['amount'] ) ? (int) $pay['amount'] : 0;
-	$total = '';
+	$total_str = '';
 	if ( $cents > 0 ) {
-		$total = '$' . number_format( $cents / 100.0, 2, '.', ',' );
+		$total_str = wrrapd_money_usd( $cents / 100.0 );
 	}
-	$inv = isset( $order['invoiceLines'] ) && is_array( $order['invoiceLines'] ) ? $order['invoiceLines'] : array();
-	if ( count( $inv ) === 0 ) {
-		foreach ( $lines as $idx => $ln ) {
-			if ( ! is_array( $ln ) ) {
-				continue;
-			}
-			$d = isset( $ln['designLabel'] ) ? trim( (string) $ln['designLabel'] ) : '';
-			if ( $d === '' && isset( $ln['designSummary'] ) ) {
-				$d = trim( (string) $ln['designSummary'] );
-				if ( strlen( $d ) > 120 ) {
-					$d = substr( $d, 0, 120 ) . '…';
-				}
-			}
-			$inv[] = array(
-				'label'  => __( 'Gift wrap', 'wrrapd' ),
-				'detail' => $d !== '' ? $d : ( __( 'Gift', 'wrrapd' ) . ' ' . ( (int) $idx + 1 ) ),
-			);
-		}
-	}
+
+	$ci        = isset( $order['checkoutInvoice'] ) && is_array( $order['checkoutInvoice'] ) ? $order['checkoutInvoice'] : null;
+	$ci_lines  = ( $ci && isset( $ci['lines'] ) && is_array( $ci['lines'] ) ) ? $ci['lines'] : array();
+	$use_check = count( $ci_lines ) > 0;
+
 	ob_start();
-	echo '<div class="wrrapd-amz-summary">';
-	echo '<div class="wrrapd-amz-summary-title">' . esc_html__( 'Wrrapd summary', 'wrrapd' ) . '</div>';
-	if ( count( $inv ) > 0 ) {
-		echo '<ul class="wrrapd-amz-summary-lines">';
-		foreach ( $inv as $row ) {
+	echo '<div class="wrrapd-amz-summary" role="region" aria-label="' . esc_attr__( 'Order charges', 'wrrapd' ) . '">';
+	if ( $use_check ) {
+		echo '<div class="wrrapd-amz-inv-list">';
+		foreach ( $ci_lines as $row ) {
 			if ( ! is_array( $row ) ) {
 				continue;
 			}
 			$lab = isset( $row['label'] ) ? trim( (string) $row['label'] ) : '';
-			$det = isset( $row['detail'] ) ? trim( (string) $row['detail'] ) : '';
-			$lab_out = $lab !== '' ? $lab : __( 'Gift wrap', 'wrrapd' );
-			if ( strcasecmp( $lab, 'Gift wrap' ) === 0 ) {
-				$lab_out = __( 'Gift wrap', 'wrrapd' );
+			if ( $lab === '' ) {
+				continue;
 			}
-			echo '<li><span class="wrrapd-amz-summary-row-lab">' . esc_html( $lab_out ) . '</span>';
-			if ( $det !== '' ) {
-				echo '<span class="wrrapd-amz-summary-row-det">' . esc_html( $det ) . '</span>';
-			}
-			echo '</li>';
+			$amt_f = isset( $row['amount'] ) && is_numeric( $row['amount'] ) ? (float) $row['amount'] : null;
+			echo '<div class="wrrapd-amz-inv-row">';
+			echo '<span class="wrrapd-amz-inv-lab">' . esc_html( $lab ) . '</span>';
+			echo '<span class="wrrapd-amz-inv-amt">' . ( $amt_f !== null ? esc_html( wrrapd_money_usd( $amt_f ) ) : '' ) . '</span>';
+			echo '</div>';
 		}
-		echo '<li class="wrrapd-amz-summary-tax"><span class="wrrapd-amz-summary-row-lab">' . esc_html__( 'Sales tax', 'wrrapd' ) . '</span> ';
-		echo '<span class="wrrapd-amz-summary-tax-note">' . esc_html__( '(included in total)', 'wrrapd' ) . '</span></li>';
-		echo '</ul>';
-	}
-	if ( $total !== '' ) {
-		echo '<div class="wrrapd-amz-summary-total">' . esc_html__( 'Total', 'wrrapd' ) . ' ' . esc_html( $total ) . '</div>';
+		echo '</div>';
+		if ( $total_str !== '' ) {
+			echo '<div class="wrrapd-amz-inv-row wrrapd-amz-inv-row--grand">';
+			echo '<span class="wrrapd-amz-inv-lab">' . esc_html__( 'Order total', 'wrrapd' ) . '</span>';
+			echo '<span class="wrrapd-amz-inv-amt">' . esc_html( $total_str ) . '</span>';
+			echo '</div>';
+		}
+	} else {
+		$inv = isset( $order['invoiceLines'] ) && is_array( $order['invoiceLines'] ) ? $order['invoiceLines'] : array();
+		if ( count( $inv ) === 0 ) {
+			foreach ( $lines as $idx => $ln ) {
+				if ( ! is_array( $ln ) ) {
+					continue;
+				}
+				$d = isset( $ln['designLabel'] ) ? trim( (string) $ln['designLabel'] ) : '';
+				if ( $d === '' && isset( $ln['designSummary'] ) ) {
+					$d = trim( (string) $ln['designSummary'] );
+					if ( strlen( $d ) > 120 ) {
+						$d = substr( $d, 0, 120 ) . '…';
+					}
+				}
+				$inv[] = array(
+					'label'  => __( 'Gift wrap', 'wrrapd' ),
+					'detail' => $d !== '' ? $d : ( __( 'Gift', 'wrrapd' ) . ' ' . ( (int) $idx + 1 ) ),
+				);
+			}
+		}
+		if ( count( $inv ) > 0 ) {
+			echo '<div class="wrrapd-amz-inv-list">';
+			foreach ( $inv as $row ) {
+				if ( ! is_array( $row ) ) {
+					continue;
+				}
+				$lab = isset( $row['label'] ) ? trim( (string) $row['label'] ) : '';
+				$det = isset( $row['detail'] ) ? trim( (string) $row['detail'] ) : '';
+				$lab_out = $lab !== '' ? $lab : __( 'Gift wrap', 'wrrapd' );
+				if ( strcasecmp( $lab, 'Gift wrap' ) === 0 ) {
+					$lab_out = __( 'Gift wrap', 'wrrapd' );
+				}
+				echo '<div class="wrrapd-amz-inv-row wrrapd-amz-inv-row--stack">';
+				echo '<div class="wrrapd-amz-inv-left">';
+				echo '<span class="wrrapd-amz-inv-lab">' . esc_html( $lab_out ) . '</span>';
+				if ( $det !== '' ) {
+					echo '<span class="wrrapd-amz-inv-sub">' . esc_html( $det ) . '</span>';
+				}
+				echo '</div><span class="wrrapd-amz-inv-amt"></span></div>';
+			}
+			echo '<div class="wrrapd-amz-inv-note">' . esc_html__( 'Sales tax included in total where applicable.', 'wrrapd' ) . '</div>';
+			echo '</div>';
+		}
+		if ( $total_str !== '' ) {
+			echo '<div class="wrrapd-amz-inv-row wrrapd-amz-inv-row--grand">';
+			echo '<span class="wrrapd-amz-inv-lab">' . esc_html__( 'Order total', 'wrrapd' ) . '</span>';
+			echo '<span class="wrrapd-amz-inv-amt">' . esc_html( $total_str ) . '</span>';
+			echo '</div>';
+		}
 	}
 	echo '</div>';
 	return (string) ob_get_clean();
@@ -713,7 +753,7 @@ function wrrapd_render_orders_studio( array $orders, array $overlays ) {
 	$ajax      = admin_url( 'admin-ajax.php' );
 
 	ob_start();
-	echo '<div id="' . esc_attr( $wrap_id ) . '" class="wrrapd-amz-root" data-wrrapd-bridge-rev="2026-04-27" data-ajax-url="' . esc_url( $ajax ) . '" data-nonce="' . esc_attr( $nonce ) . '">';
+	echo '<div id="' . esc_attr( $wrap_id ) . '" class="wrrapd-amz-root" data-wrrapd-bridge-rev="2026-04-28" data-ajax-url="' . esc_url( $ajax ) . '" data-nonce="' . esc_attr( $nonce ) . '">';
 	echo '<link rel="preconnect" href="https://fonts.googleapis.com" /><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin /><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..700&amp;family=Fraunces:opsz,wght@9..144,500;9..144,700&amp;display=swap" />';
 
 	echo '<style>
@@ -723,31 +763,32 @@ function wrrapd_render_orders_studio( array $orders, array $overlays ) {
 .wrrapd-amz-search{margin:0 auto;padding:0 .25rem;text-align:center;}
 .wrrapd-amz-search input{width:100%;max-width:min(100%,28rem);margin-left:auto;margin-right:auto;display:block;padding:.22rem .5rem;border-radius:8px;border:2px solid var(--bx);font-size:.68rem;background:#fff;font-family:var(--wr-font);color:var(--ink);box-shadow:0 1px 2px rgba(15,23,42,.06);}
 .wrrapd-amz-search input:focus{outline:2px solid var(--wr-gold-deep);outline-offset:1px;border-color:var(--wr-navy-mid);}
-.wrrapd-amz-order{background:#fff;border:3px solid var(--wr-gold-deep);border-radius:10px;margin-bottom:.42rem;box-shadow:0 2px 0 rgba(212,161,6,.25),0 6px 16px rgba(15,23,42,.08);overflow:hidden;}
-.wrrapd-amz-order-main{display:flex;flex-direction:row;align-items:flex-start;gap:.42rem;width:100%;padding:.3rem .4rem .36rem;background:#fafafa;border-bottom:1px solid var(--bx-line);flex-wrap:nowrap;}
-.wrrapd-amz-strip-col{flex:1 1 36%;min-width:7.5rem;max-width:46%;display:flex;flex-direction:column;gap:.12rem;}
-.wrrapd-amz-wraps-row,.wrrapd-amz-flowers-row,.wrrapd-amz-kind-row{display:flex;flex-direction:row;flex-wrap:wrap;justify-content:center;align-items:flex-start;gap:.32rem;margin-bottom:.14rem;}
+.wrrapd-amz-order{display:flex;flex-direction:column;min-height:0;background:#fff;border:3px solid var(--wr-gold-deep);border-radius:10px;margin-bottom:.42rem;box-shadow:0 2px 0 rgba(212,161,6,.25),0 6px 16px rgba(15,23,42,.08);overflow:hidden;}
+.wrrapd-amz-order-top{display:flex;flex-direction:row;align-items:stretch;gap:.5rem;flex:1 1 auto;width:100%;padding:.32rem .48rem .38rem;background:#fafafa;flex-wrap:nowrap;}
+.wrrapd-amz-strip-col{flex:0 1 42%;min-width:8.5rem;max-width:52%;display:flex;flex-direction:column;gap:.14rem;align-self:flex-start;}
+.wrrapd-amz-wraps-row,.wrrapd-amz-flowers-row,.wrrapd-amz-kind-row{display:flex;flex-direction:row;flex-wrap:wrap;justify-content:center;align-items:flex-start;gap:.32rem;margin-bottom:.12rem;}
 .wrrapd-amz-strip-cell{width:56px;flex:0 0 auto;display:flex;flex-direction:column;align-items:center;}
-.wrrapd-amz-flowers-cell{min-height:2.35rem;justify-content:flex-start;padding-top:.06rem;}
+.wrrapd-amz-kind-row{margin-bottom:.02rem;}
+.wrrapd-amz-flowers-cell{min-height:2.1rem;justify-content:flex-start;padding-top:.04rem;}
 .wrrapd-amz-flowers-cell .wrrapd-amz-flowers-art{width:44px;height:50px;border-radius:7px;border:2px solid var(--bx);margin:0 auto;background:radial-gradient(circle at 32% 32%,#e11d48 16%,transparent 18%),radial-gradient(circle at 66% 36%,#ea580c 14%,transparent 17%),radial-gradient(circle at 50% 58%,#c2410c 18%,transparent 21%),radial-gradient(circle at 50% 86%,#166534 10%,transparent 12%),linear-gradient(165deg,#fffbeb,#fff);}
-.wrrapd-amz-flowers-cell .wrrapd-amz-flowers-not{font-size:.48rem;font-weight:700;color:#3f0d1a;text-align:center;line-height:1.15;padding:0 .04rem;}
-.wrrapd-amz-summary-col{flex:1 1 28%;min-width:11rem;max-width:22rem;padding:.06rem .28rem 0;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;}
-.wrrapd-amz-summary{margin:0;width:100%;text-align:left;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:.38rem .5rem .42rem;box-shadow:inset 0 1px 0 rgba(255,255,255,.55);}
-.wrrapd-amz-summary-title{font-family:var(--wr-display);font-weight:700;font-size:.72rem;color:var(--wr-navy);margin-bottom:.16rem;letter-spacing:.02em;text-align:center;}
-.wrrapd-amz-summary-lines{list-style:none;margin:0;padding:0;width:100%;text-align:left;}
-.wrrapd-amz-summary-lines > li:not(.wrrapd-amz-summary-tax){margin-bottom:.14rem;padding-bottom:.1rem;border-bottom:1px dashed #e2e8f0;}
-.wrrapd-amz-summary-lines > li:last-child{margin-bottom:0;}
-.wrrapd-amz-summary-row-lab{display:block;font-weight:800;font-size:.58rem;color:var(--wr-navy);line-height:1.2;}
-.wrrapd-amz-summary-row-det{display:block;font-size:.54rem;color:#334155;font-weight:500;margin-top:.06rem;line-height:1.32;word-break:break-word;}
-.wrrapd-amz-summary-tax{margin-top:.12rem;padding-top:.08rem;font-size:.52rem;color:#475569;line-height:1.25;}
-.wrrapd-amz-summary-tax-note{font-weight:600;color:#64748b;}
-.wrrapd-amz-summary-total{margin-top:.22rem;padding-top:.14rem;border-top:2px solid var(--wr-navy-mid);font-weight:800;font-size:.68rem;color:#1a0a10;text-align:center;}
-.wrrapd-amz-lines-col{flex:1 1 34%;min-width:11.75rem;max-width:15.75rem;margin-left:auto;display:flex;flex-direction:column;}
-.wrrapd-amz-lines-col .wrrapd-amz-fields-col{max-width:100%!important;width:100%;min-width:0;flex:1 1 auto;margin-left:0;padding:.2rem .28rem .3rem .2rem;}
-.wrrapd-amz-design-col{flex:0 0 auto;width:7.25rem;max-width:46%;min-width:5.5rem;padding:.1rem .06rem .18rem 0;text-align:center;}
-.wrrapd-amz-design-stack{display:flex;flex-direction:column;align-items:center;gap:.08rem;}
-.wrrapd-amz-design-visual-row{display:flex;flex-direction:row;flex-wrap:nowrap;align-items:flex-start;justify-content:center;gap:.2rem;}
-.wrrapd-amz-prod-ph{display:inline-block;flex-shrink:0;width:48px;height:48px;border-radius:6px;background:#f1f5f9;border:1px dashed var(--bx-line);vertical-align:top;}
+.wrrapd-amz-flowers-cell .wrrapd-amz-flowers-not{font-size:.52rem;font-weight:700;color:#3f0d1a;text-align:center;line-height:1.15;padding:0 .04rem;}
+.wrrapd-amz-order-foot{width:100%;padding:.28rem .55rem .4rem;background:#fff;border-top:2px solid var(--wr-gold-deep);}
+.wrrapd-amz-summary{margin:0 auto;max-width:min(100%,34rem);text-align:left;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:.42rem .55rem .48rem;box-shadow:inset 0 1px 0 rgba(255,255,255,.55);}
+.wrrapd-amz-inv-list{width:100%;}
+.wrrapd-amz-inv-row{display:flex;flex-direction:row;justify-content:space-between;align-items:baseline;gap:.75rem;width:100%;padding:.1rem 0;border-bottom:1px solid #e2e8f0;font-size:.62rem;line-height:1.35;}
+.wrrapd-amz-inv-row:last-of-type:not(.wrrapd-amz-inv-row--grand){border-bottom:none;}
+.wrrapd-amz-inv-row--grand{margin-top:.18rem;padding-top:.2rem;border-top:2px solid var(--wr-navy-mid);border-bottom:none;font-weight:800;font-size:.72rem;color:#0f172a;}
+.wrrapd-amz-inv-row--stack{align-items:flex-start;}
+.wrrapd-amz-inv-left{flex:1;min-width:0;}
+.wrrapd-amz-inv-lab{color:#0f172a;font-weight:600;word-break:break-word;}
+.wrrapd-amz-inv-sub{display:block;margin-top:.06rem;font-size:.56rem;color:#475569;font-weight:500;line-height:1.3;word-break:break-word;}
+.wrrapd-amz-inv-amt{flex:0 0 auto;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;color:#0f172a;font-weight:600;}
+.wrrapd-amz-inv-note{margin-top:.12rem;font-size:.52rem;color:#64748b;line-height:1.3;}
+.wrrapd-amz-lines-col{flex:1 1 58%;min-width:13.5rem;max-width:100%;margin-left:auto;display:flex;flex-direction:column;}
+.wrrapd-amz-lines-col .wrrapd-amz-fields-col{max-width:100%!important;width:100%;min-width:0;flex:1 1 auto;margin-left:0;padding:.22rem .52rem .34rem .32rem;}
+.wrrapd-amz-line-inner .wrrapd-amz-fields-col{gap:.16rem;}
+.wrrapd-amz-prod-after-rem{display:flex;flex-direction:row;align-items:center;justify-content:flex-end;width:100%;max-width:min(100%,13.5rem);margin:.14rem 0 .06rem;padding-top:.08rem;border-top:1px dashed var(--bx-line);}
+.wrrapd-amz-prod-ph{display:inline-block;flex-shrink:0;width:52px;height:52px;border-radius:6px;background:#f1f5f9;border:1px dashed var(--bx-line);}
 .wrrapd-amz-bar{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-start;gap:.2rem .55rem;padding:.32rem .48rem;background:linear-gradient(180deg,#ffd54a,var(--wr-gold));border-bottom:2px solid var(--bx);}
 .wrrapd-amz-bar-lbl{font-size:.54rem;font-weight:700;font-family:var(--wr-display);color:var(--wr-bar-ink);letter-spacing:.06em;text-transform:uppercase;opacity:.88;}
 .wrrapd-amz-bar-date{margin-top:0;font-size:.72rem;font-weight:700;font-family:var(--wr-display);color:var(--wr-bar-ink);}
@@ -755,24 +796,24 @@ function wrrapd_render_orders_studio( array $orders, array $overlays ) {
 .wrrapd-amz-bar-right{text-align:right;}
 .wrrapd-amz-line{border-top:1px solid var(--bx-line);}
 .wrrapd-amz-line:first-of-type{border-top:none;}
-.wrrapd-amz-line-inner{display:flex;flex-direction:row;align-items:flex-start;justify-content:space-between;gap:.28rem;width:100%;background:#fff;}
+.wrrapd-amz-line-inner{display:flex;flex-direction:row;align-items:stretch;justify-content:flex-end;gap:0;width:100%;background:#fff;}
 .wrrapd-amz-wrap-thumb{flex:0 0 auto;width:52px;height:52px;padding:0;border:none;border-radius:10px;cursor:zoom-in;overflow:hidden;background:radial-gradient(ellipse 95% 75% at 18% 12%,rgba(251,207,232,.55),transparent 52%),radial-gradient(ellipse 80% 70% at 88% 8%,rgba(254,243,199,.45),transparent 48%),radial-gradient(ellipse 120% 90% at 50% 100%,rgba(226,232,240,.9),transparent 55%),linear-gradient(152deg,#fffdfb 0%,#f8fafc 38%,#e2e8f0 72%,#f1f5f9 100%),repeating-linear-gradient(125deg,rgba(255,255,255,.14) 0 1px,transparent 1px 9px);}
 .wrrapd-amz-wrap-thumb.has-img{background:#0f172a;border:2px solid var(--bx);border-radius:7px;box-shadow:0 2px 8px rgba(15,23,42,.2);}
 .wrrapd-amz-wrap-thumb img{width:100%;height:100%;object-fit:cover;display:block;}
 .wrrapd-amz-wrap-thumb:focus{outline:2px solid var(--wr-gold-deep);outline-offset:1px;}
 .wrrapd-amz-design-kind{font-size:.5rem;font-weight:700;font-family:var(--wr-display);color:var(--ink);line-height:1.15;text-align:center;width:100%;padding:0 .06rem;}
-.wrrapd-amz-fields-col{flex:1 1 auto;min-width:0;width:auto;max-width:min(100%,12rem);padding:.24rem .42rem .32rem .28rem;display:flex;flex-direction:column;align-items:flex-end;gap:.12rem;text-align:left;background:#fff;border-left:none;box-shadow:none;overflow:visible;margin-left:auto;}
-@media(max-width:720px){.wrrapd-amz-order-main{flex-wrap:wrap;}.wrrapd-amz-strip-col{max-width:100%;flex:1 1 100%;}.wrrapd-amz-summary-col{flex:1 1 100%;max-width:100%;order:2;}.wrrapd-amz-lines-col{flex:1 1 100%;max-width:100%;order:3;margin-left:0;}}
-@media(max-width:560px){.wrrapd-amz-search-wrap{transform:translateY(-1rem);margin-bottom:-.5rem;}.wrrapd-amz-line-inner{flex-direction:column;align-items:stretch;}.wrrapd-amz-design-col{max-width:100%;width:100%;}.wrrapd-amz-fields-col{max-width:100%;width:100%;align-items:stretch;margin-left:0;}.wrrapd-amz-fields-col > .wrrapd-amz-f,.wrrapd-amz-occ-date-row,.wrrapd-amz-rem-inline-row{max-width:100%;width:100%;margin-left:0!important;}.wrrapd-amz-occ-date-row{flex-direction:column;align-items:stretch;}.wrrapd-amz-prodrow{justify-content:flex-start;}}
-.wrrapd-amz-fields-col > .wrrapd-amz-f{position:relative;width:100%;max-width:min(100%,12rem);margin-left:auto;margin-right:0;}
-.wrrapd-amz-fields-col > .wrrapd-amz-f--select{max-width:min(100%,12rem);}
-.wrrapd-amz-occ-date-row{display:flex;flex-direction:row;align-items:flex-end;flex-wrap:nowrap;gap:.22rem;width:100%;max-width:min(100%,12rem);margin-left:auto;margin-right:0;}
+.wrrapd-amz-fields-col{flex:1 1 auto;min-width:0;width:100%;max-width:min(100%,13.5rem);padding:.24rem .42rem .32rem .28rem;display:flex;flex-direction:column;align-items:flex-end;gap:.14rem;text-align:left;background:#fff;border-left:none;box-shadow:none;overflow:visible;margin-left:auto;}
+@media(max-width:720px){.wrrapd-amz-order-top{flex-wrap:wrap;}.wrrapd-amz-strip-col{max-width:100%;flex:1 1 100%;}.wrrapd-amz-lines-col{flex:1 1 100%;max-width:100%;margin-left:0;}}
+@media(max-width:560px){.wrrapd-amz-search-wrap{transform:translateY(-1rem);margin-bottom:-.5rem;}.wrrapd-amz-line-inner{flex-direction:column;align-items:stretch;}.wrrapd-amz-fields-col{max-width:100%;width:100%;align-items:stretch;margin-left:0;}.wrrapd-amz-fields-col > .wrrapd-amz-f,.wrrapd-amz-occ-date-row,.wrrapd-amz-rem-inline-row,.wrrapd-amz-prod-after-rem{max-width:100%;width:100%;margin-left:0!important;}.wrrapd-amz-occ-date-row{flex-direction:column;align-items:stretch;}.wrrapd-amz-prodrow{justify-content:flex-start;}}
+.wrrapd-amz-fields-col > .wrrapd-amz-f{position:relative;width:100%;max-width:min(100%,13.5rem);margin-left:auto;margin-right:0;}
+.wrrapd-amz-fields-col > .wrrapd-amz-f--select{max-width:min(100%,13.5rem);}
+.wrrapd-amz-occ-date-row{display:flex;flex-direction:row;align-items:flex-end;flex-wrap:nowrap;gap:.28rem;width:100%;max-width:min(100%,13.5rem);margin-left:auto;margin-right:0;}
 .wrrapd-amz-occ-date-row .wrrapd-amz-f{flex:1 1 auto;min-width:0;margin:0;max-width:none;}
-.wrrapd-amz-occ-date-row .wrrapd-amz-f-occwrap{flex:1 1 55%;min-width:0;}
-.wrrapd-amz-occ-date-row .wrrapd-amz-f-datewrap{flex:0 1 42%;min-width:6.85rem;max-width:none;}
+.wrrapd-amz-occ-date-row .wrrapd-amz-f-occwrap{flex:1 1 58%;min-width:0;}
+.wrrapd-amz-occ-date-row .wrrapd-amz-f-datewrap{flex:0 1 40%;min-width:7.25rem;max-width:none;}
 .wrrapd-amz-f-datewrap{margin:0;text-align:left;}
-.wrrapd-amz-rem-inline-row{display:flex;flex-direction:row;align-items:center;flex-wrap:nowrap;gap:.14rem .18rem;width:100%;max-width:min(100%,12rem);margin-left:auto;margin-right:0;padding:.06rem 0;color:#1a0a10;}
-.wrrapd-amz-rem-inline-row .wrrapd-amz-f-rem-days{flex:0 0 auto;width:auto;min-width:1.65rem;max-width:2.1rem;padding:.05rem .14rem;border-radius:5px;border:2px solid #334155;font-size:.54rem;font-family:var(--wr-font);background:#fff;color:#0f172a;line-height:1.2;font-weight:700;}
+.wrrapd-amz-rem-inline-row{display:flex;flex-direction:row;align-items:center;flex-wrap:wrap;gap:.16rem .22rem;width:100%;max-width:min(100%,13.5rem);margin-left:auto;margin-right:0;padding:.12rem 0 .08rem;color:#0f172a;}
+.wrrapd-amz-rem-inline-row .wrrapd-amz-f-rem-days{flex:0 0 auto;width:auto;min-width:1.75rem;max-width:2.2rem;padding:.08rem .16rem;border-radius:5px;border:2px solid #334155;font-size:.58rem;font-family:var(--wr-font);background:#fff;color:#0f172a;line-height:1.25;font-weight:700;}
 .wrrapd-amz-f-rem-days:disabled{opacity:.45;cursor:not-allowed;}
 .wrrapd-amz-f label{display:block;font-size:.48rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--wr-navy);margin-bottom:.05rem;font-family:var(--wr-font);width:100%;text-align:left;}
 .wrrapd-amz-f input[type=text],.wrrapd-amz-f select:not(.wrrapd-amz-f-rem-days){width:100%;max-width:100%;min-height:1.35rem;padding:.14rem .32rem;border-radius:6px;border:2px solid var(--bx);font-size:.62rem;font-family:var(--wr-font);background:linear-gradient(180deg,var(--wr-field-hi),var(--wr-field));line-height:1.25;color:var(--wr-field-ink);box-shadow:inset 0 1px 0 rgba(255,255,255,.2),inset 0 -1px 0 rgba(0,0,0,.12);transition:border-color .15s ease,box-shadow .15s ease;}
@@ -789,18 +830,18 @@ function wrrapd_render_orders_studio( array $orders, array $overlays ) {
 .wrrapd-amz-f input.wrrapd-amz-f-giftee[type=hidden]{display:none;}
 .wrrapd-amz-f-commentplain{background:#fff!important;color:#0f172a!important;border:1px solid #94a3b8!important;box-shadow:none!important;background-image:none!important;}
 .wrrapd-amz-f input.wrrapd-amz-f-commentplain::placeholder{color:#475569;font-weight:500;}
-.wrrapd-amz-giftmsg{max-width:min(100%,12rem);width:100%;margin-left:auto;margin-right:0;font-size:.58rem;line-height:1.35;color:var(--ink);padding:.06rem 0 .02rem;text-align:left;}
+.wrrapd-amz-giftmsg{max-width:min(100%,13.5rem);width:100%;margin-left:auto;margin-right:0;font-size:.6rem;line-height:1.38;color:var(--ink);padding:.08rem 0 .04rem;text-align:left;}
 .wrrapd-amz-giftmsg-lbl{font-weight:700;font-size:.48rem;text-transform:uppercase;letter-spacing:.06em;color:var(--wr-navy);display:block;margin-bottom:.04rem;}
 .wrrapd-amz-giftmsg-txt{font-weight:500;white-space:pre-wrap;word-break:break-word;}
 .wrrapd-amz-prodrow{display:flex;align-items:center;justify-content:flex-start;gap:.28rem;flex-wrap:wrap;width:100%;max-width:min(100%,12rem);margin-left:auto;margin-right:0;position:relative;overflow:visible;}
 .wrrapd-amz-prod-thumb{flex:0 0 auto;width:48px;height:48px;padding:0;border:2px solid var(--bx);border-radius:6px;cursor:zoom-in;overflow:hidden;background:#fff;position:relative;z-index:1;transition:transform .2s ease,box-shadow .2s ease,overflow .01s step-end .2s;box-shadow:0 1px 3px rgba(15,23,42,.1);}
 .wrrapd-amz-prod-thumb img{width:100%;height:100%;object-fit:contain;display:block;border-radius:4px;}
 .wrrapd-amz-prod-thumb:hover,.wrrapd-amz-prod-thumb:focus{z-index:30;overflow:visible;transform:scale(2);box-shadow:0 8px 24px rgba(15,23,42,.25);}
-.wrrapd-amz-rowcheck{display:inline-flex;align-items:center;gap:.18rem;font-size:.62rem;font-weight:800;color:#1a0a10;margin:0;flex:0 0 auto;white-space:nowrap;}
-.wrrapd-amz-rowcheck input{width:15px;height:15px;accent-color:#7f1d1d;margin:0;flex-shrink:0;}
-.wrrapd-amz-rowcheck span,.wrrapd-amz-rowcheck label{margin:0;text-transform:none;letter-spacing:.01em;font-size:.62rem;line-height:1.25;font-weight:800;color:#1a0a10;}
-.wrrapd-amz-rem-tail{font-size:.62rem;font-weight:800;color:#1a0a10;white-space:nowrap;flex:0 0 auto;}
-.wrrapd-amz-savebar{margin-top:.12rem;padding-top:.18rem;border-top:1px dashed var(--bx-line);display:flex;justify-content:flex-end;width:100%;max-width:min(100%,12rem);margin-left:auto;margin-right:0;}
+.wrrapd-amz-rowcheck{display:inline-flex;align-items:center;gap:.2rem;font-size:.68rem;font-weight:800;color:#0f172a;margin:0;flex:1 1 auto;min-width:0;}
+.wrrapd-amz-rowcheck input{width:16px;height:16px;accent-color:#7f1d1d;margin:0;flex-shrink:0;}
+.wrrapd-amz-rowcheck span,.wrrapd-amz-rowcheck label{margin:0;text-transform:none;letter-spacing:.01em;font-size:.68rem;line-height:1.3;font-weight:800;color:#0f172a;}
+.wrrapd-amz-rem-tail{font-size:.68rem;font-weight:800;color:#0f172a;white-space:nowrap;flex:0 0 auto;}
+.wrrapd-amz-savebar{margin-top:.14rem;padding-top:.2rem;border-top:1px dashed var(--bx-line);display:flex;justify-content:flex-end;width:100%;max-width:min(100%,13.5rem);margin-left:auto;margin-right:0;}
 .wrrapd-amz-save{background:linear-gradient(180deg,var(--wr-navy-mid),var(--wr-navy));color:#fffef8;border:2px solid var(--bx);border-radius:7px;padding:.2rem .75rem;font-weight:700;font-size:.6rem;cursor:pointer;font-family:var(--wr-display);letter-spacing:.02em;box-shadow:0 1px 0 rgba(0,0,0,.1),0 3px 10px rgba(22,42,82,.2);transition:transform .12s ease,box-shadow .15s ease,background .15s ease;}
 .wrrapd-amz-save:hover{background:linear-gradient(180deg,var(--wr-navy-soft),var(--wr-navy-mid));}
 .wrrapd-amz-save:active{transform:translateY(1px);}
@@ -872,7 +913,7 @@ function wrrapd_render_orders_studio( array $orders, array $overlays ) {
 			);
 		}
 
-		echo '<div class="wrrapd-amz-order-main">';
+		echo '<div class="wrrapd-amz-order-top">';
 		echo '<div class="wrrapd-amz-strip-col">';
 		echo '<div class="wrrapd-amz-wraps-row">';
 		foreach ( $line_strips as $s ) {
@@ -882,6 +923,11 @@ function wrrapd_render_orders_studio( array $orders, array $overlays ) {
 				echo '<img src="' . esc_url( $s['wrap_src'] ) . '" alt="" loading="lazy" decoding="async" />';
 			}
 			echo '</button></div>';
+		}
+		echo '</div>';
+		echo '<div class="wrrapd-amz-kind-row">';
+		foreach ( $line_strips as $s ) {
+			echo '<div class="wrrapd-amz-strip-cell"><div class="wrrapd-amz-design-kind">' . esc_html( $s['design_kind'] ) . '</div></div>';
 		}
 		echo '</div>';
 		echo '<div class="wrrapd-amz-flowers-row">';
@@ -895,14 +941,6 @@ function wrrapd_render_orders_studio( array $orders, array $overlays ) {
 			echo '</div>';
 		}
 		echo '</div>';
-		echo '<div class="wrrapd-amz-kind-row">';
-		foreach ( $line_strips as $s ) {
-			echo '<div class="wrrapd-amz-strip-cell"><div class="wrrapd-amz-design-kind">' . esc_html( $s['design_kind'] ) . '</div></div>';
-		}
-		echo '</div></div>';
-
-		echo '<div class="wrrapd-amz-summary-col">';
-		echo wrrapd_studio_order_summary_html( $order, $lines );
 		echo '</div>';
 
 		echo '<div class="wrrapd-amz-lines-col">';
@@ -936,14 +974,9 @@ function wrrapd_render_orders_studio( array $orders, array $overlays ) {
 
 			$dlabel = isset( $ln['designLabel'] ) ? trim( (string) $ln['designLabel'] ) : '';
 
-			$img_raw = isset( $ln['productImageUrl'] ) ? trim( (string) $ln['productImageUrl'] ) : '';
-			$img     = $img_raw !== '' ? esc_url( $img_raw ) : '';
-			$dprev_r = isset( $ln['designPreviewUrl'] ) ? trim( (string) $ln['designPreviewUrl'] ) : '';
-			$dprev   = $dprev_r !== '' ? esc_url( $dprev_r ) : '';
-			$wrap_lb_src  = $dprev_r !== '' ? esc_url( $dprev_r ) : '';
-			$wrap_lb_type = $wrap_lb_src !== '' ? 'img' : 'paper';
-			$prod_lb_src  = $img_raw !== '' ? esc_url( $img_raw ) : '';
-			$design_kind  = wrrapd_studio_design_kind_label( $ln );
+			$img_raw     = isset( $ln['productImageUrl'] ) ? trim( (string) $ln['productImageUrl'] ) : '';
+			$img         = $img_raw !== '' ? esc_url( $img_raw ) : '';
+			$prod_lb_src = $img_raw !== '' ? esc_url( $img_raw ) : '';
 
 			$line_search = strtolower(
 				implode(
@@ -975,23 +1008,6 @@ function wrrapd_render_orders_studio( array $orders, array $overlays ) {
 
 			echo '<div class="wrrapd-amz-line" data-order="' . esc_attr( $on ) . '" data-line="' . (int) $li . '" data-wrrapd-search="' . esc_attr( $line_search ) . '">';
 			echo '<div class="wrrapd-amz-line-inner">';
-			echo '<div class="wrrapd-amz-design-col">';
-			echo '<div class="wrrapd-amz-design-stack">';
-			echo '<div class="wrrapd-amz-design-visual-row">';
-			echo '<button type="button" class="wrrapd-amz-wrap-thumb' . ( $wrap_lb_src !== '' ? ' has-img' : '' ) . '" data-wrrapd-lb-type="' . esc_attr( $wrap_lb_type ) . '" data-wrrapd-lb-src="' . esc_attr( $wrap_lb_src ) . '" aria-label="' . esc_attr__( 'Enlarge wrapping preview', 'wrrapd' ) . '">';
-			if ( $wrap_lb_src !== '' ) {
-				echo '<img src="' . $dprev . '" alt="" loading="lazy" decoding="async" />';
-			}
-			echo '</button>';
-			if ( $prod_lb_src !== '' ) {
-				echo '<button type="button" class="wrrapd-amz-prod-thumb" data-wrrapd-lb-type="img" data-wrrapd-lb-src="' . esc_attr( $prod_lb_src ) . '" aria-label="' . esc_attr__( 'Enlarge item image', 'wrrapd' ) . '"><img src="' . $img . '" alt="" loading="lazy" decoding="async" /></button>';
-			} else {
-				echo '<span class="wrrapd-amz-prod-ph" aria-hidden="true"></span>';
-			}
-			echo '</div>';
-			echo '<div class="wrrapd-amz-design-kind">' . esc_html( $design_kind ) . '</div>';
-			echo '</div></div>';
-
 			echo '<div class="wrrapd-amz-fields-col">';
 			echo '<div class="wrrapd-amz-f">';
 			echo '<input type="hidden" class="wrrapd-amz-f-giftee" name="giftee_' . esc_attr( $id_sfx ) . '" value="' . esc_attr( $giftee_val ) . '" />';
@@ -1038,6 +1054,12 @@ function wrrapd_render_orders_studio( array $orders, array $overlays ) {
 			echo '<span class="wrrapd-amz-rem-tail">' . esc_html__( 'days prior.', 'wrrapd' ) . '</span>';
 			echo '</div>';
 
+			echo '<div class="wrrapd-amz-prod-after-rem">';
+			if ( $prod_lb_src !== '' ) {
+				echo '<button type="button" class="wrrapd-amz-prod-thumb" data-wrrapd-lb-type="img" data-wrrapd-lb-src="' . esc_attr( $prod_lb_src ) . '" aria-label="' . esc_attr__( 'Enlarge item image', 'wrrapd' ) . '"><img src="' . $img . '" alt="" loading="lazy" decoding="async" /></button>';
+			}
+			echo '</div>';
+
 			echo '<div class="wrrapd-amz-f">';
 			echo '<input type="text" class="wrrapd-amz-f-comment wrrapd-amz-f-commentplain" id="' . esc_attr( $wrap_id . '-c-' . $id_sfx ) . '" maxlength="4000" value="' . esc_attr( $comment ) . '" placeholder="' . esc_attr__( 'Additional comments', 'wrrapd' ) . '" aria-label="' . esc_attr__( 'Additional comments', 'wrrapd' ) . '" /></div>';
 
@@ -1047,7 +1069,11 @@ function wrrapd_render_orders_studio( array $orders, array $overlays ) {
 			echo '</div></div>';
 			++$li;
 		}
-		echo '</div></div>';
+		echo '</div>';
+		echo '</div>';
+		echo '<div class="wrrapd-amz-order-foot">';
+		echo wrrapd_studio_order_summary_html( $order, $lines );
+		echo '</div>';
 		echo '</article>';
 	}
 
