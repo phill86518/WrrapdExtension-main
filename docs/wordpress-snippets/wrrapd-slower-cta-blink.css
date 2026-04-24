@@ -1,0 +1,30 @@
+/*
+ * Slower orange “FREE extension / Chrome Web Store” CTA pulse on wrrapd.com.
+ *
+ * Apply in WordPress: Hello Elementor → Custom CSS (often stored as Elementor Library
+ * document / global CSS — historically post ID ~6064). APPEND these rules and adjust
+ * `3s` / `4s` to taste (larger = slower).
+ *
+ * If your existing rule uses a named @keyframes block, increase its duration there instead
+ * (e.g. change `1.2s` to `3s` on the same `animation:` line).
+ */
+
+@keyframes wrrapd-cta-blink-slow {
+	0%,
+	100% {
+		filter: brightness(1);
+		box-shadow: 0 0 0 0 rgba(234, 88, 12, 0.45);
+	}
+	50% {
+		filter: brightness(1.12);
+		box-shadow: 0 0 14px 3px rgba(234, 88, 12, 0.35);
+	}
+}
+
+/* Header Theme Builder button 7f1bdc1 + homepage hero duplicate eb0b235 — match WORDPRESS-SITE-EDITS-LOG.md */
+.elementor-element-7f1bdc1 .elementor-button,
+.elementor-element-eb0b235 .elementor-button,
+.elementor-element-7f1bdc1 a.elementor-button,
+.elementor-element-eb0b235 a.elementor-button {
+	animation: wrrapd-cta-blink-slow 3.5s ease-in-out infinite !important;
+}

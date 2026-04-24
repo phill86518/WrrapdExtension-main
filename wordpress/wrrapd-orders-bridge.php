@@ -12,6 +12,30 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+/**
+ * Logout links without a valid `_wpnonce` (common with hard-coded or Elementor URLs) show
+ * WordPress “Do you really want to log out?” — bounce once to `wp_logout_url()` so logout completes immediately.
+ */
+function wrrapd_redirect_stale_logout_to_fresh_nonce() {
+	if ( ! isset( $_GET['action'] ) || $_GET['action'] !== 'logout' ) {
+		return;
+	}
+	if ( ! is_user_logged_in() ) {
+		return;
+	}
+	$nonce = isset( $_GET['_wpnonce'] ) ? sanitize_text_field( wp_unslash( $_GET['_wpnonce'] ) ) : '';
+	if ( wp_verify_nonce( $nonce, 'log-out' ) ) {
+		return;
+	}
+	$redirect = home_url( '/' );
+	if ( ! empty( $_GET['redirect_to'] ) ) {
+		$redirect = wp_validate_redirect( wp_unslash( $_GET['redirect_to'] ), $redirect );
+	}
+	wp_safe_redirect( wp_logout_url( $redirect ) );
+	exit;
+}
+add_action( 'login_init', 'wrrapd_redirect_stale_logout_to_fresh_nonce', 0 );
+
 if ( ! defined( 'WRRAPD_INTERNAL_API_KEY' ) || WRRAPD_INTERNAL_API_KEY === '' ) {
 	return;
 }

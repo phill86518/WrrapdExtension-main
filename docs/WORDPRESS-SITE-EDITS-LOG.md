@@ -8,6 +8,11 @@ WordPress + Elementor + Hello theme content mostly lives **in the production dat
 
 ## Recent changes
 
+### 2026-04 — Logout confirmation page + slower CTA blink (repo + optional CSS)
+
+- **Logout:** MU plugin `wordpress/wrrapd-orders-bridge.php` hooks `login_init` priority **0**: if `action=logout`, user is logged in, and `_wpnonce` is missing or invalid for `log-out`, **redirect once** to `wp_logout_url()` so WordPress performs an immediate logout instead of the “Do you really want to log out?” interstitial (common when Elementor uses a bare `wp-login.php?action=logout` link). Re-upload `mu-plugins/wrrapd-orders-bridge.php` after pull.
+- **Blink:** Optional snippet **[`docs/wordpress-snippets/wrrapd-slower-cta-blink.css`](wordpress-snippets/wrrapd-slower-cta-blink.css)** — append to Hello / global Additional CSS (post **6064** or successor); tune `3.5s` as desired. If existing CSS already defines `@keyframes`, prefer lengthening that animation’s duration to avoid duplicate rules.
+
 ### 2026-04 — “Review Wrrapd Orders”: claim on login + order table (repo MU plugin)
 
 - **Monorepo:** `wordpress/wrrapd-orders-bridge.php` + `wordpress/README.md` — copy PHP file to **`wp-content/mu-plugins/`**; add **`WRRAPD_INTERNAL_API_KEY`** (same value as VM **`WRRAPD_INTERNAL_CLAIM_SECRET`**) and optional **`WRRAPD_API_BASE`** to **`wp-config.php`**.

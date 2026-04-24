@@ -13,8 +13,10 @@ define( 'WRRAPD_INTERNAL_API_KEY', 'paste-the-same-secret-as-WRRAPD_INTERNAL_CLA
 
 ## Elementor / “Review Wrrapd Orders” page
 
-1. Edit the page that the **Review Wrrapd Orders** button opens (logged-in users only).
-2. Add a **Shortcode** widget (or HTML widget) with:
+The `[wrrapd_review_orders]` shortcode **only outputs the table block you add**; it does not remove other Elementor widgets. If you had a richer “My orders” layout (dates, giftee, occasions, design, comments), use **that** page: add one **Shortcode** widget (or embed the shortcode inside a column) and keep your existing form/list widgets. A separate minimal **“My Orders”** page is optional.
+
+1. Edit the page that should show pay-server orders (logged-in users only — the one with your full layout if you prefer).
+2. Add a **Shortcode** widget with:
 
 ```text
 [wrrapd_review_orders]
@@ -22,7 +24,11 @@ define( 'WRRAPD_INTERNAL_API_KEY', 'paste-the-same-secret-as-WRRAPD_INTERNAL_CLA
 
 3. Publish. The shortcode **re-runs claim** (idempotent) then **lists** every pay-server order whose **gifter email** matches the logged-in user’s WordPress email, or that is already **claimed** to their WP user id.
 
-Your existing per-order fields (giftee name, occasion date, etc.) stay in WordPress / Elementor as you already built them; this table is the **server-side order list** from `api.wrrapd.com`.
+If you are unsure which page has the big layout: **WP Admin → Pages** and search titles/slugs for *order*, *review*, *gift*, or open **Elementor → Templates** / **Theme Builder** for user dashboards. Those page IDs are not stored in this Git repo (they live in the production DB).
+
+### Slower homepage / header CTA blink
+
+See **[../docs/wordpress-snippets/wrrapd-slower-cta-blink.css](../docs/wordpress-snippets/wrrapd-slower-cta-blink.css)** — append to your global Hello / Elementor Custom CSS (or merge durations into your existing `@keyframes` / `animation` rules). Remove or override older faster rules if both apply.
 
 ## After deploy
 
