@@ -8,6 +8,10 @@ WordPress + Elementor + Hello theme content mostly lives **in the production dat
 
 ## Recent changes
 
+### 2026-04 — Orders shortcode `layout="cards"` (Jet listing vs pay-server)
+
+- **Monorepo:** `[wrrapd_review_orders layout="cards"]` — card UI + occasion `<select>` filter from pay-server JSON; remove JetEngine “Associated Id / No. of Files” listing on the same page if both appear.
+
 ### 2026-04 — Logout confirmation page + slower CTA blink (repo + optional CSS)
 
 - **Logout:** MU plugin `wordpress/wrrapd-orders-bridge.php` hooks `login_init` priority **0**: if `action=logout`, user is logged in, and `_wpnonce` is missing or invalid for `log-out`, **redirect once** to `wp_logout_url()` so WordPress performs an immediate logout instead of the “Do you really want to log out?” interstitial (common when Elementor uses a bare `wp-login.php?action=logout` link). Re-upload `mu-plugins/wrrapd-orders-bridge.php` after pull.
