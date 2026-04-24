@@ -70,5 +70,6 @@ WordPress + Elementor + Hello theme content mostly lives **in the production dat
 
 ## Related documents
 
+- [`FIND-WORDPRESS-ORDERS-PAGE.md`](FIND-WORDPRESS-ORDERS-PAGE.md) — SQL + admin steps to locate the rich “orders” Elementor page (not stored in Git).
 - [`INTEGRATION-MAP.md`](INTEGRATION-MAP.md) — how WP fits with extension and APIs.
 - [`CUSTOMER-ACCOUNTS-AND-ORDER-HISTORY.md`](CUSTOMER-ACCOUNTS-AND-ORDER-HISTORY.md) — next: wiring “Review Wrrapd Orders” to real data.
