@@ -21,3 +21,17 @@ This directory lives inside the same Git repo as **`extension/`** and **`trackin
 ## Environment
 
 Secrets and env vars (Stripe, Mailgun, session secrets, etc.) are **not** committed here. Configure on the VM / process manager / hosting panel as you already do for production.
+
+### Guest → WordPress order claim (Phase 2)
+
+- **`WRRAPD_INTERNAL_CLAIM_SECRET`** — long random string. Required for **`POST https://api.wrrapd.com/api/internal/claim-orders-by-email`**. Send the same value in header **`X-Wrrapd-Internal-Key`**. WordPress (or another trusted server) should call this over HTTPS with the logged-in user’s email + `wpUserId`; **never** expose this secret in the browser.
+- After setting or changing it: **`pm2 restart wrrapd-server`**.
+
+Example (dry run — no writes):
+
+```bash
+curl -sS -X POST 'https://api.wrrapd.com/api/internal/claim-orders-by-email' \
+  -H 'Content-Type: application/json' \
+  -H "X-Wrrapd-Internal-Key: $WRRAPD_INTERNAL_CLAIM_SECRET" \
+  -d '{"email":"shopper@example.com","wpUserId":"129","dryRun":true}'
+```

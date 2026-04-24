@@ -546,6 +546,103 @@ function findExistingOrderByPaymentIntent(paymentIntentId) {
     return null;
 }
 
+/** Normalized gifter email on a persisted order JSON (Phase 1 + legacy `customer.email`). */
+function orderRecordEmailNorm(record) {
+    if (!record || typeof record !== 'object') return null;
+    if (typeof record.customerEmailNorm === 'string' && record.customerEmailNorm.trim()) {
+        return record.customerEmailNorm.trim().toLowerCase();
+    }
+    const nested =
+        record.customer && typeof record.customer === 'object' && record.customer.emailNorm;
+    if (typeof nested === 'string' && nested.trim()) {
+        return nested.trim().toLowerCase();
+    }
+    if (record.customer && record.customer.email != null) {
+        return normalizeCustomerEmail(String(record.customer.email));
+    }
+    return null;
+}
+
+function internalClaimSecretMatches(headerVal) {
+    const expected = (process.env.WRRAPD_INTERNAL_CLAIM_SECRET || '').trim();
+    if (!expected) return false;
+    const got = (headerVal || '').trim();
+    if (got.length !== expected.length) return false;
+    try {
+        return crypto.timingSafeEqual(Buffer.from(got, 'utf8'), Buffer.from(expected, 'utf8'));
+    } catch (_) {
+        return false;
+    }
+}
+
+/**
+ * Phase 2 — attach WordPress user id to on-disk orders for a normalized email (idempotent).
+ * @returns {{ scanned: number, matched: number, applied: number, skippedAlready: number, conflicts: object[], details: object[] }}
+ */
+function claimOrdersByEmailForWpUser(emailNorm, wpUserId, dryRun) {
+    const widStr = String(wpUserId).trim();
+    const ordersDir = path.join(__dirname, 'orders');
+    const out = {
+        scanned: 0,
+        matched: 0,
+        applied: 0,
+        skippedAlready: 0,
+        conflicts: [],
+        details: [],
+    };
+    if (!fs.existsSync(ordersDir)) {
+        return out;
+    }
+    const files = fs.readdirSync(ordersDir).filter((f) => f.startsWith('order_') && f.endsWith('.json'));
+    for (const file of files) {
+        out.scanned++;
+        const fp = path.join(ordersDir, file);
+        let raw;
+        try {
+            raw = fs.readFileSync(fp, 'utf8');
+        } catch (_) {
+            continue;
+        }
+        let data;
+        try {
+            data = JSON.parse(raw);
+        } catch (_) {
+            continue;
+        }
+        const norm = orderRecordEmailNorm(data);
+        if (!norm || norm !== emailNorm) continue;
+        out.matched++;
+        const on = data.orderNumber != null ? String(data.orderNumber) : null;
+        if (data.claimedWpUserId != null && String(data.claimedWpUserId).trim() !== '') {
+            if (String(data.claimedWpUserId) === widStr) {
+                out.skippedAlready++;
+                out.details.push({ file, orderNumber: on, action: 'already_claimed' });
+                continue;
+            }
+            out.conflicts.push({
+                file,
+                orderNumber: on,
+                existingWpUserId: String(data.claimedWpUserId),
+            });
+            out.details.push({ file, orderNumber: on, action: 'conflict' });
+            continue;
+        }
+        if (dryRun) {
+            out.details.push({ file, orderNumber: on, action: 'would_claim' });
+            continue;
+        }
+        const next = {
+            ...data,
+            claimedWpUserId: widStr,
+            claimedAt: new Date().toISOString(),
+        };
+        fs.writeFileSync(fp, JSON.stringify(next, null, 2), 'utf8');
+        out.applied++;
+        out.details.push({ file, orderNumber: on, action: 'claimed' });
+    }
+    return out;
+}
+
 function parseDateCandidate(raw) {
     if (!raw || typeof raw !== 'string') return null;
     const t = raw.trim();
@@ -881,6 +978,51 @@ app.post('/api/proxy-tracking-ingest', async (req, res) => {
     }
     const allOk = results.every((row) => row.ok);
     res.status(200).json({ ok: allOk, results });
+});
+
+/**
+ * Phase 2 — WordPress (or other trusted backend) calls this with a shared secret to stamp
+ * `claimedWpUserId` + `claimedAt` on all `orders/order_*.json` rows matching the gifter email.
+ * Host: **api.wrrapd.com** only. Header: **X-Wrrapd-Internal-Key** (must match **WRRAPD_INTERNAL_CLAIM_SECRET**).
+ * Body JSON: `{ "emailNorm"?: string, "email"?: string, "wpUserId": string|number, "dryRun"?: boolean }`
+ */
+app.post('/api/internal/claim-orders-by-email', (req, res) => {
+    if (!req.isApiDomain) {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
+    const configured = (process.env.WRRAPD_INTERNAL_CLAIM_SECRET || '').trim();
+    if (!configured) {
+        return res.status(503).json({
+            error: 'Not configured',
+            hint: 'Set WRRAPD_INTERNAL_CLAIM_SECRET on wrrapd-server, then restart PM2.',
+        });
+    }
+    const hk = req.headers['x-wrrapd-internal-key'];
+    const headerKey = typeof hk === 'string' ? hk : (Array.isArray(hk) ? hk[0] : '');
+    if (!internalClaimSecretMatches(headerKey)) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+    const body = req.body && typeof req.body === 'object' ? req.body : {};
+    const dryRun = body.dryRun === true || body.dryRun === 'true';
+    let emailNorm = typeof body.emailNorm === 'string' ? normalizeCustomerEmail(body.emailNorm) : null;
+    if (!emailNorm && body.email != null) {
+        emailNorm = normalizeCustomerEmail(String(body.email));
+    }
+    if (!emailNorm) {
+        return res.status(400).json({ error: 'Provide email or emailNorm' });
+    }
+    if (body.wpUserId == null || String(body.wpUserId).trim() === '') {
+        return res.status(400).json({ error: 'wpUserId required' });
+    }
+    const wpUserId = String(body.wpUserId).trim();
+    const result = claimOrdersByEmailForWpUser(emailNorm, wpUserId, dryRun);
+    res.status(200).json({
+        ok: true,
+        emailNorm,
+        wpUserId,
+        dryRun,
+        ...result,
+    });
 });
 
 app.post('/process-payment', async (req, res) => {
