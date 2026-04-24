@@ -100,9 +100,10 @@ Until those exist, the welcome page button may link to a page that cannot yet li
 ### Practical recommendation (staged)
 
 1. **Stage A — No new DB yet:** **(Done in repo, 2026-04)** `customerEmailNorm` + `wrrapdCustomerId` on **VM order JSON** (`WrrapdServer` → `saveOrderToJsonFile`) and on **tracking ingest** → Firestore `Order` documents. Registry file: `WrrapdServer/customers/email_to_customer_id.json` (gitignored). **Deploy:** VM `pm2 restart` + Cloud Run image when you ship.
-2. **Stage A2 — Claim API (Phase 2, repo):** **`POST /api/internal/claim-orders-by-email`** on **`api.wrrapd.com`** with header **`X-Wrrapd-Internal-Key`** = env **`WRRAPD_INTERNAL_CLAIM_SECRET`**. Stamps `claimedWpUserId` + `claimedAt` on matching `orders/order_*.json` (idempotent; reports conflicts if another WP user already claimed). **Still to do:** WordPress `wp_login` hook calling this + “Review orders” UI.
-3. **Stage B — If reporting or joins hurt:** Add **Postgres** (Supabase **or** Cloud SQL) as a **read model** fed by webhook or nightly job; WordPress reads “my orders” from that API.
-4. **Avoid** “JSON files as the only queryable store” beyond early prototyping.
+2. **Stage A2 — Claim API (Phase 2, repo):** **`POST /api/internal/claim-orders-by-email`** on **`api.wrrapd.com`** with header **`X-Wrrapd-Internal-Key`** = env **`WRRAPD_INTERNAL_CLAIM_SECRET`**. Stamps `claimedWpUserId` + `claimedAt` on matching `orders/order_*.json` (idempotent; reports conflicts if another WP user already claimed).
+3. **Stage A3 — WordPress bridge + list (Phase 3, repo):** MU plugin **`wordpress/wrrapd-orders-bridge.php`** — `wp_login` + `user_register` call claim; shortcode **`[wrrapd_review_orders]`** calls **`POST /api/internal/orders-for-wp-user`** (same header/secret). Deploy: copy to **`wp-content/mu-plugins/`**, define **`WRRAPD_INTERNAL_API_KEY`** (+ optional **`WRRAPD_API_BASE`**) in **`wp-config.php`**, add shortcode to the Review page. Pay server: **`pm2 restart`** after pull.
+4. **Stage B — If reporting or joins hurt:** Add **Postgres** (Supabase **or** Cloud SQL) as a **read model** fed by webhook or nightly job; WordPress reads “my orders” from that API.
+5. **Avoid** “JSON files as the only queryable store” beyond early prototyping.
 
 ---
 

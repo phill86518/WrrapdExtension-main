@@ -86,10 +86,10 @@ Any “list my orders” feature for end users should **reuse the same normalize
 ### Target integration for “Review Wrrapd Orders”
 
 1. User is authenticated in WordPress (`is_user_logged_in()`).
-2. A **small bridge** (custom plugin or mu-plugin on WP, **or** a trusted BFF on the VM) calls WrrapdServer / Firestore with **server-side secret**, passing **normalized email** or **`wrrapd_customer_id`** from `usermeta`.
-3. Response JSON drives a table or cards on the Elementor page behind the button.
+2. **Implemented (repo):** MU plugin **`wordpress/wrrapd-orders-bridge.php`** — on **`wp_login`** / **`user_register`** calls **`POST /api/internal/claim-orders-by-email`**; shortcode **`[wrrapd_review_orders]`** calls **`POST /api/internal/orders-for-wp-user`**. Both use header **`X-Wrrapd-Internal-Key`** (same secret as **`WRRAPD_INTERNAL_CLAIM_SECRET`** on the pay server). Body always includes **`wpUserId` + `email`** so the list endpoint cannot be abused with user id alone.
+3. Response JSON drives the shortcode table on the Elementor page behind the button.
 
-Never expose a “list orders by arbitrary email” endpoint to the public internet without authentication and rate limits.
+Never expose the internal key in Elementor HTML or browser JavaScript.
 
 ---
 

@@ -8,6 +8,12 @@ WordPress + Elementor + Hello theme content mostly lives **in the production dat
 
 ## Recent changes
 
+### 2026-04 — “Review Wrrapd Orders”: claim on login + order table (repo MU plugin)
+
+- **Monorepo:** `wordpress/wrrapd-orders-bridge.php` + `wordpress/README.md` — copy PHP file to **`wp-content/mu-plugins/`**; add **`WRRAPD_INTERNAL_API_KEY`** (same value as VM **`WRRAPD_INTERNAL_CLAIM_SECRET`**) and optional **`WRRAPD_API_BASE`** to **`wp-config.php`**.
+- **Pay server:** deploy commit with **`POST /api/internal/orders-for-wp-user`**; **`pm2 restart wrrapd-server`**.
+- **Elementor:** on the Review page, add shortcode **`[wrrapd_review_orders]`** (Shortcode widget or equivalent). Keeps existing per-order WP fields separate; table lists pay-server orders for the logged-in email.
+
 ### 2026-04 — Chrome Web Store: wire CTAs + welcome “here” link
 
 - **Listing:** [Wrrapd on the Chrome Web Store](https://chromewebstore.google.com/detail/wrrapd/eampapdpkmnnbfdojhmbpckpljnbpapo)

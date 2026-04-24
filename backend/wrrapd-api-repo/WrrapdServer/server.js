@@ -643,6 +643,74 @@ function claimOrdersByEmailForWpUser(emailNorm, wpUserId, dryRun) {
     return out;
 }
 
+/**
+ * Whether this order should appear in "my orders" for the given WP user + account email.
+ * Includes rows claimed by this user, or same gifter email with no claim / own claim.
+ */
+function orderVisibleToWpUser(data, emailNorm, wpUserId) {
+    const widRaw = data.claimedWpUserId;
+    const wid = widRaw != null && String(widRaw).trim() !== '' ? String(widRaw).trim() : '';
+    const norm = orderRecordEmailNorm(data);
+    if (wid === wpUserId) return true;
+    if (emailNorm && norm === emailNorm) {
+        if (!wid || wid === wpUserId) return true;
+    }
+    return false;
+}
+
+function summarizeOrderForWpList(data) {
+    const items = data.orderItems;
+    let lineItemCount = 0;
+    if (Array.isArray(items)) lineItemCount = items.length;
+    else if (items && typeof items === 'object') lineItemCount = Object.keys(items).length;
+    const pay = data.payment && typeof data.payment === 'object' ? data.payment : null;
+    return {
+        orderNumber: data.orderNumber != null ? String(data.orderNumber) : null,
+        timestamp: data.timestamp || null,
+        payment: pay
+            ? {
+                  amount: pay.amount,
+                  status: pay.status,
+                  id: pay.id,
+              }
+            : null,
+        customerEmailNorm: orderRecordEmailNorm(data),
+        wrrapdCustomerId: data.wrrapdCustomerId || null,
+        claimedWpUserId: data.claimedWpUserId != null ? String(data.claimedWpUserId) : null,
+        claimedAt: data.claimedAt || null,
+        lineItemCount,
+    };
+}
+
+/**
+ * @returns {{ orders: object[], scanned: number }}
+ */
+function listOrdersJsonForWpUser(emailNorm, wpUserId) {
+    const widStr = String(wpUserId).trim();
+    const out = { orders: [], scanned: 0 };
+    const ordersDir = path.join(__dirname, 'orders');
+    if (!fs.existsSync(ordersDir)) return out;
+    const files = fs.readdirSync(ordersDir).filter((f) => f.startsWith('order_') && f.endsWith('.json'));
+    for (const file of files) {
+        out.scanned++;
+        const fp = path.join(ordersDir, file);
+        let data;
+        try {
+            data = JSON.parse(fs.readFileSync(fp, 'utf8'));
+        } catch (_) {
+            continue;
+        }
+        if (!orderVisibleToWpUser(data, emailNorm, widStr)) continue;
+        out.orders.push(summarizeOrderForWpList(data));
+    }
+    out.orders.sort((a, b) => {
+        const ta = parseDateCandidate(a.timestamp)?.getTime() || 0;
+        const tb = parseDateCandidate(b.timestamp)?.getTime() || 0;
+        return tb - ta;
+    });
+    return out;
+}
+
 function parseDateCandidate(raw) {
     if (!raw || typeof raw !== 'string') return null;
     const t = raw.trim();
@@ -1023,6 +1091,43 @@ app.post('/api/internal/claim-orders-by-email', (req, res) => {
         dryRun,
         ...result,
     });
+});
+
+/**
+ * Phase 3 — WordPress (trusted server) lists pay-server orders for the logged-in shopper.
+ * Same host + header as claim. Body: `{ "wpUserId", "email" | "emailNorm" }` — both required
+ * so callers cannot list by wpUserId alone without knowing the account email.
+ */
+app.post('/api/internal/orders-for-wp-user', (req, res) => {
+    if (!req.isApiDomain) {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
+    const configured = (process.env.WRRAPD_INTERNAL_CLAIM_SECRET || '').trim();
+    if (!configured) {
+        return res.status(503).json({
+            error: 'Not configured',
+            hint: 'Set WRRAPD_INTERNAL_CLAIM_SECRET on wrrapd-server, then restart PM2.',
+        });
+    }
+    const hk = req.headers['x-wrrapd-internal-key'];
+    const headerKey = typeof hk === 'string' ? hk : (Array.isArray(hk) ? hk[0] : '');
+    if (!internalClaimSecretMatches(headerKey)) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+    const body = req.body && typeof req.body === 'object' ? req.body : {};
+    let emailNorm = typeof body.emailNorm === 'string' ? normalizeCustomerEmail(body.emailNorm) : null;
+    if (!emailNorm && body.email != null) {
+        emailNorm = normalizeCustomerEmail(String(body.email));
+    }
+    if (!emailNorm) {
+        return res.status(400).json({ error: 'Provide email or emailNorm' });
+    }
+    if (body.wpUserId == null || String(body.wpUserId).trim() === '') {
+        return res.status(400).json({ error: 'wpUserId required' });
+    }
+    const wpUserId = String(body.wpUserId).trim();
+    const { orders, scanned } = listOrdersJsonForWpUser(emailNorm, wpUserId);
+    res.status(200).json({ ok: true, emailNorm, wpUserId, scanned, count: orders.length, orders });
 });
 
 app.post('/process-payment', async (req, res) => {

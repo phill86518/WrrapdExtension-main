@@ -22,10 +22,14 @@ This directory lives inside the same Git repo as **`extension/`** and **`trackin
 
 Secrets and env vars (Stripe, Mailgun, session secrets, etc.) are **not** committed here. Configure on the VM / process manager / hosting panel as you already do for production.
 
-### Guest → WordPress order claim (Phase 2)
+### Guest → WordPress order claim (Phase 2) + list (Phase 3)
 
-- **`WRRAPD_INTERNAL_CLAIM_SECRET`** — long random string. Required for **`POST https://api.wrrapd.com/api/internal/claim-orders-by-email`**. Send the same value in header **`X-Wrrapd-Internal-Key`**. WordPress (or another trusted server) should call this over HTTPS with the logged-in user’s email + `wpUserId`; **never** expose this secret in the browser.
+- **`WRRAPD_INTERNAL_CLAIM_SECRET`** — long random string. Required for internal routes below. Send the same value in header **`X-Wrrapd-Internal-Key`**. Only **trusted server code** (e.g. WordPress `mu-plugins` on `wrrapd.com`) should call these; **never** expose this secret in the browser.
 - After setting or changing it: **`pm2 restart wrrapd-server`**.
+
+**`POST /api/internal/claim-orders-by-email`** — stamps `claimedWpUserId` on `orders/order_*.json` where gifter email matches. Body: `email` or `emailNorm`, `wpUserId`, optional `dryRun`.
+
+**`POST /api/internal/orders-for-wp-user`** — returns order summaries for the Review UI. Body must include **`email`** (or `emailNorm`) **and** `wpUserId` (same pairing WordPress has for the logged-in user).
 
 Example (dry run — no writes):
 
@@ -35,3 +39,5 @@ curl -sS -X POST 'https://api.wrrapd.com/api/internal/claim-orders-by-email' \
   -H "X-Wrrapd-Internal-Key: $WRRAPD_INTERNAL_CLAIM_SECRET" \
   -d '{"email":"shopper@example.com","wpUserId":"129","dryRun":true}'
 ```
+
+Monorepo MU plugin + install notes: **[../../../wordpress/README.md](../../../wordpress/README.md)**.
