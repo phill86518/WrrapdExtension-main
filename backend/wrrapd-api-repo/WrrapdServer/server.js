@@ -739,6 +739,18 @@ function summarizeOrderForWpList(data) {
     else if (items && typeof items === 'object') lineItemCount = Object.keys(items).length;
     const pay = data.payment && typeof data.payment === 'object' ? data.payment : null;
     const lines = summarizeWrrapdLinesFromOrderRecord(data);
+    /** Short invoice-style rows for WordPress studio (no Amazon product titles). */
+    const invoiceLines = lines.map((ln, idx) => {
+        const raw =
+            (ln.designLabel && String(ln.designLabel).trim()) ||
+            (ln.designSummary && String(ln.designSummary).trim()) ||
+            '';
+        const detail = raw.length > 120 ? `${raw.slice(0, 120)}…` : raw;
+        return {
+            label: 'Gift wrap',
+            detail: detail || `Gift ${idx + 1}`,
+        };
+    });
     return {
         orderNumber: data.orderNumber != null ? String(data.orderNumber) : null,
         timestamp: data.timestamp || null,
@@ -756,6 +768,7 @@ function summarizeOrderForWpList(data) {
         lineItemCount,
         wrrapdLineCount: lines.length,
         lines,
+        invoiceLines,
     };
 }
 
