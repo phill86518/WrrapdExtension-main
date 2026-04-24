@@ -74,7 +74,7 @@ export function DriverAccountPanel() {
               {saving ? "Saving…" : "Save"}
             </button>
           </form>
-          {message && <p className="mt-2 text-sm text-emerald-700">{message}</p>}
+          {message && <p className="mt-2 text-sm text-amber-800">{message}</p>}
           {error && <p className="mt-2 text-sm text-rose-700">{error}</p>}
         </>
       )}

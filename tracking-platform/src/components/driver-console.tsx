@@ -297,7 +297,7 @@ export function DriverConsole({
         <p className="mt-1 text-sm text-slate-600">{description}</p>
         <p className="mt-1 text-sm font-medium text-slate-800">
           {filteredOrders.length} stop{filteredOrders.length === 1 ? "" : "s"} for{" "}
-          <span className="text-emerald-800">{calendarDayLabelNy(selectedDayKey)}</span> (Eastern)
+          <span className="text-amber-900">{calendarDayLabelNy(selectedDayKey)}</span> (Eastern)
         </p>
         <p className="mt-1 text-xs text-slate-400">
           Wrrapd web driver UI · rev {DRIVER_QUEUE_UI_REV} · list is filtered by Eastern calendar date of each stop.
@@ -424,13 +424,13 @@ export function DriverConsole({
                   isSelected
                     ? "border-slate-900 bg-slate-900 text-white"
                     : count > 0
-                      ? "border-emerald-500 bg-emerald-50 text-emerald-950 hover:bg-emerald-100"
+                      ? "border-amber-500 bg-amber-50 text-amber-950 hover:bg-amber-100"
                       : "border-slate-200 bg-white text-slate-700 hover:bg-slate-100"
                 } ${isTodayCell && !isSelected ? "ring-1 ring-amber-400" : ""}`}
               >
                 <span>{Number(cellKey.slice(8, 10))}</span>
                 {count > 0 ? (
-                  <span className={`text-[10px] font-normal ${isSelected ? "text-slate-200" : "text-emerald-800"}`}>
+                  <span className={`text-[10px] font-normal ${isSelected ? "text-slate-200" : "text-amber-900"}`}>
                     {count} stop{count === 1 ? "" : "s"}
                   </span>
                 ) : null}
@@ -503,7 +503,7 @@ export function DriverConsole({
             <button
               type="button"
               className={`w-full rounded px-4 py-3 text-lg font-semibold ${
-                autoGpsEnabled[order.id] ? "bg-emerald-700 text-white" : "border"
+                autoGpsEnabled[order.id] ? "bg-amber-600 text-white" : "border"
               }`}
               onClick={() =>
                 setAutoGpsEnabled((prev) => ({
@@ -529,7 +529,7 @@ export function DriverConsole({
               }
             />
             <button
-              className="w-full rounded bg-emerald-700 px-4 py-3 text-lg font-semibold text-white"
+              className="w-full rounded bg-amber-600 px-4 py-3 text-lg font-semibold text-white"
               type="button"
               onClick={() => uploadProof(order.id)}
               disabled={busyOrder === order.id}

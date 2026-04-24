@@ -98,7 +98,7 @@ export function DriverAvailabilityPanel({
           {saving ? "Saving..." : "Save Availability"}
         </button>
       </form>
-      {msg && <p className="mt-2 text-sm text-emerald-700">{msg}</p>}
+      {msg && <p className="mt-2 text-sm text-amber-800">{msg}</p>}
       {err && <p className="mt-2 text-sm text-rose-700">{err}</p>}
     </section>
   );

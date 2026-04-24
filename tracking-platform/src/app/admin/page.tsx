@@ -90,9 +90,9 @@ async function deleteSelectedOrdersAction(formData: FormData) {
 
 function orderRowClass(status: string) {
   if (status === "en_route") return "border-l-4 border-l-sky-600 bg-sky-100/80 ring-1 ring-sky-200/80";
-  if (status === "delivered") return "border-l-4 border-l-emerald-600 bg-emerald-100/70 ring-1 ring-emerald-200/80";
+  if (status === "delivered") return "border-l-4 border-l-amber-500 bg-amber-100/80 ring-1 ring-amber-200/90";
   if (status === "cancelled") return "border-l-4 border-l-stone-500 bg-stone-200/60 ring-1 ring-stone-300/80";
-  return "bg-white ring-1 ring-[#1a3d2e]/12";
+  return "bg-white ring-1 ring-[#1a2744]/12";
 }
 
 export default async function AdminPage({
@@ -189,11 +189,11 @@ export default async function AdminPage({
   return (
     <main className="min-h-screen bg-gradient-to-br from-[#9aab9f] via-[#c5cfc9] to-[#a8b8ae]">
       <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-        <div className="mb-8 rounded-2xl border-2 border-[#1a3d2e]/40 bg-[#faf8f4] p-6 shadow-xl shadow-[#0f172a]/20 ring-1 ring-white/40">
+        <div className="mb-8 rounded-2xl border-2 border-[#1a2744]/40 bg-[#faf8f4] p-6 shadow-xl shadow-[#0f172a]/20 ring-1 ring-white/40">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <WrrapdLogo className="h-10 w-auto max-w-[180px] object-contain object-left" />
-              <h1 className="mt-2 text-3xl font-bold tracking-tight text-[#0f241c]">Command Center</h1>
+              <h1 className="mt-2 text-3xl font-bold tracking-tight text-[#0f172a]">Command Center</h1>
               <p className="mt-1 text-sm font-medium text-[#2d4a38]">Scheduled deliveries and fleet oversight</p>
             </div>
             <div className="flex flex-wrap items-center gap-3">
@@ -206,27 +206,27 @@ export default async function AdminPage({
         <section className="mb-10 grid gap-5 md:grid-cols-2">
           <a
             href="/admin/drivers"
-            className="group relative overflow-hidden rounded-2xl border-2 border-[#1a3d2e]/35 bg-[#faf8f4] p-6 shadow-lg shadow-[#0f172a]/15 transition hover:border-[#c9a227] hover:shadow-xl"
+            className="group relative overflow-hidden rounded-2xl border-2 border-[#1a2744]/35 bg-[#faf8f4] p-6 shadow-lg shadow-[#0f172a]/15 transition hover:border-[#c9a227] hover:shadow-xl"
           >
             <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-[#c9a227] via-amber-500 to-[#c9a227]" />
-            <h3 className="mt-2 font-bold text-[#0f241c]">Driver onboarding</h3>
+            <h3 className="mt-2 font-bold text-[#0f172a]">Driver onboarding</h3>
             <p className="mt-2 text-sm leading-relaxed text-[#2d4a38]">
               Approve or reject drivers and apply manual availability overrides.
             </p>
-            <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-[#1a3d2e] group-hover:text-emerald-700">
+            <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-[#1a2744] group-hover:text-amber-700">
               Open →
             </p>
           </a>
           <a
             href="/admin/reports"
-            className="group relative overflow-hidden rounded-2xl border-2 border-[#1a3d2e]/35 bg-[#faf8f4] p-6 shadow-lg shadow-[#0f172a]/15 transition hover:border-[#c9a227] hover:shadow-xl"
+            className="group relative overflow-hidden rounded-2xl border-2 border-[#1a2744]/35 bg-[#faf8f4] p-6 shadow-lg shadow-[#0f172a]/15 transition hover:border-[#c9a227] hover:shadow-xl"
           >
             <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-[#c9a227] via-amber-500 to-[#c9a227]" />
-            <h3 className="mt-2 font-bold text-[#0f241c]">Delivery reports</h3>
+            <h3 className="mt-2 font-bold text-[#0f172a]">Delivery reports</h3>
             <p className="mt-2 text-sm leading-relaxed text-[#2d4a38]">
               View daily metrics and export CSV for operations.
             </p>
-            <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-[#1a3d2e] group-hover:text-emerald-700">
+            <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-[#1a2744] group-hover:text-amber-700">
               Open →
             </p>
           </a>
@@ -242,16 +242,16 @@ export default async function AdminPage({
           return (
           <section
             key={group.title}
-            className="overflow-hidden rounded-2xl border-2 border-[#1a3d2e]/40 bg-[#faf8f4] shadow-xl shadow-[#0f172a]/18 ring-1 ring-white/30"
+            className="overflow-hidden rounded-2xl border-2 border-[#1a2744]/40 bg-[#faf8f4] shadow-xl shadow-[#0f172a]/18 ring-1 ring-white/30"
           >
-            <div className="bg-gradient-to-r from-[#1a3d2e] via-[#234d3c] to-[#2d5a47] px-4 py-3.5">
+            <div className="bg-gradient-to-r from-[#162a52] via-[#1e3a5f] to-[#2d4a7c] px-4 py-3.5">
               <h2 className="text-sm font-bold uppercase tracking-[0.12em] text-white">{group.title}</h2>
             </div>
             <div className="p-5">
             <form
               id={deleteFormId}
               action={deleteSelectedOrdersAction}
-              className="flex flex-col gap-3 border-b-2 border-[#1a3d2e]/15 pb-4 sm:flex-row sm:flex-wrap sm:items-center"
+              className="flex flex-col gap-3 border-b-2 border-[#1a2744]/15 pb-4 sm:flex-row sm:flex-wrap sm:items-center"
             >
               <div className="flex flex-wrap items-center gap-2">
                 <SelectAllOrdersButton formId={deleteFormId} />
@@ -272,7 +272,7 @@ export default async function AdminPage({
                 return (
                 <div
                   key={order.id}
-                  className={`rounded-xl border-2 border-[#1a3d2e]/20 p-4 shadow-md ${orderRowClass(order.status)}`}
+                  className={`rounded-xl border-2 border-[#1a2744]/20 p-4 shadow-md ${orderRowClass(order.status)}`}
                 >
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
@@ -281,16 +281,16 @@ export default async function AdminPage({
                         name="orderIds"
                         value={order.id}
                         form={deleteFormId}
-                        className="h-4 w-4 rounded border-[#1a3d2e]/40 text-emerald-600 focus:ring-2 focus:ring-emerald-500"
+                        className="h-4 w-4 rounded border-[#1a2744]/40 text-amber-600 focus:ring-2 focus:ring-amber-500"
                         title={`Select ${order.id} for deletion`}
                       />
                       <div className="leading-tight">
-                        <p className="font-semibold text-[#0f241c]">{order.externalOrderId?.trim() || order.id}</p>
+                        <p className="font-semibold text-[#0f172a]">{order.externalOrderId?.trim() || order.id}</p>
                       </div>
                     </div>
                     <div className="flex flex-wrap items-center justify-end gap-2">
                       {order.stopSequence != null && (
-                        <span className="rounded-lg bg-gradient-to-b from-[#1a3d2e] to-[#0f241c] px-2.5 py-1 text-xs font-bold text-white shadow-md">
+                        <span className="rounded-lg bg-gradient-to-b from-[#1a2744] to-[#0f172a] px-2.5 py-1 text-xs font-bold text-white shadow-md">
                           Stop {order.stopSequence}
                           {order.driverId
                             ? (() => {
@@ -308,11 +308,11 @@ export default async function AdminPage({
                             : ""}
                         </span>
                       )}
-                      <p className="text-xs font-bold uppercase tracking-wide text-[#2d5a47]">{order.status}</p>
+                      <p className="text-xs font-bold uppercase tracking-wide text-[#1e3a5f]">{order.status}</p>
                     </div>
                   </div>
                   <>
-                    <p className="text-sm font-medium text-[#0f241c]">{order.recipientName}</p>
+                    <p className="text-sm font-medium text-[#0f172a]">{order.recipientName}</p>
                     <p className="text-sm text-[#2d4a38]">
                       {order.addressLine1}, {order.city}, {order.state} {order.postalCode}
                     </p>
@@ -327,7 +327,7 @@ export default async function AdminPage({
                   </p>
                   <a
                     href={`/admin/orders/${order.id}`}
-                    className="mt-3 inline-flex items-center justify-center rounded-xl border-2 border-[#1a3d2e]/50 bg-white px-4 py-2 text-sm font-bold text-[#0f241c] no-underline shadow-md transition hover:border-[#c9a227] hover:bg-[#fffef8] hover:shadow-lg"
+                    className="mt-3 inline-flex items-center justify-center rounded-xl border-2 border-[#1a2744]/50 bg-white px-4 py-2 text-sm font-bold text-[#0f172a] no-underline shadow-md transition hover:border-[#c9a227] hover:bg-[#fffef8] hover:shadow-lg"
                   >
                     View details
                   </a>
@@ -337,7 +337,7 @@ export default async function AdminPage({
                     <select
                       name="status"
                       defaultValue={order.status}
-                      className="rounded-xl border-2 border-[#1a3d2e]/25 bg-white px-3 py-2 text-sm font-medium text-[#0f241c] shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-400/40"
+                      className="rounded-xl border-2 border-[#1a2744]/25 bg-white px-3 py-2 text-sm font-medium text-[#0f172a] shadow-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-400/50"
                     >
                       <option value="scheduled">scheduled</option>
                       <option value="assigned">assigned</option>
@@ -346,7 +346,7 @@ export default async function AdminPage({
                       <option value="cancelled">cancelled</option>
                     </select>
                     <button
-                      className="rounded-xl bg-gradient-to-b from-emerald-500 to-emerald-700 px-5 py-2 text-sm font-bold text-white shadow-lg shadow-emerald-900/35 ring-1 ring-white/30 transition hover:from-emerald-400 hover:to-emerald-600 active:scale-[0.98]"
+                      className="rounded-xl bg-gradient-to-b from-amber-400 to-amber-600 px-5 py-2 text-sm font-bold text-[#1a1a1a] shadow-lg shadow-amber-900/25 ring-1 ring-white/40 transition hover:from-amber-300 hover:to-amber-500 active:scale-[0.98]"
                       type="submit"
                     >
                       Update status
@@ -369,7 +369,7 @@ export default async function AdminPage({
                     <input type="hidden" name="orderId" value={order.id} />
                     <select
                       name="driverId"
-                      className="min-w-0 flex-1 rounded-xl border-2 border-[#1a3d2e]/25 bg-white px-3 py-2 text-sm font-medium text-[#0f241c] shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-400/40 sm:flex-none sm:min-w-[10rem]"
+                      className="min-w-0 flex-1 rounded-xl border-2 border-[#1a2744]/25 bg-white px-3 py-2 text-sm font-medium text-[#0f172a] shadow-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-400/50 sm:flex-none sm:min-w-[10rem]"
                     >
                       {drivers.map((d) => (
                         <option key={d.id} value={d.id}>

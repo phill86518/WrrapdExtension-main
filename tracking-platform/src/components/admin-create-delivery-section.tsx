@@ -33,7 +33,7 @@ export function AdminCreateDeliverySection({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="group inline-flex items-center gap-2 rounded-xl bg-gradient-to-b from-emerald-500 to-emerald-700 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-emerald-900/40 ring-1 ring-white/30 transition hover:from-emerald-400 hover:to-emerald-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#faf8f4] active:scale-[0.98]"
+        className="group inline-flex items-center gap-2 rounded-xl bg-gradient-to-b from-amber-400 to-amber-600 px-5 py-2.5 text-sm font-bold text-[#1a1a1a] shadow-lg shadow-amber-900/25 ring-1 ring-white/40 transition hover:from-amber-300 hover:to-amber-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#faf8f4] active:scale-[0.98]"
       >
         <span className="text-lg leading-none font-light opacity-90">+</span>
         Manual delivery
