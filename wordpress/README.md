@@ -22,7 +22,15 @@ The `[wrrapd_review_orders]` shortcode **only outputs the table block you add**;
 [wrrapd_review_orders]
 ```
 
-or a layout closer to your legacy “giftee / occasion / design” columns:
+or a **card layout** (recommended on restored Elementor pages — navy/gold styling, **occasion dropdown** filter built from your real orders):
+
+```text
+[wrrapd_review_orders layout="cards"]
+```
+
+**Important:** If you still see columns named **“Associated Id”**, **“No. of Files”**, etc., that is **not** this shortcode — it is almost always **JetEngine (or similar) listing** reading old WordPress/CPT data. **Delete that listing widget** (or its section) in Elementor **Navigator**, then keep only **one** Shortcode widget with `layout="cards"` (or `rich` if you prefer a table). Two widgets = two different data sources on top of each other.
+
+Older table layout:
 
 ```text
 [wrrapd_review_orders layout="rich"]

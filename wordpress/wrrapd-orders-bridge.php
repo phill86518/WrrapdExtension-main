@@ -285,7 +285,141 @@ function wrrapd_render_orders_table_rich( array $orders ) {
 }
 
 /**
- * Shortcode: [wrrapd_review_orders] or [wrrapd_review_orders layout="rich"]
+ * Card layout + optional occasion filter (front-end only; scoped CSS).
+ *
+ * @param array<int, array<string, mixed>> $orders
+ */
+function wrrapd_render_orders_cards( array $orders ) {
+	$wrap_id = function_exists( 'wp_unique_id' ) ? wp_unique_id( 'wrrapd-orders-' ) : 'wrrapd-orders-' . uniqid( '', false );
+	$sel_id  = $wrap_id . '-occasion';
+
+	$occasions = array();
+	foreach ( $orders as $order ) {
+		if ( ! is_array( $order ) ) {
+			continue;
+		}
+		$lines = isset( $order['lines'] ) && is_array( $order['lines'] ) ? $order['lines'] : array();
+		foreach ( $lines as $ln ) {
+			if ( ! is_array( $ln ) ) {
+				continue;
+			}
+			$o = isset( $ln['occasion'] ) ? trim( (string) $ln['occasion'] ) : '';
+			if ( $o !== '' ) {
+				$occasions[ $o ] = true;
+			}
+		}
+	}
+	$occasion_keys = array_keys( $occasions );
+	sort( $occasion_keys, SORT_NATURAL | SORT_FLAG_CASE );
+
+	ob_start();
+	echo '<div id="' . esc_attr( $wrap_id ) . '" class="wrrapd-orders-cards-root">';
+
+	echo '<style>
+.wrrapd-orders-cards-root{--wrrapd-navy:#152a45;--wrrapd-gold:#c9a227;--wrrapd-card:#fff;--wrrapd-muted:#5c6b7a;max-width:1100px;margin:0 auto 2.5rem;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;}
+.wrrapd-orders-cards-root .wrrapd-occ-row{display:flex;flex-wrap:wrap;align-items:center;gap:.75rem 1.25rem;margin:0 0 1.25rem;padding:1rem 1.25rem;background:linear-gradient(135deg,var(--wrrapd-navy),#1e3d66);border-radius:12px;color:#fff;box-shadow:0 4px 18px rgba(21,42,69,.25);}
+.wrrapd-orders-cards-root .wrrapd-occ-row label{font-weight:600;font-size:.95rem;}
+.wrrapd-orders-cards-root .wrrapd-occ-row select{min-width:220px;padding:.55rem .9rem;border-radius:8px;border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.12);color:#fff;font-size:.95rem;}
+.wrrapd-orders-cards-root .wrrapd-occ-row select option{color:#111;}
+.wrrapd-orders-cards-root article.wrrapd-order-card{background:var(--wrrapd-card);border-radius:14px;box-shadow:0 2px 14px rgba(21,42,69,.08);margin-bottom:1.35rem;overflow:hidden;border:1px solid rgba(21,42,69,.08);}
+.wrrapd-orders-cards-root .wrrapd-order-head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:.75rem 1rem;padding:1rem 1.25rem;background:linear-gradient(90deg,rgba(201,162,39,.12),transparent);border-bottom:1px solid rgba(21,42,69,.08);}
+.wrrapd-orders-cards-root .wrrapd-order-head strong{font-size:1.1rem;color:var(--wrrapd-navy);}
+.wrrapd-orders-cards-root .wrrapd-order-meta{font-size:.88rem;color:var(--wrrapd-muted);}
+.wrrapd-orders-cards-root .wrrapd-pay-badge{display:inline-block;padding:.2rem .65rem;border-radius:999px;font-size:.78rem;font-weight:600;background:rgba(201,162,39,.25);color:#6a5300;}
+.wrrapd-orders-cards-root .wrrapd-line-card{padding:1rem 1.25rem 1.15rem;border-top:1px solid rgba(21,42,69,.06);}
+.wrrapd-orders-cards-root .wrrapd-line-card:first-of-type{border-top:none;}
+.wrrapd-orders-cards-root .wrrapd-line-top{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem .75rem;margin-bottom:.45rem;}
+.wrrapd-orders-cards-root .wrrapd-occ-pill{display:inline-block;padding:.2rem .65rem;border-radius:999px;font-size:.78rem;font-weight:600;background:#eef4ff;color:#2a4a8a;}
+.wrrapd-orders-cards-root .wrrapd-giftee{font-size:1.05rem;font-weight:600;color:var(--wrrapd-navy);}
+.wrrapd-orders-cards-root .wrrapd-sub{font-size:.88rem;color:var(--wrrapd-muted);margin:.35rem 0 .15rem;}
+.wrrapd-orders-cards-root .wrrapd-design,.wrrapd-orders-cards-root .wrrapd-gift{font-size:.9rem;line-height:1.45;color:#334155;}
+</style>';
+
+	if ( count( $occasion_keys ) > 0 ) {
+		echo '<div class="wrrapd-occ-row"><label for="' . esc_attr( $sel_id ) . '">' . esc_html__( 'Occasion', 'wrrapd' ) . '</label>';
+		echo '<select id="' . esc_attr( $sel_id ) . '">';
+		echo '<option value="">' . esc_html__( 'All occasions', 'wrrapd' ) . '</option>';
+		foreach ( $occasion_keys as $lab ) {
+			$key = md5( $lab );
+			echo '<option value="' . esc_attr( $key ) . '">' . esc_html( $lab ) . '</option>';
+		}
+		echo '</select></div>';
+	}
+
+	foreach ( $orders as $order ) {
+		if ( ! is_array( $order ) ) {
+			continue;
+		}
+		$on = isset( $order['orderNumber'] ) ? (string) $order['orderNumber'] : '—';
+		$ts = isset( $order['timestamp'] ) ? (string) $order['timestamp'] : '';
+		$st = '';
+		if ( isset( $order['payment'] ) && is_array( $order['payment'] ) ) {
+			$st = isset( $order['payment']['status'] ) ? (string) $order['payment']['status'] : '';
+		}
+		$lines = isset( $order['lines'] ) && is_array( $order['lines'] ) ? $order['lines'] : array();
+		if ( count( $lines ) === 0 ) {
+			$lines = array(
+				array(
+					'gifteeName'         => null,
+					'occasion'           => null,
+					'designSummary'      => null,
+					'giftMessageSnippet' => null,
+					'productTitle'       => null,
+				),
+			);
+		}
+
+		echo '<article class="wrrapd-order-card">';
+		echo '<div class="wrrapd-order-head"><div><strong>' . esc_html__( 'Order', 'wrrapd' ) . ' ' . esc_html( $on ) . '</strong>';
+		echo '<div class="wrrapd-order-meta">' . esc_html( $ts ) . '</div></div>';
+		if ( $st !== '' ) {
+			echo '<span class="wrrapd-pay-badge">' . esc_html( $st ) . '</span>';
+		}
+		echo '</div>';
+
+		foreach ( $lines as $ln ) {
+			if ( ! is_array( $ln ) ) {
+				continue;
+			}
+			$gif = wrrapd_cell_text( $ln['gifteeName'] ?? null );
+			$occ = isset( $ln['occasion'] ) ? trim( (string) $ln['occasion'] ) : '';
+			$key = $occ !== '' ? md5( $occ ) : '';
+			$des = wrrapd_cell_text( $ln['designSummary'] ?? null );
+			$gifm = wrrapd_cell_text( $ln['giftMessageSnippet'] ?? null );
+			$pt   = wrrapd_cell_text( $ln['productTitle'] ?? null );
+
+			echo '<div class="wrrapd-line-card" data-wrrapd-occ="' . esc_attr( $key ) . '">';
+			echo '<div class="wrrapd-line-top">';
+			if ( $occ !== '' ) {
+				echo '<span class="wrrapd-occ-pill">' . esc_html( $occ ) . '</span>';
+			}
+			echo '<span class="wrrapd-giftee">' . esc_html( $gif ) . '</span>';
+			echo '</div>';
+			if ( $pt !== '—' ) {
+				echo '<div class="wrrapd-sub">' . esc_html__( 'Item', 'wrrapd' ) . ': ' . esc_html( $pt ) . '</div>';
+			}
+			if ( $des !== '—' ) {
+				echo '<div class="wrrapd-design"><strong>' . esc_html__( 'Design', 'wrrapd' ) . '</strong> — ' . esc_html( $des ) . '</div>';
+			}
+			if ( $gifm !== '—' ) {
+				echo '<div class="wrrapd-gift"><strong>' . esc_html__( 'Gift message', 'wrrapd' ) . '</strong> — ' . esc_html( $gifm ) . '</div>';
+			}
+			echo '</div>';
+		}
+		echo '</article>';
+	}
+
+	if ( count( $occasion_keys ) > 0 ) {
+		$sel_json = wp_json_encode( $sel_id );
+		echo '<script>(function(){var s=document.getElementById(' . $sel_json . ');if(!s)return;var root=document.getElementById(' . wp_json_encode( $wrap_id ) . ');if(!root)return;function run(){var v=s.value||"";root.querySelectorAll("[data-wrrapd-occ]").forEach(function(el){var m=el.getAttribute("data-wrrapd-occ")||"";el.style.display=(!v||m===v)?"":"none";});}s.addEventListener("change",run);})();</script>';
+	}
+
+	echo '</div>';
+	return (string) ob_get_clean();
+}
+
+/**
+ * Shortcode: [wrrapd_review_orders] or [wrrapd_review_orders layout="rich"|"cards"]
  * Re-claims (idempotent) then lists orders for the current user.
  *
  * @param array<string, string>|string $atts
@@ -324,6 +458,9 @@ function wrrapd_shortcode_review_orders( $atts ) {
 
 	if ( $layout === 'rich' ) {
 		return wrrapd_render_orders_table_rich( $orders );
+	}
+	if ( $layout === 'cards' ) {
+		return wrrapd_render_orders_cards( $orders );
 	}
 	return wrrapd_render_orders_table_simple( $orders );
 }
