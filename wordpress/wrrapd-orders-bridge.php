@@ -635,6 +635,49 @@ function wrrapd_studio_design_kind_label( array $ln ) {
 }
 
 /**
+ * Centered invoice-style summary for studio order card.
+ *
+ * @param array<string, mixed>              $order Order payload from API.
+ * @param array<int, array<string, mixed>> $lines Normalized gift lines.
+ */
+function wrrapd_studio_order_summary_html( array $order, array $lines ) {
+	$pay   = isset( $order['payment'] ) && is_array( $order['payment'] ) ? $order['payment'] : null;
+	$cents = isset( $pay['amount'] ) ? (int) $pay['amount'] : 0;
+	$total = '';
+	if ( $cents > 0 ) {
+		$total = '$' . number_format( $cents / 100.0, 2, '.', ',' );
+	}
+	ob_start();
+	echo '<div class="wrrapd-amz-summary">';
+	echo '<div class="wrrapd-amz-summary-title">' . esc_html__( 'Wrrapd summary', 'wrrapd' ) . '</div>';
+	echo '<ul class="wrrapd-amz-summary-lines">';
+	foreach ( $lines as $ln ) {
+		if ( ! is_array( $ln ) ) {
+			continue;
+		}
+		$pt = isset( $ln['productTitle'] ) ? trim( (string) $ln['productTitle'] ) : '';
+		$ds = isset( $ln['designSummary'] ) ? trim( (string) $ln['designSummary'] ) : '';
+		if ( $pt === '' && $ds === '' ) {
+			continue;
+		}
+		echo '<li>';
+		if ( $pt !== '' ) {
+			echo '<span class="wrrapd-amz-summary-item">' . esc_html( $pt ) . '</span>';
+		}
+		if ( $ds !== '' ) {
+			echo '<span class="wrrapd-amz-summary-design">' . esc_html( $ds ) . '</span>';
+		}
+		echo '</li>';
+	}
+	echo '</ul>';
+	if ( $total !== '' ) {
+		echo '<div class="wrrapd-amz-summary-total">' . esc_html__( 'Total', 'wrrapd' ) . ' ' . esc_html( $total ) . '</div>';
+	}
+	echo '</div>';
+	return (string) ob_get_clean();
+}
+
+/**
  * Studio — Amazon-style order blocks, Wrrapd red/gold, editable overlays (one save per gift).
  *
  * @param array<int, array<string, mixed>> $orders
@@ -649,16 +692,31 @@ function wrrapd_render_orders_studio( array $orders, array $overlays ) {
 	$ajax      = admin_url( 'admin-ajax.php' );
 
 	ob_start();
-	echo '<div id="' . esc_attr( $wrap_id ) . '" class="wrrapd-amz-root" data-wrrapd-bridge-rev="2026-04-24b" data-ajax-url="' . esc_url( $ajax ) . '" data-nonce="' . esc_attr( $nonce ) . '">';
+	echo '<div id="' . esc_attr( $wrap_id ) . '" class="wrrapd-amz-root" data-wrrapd-bridge-rev="2026-04-26" data-ajax-url="' . esc_url( $ajax ) . '" data-nonce="' . esc_attr( $nonce ) . '">';
 	echo '<link rel="preconnect" href="https://fonts.googleapis.com" /><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin /><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..700&amp;family=Fraunces:opsz,wght@9..144,500;9..144,700&amp;display=swap" />';
 
 	echo '<style>
 .wrrapd-amz-root{--wr-navy:#162a52;--wr-navy-mid:#1e3a5f;--wr-navy-soft:#2d4a7c;--wr-amber:#ea580c;--wr-amber-deep:#c2410c;--wr-gold:#f5c518;--wr-gold-deep:#d4a106;--bx:var(--wr-navy);--bx-soft:var(--wr-navy-soft);--bx-line:#cbd5e1;--ink:#0f172a;--muted:#475569;--wr-field:var(--wr-amber-deep);--wr-field-hi:var(--wr-amber);--wr-field-ink:#fff7ed;--wr-bar:var(--wr-gold);--wr-bar-ink:#162a52;--wr-font:"DM Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--wr-display:"Fraunces",Georgia,serif;width:100%;max-width:min(100%,960px);margin:-1.35rem auto .55rem;padding:0 .45rem;font-family:var(--wr-font);font-size:.68rem;line-height:1.22;color:var(--ink);-webkit-font-smoothing:antialiased;box-sizing:border-box;}
 .wrrapd-amz-root *,.wrrapd-amz-root *::before,.wrrapd-amz-root *::after{box-sizing:border-box;}
-.wrrapd-amz-search{margin:-.55rem auto .95rem;padding:0 .25rem;text-align:center;}
+.wrrapd-amz-search-wrap{position:relative;transform:translateY(-2.85rem);margin-bottom:-1.65rem;z-index:4;}
+.wrrapd-amz-search{margin:0 auto;padding:0 .25rem;text-align:center;}
 .wrrapd-amz-search input{width:100%;max-width:min(100%,28rem);margin-left:auto;margin-right:auto;display:block;padding:.22rem .5rem;border-radius:8px;border:2px solid var(--bx);font-size:.68rem;background:#fff;font-family:var(--wr-font);color:var(--ink);box-shadow:0 1px 2px rgba(15,23,42,.06);}
 .wrrapd-amz-search input:focus{outline:2px solid var(--wr-gold-deep);outline-offset:1px;border-color:var(--wr-navy-mid);}
-.wrrapd-amz-order{background:#fff;border:3px solid var(--wr-gold-deep);border-radius:10px;margin-bottom:.38rem;box-shadow:0 2px 0 rgba(212,161,6,.25),0 6px 16px rgba(15,23,42,.08);overflow:hidden;}
+.wrrapd-amz-order{background:#fff;border:3px solid var(--wr-gold-deep);border-radius:10px;margin-bottom:.42rem;box-shadow:0 2px 0 rgba(212,161,6,.25),0 6px 16px rgba(15,23,42,.08);overflow:hidden;}
+.wrrapd-amz-order-grid{padding:.28rem .4rem .32rem;background:#fff;border-bottom:1px solid var(--bx-line);}
+.wrrapd-amz-wraps-row,.wrrapd-amz-flowers-row,.wrrapd-amz-prods-row,.wrrapd-amz-kind-row{display:flex;flex-direction:row;flex-wrap:wrap;justify-content:center;align-items:flex-start;gap:.32rem;margin-bottom:.18rem;}
+.wrrapd-amz-strip-cell{width:56px;flex:0 0 auto;display:flex;flex-direction:column;align-items:center;}
+.wrrapd-amz-flowers-cell{min-height:2.35rem;justify-content:flex-start;padding-top:.06rem;}
+.wrrapd-amz-flowers-cell .wrrapd-amz-flowers-art{width:44px;height:50px;border-radius:7px;border:2px solid var(--bx);margin:0 auto;background:radial-gradient(circle at 32% 32%,#e11d48 16%,transparent 18%),radial-gradient(circle at 66% 36%,#ea580c 14%,transparent 17%),radial-gradient(circle at 50% 58%,#c2410c 18%,transparent 21%),radial-gradient(circle at 50% 86%,#166534 10%,transparent 12%),linear-gradient(165deg,#fffbeb,#fff);}
+.wrrapd-amz-flowers-cell .wrrapd-amz-flowers-not{font-size:.48rem;font-weight:700;color:#3f0d1a;text-align:center;line-height:1.15;padding:0 .04rem;}
+.wrrapd-amz-prod-ph{display:block;width:48px;height:48px;border-radius:6px;background:#f1f5f9;border:1px dashed var(--bx-line);}
+.wrrapd-amz-summary{text-align:center;padding:.32rem .55rem .42rem;background:#f8fafc;border-bottom:1px solid var(--bx-line);}
+.wrrapd-amz-summary-title{font-family:var(--wr-display);font-weight:700;font-size:.7rem;color:var(--wr-navy);margin-bottom:.14rem;letter-spacing:.02em;}
+.wrrapd-amz-summary-lines{list-style:none;margin:0 auto;padding:0;max-width:min(100%,28rem);text-align:left;}
+.wrrapd-amz-summary-lines li{font-size:.58rem;color:#0f172a;margin-bottom:.1rem;padding-left:.45rem;text-indent:-.45rem;line-height:1.35;}
+.wrrapd-amz-summary-item{display:block;font-weight:700;}
+.wrrapd-amz-summary-design{display:block;color:#334155;font-size:.54rem;font-weight:500;margin-top:.04rem;}
+.wrrapd-amz-summary-total{margin-top:.2rem;font-weight:800;font-size:.66rem;color:#1a0a10;}
 .wrrapd-amz-bar{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-start;gap:.2rem .55rem;padding:.32rem .48rem;background:linear-gradient(180deg,#ffd54a,var(--wr-gold));border-bottom:2px solid var(--bx);}
 .wrrapd-amz-bar-lbl{font-size:.54rem;font-weight:700;font-family:var(--wr-display);color:var(--wr-bar-ink);letter-spacing:.06em;text-transform:uppercase;opacity:.88;}
 .wrrapd-amz-bar-date{margin-top:0;font-size:.72rem;font-weight:700;font-family:var(--wr-display);color:var(--wr-bar-ink);}
@@ -666,29 +724,24 @@ function wrrapd_render_orders_studio( array $orders, array $overlays ) {
 .wrrapd-amz-bar-right{text-align:right;}
 .wrrapd-amz-line{border-top:1px solid var(--bx-line);}
 .wrrapd-amz-line:first-of-type{border-top:none;}
-.wrrapd-amz-line-inner{display:flex;flex-direction:row;align-items:stretch;justify-content:space-between;gap:0;width:100%;background:#fafafa;}
-.wrrapd-amz-design-col{flex:0 0 132px;width:132px;max-width:132px;min-height:6.35rem;padding:.22rem .2rem .18rem;border-right:none;background:#fff;display:flex;flex-direction:column;justify-content:center;align-items:center;padding-top:.28rem;}
-.wrrapd-amz-design-stack{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.12rem;width:100%;}
-.wrrapd-amz-design-visual-row{display:flex;flex-direction:row;align-items:flex-start;justify-content:center;gap:.28rem;width:100%;}
-.wrrapd-amz-flowers-side{flex:0 0 auto;width:48px;min-height:52px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:.02rem;}
-.wrrapd-amz-flowers-art{width:46px;height:54px;border-radius:7px;border:2px solid var(--bx);background:radial-gradient(circle at 32% 32%,#e11d48 16%,transparent 18%),radial-gradient(circle at 66% 36%,#ea580c 14%,transparent 17%),radial-gradient(circle at 50% 58%,#c2410c 18%,transparent 21%),radial-gradient(circle at 50% 86%,#166534 10%,transparent 12%),linear-gradient(165deg,#fffbeb,#fff);}
-.wrrapd-amz-flowers-not{font-size:.52rem;font-weight:600;color:var(--muted);text-align:center;line-height:1.2;padding:.12rem .08rem;}
+.wrrapd-amz-line-inner{display:flex;flex-direction:row;align-items:stretch;justify-content:flex-end;gap:0;width:100%;background:#fafafa;}
+.wrrapd-amz-line-inner--fields{justify-content:flex-end;}
 .wrrapd-amz-wrap-thumb{flex:0 0 auto;width:52px;height:52px;padding:0;border:none;border-radius:10px;cursor:zoom-in;overflow:hidden;background:radial-gradient(ellipse 95% 75% at 18% 12%,rgba(251,207,232,.55),transparent 52%),radial-gradient(ellipse 80% 70% at 88% 8%,rgba(254,243,199,.45),transparent 48%),radial-gradient(ellipse 120% 90% at 50% 100%,rgba(226,232,240,.9),transparent 55%),linear-gradient(152deg,#fffdfb 0%,#f8fafc 38%,#e2e8f0 72%,#f1f5f9 100%),repeating-linear-gradient(125deg,rgba(255,255,255,.14) 0 1px,transparent 1px 9px);}
 .wrrapd-amz-wrap-thumb.has-img{background:#0f172a;border:2px solid var(--bx);border-radius:7px;box-shadow:0 2px 8px rgba(15,23,42,.2);}
 .wrrapd-amz-wrap-thumb img{width:100%;height:100%;object-fit:cover;display:block;}
 .wrrapd-amz-wrap-thumb:focus{outline:2px solid var(--wr-gold-deep);outline-offset:1px;}
 .wrrapd-amz-design-kind{font-size:.5rem;font-weight:700;font-family:var(--wr-display);color:var(--ink);line-height:1.15;text-align:center;width:100%;padding:0 .06rem;}
 .wrrapd-amz-fields-col{flex:0 1 auto;min-width:0;width:auto;max-width:56%;padding:.24rem .42rem .32rem .28rem;display:flex;flex-direction:column;align-items:flex-end;gap:.12rem;text-align:left;background:#fff;border-left:none;box-shadow:none;overflow:visible;margin-left:auto;}
-@media(max-width:560px){.wrrapd-amz-line-inner{flex-direction:column;}.wrrapd-amz-design-col{flex:none;max-width:none;width:100%;min-height:0;border-bottom:1px solid var(--bx-line);}.wrrapd-amz-fields-col{max-width:100%;width:100%;align-items:stretch;margin-left:0;}.wrrapd-amz-fields-col > .wrrapd-amz-f,.wrrapd-amz-occ-date-row,.wrrapd-amz-rem-inline-row{max-width:100%;width:100%;margin-left:0!important;}.wrrapd-amz-occ-date-row{flex-direction:column;align-items:stretch;}.wrrapd-amz-prodrow{justify-content:flex-start;}}
+@media(max-width:560px){.wrrapd-amz-search-wrap{transform:translateY(-1rem);margin-bottom:-.5rem;}.wrrapd-amz-line-inner{flex-direction:column;}.wrrapd-amz-fields-col{max-width:100%;width:100%;align-items:stretch;margin-left:0;}.wrrapd-amz-fields-col > .wrrapd-amz-f,.wrrapd-amz-occ-date-row,.wrrapd-amz-rem-inline-row{max-width:100%;width:100%;margin-left:0!important;}.wrrapd-amz-occ-date-row{flex-direction:column;align-items:stretch;}.wrrapd-amz-prodrow{justify-content:flex-start;}}
 .wrrapd-amz-fields-col > .wrrapd-amz-f{position:relative;width:100%;max-width:min(100%,12rem);margin-left:auto;margin-right:0;}
 .wrrapd-amz-fields-col > .wrrapd-amz-f--select{max-width:min(100%,12rem);}
 .wrrapd-amz-occ-date-row{display:flex;flex-direction:row;align-items:flex-end;flex-wrap:nowrap;gap:.28rem;width:100%;max-width:min(100%,12rem);margin-left:auto;margin-right:0;}
 .wrrapd-amz-occ-date-row .wrrapd-amz-f{flex:1 1 auto;min-width:0;margin:0;max-width:none;}
-.wrrapd-amz-occ-date-row .wrrapd-amz-f-occwrap{flex:1 1 52%;min-width:0;}
-.wrrapd-amz-occ-date-row .wrrapd-amz-f-datewrap{flex:0 1 auto;min-width:0;}
+.wrrapd-amz-occ-date-row .wrrapd-amz-f-occwrap{flex:1 1 72%;min-width:0;}
+.wrrapd-amz-occ-date-row .wrrapd-amz-f-datewrap{flex:0 1 24%;min-width:0;max-width:7.2rem;}
 .wrrapd-amz-f-datewrap{margin:0;text-align:left;}
-.wrrapd-amz-rem-inline-row{display:flex;flex-direction:row;align-items:center;flex-wrap:nowrap;gap:.18rem .22rem;width:100%;max-width:min(100%,12rem);margin-left:auto;margin-right:0;padding:.04rem 0;}
-.wrrapd-amz-rem-inline-row .wrrapd-amz-f-rem-days{flex:0 0 auto;width:auto;min-width:1.85rem;max-width:2.4rem;padding:.06rem .2rem;border-radius:5px;border:2px solid var(--bx);font-size:.56rem;font-family:var(--wr-font);background:#fff;color:var(--ink);line-height:1.2;}
+.wrrapd-amz-rem-inline-row{display:flex;flex-direction:row;align-items:center;flex-wrap:nowrap;gap:.14rem .18rem;width:100%;max-width:min(100%,12rem);margin-left:auto;margin-right:0;padding:.06rem 0;color:#1a0a10;}
+.wrrapd-amz-rem-inline-row .wrrapd-amz-f-rem-days{flex:0 0 auto;width:auto;min-width:1.65rem;max-width:2.1rem;padding:.05rem .14rem;border-radius:5px;border:2px solid #334155;font-size:.54rem;font-family:var(--wr-font);background:#fff;color:#0f172a;line-height:1.2;font-weight:700;}
 .wrrapd-amz-f-rem-days:disabled{opacity:.45;cursor:not-allowed;}
 .wrrapd-amz-f label{display:block;font-size:.48rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--wr-navy);margin-bottom:.05rem;font-family:var(--wr-font);width:100%;text-align:left;}
 .wrrapd-amz-f input[type=text],.wrrapd-amz-f select:not(.wrrapd-amz-f-rem-days){width:100%;max-width:100%;min-height:1.35rem;padding:.14rem .32rem;border-radius:6px;border:2px solid var(--bx);font-size:.62rem;font-family:var(--wr-font);background:linear-gradient(180deg,var(--wr-field-hi),var(--wr-field));line-height:1.25;color:var(--wr-field-ink);box-shadow:inset 0 1px 0 rgba(255,255,255,.2),inset 0 -1px 0 rgba(0,0,0,.12);transition:border-color .15s ease,box-shadow .15s ease;}
@@ -698,10 +751,13 @@ function wrrapd_render_orders_studio( array $orders, array $overlays ) {
 .wrrapd-amz-f select:not(.wrrapd-amz-f-rem-days){cursor:pointer;accent-color:var(--wr-gold-deep);}
 .wrrapd-amz-f select option{background:#fff;color:var(--ink);}
 .wrrapd-amz-f select:not(.wrrapd-amz-f-rem-days):focus,.wrrapd-amz-f input[type=text]:focus{outline:none;border-color:var(--wr-gold-deep);box-shadow:inset 0 1px 0 rgba(255,255,255,.22),inset 0 -1px 0 rgba(0,0,0,.1),0 0 0 3px rgba(245,197,24,.35);}
-.wrrapd-amz-f-datewrap input[type=date]{width:100%;max-width:100%;min-width:6.5rem;padding:.12rem .22rem;border-radius:6px;border:2px solid var(--bx);font-size:.56rem;font-family:var(--wr-font);background:#fff;color:var(--ink);accent-color:var(--wr-navy-mid);}
+.wrrapd-amz-f-datewrap input[type=date]{width:100%;max-width:100%;min-width:4.5rem;padding:.1rem .14rem;border-radius:6px;border:2px solid var(--bx);font-size:.52rem;font-family:var(--wr-font);background:#fff;color:var(--ink);accent-color:var(--wr-navy-mid);}
 .wrrapd-amz-f-datewrap input[type=date]:focus{outline:none;border-color:var(--wr-gold-deep);box-shadow:0 0 0 3px rgba(245,197,24,.3);}
-.wrrapd-amz-f-hintwrap{width:100%;max-width:min(100%,12rem);margin-left:auto;margin-right:0;}
 .wrrapd-amz-f-hint{font-size:.5rem;color:var(--muted);margin-top:.04rem;line-height:1.2;max-width:100%;text-align:left;}
+.wrrapd-amz-giftee-readonly{width:100%;padding:.16rem .36rem;border-radius:6px;background:linear-gradient(180deg,#7f1d1d,#5c1a2e);color:#fff5f5;font-weight:700;font-size:.62rem;line-height:1.3;box-shadow:inset 0 1px 0 rgba(255,255,255,.12);}
+.wrrapd-amz-f input.wrrapd-amz-f-giftee[type=hidden]{display:none;}
+.wrrapd-amz-f-commentplain{background:#fff!important;color:#0f172a!important;border:1px solid #94a3b8!important;box-shadow:none!important;background-image:none!important;}
+.wrrapd-amz-f input.wrrapd-amz-f-commentplain::placeholder{color:#475569;font-weight:500;}
 .wrrapd-amz-giftmsg{max-width:min(100%,12rem);width:100%;margin-left:auto;margin-right:0;font-size:.58rem;line-height:1.35;color:var(--ink);padding:.06rem 0 .02rem;text-align:left;}
 .wrrapd-amz-giftmsg-lbl{font-weight:700;font-size:.48rem;text-transform:uppercase;letter-spacing:.06em;color:var(--wr-navy);display:block;margin-bottom:.04rem;}
 .wrrapd-amz-giftmsg-txt{font-weight:500;white-space:pre-wrap;word-break:break-word;}
@@ -709,10 +765,10 @@ function wrrapd_render_orders_studio( array $orders, array $overlays ) {
 .wrrapd-amz-prod-thumb{flex:0 0 auto;width:48px;height:48px;padding:0;border:2px solid var(--bx);border-radius:6px;cursor:zoom-in;overflow:hidden;background:#fff;position:relative;z-index:1;transition:transform .2s ease,box-shadow .2s ease,overflow .01s step-end .2s;box-shadow:0 1px 3px rgba(15,23,42,.1);}
 .wrrapd-amz-prod-thumb img{width:100%;height:100%;object-fit:contain;display:block;border-radius:4px;}
 .wrrapd-amz-prod-thumb:hover,.wrrapd-amz-prod-thumb:focus{z-index:30;overflow:visible;transform:scale(2);box-shadow:0 8px 24px rgba(15,23,42,.25);}
-.wrrapd-amz-rowcheck{display:inline-flex;align-items:center;gap:.2rem;font-size:.56rem;font-weight:600;color:var(--wr-navy);margin:0;flex:0 0 auto;white-space:nowrap;}
-.wrrapd-amz-rowcheck input{width:14px;height:14px;accent-color:var(--wr-amber-deep);margin:0;flex-shrink:0;}
-.wrrapd-amz-rowcheck span,.wrrapd-amz-rowcheck label{margin:0;text-transform:none;letter-spacing:.01em;font-size:.56rem;line-height:1.2;}
-.wrrapd-amz-rem-tail{font-size:.56rem;font-weight:600;color:var(--wr-navy);white-space:nowrap;flex:0 0 auto;}
+.wrrapd-amz-rowcheck{display:inline-flex;align-items:center;gap:.18rem;font-size:.62rem;font-weight:800;color:#1a0a10;margin:0;flex:0 0 auto;white-space:nowrap;}
+.wrrapd-amz-rowcheck input{width:15px;height:15px;accent-color:#7f1d1d;margin:0;flex-shrink:0;}
+.wrrapd-amz-rowcheck span,.wrrapd-amz-rowcheck label{margin:0;text-transform:none;letter-spacing:.01em;font-size:.62rem;line-height:1.25;font-weight:800;color:#1a0a10;}
+.wrrapd-amz-rem-tail{font-size:.62rem;font-weight:800;color:#1a0a10;white-space:nowrap;flex:0 0 auto;}
 .wrrapd-amz-savebar{margin-top:.12rem;padding-top:.18rem;border-top:1px dashed var(--bx-line);display:flex;justify-content:flex-end;width:100%;max-width:min(100%,12rem);margin-left:auto;margin-right:0;}
 .wrrapd-amz-save{background:linear-gradient(180deg,var(--wr-navy-mid),var(--wr-navy));color:#fffef8;border:2px solid var(--bx);border-radius:7px;padding:.2rem .75rem;font-weight:700;font-size:.6rem;cursor:pointer;font-family:var(--wr-display);letter-spacing:.02em;box-shadow:0 1px 0 rgba(0,0,0,.1),0 3px 10px rgba(22,42,82,.2);transition:transform .12s ease,box-shadow .15s ease,background .15s ease;}
 .wrrapd-amz-save:hover{background:linear-gradient(180deg,var(--wr-navy-soft),var(--wr-navy-mid));}
@@ -726,7 +782,7 @@ function wrrapd_render_orders_studio( array $orders, array $overlays ) {
 .wrrapd-amz-lb-inner .wrrapd-amz-lb-paper{width:min(85vw,520px);height:min(70vh,520px);border-radius:8px;border:1px solid var(--bx);margin:0 auto;background:radial-gradient(ellipse at 30% 15%,rgba(30,58,95,.06),transparent 50%),linear-gradient(165deg,#fff,#eef2f7);}
 </style>';
 
-	echo '<div class="wrrapd-amz-search"><input type="search" id="' . esc_attr( $search_id ) . '" aria-label="' . esc_attr__( 'Search orders, giftee, or item', 'wrrapd' ) . '" placeholder="' . esc_attr__( 'Search orders, giftee, item…', 'wrrapd' ) . '" autocomplete="off" /></div>';
+	echo '<div class="wrrapd-amz-search-wrap"><div class="wrrapd-amz-search"><input type="search" id="' . esc_attr( $search_id ) . '" aria-label="' . esc_attr__( 'Search orders, giftee, or item', 'wrrapd' ) . '" placeholder="' . esc_attr__( 'Search orders, giftee, item…', 'wrrapd' ) . '" autocomplete="off" /></div></div>';
 
 	foreach ( $orders as $order ) {
 		if ( ! is_array( $order ) ) {
@@ -770,6 +826,65 @@ function wrrapd_render_orders_studio( array $orders, array $overlays ) {
 		echo '<div class="wrrapd-amz-bar-right"><div class="wrrapd-amz-bar-lbl">' . esc_html__( 'Order #', 'wrrapd' ) . '</div>';
 		echo '<div class="wrrapd-amz-bar-onum">' . esc_html( $on ) . '</div></div></div>';
 
+		$line_strips = array();
+		foreach ( $lines as $lnx ) {
+			if ( ! is_array( $lnx ) ) {
+				continue;
+			}
+			$dpr  = isset( $lnx['designPreviewUrl'] ) ? trim( (string) $lnx['designPreviewUrl'] ) : '';
+			$imgr = isset( $lnx['productImageUrl'] ) ? trim( (string) $lnx['productImageUrl'] ) : '';
+			$wsrc = $dpr !== '' ? esc_url( $dpr ) : '';
+			$psrc = $imgr !== '' ? esc_url( $imgr ) : '';
+			$line_strips[] = array(
+				'wrap_src'    => $wsrc,
+				'wrap_type'   => $wsrc !== '' ? 'img' : 'paper',
+				'prod_src'    => $psrc,
+				'flowers'     => ! empty( $lnx['flowers'] ),
+				'design_kind' => wrrapd_studio_design_kind_label( $lnx ),
+			);
+		}
+
+		echo '<div class="wrrapd-amz-order-grid">';
+		echo '<div class="wrrapd-amz-wraps-row">';
+		foreach ( $line_strips as $s ) {
+			$hcls = ( $s['wrap_src'] !== '' ) ? ' has-img' : '';
+			echo '<div class="wrrapd-amz-strip-cell"><button type="button" class="wrrapd-amz-wrap-thumb' . $hcls . '" data-wrrapd-lb-type="' . esc_attr( $s['wrap_type'] ) . '" data-wrrapd-lb-src="' . esc_attr( $s['wrap_src'] ) . '" aria-label="' . esc_attr__( 'Enlarge wrapping preview', 'wrrapd' ) . '">';
+			if ( $s['wrap_src'] !== '' ) {
+				echo '<img src="' . esc_url( $s['wrap_src'] ) . '" alt="" loading="lazy" decoding="async" />';
+			}
+			echo '</button></div>';
+		}
+		echo '</div>';
+		echo '<div class="wrrapd-amz-flowers-row">';
+		foreach ( $line_strips as $s ) {
+			echo '<div class="wrrapd-amz-strip-cell wrrapd-amz-flowers-cell">';
+			if ( ! empty( $s['flowers'] ) ) {
+				echo '<div class="wrrapd-amz-flowers-art" role="img" aria-label="' . esc_attr__( 'Bouquet with this gift', 'wrrapd' ) . '"></div>';
+			} else {
+				echo '<span class="wrrapd-amz-flowers-not">' . esc_html__( 'Flowers not sent.', 'wrrapd' ) . '</span>';
+			}
+			echo '</div>';
+		}
+		echo '</div>';
+		echo '<div class="wrrapd-amz-prods-row">';
+		foreach ( $line_strips as $s ) {
+			echo '<div class="wrrapd-amz-strip-cell">';
+			if ( $s['prod_src'] !== '' ) {
+				echo '<button type="button" class="wrrapd-amz-prod-thumb" data-wrrapd-lb-type="img" data-wrrapd-lb-src="' . esc_attr( $s['prod_src'] ) . '" aria-label="' . esc_attr__( 'Enlarge item image', 'wrrapd' ) . '"><img src="' . esc_url( $s['prod_src'] ) . '" alt="" loading="lazy" decoding="async" /></button>';
+			} else {
+				echo '<span class="wrrapd-amz-prod-ph" aria-hidden="true"></span>';
+			}
+			echo '</div>';
+		}
+		echo '</div>';
+		echo '<div class="wrrapd-amz-kind-row">';
+		foreach ( $line_strips as $s ) {
+			echo '<div class="wrrapd-amz-strip-cell"><div class="wrrapd-amz-design-kind">' . esc_html( $s['design_kind'] ) . '</div></div>';
+		}
+		echo '</div></div>';
+
+		echo wrrapd_studio_order_summary_html( $order, $lines );
+
 		$li = 0;
 		foreach ( $lines as $ln ) {
 			if ( ! is_array( $ln ) ) {
@@ -798,13 +913,7 @@ function wrrapd_render_orders_studio( array $orders, array $overlays ) {
 				$rem_prior = 1;
 			}
 
-			$img_raw = isset( $ln['productImageUrl'] ) ? trim( (string) $ln['productImageUrl'] ) : '';
-			$img     = $img_raw !== '' ? esc_url( $img_raw ) : '';
-			$dprev_r = isset( $ln['designPreviewUrl'] ) ? trim( (string) $ln['designPreviewUrl'] ) : '';
-			$dprev   = $dprev_r !== '' ? esc_url( $dprev_r ) : '';
-			$dlabel  = isset( $ln['designLabel'] ) ? trim( (string) $ln['designLabel'] ) : '';
-			$flowers = ! empty( $ln['flowers'] );
-			$dhint   = isset( $ln['deliveryHint'] ) ? trim( (string) $ln['deliveryHint'] ) : '';
+			$dlabel = isset( $ln['designLabel'] ) ? trim( (string) $ln['designLabel'] ) : '';
 
 			$line_search = strtolower(
 				implode(
@@ -832,34 +941,14 @@ function wrrapd_render_orders_studio( array $orders, array $overlays ) {
 				$occ_opts = array_merge( array( $occ_sel ), $occ_opts );
 			}
 
-			$wrap_lb_src  = $dprev_r !== '' ? esc_url( $dprev_r ) : '';
-			$wrap_lb_type = $wrap_lb_src !== '' ? 'img' : 'paper';
-			$prod_lb_src  = $img_raw !== '' ? esc_url( $img_raw ) : '';
-			$design_kind  = wrrapd_studio_design_kind_label( $ln );
+			$giftee_show = $giftee_val !== '' ? $giftee_val : '—';
 
 			echo '<div class="wrrapd-amz-line" data-order="' . esc_attr( $on ) . '" data-line="' . (int) $li . '" data-wrrapd-search="' . esc_attr( $line_search ) . '">';
-			echo '<div class="wrrapd-amz-line-inner">';
-			echo '<div class="wrrapd-amz-design-col">';
-			echo '<div class="wrrapd-amz-design-stack">';
-			echo '<div class="wrrapd-amz-design-visual-row">';
-			echo '<button type="button" class="wrrapd-amz-wrap-thumb' . ( $wrap_lb_src !== '' ? ' has-img' : '' ) . '" data-wrrapd-lb-type="' . esc_attr( $wrap_lb_type ) . '" data-wrrapd-lb-src="' . esc_attr( $wrap_lb_src ) . '" aria-label="' . esc_attr__( 'Enlarge wrapping preview', 'wrrapd' ) . '">';
-			if ( $wrap_lb_src !== '' ) {
-				echo '<img src="' . $dprev . '" alt="" loading="lazy" decoding="async" />';
-			}
-			echo '</button>';
-			echo '<div class="wrrapd-amz-flowers-side" aria-label="' . esc_attr__( 'Flowers add-on', 'wrrapd' ) . '">';
-			if ( $flowers ) {
-				echo '<div class="wrrapd-amz-flowers-art" role="img" title="' . esc_attr__( 'Bouquet with this gift', 'wrrapd' ) . '"></div>';
-			} else {
-				echo '<span class="wrrapd-amz-flowers-not">' . esc_html__( 'Flowers not sent.', 'wrrapd' ) . '</span>';
-			}
-			echo '</div></div>';
-			echo '<div class="wrrapd-amz-design-kind">' . esc_html( $design_kind ) . '</div>';
-			echo '</div></div>';
-
+			echo '<div class="wrrapd-amz-line-inner wrrapd-amz-line-inner--fields">';
 			echo '<div class="wrrapd-amz-fields-col">';
-			echo '<div class="wrrapd-amz-f"><label for="' . esc_attr( $wrap_id . '-g-' . $id_sfx ) . '">' . esc_html__( 'Giftee', 'wrrapd' ) . '</label>';
-			echo '<input type="text" class="wrrapd-amz-f-giftee" id="' . esc_attr( $wrap_id . '-g-' . $id_sfx ) . '" maxlength="200" value="' . esc_attr( $giftee_val ) . '" /></div>';
+			echo '<div class="wrrapd-amz-f">';
+			echo '<input type="hidden" class="wrrapd-amz-f-giftee" name="giftee_' . esc_attr( $id_sfx ) . '" value="' . esc_attr( $giftee_val ) . '" />';
+			echo '<div class="wrrapd-amz-giftee-readonly" aria-label="' . esc_attr__( 'Giftee', 'wrrapd' ) . '">' . esc_html( $giftee_show ) . '</div></div>';
 
 			echo '<div class="wrrapd-amz-f wrrapd-amz-f--select">';
 			echo '<select class="wrrapd-amz-f-rel" id="' . esc_attr( $wrap_id . '-r-' . $id_sfx ) . '" aria-label="' . esc_attr__( 'Relationship', 'wrrapd' ) . '">';
@@ -885,10 +974,6 @@ function wrrapd_render_orders_studio( array $orders, array $overlays ) {
 			echo '<input type="date" class="wrrapd-amz-f-date" id="' . esc_attr( $wrap_id . '-d-' . $id_sfx ) . '" value="' . esc_attr( $gdate ) . '" aria-label="' . esc_attr__( 'Date', 'wrrapd' ) . '" />';
 			echo '</div></div>';
 
-			if ( $dhint !== '' ) {
-				echo '<div class="wrrapd-amz-f-hintwrap"><div class="wrrapd-amz-f-hint">' . esc_html__( 'Delivery note:', 'wrrapd' ) . ' ' . esc_html( $dhint ) . '</div></div>';
-			}
-
 			if ( $gm_show !== '' ) {
 				echo '<div class="wrrapd-amz-giftmsg"><span class="wrrapd-amz-giftmsg-lbl">' . esc_html__( 'Gift message', 'wrrapd' ) . '</span>';
 				echo '<span class="wrrapd-amz-giftmsg-txt">' . esc_html( $gm_show ) . '</span></div>';
@@ -906,18 +991,8 @@ function wrrapd_render_orders_studio( array $orders, array $overlays ) {
 			echo '<span class="wrrapd-amz-rem-tail">' . esc_html__( 'days prior.', 'wrrapd' ) . '</span>';
 			echo '</div>';
 
-			echo '<div class="wrrapd-amz-f"><label>' . esc_html__( 'Main image of the gift', 'wrrapd' ) . '</label>';
-			echo '<div class="wrrapd-amz-prodrow">';
-			if ( $prod_lb_src !== '' ) {
-				echo '<button type="button" class="wrrapd-amz-prod-thumb" data-wrrapd-lb-type="img" data-wrrapd-lb-src="' . esc_attr( $prod_lb_src ) . '" aria-label="' . esc_attr__( 'Enlarge item image', 'wrrapd' ) . '"><img src="' . $img . '" alt="" loading="lazy" decoding="async" /></button>';
-				echo '<span class="wrrapd-amz-f-hint">' . esc_html__( 'Click thumbnail to enlarge.', 'wrrapd' ) . '</span>';
-			} else {
-				echo '<span class="wrrapd-amz-f-hint">' . esc_html__( 'No product image on file.', 'wrrapd' ) . '</span>';
-			}
-			echo '</div></div>';
-
-			echo '<div class="wrrapd-amz-f"><label for="' . esc_attr( $wrap_id . '-c-' . $id_sfx ) . '">' . esc_html__( 'Comment', 'wrrapd' ) . '</label>';
-			echo '<input type="text" class="wrrapd-amz-f-comment" id="' . esc_attr( $wrap_id . '-c-' . $id_sfx ) . '" maxlength="4000" value="' . esc_attr( $comment ) . '" /></div>';
+			echo '<div class="wrrapd-amz-f">';
+			echo '<input type="text" class="wrrapd-amz-f-comment wrrapd-amz-f-commentplain" id="' . esc_attr( $wrap_id . '-c-' . $id_sfx ) . '" maxlength="4000" value="' . esc_attr( $comment ) . '" placeholder="' . esc_attr__( 'Additional comments', 'wrrapd' ) . '" aria-label="' . esc_attr__( 'Additional comments', 'wrrapd' ) . '" /></div>';
 
 			echo '<div class="wrrapd-amz-savebar"><button type="button" class="wrrapd-amz-save">' . esc_html__( 'Save changes', 'wrrapd' ) . '</button></div>';
 			echo '</div>';
