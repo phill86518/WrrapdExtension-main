@@ -30,6 +30,18 @@ or a layout closer to your legacy “giftee / occasion / design” columns:
 
 Hide or remove any old widget that still says **“No order files found”** (that text is not from this bridge; it is usually a separate listing or custom HTML that expected files elsewhere).
 
+### Page titles like `07. Privacy Policy` (sort prefix)
+
+Keep the **full** title in **Pages → Edit** (with `07.` for ordering). On the **public site**, the MU plugin strips a leading **`digits + dot + spaces`** prefix from:
+
+- headings/widgets that use `the_title`,
+- the **browser tab** title (`document_title_parts`),
+- **menu labels** for normal page/post menu items.
+
+**wp-admin** lists and the editor still show the full title including `07.`
+
+Re-upload **`wrrapd-orders-bridge.php`** after pulling the latest from GitHub.
+
 3. Publish. The shortcode **re-runs claim** (idempotent) then **lists** every pay-server order whose **gifter email** matches the logged-in user’s WordPress email, or that is already **claimed** to their WP user id.
 
 If you are unsure which page has the big layout: **WP Admin → Pages** and search titles/slugs for *order*, *review*, *gift*, or open **Elementor → Templates** / **Theme Builder** for user dashboards. Those page IDs are not stored in this Git repo (they live in the production DB).

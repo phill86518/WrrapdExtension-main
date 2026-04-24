@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: Wrrapd Orders Bridge (MU)
- * Description: On login/registration, claims pay-server orders by email; shortcode lists orders for "Review Wrrapd Orders".
+ * Description: Orders bridge (claim + list shortcodes), logout nonce fix, strip leading "NN. " from front-end titles.
  * Author: Wrrapd
  *
  * Install: copy this file to wp-content/mu-plugins/wrrapd-orders-bridge.php (must-use plugins load automatically).
@@ -35,6 +35,48 @@ function wrrapd_redirect_stale_logout_to_fresh_nonce() {
 	exit;
 }
 add_action( 'login_init', 'wrrapd_redirect_stale_logout_to_fresh_nonce', 0 );
+
+/**
+ * Strip a leading admin sort prefix like "07. " from titles on the **front end** only
+ * (WP admin and editor still show the full title). Matches: digits + dot + optional spaces.
+ */
+function wrrapd_strip_leading_title_sort_prefix( $title ) {
+	if ( is_admin() || ! is_string( $title ) || $title === '' ) {
+		return $title;
+	}
+	$out = preg_replace( '/^\d+\.\s*/u', '', $title );
+	return is_string( $out ) ? $out : $title;
+}
+
+add_filter( 'the_title', 'wrrapd_strip_leading_title_sort_prefix', 10, 1 );
+
+add_filter(
+	'document_title_parts',
+	static function ( $parts ) {
+		if ( is_admin() || empty( $parts['title'] ) || ! is_string( $parts['title'] ) ) {
+			return $parts;
+		}
+		$parts['title'] = wrrapd_strip_leading_title_sort_prefix( $parts['title'] );
+		return $parts;
+	},
+	10,
+	1
+);
+
+add_filter(
+	'nav_menu_item_title',
+	static function ( $title, $item, $args, $depth ) {
+		if ( is_admin() || ! is_string( $title ) || $title === '' ) {
+			return $title;
+		}
+		if ( is_object( $item ) && isset( $item->type ) && $item->type === 'post_type' ) {
+			return wrrapd_strip_leading_title_sort_prefix( $title );
+		}
+		return $title;
+	},
+	10,
+	4
+);
 
 if ( ! defined( 'WRRAPD_INTERNAL_API_KEY' ) || WRRAPD_INTERNAL_API_KEY === '' ) {
 	return;
