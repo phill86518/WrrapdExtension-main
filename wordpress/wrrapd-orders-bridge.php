@@ -442,7 +442,6 @@ function wrrapd_overlay_row( array $overlays, $order_number, $line_index ) {
 		'comment'              => '',
 		'gift_date'            => '',
 		'reminder_next_year'   => '',
-		'flowers_delivered'    => '',
 		'customer_notes'      => '',
 	);
 	if ( ! isset( $overlays[ $order_number ] ) || ! is_array( $overlays[ $order_number ] ) ) {
@@ -607,6 +606,34 @@ function wrrapd_studio_format_order_date( $ts ) {
 }
 
 /**
+ * Short design-source label for the studio left rail (Wrrapd / upload / AI / flowers add-on).
+ *
+ * @param array<string, mixed> $ln Order line from API.
+ */
+function wrrapd_studio_design_kind_label( array $ln ) {
+	$dl = isset( $ln['designLabel'] ) ? trim( (string) $ln['designLabel'] ) : '';
+	if ( $dl !== '' ) {
+		if ( preg_match( '/^AI:/i', $dl ) || stripos( $dl, 'AI-generated' ) !== false ) {
+			return __( 'AI design', 'wrrapd' );
+		}
+		if ( preg_match( '/^Upload:/i', $dl ) ) {
+			return __( 'Uploaded design', 'wrrapd' );
+		}
+		if ( preg_match( '/^Wrrapd:/i', $dl ) ) {
+			return __( 'Wrrapd design', 'wrrapd' );
+		}
+		if ( preg_match( '/^Flowers:/i', $dl ) || stripos( $dl, 'Flowers add-on' ) !== false ) {
+			return __( 'Flowers add-on', 'wrrapd' );
+		}
+	}
+	$prev = isset( $ln['designPreviewUrl'] ) ? trim( (string) $ln['designPreviewUrl'] ) : '';
+	if ( $prev !== '' ) {
+		return __( 'AI design', 'wrrapd' );
+	}
+	return __( 'Wrrapd design', 'wrrapd' );
+}
+
+/**
  * Studio — Amazon-style order blocks, Wrrapd red/gold, editable overlays (one save per gift).
  *
  * @param array<int, array<string, mixed>> $orders
@@ -638,18 +665,16 @@ function wrrapd_render_orders_studio( array $orders, array $overlays ) {
 .wrrapd-amz-line{border-top:1px solid var(--wr-line);}
 .wrrapd-amz-line:first-of-type{border-top:none;}
 .wrrapd-amz-line-inner{display:flex;flex-direction:row;align-items:stretch;gap:0;background:var(--wr-paper);}
-.wrrapd-amz-leftcol{flex:0 0 108px;width:108px;max-width:108px;padding:.32rem .3rem;border-right:1px solid var(--wr-line);background:linear-gradient(165deg,var(--wr-butter),#fff3c9 55%,#ffe8a8);display:flex;flex-direction:column;align-items:center;text-align:center;gap:.22rem;}
-.wrrapd-amz-wrap-thumb{flex:0 0 auto;width:56px;height:56px;padding:0;border:1px solid rgba(201,162,39,.65);border-radius:6px;cursor:zoom-in;overflow:hidden;background:repeating-linear-gradient(-45deg,var(--wr-red),var(--wr-red) 5px,var(--wr-gold-deep) 5px,var(--wr-gold-deep) 10px);box-shadow:0 1px 2px rgba(0,0,0,.08);}
+.wrrapd-amz-leftcol{flex:0 0 148px;width:148px;max-width:148px;min-height:10.5rem;padding:.35rem .32rem;border-right:1px solid var(--wr-line);background:linear-gradient(165deg,var(--wr-butter),#fff3c9 55%,#ffe8a8);display:flex;flex-direction:column;justify-content:flex-end;align-items:stretch;}
+.wrrapd-amz-left-bottom{display:flex;flex-direction:row;align-items:flex-end;justify-content:flex-start;gap:.32rem;width:100%;}
+.wrrapd-amz-wrap-thumb{flex:0 0 auto;width:58px;height:58px;padding:0;border:1px solid rgba(201,162,39,.65);border-radius:6px;cursor:zoom-in;overflow:hidden;background:repeating-linear-gradient(-45deg,var(--wr-red),var(--wr-red) 5px,var(--wr-gold-deep) 5px,var(--wr-gold-deep) 10px);box-shadow:0 1px 2px rgba(0,0,0,.08);align-self:flex-end;}
 .wrrapd-amz-wrap-thumb img{width:100%;height:100%;object-fit:cover;display:block;}
 .wrrapd-amz-wrap-thumb:focus{outline:2px solid var(--wr-gold-mid);outline-offset:1px;}
-.wrrapd-amz-wrap-lbl{font-size:.58rem;font-weight:600;color:var(--wr-ink);line-height:1.2;font-family:var(--wr-display);}
-.wrrapd-amz-flowers-hint{font-size:.52rem;color:var(--wr-muted);line-height:1.15;}
-.wrrapd-amz-flowers-row{display:flex;align-items:flex-start;gap:.25rem;font-size:.55rem;font-weight:600;color:var(--wr-ink);text-align:left;width:100%;}
-.wrrapd-amz-flowers-row input[type=checkbox]{width:13px;height:13px;flex-shrink:0;margin:.1rem 0 0;accent-color:var(--wr-gold-deep);}
-.wrrapd-amz-flowers-row label{margin:0;font-weight:600;text-transform:none;letter-spacing:0;color:var(--wr-ink);line-height:1.2;}
-.wrrapd-amz-right{flex:1;min-width:0;padding:.28rem .4rem .35rem;display:flex;flex-direction:column;gap:.2rem;}
-.wrrapd-amz-grid2{display:grid;grid-template-columns:1fr 1fr;gap:.2rem .35rem;}
-@media(max-width:560px){.wrrapd-amz-line-inner{flex-direction:column;}.wrrapd-amz-leftcol{flex:none;max-width:none;width:auto;border-right:none;border-bottom:1px solid var(--wr-line);flex-direction:row;flex-wrap:wrap;justify-content:center;}.wrrapd-amz-grid2{grid-template-columns:1fr;}}
+.wrrapd-amz-wrap-meta{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-end;gap:.18rem;text-align:left;padding-bottom:.08rem;}
+.wrrapd-amz-design-kind{font-size:.58rem;font-weight:700;font-family:var(--wr-display);color:var(--wr-red-ink);line-height:1.2;letter-spacing:.02em;}
+.wrrapd-amz-bouquet-ico{font-size:1.65rem;line-height:1;display:block;filter:drop-shadow(0 1px 1px rgba(0,0,0,.12));}
+.wrrapd-amz-right{flex:1;min-width:0;max-width:420px;padding:.28rem .45rem .35rem;display:flex;flex-direction:column;gap:.22rem;}
+@media(max-width:560px){.wrrapd-amz-line-inner{flex-direction:column;}.wrrapd-amz-leftcol{flex:none;max-width:none;width:auto;min-height:0;border-right:none;border-bottom:1px solid var(--wr-line);justify-content:flex-start;}.wrrapd-amz-right{max-width:none;}}
 .wrrapd-amz-f label{display:block;font-size:.55rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--wr-muted);margin-bottom:.06rem;font-family:var(--wr-font);}
 .wrrapd-amz-f input[type=text],.wrrapd-amz-f select{width:100%;box-sizing:border-box;padding:.18rem .3rem;border-radius:5px;border:1px solid #dcd3bf;font-size:.65rem;font-family:var(--wr-font);background:#fff;line-height:1.2;color:var(--wr-ink);}
 .wrrapd-amz-f select{cursor:pointer;accent-color:var(--wr-gold-deep);}
@@ -751,7 +776,6 @@ function wrrapd_render_orders_studio( array $orders, array $overlays ) {
 			$dprev   = $dprev_r !== '' ? esc_url( $dprev_r ) : '';
 			$dlabel  = isset( $ln['designLabel'] ) ? trim( (string) $ln['designLabel'] ) : '';
 			$flowers = ! empty( $ln['flowers'] );
-			$flowers_del = ! empty( $ov['flowers_delivered'] );
 			$dhint   = isset( $ln['deliveryHint'] ) ? trim( (string) $ln['deliveryHint'] ) : '';
 
 			$line_search = strtolower(
@@ -779,41 +803,39 @@ function wrrapd_render_orders_studio( array $orders, array $overlays ) {
 				$occ_opts = array_merge( array( $occ_sel ), $occ_opts );
 			}
 
-			$wrap_lb_src = $dprev_r !== '' ? esc_url( $dprev_r ) : '';
+			$wrap_lb_src  = $dprev_r !== '' ? esc_url( $dprev_r ) : '';
 			$wrap_lb_type = $wrap_lb_src !== '' ? 'img' : 'paper';
 			$prod_lb_src  = $img_raw !== '' ? esc_url( $img_raw ) : '';
-			$cap          = $dlabel !== '' ? $dlabel : __( 'Wrrapd wrapping', 'wrrapd' );
+			$design_kind  = wrrapd_studio_design_kind_label( $ln );
 
 			echo '<div class="wrrapd-amz-line" data-order="' . esc_attr( $on ) . '" data-line="' . (int) $li . '" data-wrrapd-search="' . esc_attr( $line_search ) . '">';
 			echo '<div class="wrrapd-amz-line-inner">';
 			echo '<div class="wrrapd-amz-leftcol">';
+			echo '<div class="wrrapd-amz-left-bottom">';
 			echo '<button type="button" class="wrrapd-amz-wrap-thumb' . ( $wrap_lb_src !== '' ? ' has-img' : '' ) . '" data-wrrapd-lb-type="' . esc_attr( $wrap_lb_type ) . '" data-wrrapd-lb-src="' . esc_attr( $wrap_lb_src ) . '" aria-label="' . esc_attr__( 'Enlarge wrapping preview', 'wrrapd' ) . '">';
 			if ( $wrap_lb_src !== '' ) {
 				echo '<img src="' . $dprev . '" alt="" loading="lazy" decoding="async" />';
 			}
 			echo '</button>';
-			echo '<div class="wrrapd-amz-wrap-lbl">' . esc_html( $cap ) . '</div>';
+			echo '<div class="wrrapd-amz-wrap-meta">';
+			echo '<div class="wrrapd-amz-design-kind">' . esc_html( $design_kind ) . '</div>';
 			if ( $flowers ) {
-				echo '<div class="wrrapd-amz-flowers-hint">' . esc_html__( 'Flowers add-on on order.', 'wrrapd' ) . '</div>';
+				echo '<span class="wrrapd-amz-bouquet-ico" role="img" aria-label="' . esc_attr__( 'Flowers included with this gift', 'wrrapd' ) . '">&#x1F490;</span>';
 			}
-			echo '<div class="wrrapd-amz-flowers-row">';
-			echo '<input type="checkbox" class="wrrapd-amz-f-flowers-del" id="' . esc_attr( $wrap_id . '-fd-' . $id_sfx ) . '"' . ( $flowers_del ? ' checked' : '' ) . ' />';
-			echo '<label for="' . esc_attr( $wrap_id . '-fd-' . $id_sfx ) . '">' . esc_html__( 'Flowers were delivered', 'wrrapd' ) . '</label>';
-			echo '</div></div>';
+			echo '</div></div></div>';
 
 			echo '<div class="wrrapd-amz-right">';
-			echo '<div class="wrrapd-amz-grid2">';
 			echo '<div class="wrrapd-amz-f"><label for="' . esc_attr( $wrap_id . '-g-' . $id_sfx ) . '">' . esc_html__( 'Giftee', 'wrrapd' ) . '</label>';
 			echo '<input type="text" class="wrrapd-amz-f-giftee" id="' . esc_attr( $wrap_id . '-g-' . $id_sfx ) . '" maxlength="200" value="' . esc_attr( $giftee_val ) . '" /></div>';
+
 			echo '<div class="wrrapd-amz-f"><label for="' . esc_attr( $wrap_id . '-r-' . $id_sfx ) . '">' . esc_html__( 'Relationship', 'wrrapd' ) . '</label>';
 			echo '<select class="wrrapd-amz-f-rel" id="' . esc_attr( $wrap_id . '-r-' . $id_sfx ) . '">';
 			echo '<option value="">' . esc_html__( '— Select —', 'wrrapd' ) . '</option>';
 			foreach ( $rel_opts as $r ) {
 				echo '<option value="' . esc_attr( $r ) . '"' . selected( $rel_val, $r, false ) . '>' . esc_html( $r ) . '</option>';
 			}
-			echo '</select></div></div>';
+			echo '</select></div>';
 
-			echo '<div class="wrrapd-amz-grid2">';
 			echo '<div class="wrrapd-amz-f"><label for="' . esc_attr( $wrap_id . '-o-' . $id_sfx ) . '">' . esc_html__( 'Occasion', 'wrrapd' ) . '</label>';
 			echo '<select class="wrrapd-amz-f-occ" id="' . esc_attr( $wrap_id . '-o-' . $id_sfx ) . '">';
 			echo '<option value="">' . esc_html__( '— Same as checkout —', 'wrrapd' ) . '</option>';
@@ -821,17 +843,18 @@ function wrrapd_render_orders_studio( array $orders, array $overlays ) {
 				echo '<option value="' . esc_attr( $lab ) . '"' . selected( $occ_sel, $lab, false ) . '>' . esc_html( $lab ) . '</option>';
 			}
 			echo '</select></div>';
+
 			echo '<div class="wrrapd-amz-f wrrapd-amz-f-datewrap"><label for="' . esc_attr( $wrap_id . '-d-' . $id_sfx ) . '">' . esc_html__( 'Date', 'wrrapd' ) . '</label>';
 			echo '<input type="date" class="wrrapd-amz-f-date" id="' . esc_attr( $wrap_id . '-d-' . $id_sfx ) . '" value="' . esc_attr( $gdate ) . '" />';
 			if ( $dhint !== '' ) {
 				echo '<div class="wrrapd-amz-f-hint">' . esc_html__( 'Delivery note:', 'wrrapd' ) . ' ' . esc_html( $dhint ) . '</div>';
 			}
-			echo '</div></div>';
+			echo '</div>';
 
 			echo '<div class="wrrapd-amz-f wrrapd-amz-rowcheck"><input type="checkbox" class="wrrapd-amz-f-rem" id="' . esc_attr( $wrap_id . '-m-' . $id_sfx ) . '"' . ( $rem ? ' checked' : '' ) . ' />';
 			echo '<label for="' . esc_attr( $wrap_id . '-m-' . $id_sfx ) . '">' . esc_html__( 'Set reminder for next year', 'wrrapd' ) . '</label></div>';
 
-			echo '<div class="wrrapd-amz-f"><label>' . esc_html__( 'Item image', 'wrrapd' ) . '</label>';
+			echo '<div class="wrrapd-amz-f"><label>' . esc_html__( 'Main image of the gift', 'wrrapd' ) . '</label>';
 			echo '<div class="wrrapd-amz-prodrow">';
 			if ( $prod_lb_src !== '' ) {
 				echo '<button type="button" class="wrrapd-amz-prod-thumb" data-wrrapd-lb-type="img" data-wrrapd-lb-src="' . esc_attr( $prod_lb_src ) . '" aria-label="' . esc_attr__( 'Enlarge item image', 'wrrapd' ) . '"><img src="' . $img . '" alt="" loading="lazy" decoding="async" /></button>';
@@ -841,12 +864,11 @@ function wrrapd_render_orders_studio( array $orders, array $overlays ) {
 			}
 			echo '</div></div>';
 
-			echo '<div class="wrrapd-amz-grid2">';
 			echo '<div class="wrrapd-amz-f"><label for="' . esc_attr( $wrap_id . '-msg-' . $id_sfx ) . '">' . esc_html__( 'Gift message', 'wrrapd' ) . '</label>';
 			echo '<input type="text" class="wrrapd-amz-f-msg" id="' . esc_attr( $wrap_id . '-msg-' . $id_sfx ) . '" maxlength="6000" value="' . esc_attr( $gm_val ) . '" /></div>';
+
 			echo '<div class="wrrapd-amz-f"><label for="' . esc_attr( $wrap_id . '-c-' . $id_sfx ) . '">' . esc_html__( 'Comment', 'wrrapd' ) . '</label>';
 			echo '<input type="text" class="wrrapd-amz-f-comment" id="' . esc_attr( $wrap_id . '-c-' . $id_sfx ) . '" maxlength="4000" value="' . esc_attr( $comment ) . '" /></div>';
-			echo '</div>';
 
 			echo '<div class="wrrapd-amz-savebar"><button type="button" class="wrrapd-amz-save">' . esc_html__( 'Save changes', 'wrrapd' ) . '</button></div>';
 			echo '</div></div></div>';
@@ -859,7 +881,7 @@ function wrrapd_render_orders_studio( array $orders, array $overlays ) {
 	$search_json = wp_json_encode( $search_id );
 	$lb_json     = wp_json_encode( $wrap_id . '-lb' );
 	echo '<div class="wrrapd-amz-lightbox" id="' . esc_attr( $wrap_id ) . '-lb" role="dialog" aria-modal="true" aria-hidden="true"><button type="button" class="wrrapd-amz-lb-close" aria-label="' . esc_attr__( 'Close', 'wrrapd' ) . '">&times;</button><div class="wrrapd-amz-lb-inner"></div></div>';
-	echo '<script>(function(){var root=document.getElementById(' . $wrap_json . ');if(!root)return;try{document.querySelectorAll(".elementor-widget").forEach(function(w){var t=(w.textContent||"").replace(/\s+/g," ").trim();if(t.length>90)return;if(/\bno\s+order\s+files?\s+found\b/i.test(t))w.style.display="none";});}catch(e){}var lb=document.getElementById(' . $lb_json . ');var q=document.getElementById(' . $search_json . ');function norm(s){return(s||"").toLowerCase().trim();}function filterOrders(){var needle=norm(q?q.value:"");root.querySelectorAll(".wrrapd-amz-order").forEach(function(ord){if(!needle){ord.style.display="";return;}var hay=norm(ord.getAttribute("data-wrrapd-search"));var hit=hay.indexOf(needle)!==-1;if(!hit){ord.querySelectorAll(".wrrapd-amz-line").forEach(function(ln){if(norm(ln.getAttribute("data-wrrapd-search")).indexOf(needle)!==-1)hit=true;});}ord.style.display=hit?"":"none";});}if(q){q.addEventListener("input",filterOrders);q.addEventListener("search",filterOrders);}function openLb(t,src){if(!lb)return;var inner=lb.querySelector(".wrrapd-amz-lb-inner");inner.innerHTML="";if(t==="img"&&src){var im=document.createElement("img");im.src=src;im.alt="";im.decoding="async";inner.appendChild(im);}else{var d=document.createElement("div");d.className="wrrapd-amz-lb-paper";inner.appendChild(d);}lb.classList.add("wrrapd-amz-lightbox--open");lb.setAttribute("aria-hidden","false");}function closeLb(){if(!lb)return;lb.classList.remove("wrrapd-amz-lightbox--open");lb.setAttribute("aria-hidden","true");}root.addEventListener("click",function(e){var b=e.target.closest(".wrrapd-amz-wrap-thumb,.wrrapd-amz-prod-thumb");if(b){openLb(b.getAttribute("data-wrrapd-lb-type")||"paper",b.getAttribute("data-wrrapd-lb-src")||"");return;}if(!lb||!lb.classList.contains("wrrapd-amz-lightbox--open"))return;if(e.target.classList.contains("wrrapd-amz-lb-close")||e.target===lb)closeLb();});document.addEventListener("keydown",function(e){if(e.key!=="Escape"||!lb||!lb.classList.contains("wrrapd-amz-lightbox--open"))return;closeLb();});var ajax=root.getAttribute("data-ajax-url");var nonce=root.getAttribute("data-nonce");root.querySelectorAll(".wrrapd-amz-save").forEach(function(btn){btn.addEventListener("click",function(){var line=btn.closest(".wrrapd-amz-line");if(!line)return;var fd=new FormData();fd.append("action","wrrapd_save_order_line_overlay");fd.append("nonce",nonce);fd.append("orderNumber",line.getAttribute("data-order")||"");fd.append("lineIndex",line.getAttribute("data-line")||"0");fd.append("giftee",line.querySelector(".wrrapd-amz-f-giftee")?line.querySelector(".wrrapd-amz-f-giftee").value:"");fd.append("relationship",line.querySelector(".wrrapd-amz-f-rel")?line.querySelector(".wrrapd-amz-f-rel").value:"");fd.append("occasion_pick",line.querySelector(".wrrapd-amz-f-occ")?line.querySelector(".wrrapd-amz-f-occ").value:"");fd.append("gift_date",line.querySelector(".wrrapd-amz-f-date")?line.querySelector(".wrrapd-amz-f-date").value:"");fd.append("reminder_next_year",line.querySelector(".wrrapd-amz-f-rem")&&line.querySelector(".wrrapd-amz-f-rem").checked?"1":"");fd.append("flowers_delivered",line.querySelector(".wrrapd-amz-f-flowers-del")&&line.querySelector(".wrrapd-amz-f-flowers-del").checked?"1":"");fd.append("gift_message",line.querySelector(".wrrapd-amz-f-msg")?line.querySelector(".wrrapd-amz-f-msg").value:"");fd.append("comment",line.querySelector(".wrrapd-amz-f-comment")?line.querySelector(".wrrapd-amz-f-comment").value:"");btn.disabled=true;fetch(ajax,{method:"POST",body:fd,credentials:"same-origin"}).then(function(r){return r.json();}).then(function(j){btn.disabled=false;if(j&&j.success){btn.style.boxShadow="0 0 0 2px rgba(201,162,39,.9)";window.setTimeout(function(){btn.style.boxShadow="";},650);}else{btn.style.opacity="0.65";window.setTimeout(function(){btn.style.opacity="";},900);}}).catch(function(){btn.disabled=false;});});});})();</script>';
+	echo '<script>(function(){var root=document.getElementById(' . $wrap_json . ');if(!root)return;try{document.querySelectorAll(".elementor-widget").forEach(function(w){var t=(w.textContent||"").replace(/\s+/g," ").trim();if(t.length>90)return;if(/\bno\s+order\s+files?\s+found\b/i.test(t))w.style.display="none";});}catch(e){}var lb=document.getElementById(' . $lb_json . ');var q=document.getElementById(' . $search_json . ');function norm(s){return(s||"").toLowerCase().trim();}function filterOrders(){var needle=norm(q?q.value:"");root.querySelectorAll(".wrrapd-amz-order").forEach(function(ord){if(!needle){ord.style.display="";return;}var hay=norm(ord.getAttribute("data-wrrapd-search"));var hit=hay.indexOf(needle)!==-1;if(!hit){ord.querySelectorAll(".wrrapd-amz-line").forEach(function(ln){if(norm(ln.getAttribute("data-wrrapd-search")).indexOf(needle)!==-1)hit=true;});}ord.style.display=hit?"":"none";});}if(q){q.addEventListener("input",filterOrders);q.addEventListener("search",filterOrders);}function openLb(t,src){if(!lb)return;var inner=lb.querySelector(".wrrapd-amz-lb-inner");inner.innerHTML="";if(t==="img"&&src){var im=document.createElement("img");im.src=src;im.alt="";im.decoding="async";inner.appendChild(im);}else{var d=document.createElement("div");d.className="wrrapd-amz-lb-paper";inner.appendChild(d);}lb.classList.add("wrrapd-amz-lightbox--open");lb.setAttribute("aria-hidden","false");}function closeLb(){if(!lb)return;lb.classList.remove("wrrapd-amz-lightbox--open");lb.setAttribute("aria-hidden","true");}root.addEventListener("click",function(e){var b=e.target.closest(".wrrapd-amz-wrap-thumb,.wrrapd-amz-prod-thumb");if(b){openLb(b.getAttribute("data-wrrapd-lb-type")||"paper",b.getAttribute("data-wrrapd-lb-src")||"");return;}if(!lb||!lb.classList.contains("wrrapd-amz-lightbox--open"))return;if(e.target.classList.contains("wrrapd-amz-lb-close")||e.target===lb)closeLb();});document.addEventListener("keydown",function(e){if(e.key!=="Escape"||!lb||!lb.classList.contains("wrrapd-amz-lightbox--open"))return;closeLb();});var ajax=root.getAttribute("data-ajax-url");var nonce=root.getAttribute("data-nonce");root.querySelectorAll(".wrrapd-amz-save").forEach(function(btn){btn.addEventListener("click",function(){var line=btn.closest(".wrrapd-amz-line");if(!line)return;var fd=new FormData();fd.append("action","wrrapd_save_order_line_overlay");fd.append("nonce",nonce);fd.append("orderNumber",line.getAttribute("data-order")||"");fd.append("lineIndex",line.getAttribute("data-line")||"0");fd.append("giftee",line.querySelector(".wrrapd-amz-f-giftee")?line.querySelector(".wrrapd-amz-f-giftee").value:"");fd.append("relationship",line.querySelector(".wrrapd-amz-f-rel")?line.querySelector(".wrrapd-amz-f-rel").value:"");fd.append("occasion_pick",line.querySelector(".wrrapd-amz-f-occ")?line.querySelector(".wrrapd-amz-f-occ").value:"");fd.append("gift_date",line.querySelector(".wrrapd-amz-f-date")?line.querySelector(".wrrapd-amz-f-date").value:"");fd.append("reminder_next_year",line.querySelector(".wrrapd-amz-f-rem")&&line.querySelector(".wrrapd-amz-f-rem").checked?"1":"");fd.append("gift_message",line.querySelector(".wrrapd-amz-f-msg")?line.querySelector(".wrrapd-amz-f-msg").value:"");fd.append("comment",line.querySelector(".wrrapd-amz-f-comment")?line.querySelector(".wrrapd-amz-f-comment").value:"");btn.disabled=true;fetch(ajax,{method:"POST",body:fd,credentials:"same-origin"}).then(function(r){return r.json();}).then(function(j){btn.disabled=false;if(j&&j.success){btn.style.boxShadow="0 0 0 2px rgba(201,162,39,.9)";window.setTimeout(function(){btn.style.boxShadow="";},650);}else{btn.style.opacity="0.65";window.setTimeout(function(){btn.style.opacity="";},900);}}).catch(function(){btn.disabled=false;});});});})();</script>';
 
 	echo '</div>';
 	return (string) ob_get_clean();
@@ -957,9 +979,6 @@ function wrrapd_ajax_save_order_line_overlay() {
 	$reminder = isset( $_POST['reminder_next_year'] ) ? sanitize_text_field( wp_unslash( $_POST['reminder_next_year'] ) ) : '';
 	$reminder = ( $reminder === '1' || $reminder === 'true' || $reminder === 'on' ) ? '1' : '';
 
-	$flowers_delivered = isset( $_POST['flowers_delivered'] ) ? sanitize_text_field( wp_unslash( $_POST['flowers_delivered'] ) ) : '';
-	$flowers_delivered = ( $flowers_delivered === '1' || $flowers_delivered === 'true' || $flowers_delivered === 'on' ) ? '1' : '';
-
 	$gift_message = isset( $_POST['gift_message'] ) ? sanitize_textarea_field( wp_unslash( $_POST['gift_message'] ) ) : '';
 	if ( strlen( $gift_message ) > 6000 ) {
 		wp_send_json_error( array( 'message' => __( 'Gift message is too long.', 'wrrapd' ) ), 400 );
@@ -982,7 +1001,6 @@ function wrrapd_ajax_save_order_line_overlay() {
 		$pick === '' &&
 		$gift_date === '' &&
 		$reminder === '' &&
-		$flowers_delivered === '' &&
 		$gift_message === '' &&
 		$comment === ''
 	);
@@ -999,7 +1017,6 @@ function wrrapd_ajax_save_order_line_overlay() {
 			'occasion_pick'       => $pick,
 			'gift_date'           => $gift_date,
 			'reminder_next_year'  => $reminder,
-			'flowers_delivered'   => $flowers_delivered,
 			'gift_message'        => $gift_message,
 			'comment'             => $comment,
 		);
