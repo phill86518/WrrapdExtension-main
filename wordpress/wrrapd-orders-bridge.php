@@ -431,25 +431,106 @@ function wrrapd_get_line_overlays( $user_id ) {
 
 /**
  * @param array<string, array<string|int, array<string, string>>> $overlays
- * @return array{occasion_pick: string, customer_notes: string}
+ * @return array<string, string>
  */
 function wrrapd_overlay_row( array $overlays, $order_number, $line_index ) {
 	$base = array(
-		'occasion_pick'    => '',
-		'customer_notes'   => '',
+		'relationship'         => '',
+		'occasion_pick'        => '',
+		'giftee'               => '',
+		'gift_message'         => '',
+		'comment'              => '',
+		'gift_date'            => '',
+		'reminder_next_year'   => '',
+		'customer_notes'      => '',
 	);
 	if ( ! isset( $overlays[ $order_number ] ) || ! is_array( $overlays[ $order_number ] ) ) {
 		return $base;
 	}
 	$blk = $overlays[ $order_number ];
 	$key = (string) (int) $line_index;
+	$out = $base;
 	if ( isset( $blk[ $key ] ) && is_array( $blk[ $key ] ) ) {
-		return array_merge( $base, $blk[ $key ] );
+		$out = array_merge( $base, $blk[ $key ] );
+	} elseif ( isset( $blk[ $line_index ] ) && is_array( $blk[ $line_index ] ) ) {
+		$out = array_merge( $base, $blk[ $line_index ] );
 	}
-	if ( isset( $blk[ $line_index ] ) && is_array( $blk[ $line_index ] ) ) {
-		return array_merge( $base, $blk[ $line_index ] );
+	if ( $out['comment'] === '' && $out['customer_notes'] !== '' ) {
+		$out['comment'] = $out['customer_notes'];
 	}
-	return $base;
+	return $out;
+}
+
+/**
+ * @return list<string>
+ */
+function wrrapd_relationship_choices() {
+	return array(
+		'Husband',
+		'Wife',
+		'Father',
+		'Mother',
+		'Son',
+		'Daughter',
+		'Sister',
+		'Brother',
+		'Friend',
+		'Colleague',
+		'Uncle',
+		'Aunt',
+		'Cousin',
+		'Teacher',
+		'Mentor',
+		'Elder',
+		'Fiance',
+		'Fiancee',
+		"Father-in-Law",
+		"Mother-in-Law",
+		'Brother/Sister-in-Law',
+		'Godfather',
+		'Godmother',
+		'Godson',
+		'Goddaughter',
+		'Great-Grandfather',
+		'Great-Grandmother',
+		'Great-grandson',
+		'Great-granddaugther',
+		'Other',
+	);
+}
+
+/**
+ * @return list<string>
+ */
+function wrrapd_occasion_canonical() {
+	return array(
+		'Birthday',
+		'Christmas',
+		'Anniversary',
+		"Father's Day",
+		"Mother's Day",
+		"Valentine's Day",
+		'Graduation',
+		'Thank you',
+		'Thanksgiving',
+		'Easter',
+		'Hanukkah',
+		'Wedding',
+		'Retirement',
+		'July Fourth',
+		'Corporate Gift',
+		"St. Patrick's Day",
+		'Diwali',
+		'Ramadan / Eid',
+		'Chinese New Year',
+		'Housewarming',
+		'New baby',
+		'Sympathy',
+		'Get well',
+		'Congratulations',
+		'Just because',
+		'Other',
+	);
 }
 
 /**
@@ -496,85 +577,87 @@ function wrrapd_collect_occasion_labels( array $orders, array $overlays ) {
 }
 
 /**
- * “Studio” — full dashboard layout, occasion filter, mapped pay-server fields,
- * plus customer-editable overlay (occasion label + notes) stored in user meta.
+ * Occasion dropdown = canonical presets plus anything seen in orders / saved picks.
+ *
+ * @param array<int, array<string, mixed>> $orders
+ * @param array<string, array<string|int, array<string, string>>> $overlays
+ * @return list<string>
+ */
+function wrrapd_merge_occasion_dropdown_choices( array $orders, array $overlays ) {
+	$labels = array_merge( wrrapd_occasion_canonical(), wrrapd_collect_occasion_labels( $orders, $overlays ) );
+	$labels = array_values( array_unique( array_map( 'strval', $labels ) ) );
+	sort( $labels, SORT_NATURAL | SORT_FLAG_CASE );
+	return $labels;
+}
+
+/**
+ * @param string $ts ISO-like timestamp from pay server
+ */
+function wrrapd_studio_format_order_date( $ts ) {
+	$ts = is_string( $ts ) ? trim( $ts ) : '';
+	if ( $ts === '' ) {
+		return '';
+	}
+	$t = strtotime( $ts );
+	if ( ! $t ) {
+		return $ts;
+	}
+	return date_i18n( get_option( 'date_format' ), $t );
+}
+
+/**
+ * Studio — Amazon-style order blocks, Wrrapd red/gold, editable overlays (one save per gift).
  *
  * @param array<int, array<string, mixed>> $orders
  * @param array<string, array<string|int, array<string, string>>> $overlays
  */
-function wrrapd_render_orders_studio( array $orders, array $overlays, $user_id ) {
-	$wrap_id = function_exists( 'wp_unique_id' ) ? wp_unique_id( 'wrrapd-studio-' ) : 'wrrapd-studio-' . uniqid( '', false );
-	$sel_id  = $wrap_id . '-filter';
-	$presets = array(
-		'Birthday',
-		'Christmas',
-		'Anniversary',
-		"Father's Day",
-		"Mother's Day",
-		"Valentine's Day",
-		'Graduation',
-		'Thank you',
-		'Thanksgiving',
-		'Easter',
-		'Hanukkah',
-		'Just because',
-		'Other',
-	);
-	$labels = array_values(
-		array_unique(
-			array_merge(
-				$presets,
-				wrrapd_collect_occasion_labels( $orders, $overlays )
-			)
-		)
-	);
-	sort( $labels, SORT_NATURAL | SORT_FLAG_CASE );
-	$nonce   = wp_create_nonce( 'wrrapd_line_extras' );
-	$ajax    = admin_url( 'admin-ajax.php' );
+function wrrapd_render_orders_studio( array $orders, array $overlays ) {
+	$wrap_id = function_exists( 'wp_unique_id' ) ? wp_unique_id( 'wrrapd-amz-' ) : 'wrrapd-amz-' . uniqid( '', false );
+	$search_id = $wrap_id . '-q';
+	$labels    = wrrapd_merge_occasion_dropdown_choices( $orders, $overlays );
+	$rels      = wrrapd_relationship_choices();
+	$nonce     = wp_create_nonce( 'wrrapd_line_extras' );
+	$ajax      = admin_url( 'admin-ajax.php' );
 
 	ob_start();
-	echo '<div id="' . esc_attr( $wrap_id ) . '" class="wrrapd-studio-root" data-ajax-url="' . esc_url( $ajax ) . '" data-nonce="' . esc_attr( $nonce ) . '">';
+	echo '<div id="' . esc_attr( $wrap_id ) . '" class="wrrapd-amz-root" data-ajax-url="' . esc_url( $ajax ) . '" data-nonce="' . esc_attr( $nonce ) . '">';
 
 	echo '<style>
-.wrrapd-studio-root{--n:#0f2744;--n2:#1a3a63;--gold:#d4a84b;--paper:#faf7f2;--ink:#1e293b;--muted:#64748b;--line:#e2e8f0;max-width:1120px;margin:0 auto 3rem;padding:0 .5rem;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--ink);}
-.wrrapd-studio-hero{background:linear-gradient(118deg,var(--n),var(--n2) 45%,#243d5f);color:#fff;border-radius:18px;padding:1.35rem 1.6rem 1.5rem;margin:0 0 1.5rem;box-shadow:0 12px 40px rgba(15,39,68,.35);}
-.wrrapd-studio-hero h2{margin:0 0 .35rem;font-size:1.55rem;font-weight:700;letter-spacing:.02em;}
-.wrrapd-studio-hero p{margin:0;opacity:.88;font-size:.95rem;}
-.wrrapd-studio-filter{display:flex;flex-wrap:wrap;align-items:center;gap:.75rem 1.25rem;margin:0 0 1.5rem;padding:1rem 1.2rem;background:var(--paper);border-radius:14px;border:1px solid var(--line);box-shadow:0 2px 10px rgba(15,39,68,.06);}
-.wrrapd-studio-filter label{font-weight:700;color:var(--n);font-size:.9rem;}
-.wrrapd-studio-filter select{min-width:240px;padding:.55rem .85rem;border-radius:10px;border:1px solid #cbd5e1;background:#fff;font-size:.95rem;}
-.wrrapd-studio-order{background:#fff;border-radius:16px;border:1px solid var(--line);box-shadow:0 4px 22px rgba(15,39,68,.07);margin-bottom:1.5rem;overflow:hidden;}
-.wrrapd-studio-order-top{display:flex;flex-wrap:wrap;justify-content:space-between;gap:.75rem 1rem;padding:1rem 1.25rem;background:linear-gradient(90deg,rgba(212,168,75,.14),transparent);border-bottom:1px solid var(--line);}
-.wrrapd-studio-order-top strong{font-size:1.12rem;color:var(--n);}
-.wrrapd-studio-badge{display:inline-block;padding:.25rem .75rem;border-radius:999px;font-size:.75rem;font-weight:700;background:rgba(212,168,75,.28);color:#5c4514;}
-.wrrapd-studio-line{padding:1.15rem 1.25rem 1.25rem;border-top:1px solid var(--line);}
-.wrrapd-studio-line:first-of-type{border-top:none;}
-.wrrapd-studio-line-grid{display:grid;grid-template-columns:1fr 1fr;gap:.85rem 1.25rem;}
-@media(max-width:720px){.wrrapd-studio-line-grid{grid-template-columns:1fr;}}
-.wrrapd-studio-field label{display:block;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:.25rem;}
-.wrrapd-studio-field .ro{display:block;padding:.5rem .65rem;border-radius:10px;background:#f8fafc;border:1px solid #e2e8f0;min-height:2.4rem;font-size:.92rem;}
-.wrrapd-studio-field textarea,.wrrapd-studio-field select{width:100%;padding:.55rem .65rem;border-radius:10px;border:1px solid #cbd5e1;font-size:.92rem;font-family:inherit;}
-.wrrapd-studio-field textarea{min-height:4.5rem;resize:vertical;}
-.wrrapd-studio-pill{display:inline-block;margin-bottom:.5rem;padding:.2rem .65rem;border-radius:999px;font-size:.78rem;font-weight:700;background:#e8efff;color:#274690;}
-.wrrapd-studio-actions{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem;margin-top:.75rem;}
-.wrrapd-studio-save{background:linear-gradient(180deg,var(--gold),#b8923f);color:#1a1204;border:none;border-radius:10px;padding:.55rem 1.15rem;font-weight:700;cursor:pointer;font-size:.88rem;box-shadow:0 2px 0 rgba(0,0,0,.12);}
-.wrrapd-studio-save:hover{filter:brightness(1.05);}
-.wrrapd-studio-save:disabled{opacity:.55;cursor:wait;}
-.wrrapd-studio-msg{font-size:.82rem;color:var(--muted);margin-left:.25rem;}
-.wrrapd-studio-msg.ok{color:#166534;}
+.wrrapd-amz-root{--wr-red:#b3121d;--wr-red2:#8f0e18;--wr-gold:#c9a227;--wr-gold2:#8a6b12;--wr-ink:#0f0f0f;--wr-muted:#5c5c5c;--wr-line:#d6d6d6;--wr-paper:#fffdf8;--wr-bar:#f0f0f0;max-width:960px;margin:0 auto 2.5rem;padding:0 .5rem;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--wr-ink);}
+.wrrapd-amz-search{margin:0 0 .85rem;}
+.wrrapd-amz-search input{width:100%;max-width:420px;box-sizing:border-box;padding:.45rem .65rem;border-radius:8px;border:1px solid var(--wr-line);font-size:.9rem;background:#fff;box-shadow:inset 0 1px 2px rgba(0,0,0,.04);}
+.wrrapd-amz-search input:focus{outline:2px solid rgba(201,162,39,.45);outline-offset:1px;border-color:var(--wr-gold);}
+.wrrapd-amz-order{background:#fff;border:1px solid var(--wr-line);border-radius:4px;margin-bottom:1.15rem;box-shadow:0 1px 3px rgba(0,0,0,.06);overflow:hidden;}
+.wrrapd-amz-bar{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-start;gap:.75rem 1.25rem;padding:.65rem 1rem;background:var(--wr-bar);border-bottom:3px solid var(--wr-red);}
+.wrrapd-amz-bar-lbl{font-size:.72rem;font-weight:700;color:var(--wr-muted);letter-spacing:.04em;text-transform:uppercase;}
+.wrrapd-amz-bar-date{margin-top:.15rem;font-size:1rem;font-weight:700;color:var(--wr-ink);}
+.wrrapd-amz-bar-onum{margin-top:.15rem;font-size:.95rem;font-weight:600;color:var(--wr-red2);text-align:right;}
+.wrrapd-amz-bar-right{text-align:right;}
+.wrrapd-amz-line{border-top:1px solid var(--wr-line);}
+.wrrapd-amz-line:first-of-type{border-top:none;}
+.wrrapd-amz-line-inner{display:flex;flex-wrap:wrap;gap:0;min-height:12rem;}
+.wrrapd-amz-left{flex:1 1 220px;min-height:12rem;position:relative;background:repeating-linear-gradient(-45deg,var(--wr-red),var(--wr-red) 12px,var(--wr-gold) 12px,var(--wr-gold) 24px);background-size:200% 200%;}
+.wrrapd-amz-left.has-img{background:#1a0a0a;}
+.wrrapd-amz-left img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.92;}
+.wrrapd-amz-left-cap{position:absolute;left:0;right:0;bottom:0;padding:.5rem .65rem;background:linear-gradient(transparent,rgba(0,0,0,.75));color:#fff;font-size:.75rem;font-weight:600;line-height:1.35;text-shadow:0 1px 2px rgba(0,0,0,.5);}
+.wrrapd-amz-flowers{position:absolute;top:.5rem;right:.5rem;font-size:1.35rem;line-height:1;filter:drop-shadow(0 1px 2px rgba(0,0,0,.35));}
+.wrrapd-amz-right{flex:0 1 380px;max-width:100%;padding:.85rem 1rem 1rem;background:var(--wr-paper);border-left:1px solid var(--wr-line);display:flex;flex-direction:column;gap:.55rem;}
+.wrrapd-amz-f label{display:block;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--wr-muted);margin-bottom:.2rem;}
+.wrrapd-amz-f input[type=text],.wrrapd-amz-f input[type=date],.wrrapd-amz-f select,.wrrapd-amz-f textarea{width:100%;box-sizing:border-box;padding:.45rem .55rem;border-radius:6px;border:1px solid #c4c4c4;font-size:.88rem;font-family:inherit;background:#fff;}
+.wrrapd-amz-f textarea{min-height:4.2rem;resize:vertical;}
+.wrrapd-amz-f-hint{font-size:.75rem;color:var(--wr-muted);margin-top:.15rem;}
+.wrrapd-amz-imgbox{border:1px solid var(--wr-line);border-radius:6px;overflow:hidden;background:#fff;max-height:200px;display:flex;align-items:center;justify-content:center;}
+.wrrapd-amz-imgbox img{max-width:100%;max-height:200px;object-fit:contain;display:block;}
+.wrrapd-amz-rowcheck{display:flex;align-items:center;gap:.45rem;font-size:.88rem;font-weight:600;color:var(--wr-ink);}
+.wrrapd-amz-rowcheck input{width:auto;}
+.wrrapd-amz-savebar{margin-top:.35rem;padding-top:.65rem;border-top:1px dashed var(--wr-line);}
+.wrrapd-amz-save{background:linear-gradient(180deg,var(--wr-gold),var(--wr-gold2));color:#1a1204;border:none;border-radius:8px;padding:.5rem 1.1rem;font-weight:700;font-size:.86rem;cursor:pointer;box-shadow:0 2px 0 rgba(0,0,0,.12);}
+.wrrapd-amz-save:hover{filter:brightness(1.06);}
+.wrrapd-amz-save:disabled{opacity:.55;cursor:wait;}
+@media(max-width:640px){.wrrapd-amz-right{border-left:none;border-top:1px solid var(--wr-line);flex:1 1 100%;}}
 </style>';
 
-	echo '<div class="wrrapd-studio-hero"><h2>' . esc_html__( 'Your Wrrapd gifts', 'wrrapd' ) . '</h2><p>' . esc_html__( 'Checkout details from your paid orders. Use the fields below to add your own labels and notes — they are saved to your account.', 'wrrapd' ) . '</p></div>';
-
-	if ( count( $labels ) > 0 ) {
-		echo '<div class="wrrapd-studio-filter"><label for="' . esc_attr( $sel_id ) . '">' . esc_html__( 'Browse by occasion', 'wrrapd' ) . '</label>';
-		echo '<select id="' . esc_attr( $sel_id ) . '"><option value="">' . esc_html__( 'Show all', 'wrrapd' ) . '</option>';
-		foreach ( $labels as $lab ) {
-			$key = md5( $lab );
-			echo '<option value="' . esc_attr( $key ) . '">' . esc_html( $lab ) . '</option>';
-		}
-		echo '</select></div>';
-	}
+	echo '<div class="wrrapd-amz-search"><input type="search" id="' . esc_attr( $search_id ) . '" aria-label="' . esc_attr__( 'Search orders, giftee, or item', 'wrrapd' ) . '" placeholder="' . esc_attr__( 'Search orders, giftee, item…', 'wrrapd' ) . '" autocomplete="off" /></div>';
 
 	foreach ( $orders as $order ) {
 		if ( ! is_array( $order ) ) {
@@ -582,10 +665,7 @@ function wrrapd_render_orders_studio( array $orders, array $overlays, $user_id )
 		}
 		$on = isset( $order['orderNumber'] ) ? (string) $order['orderNumber'] : '—';
 		$ts = isset( $order['timestamp'] ) ? (string) $order['timestamp'] : '';
-		$st = '';
-		if ( isset( $order['payment'] ) && is_array( $order['payment'] ) ) {
-			$st = isset( $order['payment']['status'] ) ? (string) $order['payment']['status'] : '';
-		}
+		$date_show = wrrapd_studio_format_order_date( $ts );
 		$lines = isset( $order['lines'] ) && is_array( $order['lines'] ) ? $order['lines'] : array();
 		if ( count( $lines ) === 0 ) {
 			$lines = array(
@@ -594,18 +674,32 @@ function wrrapd_render_orders_studio( array $orders, array $overlays, $user_id )
 					'occasion'           => null,
 					'designSummary'      => null,
 					'giftMessageSnippet' => null,
+					'giftMessage'        => null,
 					'productTitle'       => null,
+					'productImageUrl'    => null,
+					'designPreviewUrl'   => null,
+					'designLabel'        => null,
+					'flowers'            => false,
+					'deliveryHint'       => null,
 				),
 			);
 		}
 
-		echo '<article class="wrrapd-studio-order">';
-		echo '<div class="wrrapd-studio-order-top"><div><strong>' . esc_html__( 'Order', 'wrrapd' ) . ' ' . esc_html( $on ) . '</strong>';
-		echo '<div class="ro" style="margin-top:.35rem;border:none;padding:0;background:transparent;color:var(--muted);font-size:.88rem;">' . esc_html( $ts ) . '</div></div>';
-		if ( $st !== '' ) {
-			echo '<span class="wrrapd-studio-badge">' . esc_html( $st ) . '</span>';
+		$search_bits = array( $on, $date_show, $ts );
+		foreach ( $lines as $ln0 ) {
+			if ( is_array( $ln0 ) ) {
+				$search_bits[] = isset( $ln0['gifteeName'] ) ? (string) $ln0['gifteeName'] : '';
+				$search_bits[] = isset( $ln0['occasion'] ) ? (string) $ln0['occasion'] : '';
+				$search_bits[] = isset( $ln0['productTitle'] ) ? (string) $ln0['productTitle'] : '';
+			}
 		}
-		echo '</div>';
+		$search_blob = strtolower( implode( ' ', array_filter( $search_bits ) ) );
+
+		echo '<article class="wrrapd-amz-order" data-wrrapd-search="' . esc_attr( $search_blob ) . '">';
+		echo '<div class="wrrapd-amz-bar"><div><div class="wrrapd-amz-bar-lbl">' . esc_html__( 'ORDER PLACED', 'wrrapd' ) . '</div>';
+		echo '<div class="wrrapd-amz-bar-date">' . esc_html( $date_show !== '' ? $date_show : '—' ) . '</div></div>';
+		echo '<div class="wrrapd-amz-bar-right"><div class="wrrapd-amz-bar-lbl">' . esc_html__( 'Order #', 'wrrapd' ) . '</div>';
+		echo '<div class="wrrapd-amz-bar-onum">' . esc_html( $on ) . '</div></div></div>';
 
 		$li = 0;
 		foreach ( $lines as $ln ) {
@@ -613,58 +707,124 @@ function wrrapd_render_orders_studio( array $orders, array $overlays, $user_id )
 				continue;
 			}
 			$ov = wrrapd_overlay_row( $overlays, $on, $li );
-			$api_occ   = isset( $ln['occasion'] ) ? trim( (string) $ln['occasion'] ) : '';
-			$pick      = isset( $ov['occasion_pick'] ) ? trim( (string) $ov['occasion_pick'] ) : '';
-			$shown_occ = $pick !== '' ? $pick : $api_occ;
-			$occ_key   = $shown_occ !== '' ? md5( $shown_occ ) : '';
 
-			$gif  = wrrapd_cell_text( $ln['gifteeName'] ?? null );
-			$des  = wrrapd_cell_text( $ln['designSummary'] ?? null );
-			$gifm = wrrapd_cell_text( $ln['giftMessageSnippet'] ?? null );
-			$pt   = wrrapd_cell_text( $ln['productTitle'] ?? null );
-			$notes_val = isset( $ov['customer_notes'] ) ? (string) $ov['customer_notes'] : '';
+			$api_giftee = isset( $ln['gifteeName'] ) ? trim( (string) $ln['gifteeName'] ) : '';
+			$giftee_val = $ov['giftee'] !== '' ? $ov['giftee'] : $api_giftee;
 
-			echo '<div class="wrrapd-studio-line" data-order="' . esc_attr( $on ) . '" data-line="' . (int) $li . '" data-wrrapd-occ="' . esc_attr( $occ_key ) . '">';
-			if ( $shown_occ !== '' ) {
-				echo '<span class="wrrapd-studio-pill">' . esc_html__( 'Occasion', 'wrrapd' ) . ': ' . esc_html( $shown_occ ) . '</span>';
+			$api_occ = isset( $ln['occasion'] ) ? trim( (string) $ln['occasion'] ) : '';
+			$pick    = isset( $ov['occasion_pick'] ) ? trim( (string) $ov['occasion_pick'] ) : '';
+			$occ_sel = $pick !== '' ? $pick : $api_occ;
+
+			$api_gm = isset( $ln['giftMessage'] ) ? (string) $ln['giftMessage'] : '';
+			if ( $api_gm === '' && isset( $ln['giftMessageSnippet'] ) ) {
+				$api_gm = (string) $ln['giftMessageSnippet'];
 			}
-			echo '<div class="wrrapd-studio-line-grid">';
-			echo '<div class="wrrapd-studio-field"><label>' . esc_html__( 'Giftee (from checkout)', 'wrrapd' ) . '</label><span class="ro">' . esc_html( $gif ) . '</span></div>';
-			echo '<div class="wrrapd-studio-field"><label>' . esc_html__( 'Amazon item', 'wrrapd' ) . '</label><span class="ro">' . esc_html( $pt ) . '</span></div>';
-			echo '<div class="wrrapd-studio-field"><label>' . esc_html__( 'Design', 'wrrapd' ) . '</label><span class="ro">' . esc_html( $des ) . '</span></div>';
-			echo '<div class="wrrapd-studio-field"><label>' . esc_html__( 'Gift message (from checkout)', 'wrrapd' ) . '</label><span class="ro">' . esc_html( $gifm ) . '</span></div>';
+			$gm_val = $ov['gift_message'] !== '' ? $ov['gift_message'] : $api_gm;
+
+			$rel_val = isset( $ov['relationship'] ) ? (string) $ov['relationship'] : '';
+			$comment = isset( $ov['comment'] ) ? (string) $ov['comment'] : '';
+			$gdate   = isset( $ov['gift_date'] ) ? (string) $ov['gift_date'] : '';
+			$rem     = ! empty( $ov['reminder_next_year'] );
+
+			$img     = isset( $ln['productImageUrl'] ) ? esc_url( (string) $ln['productImageUrl'] ) : '';
+			$dprev   = isset( $ln['designPreviewUrl'] ) ? esc_url( (string) $ln['designPreviewUrl'] ) : '';
+			$dlabel  = isset( $ln['designLabel'] ) ? trim( (string) $ln['designLabel'] ) : '';
+			$flowers = ! empty( $ln['flowers'] );
+			$dhint   = isset( $ln['deliveryHint'] ) ? trim( (string) $ln['deliveryHint'] ) : '';
+
+			$line_search = strtolower(
+				implode(
+					' ',
+					array_filter(
+						array(
+							$giftee_val,
+							$occ_sel,
+							isset( $ln['productTitle'] ) ? (string) $ln['productTitle'] : '',
+							$dlabel,
+						)
+					)
+				)
+			);
+
+			$left_cls = 'wrrapd-amz-left' . ( $dprev !== '' ? ' has-img' : '' );
+			$id_sfx   = substr( md5( $on . ':' . (string) $li ), 0, 12 );
+
+			$rel_opts = $rels;
+			if ( $rel_val !== '' && ! in_array( $rel_val, $rel_opts, true ) ) {
+				$rel_opts = array_merge( array( $rel_val ), $rel_opts );
+			}
+			$occ_opts = $labels;
+			if ( $occ_sel !== '' && ! in_array( $occ_sel, $occ_opts, true ) ) {
+				$occ_opts = array_merge( array( $occ_sel ), $occ_opts );
+			}
+
+			echo '<div class="wrrapd-amz-line" data-order="' . esc_attr( $on ) . '" data-line="' . (int) $li . '" data-wrrapd-search="' . esc_attr( $line_search ) . '">';
+			echo '<div class="wrrapd-amz-line-inner">';
+			echo '<div class="' . esc_attr( $left_cls ) . '">';
+			if ( $dprev !== '' ) {
+				echo '<img src="' . $dprev . '" alt="" loading="lazy" decoding="async" />';
+			}
+			if ( $flowers ) {
+				echo '<span class="wrrapd-amz-flowers" title="' . esc_attr__( 'Flowers add-on', 'wrrapd' ) . '">&#127799;</span>';
+			}
+			$cap = $dlabel !== '' ? $dlabel : __( 'Wrrapd wrapping', 'wrrapd' );
+			echo '<div class="wrrapd-amz-left-cap">' . esc_html( $cap ) . '</div>';
 			echo '</div>';
 
-			$id_sfx = substr( md5( $on . ':' . (string) $li ), 0, 16 );
-			echo '<div class="wrrapd-studio-field" style="margin-top:.85rem;"><label for="' . esc_attr( $wrap_id . '-o-' . $id_sfx ) . '">' . esc_html__( 'Your occasion label', 'wrrapd' ) . '</label>';
-			echo '<select id="' . esc_attr( $wrap_id . '-o-' . $id_sfx ) . '" class="wrrapd-studio-occ-pick">';
-			echo '<option value="">' . esc_html__( '— Same as checkout —', 'wrrapd' ) . '</option>';
-			foreach ( $labels as $lab ) {
-				$sel = ( $pick === $lab ) ? ' selected' : '';
-				echo '<option value="' . esc_attr( $lab ) . '"' . $sel . '>' . esc_html( $lab ) . '</option>';
+			echo '<div class="wrrapd-amz-right">';
+			echo '<div class="wrrapd-amz-f"><label for="' . esc_attr( $wrap_id . '-g-' . $id_sfx ) . '">' . esc_html__( 'Giftee', 'wrrapd' ) . '</label>';
+			echo '<input type="text" class="wrrapd-amz-f-giftee" id="' . esc_attr( $wrap_id . '-g-' . $id_sfx ) . '" maxlength="200" value="' . esc_attr( $giftee_val ) . '" /></div>';
+
+			echo '<div class="wrrapd-amz-f"><label for="' . esc_attr( $wrap_id . '-r-' . $id_sfx ) . '">' . esc_html__( 'Relationship', 'wrrapd' ) . '</label>';
+			echo '<select class="wrrapd-amz-f-rel" id="' . esc_attr( $wrap_id . '-r-' . $id_sfx ) . '">';
+			echo '<option value="">' . esc_html__( '— Select —', 'wrrapd' ) . '</option>';
+			foreach ( $rel_opts as $r ) {
+				echo '<option value="' . esc_attr( $r ) . '"' . selected( $rel_val, $r, false ) . '>' . esc_html( $r ) . '</option>';
 			}
 			echo '</select></div>';
 
-			echo '<div class="wrrapd-studio-field" style="margin-top:.65rem;"><label for="' . esc_attr( $wrap_id . '-n-' . $id_sfx ) . '">' . esc_html__( 'Your notes (optional)', 'wrrapd' ) . '</label>';
-			echo '<textarea id="' . esc_attr( $wrap_id . '-n-' . $id_sfx ) . '" class="wrrapd-studio-notes" maxlength="4000">' . esc_textarea( $notes_val ) . '</textarea></div>';
+			echo '<div class="wrrapd-amz-f"><label for="' . esc_attr( $wrap_id . '-o-' . $id_sfx ) . '">' . esc_html__( 'Occasion', 'wrrapd' ) . '</label>';
+			echo '<select class="wrrapd-amz-f-occ" id="' . esc_attr( $wrap_id . '-o-' . $id_sfx ) . '">';
+			echo '<option value="">' . esc_html__( '— Same as checkout —', 'wrrapd' ) . '</option>';
+			foreach ( $occ_opts as $lab ) {
+				echo '<option value="' . esc_attr( $lab ) . '"' . selected( $occ_sel, $lab, false ) . '>' . esc_html( $lab ) . '</option>';
+			}
+			echo '</select></div>';
 
-			echo '<div class="wrrapd-studio-actions"><button type="button" class="wrrapd-studio-save">' . esc_html__( 'Save this gift row', 'wrrapd' ) . '</button><span class="wrrapd-studio-msg" aria-live="polite"></span></div>';
+			echo '<div class="wrrapd-amz-f"><label for="' . esc_attr( $wrap_id . '-d-' . $id_sfx ) . '">' . esc_html__( 'Date', 'wrrapd' ) . '</label>';
+			echo '<input type="date" class="wrrapd-amz-f-date" id="' . esc_attr( $wrap_id . '-d-' . $id_sfx ) . '" value="' . esc_attr( $gdate ) . '" />';
+			if ( $dhint !== '' ) {
+				echo '<div class="wrrapd-amz-f-hint">' . esc_html__( 'Delivery note from order:', 'wrrapd' ) . ' ' . esc_html( $dhint ) . '</div>';
+			}
 			echo '</div>';
+
+			echo '<div class="wrrapd-amz-f wrrapd-amz-rowcheck"><input type="checkbox" class="wrrapd-amz-f-rem" id="' . esc_attr( $wrap_id . '-m-' . $id_sfx ) . '"' . ( $rem ? ' checked' : '' ) . ' />';
+			echo '<label for="' . esc_attr( $wrap_id . '-m-' . $id_sfx ) . '" style="margin:0;text-transform:none;font-size:.88rem;font-weight:600;">' . esc_html__( 'Set reminder for next year', 'wrrapd' ) . '</label></div>';
+
+			echo '<div class="wrrapd-amz-f"><span style="display:block;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--wr-muted);margin-bottom:.2rem;">' . esc_html__( 'Main image of the gift', 'wrrapd' ) . '</span>';
+			if ( $img !== '' ) {
+				echo '<div class="wrrapd-amz-imgbox"><img src="' . $img . '" alt="" loading="lazy" decoding="async" /></div>';
+			} else {
+				echo '<div class="wrrapd-amz-f-hint">' . esc_html__( 'No product image on file for this line.', 'wrrapd' ) . '</div>';
+			}
+			echo '</div>';
+
+			echo '<div class="wrrapd-amz-f"><label for="' . esc_attr( $wrap_id . '-msg-' . $id_sfx ) . '">' . esc_html__( 'Gift message', 'wrrapd' ) . '</label>';
+			echo '<textarea class="wrrapd-amz-f-msg" id="' . esc_attr( $wrap_id . '-msg-' . $id_sfx ) . '" maxlength="6000">' . esc_textarea( $gm_val ) . '</textarea></div>';
+
+			echo '<div class="wrrapd-amz-f"><label for="' . esc_attr( $wrap_id . '-c-' . $id_sfx ) . '">' . esc_html__( 'Comment', 'wrrapd' ) . '</label>';
+			echo '<textarea class="wrrapd-amz-f-comment" id="' . esc_attr( $wrap_id . '-c-' . $id_sfx ) . '" maxlength="4000">' . esc_textarea( $comment ) . '</textarea></div>';
+
+			echo '<div class="wrrapd-amz-savebar"><button type="button" class="wrrapd-amz-save">' . esc_html__( 'Save changes', 'wrrapd' ) . '</button></div>';
+			echo '</div></div></div>';
 			++$li;
 		}
 		echo '</article>';
 	}
 
-	if ( count( $labels ) > 0 ) {
-		$sel_json  = wp_json_encode( $sel_id );
-		$wrap_json = wp_json_encode( $wrap_id );
-		echo '<script>(function(){var s=document.getElementById(' . $sel_json . ');if(!s)return;var root=document.getElementById(' . $wrap_json . ');if(!root)return;function run(){var v=s.value||"";root.querySelectorAll(".wrrapd-studio-line").forEach(function(el){var m=el.getAttribute("data-wrrapd-occ")||"";el.style.display=(!v||m===v)?"":"none";});}s.addEventListener("change",run);})();</script>';
-	}
-
-	$wrap_json = wp_json_encode( $wrap_id );
-	$msg_saved = wp_json_encode( __( 'Saved. Refreshing…', 'wrrapd' ) );
-	$msg_err   = wp_json_encode( __( 'Network error.', 'wrrapd' ) );
-	echo '<script>(function(){var root=document.getElementById(' . $wrap_json . ');if(!root)return;var ajax=root.getAttribute("data-ajax-url");var nonce=root.getAttribute("data-nonce");root.querySelectorAll(".wrrapd-studio-save").forEach(function(btn){btn.addEventListener("click",function(){var line=btn.closest(".wrrapd-studio-line");if(!line)return;var pick=line.querySelector(".wrrapd-studio-occ-pick");var notes=line.querySelector(".wrrapd-studio-notes");var msg=line.querySelector(".wrrapd-studio-msg");var fd=new FormData();fd.append("action","wrrapd_save_order_line_overlay");fd.append("nonce",nonce);fd.append("orderNumber",line.getAttribute("data-order")||"");fd.append("lineIndex",line.getAttribute("data-line")||"0");fd.append("occasion_pick",pick?pick.value:"");fd.append("customer_notes",notes?notes.value:"");btn.disabled=true;msg.textContent="";fetch(ajax,{method:"POST",body:fd,credentials:"same-origin"}).then(function(r){return r.json();}).then(function(j){btn.disabled=false;if(j&&j.success){msg.className="wrrapd-studio-msg ok";msg.textContent=' . $msg_saved . ';window.setTimeout(function(){window.location.reload();},600);}else{msg.className="wrrapd-studio-msg";msg.textContent=(j&&j.data&&j.data.message)?j.data.message:"Error";}}).catch(function(){btn.disabled=false;msg.className="wrrapd-studio-msg";msg.textContent=' . $msg_err . ';});});});})();</script>';
+	$wrap_json   = wp_json_encode( $wrap_id );
+	$search_json = wp_json_encode( $search_id );
+	echo '<script>(function(){var root=document.getElementById(' . $wrap_json . ');if(!root)return;var q=document.getElementById(' . $search_json . ');function norm(s){return(s||"").toLowerCase().trim();}function filterOrders(){var needle=norm(q?q.value:"");root.querySelectorAll(".wrrapd-amz-order").forEach(function(ord){if(!needle){ord.style.display="";return;}var hay=norm(ord.getAttribute("data-wrrapd-search"));var hit=hay.indexOf(needle)!==-1;if(!hit){ord.querySelectorAll(".wrrapd-amz-line").forEach(function(ln){if(norm(ln.getAttribute("data-wrrapd-search")).indexOf(needle)!==-1)hit=true;});}ord.style.display=hit?"":"none";});}if(q){q.addEventListener("input",filterOrders);q.addEventListener("search",filterOrders);}var ajax=root.getAttribute("data-ajax-url");var nonce=root.getAttribute("data-nonce");root.querySelectorAll(".wrrapd-amz-save").forEach(function(btn){btn.addEventListener("click",function(){var line=btn.closest(".wrrapd-amz-line");if(!line)return;var fd=new FormData();fd.append("action","wrrapd_save_order_line_overlay");fd.append("nonce",nonce);fd.append("orderNumber",line.getAttribute("data-order")||"");fd.append("lineIndex",line.getAttribute("data-line")||"0");fd.append("giftee",line.querySelector(".wrrapd-amz-f-giftee")?line.querySelector(".wrrapd-amz-f-giftee").value:"");fd.append("relationship",line.querySelector(".wrrapd-amz-f-rel")?line.querySelector(".wrrapd-amz-f-rel").value:"");fd.append("occasion_pick",line.querySelector(".wrrapd-amz-f-occ")?line.querySelector(".wrrapd-amz-f-occ").value:"");fd.append("gift_date",line.querySelector(".wrrapd-amz-f-date")?line.querySelector(".wrrapd-amz-f-date").value:"");fd.append("reminder_next_year",line.querySelector(".wrrapd-amz-f-rem")&&line.querySelector(".wrrapd-amz-f-rem").checked?"1":"");fd.append("gift_message",line.querySelector(".wrrapd-amz-f-msg")?line.querySelector(".wrrapd-amz-f-msg").value:"");fd.append("comment",line.querySelector(".wrrapd-amz-f-comment")?line.querySelector(".wrrapd-amz-f-comment").value:"");btn.disabled=true;fetch(ajax,{method:"POST",body:fd,credentials:"same-origin"}).then(function(r){return r.json();}).then(function(j){btn.disabled=false;if(j&&j.success){btn.style.boxShadow="0 0 0 2px rgba(201,162,39,.9)";window.setTimeout(function(){btn.style.boxShadow="";},650);}else{btn.style.opacity="0.65";window.setTimeout(function(){btn.style.opacity="";},900);}}).catch(function(){btn.disabled=false;});});});})();</script>';
 
 	echo '</div>';
 	return (string) ob_get_clean();
@@ -716,7 +876,7 @@ function wrrapd_shortcode_review_orders( $atts ) {
 	}
 	if ( $layout === 'studio' ) {
 		$ov = wrrapd_get_line_overlays( (int) $user->ID );
-		return wrrapd_render_orders_studio( $orders, $ov, (int) $user->ID );
+		return wrrapd_render_orders_studio( $orders, $ov );
 	}
 	return wrrapd_render_orders_table_simple( $orders );
 }
@@ -724,7 +884,7 @@ function wrrapd_shortcode_review_orders( $atts ) {
 add_shortcode( 'wrrapd_review_orders', 'wrrapd_shortcode_review_orders' );
 
 /**
- * Save per–gift-line customer overlay (occasion label + notes) on the logged-in user.
+ * Save per–gift-line customer overlay (studio fields) on the logged-in user.
  */
 function wrrapd_ajax_save_order_line_overlay() {
 	if ( ! is_user_logged_in() ) {
@@ -739,13 +899,37 @@ function wrrapd_ajax_save_order_line_overlay() {
 		wp_send_json_error( array( 'message' => __( 'Bad request.', 'wrrapd' ) ), 400 );
 	}
 
+	$giftee = isset( $_POST['giftee'] ) ? sanitize_text_field( wp_unslash( $_POST['giftee'] ) ) : '';
+	if ( strlen( $giftee ) > 200 ) {
+		wp_send_json_error( array( 'message' => __( 'Giftee name is too long.', 'wrrapd' ) ), 400 );
+	}
+
+	$relationship = isset( $_POST['relationship'] ) ? sanitize_text_field( wp_unslash( $_POST['relationship'] ) ) : '';
+	if ( $relationship !== '' && ! in_array( $relationship, wrrapd_relationship_choices(), true ) ) {
+		wp_send_json_error( array( 'message' => __( 'Invalid relationship.', 'wrrapd' ) ), 400 );
+	}
+
 	$pick = isset( $_POST['occasion_pick'] ) ? sanitize_text_field( wp_unslash( $_POST['occasion_pick'] ) ) : '';
 	if ( strlen( $pick ) > 120 ) {
-		wp_send_json_error( array( 'message' => __( 'Occasion label is too long.', 'wrrapd' ) ), 400 );
+		wp_send_json_error( array( 'message' => __( 'Occasion is too long.', 'wrrapd' ) ), 400 );
 	}
-	$notes = isset( $_POST['customer_notes'] ) ? sanitize_textarea_field( wp_unslash( $_POST['customer_notes'] ) ) : '';
-	if ( strlen( $notes ) > 4000 ) {
-		wp_send_json_error( array( 'message' => __( 'Notes are too long.', 'wrrapd' ) ), 400 );
+
+	$gift_date = isset( $_POST['gift_date'] ) ? sanitize_text_field( wp_unslash( $_POST['gift_date'] ) ) : '';
+	if ( $gift_date !== '' && ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $gift_date ) ) {
+		wp_send_json_error( array( 'message' => __( 'Invalid date.', 'wrrapd' ) ), 400 );
+	}
+
+	$reminder = isset( $_POST['reminder_next_year'] ) ? sanitize_text_field( wp_unslash( $_POST['reminder_next_year'] ) ) : '';
+	$reminder = ( $reminder === '1' || $reminder === 'true' || $reminder === 'on' ) ? '1' : '';
+
+	$gift_message = isset( $_POST['gift_message'] ) ? sanitize_textarea_field( wp_unslash( $_POST['gift_message'] ) ) : '';
+	if ( strlen( $gift_message ) > 6000 ) {
+		wp_send_json_error( array( 'message' => __( 'Gift message is too long.', 'wrrapd' ) ), 400 );
+	}
+
+	$comment = isset( $_POST['comment'] ) ? sanitize_textarea_field( wp_unslash( $_POST['comment'] ) ) : '';
+	if ( strlen( $comment ) > 4000 ) {
+		wp_send_json_error( array( 'message' => __( 'Comment is too long.', 'wrrapd' ) ), 400 );
 	}
 
 	$all = wrrapd_get_line_overlays( $uid );
@@ -754,15 +938,30 @@ function wrrapd_ajax_save_order_line_overlay() {
 	}
 	$key = (string) $line;
 
-	if ( $pick === '' && $notes === '' ) {
+	$is_empty = (
+		$giftee === '' &&
+		$relationship === '' &&
+		$pick === '' &&
+		$gift_date === '' &&
+		$reminder === '' &&
+		$gift_message === '' &&
+		$comment === ''
+	);
+
+	if ( $is_empty ) {
 		unset( $all[ $order ][ $key ] );
 		if ( empty( $all[ $order ] ) ) {
 			unset( $all[ $order ] );
 		}
 	} else {
 		$all[ $order ][ $key ] = array(
-			'occasion_pick'    => $pick,
-			'customer_notes'   => $notes,
+			'giftee'             => $giftee,
+			'relationship'       => $relationship,
+			'occasion_pick'      => $pick,
+			'gift_date'          => $gift_date,
+			'reminder_next_year' => $reminder,
+			'gift_message'       => $gift_message,
+			'comment'            => $comment,
 		);
 	}
 

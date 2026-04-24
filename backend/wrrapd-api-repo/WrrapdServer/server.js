@@ -682,13 +682,52 @@ function summarizeWrrapdLinesFromOrderRecord(data) {
             designSummary = String(row.selected_wrapping_option).trim();
         }
         const gm = row.giftMessage != null ? String(row.giftMessage).trim() : '';
+        let designPreviewUrl = null;
+        if (row.selected_ai_design && typeof row.selected_ai_design === 'object') {
+            const im = row.selected_ai_design.imageUrl;
+            if (typeof im === 'string' && (im.startsWith('http://') || im.startsWith('https://'))) {
+                designPreviewUrl = im;
+            }
+        }
+        let designLabel = null;
+        if (row.selected_ai_design && typeof row.selected_ai_design === 'object') {
+            const t = row.selected_ai_design.title;
+            designLabel =
+                typeof t === 'string' && t.trim()
+                    ? `AI: ${t.trim().slice(0, 80)}`
+                    : 'AI-generated wrap';
+        } else if (row.uploaded_design_name) {
+            designLabel = `Upload: ${String(row.uploaded_design_name).trim()}`;
+        } else if (row.checkbox_flowers) {
+            designLabel = row.selected_flower_design
+                ? `Flowers: ${String(row.selected_flower_design).trim()}`
+                : 'Flowers add-on';
+        } else if (row.selected_wrapping_option) {
+            designLabel = `Wrrapd: ${String(row.selected_wrapping_option).trim()}`;
+        }
+        const deliveryHint =
+            row.amazonDeliveryDate ||
+            row.deliveryDate ||
+            row.estimatedDeliveryDate ||
+            row.arrivalDate ||
+            row.shippingDate ||
+            null;
         return {
             asin: row.asin || null,
             productTitle: row.title ? String(row.title).trim().slice(0, 200) : null,
+            productImageUrl:
+                row.imageUrl && (String(row.imageUrl).startsWith('http://') || String(row.imageUrl).startsWith('https://'))
+                    ? String(row.imageUrl).trim()
+                    : null,
             occasion: row.occasion ? String(row.occasion).trim() : null,
             designSummary,
+            designLabel,
+            designPreviewUrl,
+            flowers: row.checkbox_flowers === true,
+            deliveryHint: deliveryHint != null ? String(deliveryHint).trim().slice(0, 200) : null,
             gifteeName,
             giftMessageSnippet: gm ? gm.slice(0, 160) + (gm.length > 160 ? '…' : '') : null,
+            giftMessage: gm.length > 6000 ? `${gm.slice(0, 6000)}…` : gm,
         };
     });
 }
