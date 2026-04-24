@@ -658,12 +658,48 @@ function orderVisibleToWpUser(data, emailNorm, wpUserId) {
     return false;
 }
 
+/** One row per Wrrapd gift line (same normalization as payment ingest) for WP “rich” table. */
+function summarizeWrrapdLinesFromOrderRecord(data) {
+    const flat = normalizeOrderItems(data && data.orderItems);
+    return flat.map((row) => {
+        const fa = row.finalShippingAddress || row.shippingAddress || row.gifteeRecipientAddress;
+        let gifteeName = null;
+        if (fa && typeof fa === 'object' && fa.name != null) {
+            const n = String(fa.name).trim();
+            gifteeName = n || null;
+        }
+        let designSummary = null;
+        if (row.selected_ai_design) {
+            const s = String(row.selected_ai_design).trim();
+            designSummary = s ? `AI design: ${s.slice(0, 120)}${s.length > 120 ? '…' : ''}` : 'AI design';
+        } else if (row.uploaded_design_name) {
+            designSummary = `Upload: ${String(row.uploaded_design_name).trim()}`;
+        } else if (row.checkbox_flowers) {
+            designSummary = row.selected_flower_design
+                ? `Flowers: ${String(row.selected_flower_design).trim()}`
+                : 'Flowers add-on';
+        } else if (row.selected_wrapping_option) {
+            designSummary = String(row.selected_wrapping_option).trim();
+        }
+        const gm = row.giftMessage != null ? String(row.giftMessage).trim() : '';
+        return {
+            asin: row.asin || null,
+            productTitle: row.title ? String(row.title).trim().slice(0, 200) : null,
+            occasion: row.occasion ? String(row.occasion).trim() : null,
+            designSummary,
+            gifteeName,
+            giftMessageSnippet: gm ? gm.slice(0, 160) + (gm.length > 160 ? '…' : '') : null,
+        };
+    });
+}
+
 function summarizeOrderForWpList(data) {
     const items = data.orderItems;
     let lineItemCount = 0;
     if (Array.isArray(items)) lineItemCount = items.length;
     else if (items && typeof items === 'object') lineItemCount = Object.keys(items).length;
     const pay = data.payment && typeof data.payment === 'object' ? data.payment : null;
+    const lines = summarizeWrrapdLinesFromOrderRecord(data);
     return {
         orderNumber: data.orderNumber != null ? String(data.orderNumber) : null,
         timestamp: data.timestamp || null,
@@ -679,6 +715,8 @@ function summarizeOrderForWpList(data) {
         claimedWpUserId: data.claimedWpUserId != null ? String(data.claimedWpUserId) : null,
         claimedAt: data.claimedAt || null,
         lineItemCount,
+        wrrapdLineCount: lines.length,
+        lines,
     };
 }
 

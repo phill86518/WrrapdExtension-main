@@ -29,7 +29,7 @@ Secrets and env vars (Stripe, Mailgun, session secrets, etc.) are **not** commit
 
 **`POST /api/internal/claim-orders-by-email`** — stamps `claimedWpUserId` on `orders/order_*.json` where gifter email matches. Body: `email` or `emailNorm`, `wpUserId`, optional `dryRun`.
 
-**`POST /api/internal/orders-for-wp-user`** — returns order summaries for the Review UI. Body must include **`email`** (or `emailNorm`) **and** `wpUserId` (same pairing WordPress has for the logged-in user).
+**`POST /api/internal/orders-for-wp-user`** — returns order summaries for the Review UI. Body must include **`email`** (or `emailNorm`) **and** `wpUserId` (same pairing WordPress has for the logged-in user). Each order includes **`lines`**: Wrrapd gift rows with **`gifteeName`**, **`occasion`**, **`designSummary`**, **`giftMessageSnippet`**, **`productTitle`** (from saved checkout JSON); use MU shortcode **`layout="rich"`** to print these columns.
 
 Example (dry run — no writes):
 

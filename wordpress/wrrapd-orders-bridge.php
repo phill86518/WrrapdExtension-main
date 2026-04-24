@@ -131,10 +131,131 @@ add_action( 'wp_login', 'wrrapd_on_wp_login', 10, 2 );
 add_action( 'user_register', 'wrrapd_on_user_register', 10, 1 );
 
 /**
- * Shortcode: [wrrapd_review_orders]
- * Re-claims (idempotent) then lists orders for the current user.
+ * @param mixed $v
  */
-function wrrapd_shortcode_review_orders() {
+function wrrapd_cell_text( $v ) {
+	if ( $v === null || $v === '' ) {
+		return '—';
+	}
+	return (string) $v;
+}
+
+/**
+ * @param array<int, array<string, mixed>> $orders
+ */
+function wrrapd_render_orders_table_simple( array $orders ) {
+	ob_start();
+	echo '<div class="wrrapd-review-orders-table-wrap"><table class="wrrapd-review-orders-table wrrapd-review-orders-simple"><thead><tr>';
+	echo '<th>' . esc_html__( 'Order', 'wrrapd' ) . '</th>';
+	echo '<th>' . esc_html__( 'Date', 'wrrapd' ) . '</th>';
+	echo '<th>' . esc_html__( 'Items', 'wrrapd' ) . '</th>';
+	echo '<th>' . esc_html__( 'Payment', 'wrrapd' ) . '</th>';
+	echo '</tr></thead><tbody>';
+	foreach ( $orders as $row ) {
+		if ( ! is_array( $row ) ) {
+			continue;
+		}
+		$on  = isset( $row['orderNumber'] ) ? (string) $row['orderNumber'] : '—';
+		$ts  = isset( $row['timestamp'] ) ? (string) $row['timestamp'] : '';
+		$cnt = isset( $row['lineItemCount'] ) ? (int) $row['lineItemCount'] : 0;
+		$st  = '';
+		if ( isset( $row['payment'] ) && is_array( $row['payment'] ) ) {
+			$st = isset( $row['payment']['status'] ) ? (string) $row['payment']['status'] : '';
+		}
+		echo '<tr>';
+		echo '<td>' . esc_html( $on ) . '</td>';
+		echo '<td>' . esc_html( $ts ) . '</td>';
+		echo '<td>' . esc_html( (string) $cnt ) . '</td>';
+		echo '<td>' . esc_html( $st ) . '</td>';
+		echo '</tr>';
+	}
+	echo '</tbody></table></div>';
+	return (string) ob_get_clean();
+}
+
+/**
+ * Rich layout: giftee, occasion, design, gift note from pay-server line items (maps to your legacy columns).
+ *
+ * @param array<int, array<string, mixed>> $orders
+ */
+function wrrapd_render_orders_table_rich( array $orders ) {
+	ob_start();
+	echo '<div class="wrrapd-review-orders-table-wrap"><table class="wrrapd-review-orders-table wrrapd-review-orders-rich"><thead><tr>';
+	echo '<th>' . esc_html__( 'Amazon / order #', 'wrrapd' ) . '</th>';
+	echo '<th>' . esc_html__( 'Date placed', 'wrrapd' ) . '</th>';
+	echo '<th>' . esc_html__( 'Giftee', 'wrrapd' ) . '</th>';
+	echo '<th>' . esc_html__( 'Occasion', 'wrrapd' ) . '</th>';
+	echo '<th>' . esc_html__( 'Design', 'wrrapd' ) . '</th>';
+	echo '<th>' . esc_html__( 'Gift message', 'wrrapd' ) . '</th>';
+	echo '<th>' . esc_html__( 'Wrrapd lines', 'wrrapd' ) . '</th>';
+	echo '<th>' . esc_html__( 'Payment', 'wrrapd' ) . '</th>';
+	echo '</tr></thead><tbody>';
+
+	foreach ( $orders as $order ) {
+		if ( ! is_array( $order ) ) {
+			continue;
+		}
+		$on   = isset( $order['orderNumber'] ) ? (string) $order['orderNumber'] : '—';
+		$ts   = isset( $order['timestamp'] ) ? (string) $order['timestamp'] : '';
+		$st   = '';
+		if ( isset( $order['payment'] ) && is_array( $order['payment'] ) ) {
+			$st = isset( $order['payment']['status'] ) ? (string) $order['payment']['status'] : '';
+		}
+		$wl = isset( $order['wrrapdLineCount'] ) ? (int) $order['wrrapdLineCount'] : 0;
+		$lines = isset( $order['lines'] ) && is_array( $order['lines'] ) ? $order['lines'] : array();
+		if ( count( $lines ) === 0 ) {
+			$lines = array(
+				array(
+					'gifteeName'          => null,
+					'occasion'            => null,
+					'designSummary'       => null,
+					'giftMessageSnippet'  => null,
+					'productTitle'        => null,
+				),
+			);
+		}
+		$n = count( $lines );
+		$rs = max( 1, $n );
+
+		foreach ( $lines as $i => $ln ) {
+			if ( ! is_array( $ln ) ) {
+				continue;
+			}
+			echo '<tr>';
+			if ( $i === 0 ) {
+				echo '<td rowspan="' . (int) $rs . '">' . esc_html( $on ) . '</td>';
+				echo '<td rowspan="' . (int) $rs . '">' . esc_html( $ts ) . '</td>';
+			}
+			echo '<td>' . esc_html( wrrapd_cell_text( $ln['gifteeName'] ?? null ) ) . '</td>';
+			echo '<td>' . esc_html( wrrapd_cell_text( $ln['occasion'] ?? null ) ) . '</td>';
+			echo '<td>' . esc_html( wrrapd_cell_text( $ln['designSummary'] ?? null ) ) . '</td>';
+			echo '<td>' . esc_html( wrrapd_cell_text( $ln['giftMessageSnippet'] ?? null ) ) . '</td>';
+			if ( $i === 0 ) {
+				echo '<td rowspan="' . (int) $rs . '">' . esc_html( (string) $wl ) . '</td>';
+				echo '<td rowspan="' . (int) $rs . '">' . esc_html( $st ) . '</td>';
+			}
+			echo '</tr>';
+		}
+	}
+
+	echo '</tbody></table></div>';
+	return (string) ob_get_clean();
+}
+
+/**
+ * Shortcode: [wrrapd_review_orders] or [wrrapd_review_orders layout="rich"]
+ * Re-claims (idempotent) then lists orders for the current user.
+ *
+ * @param array<string, string>|string $atts
+ */
+function wrrapd_shortcode_review_orders( $atts ) {
+	$atts = shortcode_atts(
+		array( 'layout' => 'simple' ),
+		is_array( $atts ) ? $atts : array(),
+		'wrrapd_review_orders'
+	);
+	$layout = isset( $atts['layout'] ) ? strtolower( trim( (string) $atts['layout'] ) ) : 'simple';
+
 	if ( ! is_user_logged_in() ) {
 		return '<p class="wrrapd-review-orders">' . esc_html__( 'Please log in to see your Wrrapd orders.', 'wrrapd' ) . '</p>';
 	}
@@ -159,33 +280,10 @@ function wrrapd_shortcode_review_orders() {
 		return '<p class="wrrapd-review-orders">' . esc_html__( 'No Wrrapd orders were found for your account email yet.', 'wrrapd' ) . '</p>';
 	}
 
-	ob_start();
-	echo '<div class="wrrapd-review-orders-table-wrap"><table class="wrrapd-review-orders-table"><thead><tr>';
-	echo '<th>' . esc_html__( 'Order', 'wrrapd' ) . '</th>';
-	echo '<th>' . esc_html__( 'Date', 'wrrapd' ) . '</th>';
-	echo '<th>' . esc_html__( 'Items', 'wrrapd' ) . '</th>';
-	echo '<th>' . esc_html__( 'Payment', 'wrrapd' ) . '</th>';
-	echo '</tr></thead><tbody>';
-	foreach ( $orders as $row ) {
-		if ( ! is_array( $row ) ) {
-			continue;
-		}
-		$on   = isset( $row['orderNumber'] ) ? (string) $row['orderNumber'] : '—';
-		$ts   = isset( $row['timestamp'] ) ? (string) $row['timestamp'] : '';
-		$cnt  = isset( $row['lineItemCount'] ) ? (int) $row['lineItemCount'] : 0;
-		$st   = '';
-		if ( isset( $row['payment'] ) && is_array( $row['payment'] ) ) {
-			$st = isset( $row['payment']['status'] ) ? (string) $row['payment']['status'] : '';
-		}
-		echo '<tr>';
-		echo '<td>' . esc_html( $on ) . '</td>';
-		echo '<td>' . esc_html( $ts ) . '</td>';
-		echo '<td>' . esc_html( (string) $cnt ) . '</td>';
-		echo '<td>' . esc_html( $st ) . '</td>';
-		echo '</tr>';
+	if ( $layout === 'rich' ) {
+		return wrrapd_render_orders_table_rich( $orders );
 	}
-	echo '</tbody></table></div>';
-	return ob_get_clean();
+	return wrrapd_render_orders_table_simple( $orders );
 }
 
 add_shortcode( 'wrrapd_review_orders', 'wrrapd_shortcode_review_orders' );

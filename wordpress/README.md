@@ -16,11 +16,19 @@ define( 'WRRAPD_INTERNAL_API_KEY', 'paste-the-same-secret-as-WRRAPD_INTERNAL_CLA
 The `[wrrapd_review_orders]` shortcode **only outputs the table block you add**; it does not remove other Elementor widgets. If you had a richer “My orders” layout (dates, giftee, occasions, design, comments), use **that** page: add one **Shortcode** widget (or embed the shortcode inside a column) and keep your existing form/list widgets. A separate minimal **“My Orders”** page is optional.
 
 1. Edit the page that should show pay-server orders (logged-in users only — the one with your full layout if you prefer).
-2. Add a **Shortcode** widget with:
+2. Add a **Shortcode** widget with either:
 
 ```text
 [wrrapd_review_orders]
 ```
+
+or a layout closer to your legacy “giftee / occasion / design” columns:
+
+```text
+[wrrapd_review_orders layout="rich"]
+```
+
+Hide or remove any old widget that still says **“No order files found”** (that text is not from this bridge; it is usually a separate listing or custom HTML that expected files elsewhere).
 
 3. Publish. The shortcode **re-runs claim** (idempotent) then **lists** every pay-server order whose **gifter email** matches the logged-in user’s WordPress email, or that is already **claimed** to their WP user id.
 
