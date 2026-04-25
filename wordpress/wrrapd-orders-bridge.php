@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: Wrrapd Orders Bridge (MU)
- * Description: Orders bridge (claim + list shortcodes + studio layout), logout nonce fix, strip leading "NN. " from front-end titles.
+ * Description: Orders bridge (claim + list shortcodes + studio layout), logout nonce fix, strip leading admin sort prefixes (e.g. 07.) from front-end titles (Elementor, menus, Yoast/Rank Math).
  * Author: Wrrapd
  *
  * Install: copy this file to wp-content/mu-plugins/wrrapd-orders-bridge.php (must-use plugins load automatically).
@@ -37,18 +37,21 @@ function wrrapd_redirect_stale_logout_to_fresh_nonce() {
 add_action( 'login_init', 'wrrapd_redirect_stale_logout_to_fresh_nonce', 0 );
 
 /**
- * Strip a leading admin sort prefix like "07. " from titles on the **front end** only
- * (WP admin and editor still show the full title). Matches: digits + dot + optional spaces.
+ * Strip a leading admin sort prefix from titles on the **front end** only
+ * (WP admin and editor still show the full title).
+ *
+ * Matches: "07. My Orders", "07.My Orders", "7. My" — avoids "3.14 Pi" (no space after dot, single digit before dot).
  */
 function wrrapd_strip_leading_title_sort_prefix( $title ) {
 	if ( is_admin() || ! is_string( $title ) || $title === '' ) {
 		return $title;
 	}
-	$out = preg_replace( '/^\d+\.\s*/u', '', $title );
+	$out = preg_replace( '/^(?:(?:\d{2,}\.)|(?:\d+\.\s+))\s*/u', '', $title );
 	return is_string( $out ) ? $out : $title;
 }
 
-add_filter( 'the_title', 'wrrapd_strip_leading_title_sort_prefix', 10, 1 );
+/** Late priority so sort prefixes still strip if another plugin touched the title first. */
+add_filter( 'the_title', 'wrrapd_strip_leading_title_sort_prefix', 999, 1 );
 
 add_filter(
 	'document_title_parts',
@@ -59,7 +62,7 @@ add_filter(
 		$parts['title'] = wrrapd_strip_leading_title_sort_prefix( $parts['title'] );
 		return $parts;
 	},
-	10,
+	999,
 	1
 );
 
@@ -69,13 +72,29 @@ add_filter(
 		if ( is_admin() || ! is_string( $title ) || $title === '' ) {
 			return $title;
 		}
-		if ( is_object( $item ) && isset( $item->type ) && $item->type === 'post_type' ) {
-			return wrrapd_strip_leading_title_sort_prefix( $title );
-		}
-		return $title;
+		return wrrapd_strip_leading_title_sort_prefix( $title );
 	},
-	10,
+	999,
 	4
+);
+
+/** Some themes output raw post title; strip the same admin prefix. */
+add_filter( 'single_post_title', 'wrrapd_strip_leading_title_sort_prefix', 999, 2 );
+
+/** Yoast SEO title (browser / social when Yoast rewrites title). */
+add_filter( 'wpseo_title', 'wrrapd_strip_leading_title_sort_prefix', 999, 1 );
+
+/** Rank Math HTML title. */
+add_filter( 'rank_math/frontend/title', 'wrrapd_strip_leading_title_sort_prefix', 999, 1 );
+
+/** Elementor passes get_the_title() but some widgets/cache paths use this filter. */
+add_filter(
+	'elementor/utils/get_the_title',
+	static function ( $title ) {
+		return wrrapd_strip_leading_title_sort_prefix( (string) $title );
+	},
+	999,
+	1
 );
 
 if ( ! defined( 'WRRAPD_INTERNAL_API_KEY' ) || WRRAPD_INTERNAL_API_KEY === '' ) {
