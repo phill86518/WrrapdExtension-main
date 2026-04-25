@@ -611,14 +611,14 @@ function wrrapd_render_orders_legacy_cards( array $orders, array $overlays ) {
 .wrrapd-legacy-cards-root .item-details{flex:1;min-width:0;font-size:.8rem;}
 .wrrapd-legacy-cards-root .legacy-forms{flex:1;min-width:240px;max-width:400px;display:flex;flex-direction:column;gap:.85rem;}
 .wrrapd-legacy-cards-root .wrrapd-legacy-line{border:1px solid #ddd;border-radius:.5rem;padding:.65rem .75rem;background:#fafafa;}
-.wrrapd-legacy-cards-root .info-box{background:#f7f7f8;padding:.55rem .65rem;border-radius:.45rem;border:1px solid #e2e2e2;margin-bottom:.45rem;}
+.wrrapd-legacy-cards-root .info-box{background:transparent;padding:0;border-radius:0;border:none;margin-bottom:.38rem;}
 .wrrapd-legacy-cards-root .info-box label{display:block;margin-bottom:.35rem;font-size:.72rem;font-weight:600;color:#333;}
 .wrrapd-legacy-cards-root .info-box input[type=text],.wrrapd-legacy-cards-root .info-box input[type=date]{width:100%;padding:.32rem .4rem;font-size:.78rem;border:1px solid #bbb;border-radius:.3rem;}
 .wrrapd-legacy-cards-root .wrrapd-legacy-giftee-readonly{width:100%;padding:.38rem .52rem;border-radius:6px;background:linear-gradient(180deg,#7f1d1d,#5c1a2e);color:#fff5f5;font-weight:700;font-size:.78rem;line-height:1.35;box-shadow:inset 0 1px 0 rgba(255,255,255,.12);}
 .wrrapd-legacy-cards-root .wrrapd-legacy-orange-select select{width:100%;padding:.32rem .45rem;font-size:.78rem;border-radius:6px;border:2px solid var(--wr-navy);background:linear-gradient(180deg,var(--wr-amber),var(--wr-amber-deep));color:#fff7ed;line-height:1.25;box-shadow:inset 0 1px 0 rgba(255,255,255,.2);cursor:pointer;}
 .wrrapd-legacy-cards-root .wrrapd-legacy-orange-select select:focus{outline:2px solid #f5c518;outline-offset:1px;}
 .wrrapd-legacy-cards-root .wrrapd-legacy-orange-select select option{background:#fff;color:#0f172a;}
-.wrrapd-legacy-cards-root .wrrapd-legacy-rem-date-box{background:#fff;padding:.5rem .55rem;}
+.wrrapd-legacy-cards-root .wrrapd-legacy-rem-date-box{background:transparent;padding:0;}
 .wrrapd-legacy-cards-root .wrrapd-legacy-rem-date-row{display:flex;flex-direction:row;flex-wrap:nowrap;align-items:center;justify-content:flex-start;gap:.45rem;margin-top:.05rem;}
 .wrrapd-legacy-cards-root .wrrapd-legacy-date-block{flex:0 1 8.3rem;min-width:8.3rem;}
 .wrrapd-legacy-cards-root .wrrapd-legacy-date-block input[type=date]{width:100%;padding:.28rem .35rem;font-size:.74rem;border:1px solid #bbb;border-radius:.3rem;background:#fff;line-height:1.25;}
@@ -647,7 +647,7 @@ function wrrapd_render_orders_legacy_cards( array $orders, array $overlays ) {
 .wrrapd-legacy-cards-root .wrrapd-legacy-order-foot .wrrapd-amz-inv-row{font-size:.74rem;padding:.08rem 0;}
 .wrrapd-legacy-cards-root .wrrapd-legacy-order-foot .wrrapd-amz-inv-row--grand{font-size:.82rem;}
 .wrrapd-legacy-cards-root .wrrapd-legacy-order-foot .wrrapd-amz-inv-sub{font-size:.68rem;}
-.wrrapd-legacy-cards-root .wrrapd-legacy-order-foot .wrrapd-amz-inv-note{font-size:.65rem;}
+.wrrapd-legacy-cards-root .wrrapd-legacy-order-foot .wrrapd-amz-inv-note{font-size:.62rem;font-style:italic;opacity:.86;}
 @media(max-width:560px){.wrrapd-legacy-cards-root .wrrapd-legacy-rem-date-row{flex-wrap:wrap;}.wrrapd-legacy-cards-root .wrrapd-legacy-date-block,.wrrapd-legacy-cards-root .wrrapd-legacy-rem-block{flex:1 1 100%;min-width:0;}}
 </style>';
 
@@ -1089,6 +1089,16 @@ function wrrapd_normalize_checkout_invoice_label( $lab ) {
 }
 
 /**
+ * Detect malformed legacy checkout labels like "Gift wrapWrrapd: wrrapd".
+ *
+ * @param string $lab Raw label text.
+ */
+function wrrapd_is_bad_checkout_invoice_label( $lab ) {
+	$lab = trim( (string) $lab );
+	return $lab !== '' && preg_match( '/^gift\s*wrap\s*wrrapd\s*:/i', $lab ) === 1;
+}
+
+/**
  * Receipt block at bottom of studio order (checkout snapshot when available).
  *
  * @param array<string, mixed>              $order Order payload from API.
@@ -1114,7 +1124,11 @@ function wrrapd_studio_order_summary_html( array $order, array $lines ) {
 			if ( ! is_array( $row ) ) {
 				continue;
 			}
-			$lab = isset( $row['label'] ) ? trim( (string) $row['label'] ) : '';
+			$lab_raw = isset( $row['label'] ) ? trim( (string) $row['label'] ) : '';
+			if ( wrrapd_is_bad_checkout_invoice_label( $lab_raw ) ) {
+				continue;
+			}
+			$lab = $lab_raw;
 			if ( $lab === '' ) {
 				continue;
 			}
@@ -1132,6 +1146,7 @@ function wrrapd_studio_order_summary_html( array $order, array $lines ) {
 			echo '<span class="wrrapd-amz-inv-amt">' . esc_html( $total_str ) . '</span>';
 			echo '</div>';
 		}
+		echo '<div class="wrrapd-amz-inv-note">' . esc_html__( 'Sales tax included in total where applicable.', 'wrrapd' ) . '</div>';
 	} else {
 		$inv = isset( $order['invoiceLines'] ) && is_array( $order['invoiceLines'] ) ? $order['invoiceLines'] : array();
 		if ( count( $inv ) === 0 ) {
@@ -1159,6 +1174,9 @@ function wrrapd_studio_order_summary_html( array $order, array $lines ) {
 					continue;
 				}
 				$lab = isset( $row['label'] ) ? trim( (string) $row['label'] ) : '';
+				if ( wrrapd_is_bad_checkout_invoice_label( $lab ) ) {
+					continue;
+				}
 				$lab = wrrapd_normalize_checkout_invoice_label( $lab );
 				$det = isset( $row['detail'] ) ? trim( (string) $row['detail'] ) : '';
 				$lab_out = $lab !== '' ? $lab : __( 'Gift wrap', 'wrrapd' );
@@ -1173,7 +1191,6 @@ function wrrapd_studio_order_summary_html( array $order, array $lines ) {
 				}
 				echo '</div><span class="wrrapd-amz-inv-amt"></span></div>';
 			}
-			echo '<div class="wrrapd-amz-inv-note">' . esc_html__( 'Sales tax included in total where applicable.', 'wrrapd' ) . '</div>';
 			echo '</div>';
 		}
 		if ( $total_str !== '' ) {
@@ -1182,6 +1199,7 @@ function wrrapd_studio_order_summary_html( array $order, array $lines ) {
 			echo '<span class="wrrapd-amz-inv-amt">' . esc_html( $total_str ) . '</span>';
 			echo '</div>';
 		}
+		echo '<div class="wrrapd-amz-inv-note">' . esc_html__( 'Sales tax included in total where applicable.', 'wrrapd' ) . '</div>';
 	}
 	echo '</div>';
 	return (string) ob_get_clean();
