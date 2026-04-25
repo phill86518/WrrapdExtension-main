@@ -268,20 +268,49 @@ function wrrapd_handle_amazon_callback_path() {
 		exit;
 	}
 
-	$id_defined = defined( 'WRRAPD_AMAZON_CLIENT_ID' );
-	$sec_defined = defined( 'WRRAPD_AMAZON_CLIENT_SECRET' );
-	$id_val = $id_defined ? trim( (string) WRRAPD_AMAZON_CLIENT_ID ) : '';
-	$sec_val = $sec_defined ? trim( (string) WRRAPD_AMAZON_CLIENT_SECRET ) : '';
-	if ( ! $id_defined || ! $sec_defined || $id_val === '' || $sec_val === '' ) {
+	// Prefer WRRAPD_AMAZON_*; fall back to legacy AMAZON_* wp-config names. Treat obvious
+	// template placeholders (YOUR_...) or non-LWA client ids as empty so fallback applies.
+	$id_val  = defined( 'WRRAPD_AMAZON_CLIENT_ID' ) ? trim( (string) WRRAPD_AMAZON_CLIENT_ID ) : '';
+	$sec_val = defined( 'WRRAPD_AMAZON_CLIENT_SECRET' ) ? trim( (string) WRRAPD_AMAZON_CLIENT_SECRET ) : '';
+	if ( $id_val !== '' && strpos( $id_val, 'amzn1.application-oa2-client.' ) !== 0 ) {
+		$id_val = '';
+	}
+	if ( $sec_val !== '' && stripos( $sec_val, 'YOUR_' ) !== false ) {
+		$sec_val = '';
+	}
+	if ( defined( 'AMAZON_CLIENT_ID' ) ) {
+		$legacy_id = trim( (string) AMAZON_CLIENT_ID );
+		if ( $legacy_id !== '' && strpos( $legacy_id, 'amzn1.application-oa2-client.' ) === 0 && $id_val === '' ) {
+			$id_val = $legacy_id;
+		}
+	}
+	if ( defined( 'AMAZON_CLIENT_SECRET' ) ) {
+		$legacy_sec = trim( (string) AMAZON_CLIENT_SECRET );
+		if ( $legacy_sec !== '' && $sec_val === '' ) {
+			$sec_val = $legacy_sec;
+		}
+	}
+
+	$id_ok  = ( $id_val !== '' && strpos( $id_val, 'amzn1.application-oa2-client.' ) === 0 );
+	$sec_ok = ( $sec_val !== '' && stripos( $sec_val, 'YOUR_' ) === false );
+	if ( ! $id_ok || ! $sec_ok ) {
 		$reason = 'config_missing';
-		if ( ! $id_defined ) {
-			$reason = 'config_missing_id_undef';
-		} elseif ( $id_val === '' ) {
-			$reason = 'config_missing_id_empty';
-		} elseif ( ! $sec_defined ) {
-			$reason = 'config_missing_secret_undef';
-		} elseif ( $sec_val === '' ) {
-			$reason = 'config_missing_secret_empty';
+		$has_w_id  = defined( 'WRRAPD_AMAZON_CLIENT_ID' );
+		$has_w_sec = defined( 'WRRAPD_AMAZON_CLIENT_SECRET' );
+		$has_l_id  = defined( 'AMAZON_CLIENT_ID' );
+		$has_l_sec = defined( 'AMAZON_CLIENT_SECRET' );
+		if ( ! $id_ok ) {
+			if ( ! $has_w_id && ! $has_l_id ) {
+				$reason = 'config_missing_id_undef';
+			} else {
+				$reason = 'config_missing_id_empty';
+			}
+		} elseif ( ! $sec_ok ) {
+			if ( ! $has_w_sec && ! $has_l_sec ) {
+				$reason = 'config_missing_secret_undef';
+			} else {
+				$reason = 'config_missing_secret_empty';
+			}
 		}
 		wp_safe_redirect( add_query_arg( array( 'wrrapd_amz' => $reason ), home_url( '/' ) ), 302 );
 		exit;
