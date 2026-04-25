@@ -474,18 +474,18 @@ function wrrapd_render_orders_legacy_cards( array $orders, array $overlays ) {
 .wrrapd-legacy-cards-root .info-box{background:#f7f7f8;padding:.55rem .65rem;border-radius:.45rem;border:1px solid #e2e2e2;margin-bottom:.45rem;}
 .wrrapd-legacy-cards-root .info-box label{display:block;margin-bottom:.35rem;font-size:.72rem;font-weight:600;color:#333;}
 .wrrapd-legacy-cards-root .info-box input[type=text],.wrrapd-legacy-cards-root .info-box input[type=date]{width:100%;padding:.32rem .4rem;font-size:.78rem;border:1px solid #bbb;border-radius:.3rem;}
+.wrrapd-legacy-cards-root .wrrapd-legacy-giftee-readonly{width:100%;padding:.38rem .52rem;border-radius:6px;background:linear-gradient(180deg,#7f1d1d,#5c1a2e);color:#fff5f5;font-weight:700;font-size:.78rem;line-height:1.35;box-shadow:inset 0 1px 0 rgba(255,255,255,.12);}
 .wrrapd-legacy-cards-root .wrrapd-legacy-orange-select select{width:100%;padding:.32rem .45rem;font-size:.78rem;border-radius:6px;border:2px solid var(--wr-navy);background:linear-gradient(180deg,var(--wr-amber),var(--wr-amber-deep));color:#fff7ed;line-height:1.25;box-shadow:inset 0 1px 0 rgba(255,255,255,.2);cursor:pointer;}
 .wrrapd-legacy-cards-root .wrrapd-legacy-orange-select select:focus{outline:2px solid #f5c518;outline-offset:1px;}
 .wrrapd-legacy-cards-root .wrrapd-legacy-orange-select select option{background:#fff;color:#0f172a;}
 .wrrapd-legacy-cards-root .wrrapd-legacy-rem-date-box{background:#fff;padding:.5rem .55rem;}
-.wrrapd-legacy-cards-root .wrrapd-legacy-rem-date-row{display:flex;flex-direction:row;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:.5rem .75rem;margin-top:.2rem;}
-.wrrapd-legacy-cards-root .wrrapd-legacy-date-block{flex:1 1 48%;min-width:9rem;}
-.wrrapd-legacy-cards-root .wrrapd-legacy-date-block label{margin-bottom:0;font-size:.72rem;}
-.wrrapd-legacy-cards-root .wrrapd-legacy-date-block input[type=date]{width:100%;margin-top:.12rem;padding:.28rem .35rem;font-size:.74rem;border:1px solid #bbb;border-radius:.3rem;background:#fff;}
-.wrrapd-legacy-cards-root .wrrapd-legacy-rem-block{flex:1 1 48%;min-width:10rem;display:flex;flex-wrap:wrap;align-items:center;gap:.35rem .5rem;font-size:.68rem;}
+.wrrapd-legacy-cards-root .wrrapd-legacy-rem-date-row{display:flex;flex-direction:row;flex-wrap:nowrap;align-items:center;justify-content:flex-start;gap:.45rem;margin-top:.05rem;}
+.wrrapd-legacy-cards-root .wrrapd-legacy-date-block{flex:0 1 8.3rem;min-width:8.3rem;}
+.wrrapd-legacy-cards-root .wrrapd-legacy-date-block input[type=date]{width:100%;padding:.28rem .35rem;font-size:.74rem;border:1px solid #bbb;border-radius:.3rem;background:#fff;line-height:1.25;}
+.wrrapd-legacy-cards-root .wrrapd-legacy-rem-block{flex:0 1 auto;min-width:0;display:flex;flex-wrap:nowrap;align-items:center;gap:.35rem;font-size:.68rem;}
 .wrrapd-legacy-cards-root .wrrapd-legacy-rem-block > label{display:inline-flex;align-items:center;gap:.28rem;margin:0;font-weight:600;white-space:nowrap;}
 .wrrapd-legacy-cards-root .wrrapd-legacy-rem-block input[type=checkbox]{width:14px;height:14px;margin:0;accent-color:var(--wr-amber-deep);}
-.wrrapd-legacy-cards-root .wrrapd-legacy-days-inline{display:inline-flex;align-items:center;gap:.25rem;flex-wrap:wrap;}
+.wrrapd-legacy-cards-root .wrrapd-legacy-days-inline{display:inline-flex;align-items:center;gap:.25rem;flex-wrap:nowrap;white-space:nowrap;}
 .wrrapd-legacy-cards-root .wrrapd-legacy-rem-days{padding:.18rem .28rem;font-size:.68rem;border-radius:4px;border:1px solid #64748b;font-weight:600;background:#fff;color:#0f172a;min-width:2.5rem;}
 .wrrapd-legacy-cards-root .wrrapd-legacy-rem-days:disabled{opacity:.45;cursor:not-allowed;}
 .wrrapd-legacy-cards-root .wrrapd-legacy-days-tail{font-size:.65rem;font-weight:600;color:#334155;white-space:nowrap;}
@@ -495,13 +495,14 @@ function wrrapd_render_orders_legacy_cards( array $orders, array $overlays ) {
 .wrrapd-legacy-cards-root .save-btn,.wrrapd-legacy-cards-root .delivery-btn{padding:.42rem .85rem;width:100%;border:none;border-radius:.3rem;cursor:pointer;font-size:.8rem;}
 .wrrapd-legacy-cards-root .save-btn{background:#c00;color:#fff;font-weight:600;}
 .wrrapd-legacy-cards-root .delivery-btn{background:#f6b933;color:#000;}
+.wrrapd-legacy-cards-root .delivery-btn[disabled]{cursor:not-allowed;opacity:.8;}
 .wrrapd-legacy-cards-root .wrrapd-legacy-order-foot{margin-top:.75rem;padding-top:.65rem;border-top:1px solid #ddd;clear:both;}
 .wrrapd-legacy-cards-root .wrrapd-legacy-order-foot .wrrapd-amz-summary{font-size:.78rem;padding:.35rem .45rem;}
 .wrrapd-legacy-cards-root .wrrapd-legacy-order-foot .wrrapd-amz-inv-row{font-size:.74rem;padding:.08rem 0;}
 .wrrapd-legacy-cards-root .wrrapd-legacy-order-foot .wrrapd-amz-inv-row--grand{font-size:.82rem;}
 .wrrapd-legacy-cards-root .wrrapd-legacy-order-foot .wrrapd-amz-inv-sub{font-size:.68rem;}
 .wrrapd-legacy-cards-root .wrrapd-legacy-order-foot .wrrapd-amz-inv-note{font-size:.65rem;}
-@media(max-width:560px){.wrrapd-legacy-cards-root .wrrapd-legacy-rem-date-row{flex-direction:column;align-items:stretch;}.wrrapd-legacy-cards-root .wrrapd-legacy-date-block,.wrrapd-legacy-cards-root .wrrapd-legacy-rem-block{flex:1 1 100%;min-width:0;}}
+@media(max-width:560px){.wrrapd-legacy-cards-root .wrrapd-legacy-rem-date-row{flex-wrap:wrap;}.wrrapd-legacy-cards-root .wrrapd-legacy-date-block,.wrrapd-legacy-cards-root .wrrapd-legacy-rem-block{flex:1 1 100%;min-width:0;}}
 </style>';
 
 	echo '<h2>' . esc_html__( 'Your Orders', 'wrrapd' ) . '</h2>';
@@ -611,20 +612,22 @@ function wrrapd_render_orders_legacy_cards( array $orders, array $overlays ) {
 			$id_sfx = substr( md5( $on . ':' . (string) $li ), 0, 10 );
 
 			echo '<div class="wrrapd-legacy-line" data-order="' . esc_attr( $on ) . '" data-line="' . (int) $li . '">';
-			echo '<div class="info-box"><label>' . esc_html__( 'Giftee name', 'wrrapd' );
-			echo '<input type="text" class="wrrapd-legacy-giftee" id="' . esc_attr( $wrap_id . '-g-' . $id_sfx ) . '" value="' . esc_attr( $giftee_val ) . '" maxlength="200" /></label></div>';
+			echo '<div class="info-box">';
+			echo '<input type="hidden" class="wrrapd-legacy-giftee" id="' . esc_attr( $wrap_id . '-g-' . $id_sfx ) . '" value="' . esc_attr( $giftee_val ) . '" />';
+			echo '<div class="wrrapd-legacy-giftee-readonly" aria-label="' . esc_attr__( 'Giftee', 'wrrapd' ) . '">' . esc_html( $giftee_val !== '' ? $giftee_val : '—' ) . '</div>';
+			echo '</div>';
 
-			echo '<div class="info-box wrrapd-legacy-orange-select"><label>' . esc_html__( 'Relationship', 'wrrapd' );
+			echo '<div class="info-box wrrapd-legacy-orange-select">';
 			echo '<select class="wrrapd-legacy-rel" id="' . esc_attr( $wrap_id . '-r-' . $id_sfx ) . '">';
-			echo '<option value="">' . esc_html__( 'Select…', 'wrrapd' ) . '</option>';
+			echo '<option value="">' . esc_html__( 'Relationship', 'wrrapd' ) . '</option>';
 			foreach ( $rel_opts as $r ) {
 				echo '<option value="' . esc_attr( $r ) . '"' . selected( $rel_val, $r, false ) . '>' . esc_html( $r ) . '</option>';
 			}
-			echo '</select></label></div>';
+			echo '</select></div>';
 
-			echo '<div class="info-box wrrapd-legacy-orange-select"><label>' . esc_html__( 'Occasion', 'wrrapd' );
+			echo '<div class="info-box wrrapd-legacy-orange-select">';
 			echo '<select class="wrrapd-legacy-occ" id="' . esc_attr( $wrap_id . '-o-' . $id_sfx ) . '">';
-			echo '<option value="">' . esc_html__( 'Select…', 'wrrapd' ) . '</option>';
+			echo '<option value="">' . esc_html__( 'Occasion', 'wrrapd' ) . '</option>';
 			foreach ( $occ_opts as $lab ) {
 				$lab_s = trim( (string) $lab );
 				if ( $lab_s === '' ) {
@@ -632,12 +635,12 @@ function wrrapd_render_orders_legacy_cards( array $orders, array $overlays ) {
 				}
 				echo '<option value="' . esc_attr( $lab_s ) . '"' . selected( $occ_sel, $lab_s, false ) . '>' . esc_html( $lab_s ) . '</option>';
 			}
-			echo '</select></label></div>';
+			echo '</select></div>';
 
 			echo '<div class="info-box wrrapd-legacy-rem-date-box">';
 			echo '<div class="wrrapd-legacy-rem-date-row">';
-			echo '<div class="wrrapd-legacy-date-block"><label for="' . esc_attr( $wrap_id . '-d-' . $id_sfx ) . '">' . esc_html__( 'Date', 'wrrapd' );
-			echo '<input type="date" class="wrrapd-legacy-date" id="' . esc_attr( $wrap_id . '-d-' . $id_sfx ) . '" value="' . esc_attr( $gdate ) . '" /></label></div>';
+			echo '<div class="wrrapd-legacy-date-block">';
+			echo '<input type="date" class="wrrapd-legacy-date" id="' . esc_attr( $wrap_id . '-d-' . $id_sfx ) . '" value="' . esc_attr( $gdate ) . '" aria-label="' . esc_attr__( 'Date', 'wrrapd' ) . '" /></div>';
 			echo '<div class="wrrapd-legacy-rem-block">';
 			echo '<label for="' . esc_attr( $wrap_id . '-m-' . $id_sfx ) . '"><input type="checkbox" class="wrrapd-legacy-rem" id="' . esc_attr( $wrap_id . '-m-' . $id_sfx ) . '"' . ( $rem ? ' checked' : '' ) . ' /> ';
 			echo '<span>' . esc_html__( 'Set reminder', 'wrrapd' ) . '</span></label>';
@@ -650,8 +653,8 @@ function wrrapd_render_orders_legacy_cards( array $orders, array $overlays ) {
 			echo '<span class="wrrapd-legacy-days-tail">' . esc_html__( 'days prior', 'wrrapd' ) . '</span>';
 			echo '</span></div></div></div>';
 
-			echo '<div class="info-box wrrapd-legacy-comment-row"><label for="' . esc_attr( $wrap_id . '-c-' . $id_sfx ) . '">' . esc_html__( 'Comment', 'wrrapd' );
-			echo '<input type="text" class="wrrapd-legacy-comment" id="' . esc_attr( $wrap_id . '-c-' . $id_sfx ) . '" value="' . esc_attr( $comment ) . '" maxlength="4000" placeholder="' . esc_attr__( 'Optional note', 'wrrapd' ) . '" /></label></div>';
+			echo '<div class="info-box wrrapd-legacy-comment-row">';
+			echo '<input type="text" class="wrrapd-legacy-comment" id="' . esc_attr( $wrap_id . '-c-' . $id_sfx ) . '" value="' . esc_attr( $comment ) . '" maxlength="4000" placeholder="' . esc_attr__( 'Additional note', 'wrrapd' ) . '" aria-label="' . esc_attr__( 'Additional note', 'wrrapd' ) . '" /></div>';
 
 			echo '<div class="save-section">';
 			echo '<button type="button" class="save-btn wrrapd-legacy-save">' . esc_html__( 'Save / Update', 'wrrapd' ) . '</button>';
@@ -907,12 +910,8 @@ function wrrapd_normalize_checkout_invoice_label( $lab ) {
 	if ( $lab === '' ) {
 		return '';
 	}
-	if ( preg_match( '/^gift\s*wrap\s*Wrrapd:\s*(.*)$/i', $lab, $m ) ) {
-		$rest = trim( (string) ( $m[1] ?? '' ) );
-		if ( $rest === '' || preg_match( '/^wrrapd$/i', $rest ) ) {
-			return __( 'Gift wrap', 'wrrapd' ) . ' — ' . __( 'Wrrapd design', 'wrrapd' );
-		}
-		return __( 'Gift wrap', 'wrrapd' ) . ' — ' . $rest;
+	if ( preg_match( '/^gift\s*wrap/i', $lab ) && strpos( $lab, ':' ) !== false ) {
+		return __( 'Gift wrap', 'wrrapd' );
 	}
 	return $lab;
 }
