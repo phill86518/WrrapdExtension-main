@@ -221,6 +221,7 @@ function wrrapd_inject_header_cta_rules() {
 		return;
 	}
 	echo '<style id="wrrapd-cta-slower-blink">@keyframes wrrapd-cta-blink-slow{0%,100%{filter:brightness(1);box-shadow:0 0 0 0 rgba(234,88,12,.45);}50%{filter:brightness(1.12);box-shadow:0 0 14px 3px rgba(234,88,12,.35);}}.elementor-element-7f1bdc1 .elementor-button,.elementor-element-eb0b235 .elementor-button,.elementor-element-7f1bdc1 a.elementor-button,.elementor-element-eb0b235 a.elementor-button{animation:wrrapd-cta-blink-slow 3.5s ease-in-out infinite!important;}</style>';
+	echo '<style id="wrrapd-mobile-footer-stick">@media (max-width:900px){html,body{min-height:100%;}body{min-height:100dvh;display:flex;flex-direction:column;}#page,.site{display:flex;flex-direction:column;min-height:100dvh;flex:1 0 auto;}#content,.site-content,main,.elementor-location-single,.elementor-location-archive{flex:1 0 auto;}.site-footer,footer,.elementor-location-footer{margin-top:auto;}}</style>';
 
 	if ( ! is_user_logged_in() ) {
 		return;
