@@ -268,8 +268,22 @@ function wrrapd_handle_amazon_callback_path() {
 		exit;
 	}
 
-	if ( ! defined( 'WRRAPD_AMAZON_CLIENT_ID' ) || ! defined( 'WRRAPD_AMAZON_CLIENT_SECRET' ) || WRRAPD_AMAZON_CLIENT_ID === '' || WRRAPD_AMAZON_CLIENT_SECRET === '' ) {
-		wp_safe_redirect( add_query_arg( array( 'wrrapd_amz' => 'config_missing' ), home_url( '/' ) ), 302 );
+	$id_defined = defined( 'WRRAPD_AMAZON_CLIENT_ID' );
+	$sec_defined = defined( 'WRRAPD_AMAZON_CLIENT_SECRET' );
+	$id_val = $id_defined ? trim( (string) WRRAPD_AMAZON_CLIENT_ID ) : '';
+	$sec_val = $sec_defined ? trim( (string) WRRAPD_AMAZON_CLIENT_SECRET ) : '';
+	if ( ! $id_defined || ! $sec_defined || $id_val === '' || $sec_val === '' ) {
+		$reason = 'config_missing';
+		if ( ! $id_defined ) {
+			$reason = 'config_missing_id_undef';
+		} elseif ( $id_val === '' ) {
+			$reason = 'config_missing_id_empty';
+		} elseif ( ! $sec_defined ) {
+			$reason = 'config_missing_secret_undef';
+		} elseif ( $sec_val === '' ) {
+			$reason = 'config_missing_secret_empty';
+		}
+		wp_safe_redirect( add_query_arg( array( 'wrrapd_amz' => $reason ), home_url( '/' ) ), 302 );
 		exit;
 	}
 
@@ -346,6 +360,10 @@ function wrrapd_render_amazon_callback_debug_banner() {
 	$msg_map = array(
 		'missing_code'   => 'Amazon callback missing authorization code.',
 		'config_missing' => 'Amazon login config missing: WRRAPD_AMAZON_CLIENT_ID/SECRET.',
+		'config_missing_id_undef' => 'Amazon config missing: WRRAPD_AMAZON_CLIENT_ID is not defined in active wp-config.',
+		'config_missing_id_empty' => 'Amazon config invalid: WRRAPD_AMAZON_CLIENT_ID is defined but empty.',
+		'config_missing_secret_undef' => 'Amazon config missing: WRRAPD_AMAZON_CLIENT_SECRET is not defined in active wp-config.',
+		'config_missing_secret_empty' => 'Amazon config invalid: WRRAPD_AMAZON_CLIENT_SECRET is defined but empty.',
 		'token_error'    => 'Amazon token request failed.',
 		'token_missing'  => 'Amazon token response missing access token.',
 		'profile_error'  => 'Amazon profile request failed.',
