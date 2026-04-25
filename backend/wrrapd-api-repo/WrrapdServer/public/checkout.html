@@ -452,10 +452,14 @@
 
                 cardElementContainer.innerHTML = '<div style="padding: 10px; text-align: center; color: #666;">Loading payment form...</div>';
 
+                const piBody =
+                    payload.pricingCart && typeof payload.pricingCart === 'object'
+                        ? { orderNumber, total, pricingCart: payload.pricingCart }
+                        : { total, orderNumber };
                 const response = await fetch('https://api.wrrapd.com/create-payment-intent', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ total, orderNumber }),
+                    body: JSON.stringify(piBody),
                 });
 
                 if (!response.ok) {

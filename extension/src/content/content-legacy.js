@@ -51,6 +51,81 @@ import { isZipCodeAllowed } from './lib/zip-codes.js';
 
     const WRRAPD_MANUAL_ADDRESS_TAPS_KEY = 'wrrapd-require-manual-address-taps';
 
+    /** Default catalog when api.wrrapd.com pricing-preview is unavailable. */
+    const WRRAPD_CHECKOUT_UNIT_PRICES_FALLBACK = Object.freeze({
+        giftWrapBase: 6.99,
+        customDesignAi: 2.99,
+        customDesignUpload: 1.99,
+        flowers: 17.99,
+    });
+
+    /** Last successful `/api/pricing-preview` unit prices (geo + surge rules). */
+    let wrrapdCheckoutUnitPriceOverride = null;
+
+    function getActiveCheckoutUnitPrices() {
+        return wrrapdCheckoutUnitPriceOverride || WRRAPD_CHECKOUT_UNIT_PRICES_FALLBACK;
+    }
+
+    /**
+     * Fetches server-resolved prices (zip/state/country + WRRAPD_PRICE_CONFIG_JSON).
+     * Used before Pay + for checkout totals so Stripe intent matches the UI.
+     */
+    async function refreshWrrapdCheckoutUnitPricesFromServer(geo) {
+        try {
+            const u = new URL('https://api.wrrapd.com/api/pricing-preview');
+            if (geo && geo.postalCode) u.searchParams.set('postalCode', String(geo.postalCode).trim().slice(0, 16));
+            if (geo && geo.state) u.searchParams.set('state', String(geo.state).trim().slice(0, 16));
+            if (geo && geo.country) u.searchParams.set('country', String(geo.country).trim().slice(0, 8));
+            const r = await fetch(u.toString(), { credentials: 'omit' });
+            if (!r.ok) return false;
+            const j = await r.json();
+            const up = j && j.unitPrices && typeof j.unitPrices === 'object' ? j.unitPrices : null;
+            if (!up) return false;
+            const next = {
+                giftWrapBase: Number(up.giftWrapBase),
+                customDesignAi: Number(up.customDesignAi),
+                customDesignUpload: Number(up.customDesignUpload),
+                flowers: Number(up.flowers),
+            };
+            if (
+                [next.giftWrapBase, next.customDesignAi, next.customDesignUpload, next.flowers].every(
+                    (n) => Number.isFinite(n) && n >= 0 && n < 100000,
+                )
+            ) {
+                wrrapdCheckoutUnitPriceOverride = next;
+                return true;
+            }
+        } catch (e) {
+            console.warn('[refreshWrrapdCheckoutUnitPricesFromServer]', e);
+        }
+        return false;
+    }
+
+    /**
+     * Compact cart for server-side PaymentIntent amount (must mirror checkout math).
+     */
+    function buildPricingCartForPayment(addressObject) {
+        const allItems = getAllItemsFromLocalStorage();
+        const itemsInCurrentCheckout = filterItemsInCurrentCheckout(allItems);
+        const items = Object.values(itemsInCurrentCheckout).map((item) => ({
+            options: Array.isArray(item.options)
+                ? item.options.map((o) => ({
+                      checkbox_wrrapd: o.checkbox_wrrapd === true,
+                      selected_wrapping_option: o.selected_wrapping_option || null,
+                      checkbox_flowers: o.checkbox_flowers === true,
+                  }))
+                : [],
+        }));
+        const ao = addressObject && typeof addressObject === 'object' ? addressObject : {};
+        return {
+            items,
+            taxRatePercent: getTaxRatePercentage(),
+            ...(ao.postalCode ? { postalCode: String(ao.postalCode).trim().slice(0, 16) } : {}),
+            ...(ao.state ? { state: String(ao.state).trim().slice(0, 16) } : {}),
+            ...(ao.country ? { country: String(ao.country).trim().slice(0, 8) } : {}),
+        };
+    }
+
     /**
      * Chewbacca "Make updates to your items" / per-line ship step.
      * New checkout often uses `/checkout/p/{id}/itemselect` without `useCase=multiAddress` (and casing varies).
@@ -3188,7 +3263,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                             <label style="display: contents;">
                                 <input type="checkbox" id="wrrapd-checkbox-${i}" style="margin-right: 5px; width: 18px; height: 18px; min-width: 18px; min-height: 18px;">
                                 <span class="a-label a-checkbox-label" style="padding: 0;">
-                                    Go beyond the bag!&nbsp;&nbsp;Gift-wrap the box and/or deliver with flowers by Wrrapd - $6.99
+                                    Go beyond the bag!&nbsp;&nbsp;Gift-wrap the box and/or deliver with flowers by Wrrapd - $${getActiveCheckoutUnitPrices().giftWrapBase.toFixed(2)}
                                 </span>
                             </label>
                         </div>
@@ -3262,7 +3337,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                                         <label style="display: flex; align-items: start;">
                                             <input type="radio" name="wrapping-option-${i}" value="upload" style="margin-right: 10px; ">
                                             <div>
-                                                <div style="font-weight: bold;">Upload your own design (+$1.99)</div>
+                                                <div style="font-weight: bold;">Upload your own design (+$${getActiveCheckoutUnitPrices().customDesignUpload.toFixed(2)})</div>
                                                 <input type="file" id="design-upload-${i}" accept="image/*" style="margin-top: 10px; display: none;">
                                                 <button id="upload-btn-${i}" class="a-button" style="margin-top: 10px; padding: 5px 10px; display: none;">
                                                     Upload
@@ -3277,7 +3352,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                                         <label style="display: flex; align-items: start;">
                                             <input type="radio" name="wrapping-option-${i}" value="ai" style="margin-right: 10px;">
                                                 <div style="width: 100%;">
-                                                    <div style="font-weight: bold;">Generate AI designs (+$2.99)</div>
+                                                    <div style="font-weight: bold;">Generate AI designs (+$${getActiveCheckoutUnitPrices().customDesignAi.toFixed(2)})</div>
                                                     <div id="ai-options-${i}" style="display: none; margin-top: 10px; width: 100%;">
                                                         <div style="margin-bottom: 8px; color: #666;">What's the occasion?  Who is the giftee?  What do they like?  Please feel free to suggest any themes...</div>
                                                         <input type="text" id="occasion-input-${i}" 
@@ -3300,7 +3375,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                             <div class="modal-section" style="margin-bottom: 30px;">
                                 <label style="display: flex; align-items: flex-start;">
                                     <input type="checkbox" id="combine-with-flowers-${i}" style="margin-right: 10px;">
-                                    <div style="font-size: 18px; font-weight: bold;">Add Flowers - choose from below (15-20 stem bouquets) - $17.99</div>
+                                    <div style="font-size: 18px; font-weight: bold;">Add Flowers - choose from below (15-20 stem bouquets) - $${getActiveCheckoutUnitPrices().flowers.toFixed(2)}</div>
                                 </label>
 
                                 <div id="flower-designs-${i}" style="display: none; margin-top: 20px;">
@@ -10705,6 +10780,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
     }
 
     function createWrrapdSummary() {
+        let total = 0;
         console.log("[createWrrapdSummary] Attempting to create Wrrapd summary section.");
         if (!wrrapdIsAmazonAccountSignedInSafe()) {
             console.log('[createWrrapdSummary] Amazon session not signed in — skip.');
@@ -10935,19 +11011,6 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
 
                 console.log("[createWrrapdSummary] 'Pay Wrrapd' button clicked. Initiating payment.");
 
-                if (!total || total <= 0) {
-                    payBtn.dataset.wrrapdPayInFlight = '0';
-                    payBtn.disabled = false;
-                    payBtn.removeAttribute('aria-disabled');
-                    payBtn.style.cursor = '';
-                    payBtn.style.opacity = '';
-                    payBtn.style.backgroundColor = '#f0c14b';
-                    payBtn.style.color = 'black';
-                    payBtn.textContent = 'Pay Wrrapd';
-                    alert('Invalid total amount. Please check your order.');
-                    return;
-                }
-
                 try {
                     const addressData = localStorage.getItem('wrrapd-default-address');
                     if (!addressData) {
@@ -11019,6 +11082,25 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                             country: addressObject.country || 'United States'
                         };
                     }
+
+                    await refreshWrrapdCheckoutUnitPricesFromServer({
+                        postalCode: addressObject.postalCode,
+                        state: addressObject.state,
+                        country: addressObject.country,
+                    });
+                    total = updateWrrapdSummary();
+                    if (!total || total <= 0) {
+                        payBtn.dataset.wrrapdPayInFlight = '0';
+                        payBtn.disabled = false;
+                        payBtn.removeAttribute('aria-disabled');
+                        payBtn.style.cursor = '';
+                        payBtn.style.opacity = '';
+                        payBtn.style.backgroundColor = '#f0c14b';
+                        payBtn.style.color = 'black';
+                        payBtn.textContent = 'Pay Wrrapd';
+                        alert('Invalid total amount. Please check your order.');
+                        return;
+                    }
                     
                     // Get ZIP code for the order number
                     let zipCode = "00000";
@@ -11049,11 +11131,13 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                     // { name, street, city, state, postalCode, country, phone }
                     // payload.gifteeOriginalAddress: intended recipient (before Wrrapd warehouse) for checkout UI.
                     // ====================================================================================
+                    const pricingCart = buildPricingCartForPayment(addressObject);
                     const payload = {
                         total: Math.round((total * 100).toFixed(2)),
                         address: addressObject, // Current/default Amazon address (often Wrrapd warehouse when selected)
                         gifteeOriginalAddress: gifteeOriginalAddress,
-                        orderNumber: orderNumber // Add order number to payload
+                        orderNumber: orderNumber, // Add order number to payload
+                        pricingCart,
                     };
 
                     const encodedPayload = btoa(JSON.stringify(payload));
@@ -11453,20 +11537,12 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
         attachWrrapdPlaceOrderTrackingHook();
     }
     
-    /** Catalog unit prices (must match updateWrrapdSummary / Stripe intent math). */
-    const WRRAPD_CHECKOUT_UNIT_PRICES = {
-        giftWrapBase: 6.99,
-        customDesignAi: 2.99,
-        customDesignUpload: 1.99,
-        flowers: 17.99,
-    };
-
     /**
      * Single source of truth for checkout dollar math + per-option rows.
      * Every cart option row is listed with 0 for unused billable dimensions (DB / Elementor mapping).
      */
     function computeWrrapdCheckoutBreakdown(itemsInCurrentCheckout) {
-        const p = WRRAPD_CHECKOUT_UNIT_PRICES;
+        const p = getActiveCheckoutUnitPrices();
         let giftWrapTotal = 0;
         let designAiTotal = 0;
         let designUploadTotal = 0;
@@ -11581,7 +11657,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                 amount: roundMoney2(estimatedTax),
             });
 
-            const pc = WRRAPD_CHECKOUT_UNIT_PRICES;
+            const pc = getActiveCheckoutUnitPrices();
             const aggregateLines = [
                 {
                     code: 'WRPD_GIFT_WRAP_BASE',

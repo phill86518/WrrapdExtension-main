@@ -14,6 +14,7 @@ const crypto = require('crypto');
 const QRCode = require('qrcode');
 const https = require('https');
 const http = require('http');
+const wrrapdPricing = require(path.join(__dirname, 'lib', 'wrrapd-pricing'));
 
 // Initialize Google Cloud Storage
 let storageOptions = {
@@ -224,29 +225,94 @@ const openai = new OpenAI({
 
 app.use(express.static(path.join(__dirname, 'public')));
 
+/** Public: resolved unit prices for checkout UI (Amazon extension + pay.wrrapd.com). */
+app.get('/api/pricing-preview', (req, res) => {
+    if (!req.isApiDomain) {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
+    const geo = {
+        postalCode: typeof req.query.postalCode === 'string' ? req.query.postalCode : '',
+        state: typeof req.query.state === 'string' ? req.query.state : '',
+        country: typeof req.query.country === 'string' ? req.query.country : '',
+    };
+    const r = wrrapdPricing.resolveWrrapdUnitPrices(geo);
+    res.status(200).json({
+        ok: true,
+        unitPrices: r.unitPrices,
+        configVersion: r.configVersion,
+        appliedRuleIds: r.appliedRuleIds,
+        timeZone: r.timeZone,
+    });
+});
+
 // Endpoint specific to api.wrrapd.com
 app.post('/create-payment-intent', async (req, res) => {
     if (!req.isApiDomain) {
         return res.status(403).send('Access forbidden.');
     }
 
-    const { total, orderNumber } = req.body;
+    const { total, orderNumber, pricingCart } = req.body || {};
 
     try {
-        if (!total || total <= 0) {
-            return res.status(400).json({ error: 'Invalid total amount' });
+        let amountCents;
+        let pricingDebug = null;
+        if (pricingCart != null && typeof pricingCart === 'object') {
+            const cart = wrrapdPricing.sanitizePricingCartFromRequest(pricingCart);
+            if (!cart || !Array.isArray(cart.items) || cart.items.length === 0) {
+                return res.status(400).json({ error: 'pricingCart.items required' });
+            }
+            const validated = wrrapdPricing.computeTotalCentsFromPricingCart(cart);
+            if (!validated.ok) {
+                return res.status(400).json({ error: validated.error || 'Invalid cart total' });
+            }
+            const subSum =
+                validated.breakdown.giftWrapTotal +
+                validated.breakdown.designAiTotal +
+                validated.breakdown.designUploadTotal +
+                validated.breakdown.flowersTotal;
+            if (!Number.isFinite(subSum) || subSum <= 0) {
+                return res.status(400).json({ error: 'Zero or invalid Wrrapd subtotal' });
+            }
+            amountCents = validated.cents;
+            pricingDebug = {
+                configVersion: validated.configVersion,
+                appliedRuleIds: validated.appliedRuleIds,
+                serverCents: amountCents,
+            };
+            if (total != null && total !== '') {
+                const clientCents = Math.round(Number(total));
+                if (Number.isFinite(clientCents) && Math.abs(clientCents - amountCents) > 1) {
+                    return res.status(400).json({
+                        error: 'Total does not match server pricing',
+                        serverCents: amountCents,
+                        clientCents,
+                    });
+                }
+            }
+        } else {
+            const n = Math.round(Number(total));
+            if (!Number.isFinite(n) || n <= 0) {
+                return res.status(400).json({ error: 'Invalid total amount' });
+            }
+            amountCents = n;
         }
 
         const paymentIntent = await stripe.paymentIntents.create({
-            amount: total, // Total in cents
+            amount: amountCents,
             currency: 'usd',
             payment_method_types: ['card'],
             metadata: {
-                orderNumber: orderNumber || 'N/A'
-            }
+                orderNumber: orderNumber || 'N/A',
+                ...(pricingDebug && pricingDebug.configVersion
+                    ? { wrrapdPriceVersion: String(pricingDebug.configVersion).slice(0, 80) }
+                    : {}),
+            },
         });
 
-        res.status(200).json({ clientSecret: paymentIntent.client_secret });
+        res.status(200).json({
+            clientSecret: paymentIntent.client_secret,
+            ...(pricingDebug ? { pricing: pricingDebug } : {}),
+        });
     } catch (error) {
         console.error('Error creating PaymentIntent:', error);
         res.status(500).json({ error: 'Failed to create PaymentIntent' });

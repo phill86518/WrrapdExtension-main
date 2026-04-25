@@ -1,0 +1,29 @@
+{
+  "version": "2026-04-24",
+  "defaultUnitPrices": {
+    "giftWrapBase": 6.99,
+    "customDesignAi": 2.99,
+    "customDesignUpload": 1.99,
+    "flowers": 17.99
+  },
+  "globalMultiplier": 1,
+  "rules": [
+    {
+      "id": "peak-holiday-surge",
+      "when": {
+        "dateRanges": [{ "start": "11-24", "end": "12-26" }]
+      },
+      "multiplier": 1.1
+    },
+    {
+      "id": "sample-zip-prefix",
+      "when": { "postalCodePrefixes": ["100", "90210"] },
+      "multiplier": 1.05
+    },
+    {
+      "id": "override-ca-flowers",
+      "when": { "states": ["CA"] },
+      "unitPrices": { "flowers": 19.5 }
+    }
+  ]
+}
