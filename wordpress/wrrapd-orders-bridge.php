@@ -192,6 +192,146 @@ add_action( 'wp_login', 'wrrapd_on_wp_login', 10, 2 );
 add_action( 'user_register', 'wrrapd_on_user_register', 10, 1 );
 
 /**
+ * Fetch orders for the current WP user from the pay API.
+ *
+ * @return array<int, array<string, mixed>>|null
+ */
+function wrrapd_fetch_orders_for_user( WP_User $user ) {
+	if ( ! $user || ! $user->ID || ! is_string( $user->user_email ) || $user->user_email === '' ) {
+		return null;
+	}
+	$r = wrrapd_bridge_json_post(
+		'/api/internal/orders-for-wp-user',
+		array(
+			'email'    => $user->user_email,
+			'wpUserId' => (string) $user->ID,
+		)
+	);
+	if ( ! $r['ok'] || ! is_array( $r['body'] ) || empty( $r['body']['ok'] ) ) {
+		return null;
+	}
+	return isset( $r['body']['orders'] ) && is_array( $r['body']['orders'] ) ? $r['body']['orders'] : array();
+}
+
+/**
+ * Slow the extension CTA blink globally and hide the CTA for signed-in users with orders.
+ */
+function wrrapd_inject_header_cta_rules() {
+	if ( is_admin() ) {
+		return;
+	}
+	echo '<style id="wrrapd-cta-slower-blink">@keyframes wrrapd-cta-blink-slow{0%,100%{filter:brightness(1);box-shadow:0 0 0 0 rgba(234,88,12,.45);}50%{filter:brightness(1.12);box-shadow:0 0 14px 3px rgba(234,88,12,.35);}}.elementor-element-7f1bdc1 .elementor-button,.elementor-element-eb0b235 .elementor-button,.elementor-element-7f1bdc1 a.elementor-button,.elementor-element-eb0b235 a.elementor-button{animation:wrrapd-cta-blink-slow 3.5s ease-in-out infinite!important;}</style>';
+
+	if ( ! is_user_logged_in() ) {
+		return;
+	}
+	$user = wp_get_current_user();
+	if ( ! ( $user instanceof WP_User ) || ! $user->ID ) {
+		return;
+	}
+	$orders = wrrapd_fetch_orders_for_user( $user );
+	$has_orders = is_array( $orders ) && count( $orders ) > 0;
+	if ( ! $has_orders ) {
+		return;
+	}
+	echo '<style id="wrrapd-hide-cta-when-orders">.elementor-element-7f1bdc1,.elementor-element-eb0b235{display:none!important;}</style>';
+	echo '<script>(function(){var re=/add\\s+your\\s+free\\s+chrome\\s+extension\\s+today/i;document.querySelectorAll("a,button,.elementor-button,.elementor-heading-title").forEach(function(el){var t=(el.textContent||"").replace(/\\s+/g," ").trim();if(!re.test(t))return;var wrap=el.closest(".elementor-element,section,div")||el;wrap.style.display="none";});})();</script>';
+}
+add_action( 'wp_head', 'wrrapd_inject_header_cta_rules', 99 );
+
+/**
+ * Keep footer year current and absorb dead Amazon callback route into home.
+ */
+function wrrapd_site_footer_hygiene() {
+	if ( is_admin() ) {
+		return;
+	}
+	$year = (string) gmdate( 'Y' );
+	echo '<script>(function(){var y=' . wp_json_encode( $year ) . ';var yr=/\\b20\\d{2}\\b/;document.querySelectorAll("footer, .site-footer, .elementor-location-footer, [class*=footer]").forEach(function(root){if(!root)return;root.querySelectorAll("*").forEach(function(n){if(!n||!n.childNodes||n.childNodes.length!==1||n.childNodes[0].nodeType!==3)return;var t=(n.textContent||"").trim();if(!t)return;if(/copyright|all rights reserved|©/i.test(t)&&yr.test(t)){n.textContent=t.replace(yr,y);}});});})();</script>';
+}
+add_action( 'wp_footer', 'wrrapd_site_footer_hygiene', 99 );
+
+/**
+ * Fallback: if Amazon returns to an unmapped WP path, avoid 404/footer corruption.
+ */
+function wrrapd_handle_amazon_callback_path() {
+	$uri = isset( $_SERVER['REQUEST_URI'] ) ? (string) wp_unslash( $_SERVER['REQUEST_URI'] ) : '';
+	if ( $uri === '' ) {
+		return;
+	}
+	if ( strpos( $uri, '/auth/amazon/callback' ) !== 0 ) {
+		return;
+	}
+	$code = isset( $_GET['code'] ) ? sanitize_text_field( wp_unslash( $_GET['code'] ) ) : '';
+	if ( $code === '' ) {
+		wp_safe_redirect( add_query_arg( array( 'wrrapd_amz' => 'missing_code' ), home_url( '/' ) ), 302 );
+		exit;
+	}
+
+	if ( ! defined( 'WRRAPD_AMAZON_CLIENT_ID' ) || ! defined( 'WRRAPD_AMAZON_CLIENT_SECRET' ) || WRRAPD_AMAZON_CLIENT_ID === '' || WRRAPD_AMAZON_CLIENT_SECRET === '' ) {
+		wp_safe_redirect( add_query_arg( array( 'wrrapd_amz' => 'config_missing' ), home_url( '/' ) ), 302 );
+		exit;
+	}
+
+	$token_res = wp_remote_post(
+		'https://api.amazon.com/auth/o2/token',
+		array(
+			'timeout' => 20,
+			'body'    => array(
+				'grant_type'    => 'authorization_code',
+				'code'          => $code,
+				'client_id'     => WRRAPD_AMAZON_CLIENT_ID,
+				'client_secret' => WRRAPD_AMAZON_CLIENT_SECRET,
+				'redirect_uri'  => home_url( '/auth/amazon/callback' ),
+			),
+		)
+	);
+	if ( is_wp_error( $token_res ) ) {
+		wp_safe_redirect( add_query_arg( array( 'wrrapd_amz' => 'token_error' ), home_url( '/' ) ), 302 );
+		exit;
+	}
+	$token_body = json_decode( (string) wp_remote_retrieve_body( $token_res ), true );
+	$access     = ( is_array( $token_body ) && isset( $token_body['access_token'] ) ) ? trim( (string) $token_body['access_token'] ) : '';
+	if ( $access === '' ) {
+		wp_safe_redirect( add_query_arg( array( 'wrrapd_amz' => 'token_missing' ), home_url( '/' ) ), 302 );
+		exit;
+	}
+
+	$profile_res = wp_remote_get(
+		'https://api.amazon.com/user/profile',
+		array(
+			'timeout' => 20,
+			'headers' => array(
+				'Authorization' => 'Bearer ' . $access,
+			),
+		)
+	);
+	if ( is_wp_error( $profile_res ) ) {
+		wp_safe_redirect( add_query_arg( array( 'wrrapd_amz' => 'profile_error' ), home_url( '/' ) ), 302 );
+		exit;
+	}
+	$profile      = json_decode( (string) wp_remote_retrieve_body( $profile_res ), true );
+	$amazon_email = ( is_array( $profile ) && isset( $profile['email'] ) ) ? sanitize_email( (string) $profile['email'] ) : '';
+	if ( $amazon_email === '' || ! is_email( $amazon_email ) ) {
+		wp_safe_redirect( add_query_arg( array( 'wrrapd_amz' => 'email_missing' ), home_url( '/' ) ), 302 );
+		exit;
+	}
+
+	$user = get_user_by( 'email', $amazon_email );
+	if ( ! ( $user instanceof WP_User ) ) {
+		wp_safe_redirect( add_query_arg( array( 'wrrapd_amz' => 'no_user' ), home_url( '/' ) ), 302 );
+		exit;
+	}
+
+	wp_set_current_user( (int) $user->ID );
+	wp_set_auth_cookie( (int) $user->ID, true );
+	wrrapd_claim_orders_for_user( $user );
+	wp_safe_redirect( home_url( '/' ), 302 );
+	exit;
+}
+add_action( 'template_redirect', 'wrrapd_handle_amazon_callback_path', 0 );
+
+/**
  * @param mixed $v
  */
 function wrrapd_cell_text( $v ) {
@@ -495,7 +635,13 @@ function wrrapd_render_orders_legacy_cards( array $orders, array $overlays ) {
 .wrrapd-legacy-cards-root .save-btn,.wrrapd-legacy-cards-root .delivery-btn{padding:.42rem .85rem;width:100%;border:none;border-radius:.3rem;cursor:pointer;font-size:.8rem;}
 .wrrapd-legacy-cards-root .save-btn{background:#c00;color:#fff;font-weight:600;}
 .wrrapd-legacy-cards-root .delivery-btn{background:#f6b933;color:#000;}
-.wrrapd-legacy-cards-root .delivery-btn[disabled]{cursor:not-allowed;opacity:.8;}
+.wrrapd-legacy-cards-root .wrrapd-legacy-modal{position:fixed;inset:0;z-index:100000;background:rgba(15,23,42,.72);display:none;align-items:center;justify-content:center;padding:1rem;}
+.wrrapd-legacy-cards-root .wrrapd-legacy-modal.wrrapd-legacy-modal--open{display:flex;}
+.wrrapd-legacy-cards-root .wrrapd-legacy-modal-card{width:min(96vw,460px);max-height:86vh;overflow:auto;background:#fff;border-radius:.6rem;border:1px solid #cbd5e1;padding:.9rem 1rem;box-shadow:0 14px 30px rgba(0,0,0,.25);}
+.wrrapd-legacy-cards-root .wrrapd-legacy-modal-card h3{margin:0 0 .55rem;font-size:.95rem;}
+.wrrapd-legacy-cards-root .wrrapd-legacy-modal-copy{white-space:pre-wrap;word-break:break-word;font-size:.8rem;line-height:1.45;color:#111827;margin:0 0 .7rem;}
+.wrrapd-legacy-cards-root .wrrapd-legacy-modal-actions{display:flex;justify-content:flex-end;}
+.wrrapd-legacy-cards-root .wrrapd-legacy-modal-close{border:1px solid #94a3b8;background:#f8fafc;color:#0f172a;border-radius:.35rem;padding:.35rem .65rem;cursor:pointer;font-size:.78rem;}
 .wrrapd-legacy-cards-root .wrrapd-legacy-order-foot{margin-top:.75rem;padding-top:.65rem;border-top:1px solid #ddd;clear:both;}
 .wrrapd-legacy-cards-root .wrrapd-legacy-order-foot .wrrapd-amz-summary{font-size:.78rem;padding:.35rem .45rem;}
 .wrrapd-legacy-cards-root .wrrapd-legacy-order-foot .wrrapd-amz-inv-row{font-size:.74rem;padding:.08rem 0;}
@@ -656,9 +802,33 @@ function wrrapd_render_orders_legacy_cards( array $orders, array $overlays ) {
 			echo '<div class="info-box wrrapd-legacy-comment-row">';
 			echo '<input type="text" class="wrrapd-legacy-comment" id="' . esc_attr( $wrap_id . '-c-' . $id_sfx ) . '" value="' . esc_attr( $comment ) . '" maxlength="4000" placeholder="' . esc_attr__( 'Additional note', 'wrrapd' ) . '" aria-label="' . esc_attr__( 'Additional note', 'wrrapd' ) . '" /></div>';
 
+			$delivery_bits = array();
+			$delivery_map  = array(
+				'deliveryHint'   => __( 'Delivery', 'wrrapd' ),
+				'deliveryDate'   => __( 'Delivery date', 'wrrapd' ),
+				'deliveryEta'    => __( 'Estimated arrival', 'wrrapd' ),
+				'carrier'        => __( 'Carrier', 'wrrapd' ),
+				'trackingNumber' => __( 'Tracking #', 'wrrapd' ),
+			);
+			foreach ( $delivery_map as $k => $lbl ) {
+				$v = isset( $ln[ $k ] ) ? trim( (string) $ln[ $k ] ) : '';
+				if ( $v !== '' ) {
+					$delivery_bits[] = $lbl . ': ' . $v;
+				}
+			}
+			if ( isset( $ln['delivery'] ) && is_array( $ln['delivery'] ) ) {
+				foreach ( array( 'carrier', 'trackingNumber', 'eta', 'status', 'address' ) as $k ) {
+					$v = isset( $ln['delivery'][ $k ] ) ? trim( (string) $ln['delivery'][ $k ] ) : '';
+					if ( $v !== '' ) {
+						$delivery_bits[] = ucfirst( (string) $k ) . ': ' . $v;
+					}
+				}
+			}
+			$delivery_text = count( $delivery_bits ) > 0 ? implode( "\n", array_unique( $delivery_bits ) ) : (string) __( 'No delivery details are available for this line item yet.', 'wrrapd' );
+
 			echo '<div class="save-section">';
 			echo '<button type="button" class="save-btn wrrapd-legacy-save">' . esc_html__( 'Save / Update', 'wrrapd' ) . '</button>';
-			echo '<button type="button" class="delivery-btn wrrapd-legacy-delivery" disabled title="' . esc_attr__( 'Coming soon', 'wrrapd' ) . '">' . esc_html__( 'Delivery details', 'wrrapd' ) . '</button>';
+			echo '<button type="button" class="delivery-btn wrrapd-legacy-delivery" data-delivery="' . esc_attr( $delivery_text ) . '">' . esc_html__( 'Delivery details', 'wrrapd' ) . '</button>';
 			echo '</div></div>';
 
 			++$li;
@@ -669,9 +839,11 @@ function wrrapd_render_orders_legacy_cards( array $orders, array $overlays ) {
 		echo '</div>';
 		echo '</div></div>';
 	}
+	echo '<div class="wrrapd-legacy-modal" id="' . esc_attr( $wrap_id ) . '-delivery-modal" aria-hidden="true"><div class="wrrapd-legacy-modal-card" role="dialog" aria-modal="true" aria-label="' . esc_attr__( 'Delivery details', 'wrrapd' ) . '"><h3>' . esc_html__( 'Delivery details', 'wrrapd' ) . '</h3><div class="wrrapd-legacy-modal-copy"></div><div class="wrrapd-legacy-modal-actions"><button type="button" class="wrrapd-legacy-modal-close">' . esc_html__( 'Close', 'wrrapd' ) . '</button></div></div></div>';
 
 	$wrap_json = wp_json_encode( $wrap_id );
 	echo '<script>(function(){var root=document.getElementById(' . $wrap_json . ');if(!root)return;var ajax=root.getAttribute("data-ajax-url");var nonce=root.getAttribute("data-nonce");root.querySelectorAll(".wrrapd-legacy-rem").forEach(function(cb){var line=cb.closest(".wrrapd-legacy-line");if(!line)return;var sd=line.querySelector(".wrrapd-legacy-rem-days");function sync(){if(sd)sd.disabled=!cb.checked;}sync();cb.addEventListener("change",sync);});root.querySelectorAll(".wrrapd-legacy-save").forEach(function(btn){btn.addEventListener("click",function(){var line=btn.closest(".wrrapd-legacy-line");if(!line)return;var fd=new FormData();fd.append("action","wrrapd_save_order_line_overlay");fd.append("nonce",nonce);fd.append("orderNumber",line.getAttribute("data-order")||"");fd.append("lineIndex",line.getAttribute("data-line")||"0");var g=line.querySelector(".wrrapd-legacy-giftee");fd.append("giftee",g?g.value:"");var rel=line.querySelector(".wrrapd-legacy-rel");fd.append("relationship",rel?rel.value:"");var occ=line.querySelector(".wrrapd-legacy-occ");fd.append("occasion_pick",occ?occ.value:"");var dt=line.querySelector(".wrrapd-legacy-date");fd.append("gift_date",dt?dt.value:"");var rcb=line.querySelector(".wrrapd-legacy-rem");var ron=rcb&&rcb.checked;fd.append("reminder_next_year",ron?"1":"");var rdp=line.querySelector(".wrrapd-legacy-rem-days");fd.append("reminder_days_prior",ron&&rdp&&!rdp.disabled?(rdp.value||"1"):"");var cm=line.querySelector(".wrrapd-legacy-comment");fd.append("comment",cm?cm.value:"");btn.disabled=true;fetch(ajax,{method:"POST",body:fd,credentials:"same-origin"}).then(function(r){return r.json();}).then(function(j){btn.disabled=false;if(j&&j.success){btn.style.boxShadow="0 0 0 2px rgba(34,197,94,.6)";window.setTimeout(function(){btn.style.boxShadow="";},650);}else{btn.style.opacity="0.65";window.setTimeout(function(){btn.style.opacity="";},800);}}).catch(function(){btn.disabled=false;});});});})();</script>';
+	echo '<script>(function(){var root=document.getElementById(' . $wrap_json . ');if(!root)return;var modal=document.getElementById(root.id+"-delivery-modal");if(!modal)return;var body=modal.querySelector(".wrrapd-legacy-modal-copy");function closeModal(){modal.classList.remove("wrrapd-legacy-modal--open");modal.setAttribute("aria-hidden","true");}root.querySelectorAll(".wrrapd-legacy-delivery").forEach(function(btn){btn.addEventListener("click",function(){if(body)body.textContent=btn.getAttribute("data-delivery")||"";modal.classList.add("wrrapd-legacy-modal--open");modal.setAttribute("aria-hidden","false");});});modal.addEventListener("click",function(e){if(e.target===modal||e.target.closest(".wrrapd-legacy-modal-close"))closeModal();});document.addEventListener("keydown",function(e){if(e.key==="Escape"&&modal.classList.contains("wrrapd-legacy-modal--open"))closeModal();});})();</script>';
 
 	echo '</div>';
 	return (string) ob_get_clean();
@@ -1386,18 +1558,10 @@ function wrrapd_shortcode_review_orders( $atts ) {
 		return '';
 	}
 	wrrapd_claim_orders_for_user( $user );
-
-	$r = wrrapd_bridge_json_post(
-		'/api/internal/orders-for-wp-user',
-		array(
-			'email'    => $user->user_email,
-			'wpUserId' => (string) $user->ID,
-		)
-	);
-	if ( ! $r['ok'] || ! is_array( $r['body'] ) || empty( $r['body']['ok'] ) ) {
+	$orders = wrrapd_fetch_orders_for_user( $user );
+	if ( ! is_array( $orders ) ) {
 		return '<p class="wrrapd-review-orders wrrapd-error">' . esc_html__( 'We could not load your orders right now. Please try again later.', 'wrrapd' ) . '</p>';
 	}
-	$orders = isset( $r['body']['orders'] ) && is_array( $r['body']['orders'] ) ? $r['body']['orders'] : array();
 	if ( count( $orders ) === 0 ) {
 		return '<p class="wrrapd-review-orders">' . esc_html__( 'No Wrrapd orders were found for your account email yet.', 'wrrapd' ) . '</p>';
 	}
