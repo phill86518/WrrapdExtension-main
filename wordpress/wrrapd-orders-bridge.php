@@ -221,15 +221,10 @@ function wrrapd_inject_header_cta_rules() {
 		return;
 	}
 	echo '<style id="wrrapd-cta-slower-blink">@keyframes wrrapd-cta-blink-slow{0%,100%{filter:brightness(1);box-shadow:0 0 0 0 rgba(234,88,12,.45);}50%{filter:brightness(1.12);box-shadow:0 0 14px 3px rgba(234,88,12,.35);}}.elementor-element-7f1bdc1 .elementor-button,.elementor-element-eb0b235 .elementor-button,.elementor-element-7f1bdc1 a.elementor-button,.elementor-element-eb0b235 a.elementor-button{animation:wrrapd-cta-blink-slow 3.5s ease-in-out infinite!important;}</style>';
-	echo '<style id="wrrapd-mobile-footer-stick">@media (max-width:900px){html,body{min-height:100%;}body{min-height:100dvh;display:flex;flex-direction:column;}#page,.site{display:flex;flex-direction:column;min-height:100dvh;flex:1 0 auto;}#content,.site-content,main,.elementor-location-single,.elementor-location-archive{flex:1 0 auto;}.site-footer,footer,.elementor-location-footer{margin-top:auto;}}</style>';
 
 	if ( ! is_user_logged_in() ) {
 		return;
 	}
-	$mobile_account_url = home_url( '/account/' );
-	$mobile_logout_url  = wp_logout_url( home_url( '/' ) );
-	echo '<style id="wrrapd-mobile-auth-links-css">@media (max-width:900px){#wrrapd-mobile-auth-links{display:flex;gap:8px;align-items:center;justify-content:flex-end;padding:8px 12px;background:#0b0b78;border-top:1px solid rgba(255,255,255,.15);border-bottom:1px solid rgba(255,255,255,.15);position:relative;z-index:1000;}#wrrapd-mobile-auth-links a{display:inline-flex;align-items:center;justify-content:center;min-height:30px;padding:0 12px;border-radius:999px;background:#f6c343;color:#0b0b78!important;font:700 12px/1.1 Arial,sans-serif;text-decoration:none!important;box-shadow:0 1px 2px rgba(0,0,0,.25);}}</style>';
-	echo '<script>(function(){var accountUrl=' . wp_json_encode( $mobile_account_url ) . ';var logoutUrl=' . wp_json_encode( $mobile_logout_url ) . ';function wrInject(){if(window.innerWidth>900)return;var hdr=document.querySelector("header, .site-header, .elementor-location-header");if(!hdr)return;var wrap=document.getElementById("wrrapd-mobile-auth-links");if(!wrap){wrap=document.createElement("div");wrap.id="wrrapd-mobile-auth-links";var a1=document.createElement("a");a1.href=accountUrl;a1.textContent="Account";var a2=document.createElement("a");a2.href=logoutUrl;a2.textContent="Logout";wrap.appendChild(a1);wrap.appendChild(a2);hdr.insertAdjacentElement("afterend",wrap);}else{var links=wrap.querySelectorAll("a");if(links[0])links[0].href=accountUrl;if(links[1])links[1].href=logoutUrl;}}if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",wrInject,{once:true});}else{wrInject();}window.addEventListener("resize",wrInject);setTimeout(wrInject,600);})();</script>';
 	$user = wp_get_current_user();
 	if ( ! ( $user instanceof WP_User ) || ! $user->ID ) {
 		return;
