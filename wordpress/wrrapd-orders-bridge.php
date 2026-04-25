@@ -264,7 +264,7 @@ function wrrapd_handle_amazon_callback_path() {
 	}
 	$code = isset( $_GET['code'] ) ? sanitize_text_field( wp_unslash( $_GET['code'] ) ) : '';
 	if ( $code === '' ) {
-		wp_safe_redirect( add_query_arg( array( 'wrrapd_amz' => 'missing_code' ), home_url( '/' ) ), 302 );
+		wp_safe_redirect( home_url( '/' ), 302 );
 		exit;
 	}
 
@@ -294,32 +294,13 @@ function wrrapd_handle_amazon_callback_path() {
 	$id_ok  = ( $id_val !== '' && strpos( $id_val, 'amzn1.application-oa2-client.' ) === 0 );
 	$sec_ok = ( $sec_val !== '' && stripos( $sec_val, 'YOUR_' ) === false );
 	if ( ! $id_ok || ! $sec_ok ) {
-		$reason = 'config_missing';
-		$has_w_id  = defined( 'WRRAPD_AMAZON_CLIENT_ID' );
-		$has_w_sec = defined( 'WRRAPD_AMAZON_CLIENT_SECRET' );
-		$has_l_id  = defined( 'AMAZON_CLIENT_ID' );
-		$has_l_sec = defined( 'AMAZON_CLIENT_SECRET' );
-		if ( ! $id_ok ) {
-			if ( ! $has_w_id && ! $has_l_id ) {
-				$reason = 'config_missing_id_undef';
-			} else {
-				$reason = 'config_missing_id_empty';
-			}
-		} elseif ( ! $sec_ok ) {
-			if ( ! $has_w_sec && ! $has_l_sec ) {
-				$reason = 'config_missing_secret_undef';
-			} else {
-				$reason = 'config_missing_secret_empty';
-			}
-		}
-		wp_safe_redirect( add_query_arg( array( 'wrrapd_amz' => $reason ), home_url( '/' ) ), 302 );
+		wp_safe_redirect( home_url( '/' ), 302 );
 		exit;
 	}
 
 	$redirect_uri = home_url( '/auth/amazon/callback' );
 	$token_body   = array();
 	$token_raw    = '';
-	$token_http   = 0;
 
 	$token_res = wp_remote_post(
 		'https://api.amazon.com/auth/o2/token',
@@ -343,35 +324,15 @@ function wrrapd_handle_amazon_callback_path() {
 		)
 	);
 	if ( is_wp_error( $token_res ) ) {
-		wp_safe_redirect( add_query_arg( array( 'wrrapd_amz' => 'token_error' ), home_url( '/' ) ), 302 );
+		wp_safe_redirect( home_url( '/' ), 302 );
 		exit;
 	}
-	$token_http = (int) wp_remote_retrieve_response_code( $token_res );
 	$token_raw  = (string) wp_remote_retrieve_body( $token_res );
 	$decoded    = json_decode( $token_raw, true );
 	$token_body = is_array( $decoded ) ? $decoded : array();
 	$access     = ( is_array( $token_body ) && isset( $token_body['access_token'] ) ) ? trim( (string) $token_body['access_token'] ) : '';
 	if ( $access === '' ) {
-		$tk_err  = is_array( $token_body ) && isset( $token_body['error'] ) ? sanitize_key( (string) $token_body['error'] ) : '';
-		$tk_desc = is_array( $token_body ) && isset( $token_body['error_description'] ) ? sanitize_text_field( (string) $token_body['error_description'] ) : '';
-		$status  = $tk_err !== '' ? ( 'token_' . $tk_err ) : 'token_missing';
-		$dbg     = array(
-			'http'         => $token_http,
-			'redirect_uri' => $redirect_uri,
-			'home'         => home_url( '/' ),
-			'siteurl'      => site_url( '/' ),
-			'client_tail'  => strlen( $id_val ) > 10 ? substr( $id_val, -10 ) : $id_val,
-			'raw_head'     => substr( preg_replace( '/\s+/', ' ', $token_raw ), 0, 180 ),
-		);
-		$target  = add_query_arg(
-			array(
-				'wrrapd_amz'      => $status,
-				'wrrapd_amz_desc' => rawurlencode( $tk_desc ),
-				'wrrapd_amz_dbg'  => rawurlencode( base64_encode( wp_json_encode( $dbg ) ) ),
-			),
-			home_url( '/' )
-		);
-		wp_safe_redirect( $target, 302 );
+		wp_safe_redirect( home_url( '/' ), 302 );
 		exit;
 	}
 
@@ -385,19 +346,19 @@ function wrrapd_handle_amazon_callback_path() {
 		)
 	);
 	if ( is_wp_error( $profile_res ) ) {
-		wp_safe_redirect( add_query_arg( array( 'wrrapd_amz' => 'profile_error' ), home_url( '/' ) ), 302 );
+		wp_safe_redirect( home_url( '/' ), 302 );
 		exit;
 	}
 	$profile      = json_decode( (string) wp_remote_retrieve_body( $profile_res ), true );
 	$amazon_email = ( is_array( $profile ) && isset( $profile['email'] ) ) ? sanitize_email( (string) $profile['email'] ) : '';
 	if ( $amazon_email === '' || ! is_email( $amazon_email ) ) {
-		wp_safe_redirect( add_query_arg( array( 'wrrapd_amz' => 'email_missing' ), home_url( '/' ) ), 302 );
+		wp_safe_redirect( home_url( '/' ), 302 );
 		exit;
 	}
 
 	$user = get_user_by( 'email', $amazon_email );
 	if ( ! ( $user instanceof WP_User ) ) {
-		wp_safe_redirect( add_query_arg( array( 'wrrapd_amz' => 'no_user' ), home_url( '/' ) ), 302 );
+		wp_safe_redirect( home_url( '/' ), 302 );
 		exit;
 	}
 
@@ -408,62 +369,6 @@ function wrrapd_handle_amazon_callback_path() {
 	exit;
 }
 add_action( 'template_redirect', 'wrrapd_handle_amazon_callback_path', 0 );
-
-/**
- * Show visible debug banner for Amazon callback outcomes.
- * Enabled when `?wrrapd_amz=...` is present after callback redirect.
- */
-function wrrapd_render_amazon_callback_debug_banner() {
-	if ( is_admin() ) {
-		return;
-	}
-	$code = isset( $_GET['wrrapd_amz'] ) ? sanitize_text_field( wp_unslash( $_GET['wrrapd_amz'] ) ) : '';
-	if ( $code === '' ) {
-		return;
-	}
-	$msg_map = array(
-		'missing_code'   => 'Amazon callback missing authorization code.',
-		'config_missing' => 'Amazon login config missing: WRRAPD_AMAZON_CLIENT_ID/SECRET.',
-		'config_missing_id_undef' => 'Amazon config missing: WRRAPD_AMAZON_CLIENT_ID is not defined in active wp-config.',
-		'config_missing_id_empty' => 'Amazon config invalid: WRRAPD_AMAZON_CLIENT_ID is defined but empty.',
-		'config_missing_secret_undef' => 'Amazon config missing: WRRAPD_AMAZON_CLIENT_SECRET is not defined in active wp-config.',
-		'config_missing_secret_empty' => 'Amazon config invalid: WRRAPD_AMAZON_CLIENT_SECRET is defined but empty.',
-		'token_error'    => 'Amazon token request failed.',
-		'token_missing'  => 'Amazon token response missing access token.',
-		'profile_error'  => 'Amazon profile request failed.',
-		'email_missing'  => 'Amazon profile did not return a valid email.',
-		'no_user'        => 'No WordPress user exists with this Amazon email.',
-	);
-	$msg = isset( $msg_map[ $code ] ) ? $msg_map[ $code ] : ( 'Amazon callback status: ' . $code );
-	$desc = isset( $_GET['wrrapd_amz_desc'] ) ? sanitize_text_field( rawurldecode( (string) wp_unslash( $_GET['wrrapd_amz_desc'] ) ) ) : '';
-	if ( strpos( $code, 'token_' ) === 0 && $desc !== '' ) {
-		$msg .= ' Details: ' . $desc;
-	}
-	$dbg_b64 = isset( $_GET['wrrapd_amz_dbg'] ) ? (string) wp_unslash( $_GET['wrrapd_amz_dbg'] ) : '';
-	if ( $dbg_b64 !== '' ) {
-		$dbg_json = base64_decode( rawurldecode( $dbg_b64 ), true );
-		if ( is_string( $dbg_json ) && $dbg_json !== '' ) {
-			$dbg = json_decode( $dbg_json, true );
-			if ( is_array( $dbg ) ) {
-				$msg .= ' Runtime: HTTP ' . ( isset( $dbg['http'] ) ? (string) (int) $dbg['http'] : '?' );
-				if ( ! empty( $dbg['redirect_uri'] ) ) {
-					$msg .= '; redirect_uri=' . (string) $dbg['redirect_uri'];
-				}
-				if ( ! empty( $dbg['home'] ) || ! empty( $dbg['siteurl'] ) ) {
-					$msg .= '; home=' . (string) ( $dbg['home'] ?? '' ) . '; siteurl=' . (string) ( $dbg['siteurl'] ?? '' );
-				}
-				if ( ! empty( $dbg['client_tail'] ) ) {
-					$msg .= '; client_id_tail=' . (string) $dbg['client_tail'];
-				}
-				if ( ! empty( $dbg['raw_head'] ) ) {
-					$msg .= '; body_head=' . (string) $dbg['raw_head'];
-				}
-			}
-		}
-	}
-	echo '<div style="position:fixed;left:12px;right:12px;top:12px;z-index:100001;background:#7f1d1d;color:#fff;border:2px solid #fecaca;border-radius:8px;padding:10px 12px;font:600 14px/1.35 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;box-shadow:0 6px 16px rgba(0,0,0,.25);">Amazon login debug: ' . esc_html( $msg ) . '</div>';
-}
-add_action( 'wp_body_open', 'wrrapd_render_amazon_callback_debug_banner', 1 );
 
 /**
  * @param mixed $v
