@@ -2137,59 +2137,86 @@ app.post('/generate-ideas', async (req, res) => {
         return res.status(400).json({ error: 'Occasion is required' });
     }
 
-	    try {
-		            console.log(`[generate-ideas] Received occasion: ${occasion}`);
+    try {
+	            console.log(`[generate-ideas] Received occasion: ${occasion}`);
 
-		            // Step 1: Generate text descriptions using GPT-4o
+	            // Step 1: Generate text descriptions using GPT-4o
         console.log('[generate-ideas] Generating design descriptions...');
-        const completion = await openai.chat.completions.create({
-            model: "gpt-4o",
-            messages: [{
-                role: "system",
-                content: "You are a creative gift wrapping designer. Generate 3 unique wrapping paper design ideas. Keep each description brief and impactful - maximum two short sentences per design."
-            }, {
-                role: "user",
-                content: `Generate 3 concise wrapping paper designs for this occasion: ${occasion}`
-            }],
-            temperature: 0.7,
-            max_tokens: 200,
-            response_format: {
-                type: "json_schema",
-                json_schema: {
-                    name: "wrapping_paper_designs",
-                    schema: {
-                        type: "object",
-                        properties: {
-                            designs: {
-                                type: "array",
-                                items: {
-                                    type: "object",
-                                    properties: {
-                                        title: {
-                                            type: "string",
-                                            description: "A short, catchy title for the wrapping paper design"
+        let designs = [];
+        try {
+            const completion = await openai.chat.completions.create({
+                model: "gpt-4o",
+                messages: [{
+                    role: "system",
+                    content: "You are a creative gift wrapping designer. Generate 3 unique wrapping paper design ideas. Keep each description brief and impactful - maximum two short sentences per design."
+                }, {
+                    role: "user",
+                    content: `Generate 3 concise wrapping paper designs for this occasion: ${occasion}`
+                }],
+                temperature: 0.7,
+                max_tokens: 200,
+                response_format: {
+                    type: "json_schema",
+                    json_schema: {
+                        name: "wrapping_paper_designs",
+                        schema: {
+                            type: "object",
+                            properties: {
+                                designs: {
+                                    type: "array",
+                                    items: {
+                                        type: "object",
+                                        properties: {
+                                            title: {
+                                                type: "string",
+                                                description: "A short, catchy title for the wrapping paper design"
+                                            },
+                                            description: {
+                                                type: "string",
+                                                description: "A detailed description of the wrapping paper design"
+                                            }
                                         },
-                                        description: {
-                                            type: "string",
-                                            description: "A detailed description of the wrapping paper design"
-                                        }
-                                    },
-                                    required: ["title", "description"],
-                                    additionalProperties: false
+                                        required: ["title", "description"],
+                                        additionalProperties: false
+                                    }
                                 }
-                            }
+                            },
+                            required: ["designs"],
+                            additionalProperties: false
                         },
-                        required: ["designs"],
-                        additionalProperties: false
-                    },
-                    strict: true
+                        strict: true
+                    }
                 }
-            }
-        });
+            });
 
-        // Parse the JSON response
-        const designsData = JSON.parse(completion.choices[0].message.content);
-        const designs = designsData.designs || [];
+            const rawContent = completion?.choices?.[0]?.message?.content;
+            if (typeof rawContent !== 'string' || !rawContent.trim()) {
+                throw new Error('OpenAI returned empty structured content');
+            }
+            const designsData = JSON.parse(rawContent);
+            designs = Array.isArray(designsData?.designs) ? designsData.designs : [];
+        } catch (openAiError) {
+            console.error('[generate-ideas] OpenAI structured output failed; using fallback text designs:', openAiError.message);
+        }
+
+        // Always return useful choices even when OpenAI structured output is unavailable.
+        if (!Array.isArray(designs) || designs.length === 0) {
+            const safeOccasion = String(occasion || 'gift').trim() || 'gift';
+            designs = [
+                {
+                    title: `${safeOccasion} Confetti`,
+                    description: `Playful repeating confetti and ribbon motifs inspired by ${safeOccasion}. Balanced colors, clean shapes, seamless pattern.`
+                },
+                {
+                    title: `${safeOccasion} Botanical`,
+                    description: `Soft floral and leaf geometry themed for ${safeOccasion}. Elegant spacing, subtle contrast, seamless wrapping-paper texture.`
+                },
+                {
+                    title: `${safeOccasion} Modern Lines`,
+                    description: `Modern abstract lines and geometric accents for ${safeOccasion}. Contemporary palette, high legibility, seamless repeat.`
+                }
+            ];
+        }
 
         console.log(`[generate-ideas] Generated ${designs.length} design descriptions`);
 
