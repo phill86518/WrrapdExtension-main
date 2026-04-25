@@ -5,7 +5,6 @@ import {
   WRRAPD_RETAILER_LEGO,
 } from "./constants.js";
 import { initLegoCheckoutFinalDeliveryMessage } from "./checkout-final-delivery-message.js";
-import { initLegoHubShipAddressHint } from "./hub-ship-address-hint.js";
 import { initLegoGiftWrapUpsell } from "./lego-gift-wrap-upsell.js";
 import { isLegoCheckoutReviewLikePage } from "./lego-checkout-review-detect.js";
 
@@ -54,7 +53,6 @@ export function initLegoGuestCheckoutBootstrap() {
     sampledAt: new Date().toISOString(),
   };
 
-  initLegoHubShipAddressHint();
   initLegoCheckoutFinalDeliveryMessage();
   initLegoGiftWrapUpsell();
 }

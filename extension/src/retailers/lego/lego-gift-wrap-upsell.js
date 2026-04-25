@@ -110,13 +110,13 @@ export function openLegoGiftWrapIntroModal() {
   title.id = "wrrapd-lego-gift-modal-title";
   title.className = "ds-heading-sm ds-color-text-default";
   title.style.margin = "0 0 var(--ds-spacing-xs, 0.5rem) 0";
-  title.textContent = "LEGO builds the set — Wrrapd builds the moment";
+  title.textContent = "Gift wrap with Wrrapd";
 
   const p = document.createElement("p");
   p.className = "ds-body-xs-regular ds-color-text-default";
   p.style.margin = "0 0 var(--ds-spacing-sm, 0.75rem) 0";
   p.textContent =
-    "LEGO.com does not offer gift wrap. Wrrapd receives your order at our hub, professionally wraps it, and can coordinate extras like flowers. Your giftee’s address is used for the final handoff — not LEGO’s checkout.";
+    "LEGO.com does not sell gift wrap. If you choose Wrrapd, we can help with wrapping and optional add-ons (such as flowers), and we’ll explain how delivery works for your giftee.";
 
   const row = document.createElement("div");
   row.style.cssText =
@@ -133,7 +133,7 @@ export function openLegoGiftWrapIntroModal() {
   link.href = "https://www.wrrapd.com/";
   link.target = "_blank";
   link.rel = "noopener noreferrer";
-  link.textContent = "Explore Wrrapd";
+  link.textContent = "Learn more at wrrapd.com";
 
   const tearDown = () => {
     window.removeEventListener("keydown", onKey);
@@ -176,16 +176,16 @@ function mountCartGiftOptIn() {
     "border:1px solid var(--ds-color-border-subdued, #e2e8f0)",
   ].join(";");
 
-  const hook = document.createElement("p");
-  hook.className = "ds-label-sm-medium ds-color-text-default";
+  const hook = document.createElement("h2");
+  hook.className = "ds-heading-xs ds-color-text-default";
   hook.style.margin = "0 0 var(--ds-spacing-2xs, 0.375rem) 0";
-  hook.textContent = "LEGO doesn’t wrap gifts — we do.";
+  hook.textContent = "Would you like it gift-wrapped?";
 
   const sub = document.createElement("p");
   sub.className = "ds-body-xs-regular ds-color-text-subdued";
   sub.style.margin = "0 0 var(--ds-spacing-xs, 0.5rem) 0";
   sub.textContent =
-    "Ship the bricks to Wrrapd; we wrap, ribbon, and route the wow to your giftee.";
+    "Wrrapd offers optional gift wrap and delivery help. If you’re interested, tick below and we’ll show you a short overview—you can decide later.";
 
   const label = document.createElement("label");
   label.className = "ds-body-xs-regular ds-color-text-default";
@@ -199,8 +199,11 @@ function mountCartGiftOptIn() {
 
   const span = document.createElement("span");
   const lead = document.createElement("strong");
-  lead.textContent = "Yes — I want Wrrapd gift wrap";
-  span.append(lead, document.createTextNode(" (and hear about flowers & final delivery)."));
+  lead.textContent = "Yes, I’m interested";
+  span.append(
+    lead,
+    document.createTextNode(" in gift wrap and hearing about flowers or delivery options from Wrrapd."),
+  );
 
   input.addEventListener("change", () => {
     if (input.checked) {
@@ -242,13 +245,13 @@ function mountCheckoutStepZero() {
   title.className = "ds-heading-sm ds-color-text-default";
   title.style.margin = "0 0 var(--ds-spacing-2xs, 0.375rem) 0";
   title.textContent =
-    "0. How about gift-wrapping it with Wrrapd — or delivering it with flowers?";
+    "0. Would you like it gift-wrapped—or help with flowers or delivery?";
 
   const blurb = document.createElement("p");
   blurb.className = "ds-body-xs-regular ds-color-text-subdued";
   blurb.style.margin = "0 0 var(--ds-spacing-sm, 0.75rem) 0";
   blurb.textContent =
-    "You skipped the option on My Bag — no worries. One tap opens how Wrrapd finishes the gift after LEGO ships to our hub.";
+    "If you’d like to see how Wrrapd can help with wrapping or add-ons, tap below for a brief overview. You can always continue checkout as usual.";
 
   const row = document.createElement("div");
   row.style.cssText =
@@ -258,7 +261,7 @@ function mountCheckoutStepZero() {
   yes.type = "button";
   yes.className =
     "sk-button sk-button--primary sk-button--small sk-button--neutral";
-  yes.textContent = "Yes — show me";
+  yes.textContent = "Show me";
 
   const later = document.createElement("button");
   later.type = "button";
