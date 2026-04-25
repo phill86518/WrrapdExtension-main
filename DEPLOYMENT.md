@@ -104,7 +104,7 @@ Authoritative clone (example paths):
 From the **repo root** of that clone:
 
 ```bash
-git restore extension/content.js
+git restore extension/content.js extension/content-target.js
 git pull origin main
 cd extension
 npm install
@@ -114,7 +114,7 @@ cd ..
 
 Then **Chrome → Extensions → Wrrapd → Reload**.
 
-`git restore extension/content.js` removes a dirty/generated `content.js` so `git pull` is not blocked.
+`git restore` removes dirty/generated bundles (`content.js` = Amazon, `content-target.js` = Target) so `git pull` is not blocked. Details: [extension/README.md](extension/README.md).
 
 **Skip this section** if you did not change the extension.
 

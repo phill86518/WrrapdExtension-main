@@ -2,7 +2,7 @@
 
 **Public install:** [Wrrapd on the Chrome Web Store](https://chromewebstore.google.com/detail/wrrapd/eampapdpkmnnbfdojhmbpckpljnbpapo). For development, use **Load unpacked** on this folder after `npm run build`.
 
-Manifest V3 content script for **www.amazon.com** (see `manifest.json`). Checkout UX, gift options, Wrrapd pay summary, and post-pay **Place your order** integration.
+Manifest V3 **multi-retailer** extension (see `manifest.json`): a **separate content script bundle per retailer domain**, not one script on all stores. Today **Amazon** (`content.js` → `www.amazon.com`) carries checkout UX, pay summary, and **Place your order** integration; **Target** (`content-target.js` → `*.target.com`) is a separate entry and bundle (real DOM work lives under `src/retailers/target/` as you build it out).
 
 ## Windows — where to build (Roger’s machine)
 
@@ -16,7 +16,7 @@ After pulling from GitHub, run **`npm run build` inside the `extension` folder**
 **Every extension release (from repo root — PowerShell or Git Bash):**
 
 ```bash
-git restore extension/content.js
+git restore extension/content.js extension/content-target.js
 git pull origin main
 cd extension
 npm install
@@ -25,20 +25,60 @@ cd ..
 ```
 
 Then Chrome → Extensions → Wrrapd → **Reload**.  
-`git restore extension/content.js` clears a dirty/generated `content.js` so `git pull` is not blocked.
+`git restore` clears **generated** bundles so `git pull` is not blocked (`content.js` = Amazon, `content-target.js` = Target).
 
 Full stack deploy order (VM push, PM2, Cloud Run, Windows): **[../DEPLOYMENT.md](../DEPLOYMENT.md)**.
 
 ## Source layout and build
 
-- **Entry:** `src/content/index.js` (imports helpers, then legacy IIFE).
-- **Legacy checkout / payment / cart:** `src/content/content-legacy.js` (large; being split over time).
-- **Bundled output:** root **`content.js`** (minified). Chrome loads this per `manifest.json`.
-- **Do not** edit `content.js` by hand; **`npm run build`** overwrites it.
-- **`npm run build`** — production/minified (default).
-- **`npm run build:pretty`** — same bundle without minify (easier to read `content.js` while debugging).
+- **Amazon entry:** `src/content/index.js` → imports Amazon-only helpers, then **`content-legacy.js`** (IIFE).
+- **Target entry:** `src/content/target-index.js` → **must not** import `content-legacy.js` or Amazon DOM modules. Add Target logic only under `src/retailers/target/` (and optional thin `src/shared/` for API URLs / ingest helpers).
+- **Bundled outputs (generated — do not edit by hand):**
+  - **`content.js`** — Amazon; loaded only on `*://www.amazon.com/*` (`manifest.json` `content_scripts`).
+  - **`content-target.js`** — Target; loaded only on `*://*.target.com/*`.
+- **`npm run build`** — runs **`build:amazon`** and **`build:target`** (both bundles).
+- **`npm run build:pretty`** — both bundles without minify (easier to read while debugging).
+- **`npm run build:prod`** — Amazon + Target with `drop:console` where configured in `package.json`.
+- **Legacy Amazon checkout / cart / pay:** `src/content/content-legacy.js` (large; refactor only inside Amazon paths).
 
-### `src/content/lib/` (shared modules)
+### Naming convention for more retailers
+
+- **Amazon** keeps the historic name **`content.js`** / entry `index.js` (avoids churn in docs, Roger’s flow, and older references).
+- **Every other retailer:** `content-<retailer>.js` from `src/content/<retailer>-index.js` (e.g. `content-target.js`). Add a matching `content_scripts` block and `host_permissions` / `web_accessible_resources.matches` in `manifest.json`, plus a `build:<retailer>` script chained from `npm run build`.
+
+## Multi-retailer architecture (isolation + Chrome Web Store)
+
+### Only Amazon code on Amazon; only Target code on Target
+
+Chrome injects scripts **only** on URLs matched by each `content_scripts` entry. With the current manifest:
+
+| Host pattern        | Script(s) loaded   | What runs                                      |
+|---------------------|--------------------|------------------------------------------------|
+| `www.amazon.com`    | `content.js`       | Full Amazon legacy checkout / pay integration |
+| `*.target.com`      | `content-target.js`| Target-only bundle (no Amazon legacy)         |
+
+**Rules of thumb**
+
+1. **Never** import `content-legacy.js` (or `src/content/lib/*` Amazon-only modules) from the Target entry.
+2. **Shared** code should be retailer-agnostic (constants, `fetch` to `api.wrrapd.com`, types). If something touches Amazon DOM or ASINs, it stays in the Amazon tree (`src/retailers/amazon/`, legacy, etc.).
+3. Tracking ingest payloads must set **`retailer`** (`Amazon` \| `Target` \| …) to match [tracking-platform](../tracking-platform) `OrderRetailer` (see pay server + `parseIngestOrderPayload`).
+
+### Does Chrome Web Store allow multiple content JavaScript files?
+
+**Yes.** Manifest V3 explicitly supports:
+
+- Several **`content_scripts`** entries (each with its own `matches` and `js` array), and/or  
+- Multiple files in one entry’s **`js`** array.
+
+This is normal and widely used (e.g. one bundle per major site). It is **not** inherently a review problem. Reviewers care that **host permissions and `matches` are narrow and justified**, that the **privacy policy and single purpose** match what you do, and that you **do not** request broader access than needed. Splitting by retailer **reduces** risk versus one giant script with `<all_urls>`.
+
+### `rules.json` (DeclarativeNetRequest)
+
+Today CSP-related header rules are scoped to **Amazon** only. If Target checkout blocks the extension, add a **separate** rule with a **narrow** `urlFilter` for Target—**after** you confirm in DevTools that CSP (or framing) is the issue. Do not copy Amazon DNR to Target “just in case” without evidence.
+
+### `src/content/lib/` (Amazon bundle only)
+
+These are imported from **`src/content/index.js`** (Amazon). The Target entry should not depend on them unless you later extract truly shared, DOM-free utilities into `src/shared/`.
 
 Includes, among others:
 
@@ -47,7 +87,7 @@ Includes, among others:
 - `wrrapd-debug.js` — Optional HUD / trace (`localStorage wrrapd-trace=1`, etc.).
 - Other helpers: `dom-utils.js`, `storage.js`, `loading-ui.js`, `order-helpers.js`, `summary-alignment.js`, `zip-codes.js`, etc.
 
-**Verify build in DevTools:** `window.__WRRAPD_CONTENT_BUILD_TAG__` (set from `index.js`).
+**Verify builds in DevTools:** `window.__WRRAPD_CONTENT_BUILD_TAG__` on Amazon (from `index.js`); `window.__WRRAPD_TARGET_CONTENT_BUILD__` on Target (from `target-index.js`).
 
 ## Production behavior (summary)
 
