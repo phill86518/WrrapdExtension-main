@@ -437,6 +437,214 @@ function wrrapd_render_orders_cards( array $orders ) {
 	return (string) ob_get_clean();
 }
 
+/**
+ * Legacy “card” layout (historical Elementor HTML widget) — server-rendered from API orders, no fetch/CORS.
+ * Use: [wrrapd_review_orders layout="legacy-cards"]
+ *
+ * @param array<int, array<string, mixed>>                  $orders
+ * @param array<string, array<string|int, array<string, string>>> $overlays
+ */
+function wrrapd_render_orders_legacy_cards( array $orders, array $overlays ) {
+	$wrap_id = function_exists( 'wp_unique_id' ) ? wp_unique_id( 'wrrapd-legacy-' ) : 'wrrapd-legacy-' . uniqid( '', false );
+	$nonce   = wp_create_nonce( 'wrrapd_line_extras' );
+	$ajax    = admin_url( 'admin-ajax.php' );
+	$labels  = wrrapd_merge_occasion_dropdown_choices( $orders, $overlays );
+	$rels    = wrrapd_relationship_choices();
+	$def_img = 'https://www.publicdomainpictures.net/pictures/30000/velka/christmas-wrapping-paper.jpg';
+
+	ob_start();
+	echo '<link rel="preconnect" href="https://fonts.googleapis.com" /><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin /><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&amp;display=swap" />';
+	echo '<div id="' . esc_attr( $wrap_id ) . '" class="wrrapd-legacy-cards-root" data-ajax-url="' . esc_url( $ajax ) . '" data-nonce="' . esc_attr( $nonce ) . '">';
+	echo '<style>
+.wrrapd-legacy-cards-root{font-family:Roboto,system-ui,sans-serif;font-size:1rem;max-width:100%;padding:1rem;box-sizing:border-box;}
+.wrrapd-legacy-cards-root *,.wrrapd-legacy-cards-root *::before,.wrrapd-legacy-cards-root *::after{box-sizing:border-box;}
+.wrrapd-legacy-cards-root h2{font-size:1.5rem;margin:0 0 1.5rem;font-weight:700;}
+.wrrapd-legacy-cards-root .order-card{display:flex;flex-direction:column;border:1px solid #999;padding:1rem;border-radius:.8rem;box-shadow:0 .2rem .4rem rgba(0,0,0,.05);margin-bottom:1.5rem;background:#fff;}
+.wrrapd-legacy-cards-root .order-content{display:flex;flex-wrap:wrap;gap:2rem;align-items:flex-start;}
+.wrrapd-legacy-cards-root .order-details{flex:1;min-width:280px;}
+.wrrapd-legacy-cards-root .order-meta{margin-bottom:1rem;font-size:.95rem;}
+.wrrapd-legacy-cards-root .order-meta strong{display:block;font-weight:500;}
+.wrrapd-legacy-cards-root .order-items{display:flex;flex-direction:column;gap:1rem;}
+.wrrapd-legacy-cards-root .order-item{display:flex;gap:1rem;padding:.5rem 0;border-bottom:1px solid #eee;}
+.wrrapd-legacy-cards-root .order-item:last-child{border-bottom:none;}
+.wrrapd-legacy-cards-root .order-item img{width:5rem;height:5rem;object-fit:cover;border-radius:.5rem;border:1px solid #ccc;}
+.wrrapd-legacy-cards-root .item-details{flex:1;min-width:0;}
+.wrrapd-legacy-cards-root .legacy-forms{flex:1;min-width:260px;max-width:420px;display:flex;flex-direction:column;gap:1.25rem;}
+.wrrapd-legacy-cards-root .wrrapd-legacy-line{border:1px solid #ddd;border-radius:.5rem;padding:.85rem;background:#fafafa;}
+.wrrapd-legacy-cards-root .wrrapd-legacy-line h4{margin:0 0 .5rem;font-size:.95rem;font-weight:600;}
+.wrrapd-legacy-cards-root .info-box{background:#f9f9f9;padding:.8rem;border-radius:.5rem;border:1px solid #ddd;margin-bottom:.6rem;}
+.wrrapd-legacy-cards-root .info-box label{display:block;margin-bottom:.5rem;font-size:.88rem;}
+.wrrapd-legacy-cards-root .info-box input[type=text],.wrrapd-legacy-cards-root .info-box input[type=date],.wrrapd-legacy-cards-root .info-box select,.wrrapd-legacy-cards-root .info-box textarea{width:100%;padding:.4rem;font-size:.9rem;border:1px solid #ccc;border-radius:.3rem;}
+.wrrapd-legacy-cards-root .info-box textarea{min-height:4rem;resize:vertical;}
+.wrrapd-legacy-cards-root .recurring-date-wrapper{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin-top:.35rem;}
+.wrrapd-legacy-cards-root .save-section{display:flex;flex-direction:column;gap:.5rem;margin-top:.35rem;}
+.wrrapd-legacy-cards-root .save-btn,.wrrapd-legacy-cards-root .delivery-btn{padding:.5rem 1rem;width:100%;border:none;border-radius:.3rem;cursor:pointer;font-size:.9rem;}
+.wrrapd-legacy-cards-root .save-btn{background:#c00;color:#fff;font-weight:600;}
+.wrrapd-legacy-cards-root .delivery-btn{background:#f6b933;color:#000;}
+</style>';
+
+	echo '<h2>' . esc_html__( 'Your Orders', 'wrrapd' ) . '</h2>';
+
+	foreach ( $orders as $order ) {
+		if ( ! is_array( $order ) ) {
+			continue;
+		}
+		$on = isset( $order['orderNumber'] ) ? (string) $order['orderNumber'] : '—';
+		$ts = isset( $order['timestamp'] ) ? (string) $order['timestamp'] : '';
+		$st = '';
+		if ( isset( $order['payment'] ) && is_array( $order['payment'] ) ) {
+			$st = isset( $order['payment']['status'] ) ? (string) $order['payment']['status'] : '';
+		}
+		$date_show = wrrapd_studio_format_order_date( $ts );
+		$lines     = isset( $order['lines'] ) && is_array( $order['lines'] ) ? $order['lines'] : array();
+		if ( count( $lines ) === 0 ) {
+			$lines = array(
+				array(
+					'productTitle'       => null,
+					'designLabel'        => null,
+					'flowers'            => false,
+					'giftMessage'        => null,
+					'giftMessageSnippet' => null,
+					'productImageUrl'    => null,
+					'designPreviewUrl'   => null,
+				),
+			);
+		}
+
+		echo '<div class="order-card">';
+		echo '<div class="order-content">';
+		echo '<div class="order-details">';
+		echo '<div class="order-meta">';
+		echo '<strong>' . esc_html__( 'Order #:', 'wrrapd' ) . ' ' . esc_html( $on ) . '</strong>';
+		echo '<div>' . esc_html__( 'Order date:', 'wrrapd' ) . ' ' . esc_html( $date_show !== '' ? $date_show : '—' ) . '</div>';
+		if ( $st !== '' ) {
+			echo '<div>' . esc_html__( 'Payment:', 'wrrapd' ) . ' ' . esc_html( $st ) . '</div>';
+		}
+		echo '</div><div class="order-items">';
+
+		foreach ( $lines as $ln ) {
+			if ( ! is_array( $ln ) ) {
+				continue;
+			}
+			$desc = isset( $ln['productTitle'] ) ? trim( (string) $ln['productTitle'] ) : '';
+			if ( $desc === '' ) {
+				$desc = isset( $ln['designLabel'] ) ? trim( (string) $ln['designLabel'] ) : '';
+			}
+			if ( $desc === '' ) {
+				$desc = __( 'Gift line', 'wrrapd' );
+			}
+			$trunc = strlen( $desc ) > 50 ? substr( $desc, 0, 47 ) . '...' : $desc;
+			$dprev = isset( $ln['designPreviewUrl'] ) ? trim( (string) $ln['designPreviewUrl'] ) : '';
+			$pimg  = isset( $ln['productImageUrl'] ) ? trim( (string) $ln['productImageUrl'] ) : '';
+			$img_u = $dprev !== '' && preg_match( '#^https?://#i', $dprev ) ? $dprev : ( $pimg !== '' && preg_match( '#^https?://#i', $pimg ) ? $pimg : $def_img );
+			$wrap_lab = wrrapd_studio_design_kind_label( $ln );
+			$fl       = ! empty( $ln['flowers'] );
+			$gm       = isset( $ln['giftMessage'] ) ? trim( (string) $ln['giftMessage'] ) : '';
+			if ( $gm === '' && isset( $ln['giftMessageSnippet'] ) ) {
+				$gm = trim( (string) $ln['giftMessageSnippet'] );
+			}
+
+			echo '<div class="order-item">';
+			echo '<img src="' . esc_url( $img_u ) . '" alt="" loading="lazy" decoding="async" />';
+			echo '<div class="item-details">';
+			echo '<div>' . esc_html( $trunc ) . '</div>';
+			echo '<div>' . esc_html__( 'Wrapping:', 'wrrapd' ) . ' ' . esc_html( $wrap_lab ) . ' | ' . esc_html__( 'Flowers:', 'wrrapd' ) . ' ' . ( $fl ? esc_html__( 'Yes', 'wrrapd' ) : esc_html__( 'No', 'wrrapd' ) ) . '</div>';
+			echo '<div>' . esc_html__( 'Gift message:', 'wrrapd' ) . ' &quot;' . esc_html( $gm !== '' ? $gm : __( 'None', 'wrrapd' ) ) . '&quot;</div>';
+			echo '</div></div>';
+		}
+		echo '</div></div>';
+
+		echo '<div class="legacy-forms">';
+		$li = 0;
+		foreach ( $lines as $ln ) {
+			if ( ! is_array( $ln ) ) {
+				continue;
+			}
+			$ov = wrrapd_overlay_row( $overlays, $on, $li );
+
+			$api_giftee = isset( $ln['gifteeName'] ) ? trim( (string) $ln['gifteeName'] ) : '';
+			$giftee_val = $ov['giftee'] !== '' ? $ov['giftee'] : $api_giftee;
+
+			$api_occ = isset( $ln['occasion'] ) ? trim( (string) $ln['occasion'] ) : '';
+			$pick    = isset( $ov['occasion_pick'] ) ? trim( (string) $ov['occasion_pick'] ) : '';
+			$occ_sel = $pick !== '' ? $pick : $api_occ;
+
+			$rel_val = isset( $ov['relationship'] ) ? (string) $ov['relationship'] : '';
+			$comment = isset( $ov['comment'] ) ? (string) $ov['comment'] : '';
+			$gdate   = isset( $ov['gift_date'] ) ? (string) $ov['gift_date'] : '';
+			$rem     = ! empty( $ov['reminder_next_year'] );
+			$rem_prior = isset( $ov['reminder_days_prior'] ) ? (int) $ov['reminder_days_prior'] : 1;
+			if ( $rem_prior < 1 || $rem_prior > 7 ) {
+				$rem_prior = 1;
+			}
+
+			$rel_opts = $rels;
+			if ( $rel_val !== '' && ! in_array( $rel_val, $rel_opts, true ) ) {
+				$rel_opts = array_merge( array( $rel_val ), $rel_opts );
+			}
+			$occ_opts = $labels;
+			if ( $occ_sel !== '' && ! in_array( $occ_sel, $occ_opts, true ) ) {
+				$occ_opts = array_merge( array( $occ_sel ), $occ_opts );
+			}
+
+			$id_sfx = substr( md5( $on . ':' . (string) $li ), 0, 10 );
+
+			echo '<div class="wrrapd-legacy-line" data-order="' . esc_attr( $on ) . '" data-line="' . (int) $li . '">';
+			echo '<h4>' . esc_html( sprintf( /* translators: %d: gift line index (1-based). */ __( 'Gift line %d', 'wrrapd' ), $li + 1 ) ) . '</h4>';
+			echo '<div class="info-box"><label>' . esc_html__( 'Giftee name', 'wrrapd' );
+			echo '<input type="text" class="wrrapd-legacy-giftee" id="' . esc_attr( $wrap_id . '-g-' . $id_sfx ) . '" value="' . esc_attr( $giftee_val ) . '" maxlength="200" /></label>';
+			echo '<label>' . esc_html__( 'Relationship', 'wrrapd' );
+			echo '<select class="wrrapd-legacy-rel" id="' . esc_attr( $wrap_id . '-r-' . $id_sfx ) . '">';
+			echo '<option value="">' . esc_html__( 'Select…', 'wrrapd' ) . '</option>';
+			foreach ( $rel_opts as $r ) {
+				echo '<option value="' . esc_attr( $r ) . '"' . selected( $rel_val, $r, false ) . '>' . esc_html( $r ) . '</option>';
+			}
+			echo '</select></label></div>';
+
+			echo '<div class="info-box"><label>' . esc_html__( 'Occasion', 'wrrapd' );
+			echo '<select class="wrrapd-legacy-occ" id="' . esc_attr( $wrap_id . '-o-' . $id_sfx ) . '">';
+			echo '<option value="">' . esc_html__( 'Select…', 'wrrapd' ) . '</option>';
+			foreach ( $occ_opts as $lab ) {
+				$lab_s = trim( (string) $lab );
+				if ( $lab_s === '' ) {
+					continue;
+				}
+				echo '<option value="' . esc_attr( $lab_s ) . '"' . selected( $occ_sel, $lab_s, false ) . '>' . esc_html( $lab_s ) . '</option>';
+			}
+			echo '</select></label>';
+			echo '<div class="recurring-date-wrapper"><label><input type="checkbox" class="wrrapd-legacy-rem" id="' . esc_attr( $wrap_id . '-m-' . $id_sfx ) . '"' . ( $rem ? ' checked' : '' ) . ' /> ';
+			echo '<span>' . esc_html__( 'Set reminder', 'wrrapd' ) . '</span></label>';
+			echo '<label>' . esc_html__( 'Date', 'wrrapd' ) . ' <input type="date" class="wrrapd-legacy-date" id="' . esc_attr( $wrap_id . '-d-' . $id_sfx ) . '" value="' . esc_attr( $gdate ) . '" /></label>';
+			echo '<label class="wrrapd-legacy-prior-wrap">' . esc_html__( 'Days prior', 'wrrapd' ) . ' ';
+			echo '<select class="wrrapd-legacy-rem-days" id="' . esc_attr( $wrap_id . '-md-' . $id_sfx ) . '"' . ( $rem ? '' : ' disabled' ) . '>';
+			for ( $rd = 1; $rd <= 7; $rd++ ) {
+				echo '<option value="' . (int) $rd . '"' . selected( $rem_prior, $rd, false ) . '>' . (int) $rd . '</option>';
+			}
+			echo '</select></label></div>';
+			echo '<label>' . esc_html__( 'Comment', 'wrrapd' );
+			echo '<textarea class="wrrapd-legacy-comment" id="' . esc_attr( $wrap_id . '-c-' . $id_sfx ) . '" maxlength="4000" rows="3">' . esc_textarea( $comment ) . '</textarea></label></div>';
+
+			echo '<div class="save-section">';
+			echo '<button type="button" class="save-btn wrrapd-legacy-save">' . esc_html__( 'Save / Update', 'wrrapd' ) . '</button>';
+			echo '<button type="button" class="delivery-btn wrrapd-legacy-delivery" disabled title="' . esc_attr__( 'Coming soon', 'wrrapd' ) . '">' . esc_html__( 'Delivery details', 'wrrapd' ) . '</button>';
+			echo '</div></div>';
+
+			++$li;
+		}
+		echo '</div>';
+		echo '<div class="wrrapd-legacy-order-foot" style="margin-top:1rem;padding-top:1rem;border-top:1px solid #ddd;clear:both;">';
+		echo wrrapd_studio_order_summary_html( $order, $lines );
+		echo '</div>';
+		echo '</div></div>';
+	}
+
+	$wrap_json = wp_json_encode( $wrap_id );
+	echo '<script>(function(){var root=document.getElementById(' . $wrap_json . ');if(!root)return;var ajax=root.getAttribute("data-ajax-url");var nonce=root.getAttribute("data-nonce");root.querySelectorAll(".wrrapd-legacy-rem").forEach(function(cb){var line=cb.closest(".wrrapd-legacy-line");if(!line)return;var sd=line.querySelector(".wrrapd-legacy-rem-days");function sync(){if(sd)sd.disabled=!cb.checked;}sync();cb.addEventListener("change",sync);});root.querySelectorAll(".wrrapd-legacy-save").forEach(function(btn){btn.addEventListener("click",function(){var line=btn.closest(".wrrapd-legacy-line");if(!line)return;var fd=new FormData();fd.append("action","wrrapd_save_order_line_overlay");fd.append("nonce",nonce);fd.append("orderNumber",line.getAttribute("data-order")||"");fd.append("lineIndex",line.getAttribute("data-line")||"0");var g=line.querySelector(".wrrapd-legacy-giftee");fd.append("giftee",g?g.value:"");var rel=line.querySelector(".wrrapd-legacy-rel");fd.append("relationship",rel?rel.value:"");var occ=line.querySelector(".wrrapd-legacy-occ");fd.append("occasion_pick",occ?occ.value:"");var dt=line.querySelector(".wrrapd-legacy-date");fd.append("gift_date",dt?dt.value:"");var rcb=line.querySelector(".wrrapd-legacy-rem");var ron=rcb&&rcb.checked;fd.append("reminder_next_year",ron?"1":"");var rdp=line.querySelector(".wrrapd-legacy-rem-days");fd.append("reminder_days_prior",ron&&rdp&&!rdp.disabled?(rdp.value||"1"):"");var cm=line.querySelector(".wrrapd-legacy-comment");fd.append("comment",cm?cm.value:"");btn.disabled=true;fetch(ajax,{method:"POST",body:fd,credentials:"same-origin"}).then(function(r){return r.json();}).then(function(j){btn.disabled=false;if(j&&j.success){btn.style.boxShadow="0 0 0 2px rgba(34,197,94,.6)";window.setTimeout(function(){btn.style.boxShadow="";},650);}else{btn.style.opacity="0.65";window.setTimeout(function(){btn.style.opacity="";},800);}}).catch(function(){btn.disabled=false;});});});})();</script>';
+
+	echo '</div>';
+	return (string) ob_get_clean();
+}
+
 /** @var string */
 const WRRAPD_LINE_OVERLAYS_META = 'wrrapd_order_line_overlays';
 
@@ -1107,7 +1315,7 @@ function wrrapd_render_orders_studio( array $orders, array $overlays ) {
 }
 
 /**
- * Shortcode: [wrrapd_review_orders] or [wrrapd_review_orders layout="rich"|"cards"|"studio"]
+ * Shortcode: [wrrapd_review_orders] or [wrrapd_review_orders layout="rich"|"cards"|"studio"|"legacy-cards"]
  * Re-claims (idempotent) then lists orders for the current user.
  *
  * @param array<string, string>|string $atts
@@ -1153,6 +1361,10 @@ function wrrapd_shortcode_review_orders( $atts ) {
 	if ( $layout === 'studio' ) {
 		$ov = wrrapd_get_line_overlays( (int) $user->ID );
 		return wrrapd_render_orders_studio( $orders, $ov );
+	}
+	if ( $layout === 'legacy-cards' ) {
+		$ov = wrrapd_get_line_overlays( (int) $user->ID );
+		return wrrapd_render_orders_legacy_cards( $orders, $ov );
 	}
 	return wrrapd_render_orders_table_simple( $orders );
 }
