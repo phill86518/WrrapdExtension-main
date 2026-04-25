@@ -456,31 +456,52 @@ function wrrapd_render_orders_legacy_cards( array $orders, array $overlays ) {
 	echo '<link rel="preconnect" href="https://fonts.googleapis.com" /><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin /><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&amp;display=swap" />';
 	echo '<div id="' . esc_attr( $wrap_id ) . '" class="wrrapd-legacy-cards-root" data-ajax-url="' . esc_url( $ajax ) . '" data-nonce="' . esc_attr( $nonce ) . '">';
 	echo '<style>
-.wrrapd-legacy-cards-root{font-family:Roboto,system-ui,sans-serif;font-size:1rem;max-width:100%;padding:1rem;box-sizing:border-box;}
+.wrrapd-legacy-cards-root{--wr-amber:#ea580c;--wr-amber-deep:#c2410c;--wr-navy:#162a52;font-family:Roboto,system-ui,sans-serif;font-size:.875rem;max-width:100%;padding:.85rem;box-sizing:border-box;color:#1a1a1a;line-height:1.35;}
 .wrrapd-legacy-cards-root *,.wrrapd-legacy-cards-root *::before,.wrrapd-legacy-cards-root *::after{box-sizing:border-box;}
-.wrrapd-legacy-cards-root h2{font-size:1.5rem;margin:0 0 1.5rem;font-weight:700;}
-.wrrapd-legacy-cards-root .order-card{display:flex;flex-direction:column;border:1px solid #999;padding:1rem;border-radius:.8rem;box-shadow:0 .2rem .4rem rgba(0,0,0,.05);margin-bottom:1.5rem;background:#fff;}
-.wrrapd-legacy-cards-root .order-content{display:flex;flex-wrap:wrap;gap:2rem;align-items:flex-start;}
-.wrrapd-legacy-cards-root .order-details{flex:1;min-width:280px;}
-.wrrapd-legacy-cards-root .order-meta{margin-bottom:1rem;font-size:.95rem;}
-.wrrapd-legacy-cards-root .order-meta strong{display:block;font-weight:500;}
-.wrrapd-legacy-cards-root .order-items{display:flex;flex-direction:column;gap:1rem;}
-.wrrapd-legacy-cards-root .order-item{display:flex;gap:1rem;padding:.5rem 0;border-bottom:1px solid #eee;}
+.wrrapd-legacy-cards-root h2{font-size:1.2rem;margin:0 0 1.1rem;font-weight:700;}
+.wrrapd-legacy-cards-root .order-card{display:flex;flex-direction:column;border:1px solid #c5c5c5;padding:.85rem 1rem;border-radius:.65rem;box-shadow:0 .12rem .35rem rgba(0,0,0,.06);margin-bottom:1.15rem;background:#fff;}
+.wrrapd-legacy-cards-root .order-content{display:flex;flex-wrap:wrap;gap:1.35rem;align-items:flex-start;}
+.wrrapd-legacy-cards-root .order-details{flex:1;min-width:260px;}
+.wrrapd-legacy-cards-root .order-meta{margin-bottom:.65rem;font-size:.8rem;color:#333;}
+.wrrapd-legacy-cards-root .order-meta strong{display:block;font-weight:600;margin-bottom:.15rem;}
+.wrrapd-legacy-cards-root .order-items{display:flex;flex-direction:column;gap:.65rem;}
+.wrrapd-legacy-cards-root .order-item{display:flex;gap:.75rem;padding:.4rem 0;border-bottom:1px solid #eee;}
 .wrrapd-legacy-cards-root .order-item:last-child{border-bottom:none;}
-.wrrapd-legacy-cards-root .order-item img{width:5rem;height:5rem;object-fit:cover;border-radius:.5rem;border:1px solid #ccc;}
-.wrrapd-legacy-cards-root .item-details{flex:1;min-width:0;}
-.wrrapd-legacy-cards-root .legacy-forms{flex:1;min-width:260px;max-width:420px;display:flex;flex-direction:column;gap:1.25rem;}
-.wrrapd-legacy-cards-root .wrrapd-legacy-line{border:1px solid #ddd;border-radius:.5rem;padding:.85rem;background:#fafafa;}
-.wrrapd-legacy-cards-root .wrrapd-legacy-line h4{margin:0 0 .5rem;font-size:.95rem;font-weight:600;}
-.wrrapd-legacy-cards-root .info-box{background:#f9f9f9;padding:.8rem;border-radius:.5rem;border:1px solid #ddd;margin-bottom:.6rem;}
-.wrrapd-legacy-cards-root .info-box label{display:block;margin-bottom:.5rem;font-size:.88rem;}
-.wrrapd-legacy-cards-root .info-box input[type=text],.wrrapd-legacy-cards-root .info-box input[type=date],.wrrapd-legacy-cards-root .info-box select,.wrrapd-legacy-cards-root .info-box textarea{width:100%;padding:.4rem;font-size:.9rem;border:1px solid #ccc;border-radius:.3rem;}
-.wrrapd-legacy-cards-root .info-box textarea{min-height:4rem;resize:vertical;}
-.wrrapd-legacy-cards-root .recurring-date-wrapper{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin-top:.35rem;}
-.wrrapd-legacy-cards-root .save-section{display:flex;flex-direction:column;gap:.5rem;margin-top:.35rem;}
-.wrrapd-legacy-cards-root .save-btn,.wrrapd-legacy-cards-root .delivery-btn{padding:.5rem 1rem;width:100%;border:none;border-radius:.3rem;cursor:pointer;font-size:.9rem;}
+.wrrapd-legacy-cards-root .order-item img{width:4.25rem;height:4.25rem;object-fit:cover;border-radius:.45rem;border:1px solid #ccc;}
+.wrrapd-legacy-cards-root .item-details{flex:1;min-width:0;font-size:.8rem;}
+.wrrapd-legacy-cards-root .legacy-forms{flex:1;min-width:240px;max-width:400px;display:flex;flex-direction:column;gap:.85rem;}
+.wrrapd-legacy-cards-root .wrrapd-legacy-line{border:1px solid #ddd;border-radius:.5rem;padding:.65rem .75rem;background:#fafafa;}
+.wrrapd-legacy-cards-root .info-box{background:#f7f7f8;padding:.55rem .65rem;border-radius:.45rem;border:1px solid #e2e2e2;margin-bottom:.45rem;}
+.wrrapd-legacy-cards-root .info-box label{display:block;margin-bottom:.35rem;font-size:.72rem;font-weight:600;color:#333;}
+.wrrapd-legacy-cards-root .info-box input[type=text],.wrrapd-legacy-cards-root .info-box input[type=date]{width:100%;padding:.32rem .4rem;font-size:.78rem;border:1px solid #bbb;border-radius:.3rem;}
+.wrrapd-legacy-cards-root .wrrapd-legacy-orange-select select{width:100%;padding:.32rem .45rem;font-size:.78rem;border-radius:6px;border:2px solid var(--wr-navy);background:linear-gradient(180deg,var(--wr-amber),var(--wr-amber-deep));color:#fff7ed;line-height:1.25;box-shadow:inset 0 1px 0 rgba(255,255,255,.2);cursor:pointer;}
+.wrrapd-legacy-cards-root .wrrapd-legacy-orange-select select:focus{outline:2px solid #f5c518;outline-offset:1px;}
+.wrrapd-legacy-cards-root .wrrapd-legacy-orange-select select option{background:#fff;color:#0f172a;}
+.wrrapd-legacy-cards-root .wrrapd-legacy-rem-date-box{background:#fff;padding:.5rem .55rem;}
+.wrrapd-legacy-cards-root .wrrapd-legacy-rem-date-row{display:flex;flex-direction:row;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:.5rem .75rem;margin-top:.2rem;}
+.wrrapd-legacy-cards-root .wrrapd-legacy-date-block{flex:1 1 48%;min-width:9rem;}
+.wrrapd-legacy-cards-root .wrrapd-legacy-date-block label{margin-bottom:0;font-size:.72rem;}
+.wrrapd-legacy-cards-root .wrrapd-legacy-date-block input[type=date]{width:100%;margin-top:.12rem;padding:.28rem .35rem;font-size:.74rem;border:1px solid #bbb;border-radius:.3rem;background:#fff;}
+.wrrapd-legacy-cards-root .wrrapd-legacy-rem-block{flex:1 1 48%;min-width:10rem;display:flex;flex-wrap:wrap;align-items:center;gap:.35rem .5rem;font-size:.68rem;}
+.wrrapd-legacy-cards-root .wrrapd-legacy-rem-block > label{display:inline-flex;align-items:center;gap:.28rem;margin:0;font-weight:600;white-space:nowrap;}
+.wrrapd-legacy-cards-root .wrrapd-legacy-rem-block input[type=checkbox]{width:14px;height:14px;margin:0;accent-color:var(--wr-amber-deep);}
+.wrrapd-legacy-cards-root .wrrapd-legacy-days-inline{display:inline-flex;align-items:center;gap:.25rem;flex-wrap:wrap;}
+.wrrapd-legacy-cards-root .wrrapd-legacy-rem-days{padding:.18rem .28rem;font-size:.68rem;border-radius:4px;border:1px solid #64748b;font-weight:600;background:#fff;color:#0f172a;min-width:2.5rem;}
+.wrrapd-legacy-cards-root .wrrapd-legacy-rem-days:disabled{opacity:.45;cursor:not-allowed;}
+.wrrapd-legacy-cards-root .wrrapd-legacy-days-tail{font-size:.65rem;font-weight:600;color:#334155;white-space:nowrap;}
+.wrrapd-legacy-cards-root .wrrapd-legacy-comment-row label{margin-bottom:.2rem;}
+.wrrapd-legacy-cards-root .wrrapd-legacy-comment{width:100%;padding:.3rem .4rem;font-size:.78rem;border:1px solid #94a3b8;border-radius:.3rem;background:#fff;}
+.wrrapd-legacy-cards-root .save-section{display:flex;flex-direction:column;gap:.4rem;margin-top:.35rem;}
+.wrrapd-legacy-cards-root .save-btn,.wrrapd-legacy-cards-root .delivery-btn{padding:.42rem .85rem;width:100%;border:none;border-radius:.3rem;cursor:pointer;font-size:.8rem;}
 .wrrapd-legacy-cards-root .save-btn{background:#c00;color:#fff;font-weight:600;}
 .wrrapd-legacy-cards-root .delivery-btn{background:#f6b933;color:#000;}
+.wrrapd-legacy-cards-root .wrrapd-legacy-order-foot{margin-top:.75rem;padding-top:.65rem;border-top:1px solid #ddd;clear:both;}
+.wrrapd-legacy-cards-root .wrrapd-legacy-order-foot .wrrapd-amz-summary{font-size:.78rem;padding:.35rem .45rem;}
+.wrrapd-legacy-cards-root .wrrapd-legacy-order-foot .wrrapd-amz-inv-row{font-size:.74rem;padding:.08rem 0;}
+.wrrapd-legacy-cards-root .wrrapd-legacy-order-foot .wrrapd-amz-inv-row--grand{font-size:.82rem;}
+.wrrapd-legacy-cards-root .wrrapd-legacy-order-foot .wrrapd-amz-inv-sub{font-size:.68rem;}
+.wrrapd-legacy-cards-root .wrrapd-legacy-order-foot .wrrapd-amz-inv-note{font-size:.65rem;}
+@media(max-width:560px){.wrrapd-legacy-cards-root .wrrapd-legacy-rem-date-row{flex-direction:column;align-items:stretch;}.wrrapd-legacy-cards-root .wrrapd-legacy-date-block,.wrrapd-legacy-cards-root .wrrapd-legacy-rem-block{flex:1 1 100%;min-width:0;}}
 </style>';
 
 	echo '<h2>' . esc_html__( 'Your Orders', 'wrrapd' ) . '</h2>';
@@ -590,10 +611,10 @@ function wrrapd_render_orders_legacy_cards( array $orders, array $overlays ) {
 			$id_sfx = substr( md5( $on . ':' . (string) $li ), 0, 10 );
 
 			echo '<div class="wrrapd-legacy-line" data-order="' . esc_attr( $on ) . '" data-line="' . (int) $li . '">';
-			echo '<h4>' . esc_html( sprintf( /* translators: %d: gift line index (1-based). */ __( 'Gift line %d', 'wrrapd' ), $li + 1 ) ) . '</h4>';
 			echo '<div class="info-box"><label>' . esc_html__( 'Giftee name', 'wrrapd' );
-			echo '<input type="text" class="wrrapd-legacy-giftee" id="' . esc_attr( $wrap_id . '-g-' . $id_sfx ) . '" value="' . esc_attr( $giftee_val ) . '" maxlength="200" /></label>';
-			echo '<label>' . esc_html__( 'Relationship', 'wrrapd' );
+			echo '<input type="text" class="wrrapd-legacy-giftee" id="' . esc_attr( $wrap_id . '-g-' . $id_sfx ) . '" value="' . esc_attr( $giftee_val ) . '" maxlength="200" /></label></div>';
+
+			echo '<div class="info-box wrrapd-legacy-orange-select"><label>' . esc_html__( 'Relationship', 'wrrapd' );
 			echo '<select class="wrrapd-legacy-rel" id="' . esc_attr( $wrap_id . '-r-' . $id_sfx ) . '">';
 			echo '<option value="">' . esc_html__( 'Select…', 'wrrapd' ) . '</option>';
 			foreach ( $rel_opts as $r ) {
@@ -601,7 +622,7 @@ function wrrapd_render_orders_legacy_cards( array $orders, array $overlays ) {
 			}
 			echo '</select></label></div>';
 
-			echo '<div class="info-box"><label>' . esc_html__( 'Occasion', 'wrrapd' );
+			echo '<div class="info-box wrrapd-legacy-orange-select"><label>' . esc_html__( 'Occasion', 'wrrapd' );
 			echo '<select class="wrrapd-legacy-occ" id="' . esc_attr( $wrap_id . '-o-' . $id_sfx ) . '">';
 			echo '<option value="">' . esc_html__( 'Select…', 'wrrapd' ) . '</option>';
 			foreach ( $occ_opts as $lab ) {
@@ -611,18 +632,26 @@ function wrrapd_render_orders_legacy_cards( array $orders, array $overlays ) {
 				}
 				echo '<option value="' . esc_attr( $lab_s ) . '"' . selected( $occ_sel, $lab_s, false ) . '>' . esc_html( $lab_s ) . '</option>';
 			}
-			echo '</select></label>';
-			echo '<div class="recurring-date-wrapper"><label><input type="checkbox" class="wrrapd-legacy-rem" id="' . esc_attr( $wrap_id . '-m-' . $id_sfx ) . '"' . ( $rem ? ' checked' : '' ) . ' /> ';
+			echo '</select></label></div>';
+
+			echo '<div class="info-box wrrapd-legacy-rem-date-box">';
+			echo '<div class="wrrapd-legacy-rem-date-row">';
+			echo '<div class="wrrapd-legacy-date-block"><label for="' . esc_attr( $wrap_id . '-d-' . $id_sfx ) . '">' . esc_html__( 'Date', 'wrrapd' );
+			echo '<input type="date" class="wrrapd-legacy-date" id="' . esc_attr( $wrap_id . '-d-' . $id_sfx ) . '" value="' . esc_attr( $gdate ) . '" /></label></div>';
+			echo '<div class="wrrapd-legacy-rem-block">';
+			echo '<label for="' . esc_attr( $wrap_id . '-m-' . $id_sfx ) . '"><input type="checkbox" class="wrrapd-legacy-rem" id="' . esc_attr( $wrap_id . '-m-' . $id_sfx ) . '"' . ( $rem ? ' checked' : '' ) . ' /> ';
 			echo '<span>' . esc_html__( 'Set reminder', 'wrrapd' ) . '</span></label>';
-			echo '<label>' . esc_html__( 'Date', 'wrrapd' ) . ' <input type="date" class="wrrapd-legacy-date" id="' . esc_attr( $wrap_id . '-d-' . $id_sfx ) . '" value="' . esc_attr( $gdate ) . '" /></label>';
-			echo '<label class="wrrapd-legacy-prior-wrap">' . esc_html__( 'Days prior', 'wrrapd' ) . ' ';
-			echo '<select class="wrrapd-legacy-rem-days" id="' . esc_attr( $wrap_id . '-md-' . $id_sfx ) . '"' . ( $rem ? '' : ' disabled' ) . '>';
+			echo '<span class="wrrapd-legacy-days-inline">';
+			echo '<select class="wrrapd-legacy-rem-days" id="' . esc_attr( $wrap_id . '-md-' . $id_sfx ) . '" aria-label="' . esc_attr__( 'Days before the date', 'wrrapd' ) . '"' . ( $rem ? '' : ' disabled' ) . '>';
 			for ( $rd = 1; $rd <= 7; $rd++ ) {
 				echo '<option value="' . (int) $rd . '"' . selected( $rem_prior, $rd, false ) . '>' . (int) $rd . '</option>';
 			}
-			echo '</select></label></div>';
-			echo '<label>' . esc_html__( 'Comment', 'wrrapd' );
-			echo '<textarea class="wrrapd-legacy-comment" id="' . esc_attr( $wrap_id . '-c-' . $id_sfx ) . '" maxlength="4000" rows="3">' . esc_textarea( $comment ) . '</textarea></label></div>';
+			echo '</select>';
+			echo '<span class="wrrapd-legacy-days-tail">' . esc_html__( 'days prior', 'wrrapd' ) . '</span>';
+			echo '</span></div></div></div>';
+
+			echo '<div class="info-box wrrapd-legacy-comment-row"><label for="' . esc_attr( $wrap_id . '-c-' . $id_sfx ) . '">' . esc_html__( 'Comment', 'wrrapd' );
+			echo '<input type="text" class="wrrapd-legacy-comment" id="' . esc_attr( $wrap_id . '-c-' . $id_sfx ) . '" value="' . esc_attr( $comment ) . '" maxlength="4000" placeholder="' . esc_attr__( 'Optional note', 'wrrapd' ) . '" /></label></div>';
 
 			echo '<div class="save-section">';
 			echo '<button type="button" class="save-btn wrrapd-legacy-save">' . esc_html__( 'Save / Update', 'wrrapd' ) . '</button>';
@@ -632,7 +661,7 @@ function wrrapd_render_orders_legacy_cards( array $orders, array $overlays ) {
 			++$li;
 		}
 		echo '</div>';
-		echo '<div class="wrrapd-legacy-order-foot" style="margin-top:1rem;padding-top:1rem;border-top:1px solid #ddd;clear:both;">';
+		echo '<div class="wrrapd-legacy-order-foot">';
 		echo wrrapd_studio_order_summary_html( $order, $lines );
 		echo '</div>';
 		echo '</div></div>';
@@ -869,6 +898,26 @@ function wrrapd_money_usd( $n ) {
 }
 
 /**
+ * Pretty-print checkout invoice line labels (API sometimes concatenates without a space).
+ *
+ * @param string $lab Raw label from checkout snapshot.
+ */
+function wrrapd_normalize_checkout_invoice_label( $lab ) {
+	$lab = trim( (string) $lab );
+	if ( $lab === '' ) {
+		return '';
+	}
+	if ( preg_match( '/^gift\s*wrap\s*Wrrapd:\s*(.*)$/i', $lab, $m ) ) {
+		$rest = trim( (string) ( $m[1] ?? '' ) );
+		if ( $rest === '' || preg_match( '/^wrrapd$/i', $rest ) ) {
+			return __( 'Gift wrap', 'wrrapd' ) . ' — ' . __( 'Wrrapd design', 'wrrapd' );
+		}
+		return __( 'Gift wrap', 'wrrapd' ) . ' — ' . $rest;
+	}
+	return $lab;
+}
+
+/**
  * Receipt block at bottom of studio order (checkout snapshot when available).
  *
  * @param array<string, mixed>              $order Order payload from API.
@@ -898,6 +947,7 @@ function wrrapd_studio_order_summary_html( array $order, array $lines ) {
 			if ( $lab === '' ) {
 				continue;
 			}
+			$lab     = wrrapd_normalize_checkout_invoice_label( $lab );
 			$amt_f = isset( $row['amount'] ) && is_numeric( $row['amount'] ) ? (float) $row['amount'] : null;
 			echo '<div class="wrrapd-amz-inv-row">';
 			echo '<span class="wrrapd-amz-inv-lab">' . esc_html( $lab ) . '</span>';
@@ -938,6 +988,7 @@ function wrrapd_studio_order_summary_html( array $order, array $lines ) {
 					continue;
 				}
 				$lab = isset( $row['label'] ) ? trim( (string) $row['label'] ) : '';
+				$lab = wrrapd_normalize_checkout_invoice_label( $lab );
 				$det = isset( $row['detail'] ) ? trim( (string) $row['detail'] ) : '';
 				$lab_out = $lab !== '' ? $lab : __( 'Gift wrap', 'wrrapd' );
 				if ( strcasecmp( $lab, 'Gift wrap' ) === 0 ) {
