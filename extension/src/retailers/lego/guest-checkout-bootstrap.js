@@ -1,12 +1,14 @@
 import {
   LEGO_CHECKOUT_CTA_PATTERNS,
   LEGO_CHECKOUT_URL_HINTS,
-  LEGO_GIFT_INTENT_SESSION_KEY,
+  LEGO_GIFT_RADIO_SESSION_KEY,
+  LEGO_GIFT_TC_SESSION_KEY,
   WRRAPD_RETAILER_LEGO,
 } from "./constants.js";
 import { initLegoCheckoutFinalDeliveryMessage } from "./checkout-final-delivery-message.js";
 import { initLegoGiftWrapUpsell } from "./lego-gift-wrap-upsell.js";
 import { isLegoCheckoutReviewLikePage } from "./lego-checkout-review-detect.js";
+import { initLegoShippingDeliveryHint } from "./lego-shipping-overlay.js";
 
 function looksLikeLegoCheckoutUrl(url) {
   const href = String(url || "").toLowerCase();
@@ -35,11 +37,14 @@ export function initLegoGuestCheckoutBootstrap() {
   const href = window.location.href;
   const isCheckoutLike = looksLikeLegoCheckoutUrl(href);
   const cta = detectGuestCheckoutCta();
-  let giftIntent = "";
+  let giftRadio = "";
+  let giftTcAccepted = false;
   try {
-    giftIntent = sessionStorage.getItem(LEGO_GIFT_INTENT_SESSION_KEY) || "";
+    giftRadio = sessionStorage.getItem(LEGO_GIFT_RADIO_SESSION_KEY) || "";
+    giftTcAccepted = sessionStorage.getItem(LEGO_GIFT_TC_SESSION_KEY) === "1";
   } catch {
-    giftIntent = "";
+    giftRadio = "";
+    giftTcAccepted = false;
   }
 
   window.__WRRAPD_LEGO_DEBUG__ = {
@@ -47,7 +52,8 @@ export function initLegoGuestCheckoutBootstrap() {
     href,
     isCheckoutLike,
     checkoutReviewLike: isLegoCheckoutReviewLikePage(),
-    giftIntent,
+    giftRadio,
+    giftTcAccepted,
     ctaFound: cta.found,
     ctaText: cta.text,
     sampledAt: new Date().toISOString(),
@@ -55,4 +61,5 @@ export function initLegoGuestCheckoutBootstrap() {
 
   initLegoCheckoutFinalDeliveryMessage();
   initLegoGiftWrapUpsell();
+  initLegoShippingDeliveryHint();
 }

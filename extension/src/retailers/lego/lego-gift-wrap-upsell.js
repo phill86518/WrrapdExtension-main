@@ -1,24 +1,79 @@
 import {
   LEGO_GIFT_CART_OPTIN_DATA_ATTR,
   LEGO_GIFT_CHECKOUT_STEP0_DATA_ATTR,
+  LEGO_GIFT_FLOWERS_INTEREST_KEY,
   LEGO_GIFT_INTENT_SESSION_KEY,
+  LEGO_GIFT_RADIO_SESSION_KEY,
+  LEGO_GIFT_STEP0_DISMISSED_KEY,
+  LEGO_GIFT_TC_SESSION_KEY,
+  LEGO_GIFT_WRAP_PREF_KEY,
+  LEGO_HUB_SHIP_HINT_DATA_ATTR,
 } from "./constants.js";
 import { isLegoCheckoutReviewLikePage } from "./lego-checkout-review-detect.js";
 
-const MODAL_ID = "wrrapd-lego-gift-intro-modal";
+const FLOW_MODAL_ID = "wrrapd-lego-gift-service-modal";
 
-function readIntent() {
+function migrateLegacySession() {
   try {
-    return sessionStorage.getItem(LEGO_GIFT_INTENT_SESSION_KEY) || "";
+    const legacy = sessionStorage.getItem(LEGO_GIFT_INTENT_SESSION_KEY);
+    if (legacy === "cart-yes" && !sessionStorage.getItem(LEGO_GIFT_RADIO_SESSION_KEY)) {
+      sessionStorage.setItem(LEGO_GIFT_RADIO_SESSION_KEY, "yes");
+      sessionStorage.setItem(LEGO_GIFT_TC_SESSION_KEY, "1");
+    }
+    if (legacy === "dismissed-step0" && !sessionStorage.getItem(LEGO_GIFT_STEP0_DISMISSED_KEY)) {
+      sessionStorage.setItem(LEGO_GIFT_STEP0_DISMISSED_KEY, "1");
+    }
+    if (legacy) sessionStorage.removeItem(LEGO_GIFT_INTENT_SESSION_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+function readRadio() {
+  try {
+    return sessionStorage.getItem(LEGO_GIFT_RADIO_SESSION_KEY) || "";
   } catch {
     return "";
   }
 }
 
-function writeIntent(value) {
+function writeRadio(v) {
   try {
-    if (!value) sessionStorage.removeItem(LEGO_GIFT_INTENT_SESSION_KEY);
-    else sessionStorage.setItem(LEGO_GIFT_INTENT_SESSION_KEY, value);
+    if (!v) sessionStorage.removeItem(LEGO_GIFT_RADIO_SESSION_KEY);
+    else sessionStorage.setItem(LEGO_GIFT_RADIO_SESSION_KEY, v);
+  } catch {
+    /* ignore */
+  }
+}
+
+function readTc() {
+  try {
+    return sessionStorage.getItem(LEGO_GIFT_TC_SESSION_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function writeTc(on) {
+  try {
+    if (on) sessionStorage.setItem(LEGO_GIFT_TC_SESSION_KEY, "1");
+    else sessionStorage.removeItem(LEGO_GIFT_TC_SESSION_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+function readStep0Dismissed() {
+  try {
+    return sessionStorage.getItem(LEGO_GIFT_STEP0_DISMISSED_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function writeStep0Dismissed() {
+  try {
+    sessionStorage.setItem(LEGO_GIFT_STEP0_DISMISSED_KEY, "1");
   } catch {
     /* ignore */
   }
@@ -42,6 +97,243 @@ function findCheckoutSecurelyButton() {
     ) ||
     null
   );
+}
+
+function removeLegacyHubShipCard() {
+  document.querySelectorAll(`[${LEGO_HUB_SHIP_HINT_DATA_ATTR}]`).forEach((el) => {
+    el.remove();
+  });
+}
+
+/** Gate LEGO “Checkout Securely” until Yes path completes T&C. */
+function applyCheckoutSecurelyGate() {
+  const btn = findCheckoutSecurelyButton();
+  if (!btn) return;
+  const radio = readRadio();
+  const tc = readTc();
+  const needBlock = radio === "yes" && !tc;
+  if (needBlock) {
+    btn.disabled = true;
+    btn.setAttribute("aria-disabled", "true");
+    btn.setAttribute("data-wrrapd-lego-checkout-gated", "1");
+  } else {
+    if (btn.getAttribute("data-wrrapd-lego-checkout-gated") === "1") {
+      btn.disabled = false;
+      btn.removeAttribute("aria-disabled");
+      btn.removeAttribute("data-wrrapd-lego-checkout-gated");
+    }
+  }
+}
+
+/**
+ * Gift wrap / flowers preferences + T&C. On accept: TC flag + prefs saved, checkout enabled.
+ */
+export function openLegoGiftServiceModal() {
+  if (document.getElementById(FLOW_MODAL_ID)) return;
+
+  const overlay = document.createElement("div");
+  overlay.id = FLOW_MODAL_ID;
+  overlay.className = "wrrapd-lego-modal";
+  overlay.setAttribute("role", "dialog");
+  overlay.setAttribute("aria-modal", "true");
+  overlay.setAttribute("aria-labelledby", "wrrapd-lego-flow-title");
+  overlay.style.cssText = [
+    "position:fixed",
+    "inset:0",
+    "z-index:2147483646",
+    "display:flex",
+    "align-items:center",
+    "justify-content:center",
+    "padding:var(--ds-spacing-md, 1rem)",
+    "background:rgba(15,23,42,0.55)",
+    "box-sizing:border-box",
+  ].join(";");
+
+  const panel = document.createElement("div");
+  panel.style.cssText = [
+    "max-width:26rem",
+    "width:100%",
+    "max-height:min(90vh, 34rem)",
+    "overflow:auto",
+    "box-sizing:border-box",
+    "padding:var(--ds-spacing-md, 1rem)",
+    "border-radius:var(--ds-border-radius-md, 0.5rem)",
+    "background:var(--ds-color-layer-neutral-default, #fff)",
+    "box-shadow:var(--ds-shadow-deep-md, 0 8px 24px rgba(0,0,0,.15))",
+  ].join(";");
+
+  const title = document.createElement("h2");
+  title.id = "wrrapd-lego-flow-title";
+  title.className = "ds-heading-sm ds-color-text-default";
+  title.style.margin = "0 0 var(--ds-spacing-xs, 0.5rem) 0";
+  title.textContent = "Gift wrap with Wrrapd";
+
+  const intro = document.createElement("p");
+  intro.className = "ds-body-xs-regular ds-color-text-subdued";
+  intro.style.margin = "0 0 var(--ds-spacing-sm, 0.75rem) 0";
+  intro.textContent =
+    "A few gentle choices below. You can change details later with our team if you need to.";
+
+  const wrapLegend = document.createElement("p");
+  wrapLegend.className = "ds-label-sm-medium ds-color-text-default";
+  wrapLegend.style.margin = "0 0 var(--ds-spacing-2xs, 0.375rem) 0";
+  wrapLegend.textContent = "Wrapping paper";
+
+  const wrapFieldset = document.createElement("div");
+  wrapFieldset.style.margin = "0 0 var(--ds-spacing-sm, 0.75rem) 0";
+
+  const wrapChoices = [
+    { id: "wrrapd-wrap-wrrapd", value: "wrrapd", label: "Let Wrrapd choose a wrap that suits this LEGO set" },
+    { id: "wrrapd-wrap-classic", value: "classic", label: "A timeless, classic wrap style" },
+  ];
+  let wrapValue = "wrrapd";
+  for (const c of wrapChoices) {
+    const row = document.createElement("label");
+    row.className = "ds-body-xs-regular ds-color-text-default";
+    row.style.cssText =
+      "display:flex;align-items:flex-start;gap:var(--ds-spacing-2xs, 0.375rem);cursor:pointer;margin-bottom:6px;";
+    const inp = document.createElement("input");
+    inp.type = "radio";
+    inp.name = "wrrapd-lego-wrap";
+    inp.value = c.value;
+    inp.checked = c.value === wrapValue;
+    inp.addEventListener("change", () => {
+      if (inp.checked) wrapValue = c.value;
+    });
+    row.append(inp, document.createTextNode(" " + c.label));
+    wrapFieldset.appendChild(row);
+  }
+
+  const flowersLabel = document.createElement("label");
+  flowersLabel.className = "ds-body-xs-regular ds-color-text-default";
+  flowersLabel.style.cssText =
+    "display:flex;align-items:flex-start;gap:var(--ds-spacing-2xs, 0.375rem);cursor:pointer;margin-bottom:var(--ds-spacing-sm, 0.75rem);";
+  const flowersCb = document.createElement("input");
+  flowersCb.type = "checkbox";
+  flowersCb.style.marginTop = "0.15rem";
+  flowersLabel.append(
+    flowersCb,
+    document.createTextNode(
+      " I may be interested in fresh flowers with delivery (where available). No obligation.",
+    ),
+  );
+
+  const tcBox = document.createElement("div");
+  tcBox.className = "ds-body-xs-regular ds-color-text-default";
+  tcBox.style.cssText =
+    "margin:0 0 var(--ds-spacing-xs, 0.5rem) 0;padding:var(--ds-spacing-xs, 0.5rem);background:var(--ds-color-layer-neutral-subdued, #f8fafc);border-radius:var(--ds-border-radius-sm, 0.375rem);max-height:9rem;overflow:auto;line-height:1.45;";
+  tcBox.textContent =
+    "Wrrapd provides optional gift preparation and coordination services separate from LEGO.com. By continuing you confirm you have read our service description and agree to Wrrapd’s terms for gift services and messaging for this order. Full terms and privacy policies are available at wrrapd.com.";
+
+  const agreeLabel = document.createElement("label");
+  agreeLabel.className = "ds-body-xs-regular ds-color-text-default";
+  agreeLabel.style.cssText =
+    "display:flex;align-items:flex-start;gap:var(--ds-spacing-2xs, 0.375rem);cursor:pointer;margin-bottom:var(--ds-spacing-sm, 0.75rem);";
+  const agreeCb = document.createElement("input");
+  agreeCb.type = "checkbox";
+  agreeCb.style.marginTop = "0.15rem";
+  agreeLabel.append(
+    agreeCb,
+    document.createTextNode(" I have read the above and agree to proceed with Wrrapd gift services for this bag."),
+  );
+
+  const row = document.createElement("div");
+  row.style.cssText =
+    "display:flex;flex-wrap:wrap;gap:var(--ds-spacing-2xs, 0.375rem);justify-content:flex-end;";
+
+  const cancelBtn = document.createElement("button");
+  cancelBtn.type = "button";
+  cancelBtn.className =
+    "sk-button sk-button--secondary sk-button--small sk-button--neutral";
+  cancelBtn.textContent = "Not right now";
+
+  const proceedBtn = document.createElement("button");
+  proceedBtn.type = "button";
+  proceedBtn.className =
+    "sk-button sk-button--primary sk-button--small sk-button--neutral";
+  proceedBtn.textContent = "Continue to LEGO checkout";
+  proceedBtn.disabled = true;
+
+  agreeCb.addEventListener("change", () => {
+    proceedBtn.disabled = !agreeCb.checked;
+  });
+
+  const tearDown = () => {
+    window.removeEventListener("keydown", onKey);
+    overlay.remove();
+  };
+
+  const onKey = (e) => {
+    if (e.key === "Escape") {
+      writeRadio("no");
+      writeTc(false);
+      try {
+        sessionStorage.removeItem(LEGO_GIFT_WRAP_PREF_KEY);
+        sessionStorage.removeItem(LEGO_GIFT_FLOWERS_INTEREST_KEY);
+      } catch {
+        /* ignore */
+      }
+      const y = document.querySelector('input[name="wrrapd-lego-gift"][value="yes"]');
+      const n = document.querySelector('input[name="wrrapd-lego-gift"][value="no"]');
+      if (y) y.checked = false;
+      if (n) n.checked = true;
+      tearDown();
+      applyCheckoutSecurelyGate();
+    }
+  };
+
+  cancelBtn.addEventListener("click", () => {
+    writeRadio("no");
+    writeTc(false);
+    try {
+      sessionStorage.removeItem(LEGO_GIFT_WRAP_PREF_KEY);
+      sessionStorage.removeItem(LEGO_GIFT_FLOWERS_INTEREST_KEY);
+    } catch {
+      /* ignore */
+    }
+    const y = document.querySelector('input[name="wrrapd-lego-gift"][value="yes"]');
+    const n = document.querySelector('input[name="wrrapd-lego-gift"][value="no"]');
+    if (y) y.checked = false;
+    if (n) n.checked = true;
+    tearDown();
+    applyCheckoutSecurelyGate();
+  });
+
+  proceedBtn.addEventListener("click", () => {
+    if (!agreeCb.checked) return;
+    try {
+      sessionStorage.setItem(LEGO_GIFT_WRAP_PREF_KEY, wrapValue);
+      sessionStorage.setItem(
+        LEGO_GIFT_FLOWERS_INTEREST_KEY,
+        flowersCb.checked ? "1" : "0",
+      );
+    } catch {
+      /* ignore */
+    }
+    writeTc(true);
+    tearDown();
+    applyCheckoutSecurelyGate();
+  });
+
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) cancelBtn.click();
+  });
+  window.addEventListener("keydown", onKey);
+
+  row.append(cancelBtn, proceedBtn);
+  panel.append(
+    title,
+    intro,
+    wrapLegend,
+    wrapFieldset,
+    flowersLabel,
+    tcBox,
+    agreeLabel,
+    row,
+  );
+  overlay.appendChild(panel);
+  document.body.appendChild(overlay);
+  proceedBtn.focus();
 }
 
 function findShippingStepHeadline() {
@@ -71,94 +363,6 @@ function findShippingStepHeadline() {
   return null;
 }
 
-/**
- * Lightweight intro modal (LEGO-adjacent styling). Opens from bag checkbox or checkout step 0.
- */
-export function openLegoGiftWrapIntroModal() {
-  if (document.getElementById(MODAL_ID)) return;
-
-  const overlay = document.createElement("div");
-  overlay.id = MODAL_ID;
-  overlay.className = "wrrapd-lego-modal";
-  overlay.setAttribute("role", "dialog");
-  overlay.setAttribute("aria-modal", "true");
-  overlay.setAttribute("aria-labelledby", "wrrapd-lego-gift-modal-title");
-  overlay.style.cssText = [
-    "position:fixed",
-    "inset:0",
-    "z-index:2147483646",
-    "display:flex",
-    "align-items:center",
-    "justify-content:center",
-    "padding:var(--ds-spacing-md, 1rem)",
-    "background:rgba(15,23,42,0.55)",
-    "box-sizing:border-box",
-  ].join(";");
-
-  const panel = document.createElement("div");
-  panel.style.cssText = [
-    "max-width:28rem",
-    "width:100%",
-    "box-sizing:border-box",
-    "padding:var(--ds-spacing-md, 1rem)",
-    "border-radius:var(--ds-border-radius-md, 0.5rem)",
-    "background:var(--ds-color-layer-neutral-default, #fff)",
-    "box-shadow:var(--ds-shadow-deep-md, 0 8px 24px rgba(0,0,0,.15))",
-  ].join(";");
-
-  const title = document.createElement("h2");
-  title.id = "wrrapd-lego-gift-modal-title";
-  title.className = "ds-heading-sm ds-color-text-default";
-  title.style.margin = "0 0 var(--ds-spacing-xs, 0.5rem) 0";
-  title.textContent = "Gift wrap with Wrrapd";
-
-  const p = document.createElement("p");
-  p.className = "ds-body-xs-regular ds-color-text-default";
-  p.style.margin = "0 0 var(--ds-spacing-sm, 0.75rem) 0";
-  p.textContent =
-    "LEGO.com does not sell gift wrap. If you choose Wrrapd, we can help with wrapping and optional add-ons (such as flowers), and we’ll explain how delivery works for your giftee.";
-
-  const row = document.createElement("div");
-  row.style.cssText =
-    "display:flex;flex-wrap:wrap;gap:var(--ds-spacing-2xs, 0.375rem);justify-content:flex-end;";
-
-  const closeBtn = document.createElement("button");
-  closeBtn.type = "button";
-  closeBtn.className =
-    "sk-button sk-button--secondary sk-button--small sk-button--neutral";
-  closeBtn.textContent = "Got it";
-
-  const link = document.createElement("a");
-  link.className = "sk-button sk-button--primary sk-button--small sk-button--neutral";
-  link.href = "https://www.wrrapd.com/";
-  link.target = "_blank";
-  link.rel = "noopener noreferrer";
-  link.textContent = "Learn more at wrrapd.com";
-
-  const tearDown = () => {
-    window.removeEventListener("keydown", onKey);
-    overlay.remove();
-  };
-
-  const onKey = (e) => {
-    if (e.key === "Escape") tearDown();
-  };
-
-  overlay.addEventListener("click", (e) => {
-    if (e.target === overlay) tearDown();
-  });
-  closeBtn.addEventListener("click", tearDown);
-  link.addEventListener("click", () => window.setTimeout(tearDown, 0));
-
-  window.addEventListener("keydown", onKey);
-
-  row.append(closeBtn, link);
-  panel.append(title, p, row);
-  overlay.appendChild(panel);
-  document.body.appendChild(overlay);
-  closeBtn.focus();
-}
-
 function mountCartGiftOptIn() {
   if (existingCartOptIn()) return;
   const btn = findCheckoutSecurelyButton();
@@ -179,49 +383,70 @@ function mountCartGiftOptIn() {
   const hook = document.createElement("h2");
   hook.className = "ds-heading-xs ds-color-text-default";
   hook.style.margin = "0 0 var(--ds-spacing-2xs, 0.375rem) 0";
-  hook.textContent = "Would you like it gift-wrapped?";
+  hook.textContent = "Would you like us to gift-wrap it for you?";
 
   const sub = document.createElement("p");
   sub.className = "ds-body-xs-regular ds-color-text-subdued";
-  sub.style.margin = "0 0 var(--ds-spacing-xs, 0.5rem) 0";
+  sub.style.margin = "0 0 var(--ds-spacing-sm, 0.75rem) 0";
   sub.textContent =
-    "Wrrapd offers optional gift wrap and delivery help. If you’re interested, tick below and we’ll show you a short overview—you can decide later.";
+    "It’s entirely optional. If you’d rather not decide yet, you can still check out on LEGO.com as usual—we’ll offer this again on the next step.";
 
-  const label = document.createElement("label");
-  label.className = "ds-body-xs-regular ds-color-text-default";
-  label.style.cssText =
-    "display:flex;align-items:flex-start;gap:var(--ds-spacing-2xs, 0.375rem);cursor:pointer;";
+  const fieldset = document.createElement("fieldset");
+  fieldset.style.cssText = "border:none;padding:0;margin:0;";
+  const leg = document.createElement("legend");
+  leg.className = "ds-label-sm-medium ds-color-text-default";
+  leg.style.cssText = "padding:0;margin:0 0 6px 0;float:left;width:100%;";
+  leg.textContent = "Your choice";
 
-  const input = document.createElement("input");
-  input.type = "checkbox";
-  input.style.marginTop = "0.15rem";
-  if (readIntent() === "cart-yes") input.checked = true;
+  const mkRow = (value, labelText) => {
+    const lab = document.createElement("label");
+    lab.className = "ds-body-xs-regular ds-color-text-default";
+    lab.style.cssText =
+      "display:flex;align-items:flex-start;gap:var(--ds-spacing-2xs, 0.375rem);cursor:pointer;margin-bottom:8px;";
+    const inp = document.createElement("input");
+    inp.type = "radio";
+    inp.name = "wrrapd-lego-gift";
+    inp.value = value;
+    const stored = readRadio();
+    if (stored === value) inp.checked = true;
+    inp.addEventListener("change", () => {
+      if (!inp.checked) return;
+      writeRadio(value);
+      if (value === "yes") {
+        openLegoGiftServiceModal();
+      } else {
+        writeTc(false);
+        try {
+          sessionStorage.removeItem(LEGO_GIFT_WRAP_PREF_KEY);
+          sessionStorage.removeItem(LEGO_GIFT_FLOWERS_INTEREST_KEY);
+        } catch {
+          /* ignore */
+        }
+      }
+      applyCheckoutSecurelyGate();
+    });
+    lab.append(inp, document.createTextNode(" " + labelText));
+    return lab;
+  };
 
-  const span = document.createElement("span");
-  const lead = document.createElement("strong");
-  lead.textContent = "Yes, I’m interested";
-  span.append(
-    lead,
-    document.createTextNode(" in gift wrap and hearing about flowers or delivery options from Wrrapd."),
+  fieldset.append(
+    leg,
+    mkRow(
+      "yes",
+      "Yes — I’d like to see gift-wrap and add-on options, and review terms before I continue.",
+    ),
+    mkRow("no", "No, thank you — I’ll continue without Wrrapd gift wrap for now."),
   );
 
-  input.addEventListener("change", () => {
-    if (input.checked) {
-      writeIntent("cart-yes");
-      openLegoGiftWrapIntroModal();
-    } else {
-      writeIntent("");
-    }
-  });
-
-  label.append(input, span);
-  wrap.append(hook, sub, label);
+  wrap.append(hook, sub, fieldset);
   btn.parentElement.insertBefore(wrap, btn);
+  applyCheckoutSecurelyGate();
 }
 
 function mountCheckoutStepZero() {
   if (existingCheckoutStep0()) return;
-  if (readIntent() === "cart-yes" || readIntent() === "dismissed-step0") return;
+  if (readRadio() === "yes") return;
+  if (readStep0Dismissed()) return;
 
   const headline = findShippingStepHeadline();
   if (!headline?.parentElement) return;
@@ -244,14 +469,13 @@ function mountCheckoutStepZero() {
   const title = document.createElement("h2");
   title.className = "ds-heading-sm ds-color-text-default";
   title.style.margin = "0 0 var(--ds-spacing-2xs, 0.375rem) 0";
-  title.textContent =
-    "0. Would you like it gift-wrapped—or help with flowers or delivery?";
+  title.textContent = "0. Would you like us to gift-wrap it for you?";
 
   const blurb = document.createElement("p");
   blurb.className = "ds-body-xs-regular ds-color-text-subdued";
   blurb.style.margin = "0 0 var(--ds-spacing-sm, 0.75rem) 0";
   blurb.textContent =
-    "If you’d like to see how Wrrapd can help with wrapping or add-ons, tap below for a brief overview. You can always continue checkout as usual.";
+    "On My Bag you preferred to wait—here’s another chance to preview Wrrapd’s gentle gift-wrap and add-on options. Or continue with LEGO’s checkout as usual.";
 
   const row = document.createElement("div");
   row.style.cssText =
@@ -261,7 +485,7 @@ function mountCheckoutStepZero() {
   yes.type = "button";
   yes.className =
     "sk-button sk-button--primary sk-button--small sk-button--neutral";
-  yes.textContent = "Show me";
+  yes.textContent = "Show me the options";
 
   const later = document.createElement("button");
   later.type = "button";
@@ -270,12 +494,12 @@ function mountCheckoutStepZero() {
   later.textContent = "Not now";
 
   yes.addEventListener("click", () => {
-    writeIntent("cart-yes");
-    openLegoGiftWrapIntroModal();
+    writeRadio("yes");
+    openLegoGiftServiceModal();
     section.remove();
   });
   later.addEventListener("click", () => {
-    writeIntent("dismissed-step0");
+    writeStep0Dismissed();
     section.remove();
   });
 
@@ -285,23 +509,28 @@ function mountCheckoutStepZero() {
 }
 
 function tryMountGiftUpsell() {
+  migrateLegacySession();
   const path = (window.location.pathname || "").toLowerCase();
   const isCart = path.includes("/cart");
   const isCheckout =
     path.includes("/checkout") || path.includes("/checkouts");
 
   if (isCart) {
+    removeLegacyHubShipCard();
     mountCartGiftOptIn();
+    applyCheckoutSecurelyGate();
     return;
   }
 
   if (isCheckout && !isLegoCheckoutReviewLikePage()) {
     mountCheckoutStepZero();
   }
+  applyCheckoutSecurelyGate();
 }
 
 /**
- * Bag: checkbox above Checkout Securely. Checkout shipping: step 0 if user did not opt in on bag.
+ * Bag: soft Yes/No above Checkout Securely; Yes opens wrap/flowers/T&C then enables checkout.
+ * Checkout: Step 0 only if guest declined on bag (or chose not to see options).
  */
 export function initLegoGiftWrapUpsell() {
   let raf = 0;
