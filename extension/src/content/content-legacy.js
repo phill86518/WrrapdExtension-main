@@ -11473,6 +11473,13 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                                     checkoutFinalShippingAddress &&
                                     typeof checkoutFinalShippingAddress === 'object';
                                 const checkoutInvoicePayload = buildCheckoutInvoiceSnapshotForServer();
+                                const payRetailer =
+                                    typeof event.data.retailer === 'string' && event.data.retailer.trim()
+                                        ? String(event.data.retailer).trim()
+                                        : typeof event.data.name_of_retailer === 'string' &&
+                                            event.data.name_of_retailer.trim()
+                                          ? String(event.data.name_of_retailer).trim()
+                                          : 'Amazon';
                                 const response = await fetch('https://api.wrrapd.com/process-payment', {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
@@ -11482,6 +11489,8 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                                         customerEmail,
                                         customerPhone,
                                         orderNumber,
+                                        retailer: payRetailer,
+                                        name_of_retailer: payRetailer,
                                         billingDetails: billingDetails || null,
                                         ...(hasCheckoutGiftee
                                             ? { finalShippingAddress: checkoutFinalShippingAddress }

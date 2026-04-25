@@ -101,6 +101,13 @@ app.get('/checkout', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'checkout.html'));
 });
 
+app.get('/checkout/lego', (req, res) => {
+    if (!req.isPayDomain) {
+        return res.status(403).send('Access forbidden.');
+    }
+    res.sendFile(path.join(__dirname, 'public', 'checkout.html'));
+});
+
 // Increase body size limit to handle large base64 images (50MB)
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
@@ -625,8 +632,21 @@ function sanitizeCheckoutInvoiceForStorage(raw) {
     return out;
 }
 
+/** Canonical sales channel for saved JSON + tracking ingest (`name_of_retailer` mirrors this string). */
+function normalizePayRetailer(body) {
+    const raw =
+        (body && typeof body.retailer === 'string' && body.retailer) ||
+        (body && typeof body.name_of_retailer === 'string' && body.name_of_retailer) ||
+        '';
+    const lo = String(raw).trim().toLowerCase();
+    if (lo === 'lego') return 'Lego';
+    if (lo === 'target') return 'Target';
+    return 'Amazon';
+}
+
 // Function to save order data to a JSON file
-const saveOrderToJsonFile = (orderData, paymentData, customerData, orderNumber, checkoutInvoice) => {
+const saveOrderToJsonFile = (orderData, paymentData, customerData, orderNumber, checkoutInvoice, payRetailer) => {
+    const channel = normalizePayRetailer({ retailer: payRetailer });
     // Create 'orders' directory if it doesn't exist
     const ordersDir = path.join(__dirname, 'orders');
     if (!fs.existsSync(ordersDir)) {
@@ -652,7 +672,8 @@ const saveOrderToJsonFile = (orderData, paymentData, customerData, orderNumber, 
     const saveData = {
         orderNumber: orderNumber,
         timestamp: new Date().toISOString(),
-        retailer: 'Amazon',
+        retailer: channel,
+        name_of_retailer: channel,
         orderItems: orderData,
         payment: {
             id: paymentData.id,
@@ -1466,6 +1487,7 @@ app.post('/process-payment', async (req, res) => {
     }
 
     const normalizedOrderData = normalizeOrderItems(orderData);
+    const payRetailer = normalizePayRetailer(req.body);
 
     // Checkout giftee source (priority):
     // 1) process-payment body from checkout postMessage (always tied to this payment; survives PM2 multi-worker).
@@ -1544,6 +1566,7 @@ app.post('/process-payment', async (req, res) => {
             },
             orderNumber,
             checkoutInvoice,
+            payRetailer,
         );
         
         // Generate QR code for the order
@@ -1952,8 +1975,7 @@ app.post('/process-payment', async (req, res) => {
             const fallbackAmazonDay = inferAmazonDateKeyFromItems(wrappedOnly.length ? wrappedOnly : normalizedOrderData);
             const payEmailNorm = normalizeCustomerEmail(customerEmail);
             const payWrrapdCustomerId = getOrCreateWrrapdCustomerId(payEmailNorm);
-            const ingestPayload = {
-                retailer: 'Amazon',
+            const ingestCommon = {
                 customerName,
                 customerPhone,
                 customerEmail,
@@ -1975,22 +1997,41 @@ app.post('/process-payment', async (req, res) => {
                     postalCode: finalAddr.postalCode || finalAddr.postal_code || firstItem.postalCode || '00000',
                 },
                 externalOrderId: canonicalTrackingExternalOrderId(orderNumber),
-                sourceNote: `Amazon order ${orderNumber}; ${wrappedOnly.length} Wrrapd item(s); Amazon dates ${
-                    effectiveAmazonDays.join(', ') || fallbackAmazonDay
-                }; Wrrapd +1 (${
-                    hintedGrouping === 'earliest' ? 'after earliest' : 'after latest'
-                } Amazon day). [${WRRAPD_INGEST_VERSION}]`,
                 lineItems,
-                ...(effectiveAmazonDays.length > 0
-                    ? {
-                        amazonDeliveryDays: effectiveAmazonDays,
-                        wrrapdAmazonGrouping: hintedGrouping === 'earliest' ? 'earliest' : 'latest',
-                    }
-                    : {
-                        // Always prefer Amazon date key input so tracking computes +1 day in America/New_York.
-                        amazonDeliveryDay: fallbackAmazonDay,
-                    }),
             };
+            let ingestPayload;
+            if (payRetailer === 'Lego') {
+                const legoScheduled =
+                    (typeof req.body.scheduledFor === 'string' && req.body.scheduledFor.trim()) ||
+                    (typeof req.body.deliveryDate === 'string' && req.body.deliveryDate.trim()) ||
+                    new Date(Date.now() + 5 * 86400000).toISOString();
+                ingestPayload = {
+                    ...ingestCommon,
+                    retailer: 'Lego',
+                    sourceNote: `Lego order ${orderNumber}; ${wrappedOnly.length} Wrrapd item(s). [${WRRAPD_INGEST_VERSION}]`,
+                    scheduledFor: legoScheduled,
+                };
+            } else {
+                const trackingRetailer = payRetailer === 'Target' ? 'Target' : 'Amazon';
+                ingestPayload = {
+                    ...ingestCommon,
+                    retailer: trackingRetailer,
+                    sourceNote: `Amazon order ${orderNumber}; ${wrappedOnly.length} Wrrapd item(s); Amazon dates ${
+                        effectiveAmazonDays.join(', ') || fallbackAmazonDay
+                    }; Wrrapd +1 (${
+                        hintedGrouping === 'earliest' ? 'after earliest' : 'after latest'
+                    } Amazon day). [${WRRAPD_INGEST_VERSION}]`,
+                    ...(effectiveAmazonDays.length > 0
+                        ? {
+                            amazonDeliveryDays: effectiveAmazonDays,
+                            wrrapdAmazonGrouping: hintedGrouping === 'earliest' ? 'earliest' : 'latest',
+                        }
+                        : {
+                            // Always prefer Amazon date key input so tracking computes +1 day in America/New_York.
+                            amazonDeliveryDay: fallbackAmazonDay,
+                        }),
+                };
+            }
             const ingestResult = await ingestOrderIntoTracking(ingestPayload);
             if (!ingestResult.ok) {
                 nonBlockingWarnings.push(`tracking ingest failed: ${ingestResult.reason}`);

@@ -8,7 +8,7 @@ export type DeliveryStatus =
 export type OnboardingStatus = "pending" | "approved" | "rejected";
 
 /** Where the shopper placed the underlying gift order (multi-retailer ingest + ops). */
-export type OrderRetailer = "Amazon" | "Target";
+export type OrderRetailer = "Amazon" | "Target" | "Lego";
 
 export type OrderLineItem = {
   asin?: string;

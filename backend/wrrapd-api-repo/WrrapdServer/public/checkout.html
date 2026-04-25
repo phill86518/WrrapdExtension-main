@@ -384,6 +384,11 @@
         }, 60000); // Check every minute
         
         const urlParams = new URLSearchParams(window.location.search);
+        const checkoutRetailer =
+            /\/checkout\/lego\b/i.test(window.location.pathname || '') ||
+            /[?&]retailer=lego\b/i.test(window.location.search || '')
+                ? 'Lego'
+                : 'Amazon';
         const encodedPayload = urlParams.get('data');
 
         if (!encodedPayload) {
@@ -401,6 +406,22 @@
 
         const { total, address, orderNumber, gifteeOriginalAddress: gifteeFromPayload } = payload;
         const gifteeOriginalAddress = gifteeFromPayload || address;
+
+        if (checkoutRetailer === 'Lego') {
+            document.title = 'Wrrapd payment — LEGO order';
+            const banner = document.createElement('div');
+            banner.setAttribute('data-wrrapd-checkout-channel', 'lego');
+            banner.style.cssText =
+                'max-width:520px;margin:0 auto 10px;padding:10px 12px;background:#fff3e0;border:1px solid #e6a23c;border-radius:4px;font-size:12px;line-height:1.45;text-align:center;color:#333;';
+            banner.textContent =
+                'LEGO.com purchase — payment is through Wrrapd. Use the hub ship-to on LEGO; final giftee delivery is coordinated by Wrrapd after wrapping.';
+            const totalEl = document.getElementById('total');
+            if (totalEl && totalEl.parentNode) {
+                totalEl.parentNode.insertBefore(banner, totalEl);
+            } else {
+                document.body.insertBefore(banner, document.body.firstChild);
+            }
+        }
 
         /** Set ?wrrapdDebug=1 on the checkout URL, or sessionStorage wrrapd_checkout_debug=1 then reload. */
         const wrrapdCheckoutDebug =
@@ -2231,6 +2252,8 @@
                                 gifterFullName: gifterNameForCard,
                                 billingDetails: billingDetails,
                                 finalShippingAddress: finalShippingAddressForServer,
+                                retailer: checkoutRetailer,
+                                name_of_retailer: checkoutRetailer,
                             },
                             '*'
                         );

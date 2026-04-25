@@ -101,6 +101,7 @@ function parseExplicitRetailer(p: IngestOrderPayload, invalidFields: string[]): 
   const lo = raw.toLowerCase();
   if (lo === "amazon") return "Amazon";
   if (lo === "target") return "Target";
+  if (lo === "lego") return "Lego";
   invalidFields.push("retailer");
   return undefined;
 }
@@ -350,6 +351,8 @@ export function parseIngestOrderPayload(body: unknown): IngestSuccess | IngestFa
       retailer = "Amazon";
     } else if (sourceNote && /\bAmazon order\b/i.test(sourceNote)) {
       retailer = "Amazon";
+    } else if (sourceNote && /\bLego order\b/i.test(sourceNote)) {
+      retailer = "Lego";
     }
   }
 
@@ -442,7 +445,7 @@ export function orderIngestFieldGuide(): {
       customerEmailNorm: "optional; defaults to lowercase customerEmail when omitted",
       wrrapdCustomerId: "optional stable id from pay server (Phase 1 customer registry)",
       greetingFirstName: "customerGreetingName (Amazon Deliver-to first name)",
-      retailer: "Amazon | Target; omitted + Amazon calendar fields or pay-style sourceNote → inferred Amazon",
+      retailer: "Amazon | Target | Lego; omitted + Amazon calendar fields or pay-style sourceNote → inferred channel",
       "buyer.email": "customerEmail",
       orderNumber: "externalOrderId (+ sourceNote)",
       "shippingAddress.line1": "addressLine1",
