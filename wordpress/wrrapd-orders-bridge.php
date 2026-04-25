@@ -332,6 +332,32 @@ function wrrapd_handle_amazon_callback_path() {
 add_action( 'template_redirect', 'wrrapd_handle_amazon_callback_path', 0 );
 
 /**
+ * Show visible debug banner for Amazon callback outcomes.
+ * Enabled when `?wrrapd_amz=...` is present after callback redirect.
+ */
+function wrrapd_render_amazon_callback_debug_banner() {
+	if ( is_admin() ) {
+		return;
+	}
+	$code = isset( $_GET['wrrapd_amz'] ) ? sanitize_text_field( wp_unslash( $_GET['wrrapd_amz'] ) ) : '';
+	if ( $code === '' ) {
+		return;
+	}
+	$msg_map = array(
+		'missing_code'   => 'Amazon callback missing authorization code.',
+		'config_missing' => 'Amazon login config missing: WRRAPD_AMAZON_CLIENT_ID/SECRET.',
+		'token_error'    => 'Amazon token request failed.',
+		'token_missing'  => 'Amazon token response missing access token.',
+		'profile_error'  => 'Amazon profile request failed.',
+		'email_missing'  => 'Amazon profile did not return a valid email.',
+		'no_user'        => 'No WordPress user exists with this Amazon email.',
+	);
+	$msg = isset( $msg_map[ $code ] ) ? $msg_map[ $code ] : ( 'Amazon callback status: ' . $code );
+	echo '<div style="position:fixed;left:12px;right:12px;top:12px;z-index:100001;background:#7f1d1d;color:#fff;border:2px solid #fecaca;border-radius:8px;padding:10px 12px;font:600 14px/1.35 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;box-shadow:0 6px 16px rgba(0,0,0,.25);">Amazon login debug: ' . esc_html( $msg ) . '</div>';
+}
+add_action( 'wp_body_open', 'wrrapd_render_amazon_callback_debug_banner', 1 );
+
+/**
  * @param mixed $v
  */
 function wrrapd_cell_text( $v ) {
