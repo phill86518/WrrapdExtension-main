@@ -307,7 +307,17 @@ function wrrapd_handle_amazon_callback_path() {
 	$token_body = json_decode( (string) wp_remote_retrieve_body( $token_res ), true );
 	$access     = ( is_array( $token_body ) && isset( $token_body['access_token'] ) ) ? trim( (string) $token_body['access_token'] ) : '';
 	if ( $access === '' ) {
-		wp_safe_redirect( add_query_arg( array( 'wrrapd_amz' => 'token_missing' ), home_url( '/' ) ), 302 );
+		$tk_err  = is_array( $token_body ) && isset( $token_body['error'] ) ? sanitize_key( (string) $token_body['error'] ) : '';
+		$tk_desc = is_array( $token_body ) && isset( $token_body['error_description'] ) ? sanitize_text_field( (string) $token_body['error_description'] ) : '';
+		$status  = $tk_err !== '' ? ( 'token_' . $tk_err ) : 'token_missing';
+		$target  = add_query_arg(
+			array(
+				'wrrapd_amz'      => $status,
+				'wrrapd_amz_desc' => rawurlencode( $tk_desc ),
+			),
+			home_url( '/' )
+		);
+		wp_safe_redirect( $target, 302 );
 		exit;
 	}
 
@@ -371,6 +381,10 @@ function wrrapd_render_amazon_callback_debug_banner() {
 		'no_user'        => 'No WordPress user exists with this Amazon email.',
 	);
 	$msg = isset( $msg_map[ $code ] ) ? $msg_map[ $code ] : ( 'Amazon callback status: ' . $code );
+	$desc = isset( $_GET['wrrapd_amz_desc'] ) ? sanitize_text_field( rawurldecode( (string) wp_unslash( $_GET['wrrapd_amz_desc'] ) ) ) : '';
+	if ( strpos( $code, 'token_' ) === 0 && $desc !== '' ) {
+		$msg .= ' Details: ' . $desc;
+	}
 	echo '<div style="position:fixed;left:12px;right:12px;top:12px;z-index:100001;background:#7f1d1d;color:#fff;border:2px solid #fecaca;border-radius:8px;padding:10px 12px;font:600 14px/1.35 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;box-shadow:0 6px 16px rgba(0,0,0,.25);">Amazon login debug: ' . esc_html( $msg ) . '</div>';
 }
 add_action( 'wp_body_open', 'wrrapd_render_amazon_callback_debug_banner', 1 );
