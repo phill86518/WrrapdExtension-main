@@ -287,16 +287,29 @@ function wrrapd_handle_amazon_callback_path() {
 		exit;
 	}
 
+	$redirect_uri = home_url( '/auth/amazon/callback' );
+	$token_body   = array();
+	$token_raw    = '';
+	$token_http   = 0;
+
 	$token_res = wp_remote_post(
 		'https://api.amazon.com/auth/o2/token',
 		array(
 			'timeout' => 20,
-			'body'    => array(
-				'grant_type'    => 'authorization_code',
-				'code'          => $code,
-				'client_id'     => WRRAPD_AMAZON_CLIENT_ID,
-				'client_secret' => WRRAPD_AMAZON_CLIENT_SECRET,
-				'redirect_uri'  => home_url( '/auth/amazon/callback' ),
+			'headers' => array(
+				'Content-Type' => 'application/x-www-form-urlencoded',
+			),
+			'body'    => http_build_query(
+				array(
+					'grant_type'    => 'authorization_code',
+					'code'          => $code,
+					'client_id'     => $id_val,
+					'client_secret' => $sec_val,
+					'redirect_uri'  => $redirect_uri,
+				),
+				'',
+				'&',
+				PHP_QUERY_RFC3986
 			),
 		)
 	);
@@ -304,16 +317,28 @@ function wrrapd_handle_amazon_callback_path() {
 		wp_safe_redirect( add_query_arg( array( 'wrrapd_amz' => 'token_error' ), home_url( '/' ) ), 302 );
 		exit;
 	}
-	$token_body = json_decode( (string) wp_remote_retrieve_body( $token_res ), true );
+	$token_http = (int) wp_remote_retrieve_response_code( $token_res );
+	$token_raw  = (string) wp_remote_retrieve_body( $token_res );
+	$decoded    = json_decode( $token_raw, true );
+	$token_body = is_array( $decoded ) ? $decoded : array();
 	$access     = ( is_array( $token_body ) && isset( $token_body['access_token'] ) ) ? trim( (string) $token_body['access_token'] ) : '';
 	if ( $access === '' ) {
 		$tk_err  = is_array( $token_body ) && isset( $token_body['error'] ) ? sanitize_key( (string) $token_body['error'] ) : '';
 		$tk_desc = is_array( $token_body ) && isset( $token_body['error_description'] ) ? sanitize_text_field( (string) $token_body['error_description'] ) : '';
 		$status  = $tk_err !== '' ? ( 'token_' . $tk_err ) : 'token_missing';
+		$dbg     = array(
+			'http'         => $token_http,
+			'redirect_uri' => $redirect_uri,
+			'home'         => home_url( '/' ),
+			'siteurl'      => site_url( '/' ),
+			'client_tail'  => strlen( $id_val ) > 10 ? substr( $id_val, -10 ) : $id_val,
+			'raw_head'     => substr( preg_replace( '/\s+/', ' ', $token_raw ), 0, 180 ),
+		);
 		$target  = add_query_arg(
 			array(
 				'wrrapd_amz'      => $status,
 				'wrrapd_amz_desc' => rawurlencode( $tk_desc ),
+				'wrrapd_amz_dbg'  => rawurlencode( base64_encode( wp_json_encode( $dbg ) ) ),
 			),
 			home_url( '/' )
 		);
@@ -384,6 +409,28 @@ function wrrapd_render_amazon_callback_debug_banner() {
 	$desc = isset( $_GET['wrrapd_amz_desc'] ) ? sanitize_text_field( rawurldecode( (string) wp_unslash( $_GET['wrrapd_amz_desc'] ) ) ) : '';
 	if ( strpos( $code, 'token_' ) === 0 && $desc !== '' ) {
 		$msg .= ' Details: ' . $desc;
+	}
+	$dbg_b64 = isset( $_GET['wrrapd_amz_dbg'] ) ? (string) wp_unslash( $_GET['wrrapd_amz_dbg'] ) : '';
+	if ( $dbg_b64 !== '' ) {
+		$dbg_json = base64_decode( rawurldecode( $dbg_b64 ), true );
+		if ( is_string( $dbg_json ) && $dbg_json !== '' ) {
+			$dbg = json_decode( $dbg_json, true );
+			if ( is_array( $dbg ) ) {
+				$msg .= ' Runtime: HTTP ' . ( isset( $dbg['http'] ) ? (string) (int) $dbg['http'] : '?' );
+				if ( ! empty( $dbg['redirect_uri'] ) ) {
+					$msg .= '; redirect_uri=' . (string) $dbg['redirect_uri'];
+				}
+				if ( ! empty( $dbg['home'] ) || ! empty( $dbg['siteurl'] ) ) {
+					$msg .= '; home=' . (string) ( $dbg['home'] ?? '' ) . '; siteurl=' . (string) ( $dbg['siteurl'] ?? '' );
+				}
+				if ( ! empty( $dbg['client_tail'] ) ) {
+					$msg .= '; client_id_tail=' . (string) $dbg['client_tail'];
+				}
+				if ( ! empty( $dbg['raw_head'] ) ) {
+					$msg .= '; body_head=' . (string) $dbg['raw_head'];
+				}
+			}
+		}
 	}
 	echo '<div style="position:fixed;left:12px;right:12px;top:12px;z-index:100001;background:#7f1d1d;color:#fff;border:2px solid #fecaca;border-radius:8px;padding:10px 12px;font:600 14px/1.35 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;box-shadow:0 6px 16px rgba(0,0,0,.25);">Amazon login debug: ' . esc_html( $msg ) . '</div>';
 }
