@@ -99,11 +99,12 @@ Never expose the internal key in Elementor HTML or browser JavaScript.
 |------|------|
 | `extension/src/content/index.js` | **Amazon** entry; bundled to root `extension/content.js` (`npm run build:amazon`). |
 | `extension/src/content/target-index.js` | **Target** entry; bundled to `extension/content-target.js` (`npm run build:target`). Must stay independent of Amazon legacy. |
+| `extension/src/content/lego-index.js` | **Lego** entry; bundled to `extension/content-lego.js` (`npm run build:lego`). Guest-checkout-first scaffold. |
 | `extension/src/content/content-legacy.js` | Amazon-only legacy flow (checkout monitoring, pay handoff, etc.). |
 | `extension/src/content/lib/` | Modules imported by the **Amazon** entry (sign-in heuristics, delivery hints, DOM helpers, etc.). |
-| `extension/src/retailers/` | Per-retailer constants and (as you add them) Target-specific adapters. |
+| `extension/src/retailers/` | Per-retailer constants/adapters (Amazon, Target, Lego, ...). |
 
-`npm run build` produces **both** bundles; `manifest.json` uses **separate `content_scripts`** so only Amazon code runs on `www.amazon.com` and only Target code on `*.target.com`. Full framework, CWS notes, and naming (`content.js` vs `content-<retailer>.js`): **[extension/README.md](../extension/README.md)**.
+`npm run build` produces all retailer bundles; `manifest.json` uses **separate `content_scripts`** so only the matching retailer code runs on each host. Full framework, CWS notes, and naming (`content.js` vs `content-<retailer>.js`): **[extension/README.md](../extension/README.md)** and **[docs/EXTENSION-ARCHITECTURE.md](EXTENSION-ARCHITECTURE.md)**.
 
 The Amazon bundle’s job is to **complete Amazon checkout** and **invoke** pay server and ingest paths with consistent **order numbers**, **`retailer: Amazon`**, and **customer email** when available. Additional retailers use the same API patterns with the correct **`retailer`** on ingest. Long-term **order listing** for logged-in shoppers is **server + WP**, not the extension alone.
 

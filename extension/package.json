@@ -5,10 +5,12 @@
     "build:amazon:prod": "esbuild src/content/index.js --bundle --outfile=content.js --platform=browser --format=iife --legal-comments=none --minify --drop:console --drop:debugger",
     "build:target": "esbuild src/content/target-index.js --bundle --outfile=content-target.js --platform=browser --format=iife --legal-comments=none --minify --drop:debugger",
     "build:target:prod": "esbuild src/content/target-index.js --bundle --outfile=content-target.js --platform=browser --format=iife --legal-comments=none --minify --drop:console --drop:debugger",
-    "build": "npm run build:amazon && npm run build:target",
-    "build:prod": "npm run build:amazon:prod && npm run build:target:prod",
-    "build:dev": "npm run build:amazon && npm run build:target",
-    "build:pretty": "esbuild src/content/index.js --bundle --outfile=content.js --platform=browser --format=iife --legal-comments=none && esbuild src/content/target-index.js --bundle --outfile=content-target.js --platform=browser --format=iife --legal-comments=none"
+    "build:lego": "esbuild src/content/lego-index.js --bundle --outfile=content-lego.js --platform=browser --format=iife --legal-comments=none --minify --drop:debugger",
+    "build:lego:prod": "esbuild src/content/lego-index.js --bundle --outfile=content-lego.js --platform=browser --format=iife --legal-comments=none --minify --drop:console --drop:debugger",
+    "build": "npm run build:amazon && npm run build:target && npm run build:lego",
+    "build:prod": "npm run build:amazon:prod && npm run build:target:prod && npm run build:lego:prod",
+    "build:dev": "npm run build:amazon && npm run build:target && npm run build:lego",
+    "build:pretty": "esbuild src/content/index.js --bundle --outfile=content.js --platform=browser --format=iife --legal-comments=none && esbuild src/content/target-index.js --bundle --outfile=content-target.js --platform=browser --format=iife --legal-comments=none && esbuild src/content/lego-index.js --bundle --outfile=content-lego.js --platform=browser --format=iife --legal-comments=none"
   },
   "dependencies": {
     "body-parser": "^1.20.3",

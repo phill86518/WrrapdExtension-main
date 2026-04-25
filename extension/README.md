@@ -2,7 +2,7 @@
 
 **Public install:** [Wrrapd on the Chrome Web Store](https://chromewebstore.google.com/detail/wrrapd/eampapdpkmnnbfdojhmbpckpljnbpapo). For development, use **Load unpacked** on this folder after `npm run build`.
 
-Manifest V3 **multi-retailer** extension (see `manifest.json`): a **separate content script bundle per retailer domain**, not one script on all stores. Today **Amazon** (`content.js` → `www.amazon.com`) carries checkout UX, pay summary, and **Place your order** integration; **Target** (`content-target.js` → `*.target.com`) is a separate entry and bundle (real DOM work lives under `src/retailers/target/` as you build it out).
+Manifest V3 **multi-retailer** extension (see `manifest.json`): a **separate content script bundle per retailer domain**, not one script on all stores. Today **Amazon** (`content.js` → `www.amazon.com`) carries checkout UX, pay summary, and **Place your order** integration; **Target** (`content-target.js` → `*.target.com`) and **Lego** (`content-lego.js` → `*.lego.com`) are separate entries and bundles.
 
 ## Windows — where to build (Roger’s machine)
 
@@ -16,7 +16,7 @@ After pulling from GitHub, run **`npm run build` inside the `extension` folder**
 **Every extension release (from repo root — PowerShell or Git Bash):**
 
 ```bash
-git restore extension/content.js extension/content-target.js
+git restore extension/content.js extension/content-target.js extension/content-lego.js
 git pull origin main
 cd extension
 npm install
@@ -25,7 +25,7 @@ cd ..
 ```
 
 Then Chrome → Extensions → Wrrapd → **Reload**.  
-`git restore` clears **generated** bundles so `git pull` is not blocked (`content.js` = Amazon, `content-target.js` = Target).
+`git restore` clears **generated** bundles so `git pull` is not blocked (`content.js` = Amazon, `content-target.js` = Target, `content-lego.js` = Lego).
 
 Full stack deploy order (VM push, PM2, Cloud Run, Windows): **[../DEPLOYMENT.md](../DEPLOYMENT.md)**.
 
@@ -33,18 +33,21 @@ Full stack deploy order (VM push, PM2, Cloud Run, Windows): **[../DEPLOYMENT.md]
 
 - **Amazon entry:** `src/content/index.js` → imports Amazon-only helpers, then **`content-legacy.js`** (IIFE).
 - **Target entry:** `src/content/target-index.js` → **must not** import `content-legacy.js` or Amazon DOM modules. Add Target logic only under `src/retailers/target/` (and optional thin `src/shared/` for API URLs / ingest helpers).
+- **Lego entry:** `src/content/lego-index.js` → guest-checkout-first scaffold for `*.lego.com`; keep it isolated from Amazon legacy modules.
 - **Bundled outputs (generated — do not edit by hand):**
   - **`content.js`** — Amazon; loaded only on `*://www.amazon.com/*` (`manifest.json` `content_scripts`).
   - **`content-target.js`** — Target; loaded only on `*://*.target.com/*`.
-- **`npm run build`** — runs **`build:amazon`** and **`build:target`** (both bundles).
+  - **`content-lego.js`** — Lego; loaded only on `*://*.lego.com/*`.
+- **`npm run build`** — runs **`build:amazon`**, **`build:target`**, and **`build:lego`**.
 - **`npm run build:pretty`** — both bundles without minify (easier to read while debugging).
-- **`npm run build:prod`** — Amazon + Target with `drop:console` where configured in `package.json`.
+- **`npm run build:prod`** — Amazon + Target + Lego with `drop:console` where configured in `package.json`.
 - **Legacy Amazon checkout / cart / pay:** `src/content/content-legacy.js` (large; refactor only inside Amazon paths).
 
 ### Naming convention for more retailers
 
 - **Amazon** keeps the historic name **`content.js`** / entry `index.js` (avoids churn in docs, Roger’s flow, and older references).
-- **Every other retailer:** `content-<retailer>.js` from `src/content/<retailer>-index.js` (e.g. `content-target.js`). Add a matching `content_scripts` block and `host_permissions` / `web_accessible_resources.matches` in `manifest.json`, plus a `build:<retailer>` script chained from `npm run build`.
+- **Every other retailer:** `content-<retailer>.js` from `src/content/<retailer>-index.js` (e.g. `content-target.js`, `content-lego.js`). Add a matching `content_scripts` block and `host_permissions` / `web_accessible_resources.matches` in `manifest.json`, plus a `build:<retailer>` script chained from `npm run build`.
+- **Future symmetry note:** Keep Amazon on historic `content.js` for now. Planned future cleanup can rename to `content-amazon.js` once deployment/docs churn is acceptable.
 
 ## Multi-retailer architecture (isolation + Chrome Web Store)
 
@@ -56,6 +59,7 @@ Chrome injects scripts **only** on URLs matched by each `content_scripts` entry.
 |---------------------|--------------------|------------------------------------------------|
 | `www.amazon.com`    | `content.js`       | Full Amazon legacy checkout / pay integration |
 | `*.target.com`      | `content-target.js`| Target-only bundle (no Amazon legacy)         |
+| `*.lego.com`        | `content-lego.js`  | Lego-only bundle (guest-first scaffold)       |
 
 **Rules of thumb**
 
