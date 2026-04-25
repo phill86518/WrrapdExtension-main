@@ -11453,7 +11453,101 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
         attachWrrapdPlaceOrderTrackingHook();
     }
     
-    /** Same dollar math as updateWrrapdSummary — sent to process-payment for WordPress order receipt. */
+    /** Catalog unit prices (must match updateWrrapdSummary / Stripe intent math). */
+    const WRRAPD_CHECKOUT_UNIT_PRICES = {
+        giftWrapBase: 6.99,
+        customDesignAi: 2.99,
+        customDesignUpload: 1.99,
+        flowers: 17.99,
+    };
+
+    /**
+     * Single source of truth for checkout dollar math + per-option rows.
+     * Every cart option row is listed with 0 for unused billable dimensions (DB / Elementor mapping).
+     */
+    function computeWrrapdCheckoutBreakdown(itemsInCurrentCheckout) {
+        const p = WRRAPD_CHECKOUT_UNIT_PRICES;
+        let giftWrapTotal = 0;
+        let designAiTotal = 0;
+        let designUploadTotal = 0;
+        let flowersTotal = 0;
+        let qtyGiftWrap = 0;
+        let qtyDesignAi = 0;
+        let qtyDesignUpload = 0;
+        let qtyFlowers = 0;
+        const perOptionLines = [];
+
+        Object.values(itemsInCurrentCheckout).forEach((item) => {
+            if (!item || !Array.isArray(item.options)) return;
+            const asin = item.asin != null ? String(item.asin).trim().slice(0, 20) : null;
+            const productTitle = item.title ? String(item.title).trim().slice(0, 300) : null;
+            item.options.forEach((option, optionIndex) => {
+                if (!option || typeof option !== 'object') return;
+                let giftWrapBase = 0;
+                let customDesignAi = 0;
+                let customDesignUpload = 0;
+                let flowers = 0;
+                if (option.checkbox_wrrapd) {
+                    giftWrapBase = p.giftWrapBase;
+                    giftWrapTotal += p.giftWrapBase;
+                    qtyGiftWrap += 1;
+                    if (option.selected_wrapping_option === 'ai') {
+                        customDesignAi = p.customDesignAi;
+                        designAiTotal += p.customDesignAi;
+                        qtyDesignAi += 1;
+                    } else if (option.selected_wrapping_option === 'upload') {
+                        customDesignUpload = p.customDesignUpload;
+                        designUploadTotal += p.customDesignUpload;
+                        qtyDesignUpload += 1;
+                    }
+                }
+                if (option.checkbox_flowers) {
+                    flowers = p.flowers;
+                    flowersTotal += p.flowers;
+                    qtyFlowers += 1;
+                }
+                perOptionLines.push({
+                    asin,
+                    productTitle,
+                    optionIndex,
+                    checkbox_wrrapd: option.checkbox_wrrapd === true,
+                    selected_wrapping_option: option.selected_wrapping_option || null,
+                    checkbox_flowers: option.checkbox_flowers === true,
+                    giftWrapBase,
+                    customDesignAi,
+                    customDesignUpload,
+                    flowers,
+                });
+            });
+        });
+
+        const taxRatePercent = getTaxRatePercentage();
+        const taxRate = taxRatePercent / 100;
+        const subtotal = giftWrapTotal + designAiTotal + designUploadTotal + flowersTotal;
+        const estimatedTax = subtotal * taxRate;
+        const total = subtotal + estimatedTax;
+        return {
+            giftWrapTotal,
+            designAiTotal,
+            designUploadTotal,
+            flowersTotal,
+            qtyGiftWrap,
+            qtyDesignAi,
+            qtyDesignUpload,
+            qtyFlowers,
+            subtotal,
+            estimatedTax,
+            total,
+            taxRatePercent,
+            perOptionLines,
+        };
+    }
+
+    function roundMoney2(n) {
+        return Math.round(n * 100) / 100;
+    }
+
+    /** Same dollar math as updateWrrapdSummary — sent to process-payment (legacy lines + complete matrix with zeros). */
     function buildCheckoutInvoiceSnapshotForServer() {
         try {
             const allItems = getAllItemsFromLocalStorage();
@@ -11462,57 +11556,113 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                 return null;
             }
 
-            let giftWrapTotal = 0;
-            let flowersTotal = 0;
-            let customDesignTotal = 0;
-
-            Object.values(itemsInCurrentCheckout).forEach((item) => {
-                if (item.options) {
-                    item.options.forEach((option) => {
-                        if (option.checkbox_wrrapd) {
-                            giftWrapTotal += 6.99;
-                            if (option.selected_wrapping_option === 'ai') {
-                                customDesignTotal += 2.99;
-                            } else if (option.selected_wrapping_option === 'upload') {
-                                customDesignTotal += 1.99;
-                            }
-                        }
-                        if (option.checkbox_flowers) {
-                            flowersTotal += 17.99;
-                        }
-                    });
-                }
-            });
-
-            const taxRate = getTaxRatePercentage() / 100;
-            const subtotal = giftWrapTotal + flowersTotal + customDesignTotal;
-            const estimatedTax = subtotal * taxRate;
-            const total = subtotal + estimatedTax;
+            const b = computeWrrapdCheckoutBreakdown(itemsInCurrentCheckout);
+            const subtotal = b.subtotal;
+            const estimatedTax = b.estimatedTax;
+            const total = b.total;
+            const customDesignCombined = b.designAiTotal + b.designUploadTotal;
 
             const lines = [];
-            if (giftWrapTotal > 0) {
-                lines.push({ label: 'Gift-wrapping', amount: Math.round(giftWrapTotal * 100) / 100 });
+            if (b.giftWrapTotal > 0) {
+                lines.push({ label: 'Gift-wrapping', amount: roundMoney2(b.giftWrapTotal) });
             }
-            if (customDesignTotal > 0) {
+            if (customDesignCombined > 0) {
                 lines.push({
                     label: 'Custom Design Fee',
-                    amount: Math.round(customDesignTotal * 100) / 100,
+                    amount: roundMoney2(customDesignCombined),
                 });
             }
-            if (flowersTotal > 0) {
-                lines.push({ label: 'Flowers', amount: Math.round(flowersTotal * 100) / 100 });
+            if (b.flowersTotal > 0) {
+                lines.push({ label: 'Flowers', amount: roundMoney2(b.flowersTotal) });
             }
-            lines.push({ label: 'Total before tax:', amount: Math.round(subtotal * 100) / 100 });
+            lines.push({ label: 'Total before tax:', amount: roundMoney2(subtotal) });
             lines.push({
                 label: 'Estimated tax to be collected:',
-                amount: Math.round(estimatedTax * 100) / 100,
+                amount: roundMoney2(estimatedTax),
             });
+
+            const pc = WRRAPD_CHECKOUT_UNIT_PRICES;
+            const aggregateLines = [
+                {
+                    code: 'WRPD_GIFT_WRAP_BASE',
+                    label: 'Gift-wrapping (base)',
+                    quantity: b.qtyGiftWrap,
+                    unitPrice: pc.giftWrapBase,
+                    amount: roundMoney2(b.giftWrapTotal),
+                },
+                {
+                    code: 'WRPD_CUSTOM_DESIGN_AI',
+                    label: 'Custom design (AI)',
+                    quantity: b.qtyDesignAi,
+                    unitPrice: pc.customDesignAi,
+                    amount: roundMoney2(b.designAiTotal),
+                },
+                {
+                    code: 'WRPD_CUSTOM_DESIGN_UPLOAD',
+                    label: 'Custom design (upload)',
+                    quantity: b.qtyDesignUpload,
+                    unitPrice: pc.customDesignUpload,
+                    amount: roundMoney2(b.designUploadTotal),
+                },
+                {
+                    code: 'WRPD_FLOWERS',
+                    label: 'Flowers',
+                    quantity: b.qtyFlowers,
+                    unitPrice: pc.flowers,
+                    amount: roundMoney2(b.flowersTotal),
+                },
+                {
+                    code: 'WRPD_SUBTOTAL_BEFORE_TAX',
+                    label: 'Subtotal before tax',
+                    quantity: null,
+                    unitPrice: null,
+                    amount: roundMoney2(subtotal),
+                },
+                {
+                    code: 'WRPD_ESTIMATED_TAX',
+                    label: 'Estimated tax',
+                    quantity: null,
+                    unitPrice: null,
+                    amount: roundMoney2(estimatedTax),
+                },
+                {
+                    code: 'WRPD_ORDER_TOTAL',
+                    label: 'Order total',
+                    quantity: null,
+                    unitPrice: null,
+                    amount: roundMoney2(total),
+                },
+            ];
+
+            const perOptionLines = b.perOptionLines.map((row) => ({
+                asin: row.asin,
+                productTitle: row.productTitle,
+                optionIndex: row.optionIndex,
+                checkbox_wrrapd: row.checkbox_wrrapd,
+                selected_wrapping_option: row.selected_wrapping_option,
+                checkbox_flowers: row.checkbox_flowers,
+                giftWrapBase: roundMoney2(row.giftWrapBase),
+                customDesignAi: roundMoney2(row.customDesignAi),
+                customDesignUpload: roundMoney2(row.customDesignUpload),
+                flowers: roundMoney2(row.flowers),
+            }));
 
             return {
                 lines,
-                subtotal: Math.round(subtotal * 100) / 100,
-                estimatedTax: Math.round(estimatedTax * 100) / 100,
-                total: Math.round(total * 100) / 100,
+                subtotal: roundMoney2(subtotal),
+                estimatedTax: roundMoney2(estimatedTax),
+                total: roundMoney2(total),
+                complete: {
+                    schemaVersion: 1,
+                    currency: 'USD',
+                    taxRatePercent: b.taxRatePercent,
+                    priceCatalog: { ...pc },
+                    aggregateLines,
+                    perOptionLines,
+                    subtotal: roundMoney2(subtotal),
+                    estimatedTax: roundMoney2(estimatedTax),
+                    total: roundMoney2(total),
+                },
             };
         } catch (e) {
             console.warn('[buildCheckoutInvoiceSnapshotForServer]', e);
@@ -11550,37 +11700,15 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             wrrapdSummaryTotal.innerHTML = '';
 
             console.log("[updateWrrapdSummary] Calculating totals for selected options.");
-            
-            // Calculate totals based on options array
-            let giftWrapTotal = 0;
-            let flowersTotal = 0;
-            let customDesignTotal = 0;  // New variable for AI/upload charges
 
-            // Iterate through all items and their options (only current checkout items)
-            Object.values(itemsInCurrentCheckout).forEach(item => {
-                if (item.options) {
-                    item.options.forEach(option => {
-                        if (option.checkbox_wrrapd) {
-                            giftWrapTotal += 6.99;
-                            // Add $1.99 for custom uploads and $2.99 for AI designs
-                            if (option.selected_wrapping_option === 'ai') {
-                                customDesignTotal += 2.99;
-                            } else if (option.selected_wrapping_option === 'upload') {
-                                customDesignTotal += 1.99;
-                            }
-                        }
-                        if (option.checkbox_flowers) {
-                            flowersTotal += 17.99;
-                        }
-                    });
-                }
-            });
+            const br = computeWrrapdCheckoutBreakdown(itemsInCurrentCheckout);
+            const giftWrapTotal = br.giftWrapTotal;
+            const flowersTotal = br.flowersTotal;
+            const customDesignTotal = br.designAiTotal + br.designUploadTotal;
+            const subtotal = br.subtotal;
+            let estimatedTax = br.estimatedTax;
 
-            const taxRate = getTaxRatePercentage() / 100;
-            const subtotal = giftWrapTotal + flowersTotal + customDesignTotal;
-            let estimatedTax = subtotal * taxRate;
-
-            total = subtotal + estimatedTax;
+            total = br.total;
 
             console.log(`[updateWrrapdSummary] Subtotal: $${subtotal.toFixed(2)}, Estimated Tax: $${estimatedTax.toFixed(2)}, Total: $${total.toFixed(2)}.`);
 

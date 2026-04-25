@@ -422,6 +422,114 @@ function getOrCreateWrrapdCustomerId(emailNorm) {
     }
 }
 
+const CHECKOUT_INVOICE_AGGREGATE_CODES = new Set([
+    'WRPD_GIFT_WRAP_BASE',
+    'WRPD_CUSTOM_DESIGN_AI',
+    'WRPD_CUSTOM_DESIGN_UPLOAD',
+    'WRPD_FLOWERS',
+    'WRPD_SUBTOTAL_BEFORE_TAX',
+    'WRPD_ESTIMATED_TAX',
+    'WRPD_ORDER_TOTAL',
+]);
+
+function sanitizeMoneyField(v) {
+    if (typeof v !== 'number' || !Number.isFinite(v)) return null;
+    return Math.round(v * 100) / 100;
+}
+
+function sanitizeCheckoutInvoiceCompleteForStorage(raw) {
+    if (!raw || typeof raw !== 'object') return null;
+    if (raw.schemaVersion !== 1) return null;
+    const currency = raw.currency === 'USD' ? 'USD' : null;
+    if (!currency) return null;
+    const trRaw = raw.taxRatePercent;
+    if (typeof trRaw !== 'number' || !Number.isFinite(trRaw) || trRaw < 0 || trRaw > 100) return null;
+    const taxRatePercent = Math.round(trRaw * 1000) / 1000;
+    const priceCatalog =
+        raw.priceCatalog && typeof raw.priceCatalog === 'object'
+            ? {
+                  giftWrapBase: sanitizeMoneyField(raw.priceCatalog.giftWrapBase),
+                  customDesignAi: sanitizeMoneyField(raw.priceCatalog.customDesignAi),
+                  customDesignUpload: sanitizeMoneyField(raw.priceCatalog.customDesignUpload),
+                  flowers: sanitizeMoneyField(raw.priceCatalog.flowers),
+              }
+            : null;
+    const aggIn = Array.isArray(raw.aggregateLines) ? raw.aggregateLines : [];
+    const aggregateLines = [];
+    for (const row of aggIn.slice(0, 24)) {
+        if (!row || typeof row !== 'object') continue;
+        const code = typeof row.code === 'string' ? row.code.trim().slice(0, 48) : '';
+        if (!CHECKOUT_INVOICE_AGGREGATE_CODES.has(code)) continue;
+        const label = typeof row.label === 'string' ? row.label.trim().slice(0, 160) : '';
+        const amount = sanitizeMoneyField(row.amount);
+        if (amount === null) continue;
+        const o = { code, amount };
+        if (label) o.label = label;
+        const qty = row.quantity;
+        if (typeof qty === 'number' && Number.isFinite(qty) && qty >= 0 && qty <= 9999) {
+            o.quantity = Math.floor(qty);
+        }
+        const unitPrice = sanitizeMoneyField(row.unitPrice);
+        if (unitPrice !== null) o.unitPrice = unitPrice;
+        aggregateLines.push(o);
+    }
+    if (aggregateLines.length !== CHECKOUT_INVOICE_AGGREGATE_CODES.size) return null;
+    if (new Set(aggregateLines.map((l) => l.code)).size !== CHECKOUT_INVOICE_AGGREGATE_CODES.size) return null;
+
+    const subtotal = sanitizeMoneyField(raw.subtotal);
+    const estimatedTax = sanitizeMoneyField(raw.estimatedTax);
+    const total = sanitizeMoneyField(raw.total);
+    if (subtotal === null || estimatedTax === null || total === null) return null;
+
+    const perIn = Array.isArray(raw.perOptionLines) ? raw.perOptionLines : [];
+    const perOptionLines = [];
+    for (const row of perIn.slice(0, 200)) {
+        if (!row || typeof row !== 'object') continue;
+        const asin =
+            row.asin != null && String(row.asin).trim() !== ''
+                ? String(row.asin).trim().slice(0, 20)
+                : null;
+        const productTitle =
+            typeof row.productTitle === 'string' ? row.productTitle.trim().slice(0, 300) : null;
+        const optionIndex =
+            typeof row.optionIndex === 'number' && Number.isFinite(row.optionIndex) && row.optionIndex >= 0
+                ? Math.floor(row.optionIndex)
+                : null;
+        if (optionIndex === null || optionIndex > 500) continue;
+        perOptionLines.push({
+            ...(asin ? { asin } : {}),
+            ...(productTitle ? { productTitle } : {}),
+            optionIndex,
+            checkbox_wrrapd: row.checkbox_wrrapd === true,
+            selected_wrapping_option:
+                row.selected_wrapping_option != null ? String(row.selected_wrapping_option).slice(0, 32) : null,
+            checkbox_flowers: row.checkbox_flowers === true,
+            giftWrapBase: sanitizeMoneyField(row.giftWrapBase) ?? 0,
+            customDesignAi: sanitizeMoneyField(row.customDesignAi) ?? 0,
+            customDesignUpload: sanitizeMoneyField(row.customDesignUpload) ?? 0,
+            flowers: sanitizeMoneyField(row.flowers) ?? 0,
+        });
+    }
+
+    return {
+        schemaVersion: 1,
+        currency,
+        taxRatePercent,
+        ...(priceCatalog &&
+        priceCatalog.giftWrapBase != null &&
+        priceCatalog.customDesignAi != null &&
+        priceCatalog.customDesignUpload != null &&
+        priceCatalog.flowers != null
+            ? { priceCatalog }
+            : {}),
+        aggregateLines,
+        perOptionLines,
+        subtotal,
+        estimatedTax,
+        total,
+    };
+}
+
 function sanitizeCheckoutInvoiceForStorage(raw) {
     if (!raw || typeof raw !== 'object') return null;
     const linesIn = Array.isArray(raw.lines) ? raw.lines : [];
@@ -440,12 +548,15 @@ function sanitizeCheckoutInvoiceForStorage(raw) {
     }
     const num = (x) =>
         typeof x === 'number' && Number.isFinite(x) ? Math.round(x * 100) / 100 : null;
-    return {
+    const complete = sanitizeCheckoutInvoiceCompleteForStorage(raw.complete);
+    const out = {
         lines: outLines,
         subtotal: num(raw.subtotal),
         estimatedTax: num(raw.estimatedTax),
         total: num(raw.total),
     };
+    if (complete) out.complete = complete;
+    return out;
 }
 
 // Function to save order data to a JSON file
@@ -468,6 +579,10 @@ const saveOrderToJsonFile = (orderData, paymentData, customerData, orderNumber, 
 
     // Prepare the data to be saved
     const ci = sanitizeCheckoutInvoiceForStorage(checkoutInvoice);
+    const hasCheckoutInvoice =
+        ci &&
+        ((Array.isArray(ci.lines) && ci.lines.length > 0) ||
+            (ci.complete && ci.complete.aggregateLines && ci.complete.aggregateLines.length > 0));
     const saveData = {
         orderNumber: orderNumber,
         timestamp: new Date().toISOString(),
@@ -484,7 +599,7 @@ const saveOrderToJsonFile = (orderData, paymentData, customerData, orderNumber, 
         },
         ...(customerEmailNorm ? { customerEmailNorm } : {}),
         ...(wrrapdCustomerId ? { wrrapdCustomerId } : {}),
-        ...(ci && ci.lines && ci.lines.length ? { checkoutInvoice: ci } : {}),
+        ...(hasCheckoutInvoice ? { checkoutInvoice: ci } : {}),
     };
 
     // Write the data to the file
@@ -768,6 +883,10 @@ function summarizeOrderForWpList(data) {
     const pay = data.payment && typeof data.payment === 'object' ? data.payment : null;
     const lines = summarizeWrrapdLinesFromOrderRecord(data);
     const persistedCi = sanitizeCheckoutInvoiceForStorage(data.checkoutInvoice);
+    const persistedComplete =
+        persistedCi && persistedCi.complete && persistedCi.complete.aggregateLines
+            ? persistedCi.complete
+            : null;
     /** Short invoice-style rows when checkout snapshot was not stored (no Amazon product titles). */
     const invoiceLines = lines.map((ln, idx) => {
         const raw =
@@ -798,7 +917,12 @@ function summarizeOrderForWpList(data) {
         wrrapdLineCount: lines.length,
         lines,
         invoiceLines,
-        checkoutInvoice: persistedCi && persistedCi.lines && persistedCi.lines.length ? persistedCi : null,
+        checkoutInvoice:
+            persistedCi &&
+            ((persistedCi.lines && persistedCi.lines.length) || (persistedComplete && persistedComplete.aggregateLines))
+                ? persistedCi
+                : null,
+        checkoutInvoiceComplete: persistedComplete,
     };
 }
 
