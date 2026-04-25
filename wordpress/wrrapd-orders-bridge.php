@@ -687,6 +687,9 @@ function wrrapd_render_orders_legacy_cards( array $orders, array $overlays ) {
 .wrrapd-legacy-cards-root .wrrapd-legacy-order-foot .wrrapd-amz-inv-row--grand{font-size:.82rem;}
 .wrrapd-legacy-cards-root .wrrapd-legacy-order-foot .wrrapd-amz-inv-sub{font-size:.68rem;}
 .wrrapd-legacy-cards-root .wrrapd-legacy-order-foot .wrrapd-amz-inv-note{font-size:.62rem;font-style:italic;opacity:.86;}
+.wrrapd-legacy-cards-root .wrrapd-amz-inv-lab .wrrapd-retailer-brand{display:inline-flex;align-items:center;gap:.28rem;vertical-align:middle;}
+.wrrapd-legacy-cards-root .wrrapd-retailer-logo{flex:0 0 auto;display:block;border-radius:2px;}
+.wrrapd-legacy-cards-root .wrrapd-retailer-name{font-weight:700;}
 @media(max-width:560px){.wrrapd-legacy-cards-root .wrrapd-legacy-rem-date-row{flex-wrap:wrap;}.wrrapd-legacy-cards-root .wrrapd-legacy-date-block,.wrrapd-legacy-cards-root .wrrapd-legacy-rem-block{flex:1 1 100%;min-width:0;}}
 </style>';
 
@@ -1138,6 +1141,60 @@ function wrrapd_is_bad_checkout_invoice_label( $lab ) {
 }
 
 /**
+ * Plain retailer name from order JSON (e.g. Amazon, Target). Empty if unset.
+ *
+ * @param array<string, mixed> $order Order payload from API / VM JSON.
+ */
+function wrrapd_order_retailer_plain( array $order ) {
+	foreach ( array( 'Retailer', 'retailer', 'merchant', 'store' ) as $k ) {
+		if ( isset( $order[ $k ] ) && is_string( $order[ $k ] ) ) {
+			$t = trim( $order[ $k ] );
+			if ( $t !== '' ) {
+				return $t;
+			}
+		}
+	}
+	return '';
+}
+
+/**
+ * Whether an invoice label row should show retailer branding instead of raw text
+ * (e.g. "Gift wrapWrrapd: wrrapd" or any gift-wrap line that glued "wrrapd" into the label).
+ *
+ * @param string $lab_raw Raw label from checkout snapshot or invoice line.
+ */
+function wrrapd_invoice_line_use_retailer_brand( $lab_raw ) {
+	$lab_raw = trim( (string) $lab_raw );
+	if ( $lab_raw === '' ) {
+		return false;
+	}
+	if ( wrrapd_is_bad_checkout_invoice_label( $lab_raw ) ) {
+		return true;
+	}
+	if ( preg_match( '/gift/i', $lab_raw ) === 1 && preg_match( '/wrrapd/i', $lab_raw ) === 1 ) {
+		return true;
+	}
+	return false;
+}
+
+/**
+ * HTML for the retailer line (logo + Amazon.com when unknown or clearly Amazon; else plain name).
+ *
+ * @param array<string, mixed> $order Order payload.
+ */
+function wrrapd_order_retailer_label_html( array $order ) {
+	$plain = wrrapd_order_retailer_plain( $order );
+	$is_amazon = ( $plain === '' ) || ( stripos( $plain, 'amazon' ) !== false );
+	if ( $is_amazon ) {
+		return '<span class="wrrapd-retailer-brand">'
+			. '<img class="wrrapd-retailer-logo" src="https://www.amazon.com/favicon.ico" width="14" height="14" decoding="async" alt="" />'
+			. '<span class="wrrapd-retailer-name">Amazon.com</span></span>';
+	}
+	return '<span class="wrrapd-retailer-brand wrrapd-retailer-brand--text-only"><span class="wrrapd-retailer-name">'
+		. esc_html( $plain ) . '</span></span>';
+}
+
+/**
  * Receipt block at bottom of studio order (checkout snapshot when available).
  *
  * @param array<string, mixed>              $order Order payload from API.
@@ -1159,20 +1216,41 @@ function wrrapd_studio_order_summary_html( array $order, array $lines ) {
 	echo '<div class="wrrapd-amz-summary" role="region" aria-label="' . esc_attr__( 'Order charges', 'wrrapd' ) . '">';
 	if ( $use_check ) {
 		echo '<div class="wrrapd-amz-inv-list">';
+		$retailer_brand_used_ci = false;
 		foreach ( $ci_lines as $row ) {
 			if ( ! is_array( $row ) ) {
 				continue;
 			}
 			$lab_raw = isset( $row['label'] ) ? trim( (string) $row['label'] ) : '';
+			if ( $lab_raw === '' ) {
+				continue;
+			}
+			$amt_f = isset( $row['amount'] ) && is_numeric( $row['amount'] ) ? (float) $row['amount'] : null;
+			if ( ! $retailer_brand_used_ci && wrrapd_invoice_line_use_retailer_brand( $lab_raw ) ) {
+				$retailer_brand_used_ci = true;
+				$lab_html               = wrrapd_order_retailer_label_html( $order );
+				echo '<div class="wrrapd-amz-inv-row">';
+				echo '<span class="wrrapd-amz-inv-lab">' . wp_kses_post( $lab_html ) . '</span>';
+				echo '<span class="wrrapd-amz-inv-amt">' . ( $amt_f !== null ? esc_html( wrrapd_money_usd( $amt_f ) ) : '' ) . '</span>';
+				echo '</div>';
+				continue;
+			}
+			if ( ! $retailer_brand_used_ci && preg_match( '/^gift\s*wrap$/i', $lab_raw ) ) {
+				$retailer_brand_used_ci = true;
+				$lab_html               = wrrapd_order_retailer_label_html( $order );
+				echo '<div class="wrrapd-amz-inv-row">';
+				echo '<span class="wrrapd-amz-inv-lab">' . wp_kses_post( $lab_html ) . '</span>';
+				echo '<span class="wrrapd-amz-inv-amt">' . ( $amt_f !== null ? esc_html( wrrapd_money_usd( $amt_f ) ) : '' ) . '</span>';
+				echo '</div>';
+				continue;
+			}
 			if ( wrrapd_is_bad_checkout_invoice_label( $lab_raw ) ) {
 				continue;
 			}
-			$lab = $lab_raw;
+			$lab = wrrapd_normalize_checkout_invoice_label( $lab_raw );
 			if ( $lab === '' ) {
 				continue;
 			}
-			$lab     = wrrapd_normalize_checkout_invoice_label( $lab );
-			$amt_f = isset( $row['amount'] ) && is_numeric( $row['amount'] ) ? (float) $row['amount'] : null;
 			echo '<div class="wrrapd-amz-inv-row">';
 			echo '<span class="wrrapd-amz-inv-lab">' . esc_html( $lab ) . '</span>';
 			echo '<span class="wrrapd-amz-inv-amt">' . ( $amt_f !== null ? esc_html( wrrapd_money_usd( $amt_f ) ) : '' ) . '</span>';
@@ -1201,18 +1279,55 @@ function wrrapd_studio_order_summary_html( array $order, array $lines ) {
 					}
 				}
 				$inv[] = array(
-					'label'  => __( 'Gift wrap', 'wrrapd' ),
-					'detail' => $d !== '' ? $d : ( __( 'Gift', 'wrrapd' ) . ' ' . ( (int) $idx + 1 ) ),
+					'retailerBrand' => true,
+					'detail'        => $d !== '' ? $d : ( __( 'Gift', 'wrrapd' ) . ' ' . ( (int) $idx + 1 ) ),
 				);
 			}
 		}
 		if ( count( $inv ) > 0 ) {
 			echo '<div class="wrrapd-amz-inv-list">';
+			$retailer_brand_used_inv = false;
 			foreach ( $inv as $row ) {
 				if ( ! is_array( $row ) ) {
 					continue;
 				}
-				$lab = isset( $row['label'] ) ? trim( (string) $row['label'] ) : '';
+				$lab_raw = isset( $row['label'] ) ? trim( (string) $row['label'] ) : '';
+				if ( ! empty( $row['retailerBrand'] ) ) {
+					echo '<div class="wrrapd-amz-inv-row wrrapd-amz-inv-row--stack">';
+					echo '<div class="wrrapd-amz-inv-left">';
+					echo '<span class="wrrapd-amz-inv-lab">' . wp_kses_post( wrrapd_order_retailer_label_html( $order ) ) . '</span>';
+					$det = isset( $row['detail'] ) ? trim( (string) $row['detail'] ) : '';
+					if ( $det !== '' ) {
+						echo '<span class="wrrapd-amz-inv-sub">' . esc_html( $det ) . '</span>';
+					}
+					echo '</div><span class="wrrapd-amz-inv-amt"></span></div>';
+					continue;
+				}
+				if ( ! $retailer_brand_used_inv && wrrapd_invoice_line_use_retailer_brand( $lab_raw ) ) {
+					$retailer_brand_used_inv = true;
+					$det                     = isset( $row['detail'] ) ? trim( (string) $row['detail'] ) : '';
+					echo '<div class="wrrapd-amz-inv-row wrrapd-amz-inv-row--stack">';
+					echo '<div class="wrrapd-amz-inv-left">';
+					echo '<span class="wrrapd-amz-inv-lab">' . wp_kses_post( wrrapd_order_retailer_label_html( $order ) ) . '</span>';
+					if ( $det !== '' ) {
+						echo '<span class="wrrapd-amz-inv-sub">' . esc_html( $det ) . '</span>';
+					}
+					echo '</div><span class="wrrapd-amz-inv-amt"></span></div>';
+					continue;
+				}
+				if ( ! $retailer_brand_used_inv && preg_match( '/^gift\s*wrap$/i', $lab_raw ) ) {
+					$retailer_brand_used_inv = true;
+					$det                     = isset( $row['detail'] ) ? trim( (string) $row['detail'] ) : '';
+					echo '<div class="wrrapd-amz-inv-row wrrapd-amz-inv-row--stack">';
+					echo '<div class="wrrapd-amz-inv-left">';
+					echo '<span class="wrrapd-amz-inv-lab">' . wp_kses_post( wrrapd_order_retailer_label_html( $order ) ) . '</span>';
+					if ( $det !== '' ) {
+						echo '<span class="wrrapd-amz-inv-sub">' . esc_html( $det ) . '</span>';
+					}
+					echo '</div><span class="wrrapd-amz-inv-amt"></span></div>';
+					continue;
+				}
+				$lab = $lab_raw;
 				if ( wrrapd_is_bad_checkout_invoice_label( $lab ) ) {
 					continue;
 				}
@@ -1287,6 +1402,9 @@ function wrrapd_render_orders_studio( array $orders, array $overlays ) {
 .wrrapd-amz-inv-row--stack{align-items:flex-start;}
 .wrrapd-amz-inv-left{flex:1;min-width:0;}
 .wrrapd-amz-inv-lab{color:#0f172a;font-weight:600;word-break:break-word;}
+.wrrapd-amz-inv-lab .wrrapd-retailer-brand{display:inline-flex;align-items:center;gap:.28rem;vertical-align:middle;}
+.wrrapd-retailer-logo{flex:0 0 auto;display:block;border-radius:2px;}
+.wrrapd-retailer-name{font-weight:700;}
 .wrrapd-amz-inv-sub{display:block;margin-top:.06rem;font-size:.56rem;color:#475569;font-weight:500;line-height:1.3;word-break:break-word;}
 .wrrapd-amz-inv-amt{flex:0 0 auto;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;color:#0f172a;font-weight:600;}
 .wrrapd-amz-inv-note{margin-top:.12rem;font-size:.52rem;color:#64748b;line-height:1.3;}
