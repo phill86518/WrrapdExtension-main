@@ -29,6 +29,7 @@ import { wrrapdTrace } from './lib/wrrapd-debug.js';
 import { getValueByLabel, getElementValue, generateOrderNumber } from './lib/order-helpers.js';
 import { ensureWrrapdSummaryAlignment } from './lib/summary-alignment.js';
 import { isZipCodeAllowed } from './lib/zip-codes.js';
+import { WRRAPD_RETAILER_AMAZON } from '../retailers/amazon/constants.js';
 
 (function () {
 
@@ -10697,6 +10698,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             const streetParts = splitStreetForIngest(finalAddr.street || '');
             const recipientName = finalAddr.name || customerName;
             const payload = {
+                retailer: WRRAPD_RETAILER_AMAZON,
                 customerName,
                 customerPhone,
                 customerEmail,

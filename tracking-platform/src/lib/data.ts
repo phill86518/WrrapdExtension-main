@@ -2,7 +2,13 @@ import { randomBytes, randomUUID } from "crypto";
 import { existsSync } from "fs";
 import { mkdir, readFile, writeFile } from "fs/promises";
 import path from "path";
-import type { DeliveryStatus, Order, OrderLineItem, OrdersFilePayload } from "@/lib/types";
+import type {
+  DeliveryStatus,
+  Order,
+  OrderLineItem,
+  OrderRetailer,
+  OrdersFilePayload,
+} from "@/lib/types";
 import { getFirestoreDb } from "@/lib/firebase-admin";
 import { buildDemoSeedOrders } from "@/lib/demo-orders";
 import { computeAssignmentsForOrders } from "@/lib/allocation";
@@ -254,6 +260,7 @@ export type CreateOrderInput = {
   lineItems?: OrderLineItem[];
   /** Admin / internal creates: set true to skip thank-you email & SMS */
   skipCustomerNotifications?: boolean;
+  retailer?: OrderRetailer;
 };
 
 export async function createOrder(
@@ -367,6 +374,9 @@ export async function createOrder(
     }
     if (input.customerGreetingName?.trim()) {
       merged.customerGreetingName = input.customerGreetingName.trim();
+    }
+    if (input.retailer) {
+      merged.retailer = input.retailer;
     }
     if (
       input.amazonDeliveryDatesSnapshot?.length &&
@@ -482,6 +492,7 @@ export async function createOrder(
         }
       : {}),
     ...(input.lineItems?.length ? { lineItems: [...input.lineItems] } : {}),
+    ...(input.retailer ? { retailer: input.retailer } : {}),
   };
   const ocCreate = getOrdersCollection();
   if (ocCreate) {

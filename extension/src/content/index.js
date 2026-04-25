@@ -14,7 +14,7 @@ import './lib/amazon-delivery-hints.js';
 import './content-legacy.js';
 
 /** Bump when verifying deploy — in DevTools: `window.__WRRAPD_CONTENT_BUILD_TAG__`. */
-export const WRRAPD_CONTENT_BUILD_TAG = '2026-04-23-amazon-checkout-session-hint';
+export const WRRAPD_CONTENT_BUILD_TAG = '2026-04-25-retailer-amazon-target-stub';
 if (typeof window !== 'undefined') {
     window.__WRRAPD_CONTENT_BUILD_TAG__ = WRRAPD_CONTENT_BUILD_TAG;
     initWrrapdCheckoutDebug({ tag: WRRAPD_CONTENT_BUILD_TAG });

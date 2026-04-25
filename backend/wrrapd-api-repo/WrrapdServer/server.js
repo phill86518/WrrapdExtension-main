@@ -652,6 +652,7 @@ const saveOrderToJsonFile = (orderData, paymentData, customerData, orderNumber, 
     const saveData = {
         orderNumber: orderNumber,
         timestamp: new Date().toISOString(),
+        retailer: 'Amazon',
         orderItems: orderData,
         payment: {
             id: paymentData.id,
@@ -1952,6 +1953,7 @@ app.post('/process-payment', async (req, res) => {
             const payEmailNorm = normalizeCustomerEmail(customerEmail);
             const payWrrapdCustomerId = getOrCreateWrrapdCustomerId(payEmailNorm);
             const ingestPayload = {
+                retailer: 'Amazon',
                 customerName,
                 customerPhone,
                 customerEmail,

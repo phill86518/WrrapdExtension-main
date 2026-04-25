@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Wrrapd",
-  "version": "1.4.4",
+  "version": "1.4.5",
   "description": "Enhance your gifting experience with Wrrapd",
   "permissions": [
     "scripting",
@@ -22,7 +22,8 @@
     "*://*.amazon.in/*",
     "*://*.amazon.com.au/*",
     "*://*.amazon.com.br/*",
-    "*://*.amazon.mx/*"
+    "*://*.amazon.mx/*",
+    "*://*.target.com/*"
   ],
   "declarative_net_request": {
     "rule_resources": [
@@ -38,12 +39,17 @@
       "matches": ["*://www.amazon.com/*"],
       "js": ["content.js"],
       "run_at": "document_end"
+    },
+    {
+      "matches": ["*://*.target.com/*"],
+      "js": ["content-target.js"],
+      "run_at": "document_end"
     }
   ],
   "web_accessible_resources": [
     {
       "resources": ["assets/*"],
-      "matches": ["*://www.amazon.com/*"]
+      "matches": ["*://www.amazon.com/*", "*://*.target.com/*"]
     }
   ],
   "icons": {

@@ -1,5 +1,5 @@
 import type { CreateOrderInput } from "@/lib/data";
-import type { Order, OrderLineItem } from "@/lib/types";
+import type { Order, OrderLineItem, OrderRetailer } from "@/lib/types";
 import {
   endOfCalendarDayAmericaNewYorkIso,
   wrrapdScheduledInstantFromAmazonDeliveryDateKey,
@@ -64,6 +64,8 @@ export type IngestOrderPayload = {
   greetingFirstName?: unknown;
   skipCustomerNotifications?: unknown;
   lineItems?: unknown;
+  /** Canonical: Amazon | Target (case-insensitive on ingest). */
+  retailer?: unknown;
 };
 
 export type IngestSuccess = {
@@ -91,6 +93,16 @@ function isValidYyyyMmDd(key: string): boolean {
   const [y, m, d] = key.split("-").map(Number);
   const dt = new Date(Date.UTC(y, m - 1, d));
   return dt.getUTCFullYear() === y && dt.getUTCMonth() === m - 1 && dt.getUTCDate() === d;
+}
+
+function parseExplicitRetailer(p: IngestOrderPayload, invalidFields: string[]): OrderRetailer | undefined {
+  const raw = str(p.retailer);
+  if (!raw) return undefined;
+  const lo = raw.toLowerCase();
+  if (lo === "amazon") return "Amazon";
+  if (lo === "target") return "Target";
+  invalidFields.push("retailer");
+  return undefined;
 }
 
 function parseAmazonGrouping(v: unknown): "together" | "earliest" | "separate" | "pending" | undefined {
@@ -189,6 +201,8 @@ export function parseIngestOrderPayload(body: unknown): IngestSuccess | IngestFa
   if (p.buyer !== undefined && (typeof p.buyer !== "object" || p.buyer === null)) {
     invalidFields.push("buyer");
   }
+
+  const explicitRetailer = parseExplicitRetailer(p, invalidFields);
 
   const sa = p.shippingAddress && typeof p.shippingAddress === "object" ? p.shippingAddress : undefined;
   const ga =
@@ -330,6 +344,15 @@ export function parseIngestOrderPayload(body: unknown): IngestSuccess | IngestFa
     sourceNote = `Ingested order ${externalOrderId}`;
   }
 
+  let retailer: OrderRetailer | undefined = explicitRetailer;
+  if (!retailer) {
+    if (amazonDaySingle || (amazonDaysArr && amazonDaysArr.length > 0)) {
+      retailer = "Amazon";
+    } else if (sourceNote && /\bAmazon order\b/i.test(sourceNote)) {
+      retailer = "Amazon";
+    }
+  }
+
   return {
     ok: true,
     normalized: {
@@ -359,6 +382,7 @@ export function parseIngestOrderPayload(body: unknown): IngestSuccess | IngestFa
       ...(amazonDeliveryDatesSnapshot?.length
         ? { amazonDeliveryDatesSnapshot: [...amazonDeliveryDatesSnapshot] }
         : {}),
+      ...(retailer ? { retailer } : {}),
     },
   };
 }
@@ -399,6 +423,7 @@ export function orderIngestFieldGuide(): {
       "scheduledFor",
       "sourceNote",
       "externalOrderId",
+      "retailer",
       "amazonDeliveryDatesSnapshot",
       "deliveryPreferencePending",
       "deliveryPreferenceRespondBy",
@@ -417,6 +442,7 @@ export function orderIngestFieldGuide(): {
       customerEmailNorm: "optional; defaults to lowercase customerEmail when omitted",
       wrrapdCustomerId: "optional stable id from pay server (Phase 1 customer registry)",
       greetingFirstName: "customerGreetingName (Amazon Deliver-to first name)",
+      retailer: "Amazon | Target; omitted + Amazon calendar fields or pay-style sourceNote → inferred Amazon",
       "buyer.email": "customerEmail",
       orderNumber: "externalOrderId (+ sourceNote)",
       "shippingAddress.line1": "addressLine1",

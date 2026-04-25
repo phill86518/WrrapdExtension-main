@@ -1,10 +1,14 @@
 {
   "private": true,
   "scripts": {
-    "build": "esbuild src/content/index.js --bundle --outfile=content.js --platform=browser --format=iife --legal-comments=none --minify --drop:debugger",
-    "build:prod": "esbuild src/content/index.js --bundle --outfile=content.js --platform=browser --format=iife --legal-comments=none --minify --drop:console --drop:debugger",
-    "build:dev": "esbuild src/content/index.js --bundle --outfile=content.js --platform=browser --format=iife --legal-comments=none --minify",
-    "build:pretty": "esbuild src/content/index.js --bundle --outfile=content.js --platform=browser --format=iife --legal-comments=none"
+    "build:amazon": "esbuild src/content/index.js --bundle --outfile=content.js --platform=browser --format=iife --legal-comments=none --minify --drop:debugger",
+    "build:amazon:prod": "esbuild src/content/index.js --bundle --outfile=content.js --platform=browser --format=iife --legal-comments=none --minify --drop:console --drop:debugger",
+    "build:target": "esbuild src/content/target-index.js --bundle --outfile=content-target.js --platform=browser --format=iife --legal-comments=none --minify --drop:debugger",
+    "build:target:prod": "esbuild src/content/target-index.js --bundle --outfile=content-target.js --platform=browser --format=iife --legal-comments=none --minify --drop:console --drop:debugger",
+    "build": "npm run build:amazon && npm run build:target",
+    "build:prod": "npm run build:amazon:prod && npm run build:target:prod",
+    "build:dev": "npm run build:amazon && npm run build:target",
+    "build:pretty": "esbuild src/content/index.js --bundle --outfile=content.js --platform=browser --format=iife --legal-comments=none && esbuild src/content/target-index.js --bundle --outfile=content-target.js --platform=browser --format=iife --legal-comments=none"
   },
   "dependencies": {
     "body-parser": "^1.20.3",

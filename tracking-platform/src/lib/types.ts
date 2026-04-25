@@ -7,6 +7,9 @@ export type DeliveryStatus =
 
 export type OnboardingStatus = "pending" | "approved" | "rejected";
 
+/** Where the shopper placed the underlying gift order (multi-retailer ingest + ops). */
+export type OrderRetailer = "Amazon" | "Target";
+
 export type OrderLineItem = {
   asin?: string;
   title?: string;
@@ -87,6 +90,8 @@ export type Order = {
   deliveryPreferenceChoice?: string;
   /** Wrapped items included in this Wrrapd order (for notifications + ops context). */
   lineItems?: OrderLineItem[];
+  /** E-tailer attribution; omit on legacy rows (treat as unknown / Amazon-only flows historically). */
+  retailer?: OrderRetailer;
 };
 
 export type Driver = {
