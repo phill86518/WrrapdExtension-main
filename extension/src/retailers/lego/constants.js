@@ -15,7 +15,7 @@ export const LEGO_GIFT_CHECKOUT_STEP0_DATA_ATTR = "data-wrrapd-lego-checkout-ste
 /** sessionStorage: bag gift question `yes` | `no` | unset */
 export const LEGO_GIFT_RADIO_SESSION_KEY = "wrrapdLegoGiftRadio";
 
-/** sessionStorage: `1` after guest accepts gift-service T&C in LEGO modal */
+/** sessionStorage: `1` after guest saves LEGO gift-service modal choices */
 export const LEGO_GIFT_TC_SESSION_KEY = "wrrapdLegoGiftTcAccepted";
 
 /** sessionStorage: `1` after user dismisses Step 0 “Not now” */
@@ -26,6 +26,15 @@ export const LEGO_GIFT_WRAP_PREF_KEY = "wrrapdLegoWrapPref";
 
 /** sessionStorage: `1` if guest asked about flowers in LEGO modal */
 export const LEGO_GIFT_FLOWERS_INTEREST_KEY = "wrrapdLegoFlowersInterest";
+
+/** sessionStorage: gift details captured in LEGO modal (mirrors Amazon-style fields). */
+export const LEGO_GIFT_OCCASION_KEY = "wrrapdLegoGiftOccasion";
+export const LEGO_GIFT_MESSAGE_KEY = "wrrapdLegoGiftMessage";
+export const LEGO_GIFT_SENDER_NAME_KEY = "wrrapdLegoGiftSenderName";
+export const LEGO_GIFT_SELECTED_FLOWER_KEY = "wrrapdLegoSelectedFlowerDesign";
+export const LEGO_GIFT_AI_DESIGN_KEY = "wrrapdLegoSelectedAiDesign";
+export const LEGO_GIFT_UPLOAD_NAME_KEY = "wrrapdLegoUploadedDesignName";
+export const LEGO_GIFT_UPLOAD_DATA_URL_KEY = "wrrapdLegoUploadedDesignDataUrl";
 
 /** sessionStorage: `1` after shipping-step delivery hint overlay dismissed */
 export const LEGO_SHIPPING_OVERLAY_SEEN_KEY = "wrrapdLegoShippingHintSeen";

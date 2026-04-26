@@ -1,18 +1,11 @@
 import {
-  LEGO_GIFT_AI_DESIGN_KEY,
   LEGO_GIFT_CART_OPTIN_DATA_ATTR,
   LEGO_GIFT_CHECKOUT_STEP0_DATA_ATTR,
   LEGO_GIFT_FLOWERS_INTEREST_KEY,
   LEGO_GIFT_INTENT_SESSION_KEY,
-  LEGO_GIFT_MESSAGE_KEY,
-  LEGO_GIFT_OCCASION_KEY,
   LEGO_GIFT_RADIO_SESSION_KEY,
-  LEGO_GIFT_SELECTED_FLOWER_KEY,
-  LEGO_GIFT_SENDER_NAME_KEY,
   LEGO_GIFT_STEP0_DISMISSED_KEY,
   LEGO_GIFT_TC_SESSION_KEY,
-  LEGO_GIFT_UPLOAD_DATA_URL_KEY,
-  LEGO_GIFT_UPLOAD_NAME_KEY,
   LEGO_GIFT_WRAP_PREF_KEY,
   LEGO_HUB_SHIP_HINT_DATA_ATTR,
 } from "./constants.js";
@@ -133,7 +126,7 @@ function applyCheckoutSecurelyGate() {
 }
 
 /**
- * LEGO gift service modal with Amazon-like choices (wrap/upload/AI/flowers + fields).
+ * Gift wrap / flowers preferences + T&C. On accept: TC flag + prefs saved, checkout enabled.
  */
 export function openLegoGiftServiceModal() {
   if (document.getElementById(FLOW_MODAL_ID)) return;
@@ -178,7 +171,8 @@ export function openLegoGiftServiceModal() {
   const intro = document.createElement("p");
   intro.className = "ds-body-xs-regular ds-color-text-subdued";
   intro.style.margin = "0 0 var(--ds-spacing-sm, 0.75rem) 0";
-  intro.textContent = "Choose gift-wrap options below, similar to the Amazon flow.";
+  intro.textContent =
+    "A few gentle choices below. You can change details later with our team if you need to.";
 
   const wrapLegend = document.createElement("p");
   wrapLegend.className = "ds-label-sm-medium ds-color-text-default";
@@ -189,17 +183,10 @@ export function openLegoGiftServiceModal() {
   wrapFieldset.style.margin = "0 0 var(--ds-spacing-sm, 0.75rem) 0";
 
   const wrapChoices = [
-    { id: "wrrapd-wrap-wrrapd", value: "wrrapd", label: "Allow Wrrapd to choose the wrapping" },
-    { id: "wrrapd-wrap-upload", value: "upload", label: "Upload your own design" },
-    { id: "wrrapd-wrap-ai", value: "ai", label: "Generate AI designs" },
+    { id: "wrrapd-wrap-wrrapd", value: "wrrapd", label: "Let Wrrapd choose a wrap that suits this LEGO set" },
+    { id: "wrrapd-wrap-classic", value: "classic", label: "A timeless, classic wrap style" },
   ];
   let wrapValue = "wrrapd";
-  try {
-    wrapValue = sessionStorage.getItem(LEGO_GIFT_WRAP_PREF_KEY) || "wrrapd";
-  } catch {
-    wrapValue = "wrrapd";
-  }
-  if (!["wrrapd", "upload", "ai"].includes(wrapValue)) wrapValue = "wrrapd";
   for (const c of wrapChoices) {
     const row = document.createElement("label");
     row.className = "ds-body-xs-regular ds-color-text-default";
@@ -217,210 +204,38 @@ export function openLegoGiftServiceModal() {
     wrapFieldset.appendChild(row);
   }
 
-  const uploadWrap = document.createElement("div");
-  uploadWrap.style.cssText =
-    "display:none;margin:8px 0 12px 24px;padding:8px;border:1px solid #e2e8f0;border-radius:6px;";
-  const uploadInput = document.createElement("input");
-  uploadInput.type = "file";
-  uploadInput.accept = "image/*";
-  uploadInput.style.cssText = "display:block;margin-bottom:8px;";
-  const uploadPreview = document.createElement("div");
-  uploadPreview.style.cssText = "display:none;";
-  const uploadImg = document.createElement("img");
-  uploadImg.style.cssText = "max-width:100%;max-height:180px;border:1px solid #ddd;border-radius:4px;";
-  uploadPreview.appendChild(uploadImg);
-  uploadWrap.append(uploadInput, uploadPreview);
-
-  let uploadedDesignName = "";
-  let uploadedDesignDataUrl = "";
-  try {
-    uploadedDesignName = sessionStorage.getItem(LEGO_GIFT_UPLOAD_NAME_KEY) || "";
-    uploadedDesignDataUrl = sessionStorage.getItem(LEGO_GIFT_UPLOAD_DATA_URL_KEY) || "";
-  } catch {
-    uploadedDesignName = "";
-    uploadedDesignDataUrl = "";
-  }
-  if (uploadedDesignDataUrl) {
-    uploadImg.src = uploadedDesignDataUrl;
-    uploadPreview.style.display = "block";
-  }
-  uploadInput.addEventListener("change", () => {
-    const f = uploadInput.files && uploadInput.files[0];
-    if (!f) return;
-    uploadedDesignName = f.name;
-    const fr = new FileReader();
-    fr.onload = () => {
-      uploadedDesignDataUrl = typeof fr.result === "string" ? fr.result : "";
-      if (uploadedDesignDataUrl) {
-        uploadImg.src = uploadedDesignDataUrl;
-        uploadPreview.style.display = "block";
-      }
-    };
-    fr.readAsDataURL(f);
-  });
-
-  const occasionLabel = document.createElement("label");
-  occasionLabel.className = "ds-label-sm-medium ds-color-text-default";
-  occasionLabel.style.cssText = "display:block;margin:8px 0 6px 0;";
-  occasionLabel.textContent = "Occasion / design notes";
-  const occasionInput = document.createElement("input");
-  occasionInput.type = "text";
-  occasionInput.placeholder = "e.g., Birthday gift for my niece who loves stars and blue colors";
-  occasionInput.style.cssText =
-    "width:100%;padding:10px;border:1px solid #d1d5db;border-radius:6px;box-sizing:border-box;";
-  try {
-    occasionInput.value = sessionStorage.getItem(LEGO_GIFT_OCCASION_KEY) || "";
-  } catch {
-    occasionInput.value = "";
-  }
-
-  const aiWrap = document.createElement("div");
-  aiWrap.style.cssText =
-    "display:none;margin:8px 0 12px 24px;padding:8px;border:1px solid #e2e8f0;border-radius:6px;";
-  const aiHint = document.createElement("div");
-  aiHint.className = "ds-body-xs-regular ds-color-text-subdued";
-  aiHint.style.marginBottom = "8px";
-  aiHint.textContent = "What's the occasion? Who is the giftee? What themes should we include?";
-  const aiBtn = document.createElement("button");
-  aiBtn.type = "button";
-  aiBtn.className = "sk-button sk-button--secondary sk-button--small sk-button--neutral";
-  aiBtn.textContent = "Generate AI designs";
-  const aiResults = document.createElement("div");
-  aiResults.style.cssText = "display:grid;gap:8px;margin-top:10px;";
-  aiWrap.append(occasionLabel, occasionInput, aiHint, aiBtn, aiResults);
-
-  let selectedAiDesign = null;
-  try {
-    const raw = sessionStorage.getItem(LEGO_GIFT_AI_DESIGN_KEY);
-    selectedAiDesign = raw ? JSON.parse(raw) : null;
-  } catch {
-    selectedAiDesign = null;
-  }
-  const renderAiResults = (items) => {
-    aiResults.innerHTML = "";
-    if (!Array.isArray(items) || !items.length) return;
-    items.forEach((it) => {
-      const title = String(it?.title || "AI Design");
-      const description = String(it?.description || "");
-      const label = document.createElement("label");
-      label.style.cssText =
-        "display:flex;gap:8px;align-items:flex-start;border:1px solid #e5e7eb;border-radius:6px;padding:8px;cursor:pointer;";
-      const radio = document.createElement("input");
-      radio.type = "radio";
-      radio.name = "wrrapd-lego-ai-choice";
-      if (selectedAiDesign && selectedAiDesign.title === title && selectedAiDesign.description === description) {
-        radio.checked = true;
-      }
-      radio.addEventListener("change", () => {
-        if (!radio.checked) return;
-        selectedAiDesign = { title, description };
-      });
-      const body = document.createElement("div");
-      body.innerHTML = `<div style="font-weight:600;color:#111827">${title}</div><div style="font-size:12px;color:#475569">${description}</div>`;
-      label.append(radio, body);
-      aiResults.append(label);
-    });
-  };
-  aiBtn.addEventListener("click", async () => {
-    const occasion = occasionInput.value.trim();
-    if (!occasion) {
-      occasionInput.focus();
-      return;
-    }
-    aiBtn.disabled = true;
-    aiBtn.textContent = "Generating...";
-    try {
-      const resp = await fetch("https://api.wrrapd.com/generate-ideas", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ occasion }),
-      });
-      const data = await resp.json();
-      renderAiResults(Array.isArray(data?.ideas) ? data.ideas.slice(0, 4) : []);
-    } catch {
-      aiResults.innerHTML = "<div style='font-size:12px;color:#b91c1c'>Could not generate ideas right now. Please try again.</div>";
-    } finally {
-      aiBtn.disabled = false;
-      aiBtn.textContent = "Generate AI designs";
-    }
-  });
-
   const flowersLabel = document.createElement("label");
-  flowersLabel.className = "ds-label-sm-medium ds-color-text-default";
-  flowersLabel.style.cssText = "display:flex;gap:8px;align-items:flex-start;margin:4px 0 8px 0;";
+  flowersLabel.className = "ds-body-xs-regular ds-color-text-default";
+  flowersLabel.style.cssText =
+    "display:flex;align-items:flex-start;gap:var(--ds-spacing-2xs, 0.375rem);cursor:pointer;margin-bottom:var(--ds-spacing-sm, 0.75rem);";
   const flowersCb = document.createElement("input");
   flowersCb.type = "checkbox";
-  flowersCb.style.marginTop = "2px";
-  try {
-    flowersCb.checked = sessionStorage.getItem(LEGO_GIFT_FLOWERS_INTEREST_KEY) === "1";
-  } catch {
-    flowersCb.checked = false;
-  }
-  const flowersText = document.createElement("span");
-  flowersText.textContent = "Add Flowers - choose from below (15-20 stem bouquets)";
-  flowersLabel.append(flowersCb, flowersText);
+  flowersCb.style.marginTop = "0.15rem";
+  flowersLabel.append(
+    flowersCb,
+    document.createTextNode(
+      " I may be interested in fresh flowers with delivery (where available). No obligation.",
+    ),
+  );
 
-  const flowersGrid = document.createElement("div");
-  flowersGrid.style.cssText =
-    `display:${flowersCb.checked ? "grid" : "none"};grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin:8px 0 14px 0;`;
-  let selectedFlowerDesign = "";
-  try {
-    selectedFlowerDesign = sessionStorage.getItem(LEGO_GIFT_SELECTED_FLOWER_KEY) || "";
-  } catch {
-    selectedFlowerDesign = "";
-  }
-  [1, 2, 3, 4].forEach((n) => {
-    const lab = document.createElement("label");
-    lab.style.cssText = "display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;";
-    const r = document.createElement("input");
-    r.type = "radio";
-    r.name = "wrrapd-lego-flower-design";
-    r.value = `flowers-${n}`;
-    if (selectedFlowerDesign === r.value) r.checked = true;
-    r.addEventListener("change", () => {
-      if (r.checked) selectedFlowerDesign = r.value;
-    });
-    const img = document.createElement("img");
-    img.src = chrome.runtime.getURL(`assets/flowers/flowers-${n}.webp`);
-    img.alt = `Flowers ${n}`;
-    img.style.cssText = "width:96px;height:96px;object-fit:cover;border-radius:6px;border:1px solid #e5e7eb;";
-    lab.append(r, img);
-    flowersGrid.append(lab);
-  });
-  flowersCb.addEventListener("change", () => {
-    flowersGrid.style.display = flowersCb.checked ? "grid" : "none";
-    if (!flowersCb.checked) selectedFlowerDesign = "";
-  });
+  const tcBox = document.createElement("div");
+  tcBox.className = "ds-body-xs-regular ds-color-text-default";
+  tcBox.style.cssText =
+    "margin:0 0 var(--ds-spacing-xs, 0.5rem) 0;padding:var(--ds-spacing-xs, 0.5rem);background:var(--ds-color-layer-neutral-subdued, #f8fafc);border-radius:var(--ds-border-radius-sm, 0.375rem);max-height:9rem;overflow:auto;line-height:1.45;";
+  tcBox.textContent =
+    "Wrrapd provides optional gift preparation and coordination services separate from LEGO.com. By continuing you confirm you have read our service description and agree to Wrrapd’s terms for gift services and messaging for this order. Full terms and privacy policies are available at wrrapd.com.";
 
-  const senderLabel = document.createElement("label");
-  senderLabel.className = "ds-label-sm-medium ds-color-text-default";
-  senderLabel.style.cssText = "display:block;margin:4px 0 6px 0;";
-  senderLabel.textContent = "Sender name";
-  const senderInput = document.createElement("input");
-  senderInput.type = "text";
-  senderInput.placeholder = "From";
-  senderInput.style.cssText =
-    "width:100%;padding:10px;border:1px solid #d1d5db;border-radius:6px;box-sizing:border-box;margin-bottom:8px;";
-  try {
-    senderInput.value = sessionStorage.getItem(LEGO_GIFT_SENDER_NAME_KEY) || "";
-  } catch {
-    senderInput.value = "";
-  }
-
-  const msgLabel = document.createElement("label");
-  msgLabel.className = "ds-label-sm-medium ds-color-text-default";
-  msgLabel.style.cssText = "display:block;margin:4px 0 6px 0;";
-  msgLabel.textContent = "Gift message";
-  const msgInput = document.createElement("textarea");
-  msgInput.rows = 3;
-  msgInput.placeholder = "Write a short message for your giftee";
-  msgInput.style.cssText =
-    "width:100%;padding:10px;border:1px solid #d1d5db;border-radius:6px;box-sizing:border-box;margin-bottom:12px;";
-  try {
-    msgInput.value = sessionStorage.getItem(LEGO_GIFT_MESSAGE_KEY) || "";
-  } catch {
-    msgInput.value = "";
-  }
+  const agreeLabel = document.createElement("label");
+  agreeLabel.className = "ds-body-xs-regular ds-color-text-default";
+  agreeLabel.style.cssText =
+    "display:flex;align-items:flex-start;gap:var(--ds-spacing-2xs, 0.375rem);cursor:pointer;margin-bottom:var(--ds-spacing-sm, 0.75rem);";
+  const agreeCb = document.createElement("input");
+  agreeCb.type = "checkbox";
+  agreeCb.style.marginTop = "0.15rem";
+  agreeLabel.append(
+    agreeCb,
+    document.createTextNode(" I have read the above and agree to proceed with Wrrapd gift services for this bag."),
+  );
 
   const row = document.createElement("div");
   row.style.cssText =
@@ -436,20 +251,12 @@ export function openLegoGiftServiceModal() {
   proceedBtn.type = "button";
   proceedBtn.className =
     "sk-button sk-button--primary sk-button--small sk-button--neutral";
-  proceedBtn.textContent = "Save choices";
+  proceedBtn.textContent = "Continue to LEGO checkout";
+  proceedBtn.disabled = true;
 
-  const refreshWrapViews = () => {
-    uploadWrap.style.display = wrapValue === "upload" ? "block" : "none";
-    aiWrap.style.display = wrapValue === "ai" ? "block" : "none";
-  };
-  wrapFieldset.querySelectorAll('input[name="wrrapd-lego-wrap"]').forEach((el) => {
-    el.addEventListener("change", () => {
-      if (!el.checked) return;
-      wrapValue = el.value;
-      refreshWrapViews();
-    });
+  agreeCb.addEventListener("change", () => {
+    proceedBtn.disabled = !agreeCb.checked;
   });
-  refreshWrapViews();
 
   const tearDown = () => {
     window.removeEventListener("keydown", onKey);
@@ -493,31 +300,13 @@ export function openLegoGiftServiceModal() {
   });
 
   proceedBtn.addEventListener("click", () => {
+    if (!agreeCb.checked) return;
     try {
-      sessionStorage.setItem(LEGO_GIFT_OCCASION_KEY, occasionInput.value.trim());
-      sessionStorage.setItem(LEGO_GIFT_MESSAGE_KEY, msgInput.value.trim());
-      sessionStorage.setItem(LEGO_GIFT_SENDER_NAME_KEY, senderInput.value.trim());
       sessionStorage.setItem(LEGO_GIFT_WRAP_PREF_KEY, wrapValue);
       sessionStorage.setItem(
         LEGO_GIFT_FLOWERS_INTEREST_KEY,
         flowersCb.checked ? "1" : "0",
       );
-      sessionStorage.setItem(LEGO_GIFT_SELECTED_FLOWER_KEY, selectedFlowerDesign || "");
-      if (selectedAiDesign) {
-        sessionStorage.setItem(LEGO_GIFT_AI_DESIGN_KEY, JSON.stringify(selectedAiDesign));
-      } else {
-        sessionStorage.removeItem(LEGO_GIFT_AI_DESIGN_KEY);
-      }
-      if (uploadedDesignName) {
-        sessionStorage.setItem(LEGO_GIFT_UPLOAD_NAME_KEY, uploadedDesignName);
-      } else {
-        sessionStorage.removeItem(LEGO_GIFT_UPLOAD_NAME_KEY);
-      }
-      if (uploadedDesignDataUrl) {
-        sessionStorage.setItem(LEGO_GIFT_UPLOAD_DATA_URL_KEY, uploadedDesignDataUrl);
-      } else {
-        sessionStorage.removeItem(LEGO_GIFT_UPLOAD_DATA_URL_KEY);
-      }
     } catch {
       /* ignore */
     }
@@ -537,14 +326,9 @@ export function openLegoGiftServiceModal() {
     intro,
     wrapLegend,
     wrapFieldset,
-    uploadWrap,
-    aiWrap,
     flowersLabel,
-    flowersGrid,
-    senderLabel,
-    senderInput,
-    msgLabel,
-    msgInput,
+    tcBox,
+    agreeLabel,
     row,
   );
   overlay.appendChild(panel);
