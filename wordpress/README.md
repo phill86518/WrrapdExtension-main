@@ -4,6 +4,8 @@ This folder is **not** loaded by WordPress automatically. Copy **`wrrapd-orders-
 
 Also copy the **`logos/`** folder next to that file: **`wp-content/mu-plugins/logos/*.png`** (Ulta, LEGO, Target, Amazon wheel images). Without those PNGs, the site still works but uses favicon fallbacks.
 
+**This monorepo workspace vs SiteGround:** Cursor/GitHub hold the **source** files under **`wordpress/`**. SiteGround is the **live** WordPress disk. Nothing updates there until you **upload** (File Manager), use **Git deploy** if SiteGround offers it, or copy by SSH. There is no automatic link unless you set one up.
+
 ## Deploy MU-plugin + logos to production (copy-paste)
 
 **Why the site looked unchanged:** GitHub and this repo are updated, but **wrrapd.com still has the old files** until you copy them onto the WordPress host and clear cache.
@@ -28,7 +30,27 @@ install -m 0644 "$REPO_ROOT/wordpress/wrrapd-orders-bridge.php" "$WP_ROOT/wp-con
 install -m 0644 "$REPO_ROOT/wordpress/logos/amazon.png" "$REPO_ROOT/wordpress/logos/target.png" "$REPO_ROOT/wordpress/logos/ulta.png" "$REPO_ROOT/wordpress/logos/lego.png" "$WP_ROOT/wp-content/mu-plugins/logos/"
 ```
 
-**Step 3 — If you only have SFTP/cPanel File Manager:** upload the same paths manually (create folder `mu-plugins/logos` if needed).
+**Step 3 — SiteGround Site Tools → File Manager (no SSH):**
+
+1. **Get the five files onto your computer** (pick one way):
+   - **From GitHub in the browser:** open the repo **WrrapdExtension-main** → folder **`wordpress/`** → download **`wrrapd-orders-bridge.php`** (Raw → Save As). Open **`wordpress/logos/`** and download **`amazon.png`**, **`target.png`**, **`ulta.png`**, **`lego.png`** the same way.  
+   - **Or** Code / GitHub → **Download ZIP** → unzip → use the copies under **`wordpress/`** and **`wordpress/logos/`**.
+
+2. **SiteGround:** log in → **Site** for **wrrapd.com** → **Site Tools** → **Files** → **File Manager**.
+
+3. Open the folder where WordPress lives. For the main domain this is usually **`public_html`**. You should see **`wp-content`** and **`wp-config.php`** in that same folder (if you see `wp-content` but no `wp-config.php`, you might be one level too deep; go up until both appear).
+
+4. Go to **`wp-content`**. If there is **no** folder named **`mu-plugins`**, create it: **New folder** → name **`mu-plugins`** (exact spelling).
+
+5. Open **`mu-plugins`**. Create another folder: **`logos`**.
+
+6. **Upload** (File Manager’s **File Upload** or drag-and-drop):
+   - Upload **`wrrapd-orders-bridge.php`** into **`public_html/wp-content/mu-plugins/`** (not inside `logos`).
+   - Upload the **four** `.png` files into **`public_html/wp-content/mu-plugins/logos/`**.
+
+7. After upload, confirm these paths exist:
+   - `wp-content/mu-plugins/wrrapd-orders-bridge.php`
+   - `wp-content/mu-plugins/logos/amazon.png` (and the other three PNGs)
 
 **Step 4 — Purge caches** so HTML and static files refresh (your stack uses **W3 Total Cache**): **WP Admin → Performance → Purge All Caches** (or equivalent). Then open the homepage in a **private window** or append `?v=1` to the URL.
 
