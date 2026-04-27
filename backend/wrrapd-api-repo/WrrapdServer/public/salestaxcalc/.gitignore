@@ -1,4 +1,5 @@
-# Rate tables consumed by lib/sales-tax-zip.js — ignore stray uploads in this folder.
+# Only tax rate CSVs belong here (see ../lib/sales-tax-zip.js). Everything else is ignored
+# so accidental browser downloads / drags into this folder are never committed.
 *
 !TAXRATES_ZIP5_*.csv
 !.gitignore
