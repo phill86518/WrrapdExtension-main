@@ -17,6 +17,7 @@ import {
   LEGO_HUB_SHIP_HINT_DATA_ATTR,
 } from "./constants.js";
 import { isLegoCheckoutReviewLikePage } from "./lego-checkout-review-detect.js";
+import { loadAllowedZipCodes } from "../../content/lib/zip-codes.js";
 
 const FLOW_MODAL_ID = "wrrapd-lego-gift-service-modal";
 
@@ -106,6 +107,38 @@ function findCheckoutSecurelyButton() {
   );
 }
 
+function extractFiveDigitZip(raw) {
+  const s = String(raw || "").trim();
+  const m = s.match(/\b(\d{5})(?:-\d{4})?\b/);
+  return m ? m[1] : "";
+}
+
+/** Prefer LEGO's own "estimate tax and delivery ZIP" input on cart. */
+function readLegoEstimateZip() {
+  const cands = [
+    'input[placeholder*="ZIP" i]',
+    'input[aria-label*="ZIP" i]',
+    'input[name*="zip" i]',
+    'input[id*="zip" i]',
+  ];
+  for (const sel of cands) {
+    const el = document.querySelector(sel);
+    if (!el) continue;
+    const val = extractFiveDigitZip(el.value);
+    if (val) return val;
+  }
+  const bodyText = document.body ? document.body.textContent || "" : "";
+  const m = bodyText.match(/Enter a ZIP code to estimate tax and delivery/i);
+  if (m) {
+    const nearbyInput = document.querySelector("aside input, form input");
+    if (nearbyInput) {
+      const val = extractFiveDigitZip(nearbyInput.value);
+      if (val) return val;
+    }
+  }
+  return "";
+}
+
 function removeLegacyHubShipCard() {
   document.querySelectorAll(`[${LEGO_HUB_SHIP_HINT_DATA_ATTR}]`).forEach((el) => {
     el.remove();
@@ -158,15 +191,14 @@ export function openLegoGiftServiceModal() {
 
   const panel = document.createElement("div");
   panel.style.cssText = [
-    "max-width:26rem",
+    "max-width:62rem",
     "width:100%",
-    "max-height:min(90vh, 34rem)",
-    "overflow:auto",
     "box-sizing:border-box",
-    "padding:var(--ds-spacing-md, 1rem)",
-    "border-radius:var(--ds-border-radius-md, 0.5rem)",
-    "background:var(--ds-color-layer-neutral-default, #fff)",
-    "box-shadow:var(--ds-shadow-deep-md, 0 8px 24px rgba(0,0,0,.15))",
+    "padding:1rem 1.1rem",
+    "border-radius:0.75rem",
+    "background:linear-gradient(180deg,#fff9c4 0%,#ffffff 42%)",
+    "border:2px solid #f5cf00",
+    "box-shadow:0 16px 40px rgba(0,0,0,.22)",
   ].join(";");
 
   const title = document.createElement("h2");
@@ -176,9 +208,9 @@ export function openLegoGiftServiceModal() {
   title.textContent = "Gift wrap with Wrrapd";
 
   const intro = document.createElement("p");
-  intro.className = "ds-body-xs-regular ds-color-text-subdued";
+  intro.className = "ds-body-xs-regular ds-color-text-default";
   intro.style.margin = "0 0 var(--ds-spacing-sm, 0.75rem) 0";
-  intro.textContent = "Choose gift-wrap options below, similar to the Amazon flow.";
+  intro.textContent = "Choose wrapping paper design choices:";
 
   const wrapLegend = document.createElement("p");
   wrapLegend.className = "ds-label-sm-medium ds-color-text-default";
@@ -190,8 +222,8 @@ export function openLegoGiftServiceModal() {
 
   const wrapChoices = [
     { id: "wrrapd-wrap-wrrapd", value: "wrrapd", label: "Allow Wrrapd to choose the wrapping" },
-    { id: "wrrapd-wrap-upload", value: "upload", label: "Upload your own design" },
-    { id: "wrrapd-wrap-ai", value: "ai", label: "Generate AI designs" },
+    { id: "wrrapd-wrap-upload", value: "upload", label: "Upload my design" },
+    { id: "wrrapd-wrap-ai", value: "ai", label: "I could use a little help generating a design" },
   ];
   let wrapValue = "wrrapd";
   try {
@@ -259,13 +291,9 @@ export function openLegoGiftServiceModal() {
     fr.readAsDataURL(f);
   });
 
-  const occasionLabel = document.createElement("label");
-  occasionLabel.className = "ds-label-sm-medium ds-color-text-default";
-  occasionLabel.style.cssText = "display:block;margin:8px 0 6px 0;";
-  occasionLabel.textContent = "Occasion / design notes";
   const occasionInput = document.createElement("input");
   occasionInput.type = "text";
-  occasionInput.placeholder = "e.g., Birthday gift for my niece who loves stars and blue colors";
+  occasionInput.placeholder = "e.g., Valentine's Day gift for my 28 yo boyfriend, my sister's 21st birthday, grandson's bar mitzvah...";
   occasionInput.style.cssText =
     "width:100%;padding:10px;border:1px solid #d1d5db;border-radius:6px;box-sizing:border-box;";
   try {
@@ -280,14 +308,14 @@ export function openLegoGiftServiceModal() {
   const aiHint = document.createElement("div");
   aiHint.className = "ds-body-xs-regular ds-color-text-subdued";
   aiHint.style.marginBottom = "8px";
-  aiHint.textContent = "What's the occasion? Who is the giftee? What themes should we include?";
+  aiHint.textContent = "What's the occasion?  Who is the giftee?  What do they like?  Please feel free to suggest any themes...";
   const aiBtn = document.createElement("button");
   aiBtn.type = "button";
   aiBtn.className = "sk-button sk-button--secondary sk-button--small sk-button--neutral";
   aiBtn.textContent = "Generate AI designs";
   const aiResults = document.createElement("div");
   aiResults.style.cssText = "display:grid;gap:8px;margin-top:10px;";
-  aiWrap.append(occasionLabel, occasionInput, aiHint, aiBtn, aiResults);
+  aiWrap.append(aiHint, occasionInput, aiBtn, aiResults);
 
   let selectedAiDesign = null;
   try {
@@ -362,7 +390,7 @@ export function openLegoGiftServiceModal() {
 
   const flowersGrid = document.createElement("div");
   flowersGrid.style.cssText =
-    `display:${flowersCb.checked ? "grid" : "none"};grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin:8px 0 14px 0;`;
+    `display:${flowersCb.checked ? "grid" : "none"};grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:8px 0 14px 0;`;
   let selectedFlowerDesign = "";
   try {
     selectedFlowerDesign = sessionStorage.getItem(LEGO_GIFT_SELECTED_FLOWER_KEY) || "";
@@ -383,7 +411,7 @@ export function openLegoGiftServiceModal() {
     const img = document.createElement("img");
     img.src = chrome.runtime.getURL(`assets/flowers/flowers-${n}.webp`);
     img.alt = `Flowers ${n}`;
-    img.style.cssText = "width:96px;height:96px;object-fit:cover;border-radius:6px;border:1px solid #e5e7eb;";
+    img.style.cssText = "width:124px;height:124px;object-fit:cover;border-radius:6px;border:1px solid #e5e7eb;";
     lab.append(r, img);
     flowersGrid.append(lab);
   });
@@ -395,7 +423,7 @@ export function openLegoGiftServiceModal() {
   const senderLabel = document.createElement("label");
   senderLabel.className = "ds-label-sm-medium ds-color-text-default";
   senderLabel.style.cssText = "display:block;margin:4px 0 6px 0;";
-  senderLabel.textContent = "Sender name";
+  senderLabel.textContent = "Gifter";
   const senderInput = document.createElement("input");
   senderInput.type = "text";
   senderInput.placeholder = "From";
@@ -492,11 +520,38 @@ export function openLegoGiftServiceModal() {
     applyCheckoutSecurelyGate();
   });
 
-  proceedBtn.addEventListener("click", () => {
+  proceedBtn.addEventListener("click", async () => {
+    const estimateZip = readLegoEstimateZip();
+    if (!estimateZip) {
+      alert("Please enter a ZIP code in LEGO's tax & delivery ZIP field first, then save your Wrrapd choices.");
+      return;
+    }
+    let allowed = [];
+    try {
+      allowed = await loadAllowedZipCodes();
+    } catch {
+      allowed = [];
+    }
+    const zipAllowed = Array.isArray(allowed) && allowed.includes(estimateZip);
+    if (!zipAllowed) {
+      writeRadio("no");
+      writeTc(false);
+      const y = document.querySelector('input[name="wrrapd-lego-gift"][value="yes"]');
+      const n = document.querySelector('input[name="wrrapd-lego-gift"][value="no"]');
+      if (y) y.checked = false;
+      if (n) n.checked = true;
+      alert(
+        "Sorry — we currently cannot deliver to that ZIP code yet. We are actively adding more ZIP codes, so please check back soon.",
+      );
+      tearDown();
+      applyCheckoutSecurelyGate();
+      return;
+    }
     try {
       sessionStorage.setItem(LEGO_GIFT_OCCASION_KEY, occasionInput.value.trim());
       sessionStorage.setItem(LEGO_GIFT_MESSAGE_KEY, msgInput.value.trim());
       sessionStorage.setItem(LEGO_GIFT_SENDER_NAME_KEY, senderInput.value.trim());
+      sessionStorage.setItem("wrrapdLegoValidatedEstimateZip", estimateZip);
       sessionStorage.setItem(LEGO_GIFT_WRAP_PREF_KEY, wrapValue);
       sessionStorage.setItem(
         LEGO_GIFT_FLOWERS_INTEREST_KEY,
