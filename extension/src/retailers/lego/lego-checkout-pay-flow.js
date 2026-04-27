@@ -1,8 +1,10 @@
 import {
   LEGO_GIFT_AI_DESIGN_KEY,
   LEGO_GIFT_FLOWERS_INTEREST_KEY,
+  LEGO_GIFT_MESSAGE_KEY,
+  LEGO_GIFT_OCCASION_KEY,
   LEGO_GIFT_SELECTED_FLOWER_KEY,
-  LEGO_GIFT_UPLOAD_NAME_KEY,
+  LEGO_GIFT_SENDER_NAME_KEY,
   LEGO_GIFT_WRAP_PREF_KEY,
   WRRAPD_HUB_ADDRESS_OBJECT,
   WRRAPD_HUB_SHIP_LINES,
@@ -31,6 +33,8 @@ const WRRAPD_CHECKOUT_UNIT_PRICES_FALLBACK = Object.freeze({
 });
 
 let wrrapdCheckoutUnitPriceOverride = null;
+/** Whole-number sales-tax percent from api.wrrapd.com/pricing-preview (giftee ZIP), or null. */
+let legoPreviewTaxPercent = null;
 
 function findCheckoutSecurelyButton() {
   return (
@@ -66,6 +70,7 @@ function getActiveCheckoutUnitPrices() {
 }
 
 async function refreshCheckoutUnitPricesFromServer(geo) {
+  let pricesOk = false;
   try {
     const u = new URL("https://api.wrrapd.com/api/pricing-preview");
     if (geo && geo.postalCode) u.searchParams.set("postalCode", String(geo.postalCode).trim().slice(0, 16));
@@ -74,8 +79,15 @@ async function refreshCheckoutUnitPricesFromServer(geo) {
     const r = await fetch(u.toString(), { credentials: "omit" });
     if (!r.ok) return false;
     const j = await r.json();
+    let gotTax = false;
+    if (typeof j.estimatedSalesTaxPercent === "number" && Number.isFinite(j.estimatedSalesTaxPercent)) {
+      legoPreviewTaxPercent = j.estimatedSalesTaxPercent;
+      gotTax = true;
+    } else {
+      legoPreviewTaxPercent = null;
+    }
     const up = j && j.unitPrices && typeof j.unitPrices === "object" ? j.unitPrices : null;
-    if (!up) return false;
+    if (!up) return gotTax;
     const next = {
       giftWrapBase: Number(up.giftWrapBase),
       customDesignAi: Number(up.customDesignAi),
@@ -88,8 +100,9 @@ async function refreshCheckoutUnitPricesFromServer(geo) {
       )
     ) {
       wrrapdCheckoutUnitPriceOverride = next;
-      return true;
+      pricesOk = true;
     }
+    return pricesOk || gotTax;
   } catch (e) {
     console.warn("[LEGO pay] pricing-preview", e);
   }
@@ -115,19 +128,25 @@ function hubAsPaymentAddress() {
   };
 }
 
-function gifteeStubFromSession() {
-  let zip = "";
+/** 5-digit ZIP used for sales tax (LEGO bag estimate field). */
+function gifteeZip5() {
   try {
-    zip = sessionStorage.getItem("wrrapdLegoValidatedEstimateZip") || "";
+    return String(sessionStorage.getItem("wrrapdLegoValidatedEstimateZip") || "")
+      .replace(/\D/g, "")
+      .slice(0, 5);
   } catch {
-    zip = "";
+    return "";
   }
+}
+
+function gifteeStubFromSession() {
+  const zip = gifteeZip5();
   return {
     name: "Your giftee (LEGO delivery after wrap)",
     street: "",
     city: "",
     state: "",
-    postalCode: zip || "",
+    postalCode: zip,
     country: "United States",
     phone: "",
   };
@@ -159,10 +178,31 @@ function computeServiceSubtotalCents() {
   return Math.round(dollars * 100);
 }
 
+function round2(n) {
+  return Math.round(n * 100) / 100;
+}
+
+/** Matches server wrrapd-pricing tax line (giftee ZIP in pricingCart). */
+function computeLegoTotalBreakdown() {
+  const sub = computeServiceSubtotalCents() / 100;
+  const tr =
+    legoPreviewTaxPercent != null && Number.isFinite(legoPreviewTaxPercent) ? legoPreviewTaxPercent : 0;
+  const tax = round2(sub * (tr / 100));
+  const total = round2(sub + tax);
+  return {
+    subtotalUsd: sub,
+    taxUsd: tax,
+    totalCents: Math.round(total * 100),
+    taxRatePercent: tr,
+  };
+}
+
 function buildLegoPricingCart() {
   const wrap = readWrapPref();
   const flowers = readFlowersOn();
-  const zip = hubPostalForPricing();
+  const zipForTax = gifteeZip5() || hubPostalForPricing();
+  const tr =
+    legoPreviewTaxPercent != null && Number.isFinite(legoPreviewTaxPercent) ? legoPreviewTaxPercent : 0;
   return {
     items: [
       {
@@ -175,9 +215,9 @@ function buildLegoPricingCart() {
         ],
       },
     ],
-    taxRatePercent: 0,
-    postalCode: zip,
-    state: WRRAPD_HUB_ADDRESS_OBJECT.state,
+    taxRatePercent: tr,
+    postalCode: zipForTax,
+    state: "",
     country: "US",
   };
 }
@@ -453,6 +493,86 @@ function mountSummaryNearButton(btn, lines, totalCents, paid) {
 let payMessageBound = false;
 let payPopupRef = null;
 
+function readSession(key) {
+  try {
+    return sessionStorage.getItem(key) || "";
+  } catch {
+    return "";
+  }
+}
+
+/** One parent row + options[] — same flattening shape as Amazon for process-payment / ingest. */
+function buildLegoOrderDataForProcessPayment() {
+  const wrap = readWrapPref();
+  const flowers = readFlowersOn();
+  let selectedAi = null;
+  try {
+    const raw = readSession(LEGO_GIFT_AI_DESIGN_KEY);
+    if (raw) selectedAi = JSON.parse(raw);
+  } catch {
+    selectedAi = null;
+  }
+  const option = {
+    checkbox_wrrapd: true,
+    selected_wrapping_option: wrap,
+    checkbox_flowers: flowers,
+    selected_flower_design: readSession(LEGO_GIFT_SELECTED_FLOWER_KEY) || null,
+    selected_ai_design: selectedAi,
+    giftMessage: readSession(LEGO_GIFT_MESSAGE_KEY) || null,
+    senderName: readSession(LEGO_GIFT_SENDER_NAME_KEY) || null,
+    occasion: readSession(LEGO_GIFT_OCCASION_KEY) || null,
+  };
+  return [
+    {
+      asin: "LEGO",
+      title: "LEGO.com order — Wrrapd gift wrap",
+      imageUrl: "",
+      options: [option],
+    },
+  ];
+}
+
+async function postLegoProcessPayment(eventData) {
+  const orderNumber =
+    (typeof eventData.orderNumber === "string" && eventData.orderNumber.trim()) ||
+    readSession("wrrapd-lego-order-number");
+  if (!orderNumber || !eventData.paymentIntentId || !eventData.customerEmail) {
+    console.warn("[LEGO pay] process-payment skipped: missing orderNumber, paymentIntentId, or email.");
+    return false;
+  }
+  try {
+    const response = await fetch("https://api.wrrapd.com/process-payment", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        paymentIntentId: eventData.paymentIntentId,
+        orderData: buildLegoOrderDataForProcessPayment(),
+        customerEmail: eventData.customerEmail,
+        customerPhone: String(eventData.customerPhone || "").trim() || "000-000-0000",
+        orderNumber,
+        retailer: "Lego",
+        name_of_retailer: "Lego",
+        billingDetails: eventData.billingDetails || null,
+        gifterFullName: String(eventData.gifterFullName || "").trim() || undefined,
+        finalShippingAddress: eventData.finalShippingAddress || null,
+        gifteeOriginalAddress: gifteeStubFromSession(),
+      }),
+    });
+    const result = await response.json().catch(() => ({}));
+    if (response.ok && result.success) {
+      if (result.warnings && result.warnings.length) {
+        console.warn("[LEGO pay] process-payment warnings:", result.warnings);
+      }
+      return true;
+    }
+    console.error("[LEGO pay] process-payment failed:", result.error || response.status);
+    return false;
+  } catch (e) {
+    console.error("[LEGO pay] process-payment request error:", e);
+    return false;
+  }
+}
+
 function bindPayMessageOnce() {
   if (payMessageBound) return;
   payMessageBound = true;
@@ -462,16 +582,22 @@ function bindPayMessageOnce() {
     const retailer = String(event.data.retailer || event.data.name_of_retailer || "").toLowerCase();
     if (retailer !== "lego") return;
     if (payPopupRef && event.source !== payPopupRef) return;
-    writeLegoPaymentSuccess(true);
+    void (async () => {
+      const ok = await postLegoProcessPayment(event.data);
+      if (!ok) {
+        console.warn("[LEGO pay] process-payment did not complete; check api.wrrapd.com logs. Checkout will still unlock.");
+      }
+      writeLegoPaymentSuccess(true);
     payPopupRef = null;
     applyCheckoutSecurelyGate();
-    const btn = findCheckoutSecurelyButton();
-    if (btn) {
-      const { lines, totalCents } = buildSummaryLinesAndTotal();
-      const host = document.getElementById(SUMMARY_ROOT_ID);
-      if (host) host.remove();
-      mountSummaryNearButton(btn, lines, totalCents, true);
-    }
+      const btn = findCheckoutSecurelyButton();
+      if (btn) {
+        const { lines, totalCents } = buildSummaryLinesAndTotal();
+        const host = document.getElementById(SUMMARY_ROOT_ID);
+        if (host) host.remove();
+        mountSummaryNearButton(btn, lines, totalCents, true);
+      }
+    })();
   });
 }
 
@@ -490,17 +616,28 @@ function buildSummaryLinesAndTotal() {
     detail = "";
   }
   if (detail && wrap === "ai") lines.push("(AI selection saved with your order.)");
-  return { lines, totalCents: computeServiceSubtotalCents() };
+  const br = computeLegoTotalBreakdown();
+  const z = gifteeZip5();
+  if (br.taxUsd > 0) {
+    lines.push(
+      `Estimated sales tax (${z || "ZIP"} @ ${br.taxRatePercent.toFixed(2)}%) — $${br.taxUsd.toFixed(2)}`,
+    );
+  } else if (z) {
+    lines.push(`Estimated sales tax — $0.00 (no rate on file for ZIP ${z})`);
+  }
+  return { lines, totalCents: br.totalCents };
 }
 
 async function openLegoPaymentPopup() {
+  const zipGiftee = gifteeZip5();
   const geo = {
-    postalCode: hubPostalForPricing(),
-    state: WRRAPD_HUB_ADDRESS_OBJECT.state,
+    postalCode: zipGiftee || hubPostalForPricing(),
+    state: "",
     country: "US",
   };
   await refreshCheckoutUnitPricesFromServer(geo);
-  const totalCents = computeServiceSubtotalCents();
+  const br = computeLegoTotalBreakdown();
+  const totalCents = br.totalCents;
   if (!totalCents || totalCents < 50) {
     alert("Invalid Wrrapd total. Please refresh and try again.");
     return;
@@ -549,9 +686,14 @@ async function openLegoPaymentPopup() {
   popup.focus();
 }
 
-function ensurePaymentSummaryUi() {
+async function ensurePaymentSummaryUi() {
   const btn = findCheckoutSecurelyButton();
   if (!btn?.parentElement) return;
+  await refreshCheckoutUnitPricesFromServer({
+    postalCode: gifteeZip5() || hubPostalForPricing(),
+    state: "",
+    country: "US",
+  });
   const paid = readLegoPaymentSuccess();
   const { lines, totalCents } = buildSummaryLinesAndTotal();
   const { payBtn } = mountSummaryNearButton(btn, lines, totalCents, paid);
@@ -596,7 +738,7 @@ export function initLegoCheckoutPayFlow() {
         e.stopPropagation();
         e.stopImmediatePropagation?.();
         openLegoHubConfirmModal(() => {
-          ensurePaymentSummaryUi();
+          void ensurePaymentSummaryUi();
         });
         return;
       }
@@ -605,9 +747,10 @@ export function initLegoCheckoutPayFlow() {
         e.preventDefault();
         e.stopPropagation();
         e.stopImmediatePropagation?.();
-        ensurePaymentSummaryUi();
-        const hint = document.getElementById(SUMMARY_ROOT_ID);
-        if (hint) hint.scrollIntoView({ block: "nearest", behavior: "smooth" });
+        void ensurePaymentSummaryUi().then(() => {
+          const hint = document.getElementById(SUMMARY_ROOT_ID);
+          if (hint) hint.scrollIntoView({ block: "nearest", behavior: "smooth" });
+        });
         return;
       }
     },

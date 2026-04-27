@@ -67,7 +67,7 @@ function buildFinalDeliveryCard() {
   p2.className = "ds-body-xs-regular ds-color-text-subdued";
   p2.style.margin = "0";
   p2.textContent =
-    "Final delivery to your giftee is arranged by Wrrapd after gift wrap; it is not shown as a second LEGO.com shipment at checkout.";
+    "Final delivery to your giftee is arranged by Wrrapd after gift wrap; it is not shown as a second LEGO.com shipment at checkout. After we receive your package at the hub, gift wrap typically adds about one business day before outbound delivery to your giftee.";
 
   section.append(title, p1, p2);
   return section;

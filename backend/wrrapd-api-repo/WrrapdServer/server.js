@@ -243,12 +243,22 @@ app.get('/api/pricing-preview', (req, res) => {
         country: typeof req.query.country === 'string' ? req.query.country : '',
     };
     const r = wrrapdPricing.resolveWrrapdUnitPrices(geo);
+    // eslint-disable-next-line global-require
+    const salesTaxZip = require('./lib/sales-tax-zip');
+    const zip5 = String(geo.postalCode || '')
+        .replace(/\D/g, '')
+        .slice(0, 5);
+    let estimatedSalesTaxPercent = null;
+    if (zip5.length === 5) {
+        estimatedSalesTaxPercent = salesTaxZip.getCombinedRateAsTaxPercent(zip5);
+    }
     res.status(200).json({
         ok: true,
         unitPrices: r.unitPrices,
         configVersion: r.configVersion,
         appliedRuleIds: r.appliedRuleIds,
         timeZone: r.timeZone,
+        ...(estimatedSalesTaxPercent !== null ? { estimatedSalesTaxPercent } : {}),
     });
 });
 

@@ -20,6 +20,8 @@ const DEFAULT_CONFIG = Object.freeze({
 let cachedConfig = null;
 let cachedConfigRaw = '';
 
+const salesTaxZip = require('./sales-tax-zip');
+
 function parseConfigFromEnv() {
     const raw = (process.env.WRRAPD_PRICE_CONFIG_JSON || '').trim();
     if (!raw) {
@@ -337,16 +339,32 @@ function sanitizePricingCartFromRequest(body) {
         items.push({ options });
     }
     const taxRaw = body.taxRatePercent;
-    const taxRatePercent =
+    let taxRatePercent =
         typeof taxRaw === 'number' && Number.isFinite(taxRaw)
             ? Math.max(0, Math.min(100, taxRaw))
             : typeof taxRaw === 'string' && taxRaw.trim() !== ''
                 ? Math.max(0, Math.min(100, parseFloat(taxRaw)))
                 : null;
-    if (taxRatePercent === null || !Number.isFinite(taxRatePercent)) return null;
     const postalCode = typeof body.postalCode === 'string' ? body.postalCode.slice(0, 16) : '';
     const state = typeof body.state === 'string' ? body.state.slice(0, 16) : '';
     const country = typeof body.country === 'string' ? body.country.slice(0, 8) : '';
+    const zip5 = String(postalCode || '')
+        .replace(/\D/g, '')
+        .slice(0, 5);
+    const countryU = String(country || 'US')
+        .trim()
+        .toUpperCase();
+    const treatAsUS =
+        !countryU ||
+        countryU === 'US' ||
+        countryU === 'USA' ||
+        countryU === 'UNITED STATES' ||
+        countryU === 'UNITED STA';
+    if (zip5.length === 5 && treatAsUS) {
+        const fromTable = salesTaxZip.getCombinedRateAsTaxPercent(zip5);
+        if (fromTable !== null) taxRatePercent = fromTable;
+    }
+    if (taxRatePercent === null || !Number.isFinite(taxRatePercent)) taxRatePercent = 0;
     return {
         items,
         taxRatePercent,

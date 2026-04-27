@@ -2254,6 +2254,11 @@
                                 finalShippingAddress: finalShippingAddressForServer,
                                 retailer: checkoutRetailer,
                                 name_of_retailer: checkoutRetailer,
+                                orderNumber: orderNumber,
+                                pricingCart:
+                                    payload.pricingCart && typeof payload.pricingCart === 'object'
+                                        ? payload.pricingCart
+                                        : undefined,
                             },
                             '*'
                         );

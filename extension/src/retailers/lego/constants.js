@@ -6,6 +6,9 @@ export const LEGO_HUB_SHIP_HINT_DATA_ATTR = "data-wrrapd-lego-hub-ship-hint";
 /** DOM marker on the “hub vs giftee” explainer on LEGO checkout review / final step. */
 export const LEGO_FINAL_DELIVERY_MSG_DATA_ATTR = "data-wrrapd-lego-final-delivery";
 
+/** Early checkout steps: LEGO may show giftee address while the first physical leg is the hub. */
+export const LEGO_GIFTEE_SHIP_CTX_DATA_ATTR = "data-wrrapd-lego-giftee-ship-context";
+
 /** Bag page: checkbox block above Checkout Securely. */
 export const LEGO_GIFT_CART_OPTIN_DATA_ATTR = "data-wrrapd-lego-cart-gift-optin";
 

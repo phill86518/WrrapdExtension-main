@@ -1,0 +1,4 @@
+# Rate tables consumed by lib/sales-tax-zip.js — ignore stray uploads in this folder.
+*
+!TAXRATES_ZIP5_*.csv
+!.gitignore
