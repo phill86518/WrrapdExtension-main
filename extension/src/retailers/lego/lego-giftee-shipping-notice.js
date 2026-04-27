@@ -50,7 +50,7 @@ function tryMount() {
   const title = document.createElement("strong");
   title.textContent = "How shipping looks on LEGO.com: ";
   const rest = document.createTextNode(
-    "The next screens may show your giftee’s address as “shipping.” Your LEGO parcel still routes to the Wrrapd hub first for gift wrap. After we receive it, wrapping usually needs about one extra business day before final delivery to your giftee proceeds.",
+    "Step 1 may label the address as your giftee’s — that is usually LEGO’s way of showing who the order is ultimately for. The physical LEGO shipment for Wrrapd gift wrap still goes to the Wrrapd hub first (the hub address you confirmed), not straight to the giftee’s door. After we receive and wrap it, final delivery to the giftee is coordinated by Wrrapd and often takes about one extra business day after hub receipt.",
   );
   host.append(title, rest);
 

@@ -438,7 +438,10 @@ function removeLegoPaymentSummary() {
   if (root) root.remove();
 }
 
-function mountSummaryNearButton(btn, lines, totalCents, paid) {
+/**
+ * @param {Array<{ label: string, amount: string | null }>} invoiceRows amount null = full-width note row
+ */
+function mountSummaryNearButton(btn, invoiceRows, totalCents, paid) {
   removeLegoPaymentSummary();
   const host = document.createElement("div");
   host.setAttribute(SUMMARY_HOST_ATTR, "1");
@@ -453,17 +456,40 @@ function mountSummaryNearButton(btn, lines, totalCents, paid) {
   h.style.cssText = "font-weight:700;font-size:16px;margin-bottom:8px;color:#92400e;";
   h.textContent = "Wrrapd gift service — payment";
 
-  const ul = document.createElement("ul");
-  ul.style.cssText = "margin:0 0 10px;padding-left:1.1rem;";
-  for (const line of lines) {
-    const li = document.createElement("li");
-    li.textContent = line;
-    ul.appendChild(li);
+  const linesWrap = document.createElement("div");
+  linesWrap.style.cssText = "margin:0 0 4px;display:flex;flex-direction:column;gap:8px;";
+  for (const row of invoiceRows) {
+    if (row.amount === null) {
+      const note = document.createElement("div");
+      note.style.cssText = "font-size:14px;color:#64748b;font-style:italic;";
+      note.textContent = row.label;
+      linesWrap.appendChild(note);
+      continue;
+    }
+    const line = document.createElement("div");
+    line.style.cssText =
+      "display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:16px;align-items:baseline;";
+    const lbl = document.createElement("span");
+    lbl.textContent = row.label;
+    lbl.style.cssText = "min-width:0;";
+    const amt = document.createElement("span");
+    amt.textContent = row.amount;
+    amt.style.cssText =
+      "text-align:right;font-variant-numeric:tabular-nums;font-weight:600;white-space:nowrap;color:#0f172a;";
+    line.append(lbl, amt);
+    linesWrap.appendChild(line);
   }
 
   const total = document.createElement("div");
-  total.style.cssText = "font-weight:700;margin-bottom:12px;color:#0f172a;";
-  total.textContent = `Total due to Wrrapd: $${(totalCents / 100).toFixed(2)}`;
+  total.style.cssText =
+    "display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:16px;align-items:baseline;margin-top:10px;padding-top:10px;border-top:1px solid #fde68a;font-weight:700;color:#0f172a;";
+  const totalLbl = document.createElement("span");
+  totalLbl.textContent = "Total due to Wrrapd";
+  const totalAmt = document.createElement("span");
+  totalAmt.textContent = `$${(totalCents / 100).toFixed(2)}`;
+  totalAmt.style.cssText =
+    "text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;font-size:16px;color:#0f172a;";
+  total.append(totalLbl, totalAmt);
 
   const payRow = document.createElement("div");
   payRow.style.cssText = "display:flex;align-items:center;gap:12px;flex-wrap:wrap;";
@@ -484,7 +510,7 @@ function mountSummaryNearButton(btn, lines, totalCents, paid) {
   if (paid) payBtn.disabled = true;
 
   payRow.append(payBtn, status);
-  host.append(h, ul, total, payRow);
+  host.append(h, linesWrap, total, payRow);
 
   const parent = btn.parentElement;
   if (parent) parent.insertBefore(host, btn);
@@ -604,14 +630,14 @@ function bindPayMessageOnce() {
         console.warn("[LEGO pay] process-payment did not complete; check api.wrrapd.com logs. Checkout will still unlock.");
       }
       writeLegoPaymentSuccess(true);
-    payPopupRef = null;
-    applyCheckoutSecurelyGate();
+      payPopupRef = null;
+      applyCheckoutSecurelyGate();
       const btn = findCheckoutSecurelyButton();
       if (btn) {
-        const { lines, totalCents } = buildSummaryLinesAndTotal();
+        const { invoiceRows, totalCents } = buildSummaryLinesAndTotal();
         const host = document.getElementById(SUMMARY_ROOT_ID);
         if (host) host.remove();
-        mountSummaryNearButton(btn, lines, totalCents, true);
+        mountSummaryNearButton(btn, invoiceRows, totalCents, true);
       }
     })();
   });
@@ -620,28 +646,41 @@ function bindPayMessageOnce() {
 function buildSummaryLinesAndTotal() {
   const p = getActiveCheckoutUnitPrices();
   const wrap = readWrapPref();
-  const lines = [];
-  lines.push(`Gift wrap base — $${p.giftWrapBase.toFixed(2)}`);
-  if (wrap === "ai") lines.push(`AI design assist — $${p.customDesignAi.toFixed(2)}`);
-  if (wrap === "upload") lines.push(`Custom upload — $${p.customDesignUpload.toFixed(2)}`);
-  if (readFlowersOn()) lines.push(`Flowers add-on — $${p.flowers.toFixed(2)}`);
+  /** @type {Array<{ label: string, amount: string | null }>} */
+  const invoiceRows = [];
+  invoiceRows.push({ label: "Gift wrap base", amount: `$${p.giftWrapBase.toFixed(2)}` });
+  if (wrap === "ai") {
+    invoiceRows.push({ label: "AI design assist", amount: `$${p.customDesignAi.toFixed(2)}` });
+  }
+  if (wrap === "upload") {
+    invoiceRows.push({ label: "Custom upload", amount: `$${p.customDesignUpload.toFixed(2)}` });
+  }
+  if (readFlowersOn()) {
+    invoiceRows.push({ label: "Flowers add-on", amount: `$${p.flowers.toFixed(2)}` });
+  }
   let detail = "";
   try {
     detail = sessionStorage.getItem(LEGO_GIFT_AI_DESIGN_KEY) || "";
   } catch {
     detail = "";
   }
-  if (detail && wrap === "ai") lines.push("(AI selection saved with your order.)");
+  if (detail && wrap === "ai") {
+    invoiceRows.push({ label: "(AI selection saved with your order.)", amount: null });
+  }
   const br = computeLegoTotalBreakdown();
   const z = gifteeZip5();
   if (br.taxUsd > 0) {
-    lines.push(
-      `Estimated sales tax (${z || "ZIP"} @ ${br.taxRatePercent.toFixed(2)}%) — $${br.taxUsd.toFixed(2)}`,
-    );
+    invoiceRows.push({
+      label: `Estimated sales tax (${z || "ZIP"} @ ${br.taxRatePercent.toFixed(2)}%)`,
+      amount: `$${br.taxUsd.toFixed(2)}`,
+    });
   } else if (z) {
-    lines.push(`Estimated sales tax — $0.00 (no rate on file for ZIP ${z})`);
+    invoiceRows.push({
+      label: `Estimated sales tax (no rate on file for ZIP ${z})`,
+      amount: "$0.00",
+    });
   }
-  return { lines, totalCents: br.totalCents };
+  return { invoiceRows, totalCents: br.totalCents };
 }
 
 async function openLegoPaymentPopup() {
@@ -711,8 +750,8 @@ async function ensurePaymentSummaryUi() {
     country: "US",
   });
   const paid = readLegoPaymentSuccess();
-  const { lines, totalCents } = buildSummaryLinesAndTotal();
-  const { payBtn } = mountSummaryNearButton(btn, lines, totalCents, paid);
+  const { invoiceRows, totalCents } = buildSummaryLinesAndTotal();
+  const { payBtn } = mountSummaryNearButton(btn, invoiceRows, totalCents, paid);
   if (!paid) {
     payBtn.addEventListener("click", () => {
       openLegoPaymentPopup();
