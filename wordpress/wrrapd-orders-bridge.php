@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: Wrrapd Orders Bridge (MU)
- * Description: Orders bridge (claim + list shortcodes + studio layout), logout nonce fix, strip leading admin sort prefixes (e.g. 07.) from front-end titles (Elementor, menus, Yoast/Rank Math).
+ * Description: Orders bridge (claim + list shortcodes + studio layout) for Ulta, LEGO, Target, and Amazon; logout nonce fix; strip leading admin sort prefixes (e.g. 07.) from front-end titles (Elementor, menus, Yoast/Rank Math).
  * Author: Wrrapd
  *
  * Install: copy this file to wp-content/mu-plugins/wrrapd-orders-bridge.php (must-use plugins load automatically).
@@ -96,6 +96,108 @@ add_filter(
 	999,
 	1
 );
+
+/**
+ * On-disk folder for circular retailer PNGs (`mu-plugins/logos/`).
+ */
+function wrrapd_mu_logos_dir() {
+	return dirname( __FILE__ ) . '/logos';
+}
+
+/**
+ * Public URL for a built logo, or Google favicon fallback.
+ *
+ * @param string $slug            e.g. amazon, target.
+ * @param string $favicon_domain  e.g. amazon.com.
+ */
+function wrrapd_mu_logo_url_for_slug( $slug, $favicon_domain ) {
+	$slug = preg_replace( '/[^a-z0-9_-]/', '', strtolower( (string) $slug ) );
+	if ( $slug === '' ) {
+		return '';
+	}
+	$path = wrrapd_mu_logos_dir() . '/' . $slug . '.png';
+	if ( is_readable( $path ) ) {
+		return plugin_dir_url( __FILE__ ) . 'logos/' . $slug . '.png';
+	}
+	return 'https://www.google.com/s2/favicons?domain=' . rawurlencode( (string) $favicon_domain ) . '&sz=64';
+}
+
+/**
+ * Map plain retailer name from order JSON to slug, label, and favicon domain.
+ *
+ * @param string $plain Raw retailer field.
+ * @return array{slug:string,label:string,domain:string}|null Null = show plain text only.
+ */
+function wrrapd_retailer_row_from_plain( $plain ) {
+	$plain = trim( (string) $plain );
+	$lower = strtolower( $plain );
+	if ( $plain === '' || strpos( $lower, 'amazon' ) !== false ) {
+		return array(
+			'slug'   => 'amazon',
+			'label'  => __( 'Amazon', 'wrrapd' ),
+			'domain' => 'amazon.com',
+		);
+	}
+	if ( preg_match( '/\bulta\b/i', $plain ) === 1 ) {
+		return array(
+			'slug'   => 'ulta',
+			'label'  => __( 'Ulta', 'wrrapd' ),
+			'domain' => 'ulta.com',
+		);
+	}
+	if ( preg_match( '/\blego\b/i', $plain ) === 1 ) {
+		return array(
+			'slug'   => 'lego',
+			'label'  => __( 'LEGO', 'wrrapd' ),
+			'domain' => 'lego.com',
+		);
+	}
+	if ( preg_match( '/\btarget\b/i', $plain ) === 1 ) {
+		return array(
+			'slug'   => 'target',
+			'label'  => __( 'Target', 'wrrapd' ),
+			'domain' => 'target.com',
+		);
+	}
+	return null;
+}
+
+/**
+ * Home page: retailer wheels (Ulta, LEGO, Target, Amazon) — JS moves the strip above “Gift-wrapping…” when that heading exists.
+ */
+function wrrapd_output_retailer_wheel_strip() {
+	if ( is_admin() || is_paged() ) {
+		return;
+	}
+	if ( ! is_front_page() && ! is_home() ) {
+		return;
+	}
+	$brands = array(
+		array( 'slug' => 'ulta', 'label' => __( 'Ulta', 'wrrapd' ), 'domain' => 'ulta.com' ),
+		array( 'slug' => 'lego', 'label' => __( 'LEGO', 'wrrapd' ), 'domain' => 'lego.com' ),
+		array( 'slug' => 'target', 'label' => __( 'Target', 'wrrapd' ), 'domain' => 'target.com' ),
+		array( 'slug' => 'amazon', 'label' => __( 'Amazon', 'wrrapd' ), 'domain' => 'amazon.com' ),
+	);
+	echo '<style id="wrrapd-retailer-wheels-css">';
+	echo '@keyframes wrrapd-wheel-in{0%{transform:translateX(min(38vw,240px)) rotate(-540deg);opacity:0}100%{transform:translateX(0) rotate(0);opacity:1}}';
+	echo '.wrrapd-retailer-wheels{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:clamp(.75rem,3vw,1.35rem);padding:.35rem 1rem .55rem;max-width:100%;margin:0 auto;box-sizing:border-box;}';
+	echo '.wrrapd-retailer-wheels__item{flex:0 0 auto;width:100px;height:100px;border-radius:50%;overflow:hidden;box-shadow:0 2px 10px rgba(15,23,42,.12),inset 0 0 0 2px rgba(255,255,255,.75);background:#fff;animation:wrrapd-wheel-in 1.15s cubic-bezier(.2,.85,.15,1) forwards;opacity:0;}';
+	echo '.wrrapd-retailer-wheels__item:nth-child(1){animation-delay:.06s}.wrrapd-retailer-wheels__item:nth-child(2){animation-delay:.2s}.wrrapd-retailer-wheels__item:nth-child(3){animation-delay:.34s}.wrrapd-retailer-wheels__item:nth-child(4){animation-delay:.48s}';
+	echo '.wrrapd-retailer-wheels__item img{display:block;width:100%;height:100%;object-fit:cover;}';
+	echo '</style>';
+	echo '<div id="wrrapd-retailer-wheels-strip" class="wrrapd-retailer-wheels" role="region" aria-label="' . esc_attr__( 'Retailers: Ulta, LEGO, Target, and Amazon', 'wrrapd' ) . '">';
+	foreach ( $brands as $b ) {
+		$src = esc_url( wrrapd_mu_logo_url_for_slug( $b['slug'], $b['domain'] ) );
+		$fb  = 'https://www.google.com/s2/favicons?domain=' . rawurlencode( $b['domain'] ) . '&sz=128';
+		echo '<div class="wrrapd-retailer-wheels__item"><img src="' . $src . '" data-fallback="' . esc_url( $fb ) . '" width="100" height="100" alt="' . esc_attr( $b['label'] ) . '" loading="lazy" decoding="async" onerror="var u=this.dataset.fallback;if(u){this.onerror=null;this.src=u;}" /></div>';
+	}
+	echo '</div>';
+	echo '<script>';
+	echo 'document.addEventListener("DOMContentLoaded",function(){var s=document.getElementById("wrrapd-retailer-wheels-strip");if(!s)return;var nodes=document.querySelectorAll("h1,h2,h3,p,.elementor-heading-title");var a=null;for(var i=0;i<nodes.length;i++){var el=nodes[i],t=(el.textContent||"");if(/gift[-\s]?wrapp/i.test(t)&&t.length<500){a=el;break;}}if(a&&a.parentNode){a.parentNode.insertBefore(s,a);}});';
+	echo '</script>';
+}
+
+add_action( 'wp_body_open', 'wrrapd_output_retailer_wheel_strip', 5 );
 
 if ( ! defined( 'WRRAPD_INTERNAL_API_KEY' ) || WRRAPD_INTERNAL_API_KEY === '' ) {
 	return;
@@ -421,7 +523,7 @@ function wrrapd_render_orders_table_simple( array $orders ) {
 function wrrapd_render_orders_table_rich( array $orders ) {
 	ob_start();
 	echo '<div class="wrrapd-review-orders-table-wrap"><table class="wrrapd-review-orders-table wrrapd-review-orders-rich"><thead><tr>';
-	echo '<th>' . esc_html__( 'Amazon / order #', 'wrrapd' ) . '</th>';
+	echo '<th>' . esc_html__( 'Retailer / order #', 'wrrapd' ) . '</th>';
 	echo '<th>' . esc_html__( 'Date placed', 'wrrapd' ) . '</th>';
 	echo '<th>' . esc_html__( 'Giftee', 'wrrapd' ) . '</th>';
 	echo '<th>' . esc_html__( 'Occasion', 'wrrapd' ) . '</th>';
@@ -688,7 +790,7 @@ function wrrapd_render_orders_legacy_cards( array $orders, array $overlays ) {
 .wrrapd-legacy-cards-root .wrrapd-legacy-order-foot .wrrapd-amz-inv-sub{font-size:.68rem;}
 .wrrapd-legacy-cards-root .wrrapd-legacy-order-foot .wrrapd-amz-inv-note{font-size:.62rem;font-style:italic;opacity:.86;}
 .wrrapd-legacy-cards-root .wrrapd-amz-inv-lab .wrrapd-retailer-brand{display:inline-flex;align-items:center;gap:.28rem;vertical-align:middle;}
-.wrrapd-legacy-cards-root .wrrapd-retailer-logo{flex:0 0 auto;display:block;border-radius:2px;}
+.wrrapd-legacy-cards-root .wrrapd-retailer-logo{flex:0 0 auto;display:block;border-radius:50%;object-fit:cover;}
 .wrrapd-legacy-cards-root .wrrapd-retailer-name{font-weight:700;}
 @media(max-width:560px){.wrrapd-legacy-cards-root .wrrapd-legacy-rem-date-row{flex-wrap:wrap;}.wrrapd-legacy-cards-root .wrrapd-legacy-date-block,.wrrapd-legacy-cards-root .wrrapd-legacy-rem-block{flex:1 1 100%;min-width:0;}}
 </style>';
@@ -1141,7 +1243,7 @@ function wrrapd_is_bad_checkout_invoice_label( $lab ) {
 }
 
 /**
- * Plain retailer name from order JSON (e.g. Amazon, Target). Empty if unset.
+ * Plain retailer name from order JSON (e.g. Ulta, LEGO, Target, Amazon). Empty if unset.
  *
  * @param array<string, mixed> $order Order payload from API / VM JSON.
  */
@@ -1178,17 +1280,18 @@ function wrrapd_invoice_line_use_retailer_brand( $lab_raw ) {
 }
 
 /**
- * HTML for the retailer line (logo + Amazon.com when unknown or clearly Amazon; else plain name).
+ * HTML for the retailer line (logo + name for Ulta, LEGO, Target, Amazon when recognized; else plain text).
  *
  * @param array<string, mixed> $order Order payload.
  */
 function wrrapd_order_retailer_label_html( array $order ) {
 	$plain = wrrapd_order_retailer_plain( $order );
-	$is_amazon = ( $plain === '' ) || ( stripos( $plain, 'amazon' ) !== false );
-	if ( $is_amazon ) {
+	$row   = wrrapd_retailer_row_from_plain( $plain );
+	if ( $row !== null ) {
+		$src = esc_url( wrrapd_mu_logo_url_for_slug( $row['slug'], $row['domain'] ) );
 		return '<span class="wrrapd-retailer-brand">'
-			. '<img class="wrrapd-retailer-logo" src="https://www.amazon.com/favicon.ico" width="14" height="14" decoding="async" alt="" />'
-			. '<span class="wrrapd-retailer-name">Amazon.com</span></span>';
+			. '<img class="wrrapd-retailer-logo" src="' . $src . '" width="14" height="14" decoding="async" alt="' . esc_attr( $row['label'] ) . '" />'
+			. '<span class="wrrapd-retailer-name">' . esc_html( $row['label'] ) . '</span></span>';
 	}
 	return '<span class="wrrapd-retailer-brand wrrapd-retailer-brand--text-only"><span class="wrrapd-retailer-name">'
 		. esc_html( $plain ) . '</span></span>';
@@ -1360,7 +1463,7 @@ function wrrapd_studio_order_summary_html( array $order, array $lines ) {
 }
 
 /**
- * Studio — Amazon-style order blocks, Wrrapd red/gold, editable overlays (one save per gift).
+ * Studio — multi-retailer order blocks (Ulta, LEGO, Target, Amazon), Wrrapd red/gold, editable overlays (one save per gift).
  *
  * @param array<int, array<string, mixed>> $orders
  * @param array<string, array<string|int, array<string, string>>> $overlays
@@ -1403,7 +1506,7 @@ function wrrapd_render_orders_studio( array $orders, array $overlays ) {
 .wrrapd-amz-inv-left{flex:1;min-width:0;}
 .wrrapd-amz-inv-lab{color:#0f172a;font-weight:600;word-break:break-word;}
 .wrrapd-amz-inv-lab .wrrapd-retailer-brand{display:inline-flex;align-items:center;gap:.28rem;vertical-align:middle;}
-.wrrapd-retailer-logo{flex:0 0 auto;display:block;border-radius:2px;}
+.wrrapd-retailer-logo{flex:0 0 auto;display:block;border-radius:50%;object-fit:cover;}
 .wrrapd-retailer-name{font-weight:700;}
 .wrrapd-amz-inv-sub{display:block;margin-top:.06rem;font-size:.56rem;color:#475569;font-weight:500;line-height:1.3;word-break:break-word;}
 .wrrapd-amz-inv-amt{flex:0 0 auto;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;color:#0f172a;font-weight:600;}
