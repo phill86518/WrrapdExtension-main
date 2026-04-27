@@ -1,6 +1,7 @@
 import {
   LEGO_GIFT_CHOICES_SAVED_KEY,
   LEGO_GIFT_FLOWERS_INTEREST_KEY,
+  LEGO_GIFT_GIFTEE_NAME_KEY,
   LEGO_GIFT_RADIO_SESSION_KEY,
   LEGO_GIFT_TC_SESSION_KEY,
   LEGO_GIFT_WRAP_PREF_KEY,
@@ -104,6 +105,7 @@ export function clearLegoGiftServiceFlags() {
   try {
     sessionStorage.removeItem(LEGO_GIFT_WRAP_PREF_KEY);
     sessionStorage.removeItem(LEGO_GIFT_FLOWERS_INTEREST_KEY);
+    sessionStorage.removeItem(LEGO_GIFT_GIFTEE_NAME_KEY);
   } catch {
     /* ignore */
   }

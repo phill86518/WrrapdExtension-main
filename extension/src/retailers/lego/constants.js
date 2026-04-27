@@ -43,6 +43,8 @@ export const LEGO_GIFT_FLOWERS_INTEREST_KEY = "wrrapdLegoFlowersInterest";
 export const LEGO_GIFT_OCCASION_KEY = "wrrapdLegoGiftOccasion";
 export const LEGO_GIFT_MESSAGE_KEY = "wrrapdLegoGiftMessage";
 export const LEGO_GIFT_SENDER_NAME_KEY = "wrrapdLegoGiftSenderName";
+/** sessionStorage: giftee / recipient display name (required before Save choices). */
+export const LEGO_GIFT_GIFTEE_NAME_KEY = "wrrapdLegoGiftGifteeName";
 export const LEGO_GIFT_SELECTED_FLOWER_KEY = "wrrapdLegoSelectedFlowerDesign";
 export const LEGO_GIFT_AI_DESIGN_KEY = "wrrapdLegoSelectedAiDesign";
 export const LEGO_GIFT_UPLOAD_NAME_KEY = "wrrapdLegoUploadedDesignName";

@@ -10,6 +10,7 @@ import {
   LEGO_GIFT_RADIO_SESSION_KEY,
   LEGO_GIFT_SELECTED_FLOWER_KEY,
   LEGO_GIFT_SENDER_NAME_KEY,
+  LEGO_GIFT_GIFTEE_NAME_KEY,
   LEGO_GIFT_STEP0_DISMISSED_KEY,
   LEGO_GIFT_TC_SESSION_KEY,
   LEGO_GIFT_UPLOAD_DATA_URL_KEY,
@@ -392,16 +393,34 @@ export function openLegoGiftServiceModal() {
   const senderLabel = document.createElement("label");
   senderLabel.className = "ds-label-sm-medium ds-color-text-default";
   senderLabel.style.cssText = "display:block;margin:4px 0 6px 0;color:#0f172a;font-size:14px;";
-  senderLabel.textContent = "Gifter";
+  senderLabel.textContent = "Gifter (required)";
   const senderInput = document.createElement("input");
   senderInput.type = "text";
-  senderInput.placeholder = "From";
+  senderInput.setAttribute("aria-required", "true");
+  senderInput.autocomplete = "name";
+  senderInput.placeholder = "Your name as the person sending the gift";
   senderInput.style.cssText =
     "width:100%;padding:10px;border:1px solid #d1d5db;border-radius:6px;box-sizing:border-box;margin-bottom:8px;";
   try {
     senderInput.value = sessionStorage.getItem(LEGO_GIFT_SENDER_NAME_KEY) || "";
   } catch {
     senderInput.value = "";
+  }
+
+  const gifteeLabel = document.createElement("label");
+  gifteeLabel.className = "ds-label-sm-medium ds-color-text-default";
+  gifteeLabel.style.cssText = "display:block;margin:4px 0 6px 0;color:#0f172a;font-size:14px;";
+  gifteeLabel.textContent = "Giftee (required)";
+  const gifteeInput = document.createElement("input");
+  gifteeInput.type = "text";
+  gifteeInput.setAttribute("aria-required", "true");
+  gifteeInput.placeholder = "Recipient's name (who receives the wrapped gift)";
+  gifteeInput.style.cssText =
+    "width:100%;padding:10px;border:1px solid #d1d5db;border-radius:6px;box-sizing:border-box;margin-bottom:8px;";
+  try {
+    gifteeInput.value = sessionStorage.getItem(LEGO_GIFT_GIFTEE_NAME_KEY) || "";
+  } catch {
+    gifteeInput.value = "";
   }
 
   const msgLabel = document.createElement("label");
@@ -478,6 +497,18 @@ export function openLegoGiftServiceModal() {
   });
 
   proceedBtn.addEventListener("click", async () => {
+    const gifterName = senderInput.value.trim();
+    const gifteeName = gifteeInput.value.trim();
+    if (!gifterName) {
+      alert("Please enter the gifter's name (the person sending the gift).");
+      senderInput.focus();
+      return;
+    }
+    if (!gifteeName) {
+      alert("Please enter the giftee's name (the person who will receive the wrapped gift).");
+      gifteeInput.focus();
+      return;
+    }
     const estimateZip = readLegoEstimateZip();
     if (!estimateZip) {
       alert("Please enter a ZIP code in LEGO's tax & delivery ZIP field first, then save your Wrrapd choices.");
@@ -507,7 +538,8 @@ export function openLegoGiftServiceModal() {
     try {
       sessionStorage.setItem(LEGO_GIFT_OCCASION_KEY, occasionInput.value.trim());
       sessionStorage.setItem(LEGO_GIFT_MESSAGE_KEY, msgInput.value.trim());
-      sessionStorage.setItem(LEGO_GIFT_SENDER_NAME_KEY, senderInput.value.trim());
+      sessionStorage.setItem(LEGO_GIFT_SENDER_NAME_KEY, gifterName);
+      sessionStorage.setItem(LEGO_GIFT_GIFTEE_NAME_KEY, gifteeName);
       sessionStorage.setItem("wrrapdLegoValidatedEstimateZip", estimateZip);
       sessionStorage.setItem(LEGO_GIFT_WRAP_PREF_KEY, wrapValue);
       sessionStorage.setItem(
@@ -555,6 +587,8 @@ export function openLegoGiftServiceModal() {
     flowersGrid,
     senderLabel,
     senderInput,
+    gifteeLabel,
+    gifteeInput,
     msgLabel,
     msgInput,
     row,

@@ -1,6 +1,7 @@
 import {
   LEGO_GIFT_AI_DESIGN_KEY,
   LEGO_GIFT_FLOWERS_INTEREST_KEY,
+  LEGO_GIFT_GIFTEE_NAME_KEY,
   LEGO_GIFT_MESSAGE_KEY,
   LEGO_GIFT_OCCASION_KEY,
   LEGO_GIFT_SELECTED_FLOWER_KEY,
@@ -141,8 +142,9 @@ function gifteeZip5() {
 
 function gifteeStubFromSession() {
   const zip = gifteeZip5();
+  const gifteeName = readSession(LEGO_GIFT_GIFTEE_NAME_KEY).trim();
   return {
-    name: "Your giftee (LEGO delivery after wrap)",
+    name: gifteeName || "Your giftee (LEGO delivery after wrap)",
     street: "",
     city: "",
     state: "",
@@ -512,6 +514,8 @@ function buildLegoOrderDataForProcessPayment() {
   } catch {
     selectedAi = null;
   }
+  const gifteeName = readSession(LEGO_GIFT_GIFTEE_NAME_KEY).trim();
+  const gifteeZip = gifteeZip5();
   const option = {
     checkbox_wrrapd: true,
     selected_wrapping_option: wrap,
@@ -521,6 +525,18 @@ function buildLegoOrderDataForProcessPayment() {
     giftMessage: readSession(LEGO_GIFT_MESSAGE_KEY) || null,
     senderName: readSession(LEGO_GIFT_SENDER_NAME_KEY) || null,
     occasion: readSession(LEGO_GIFT_OCCASION_KEY) || null,
+    ...(gifteeName
+      ? {
+          gifteeRecipientAddress: {
+            name: gifteeName,
+            street: "",
+            city: "",
+            state: "",
+            postalCode: gifteeZip,
+            country: "United States",
+          },
+        }
+      : {}),
   };
   return [
     {
