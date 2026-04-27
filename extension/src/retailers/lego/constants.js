@@ -15,8 +15,17 @@ export const LEGO_GIFT_CHECKOUT_STEP0_DATA_ATTR = "data-wrrapd-lego-checkout-ste
 /** sessionStorage: bag gift question `yes` | `no` | unset */
 export const LEGO_GIFT_RADIO_SESSION_KEY = "wrrapdLegoGiftRadio";
 
-/** sessionStorage: `1` after guest saves LEGO gift-service modal choices */
+/** sessionStorage: `1` after guest saves gift options in the LEGO modal (ZIP validated). */
+export const LEGO_GIFT_CHOICES_SAVED_KEY = "wrrapdLegoGiftChoicesSaved";
+
+/** sessionStorage: `1` after guest accepts Wrrapd legal terms (LEGO path). Key id kept for legacy carts. */
 export const LEGO_GIFT_TC_SESSION_KEY = "wrrapdLegoGiftTcAccepted";
+
+/** sessionStorage: `1` after guest confirms hub ship-to for this checkout. */
+export const LEGO_HUB_SHIP_ACCEPTED_KEY = "wrrapdLegoHubShipAccepted";
+
+/** sessionStorage: `1` after successful pay.wrrapd.com LEGO checkout popup. */
+export const LEGO_PAYMENT_SUCCESS_SESSION_KEY = "wrrapdLegoPaymentSuccess";
 
 /** sessionStorage: `1` after user dismisses Step 0 “Not now” */
 export const LEGO_GIFT_STEP0_DISMISSED_KEY = "wrrapdLegoGiftStep0Dismissed";
@@ -39,7 +48,7 @@ export const LEGO_GIFT_UPLOAD_DATA_URL_KEY = "wrrapdLegoUploadedDesignDataUrl";
 /** sessionStorage: `1` after shipping-step delivery hint overlay dismissed */
 export const LEGO_SHIPPING_OVERLAY_SEEN_KEY = "wrrapdLegoShippingHintSeen";
 
-/** @deprecated use LEGO_GIFT_RADIO_SESSION_KEY + LEGO_GIFT_TC_SESSION_KEY */
+/** @deprecated use LEGO_GIFT_RADIO_SESSION_KEY + choices/legal keys in constants */
 export const LEGO_GIFT_INTENT_SESSION_KEY = "wrrapdLegoGiftIntent";
 
 /**

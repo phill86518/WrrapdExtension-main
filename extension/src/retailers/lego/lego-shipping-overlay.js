@@ -1,17 +1,11 @@
-import {
-  LEGO_GIFT_TC_SESSION_KEY,
-  LEGO_SHIPPING_OVERLAY_SEEN_KEY,
-} from "./constants.js";
+import { LEGO_SHIPPING_OVERLAY_SEEN_KEY } from "./constants.js";
 import { isLegoCheckoutReviewLikePage } from "./lego-checkout-review-detect.js";
+import { readGiftChoicesSaved, readGiftLegalTermsAccepted } from "./lego-session-state.js";
 
 const OVERLAY_ID = "wrrapd-lego-shipping-hint-overlay";
 
-function readTc() {
-  try {
-    return sessionStorage.getItem(LEGO_GIFT_TC_SESSION_KEY) === "1";
-  } catch {
-    return false;
-  }
+function giftPathReadyForShippingHint() {
+  return readGiftChoicesSaved() && readGiftLegalTermsAccepted();
 }
 
 function readSeen() {
@@ -48,7 +42,7 @@ function tryMountShippingHint() {
   const isCheckout =
     path.includes("/checkout") || path.includes("/checkouts");
   if (!isCheckout || isLegoCheckoutReviewLikePage()) return;
-  if (!readTc() || readSeen()) return;
+  if (!giftPathReadyForShippingHint() || readSeen()) return;
   if (!findShippingStepHeadline()) return;
   if (document.getElementById(OVERLAY_ID)) return;
 
