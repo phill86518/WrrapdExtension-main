@@ -166,12 +166,17 @@ function wrrapd_retailer_row_from_plain( $plain ) {
  * Home page: retailer wheels (Ulta, LEGO, Target, Amazon) — JS moves the strip above “Gift-wrapping…” when that heading exists.
  */
 function wrrapd_output_retailer_wheel_strip() {
+	static $printed = false;
+	if ( $printed ) {
+		return;
+	}
 	if ( is_admin() || is_paged() ) {
 		return;
 	}
 	if ( ! is_front_page() && ! is_home() ) {
 		return;
 	}
+	$printed = true;
 	$brands = array(
 		array( 'slug' => 'ulta', 'label' => __( 'Ulta', 'wrrapd' ), 'domain' => 'ulta.com' ),
 		array( 'slug' => 'lego', 'label' => __( 'LEGO', 'wrrapd' ), 'domain' => 'lego.com' ),
@@ -198,6 +203,8 @@ function wrrapd_output_retailer_wheel_strip() {
 }
 
 add_action( 'wp_body_open', 'wrrapd_output_retailer_wheel_strip', 5 );
+/** Same callback, run-once guard: outputs here if the active theme never calls `wp_body_open`. */
+add_action( 'wp_footer', 'wrrapd_output_retailer_wheel_strip', 1 );
 
 if ( ! defined( 'WRRAPD_INTERNAL_API_KEY' ) || WRRAPD_INTERNAL_API_KEY === '' ) {
 	return;
