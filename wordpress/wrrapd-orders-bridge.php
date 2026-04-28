@@ -131,7 +131,10 @@ function wrrapd_mu_logo_url_for_slug( $slug, $favicon_domain ) {
 function wrrapd_retailer_row_from_plain( $plain ) {
 	$plain = trim( (string) $plain );
 	$lower = strtolower( $plain );
-	if ( $plain === '' || strpos( $lower, 'amazon' ) !== false ) {
+	if ( $plain === '' ) {
+		return null;
+	}
+	if ( strpos( $lower, 'amazon' ) !== false ) {
 		return array(
 			'slug'   => 'amazon',
 			'label'  => __( 'Amazon', 'wrrapd' ),
@@ -1240,24 +1243,25 @@ function wrrapd_normalize_checkout_invoice_label( $lab ) {
 		return __( 'Gift wrap', 'wrrapd' );
 	}
 	// Internal invoice row tags from pay UI (all retailers, including LEGO.com).
-	if ( preg_match( '/^AmazonFlowers\s*:\s*(.*)$/i', $lab, $m ) ) {
+	// Handles both run-together forms (AmazonFlowers) and spaced forms (Amazon Flowers).
+	if ( preg_match( '/^Amazon\s*Flowers\s*:\s*(.*)$/i', $lab, $m ) ) {
 		$rest = trim( (string) $m[1] );
 		if ( $rest === '' || preg_match( '/^flowers-\d+$/i', $rest ) ) {
 			return __( 'Flowers add-on', 'wrrapd' );
 		}
 		return __( 'Flowers', 'wrrapd' ) . ': ' . $rest;
 	}
-	if ( preg_match( '/^AmazonFlowers$/i', $lab ) ) {
+	if ( preg_match( '/^Amazon\s*Flowers$/i', $lab ) ) {
 		return __( 'Flowers add-on', 'wrrapd' );
 	}
-	if ( preg_match( '/^AmazonAI\s*:\s*(.*)$/i', $lab, $m ) ) {
+	if ( preg_match( '/^Amazon\s*AI\s*:\s*(.*)$/i', $lab, $m ) ) {
 		$rest = trim( (string) $m[1] );
 		if ( $rest !== '' ) {
 			return $rest;
 		}
 		return __( 'AI design', 'wrrapd' );
 	}
-	if ( preg_match( '/^AmazonWrrapd\s*:\s*(.*)$/i', $lab, $m ) ) {
+	if ( preg_match( '/^Amazon\s*Wrrapd\s*:\s*(.*)$/i', $lab, $m ) ) {
 		$rest_raw = trim( (string) $m[1] );
 		$rest_lo  = strtolower( $rest_raw );
 		if ( $rest_lo === '' || $rest_lo === 'wrrapd' ) {
@@ -1270,6 +1274,15 @@ function wrrapd_normalize_checkout_invoice_label( $lab ) {
 			return __( 'Uploaded design', 'wrrapd' );
 		}
 		return __( 'Gift wrap', 'wrrapd' ) . ': ' . $rest_raw;
+	}
+	// Catch any remaining "Amazon <something>: <rest>" prefix from pay UI channel names.
+	if ( preg_match( '/^Amazon\s+(\w+)\s*:\s*(.*)$/i', $lab, $m ) ) {
+		$addon = trim( (string) $m[1] );
+		$rest  = trim( (string) $m[2] );
+		if ( strcasecmp( $addon, 'upload' ) === 0 ) {
+			return $rest !== '' ? __( 'Uploaded design', 'wrrapd' ) . ': ' . $rest : __( 'Uploaded design', 'wrrapd' );
+		}
+		return $rest !== '' ? $addon . ': ' . $rest : $addon;
 	}
 	return $lab;
 }
@@ -1296,6 +1309,28 @@ function wrrapd_order_retailer_plain( array $order ) {
 			if ( $t !== '' ) {
 				return $t;
 			}
+		}
+	}
+	// Infer retailer from order number prefix when the field is missing.
+	$num = '';
+	foreach ( array( 'orderNumber', 'order_number', 'orderId', 'order_id' ) as $k ) {
+		if ( isset( $order[ $k ] ) && is_string( $order[ $k ] ) ) {
+			$num = trim( $order[ $k ] );
+			break;
+		}
+	}
+	if ( $num !== '' ) {
+		if ( preg_match( '/^LG/i', $num ) ) {
+			return 'Lego';
+		}
+		if ( preg_match( '/^UL/i', $num ) ) {
+			return 'Ulta';
+		}
+		if ( preg_match( '/^TG/i', $num ) ) {
+			return 'Target';
+		}
+		if ( preg_match( '/^\d{3}-\d{5}-\d{7}$/', $num ) ) {
+			return 'Amazon';
 		}
 	}
 	return '';
