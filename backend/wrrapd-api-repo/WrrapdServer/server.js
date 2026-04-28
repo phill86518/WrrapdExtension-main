@@ -519,6 +519,34 @@ function sanitizeMoneyField(v) {
     return Math.round(v * 100) / 100;
 }
 
+/** Pay UI used "AmazonFlowers" / … as internal keys; flowers are a Wrrapd add-on, not Amazon retail. */
+function normalizeCheckoutInvoiceLineLabelForStorage(label) {
+    if (typeof label !== 'string') return '';
+    const s = label.trim();
+    const mFlowers = /^AmazonFlowers\s*:\s*(.*)$/i.exec(s);
+    if (mFlowers) {
+        const rest = mFlowers[1].trim();
+        if (!rest || /^flowers-\d+$/i.test(rest)) return 'Flowers add-on';
+        return `Flowers: ${rest}`;
+    }
+    if (/^AmazonFlowers$/i.test(s)) return 'Flowers add-on';
+    const mAi = /^AmazonAI\s*:\s*(.*)$/i.exec(s);
+    if (mAi) {
+        const rest = mAi[1].trim();
+        return rest || 'AI design';
+    }
+    const mW = /^AmazonWrrapd\s*:\s*(.*)$/i.exec(s);
+    if (mW) {
+        const raw = mW[1].trim();
+        const lo = raw.toLowerCase();
+        if (!lo || lo === 'wrrapd') return 'Wrrapd design';
+        if (lo === 'ai') return 'AI design';
+        if (lo === 'upload') return 'Uploaded design';
+        return `Gift wrap: ${raw}`;
+    }
+    return s;
+}
+
 function sanitizeCheckoutInvoiceCompleteForStorage(raw) {
     if (!raw || typeof raw !== 'object') return null;
     if (raw.schemaVersion !== 1) return null;
@@ -618,7 +646,10 @@ function sanitizeCheckoutInvoiceForStorage(raw) {
     const outLines = [];
     for (const row of linesIn.slice(0, 40)) {
         if (!row || typeof row !== 'object') continue;
-        const label = typeof row.label === 'string' ? row.label.trim().slice(0, 160) : '';
+        const label =
+            typeof row.label === 'string'
+                ? normalizeCheckoutInvoiceLineLabelForStorage(row.label).trim().slice(0, 160)
+                : '';
         if (!label) continue;
         const amount =
             typeof row.amount === 'number' && Number.isFinite(row.amount)

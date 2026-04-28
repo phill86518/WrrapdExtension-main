@@ -1226,6 +1226,9 @@ function wrrapd_money_usd( $n ) {
 /**
  * Pretty-print checkout invoice line labels (API sometimes concatenates without a space).
  *
+ * Pay checkout historically prefixed rows with "AmazonFlowers" / "AmazonAI" / "AmazonWrrapd"
+ * (internal channel names). Those are Wrrapd add-ons, not Amazon-sold products — strip for display.
+ *
  * @param string $lab Raw label from checkout snapshot.
  */
 function wrrapd_normalize_checkout_invoice_label( $lab ) {
@@ -1235,6 +1238,38 @@ function wrrapd_normalize_checkout_invoice_label( $lab ) {
 	}
 	if ( preg_match( '/^gift\s*wrap/i', $lab ) && strpos( $lab, ':' ) !== false ) {
 		return __( 'Gift wrap', 'wrrapd' );
+	}
+	// Internal invoice row tags from pay UI (all retailers, including LEGO.com).
+	if ( preg_match( '/^AmazonFlowers\s*:\s*(.*)$/i', $lab, $m ) ) {
+		$rest = trim( (string) $m[1] );
+		if ( $rest === '' || preg_match( '/^flowers-\d+$/i', $rest ) ) {
+			return __( 'Flowers add-on', 'wrrapd' );
+		}
+		return __( 'Flowers', 'wrrapd' ) . ': ' . $rest;
+	}
+	if ( preg_match( '/^AmazonFlowers$/i', $lab ) ) {
+		return __( 'Flowers add-on', 'wrrapd' );
+	}
+	if ( preg_match( '/^AmazonAI\s*:\s*(.*)$/i', $lab, $m ) ) {
+		$rest = trim( (string) $m[1] );
+		if ( $rest !== '' ) {
+			return $rest;
+		}
+		return __( 'AI design', 'wrrapd' );
+	}
+	if ( preg_match( '/^AmazonWrrapd\s*:\s*(.*)$/i', $lab, $m ) ) {
+		$rest_raw = trim( (string) $m[1] );
+		$rest_lo  = strtolower( $rest_raw );
+		if ( $rest_lo === '' || $rest_lo === 'wrrapd' ) {
+			return __( 'Wrrapd design', 'wrrapd' );
+		}
+		if ( $rest_lo === 'ai' ) {
+			return __( 'AI design', 'wrrapd' );
+		}
+		if ( $rest_lo === 'upload' ) {
+			return __( 'Uploaded design', 'wrrapd' );
+		}
+		return __( 'Gift wrap', 'wrrapd' ) . ': ' . $rest_raw;
 	}
 	return $lab;
 }
