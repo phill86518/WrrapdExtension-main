@@ -1027,9 +1027,11 @@ function summarizeOrderForWpList(data) {
             detail: detail || `Gift ${idx + 1}`,
         };
     });
+    const retailerRaw = data.retailer || data.name_of_retailer || data.Retailer || data.merchant || data.store || '';
     return {
         orderNumber: data.orderNumber != null ? String(data.orderNumber) : null,
         timestamp: data.timestamp || null,
+        retailer: typeof retailerRaw === 'string' ? retailerRaw.trim() : '',
         payment: pay
             ? {
                   amount: pay.amount,
