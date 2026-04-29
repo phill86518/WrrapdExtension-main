@@ -523,6 +523,12 @@ function sanitizeMoneyField(v) {
 function normalizeCheckoutInvoiceLineLabelForStorage(label) {
     if (typeof label !== 'string') return '';
     const s = label.trim();
+    if (/gift\s*wrap\s*wrrapd|wrapwrrapd|wrrapd\s*:\s*wrrapd/i.test(s)) {
+        return 'Gift wrap';
+    }
+    if (/^Lego\s*Flowers/i.test(s)) return 'Flowers add-on';
+    if (/^Lego\s*AI/i.test(s)) return 'AI design add-on';
+    if (/^Lego\s*Wrrapd/i.test(s)) return 'Gift wrap';
     const mFlowers = /^AmazonFlowers\s*:\s*(.*)$/i.exec(s);
     if (mFlowers) {
         const rest = mFlowers[1].trim();
@@ -1020,18 +1026,8 @@ function summarizeOrderForWpList(data) {
         persistedCi && persistedCi.complete && persistedCi.complete.aggregateLines
             ? persistedCi.complete
             : null;
-    /** Short invoice-style rows when checkout snapshot was not stored (no Amazon product titles). */
-    const invoiceLines = lines.map((ln, idx) => {
-        const raw =
-            (ln.designLabel && String(ln.designLabel).trim()) ||
-            (ln.designSummary && String(ln.designSummary).trim()) ||
-            '';
-        const detail = raw.length > 120 ? `${raw.slice(0, 120)}…` : raw;
-        return {
-            label: 'Gift wrap',
-            detail: detail || `Gift ${idx + 1}`,
-        };
-    });
+    /** Payment summary uses checkoutInvoice only; do not send design narrative as invoice rows. */
+    const invoiceLines = [];
     const retailerRaw = data.retailer || data.name_of_retailer || data.Retailer || data.merchant || data.store || '';
     return {
         orderNumber: data.orderNumber != null ? String(data.orderNumber) : null,

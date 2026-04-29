@@ -1276,6 +1276,19 @@ function wrrapd_normalize_checkout_invoice_label( $lab ) {
 	if ( $lab === '' ) {
 		return '';
 	}
+	// Glued / internal pay-UI garbage (never show raw on the payment summary).
+	if ( preg_match( '/gift\s*wrap\s*wrrapd|wrapwrrapd|wrrapd\s*:\s*wrrapd/i', $lab ) ) {
+		return __( 'Gift wrap', 'wrrapd' );
+	}
+	if ( preg_match( '/^lego\s*flowers/i', $lab ) ) {
+		return __( 'Flowers add-on', 'wrrapd' );
+	}
+	if ( preg_match( '/^lego\s*ai/i', $lab ) ) {
+		return __( 'AI design add-on', 'wrrapd' );
+	}
+	if ( preg_match( '/^lego\s*wrrapd/i', $lab ) ) {
+		return __( 'Gift wrap', 'wrrapd' );
+	}
 	if ( preg_match( '/^gift\s*wrap/i', $lab ) && strpos( $lab, ':' ) !== false ) {
 		return __( 'Gift wrap', 'wrrapd' );
 	}
@@ -1321,7 +1334,13 @@ function wrrapd_normalize_checkout_invoice_label( $lab ) {
  */
 function wrrapd_is_bad_checkout_invoice_label( $lab ) {
 	$lab = trim( (string) $lab );
-	return $lab !== '' && preg_match( '/^gift\s*wrap\s*wrrapd\s*:/i', $lab ) === 1;
+	if ( $lab === '' ) {
+		return false;
+	}
+	if ( preg_match( '/gift\s*wrap\s*wrrapd|wrapwrrapd|wrrapd\s*:\s*wrrapd/i', $lab ) === 1 ) {
+		return true;
+	}
+	return preg_match( '/^gift\s*wrap\s*wrrapd\s*:/i', $lab ) === 1;
 }
 
 /**
@@ -1402,10 +1421,29 @@ function wrrapd_order_retailer_label_html( array $order ) {
 }
 
 /**
+ * Human label for checkout aggregate line codes (matches pay server CHECKOUT_INVOICE_AGGREGATE_CODES).
+ *
+ * @param string $code Raw code from checkout snapshot.
+ */
+function wrrapd_checkout_aggregate_code_label( $code ) {
+	$code = trim( (string) $code );
+	$map  = array(
+		'WRPD_GIFT_WRAP_BASE'       => __( 'Gift wrap', 'wrrapd' ),
+		'WRPD_CUSTOM_DESIGN_AI'     => __( 'AI design add-on', 'wrrapd' ),
+		'WRPD_CUSTOM_DESIGN_UPLOAD' => __( 'Upload design add-on', 'wrrapd' ),
+		'WRPD_FLOWERS'              => __( 'Flowers add-on', 'wrrapd' ),
+		'WRPD_SUBTOTAL_BEFORE_TAX'  => __( 'Subtotal (before tax)', 'wrrapd' ),
+		'WRPD_ESTIMATED_TAX'        => __( 'Estimated tax', 'wrrapd' ),
+		'WRPD_ORDER_TOTAL'          => __( 'Total (checkout)', 'wrrapd' ),
+	);
+	return isset( $map[ $code ] ) ? $map[ $code ] : $code;
+}
+
+/**
  * Receipt block at bottom of studio order (checkout snapshot when available).
  *
  * @param array<string, mixed>              $order Order payload from API.
- * @param array<int, array<string, mixed>> $lines Normalized gift lines (fallback only).
+ * @param array<int, array<string, mixed>> $lines Normalized gift lines (unused for payment summary; kept for signature stability).
  */
 function wrrapd_studio_order_summary_html( array $order, array $lines ) {
 	$pay   = isset( $order['payment'] ) && is_array( $order['payment'] ) ? $order['payment'] : null;
@@ -1415,15 +1453,60 @@ function wrrapd_studio_order_summary_html( array $order, array $lines ) {
 		$total_str = wrrapd_money_usd( $cents / 100.0 );
 	}
 
-	$ci        = isset( $order['checkoutInvoice'] ) && is_array( $order['checkoutInvoice'] ) ? $order['checkoutInvoice'] : null;
-	$ci_lines  = ( $ci && isset( $ci['lines'] ) && is_array( $ci['lines'] ) ) ? $ci['lines'] : array();
-	$use_check = count( $ci_lines ) > 0;
+	$ci = isset( $order['checkoutInvoice'] ) && is_array( $order['checkoutInvoice'] ) ? $order['checkoutInvoice'] : null;
+	if ( ! $ci && isset( $order['checkoutInvoiceComplete'] ) && is_array( $order['checkoutInvoiceComplete'] ) ) {
+		$ci = array( 'complete' => $order['checkoutInvoiceComplete'] );
+	}
+	$complete     = ( $ci && isset( $ci['complete'] ) && is_array( $ci['complete'] ) ) ? $ci['complete'] : null;
+	$agg_in       = ( $complete && isset( $complete['aggregateLines'] ) && is_array( $complete['aggregateLines'] ) ) ? $complete['aggregateLines'] : array();
+	$ci_lines     = ( $ci && isset( $ci['lines'] ) && is_array( $ci['lines'] ) ) ? $ci['lines'] : array();
+	$ci_subtotal  = ( $ci && isset( $ci['subtotal'] ) && is_numeric( $ci['subtotal'] ) ) ? (float) $ci['subtotal'] : null;
+	$ci_tax       = ( $ci && isset( $ci['estimatedTax'] ) && is_numeric( $ci['estimatedTax'] ) ) ? (float) $ci['estimatedTax'] : null;
+	$ci_total     = ( $ci && isset( $ci['total'] ) && is_numeric( $ci['total'] ) ) ? (float) $ci['total'] : null;
+	$use_agg      = count( $agg_in ) > 0;
+	$use_ci_lines = ! $use_agg && count( $ci_lines ) > 0;
+	$use_ci_nums  = ! $use_agg && ! $use_ci_lines && ( $ci_subtotal !== null || $ci_tax !== null || $ci_total !== null );
+	$fallback_note = '';
 
 	ob_start();
-	echo '<div class="wrrapd-amz-summary" role="region" aria-label="' . esc_attr__( 'Order charges', 'wrrapd' ) . '">';
-	if ( $use_check ) {
-		echo '<div class="wrrapd-amz-inv-list">';
-		$retailer_brand_used_ci = false;
+	echo '<div class="wrrapd-amz-summary" role="region" aria-label="' . esc_attr__( 'Payment summary', 'wrrapd' ) . '">';
+	echo '<div class="wrrapd-amz-inv-list">';
+
+	if ( $use_agg ) {
+		$order_codes = array(
+			'WRPD_GIFT_WRAP_BASE',
+			'WRPD_CUSTOM_DESIGN_AI',
+			'WRPD_CUSTOM_DESIGN_UPLOAD',
+			'WRPD_FLOWERS',
+			'WRPD_SUBTOTAL_BEFORE_TAX',
+			'WRPD_ESTIMATED_TAX',
+		);
+		$by_code = array();
+		foreach ( $agg_in as $row ) {
+			if ( ! is_array( $row ) || ! isset( $row['code'] ) ) {
+				continue;
+			}
+			$c = trim( (string) $row['code'] );
+			if ( $c !== '' ) {
+				$by_code[ $c ] = $row;
+			}
+		}
+		foreach ( $order_codes as $code ) {
+			if ( ! isset( $by_code[ $code ] ) ) {
+				continue;
+			}
+			$row   = $by_code[ $code ];
+			$amt_f = isset( $row['amount'] ) && is_numeric( $row['amount'] ) ? (float) $row['amount'] : null;
+			if ( $amt_f === null ) {
+				continue;
+			}
+			$lab = wrrapd_checkout_aggregate_code_label( $code );
+			echo '<div class="wrrapd-amz-inv-row">';
+			echo '<span class="wrrapd-amz-inv-lab">' . esc_html( $lab ) . '</span>';
+			echo '<span class="wrrapd-amz-inv-amt">' . esc_html( wrrapd_money_usd( $amt_f ) ) . '</span>';
+			echo '</div>';
+		}
+	} elseif ( $use_ci_lines ) {
 		foreach ( $ci_lines as $row ) {
 			if ( ! is_array( $row ) ) {
 				continue;
@@ -1433,18 +1516,10 @@ function wrrapd_studio_order_summary_html( array $order, array $lines ) {
 				continue;
 			}
 			$amt_f = isset( $row['amount'] ) && is_numeric( $row['amount'] ) ? (float) $row['amount'] : null;
-			if ( ! $retailer_brand_used_ci && ( wrrapd_invoice_line_use_retailer_brand( $lab_raw ) || preg_match( '/^gift\s*wrap$/i', $lab_raw ) ) ) {
-				$retailer_brand_used_ci = true;
-				echo '<div class="wrrapd-amz-inv-row">';
-				echo '<span class="wrrapd-amz-inv-lab">' . esc_html__( 'Gift wrap', 'wrrapd' ) . '</span>';
-				echo '<span class="wrrapd-amz-inv-amt">' . ( $amt_f !== null ? esc_html( wrrapd_money_usd( $amt_f ) ) : '' ) . '</span>';
-				echo '</div>';
-				continue;
-			}
+			$lab   = wrrapd_normalize_checkout_invoice_label( $lab_raw );
 			if ( wrrapd_is_bad_checkout_invoice_label( $lab_raw ) ) {
-				continue;
+				$lab = __( 'Gift wrap', 'wrrapd' );
 			}
-			$lab = wrrapd_normalize_checkout_invoice_label( $lab_raw );
 			if ( $lab === '' ) {
 				continue;
 			}
@@ -1453,94 +1528,37 @@ function wrrapd_studio_order_summary_html( array $order, array $lines ) {
 			echo '<span class="wrrapd-amz-inv-amt">' . ( $amt_f !== null ? esc_html( wrrapd_money_usd( $amt_f ) ) : '' ) . '</span>';
 			echo '</div>';
 		}
-		echo '</div>';
-		if ( $total_str !== '' ) {
-			echo '<div class="wrrapd-amz-inv-row wrrapd-amz-inv-row--grand">';
-			echo '<span class="wrrapd-amz-inv-lab">' . esc_html__( 'Order total', 'wrrapd' ) . '</span>';
-			echo '<span class="wrrapd-amz-inv-amt">' . esc_html( $total_str ) . '</span>';
-			echo '</div>';
+	} elseif ( $use_ci_nums ) {
+		if ( $ci_subtotal !== null ) {
+			echo '<div class="wrrapd-amz-inv-row"><span class="wrrapd-amz-inv-lab">' . esc_html__( 'Subtotal (before tax)', 'wrrapd' ) . '</span>';
+			echo '<span class="wrrapd-amz-inv-amt">' . esc_html( wrrapd_money_usd( $ci_subtotal ) ) . '</span></div>';
 		}
-		echo '<div class="wrrapd-amz-inv-note">' . esc_html__( 'Sales tax included in total where applicable.', 'wrrapd' ) . '</div>';
-	} else {
-		$inv = isset( $order['invoiceLines'] ) && is_array( $order['invoiceLines'] ) ? $order['invoiceLines'] : array();
-		if ( count( $inv ) === 0 ) {
-			foreach ( $lines as $idx => $ln ) {
-				if ( ! is_array( $ln ) ) {
-					continue;
-				}
-				$d = isset( $ln['designLabel'] ) ? trim( (string) $ln['designLabel'] ) : '';
-				if ( $d === '' && isset( $ln['designSummary'] ) ) {
-					$d = trim( (string) $ln['designSummary'] );
-					if ( strlen( $d ) > 120 ) {
-						$d = substr( $d, 0, 120 ) . '…';
-					}
-				}
-				$inv[] = array(
-					'label'  => __( 'Gift wrap', 'wrrapd' ),
-					'detail' => $d !== '' ? $d : ( __( 'Gift', 'wrrapd' ) . ' ' . ( (int) $idx + 1 ) ),
-				);
-			}
+		if ( $ci_tax !== null ) {
+			echo '<div class="wrrapd-amz-inv-row"><span class="wrrapd-amz-inv-lab">' . esc_html__( 'Estimated tax', 'wrrapd' ) . '</span>';
+			echo '<span class="wrrapd-amz-inv-amt">' . esc_html( wrrapd_money_usd( $ci_tax ) ) . '</span></div>';
 		}
-		if ( count( $inv ) > 0 ) {
-			echo '<div class="wrrapd-amz-inv-list">';
-			$retailer_brand_used_inv = false;
-			foreach ( $inv as $row ) {
-				if ( ! is_array( $row ) ) {
-					continue;
-				}
-				$lab_raw = isset( $row['label'] ) ? trim( (string) $row['label'] ) : '';
-				if ( ! $retailer_brand_used_inv && wrrapd_invoice_line_use_retailer_brand( $lab_raw ) ) {
-					$retailer_brand_used_inv = true;
-					$det                     = isset( $row['detail'] ) ? trim( (string) $row['detail'] ) : '';
-					echo '<div class="wrrapd-amz-inv-row wrrapd-amz-inv-row--stack">';
-					echo '<div class="wrrapd-amz-inv-left">';
-					echo '<span class="wrrapd-amz-inv-lab">' . esc_html__( 'Gift wrap', 'wrrapd' ) . '</span>';
-					if ( $det !== '' ) {
-						echo '<span class="wrrapd-amz-inv-sub">' . esc_html( $det ) . '</span>';
-					}
-					echo '</div><span class="wrrapd-amz-inv-amt"></span></div>';
-					continue;
-				}
-				if ( ! $retailer_brand_used_inv && preg_match( '/^gift\s*wrap$/i', $lab_raw ) ) {
-					$retailer_brand_used_inv = true;
-					$det                     = isset( $row['detail'] ) ? trim( (string) $row['detail'] ) : '';
-					echo '<div class="wrrapd-amz-inv-row wrrapd-amz-inv-row--stack">';
-					echo '<div class="wrrapd-amz-inv-left">';
-					echo '<span class="wrrapd-amz-inv-lab">' . esc_html__( 'Gift wrap', 'wrrapd' ) . '</span>';
-					if ( $det !== '' ) {
-						echo '<span class="wrrapd-amz-inv-sub">' . esc_html( $det ) . '</span>';
-					}
-					echo '</div><span class="wrrapd-amz-inv-amt"></span></div>';
-					continue;
-				}
-				$lab = $lab_raw;
-				if ( wrrapd_is_bad_checkout_invoice_label( $lab ) ) {
-					continue;
-				}
-				$lab = wrrapd_normalize_checkout_invoice_label( $lab );
-				$det = isset( $row['detail'] ) ? trim( (string) $row['detail'] ) : '';
-				$lab_out = $lab !== '' ? $lab : __( 'Gift wrap', 'wrrapd' );
-				if ( strcasecmp( $lab, 'Gift wrap' ) === 0 ) {
-					$lab_out = __( 'Gift wrap', 'wrrapd' );
-				}
-				echo '<div class="wrrapd-amz-inv-row wrrapd-amz-inv-row--stack">';
-				echo '<div class="wrrapd-amz-inv-left">';
-				echo '<span class="wrrapd-amz-inv-lab">' . esc_html( $lab_out ) . '</span>';
-				if ( $det !== '' ) {
-					echo '<span class="wrrapd-amz-inv-sub">' . esc_html( $det ) . '</span>';
-				}
-				echo '</div><span class="wrrapd-amz-inv-amt"></span></div>';
-			}
-			echo '</div>';
+		if ( $ci_total !== null ) {
+			echo '<div class="wrrapd-amz-inv-row"><span class="wrrapd-amz-inv-lab">' . esc_html__( 'Total (checkout)', 'wrrapd' ) . '</span>';
+			echo '<span class="wrrapd-amz-inv-amt">' . esc_html( wrrapd_money_usd( $ci_total ) ) . '</span></div>';
 		}
-		if ( $total_str !== '' ) {
-			echo '<div class="wrrapd-amz-inv-row wrrapd-amz-inv-row--grand">';
-			echo '<span class="wrrapd-amz-inv-lab">' . esc_html__( 'Order total', 'wrrapd' ) . '</span>';
-			echo '<span class="wrrapd-amz-inv-amt">' . esc_html( $total_str ) . '</span>';
-			echo '</div>';
-		}
-		echo '<div class="wrrapd-amz-inv-note">' . esc_html__( 'Sales tax included in total where applicable.', 'wrrapd' ) . '</div>';
+	} elseif ( $total_str !== '' ) {
+		echo '<div class="wrrapd-amz-inv-row"><span class="wrrapd-amz-inv-lab">' . esc_html__( 'Wrrapd payment (Stripe)', 'wrrapd' ) . '</span>';
+		echo '<span class="wrrapd-amz-inv-amt">' . esc_html( $total_str ) . '</span></div>';
+		$fallback_note = __( 'Itemized gift-wrap, add-ons, and tax lines were not stored for this order — only the charged total is available.', 'wrrapd' );
 	}
+
+	echo '</div>';
+	if ( $fallback_note !== '' ) {
+		echo '<div class="wrrapd-amz-inv-note">' . esc_html( $fallback_note ) . '</div>';
+	}
+
+	if ( $total_str !== '' ) {
+		echo '<div class="wrrapd-amz-inv-row wrrapd-amz-inv-row--grand">';
+		echo '<span class="wrrapd-amz-inv-lab">' . esc_html__( 'Order total', 'wrrapd' ) . '</span>';
+		echo '<span class="wrrapd-amz-inv-amt">' . esc_html( $total_str ) . '</span>';
+		echo '</div>';
+	}
+	echo '<div class="wrrapd-amz-inv-note">' . esc_html__( 'Sales tax included in total where applicable.', 'wrrapd' ) . '</div>';
 	echo '</div>';
 	return (string) ob_get_clean();
 }
