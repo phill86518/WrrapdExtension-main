@@ -756,10 +756,17 @@ function wrrapd_render_orders_legacy_cards( array $orders, array $overlays ) {
 .wrrapd-legacy-cards-root .order-meta{margin-bottom:.65rem;font-size:.8rem;color:#333;}
 .wrrapd-legacy-cards-root .order-meta strong{display:block;font-weight:600;margin-bottom:.15rem;}
 .wrrapd-legacy-cards-root .order-items{display:flex;flex-direction:column;gap:.65rem;}
-.wrrapd-legacy-cards-root .order-item{display:flex;gap:.75rem;padding:.4rem 0;border-bottom:1px solid #eee;}
+.wrrapd-legacy-cards-root .order-item{display:grid;grid-template-columns:4.25rem 4.25rem minmax(0,1fr);gap:.62rem;padding:.45rem 0;border-bottom:1px solid #eee;align-items:start;}
 .wrrapd-legacy-cards-root .order-item:last-child{border-bottom:none;}
-.wrrapd-legacy-cards-root .order-item img{width:4.25rem;height:4.25rem;object-fit:cover;border-radius:.45rem;border:1px solid #ccc;}
+.wrrapd-legacy-cards-root .order-item img{width:4.25rem;height:4.25rem;object-fit:cover;border-radius:.45rem;border:1px solid #ccc;background:#fff;}
+.wrrapd-legacy-cards-root .order-item .wrrapd-legacy-wrap-preview.is-empty{width:4.25rem;height:4.25rem;border-radius:.45rem;border:1px dashed #94a3b8;background:#f8fafc;}
 .wrrapd-legacy-cards-root .item-details{flex:1;min-width:0;font-size:.8rem;}
+.wrrapd-legacy-cards-root .wrrapd-legacy-retail-row{display:flex;align-items:center;gap:.3rem;font-weight:700;color:#0f172a;margin-bottom:.08rem;}
+.wrrapd-legacy-cards-root .wrrapd-legacy-item-id{font-size:.72rem;color:#334155;font-weight:700;line-height:1.2;margin-bottom:.08rem;}
+.wrrapd-legacy-cards-root .wrrapd-legacy-item-title{font-size:.78rem;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:.1rem;}
+.wrrapd-legacy-cards-root .wrrapd-legacy-design-choice{font-size:.74rem;font-weight:700;color:#0f172a;line-height:1.22;margin-bottom:.08rem;}
+.wrrapd-legacy-cards-root .wrrapd-legacy-flowers-line{font-size:.74rem;line-height:1.22;margin-bottom:.06rem;}
+.wrrapd-legacy-cards-root .wrrapd-legacy-msg-line{font-size:.74rem;line-height:1.28;color:#1f2937;}
 .wrrapd-legacy-cards-root .legacy-forms{flex:1;min-width:240px;max-width:400px;display:flex;flex-direction:column;gap:.85rem;}
 .wrrapd-legacy-cards-root .wrrapd-legacy-line{border:1px solid #ddd;border-radius:.5rem;padding:.65rem .75rem;background:#fafafa;}
 .wrrapd-legacy-cards-root .info-box{background:transparent;padding:0;border-radius:0;border:none;margin-bottom:.38rem;}
@@ -794,11 +801,11 @@ function wrrapd_render_orders_legacy_cards( array $orders, array $overlays ) {
 .wrrapd-legacy-cards-root .wrrapd-legacy-modal-actions{display:flex;justify-content:flex-end;}
 .wrrapd-legacy-cards-root .wrrapd-legacy-modal-close{border:1px solid #94a3b8;background:#f8fafc;color:#0f172a;border-radius:.35rem;padding:.35rem .65rem;cursor:pointer;font-size:.78rem;}
 .wrrapd-legacy-cards-root .wrrapd-legacy-order-foot{margin-top:.75rem;padding-top:.65rem;border-top:1px solid #ddd;clear:both;}
-.wrrapd-legacy-cards-root .wrrapd-legacy-order-foot .wrrapd-amz-summary{font-size:.78rem;padding:.35rem .45rem;}
-.wrrapd-legacy-cards-root .wrrapd-legacy-order-foot .wrrapd-amz-inv-row{font-size:.74rem;padding:.08rem 0;}
-.wrrapd-legacy-cards-root .wrrapd-legacy-order-foot .wrrapd-amz-inv-row--grand{font-size:.82rem;}
-.wrrapd-legacy-cards-root .wrrapd-legacy-order-foot .wrrapd-amz-inv-sub{font-size:.68rem;}
-.wrrapd-legacy-cards-root .wrrapd-legacy-order-foot .wrrapd-amz-inv-note{font-size:.62rem;font-style:italic;opacity:.86;}
+.wrrapd-legacy-cards-root .wrrapd-legacy-order-foot .wrrapd-amz-summary{font-size:.86rem;padding:.42rem .52rem;}
+.wrrapd-legacy-cards-root .wrrapd-legacy-order-foot .wrrapd-amz-inv-row{font-size:.82rem;padding:.1rem 0;}
+.wrrapd-legacy-cards-root .wrrapd-legacy-order-foot .wrrapd-amz-inv-row--grand{font-size:.92rem;}
+.wrrapd-legacy-cards-root .wrrapd-legacy-order-foot .wrrapd-amz-inv-sub{font-size:.74rem;}
+.wrrapd-legacy-cards-root .wrrapd-legacy-order-foot .wrrapd-amz-inv-note{font-size:.68rem;font-style:italic;opacity:.9;}
 .wrrapd-legacy-cards-root .wrrapd-amz-inv-lab .wrrapd-retailer-brand{display:inline-flex;align-items:center;gap:.28rem;vertical-align:middle;}
 .wrrapd-legacy-cards-root .wrrapd-retailer-logo{flex:0 0 auto;display:block;border-radius:50%;object-fit:cover;}
 .wrrapd-legacy-cards-root .wrrapd-retailer-name{font-weight:700;}
@@ -850,28 +857,58 @@ function wrrapd_render_orders_legacy_cards( array $orders, array $overlays ) {
 			}
 			$desc = isset( $ln['productTitle'] ) ? trim( (string) $ln['productTitle'] ) : '';
 			if ( $desc === '' ) {
-				$desc = isset( $ln['designLabel'] ) ? trim( (string) $ln['designLabel'] ) : '';
-			}
-			if ( $desc === '' ) {
 				$desc = __( 'Gift line', 'wrrapd' );
 			}
-			$trunc = strlen( $desc ) > 50 ? substr( $desc, 0, 47 ) . '...' : $desc;
 			$dprev = isset( $ln['designPreviewUrl'] ) ? trim( (string) $ln['designPreviewUrl'] ) : '';
 			$pimg  = isset( $ln['productImageUrl'] ) ? trim( (string) $ln['productImageUrl'] ) : '';
-			$img_u = $dprev !== '' && preg_match( '#^https?://#i', $dprev ) ? $dprev : ( $pimg !== '' && preg_match( '#^https?://#i', $pimg ) ? $pimg : $def_img );
+			$img_u = $pimg !== '' && preg_match( '#^https?://#i', $pimg ) ? $pimg : $def_img;
+			$wrap_u = $dprev !== '' && preg_match( '#^https?://#i', $dprev ) ? $dprev : '';
 			$wrap_lab = wrrapd_studio_design_kind_label( $ln );
 			$fl       = ! empty( $ln['flowers'] );
+			$flower_opt = isset( $ln['flowerOption'] ) ? trim( (string) $ln['flowerOption'] ) : '';
+			if ( $flower_opt === '' ) {
+				$dl_flow = isset( $ln['designLabel'] ) ? trim( (string) $ln['designLabel'] ) : '';
+				if ( preg_match( '/^Flowers:\s*(.+)$/i', $dl_flow, $fm ) ) {
+					$flower_opt = trim( (string) $fm[1] );
+				}
+			}
+			$id_raw = isset( $ln['productId'] ) ? trim( (string) $ln['productId'] ) : '';
+			if ( $id_raw === '' ) {
+				$id_raw = isset( $ln['asin'] ) ? trim( (string) $ln['asin'] ) : '';
+			}
+			$line_id = $id_raw !== '' ? $id_raw : __( 'N/A', 'wrrapd' );
 			$gm       = isset( $ln['giftMessage'] ) ? trim( (string) $ln['giftMessage'] ) : '';
 			if ( $gm === '' && isset( $ln['giftMessageSnippet'] ) ) {
 				$gm = trim( (string) $ln['giftMessageSnippet'] );
 			}
+			$design_choice = __( 'Design chosen by Wrrapd', 'wrrapd' );
+			if ( stripos( $wrap_lab, 'AI' ) !== false ) {
+				$design_choice = __( 'Design chosen by AI', 'wrrapd' );
+			} elseif ( stripos( $wrap_lab, 'Upload' ) !== false ) {
+				$design_choice = __( 'Design chosen by uploaded image', 'wrrapd' );
+			} elseif ( stripos( $wrap_lab, 'Flower' ) !== false ) {
+				$design_choice = __( 'Design chosen as flowers add-on', 'wrrapd' );
+			}
+			$retailer_html = wrrapd_order_retailer_label_html( $order );
 
 			echo '<div class="order-item">';
 			echo '<img src="' . esc_url( $img_u ) . '" alt="" loading="lazy" decoding="async" />';
+			if ( $wrap_u !== '' ) {
+				echo '<img class="wrrapd-legacy-wrap-preview" src="' . esc_url( $wrap_u ) . '" alt="" loading="lazy" decoding="async" />';
+			} else {
+				echo '<div class="wrrapd-legacy-wrap-preview is-empty" aria-hidden="true"></div>';
+			}
 			echo '<div class="item-details">';
-			echo '<div>' . esc_html( $trunc ) . '</div>';
-			echo '<div>' . esc_html__( 'Wrapping:', 'wrrapd' ) . ' ' . esc_html( $wrap_lab ) . ' | ' . esc_html__( 'Flowers:', 'wrrapd' ) . ' ' . ( $fl ? esc_html__( 'Yes', 'wrrapd' ) : esc_html__( 'No', 'wrrapd' ) ) . '</div>';
-			echo '<div>' . esc_html__( 'Gift message:', 'wrrapd' ) . ' &quot;' . esc_html( $gm !== '' ? $gm : __( 'None', 'wrrapd' ) ) . '&quot;</div>';
+			echo '<div class="wrrapd-legacy-retail-row">' . wp_kses_post( $retailer_html ) . '<span>' . esc_html__( 'order', 'wrrapd' ) . '</span></div>';
+			echo '<div class="wrrapd-legacy-item-id">' . esc_html__( 'ASIN / SKU #:', 'wrrapd' ) . ' ' . esc_html( $line_id ) . '</div>';
+			echo '<div class="wrrapd-legacy-item-title">' . esc_html( $desc ) . '</div>';
+			echo '<div class="wrrapd-legacy-design-choice">' . esc_html( $design_choice ) . '</div>';
+			$flowers_line = esc_html__( 'Flowers:', 'wrrapd' ) . ' ' . ( $fl ? esc_html__( 'Yes', 'wrrapd' ) : esc_html__( 'No', 'wrrapd' ) );
+			if ( $fl && $flower_opt !== '' ) {
+				$flowers_line .= ', ' . esc_html__( 'Option', 'wrrapd' ) . ' ' . esc_html( $flower_opt );
+			}
+			echo '<div class="wrrapd-legacy-flowers-line">' . $flowers_line . '</div>';
+			echo '<div class="wrrapd-legacy-msg-line">' . esc_html__( 'Gift message:', 'wrrapd' ) . ' &quot;' . esc_html( $gm !== '' ? $gm : __( 'None', 'wrrapd' ) ) . '&quot;</div>';
 			echo '</div></div>';
 		}
 		echo '</div></div>';
@@ -1245,40 +1282,30 @@ function wrrapd_normalize_checkout_invoice_label( $lab ) {
 	// Internal invoice row tags from pay UI (all retailers, including LEGO.com).
 	// Handles both run-together forms (AmazonFlowers) and spaced forms (Amazon Flowers).
 	if ( preg_match( '/^Amazon\s*Flowers\s*:\s*(.*)$/i', $lab, $m ) ) {
-		$rest = trim( (string) $m[1] );
-		if ( $rest === '' || preg_match( '/^flowers-\d+$/i', $rest ) ) {
-			return __( 'Flowers add-on', 'wrrapd' );
-		}
-		return __( 'Flowers', 'wrrapd' ) . ': ' . $rest;
+		return __( 'Flowers add-on', 'wrrapd' );
 	}
 	if ( preg_match( '/^Amazon\s*Flowers$/i', $lab ) ) {
 		return __( 'Flowers add-on', 'wrrapd' );
 	}
 	if ( preg_match( '/^Amazon\s*AI\s*:\s*(.*)$/i', $lab, $m ) ) {
-		$rest = trim( (string) $m[1] );
-		if ( $rest !== '' ) {
-			return $rest;
-		}
-		return __( 'AI design', 'wrrapd' );
+		return __( 'AI design add-on', 'wrrapd' );
 	}
 	if ( preg_match( '/^Amazon\s*Wrrapd\s*:\s*(.*)$/i', $lab, $m ) ) {
-		$rest_raw = trim( (string) $m[1] );
-		$rest_lo  = strtolower( $rest_raw );
-		if ( $rest_lo === '' || $rest_lo === 'wrrapd' ) {
-			return __( 'Wrrapd design', 'wrrapd' );
-		}
-		if ( $rest_lo === 'ai' ) {
-			return __( 'AI design', 'wrrapd' );
-		}
-		if ( $rest_lo === 'upload' ) {
-			return __( 'Uploaded design', 'wrrapd' );
-		}
-		return __( 'Gift wrap', 'wrrapd' ) . ': ' . $rest_raw;
+		return __( 'Gift wrap', 'wrrapd' );
 	}
 	// Catch any remaining "Amazon <something>: <rest>" prefix from pay UI channel names.
 	if ( preg_match( '/^Amazon\s+(\w+)\s*:\s*(.*)$/i', $lab, $m ) ) {
 		$addon = trim( (string) $m[1] );
 		$rest  = trim( (string) $m[2] );
+		if ( strcasecmp( $addon, 'ai' ) === 0 ) {
+			return __( 'AI design add-on', 'wrrapd' );
+		}
+		if ( strcasecmp( $addon, 'flowers' ) === 0 ) {
+			return __( 'Flowers add-on', 'wrrapd' );
+		}
+		if ( strcasecmp( $addon, 'wrrapd' ) === 0 ) {
+			return __( 'Gift wrap', 'wrrapd' );
+		}
 		if ( strcasecmp( $addon, 'upload' ) === 0 ) {
 			return $rest !== '' ? __( 'Uploaded design', 'wrrapd' ) . ': ' . $rest : __( 'Uploaded design', 'wrrapd' );
 		}
@@ -1406,20 +1433,10 @@ function wrrapd_studio_order_summary_html( array $order, array $lines ) {
 				continue;
 			}
 			$amt_f = isset( $row['amount'] ) && is_numeric( $row['amount'] ) ? (float) $row['amount'] : null;
-			if ( ! $retailer_brand_used_ci && wrrapd_invoice_line_use_retailer_brand( $lab_raw ) ) {
+			if ( ! $retailer_brand_used_ci && ( wrrapd_invoice_line_use_retailer_brand( $lab_raw ) || preg_match( '/^gift\s*wrap$/i', $lab_raw ) ) ) {
 				$retailer_brand_used_ci = true;
-				$lab_html               = wrrapd_order_retailer_label_html( $order );
 				echo '<div class="wrrapd-amz-inv-row">';
-				echo '<span class="wrrapd-amz-inv-lab">' . wp_kses_post( $lab_html ) . '</span>';
-				echo '<span class="wrrapd-amz-inv-amt">' . ( $amt_f !== null ? esc_html( wrrapd_money_usd( $amt_f ) ) : '' ) . '</span>';
-				echo '</div>';
-				continue;
-			}
-			if ( ! $retailer_brand_used_ci && preg_match( '/^gift\s*wrap$/i', $lab_raw ) ) {
-				$retailer_brand_used_ci = true;
-				$lab_html               = wrrapd_order_retailer_label_html( $order );
-				echo '<div class="wrrapd-amz-inv-row">';
-				echo '<span class="wrrapd-amz-inv-lab">' . wp_kses_post( $lab_html ) . '</span>';
+				echo '<span class="wrrapd-amz-inv-lab">' . esc_html__( 'Gift wrap', 'wrrapd' ) . '</span>';
 				echo '<span class="wrrapd-amz-inv-amt">' . ( $amt_f !== null ? esc_html( wrrapd_money_usd( $amt_f ) ) : '' ) . '</span>';
 				echo '</div>';
 				continue;
@@ -1459,8 +1476,8 @@ function wrrapd_studio_order_summary_html( array $order, array $lines ) {
 					}
 				}
 				$inv[] = array(
-					'retailerBrand' => true,
-					'detail'        => $d !== '' ? $d : ( __( 'Gift', 'wrrapd' ) . ' ' . ( (int) $idx + 1 ) ),
+					'label'  => __( 'Gift wrap', 'wrrapd' ),
+					'detail' => $d !== '' ? $d : ( __( 'Gift', 'wrrapd' ) . ' ' . ( (int) $idx + 1 ) ),
 				);
 			}
 		}
@@ -1472,23 +1489,12 @@ function wrrapd_studio_order_summary_html( array $order, array $lines ) {
 					continue;
 				}
 				$lab_raw = isset( $row['label'] ) ? trim( (string) $row['label'] ) : '';
-				if ( ! empty( $row['retailerBrand'] ) ) {
-					echo '<div class="wrrapd-amz-inv-row wrrapd-amz-inv-row--stack">';
-					echo '<div class="wrrapd-amz-inv-left">';
-					echo '<span class="wrrapd-amz-inv-lab">' . wp_kses_post( wrrapd_order_retailer_label_html( $order ) ) . '</span>';
-					$det = isset( $row['detail'] ) ? trim( (string) $row['detail'] ) : '';
-					if ( $det !== '' ) {
-						echo '<span class="wrrapd-amz-inv-sub">' . esc_html( $det ) . '</span>';
-					}
-					echo '</div><span class="wrrapd-amz-inv-amt"></span></div>';
-					continue;
-				}
 				if ( ! $retailer_brand_used_inv && wrrapd_invoice_line_use_retailer_brand( $lab_raw ) ) {
 					$retailer_brand_used_inv = true;
 					$det                     = isset( $row['detail'] ) ? trim( (string) $row['detail'] ) : '';
 					echo '<div class="wrrapd-amz-inv-row wrrapd-amz-inv-row--stack">';
 					echo '<div class="wrrapd-amz-inv-left">';
-					echo '<span class="wrrapd-amz-inv-lab">' . wp_kses_post( wrrapd_order_retailer_label_html( $order ) ) . '</span>';
+					echo '<span class="wrrapd-amz-inv-lab">' . esc_html__( 'Gift wrap', 'wrrapd' ) . '</span>';
 					if ( $det !== '' ) {
 						echo '<span class="wrrapd-amz-inv-sub">' . esc_html( $det ) . '</span>';
 					}
@@ -1500,7 +1506,7 @@ function wrrapd_studio_order_summary_html( array $order, array $lines ) {
 					$det                     = isset( $row['detail'] ) ? trim( (string) $row['detail'] ) : '';
 					echo '<div class="wrrapd-amz-inv-row wrrapd-amz-inv-row--stack">';
 					echo '<div class="wrrapd-amz-inv-left">';
-					echo '<span class="wrrapd-amz-inv-lab">' . wp_kses_post( wrrapd_order_retailer_label_html( $order ) ) . '</span>';
+					echo '<span class="wrrapd-amz-inv-lab">' . esc_html__( 'Gift wrap', 'wrrapd' ) . '</span>';
 					if ( $det !== '' ) {
 						echo '<span class="wrrapd-amz-inv-sub">' . esc_html( $det ) . '</span>';
 					}

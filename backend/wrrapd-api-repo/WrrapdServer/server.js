@@ -532,17 +532,11 @@ function normalizeCheckoutInvoiceLineLabelForStorage(label) {
     if (/^AmazonFlowers$/i.test(s)) return 'Flowers add-on';
     const mAi = /^AmazonAI\s*:\s*(.*)$/i.exec(s);
     if (mAi) {
-        const rest = mAi[1].trim();
-        return rest || 'AI design';
+        return 'AI design add-on';
     }
     const mW = /^AmazonWrrapd\s*:\s*(.*)$/i.exec(s);
     if (mW) {
-        const raw = mW[1].trim();
-        const lo = raw.toLowerCase();
-        if (!lo || lo === 'wrrapd') return 'Wrrapd design';
-        if (lo === 'ai') return 'AI design';
-        if (lo === 'upload') return 'Uploaded design';
-        return `Gift wrap: ${raw}`;
+        return 'Gift wrap';
     }
     return s;
 }
@@ -959,6 +953,12 @@ function summarizeWrrapdLinesFromOrderRecord(data) {
             if (typeof im === 'string' && (im.startsWith('http://') || im.startsWith('https://'))) {
                 designPreviewUrl = im;
             }
+            if (!designPreviewUrl) {
+                const gcs = row.selected_ai_design.gcsUrl;
+                if (typeof gcs === 'string' && (gcs.startsWith('http://') || gcs.startsWith('https://'))) {
+                    designPreviewUrl = gcs;
+                }
+            }
         }
         let designLabel = null;
         if (row.selected_ai_design && typeof row.selected_ai_design === 'object') {
@@ -984,6 +984,7 @@ function summarizeWrrapdLinesFromOrderRecord(data) {
             row.shippingDate ||
             null;
         return {
+            productId: row.asin ? String(row.asin).trim().slice(0, 48) : null,
             asin: row.asin || null,
             productTitle: row.title ? String(row.title).trim().slice(0, 200) : null,
             productImageUrl:
@@ -995,6 +996,10 @@ function summarizeWrrapdLinesFromOrderRecord(data) {
             designLabel,
             designPreviewUrl,
             flowers: row.checkbox_flowers === true,
+            flowerOption:
+                row.selected_flower_design != null && String(row.selected_flower_design).trim() !== ''
+                    ? String(row.selected_flower_design).trim().slice(0, 32)
+                    : null,
             deliveryHint: deliveryHint != null ? String(deliveryHint).trim().slice(0, 200) : null,
             gifteeName,
             giftMessageSnippet: gm ? gm.slice(0, 160) + (gm.length > 160 ? '…' : '') : null,
