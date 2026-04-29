@@ -751,8 +751,8 @@ function wrrapd_render_orders_legacy_cards( array $orders, array $overlays ) {
 .wrrapd-legacy-cards-root *,.wrrapd-legacy-cards-root *::before,.wrrapd-legacy-cards-root *::after{box-sizing:border-box;}
 .wrrapd-legacy-cards-root h2{font-size:1.2rem;margin:0 0 1.1rem;font-weight:700;}
 .wrrapd-legacy-cards-root .order-card{display:flex;flex-direction:column;border:1px solid #c5c5c5;padding:.85rem 1rem;border-radius:.65rem;box-shadow:0 .12rem .35rem rgba(0,0,0,.06);margin-bottom:1.15rem;background:#fff;}
-.wrrapd-legacy-cards-root .order-content{display:flex;flex-wrap:wrap;gap:1.35rem;align-items:flex-start;}
-.wrrapd-legacy-cards-root .order-details{flex:1;min-width:260px;}
+.wrrapd-legacy-cards-root .order-content{display:grid;grid-template-columns:minmax(260px,1fr) minmax(240px,400px) minmax(260px,1fr);gap:1.35rem;align-items:flex-start;}
+.wrrapd-legacy-cards-root .order-details{min-width:0;}
 .wrrapd-legacy-cards-root .order-meta{margin-bottom:.65rem;font-size:.8rem;color:#333;}
 .wrrapd-legacy-cards-root .order-meta strong{display:block;font-weight:600;margin-bottom:.15rem;}
 .wrrapd-legacy-cards-root .order-items{display:flex;flex-direction:column;gap:.65rem;}
@@ -767,7 +767,7 @@ function wrrapd_render_orders_legacy_cards( array $orders, array $overlays ) {
 .wrrapd-legacy-cards-root .wrrapd-legacy-design-choice{font-size:.74rem;font-weight:700;color:#0f172a;line-height:1.22;margin-bottom:.08rem;}
 .wrrapd-legacy-cards-root .wrrapd-legacy-flowers-line{font-size:.74rem;line-height:1.22;margin-bottom:.06rem;}
 .wrrapd-legacy-cards-root .wrrapd-legacy-msg-line{font-size:.74rem;line-height:1.28;color:#1f2937;}
-.wrrapd-legacy-cards-root .legacy-forms{flex:1;min-width:240px;max-width:400px;display:flex;flex-direction:column;gap:.85rem;}
+.wrrapd-legacy-cards-root .legacy-forms{width:100%;min-width:240px;max-width:400px;display:flex;flex-direction:column;gap:.85rem;}
 .wrrapd-legacy-cards-root .wrrapd-legacy-line{border:1px solid #ddd;border-radius:.5rem;padding:.65rem .75rem;background:#fafafa;}
 .wrrapd-legacy-cards-root .info-box{background:transparent;padding:0;border-radius:0;border:none;margin-bottom:.38rem;}
 .wrrapd-legacy-cards-root .info-box label{display:block;margin-bottom:.35rem;font-size:.72rem;font-weight:600;color:#333;}
@@ -800,7 +800,7 @@ function wrrapd_render_orders_legacy_cards( array $orders, array $overlays ) {
 .wrrapd-legacy-cards-root .wrrapd-legacy-modal-copy{white-space:pre-wrap;word-break:break-word;font-size:.8rem;line-height:1.45;color:#111827;margin:0 0 .7rem;}
 .wrrapd-legacy-cards-root .wrrapd-legacy-modal-actions{display:flex;justify-content:flex-end;}
 .wrrapd-legacy-cards-root .wrrapd-legacy-modal-close{border:1px solid #94a3b8;background:#f8fafc;color:#0f172a;border-radius:.35rem;padding:.35rem .65rem;cursor:pointer;font-size:.78rem;}
-.wrrapd-legacy-cards-root .wrrapd-legacy-order-foot{margin-top:.75rem;padding-top:.65rem;border-top:1px solid #ddd;clear:both;}
+.wrrapd-legacy-cards-root .wrrapd-legacy-order-foot{margin-top:0;padding-top:0;border-top:none;min-width:0;}
 .wrrapd-legacy-cards-root .wrrapd-legacy-order-foot .wrrapd-amz-summary{font-size:.86rem;padding:.42rem .52rem;}
 .wrrapd-legacy-cards-root .wrrapd-legacy-order-foot .wrrapd-amz-inv-row{font-size:.82rem;padding:.1rem 0;}
 .wrrapd-legacy-cards-root .wrrapd-legacy-order-foot .wrrapd-amz-inv-row--grand{font-size:.92rem;}
@@ -809,6 +809,7 @@ function wrrapd_render_orders_legacy_cards( array $orders, array $overlays ) {
 .wrrapd-legacy-cards-root .wrrapd-amz-inv-lab .wrrapd-retailer-brand{display:inline-flex;align-items:center;gap:.28rem;vertical-align:middle;}
 .wrrapd-legacy-cards-root .wrrapd-retailer-logo{flex:0 0 auto;display:block;border-radius:50%;object-fit:cover;}
 .wrrapd-legacy-cards-root .wrrapd-retailer-name{font-weight:700;}
+@media(max-width:980px){.wrrapd-legacy-cards-root .order-content{grid-template-columns:1fr;}}
 @media(max-width:560px){.wrrapd-legacy-cards-root .wrrapd-legacy-rem-date-row{flex-wrap:wrap;}.wrrapd-legacy-cards-root .wrrapd-legacy-date-block,.wrrapd-legacy-cards-root .wrrapd-legacy-rem-block{flex:1 1 100%;min-width:0;}}
 </style>';
 
@@ -1200,15 +1201,16 @@ function wrrapd_collect_occasion_labels( array $orders, array $overlays ) {
 }
 
 /**
- * Occasion dropdown = canonical presets plus anything seen in orders / saved picks.
+ * Occasion dropdown = canonical presets only.
+ * Dynamic collection from order data is intentionally disabled: AI prompts and other
+ * freetext stored in the `occasion` field must never surface as dropdown choices.
  *
- * @param array<int, array<string, mixed>> $orders
- * @param array<string, array<string|int, array<string, string>>> $overlays
+ * @param array<int, array<string, mixed>> $orders   Unused — kept for signature compatibility.
+ * @param array<string, array<string|int, array<string, string>>> $overlays  Unused — kept for signature compatibility.
  * @return list<string>
  */
 function wrrapd_merge_occasion_dropdown_choices( array $orders, array $overlays ) {
-	$labels = array_merge( wrrapd_occasion_canonical(), wrrapd_collect_occasion_labels( $orders, $overlays ) );
-	$labels = array_values( array_unique( array_map( 'strval', $labels ) ) );
+	$labels = wrrapd_occasion_canonical();
 	sort( $labels, SORT_NATURAL | SORT_FLAG_CASE );
 	return $labels;
 }
@@ -1466,7 +1468,6 @@ function wrrapd_studio_order_summary_html( array $order, array $lines ) {
 	$use_agg      = count( $agg_in ) > 0;
 	$use_ci_lines = ! $use_agg && count( $ci_lines ) > 0;
 	$use_ci_nums  = ! $use_agg && ! $use_ci_lines && ( $ci_subtotal !== null || $ci_tax !== null || $ci_total !== null );
-	$fallback_note = '';
 
 	ob_start();
 	echo '<div class="wrrapd-amz-summary" role="region" aria-label="' . esc_attr__( 'Payment summary', 'wrrapd' ) . '">';
@@ -1541,16 +1542,9 @@ function wrrapd_studio_order_summary_html( array $order, array $lines ) {
 			echo '<div class="wrrapd-amz-inv-row"><span class="wrrapd-amz-inv-lab">' . esc_html__( 'Total (checkout)', 'wrrapd' ) . '</span>';
 			echo '<span class="wrrapd-amz-inv-amt">' . esc_html( wrrapd_money_usd( $ci_total ) ) . '</span></div>';
 		}
-	} elseif ( $total_str !== '' ) {
-		echo '<div class="wrrapd-amz-inv-row"><span class="wrrapd-amz-inv-lab">' . esc_html__( 'Wrrapd payment (Stripe)', 'wrrapd' ) . '</span>';
-		echo '<span class="wrrapd-amz-inv-amt">' . esc_html( $total_str ) . '</span></div>';
-		$fallback_note = __( 'Itemized gift-wrap, add-ons, and tax lines were not stored for this order — only the charged total is available.', 'wrrapd' );
 	}
 
 	echo '</div>';
-	if ( $fallback_note !== '' ) {
-		echo '<div class="wrrapd-amz-inv-note">' . esc_html( $fallback_note ) . '</div>';
-	}
 
 	if ( $total_str !== '' ) {
 		echo '<div class="wrrapd-amz-inv-row wrrapd-amz-inv-row--grand">';

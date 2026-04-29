@@ -930,6 +930,31 @@ function orderVisibleToWpUser(data, emailNorm, wpUserId) {
 }
 
 /** One row per Wrrapd gift line (same normalization as payment ingest) for WP “rich” table. */
+/** Canonical occasion labels — must stay in sync with wrrapd_occasion_canonical() in the WP plugin. */
+const CANONICAL_OCCASIONS = new Set([
+    'Birthday', 'Christmas', 'Anniversary', "Father's Day", "Mother's Day",
+    "Valentine's Day", 'Graduation', 'Thank you', 'Thanksgiving', 'Easter',
+    'Hanukkah', 'Wedding', 'Retirement', 'July Fourth', 'Corporate Gift',
+    "St. Patrick's Day", 'Diwali', 'Ramadan / Eid', 'Chinese New Year',
+    'Housewarming', 'New baby', 'Sympathy', 'Get well', 'Congratulations',
+    'Just because', 'Other',
+]);
+
+/**
+ * Return the occasion only if it exactly matches a canonical label (case-insensitive).
+ * Freetext AI prompts or custom strings are discarded (returned as null) so they
+ * never surface in the Occasion dropdown on the website.
+ */
+function sanitizeOccasion(raw) {
+    if (!raw) return null;
+    const s = String(raw).trim();
+    if (!s) return null;
+    for (const canonical of CANONICAL_OCCASIONS) {
+        if (canonical.toLowerCase() === s.toLowerCase()) return canonical;
+    }
+    return null; // freetext / AI prompt — discard
+}
+
 function summarizeWrrapdLinesFromOrderRecord(data) {
     const flat = normalizeOrderItems(data && data.orderItems);
     return flat.map((row) => {
@@ -997,7 +1022,7 @@ function summarizeWrrapdLinesFromOrderRecord(data) {
                 row.imageUrl && (String(row.imageUrl).startsWith('http://') || String(row.imageUrl).startsWith('https://'))
                     ? String(row.imageUrl).trim()
                     : null,
-            occasion: row.occasion ? String(row.occasion).trim() : null,
+            occasion: sanitizeOccasion(row.occasion),
             designSummary,
             designLabel,
             designPreviewUrl,
@@ -1065,6 +1090,7 @@ function listOrdersJsonForWpUser(emailNorm, wpUserId) {
     const out = { orders: [], scanned: 0 };
     const ordersDir = path.join(__dirname, 'orders');
     if (!fs.existsSync(ordersDir)) return out;
+    // Only top-level files — the deleted/ subfolder is intentionally excluded.
     const files = fs.readdirSync(ordersDir).filter((f) => f.startsWith('order_') && f.endsWith('.json'));
     for (const file of files) {
         out.scanned++;
@@ -1075,6 +1101,8 @@ function listOrdersJsonForWpUser(emailNorm, wpUserId) {
         } catch (_) {
             continue;
         }
+        // Skip soft-deleted orders.
+        if (data.deleted === true) continue;
         if (!orderVisibleToWpUser(data, emailNorm, widStr)) continue;
         out.orders.push(summarizeOrderForWpList(data));
     }
@@ -1503,6 +1531,63 @@ app.post('/api/internal/orders-for-wp-user', (req, res) => {
     const wpUserId = String(body.wpUserId).trim();
     const { orders, scanned } = listOrdersJsonForWpUser(emailNorm, wpUserId);
     res.status(200).json({ ok: true, emailNorm, wpUserId, scanned, count: orders.length, orders });
+});
+
+/**
+ * Mark one or more pay-server order JSON files as deleted.
+ * Moves each file to orders/deleted/<filename> and stamps "deleted":true inside.
+ * Same auth as other internal endpoints: api.wrrapd.com + X-Wrrapd-Internal-Key.
+ * Body: { "orderNumbers": ["100-1a59021-...", ...] }
+ */
+app.post('/api/internal/delete-orders', (req, res) => {
+    if (!req.isApiDomain) {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
+    const configured = (process.env.WRRAPD_INTERNAL_CLAIM_SECRET || '').trim();
+    if (!configured) {
+        return res.status(503).json({ error: 'Not configured', hint: 'Set WRRAPD_INTERNAL_CLAIM_SECRET.' });
+    }
+    const hk = req.headers['x-wrrapd-internal-key'];
+    const headerKey = typeof hk === 'string' ? hk : (Array.isArray(hk) ? hk[0] : '');
+    if (!internalClaimSecretMatches(headerKey)) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+    const body = req.body && typeof req.body === 'object' ? req.body : {};
+    const nums = Array.isArray(body.orderNumbers) ? body.orderNumbers.map(String) : [];
+    if (!nums.length) {
+        return res.status(400).json({ error: 'orderNumbers array required' });
+    }
+    const ordersDir = path.join(__dirname, 'orders');
+    const deletedDir = path.join(ordersDir, 'deleted');
+    if (!fs.existsSync(deletedDir)) fs.mkdirSync(deletedDir, { recursive: true });
+    const results = [];
+    const files = fs.existsSync(ordersDir)
+        ? fs.readdirSync(ordersDir).filter((f) => f.startsWith('order_') && f.endsWith('.json'))
+        : [];
+    for (const orderNumber of nums) {
+        let matched = false;
+        for (const file of files) {
+            const fp = path.join(ordersDir, file);
+            let data;
+            try { data = JSON.parse(fs.readFileSync(fp, 'utf8')); } catch (_) { continue; }
+            const num = data.orderNumber != null ? String(data.orderNumber).trim() : '';
+            if (num !== orderNumber.trim()) continue;
+            data.deleted = true;
+            data.deletedAt = new Date().toISOString();
+            const dest = path.join(deletedDir, file);
+            try {
+                fs.writeFileSync(dest, JSON.stringify(data, null, 2));
+                fs.unlinkSync(fp);
+                results.push({ orderNumber, status: 'deleted', file });
+            } catch (err) {
+                results.push({ orderNumber, status: 'error', error: String(err) });
+            }
+            matched = true;
+            break;
+        }
+        if (!matched) results.push({ orderNumber, status: 'not_found' });
+    }
+    return res.status(200).json({ ok: true, results });
 });
 
 app.post('/process-payment', async (req, res) => {

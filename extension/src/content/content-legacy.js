@@ -3569,7 +3569,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                         // Save all current modal state
                         const occasionInput = document.getElementById(`occasion-input-${i}`);
                         if (occasionInput?.value) {
-                            subItem.occasion = occasionInput.value.trim();
+                            subItem.aiPrompt = occasionInput.value.trim();
                         }
                         
                         const selectedWrappingOption = modal.querySelector(`input[name="wrapping-option-${i}"]:checked`);
@@ -4036,15 +4036,15 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                         }
                     });
 
-                    // Occasion input listener
+                    // Occasion input listener (AI prompt only — never stored as canonical occasion)
                     occasionInput?.addEventListener('change', function() {
-                        subItem.occasion = this.value;
+                        subItem.aiPrompt = this.value;
                         saveItemToLocalStorage(productObj);
                     });
 
-                    // Restore occasion input value
+                    // Restore AI prompt input value
                     if (occasionInput) {
-                        occasionInput.value = subItem.occasion || '';
+                        occasionInput.value = subItem.aiPrompt || '';
                     }
 
                 } else {
