@@ -6,6 +6,7 @@ import {
   LEGO_GIFT_TC_SESSION_KEY,
   LEGO_GIFT_WRAP_PREF_KEY,
   LEGO_HUB_SHIP_ACCEPTED_KEY,
+  LEGO_ITEM_CHOICES_KEY,
   LEGO_PAYMENT_SUCCESS_SESSION_KEY,
 } from "./constants.js";
 
@@ -44,7 +45,7 @@ export function writeGiftChoicesSaved(on) {
   }
 }
 
-/** Legal Wrrapd terms for LEGO gift path (scroll + “here”). */
+/** Legal Wrrapd terms for LEGO gift path (scroll + "here"). */
 export function readGiftLegalTermsAccepted() {
   try {
     return sessionStorage.getItem(LEGO_GIFT_TC_SESSION_KEY) === "1";
@@ -96,6 +97,29 @@ export function writeLegoPaymentSuccess(on) {
   }
 }
 
+/**
+ * Per-item gift choices for the LEGO wizard modal.
+ * @returns {Array<{wrapPref:string,uploadName:string,uploadDataUrl:string,aiPrompt:string,aiDesign:object|null,flowers:boolean,flowerDesign:string,message:string}>}
+ */
+export function readLegoItemChoices() {
+  try {
+    const raw = sessionStorage.getItem(LEGO_ITEM_CHOICES_KEY);
+    if (!raw) return [];
+    const p = JSON.parse(raw);
+    return Array.isArray(p) ? p : [];
+  } catch {
+    return [];
+  }
+}
+
+export function writeLegoItemChoices(arr) {
+  try {
+    sessionStorage.setItem(LEGO_ITEM_CHOICES_KEY, JSON.stringify(arr));
+  } catch {
+    /* ignore */
+  }
+}
+
 /** Clears Wrrapd-specific flags when guest opts out of the gift path. */
 export function clearLegoGiftServiceFlags() {
   writeGiftLegalTermsAccepted(false);
@@ -106,6 +130,7 @@ export function clearLegoGiftServiceFlags() {
     sessionStorage.removeItem(LEGO_GIFT_WRAP_PREF_KEY);
     sessionStorage.removeItem(LEGO_GIFT_FLOWERS_INTEREST_KEY);
     sessionStorage.removeItem(LEGO_GIFT_GIFTEE_NAME_KEY);
+    sessionStorage.removeItem(LEGO_ITEM_CHOICES_KEY);
   } catch {
     /* ignore */
   }

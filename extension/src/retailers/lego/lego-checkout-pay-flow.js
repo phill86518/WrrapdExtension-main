@@ -1,12 +1,4 @@
 import {
-  LEGO_GIFT_AI_DESIGN_KEY,
-  LEGO_GIFT_FLOWERS_INTEREST_KEY,
-  LEGO_GIFT_GIFTEE_NAME_KEY,
-  LEGO_GIFT_MESSAGE_KEY,
-  LEGO_GIFT_OCCASION_KEY,
-  LEGO_GIFT_SELECTED_FLOWER_KEY,
-  LEGO_GIFT_SENDER_NAME_KEY,
-  LEGO_GIFT_WRAP_PREF_KEY,
   WRRAPD_HUB_ADDRESS_OBJECT,
   WRRAPD_HUB_SHIP_LINES,
 } from "./constants.js";
@@ -15,11 +7,13 @@ import {
   readGiftLegalTermsAccepted,
   readGiftRadio,
   readHubShipAccepted,
+  readLegoItemChoices,
   readLegoPaymentSuccess,
   writeGiftLegalTermsAccepted,
   writeHubShipAccepted,
   writeLegoPaymentSuccess,
 } from "./lego-session-state.js";
+import { readLegoCartSnapshot } from "./lego-cart-extract.js";
 
 const TERMS_MODAL_ID = "wrrapd-lego-terms-modal";
 const HUB_MODAL_ID = "wrrapd-lego-hub-modal";
@@ -142,41 +136,25 @@ function gifteeZip5() {
 
 function gifteeStubFromSession() {
   const zip = gifteeZip5();
-  const gifteeName = readSession(LEGO_GIFT_GIFTEE_NAME_KEY).trim();
   return {
-    name: gifteeName || "Your giftee (LEGO delivery after wrap)",
-    street: "",
-    city: "",
-    state: "",
+    name: "Your giftee (LEGO delivery after wrap)",
+    street: "", city: "", state: "",
     postalCode: zip,
     country: "United States",
     phone: "",
   };
 }
 
-function readWrapPref() {
-  try {
-    return sessionStorage.getItem(LEGO_GIFT_WRAP_PREF_KEY) || "wrrapd";
-  } catch {
-    return "wrrapd";
-  }
-}
-
-function readFlowersOn() {
-  try {
-    return sessionStorage.getItem(LEGO_GIFT_FLOWERS_INTEREST_KEY) === "1";
-  } catch {
-    return false;
-  }
-}
-
 function computeServiceSubtotalCents() {
   const p = getActiveCheckoutUnitPrices();
-  const wrap = readWrapPref();
-  let dollars = p.giftWrapBase;
-  if (wrap === "ai") dollars += p.customDesignAi;
-  if (wrap === "upload") dollars += p.customDesignUpload;
-  if (readFlowersOn()) dollars += p.flowers;
+  const allChoices = readLegoItemChoices();
+  const n = Math.max(1, allChoices.length);
+  let dollars = p.giftWrapBase * n;
+  for (const ch of allChoices) {
+    if (ch.wrapPref === "ai") dollars += p.customDesignAi;
+    if (ch.wrapPref === "upload") dollars += p.customDesignUpload;
+    if (ch.flowers) dollars += p.flowers;
+  }
   return Math.round(dollars * 100);
 }
 
@@ -529,49 +507,30 @@ function readSession(key) {
   }
 }
 
-/** One parent row + options[] — same flattening shape as Amazon for process-payment / ingest. */
+/** Build per-line order data for process-payment using the per-item wizard choices. */
 function buildLegoOrderDataForProcessPayment() {
-  const wrap = readWrapPref();
-  const flowers = readFlowersOn();
-  let selectedAi = null;
-  try {
-    const raw = readSession(LEGO_GIFT_AI_DESIGN_KEY);
-    if (raw) selectedAi = JSON.parse(raw);
-  } catch {
-    selectedAi = null;
-  }
-  const gifteeName = readSession(LEGO_GIFT_GIFTEE_NAME_KEY).trim();
-  const gifteeZip = gifteeZip5();
-  const option = {
-    checkbox_wrrapd: true,
-    selected_wrapping_option: wrap,
-    checkbox_flowers: flowers,
-    selected_flower_design: readSession(LEGO_GIFT_SELECTED_FLOWER_KEY) || null,
-    selected_ai_design: selectedAi,
-    giftMessage: readSession(LEGO_GIFT_MESSAGE_KEY) || null,
-    senderName: readSession(LEGO_GIFT_SENDER_NAME_KEY) || null,
-    occasion: readSession(LEGO_GIFT_OCCASION_KEY) || null,
-    ...(gifteeName
-      ? {
-          gifteeRecipientAddress: {
-            name: gifteeName,
-            street: "",
-            city: "",
-            state: "",
-            postalCode: gifteeZip,
-            country: "United States",
-          },
-        }
-      : {}),
-  };
-  return [
-    {
-      asin: "LEGO",
-      title: "LEGO.com order — Wrrapd gift wrap",
-      imageUrl: "",
-      options: [option],
-    },
-  ];
+  const cartLines = readLegoCartSnapshot();
+  const allChoices = readLegoItemChoices();
+  const lines = cartLines.length > 0 ? cartLines : [{ id: "LEGO", sku: "", title: "LEGO.com order", imageUrl: "" }];
+  return lines.map((line, idx) => {
+    const ch = allChoices[idx] || {};
+    const wrap = ch.wrapPref || "wrrapd";
+    const flowers = ch.flowers === true;
+    return {
+      asin: line.sku || line.id || "LEGO",
+      title: line.title || "LEGO.com order — Wrrapd gift wrap",
+      imageUrl: line.imageUrl || "",
+      sku: line.sku || null,
+      checkbox_wrrapd: true,
+      selected_wrapping_option: wrap,
+      checkbox_flowers: flowers,
+      selected_flower_design: flowers ? (ch.flowerDesign || null) : null,
+      selected_ai_design: wrap === "ai" ? (ch.aiDesign || null) : null,
+      uploaded_design_name: wrap === "upload" ? (ch.uploadName || null) : null,
+      aiPrompt: wrap === "ai" ? (ch.aiPrompt || null) : null,
+      giftMessage: ch.message || null,
+    };
+  });
 }
 
 async function postLegoProcessPayment(eventData) {
@@ -645,40 +604,34 @@ function bindPayMessageOnce() {
 
 function buildSummaryLinesAndTotal() {
   const p = getActiveCheckoutUnitPrices();
-  const wrap = readWrapPref();
+  const allChoices = readLegoItemChoices();
+  const cartLines = readLegoCartSnapshot();
+  const n = Math.max(1, allChoices.length > 0 ? allChoices.length : cartLines.length);
   /** @type {Array<{ label: string, amount: string | null }>} */
   const invoiceRows = [];
-  invoiceRows.push({ label: "Gift wrap base", amount: `$${p.giftWrapBase.toFixed(2)}` });
-  if (wrap === "ai") {
-    invoiceRows.push({ label: "AI design assist", amount: `$${p.customDesignAi.toFixed(2)}` });
+
+  // Per-line breakdown
+  let hasAi = false; let hasUpload = false; let flowerCount = 0;
+  for (const ch of allChoices) {
+    if (ch.wrapPref === "ai") hasAi = true;
+    if (ch.wrapPref === "upload") hasUpload = true;
+    if (ch.flowers) flowerCount++;
   }
-  if (wrap === "upload") {
-    invoiceRows.push({ label: "Custom upload", amount: `$${p.customDesignUpload.toFixed(2)}` });
+  const xN = n > 1 ? ` (×${n})` : "";
+  invoiceRows.push({ label: `Gift wrap base${xN}`, amount: `$${(p.giftWrapBase * n).toFixed(2)}` });
+  if (hasAi) invoiceRows.push({ label: "AI design assist", amount: `$${p.customDesignAi.toFixed(2)}` });
+  if (hasUpload) invoiceRows.push({ label: "Custom upload", amount: `$${p.customDesignUpload.toFixed(2)}` });
+  if (flowerCount > 0) {
+    const xF = flowerCount > 1 ? ` (×${flowerCount})` : "";
+    invoiceRows.push({ label: `Flowers add-on${xF}`, amount: `$${(p.flowers * flowerCount).toFixed(2)}` });
   }
-  if (readFlowersOn()) {
-    invoiceRows.push({ label: "Flowers add-on", amount: `$${p.flowers.toFixed(2)}` });
-  }
-  let detail = "";
-  try {
-    detail = sessionStorage.getItem(LEGO_GIFT_AI_DESIGN_KEY) || "";
-  } catch {
-    detail = "";
-  }
-  if (detail && wrap === "ai") {
-    invoiceRows.push({ label: "(AI selection saved with your order.)", amount: null });
-  }
+
   const br = computeLegoTotalBreakdown();
   const z = gifteeZip5();
   if (br.taxUsd > 0) {
-    invoiceRows.push({
-      label: `Estimated sales tax (${z || "ZIP"} @ ${br.taxRatePercent.toFixed(2)}%)`,
-      amount: `$${br.taxUsd.toFixed(2)}`,
-    });
+    invoiceRows.push({ label: `Estimated sales tax (${z || "ZIP"} @ ${br.taxRatePercent.toFixed(2)}%)`, amount: `$${br.taxUsd.toFixed(2)}` });
   } else if (z) {
-    invoiceRows.push({
-      label: `Estimated sales tax (no rate on file for ZIP ${z})`,
-      amount: "$0.00",
-    });
+    invoiceRows.push({ label: `Estimated sales tax (no rate on file for ZIP ${z})`, amount: "$0.00" });
   }
   return { invoiceRows, totalCents: br.totalCents };
 }

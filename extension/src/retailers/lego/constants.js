@@ -50,6 +50,13 @@ export const LEGO_GIFT_AI_DESIGN_KEY = "wrrapdLegoSelectedAiDesign";
 export const LEGO_GIFT_UPLOAD_NAME_KEY = "wrrapdLegoUploadedDesignName";
 export const LEGO_GIFT_UPLOAD_DATA_URL_KEY = "wrrapdLegoUploadedDesignDataUrl";
 
+/**
+ * sessionStorage: JSON array of per-item gift choices.
+ * Shape: Array<{ wrapPref, uploadName, uploadDataUrl, aiPrompt, aiDesign, flowers, flowerDesign, message }>
+ * Index matches the cart snapshot order.
+ */
+export const LEGO_ITEM_CHOICES_KEY = "wrrapdLegoItemChoices";
+
 /** sessionStorage: `1` after shipping-step delivery hint overlay dismissed */
 export const LEGO_SHIPPING_OVERLAY_SEEN_KEY = "wrrapdLegoShippingHintSeen";
 

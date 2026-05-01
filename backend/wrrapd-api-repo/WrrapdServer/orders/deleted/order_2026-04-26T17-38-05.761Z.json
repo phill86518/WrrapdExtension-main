@@ -1,0 +1,71 @@
+{
+  "orderNumber": "100-1a59021-6778201",
+  "timestamp": "2026-04-26T17:38:05.763Z",
+  "retailer": "Amazon",
+  "name_of_retailer": "Amazon",
+  "orderItems": [
+    {
+      "asin": "B0D83Q7MK7",
+      "title": "NEBURORA Metallic Gold Tissue Paper - 120 Sheets, 14 x 20 Inches, Bulk Gold Wrap Paper for Gift Bags, Packaging, Floral Filler, Crafts, Christmas, Birthday, Wedding Decor\nNEBURORA Metallic Gold Tissue",
+      "imageUrl": "https://m.media-amazon.com/images/I/61LweIoWGuL._AC_AA180_.jpg",
+      "checkbox_wrrapd": true,
+      "checkbox_flowers": true,
+      "selected_flower_design": "flowers-2",
+      "selected_wrapping_option": "ai",
+      "selected_ai_design": {
+        "title": "Mother's Day gift for my 80 year old mom that loves orchids. Botanical",
+        "description": "Soft floral and leaf geometry themed for Mother's Day gift for my 80 year old mom that loves orchids.. Elegant spacing, subtle contrast, seamless wrapping-paper texture.",
+        "gcsPath": "generated_patterns/for_print/100-1a91236-6778201-B0D83Q7MK7-00-1777224878827.png",
+        "gcsUrl": "https://storage.googleapis.com/wrrapd-media/generated_patterns/for_print/100-1a91236-6778201-B0D83Q7MK7-00-1777224878827.png?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=wrrapd-storage-access%40wrrapd-chrome-extension.iam.gserviceaccount.com%2F20260426%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20260426T173439Z&X-Goog-Expires=604800&X-Goog-SignedHeaders=host&X-Goog-Signature=6d380664fed8bfd48c436223d3d8816f0fe53364982bf6e215dda41bbfff0e9867da1f3bb905ecb61cc833145eb5ea3277f022f22da40d80b55d74f662f06465f81f8da23418e2b7d99b015ed537a4d7ef1eb1589874e04fc0bb5b97d0707ce0113c419f6e0cd178d4ddf5d32459e15f3f194e49431aa4259c84a7c2cc41e918fb1978c50f85762ff6c58b4d2fa6e7663eb9071df4c5ae27e2edf619b513e5d8aa8e0babd611d0f5bbfe513fba62286ef5c20ff378848b27628ddb5f0805300588db7a3e554756fa43eb3c3a2de2e75bee1b7e8ffd766e3a5d6ef6d2f6c0db732707099857d3ab2a79448779ea8db06e0c8966199629e28c9529f0dcb3f4c470",
+        "orderNumber": "100-1a91236-6778201"
+      },
+      "aiImageData": null,
+      "uploaded_design_path": null,
+      "occasion": "Mother's Day gift for my 80 year old mom that loves orchids.",
+      "finalShippingAddress": {
+        "name": "Vince LoTempio",
+        "street": "555 8th Street West",
+        "city": "Jacksonville",
+        "state": "FL",
+        "postalCode": "32209",
+        "country": "US"
+      },
+      "gifteeRecipientAddress": {
+        "name": "Roger Phillips",
+        "street": "8137 BROWARD COVE RD",
+        "city": "JACKSONVILLE",
+        "state": "FL",
+        "postalCode": "32218",
+        "country": "United States"
+      },
+      "deliveryInstructions": null,
+      "giftMessage": null,
+      "senderName": null,
+      "amazonDeliveryDaysSnapshot": [
+        "2026-04-27"
+      ],
+      "wrrapdAmazonGrouping": "latest",
+      "amazonDeliveryCalendarKey": "2026-04-27",
+      "wrrapdDeliveryCalendarKey": "2026-04-28",
+      "amazonDeliveryDate": "2026-04-27",
+      "deliveryDate": null,
+      "estimatedDeliveryDate": null,
+      "arrivalDate": null,
+      "shippingDate": null
+    }
+  ],
+  "payment": {
+    "id": "pi_3TQWc7CZ6tFiFwms0jwjT5n5",
+    "amount": 3006,
+    "status": "succeeded"
+  },
+  "customer": {
+    "email": "phill86518@gmail.com",
+    "phone": "+16467342326",
+    "emailNorm": "phill86518@gmail.com"
+  },
+  "customerEmailNorm": "phill86518@gmail.com",
+  "wrrapdCustomerId": "62f48d1b-e8cc-4fa5-9b0d-0813e0ddcd1f",
+  "claimedWpUserId": "129",
+  "claimedAt": "2026-04-26T17:45:01.764Z"
+}
