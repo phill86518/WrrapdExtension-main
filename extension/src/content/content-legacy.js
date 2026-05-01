@@ -5489,11 +5489,65 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
             wrrapdAddressCache = null;
 
             console.log("[selectWrrapdAddressFromDropdown] Opening dropdown...");
-            dropdownActivator.click();
-            
-            // OPTIMIZED: Use dynamic waiting for popover instead of fixed timeout
-            const popover = await waitForPopover(1500);
-                if (!popover) {
+
+            // ── Native <select> fast-path ─────────────────────────────────────
+            // Amazon's newer checkout sometimes renders per-item address pickers
+            // as plain <select> elements instead of custom JS popovers.
+            // Try that first since it is immune to isTrusted event filtering.
+            {
+                const container = dropdownActivator.closest(
+                    '.a-dropdown-container, [class*="lineitem-address"], [class*="address-dropdown"], .lineitem-address'
+                ) || dropdownActivator.parentElement;
+                if (container) {
+                    const sel = container.querySelector('select');
+                    if (sel) {
+                        console.log("[selectWrrapdAddressFromDropdown] Found native <select> — using direct value approach.");
+                        // Find the option whose text matches the Wrrapd hub address
+                        let best = null;
+                        for (const opt of sel.options) {
+                            const t = opt.textContent || opt.value || '';
+                            if (/wrrapd|26067|32226/i.test(t)) { best = opt; break; }
+                        }
+                        if (best) {
+                            sel.value = best.value;
+                            sel.dispatchEvent(new Event('change', { bubbles: true }));
+                            sel.dispatchEvent(new Event('input',  { bubbles: true }));
+                            await new Promise(r => setTimeout(r, 400));
+                            return true;
+                        }
+                    }
+                }
+            }
+
+            // ── Popover/custom-dropdown path ──────────────────────────────────
+            // Try a trusted-like MouseEvent first, then fall back to .click().
+            try {
+                dropdownActivator.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, view: window }));
+                dropdownActivator.dispatchEvent(new MouseEvent('mouseup',   { bubbles: true, cancelable: true, view: window }));
+                dropdownActivator.dispatchEvent(new MouseEvent('click',     { bubbles: true, cancelable: true, view: window }));
+            } catch (_) {
+                dropdownActivator.click();
+            }
+
+            // Wait up to 3 s for any recognised popover variant to appear
+            const popover = await waitForPopover(3000);
+            if (!popover) {
+                // Last-chance: maybe a <select> appeared after the click
+                const nearSel = dropdownActivator.closest('[class*="lineitem-address"], .a-dropdown-container')?.querySelector('select')
+                             || document.querySelector('select[name*="address"], select[id*="address"]');
+                if (nearSel) {
+                    let best = null;
+                    for (const opt of nearSel.options) {
+                        const t = opt.textContent || opt.value || '';
+                        if (/wrrapd|26067|32226/i.test(t)) { best = opt; break; }
+                    }
+                    if (best) {
+                        nearSel.value = best.value;
+                        nearSel.dispatchEvent(new Event('change', { bubbles: true }));
+                        await new Promise(r => setTimeout(r, 400));
+                        return true;
+                    }
+                }
                 console.warn("[selectWrrapdAddressFromDropdown] Popover did not appear.");
                 return false;
             }

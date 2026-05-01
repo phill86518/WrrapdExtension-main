@@ -179,8 +179,39 @@ export function waitForElement(selector, timeout = 2000, multiple = false) {
   });
 }
 
-export function waitForPopover(timeout = 2000) {
-  return waitForElement('.a-popover', timeout);
+/**
+ * Wait for ANY of several possible Amazon popover/dropdown selectors to appear.
+ * Amazon has changed the DOM structure of their popovers; this covers both old
+ * (.a-popover) and newer variants.
+ */
+export function waitForPopover(timeout = 3000) {
+  const POPOVER_SELECTORS = [
+    '.a-popover',
+    '.a-dropdown-content',
+    '[data-a-overlay]',
+    '[role="listbox"]',
+    '.a-overlay-wrapper',
+    '[class*="popover"]',
+    '[class*="dropdown-content"]',
+  ];
+  return new Promise((resolve) => {
+    // Already present?
+    for (const sel of POPOVER_SELECTORS) {
+      const el = document.querySelector(sel);
+      if (el && el.offsetParent !== null) return resolve(el);
+    }
+    const observer = new MutationObserver(() => {
+      for (const sel of POPOVER_SELECTORS) {
+        const el = document.querySelector(sel);
+        if (el && el.offsetParent !== null) {
+          observer.disconnect();
+          return resolve(el);
+        }
+      }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+    setTimeout(() => { observer.disconnect(); resolve(null); }, timeout);
+  });
 }
 
 /**
