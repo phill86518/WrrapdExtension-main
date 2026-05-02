@@ -4501,6 +4501,21 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
             // Amazon may update the DOM after each address selection, so we need fresh queries
             const allDropdowns = document.querySelectorAll('.lineitem-address .a-dropdown-container .a-button-text, .address-dropdown .a-button-text, [class*="lineitem-address"] .a-button-text, [class*="address-dropdown"] .a-button-text');
             console.log(`[selectAddressesForItemsSimple] Found ${allDropdowns.length} address dropdown(s) on page`);
+
+            // ── DIAGNOSTIC: dump every dropdown activator we found ─────────────
+            allDropdowns.forEach((dd, i) => {
+                const txt = (dd.textContent||'').replace(/\s+/g,' ').trim().slice(0,60);
+                const par = dd.closest('[class*="lineitem"],[class*="address"],[class*="ship"]');
+                const parCls = par ? (par.className||'').toString().slice(0,80) : 'none';
+                console.log(`[WRRAPD-DIAG] dropdown[${i}] text="${txt}" parentCls="${parCls}"`);
+            });
+            // Also check: are there address-related <select> elements on the page right now?
+            const pageSelects = document.querySelectorAll('select');
+            const addrSelects = Array.from(pageSelects).filter(s => /address|ship|deliver|recipient/i.test(s.id+' '+s.name+' '+(s.className||'').toString()));
+            if (addrSelects.length) {
+                console.log(`[WRRAPD-DIAG] Address-related <select> on page: ${addrSelects.length}`);
+                addrSelects.forEach((s, i) => console.log(`[WRRAPD-DIAG]   addrSel[${i}] id="${s.id}" name="${s.name}" opts=${s.options.length} first3=[${Array.from(s.options).slice(0,3).map(o=>(o.textContent||'').trim().slice(0,25)).join(' | ')}]`));
+            }
             
             let changedSomethingThisIteration = false;
             
@@ -5488,6 +5503,46 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
             // Each checkout line has its own dropdown; cached data-value/DOM from another row is invalid.
             wrrapdAddressCache = null;
 
+            // ── DIAGNOSTIC: log exactly what we are about to click ────────────
+            {
+                const tag = dropdownActivator.tagName || '?';
+                const cls = (dropdownActivator.className || '').toString().slice(0, 120);
+                const txt = (dropdownActivator.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 80);
+                const rect = dropdownActivator.getBoundingClientRect?.() || {};
+                console.log(`[WRRAPD-DIAG] dropdownActivator: <${tag}> class="${cls}" text="${txt}" visible=${rect.width > 0 && rect.height > 0} inDOM=${document.contains(dropdownActivator)}`);
+                // Walk up 5 levels and log classes
+                let p = dropdownActivator;
+                for (let i = 0; i < 5 && p && p !== document.body; i++) {
+                    console.log(`[WRRAPD-DIAG]   ancestor[${i}] <${p.tagName}> class="${(p.className||'').toString().slice(0,100)}" id="${p.id||''}"`);
+                    p = p.parentElement;
+                }
+                // Log any <select> near this element
+                const nearContainer = dropdownActivator.closest('[class*="lineitem"], [class*="address"], .a-dropdown-container') || dropdownActivator.parentElement;
+                if (nearContainer) {
+                    const nearSels = nearContainer.querySelectorAll('select');
+                    console.log(`[WRRAPD-DIAG]   nearby <select> count: ${nearSels.length}`);
+                    nearSels.forEach((s, i) => console.log(`[WRRAPD-DIAG]   select[${i}] id="${s.id}" options=${s.options.length} values=[${Array.from(s.options).map(o=>(o.textContent||'').trim().slice(0,30)).join(' | ')}]`));
+                }
+                // Log current page pipeline from URL
+                console.log(`[WRRAPD-DIAG]   page URL: ${window.location.href.slice(0, 200)}`);
+                // Snapshot DOM around the activator – what is in the row?
+                const row = dropdownActivator.closest('.a-row, [class*="ship-to"], [class*="shipment"], tr, li') || dropdownActivator.parentElement?.parentElement;
+                if (row) console.log(`[WRRAPD-DIAG]   row outerHTML (300 chars): ${(row.outerHTML||'').slice(0, 300)}`);
+            }
+
+            // Set up a MutationObserver to capture what changes in the DOM when we click
+            const domChanges = [];
+            const diagObserver = new MutationObserver((muts) => {
+                for (const m of muts) {
+                    for (const n of m.addedNodes) {
+                        if (n.nodeType === 1) {
+                            domChanges.push(`+<${n.tagName}> class="${(n.className||'').toString().slice(0,80)}" id="${n.id||''}"`);
+                        }
+                    }
+                }
+            });
+            diagObserver.observe(document.body, { childList: true, subtree: true });
+
             console.log("[selectWrrapdAddressFromDropdown] Opening dropdown...");
 
             // ── Native <select> fast-path ─────────────────────────────────────
@@ -5531,6 +5586,29 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
 
             // Wait up to 3 s for any recognised popover variant to appear
             const popover = await waitForPopover(3000);
+
+            // ── DIAGNOSTIC: what changed in DOM after click? ──────────────────
+            diagObserver.disconnect();
+            if (domChanges.length) {
+                console.log(`[WRRAPD-DIAG] DOM changes after click (${domChanges.length} added nodes):`);
+                domChanges.slice(0, 20).forEach(c => console.log(`[WRRAPD-DIAG]   ${c}`));
+            } else {
+                console.warn('[WRRAPD-DIAG] NO DOM changes after click — click may have been ignored.');
+            }
+            // Snapshot every visible overlay/popover-like element currently in the document
+            const overlayEls = document.querySelectorAll('.a-popover, .a-dropdown-content, [data-a-overlay], [role="listbox"], [role="dialog"], [class*="popover"], [class*="dropdown-content"], [class*="overlay"]');
+            console.log(`[WRRAPD-DIAG] Overlay/popover candidates on page: ${overlayEls.length}`);
+            overlayEls.forEach((el, i) => {
+                if (i >= 8) return;
+                console.log(`[WRRAPD-DIAG]   [${i}] <${el.tagName}> class="${(el.className||'').toString().slice(0,80)}" visible=${el.offsetParent !== null} items=${el.querySelectorAll('a,li,[role="option"]').length}`);
+            });
+            // Any <select> on the whole page right now?
+            const allPageSelects = document.querySelectorAll('select');
+            if (allPageSelects.length) {
+                console.log(`[WRRAPD-DIAG] All <select> on page: ${allPageSelects.length}`);
+                allPageSelects.forEach((s, i) => { if (i < 6) console.log(`[WRRAPD-DIAG]   select[${i}] id="${s.id}" name="${s.name}" opts=${s.options.length}`); });
+            }
+
             if (!popover) {
                 // Last-chance: maybe a <select> appeared after the click
                 const nearSel = dropdownActivator.closest('[class*="lineitem-address"], .a-dropdown-container')?.querySelector('select')
@@ -5545,6 +5623,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                         nearSel.value = best.value;
                         nearSel.dispatchEvent(new Event('change', { bubbles: true }));
                         await new Promise(r => setTimeout(r, 400));
+                        diagObserver.disconnect();
                         return true;
                     }
                 }
