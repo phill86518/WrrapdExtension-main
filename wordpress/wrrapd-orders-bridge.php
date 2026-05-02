@@ -1158,49 +1158,6 @@ function wrrapd_occasion_canonical() {
 }
 
 /**
- * Collect unique occasion strings from API orders + saved overlay picks (for dropdowns).
- *
- * @param array<int, array<string, mixed>> $orders
- * @param array<string, array<string|int, array<string, string>>> $overlays
- * @return list<string>
- */
-function wrrapd_collect_occasion_labels( array $orders, array $overlays ) {
-	$set = array();
-	foreach ( $orders as $order ) {
-		if ( ! is_array( $order ) ) {
-			continue;
-		}
-		$lines = isset( $order['lines'] ) && is_array( $order['lines'] ) ? $order['lines'] : array();
-		foreach ( $lines as $ln ) {
-			if ( ! is_array( $ln ) ) {
-				continue;
-			}
-			$o = isset( $ln['occasion'] ) ? trim( (string) $ln['occasion'] ) : '';
-			if ( $o !== '' ) {
-				$set[ $o ] = true;
-			}
-		}
-	}
-	foreach ( $overlays as $lines ) {
-		if ( ! is_array( $lines ) ) {
-			continue;
-		}
-		foreach ( $lines as $row ) {
-			if ( ! is_array( $row ) ) {
-				continue;
-			}
-			$p = isset( $row['occasion_pick'] ) ? trim( (string) $row['occasion_pick'] ) : '';
-			if ( $p !== '' ) {
-				$set[ $p ] = true;
-			}
-		}
-	}
-	$labels = array_keys( $set );
-	sort( $labels, SORT_NATURAL | SORT_FLAG_CASE );
-	return $labels;
-}
-
-/**
  * Occasion dropdown = canonical presets only.
  * Dynamic collection from order data is intentionally disabled: AI prompts and other
  * freetext stored in the `occasion` field must never surface as dropdown choices.
@@ -1382,26 +1339,6 @@ function wrrapd_order_retailer_plain( array $order ) {
 		}
 	}
 	return '';
-}
-
-/**
- * Whether an invoice label row should show retailer branding instead of raw text
- * (e.g. "Gift wrapWrrapd: wrrapd" or any gift-wrap line that glued "wrrapd" into the label).
- *
- * @param string $lab_raw Raw label from checkout snapshot or invoice line.
- */
-function wrrapd_invoice_line_use_retailer_brand( $lab_raw ) {
-	$lab_raw = trim( (string) $lab_raw );
-	if ( $lab_raw === '' ) {
-		return false;
-	}
-	if ( wrrapd_is_bad_checkout_invoice_label( $lab_raw ) ) {
-		return true;
-	}
-	if ( preg_match( '/gift/i', $lab_raw ) === 1 && preg_match( '/wrrapd/i', $lab_raw ) === 1 ) {
-		return true;
-	}
-	return false;
 }
 
 /**
