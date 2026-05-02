@@ -178,23 +178,21 @@ function computeLegoTotalBreakdown() {
 }
 
 function buildLegoPricingCart() {
-  const wrap = readWrapPref();
-  const flowers = readFlowersOn();
+  const allChoices = readLegoItemChoices();
   const zipForTax = gifteeZip5() || hubPostalForPricing();
   const tr =
     legoPreviewTaxPercent != null && Number.isFinite(legoPreviewTaxPercent) ? legoPreviewTaxPercent : 0;
+  const items = allChoices.length > 0
+    ? allChoices.map((ch) => ({
+        options: [{
+          checkbox_wrrapd: true,
+          selected_wrapping_option: ch.wrapPref || "wrrapd",
+          checkbox_flowers: ch.flowers === true,
+        }],
+      }))
+    : [{ options: [{ checkbox_wrrapd: true, selected_wrapping_option: "wrrapd", checkbox_flowers: false }] }];
   return {
-    items: [
-      {
-        options: [
-          {
-            checkbox_wrrapd: true,
-            selected_wrapping_option: wrap,
-            checkbox_flowers: flowers,
-          },
-        ],
-      },
-    ],
+    items,
     taxRatePercent: tr,
     postalCode: zipForTax,
     state: "",
@@ -627,11 +625,8 @@ function buildSummaryLinesAndTotal() {
   }
 
   const br = computeLegoTotalBreakdown();
-  const z = gifteeZip5();
   if (br.taxUsd > 0) {
-    invoiceRows.push({ label: `Estimated sales tax (${z || "ZIP"} @ ${br.taxRatePercent.toFixed(2)}%)`, amount: `$${br.taxUsd.toFixed(2)}` });
-  } else if (z) {
-    invoiceRows.push({ label: `Estimated sales tax (no rate on file for ZIP ${z})`, amount: "$0.00" });
+    invoiceRows.push({ label: "Sales tax", amount: `$${br.taxUsd.toFixed(2)}` });
   }
   return { invoiceRows, totalCents: br.totalCents };
 }
