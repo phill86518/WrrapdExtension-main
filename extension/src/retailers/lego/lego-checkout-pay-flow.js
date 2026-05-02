@@ -526,6 +526,7 @@ function buildLegoOrderDataForProcessPayment() {
       selected_ai_design: wrap === "ai" ? (ch.aiDesign || null) : null,
       uploaded_design_name: wrap === "upload" ? (ch.uploadName || null) : null,
       aiPrompt: wrap === "ai" ? (ch.aiPrompt || null) : null,
+      wrrapdHint: wrap === "wrrapd" ? (ch.wrrapdHint || null) : null,
       giftMessage: ch.message || null,
     };
   });

@@ -3329,8 +3329,13 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                                         <!-- Wrrapd Selection Option -->
                                         <label style="display: flex; align-items: start;">
                                             <input type="radio" name="wrapping-option-${i}" value="wrrapd" style="margin-right: 10px;" checked>
-                                            <div>
+                                            <div style="width: 100%;">
                                                 <div style="font-weight: bold;">Allow Wrrapd to choose the wrapping</div>
+                                                <div id="wrrapd-hint-wrap-${i}" style="display: flex; align-items: center; gap: 6px; margin-top: 6px;">
+                                                    <input type="text" id="wrrapd-hint-input-${i}"
+                                                        placeholder="Occasion or other details (optional)"
+                                                        style="flex: 1; padding: 6px 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;" />
+                                                </div>
                                             </div>
                                         </label>
 
@@ -3668,6 +3673,18 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                     const uploadBtn = document.getElementById(`upload-btn-${i}`);
                     const fileInput = document.getElementById(`design-upload-${i}`);
                     const aiOptions = document.getElementById(`ai-options-${i}`);
+                    const wrrapdHintWrap = document.getElementById(`wrrapd-hint-wrap-${i}`);
+                    const wrrapdHintInput = document.getElementById(`wrrapd-hint-input-${i}`);
+
+                    // Save hint text as user types
+                    if (wrrapdHintInput) {
+                        wrrapdHintInput.addEventListener('input', function() {
+                            subItem.wrrapdHint = this.value.trim();
+                            saveItemToLocalStorage(productObj);
+                        });
+                        // Restore saved value if any
+                        if (subItem.wrrapdHint) wrrapdHintInput.value = subItem.wrrapdHint;
+                    }
 
                     wrappingOptions.forEach(option => {
                         option.addEventListener('change', function() {
@@ -3675,6 +3692,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                             uploadBtn.style.display = 'none';
                             fileInput.style.display = 'none';
                             aiOptions.style.display = 'none';
+                            if (wrrapdHintWrap) wrrapdHintWrap.style.display = 'none';
 
                             // Update storage with selected wrapping option
                             subItem.selected_wrapping_option = this.value;
@@ -3686,6 +3704,8 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                                 fileInput.style.display = 'block';
                             } else if (this.value === 'ai') {
                                 aiOptions.style.display = 'block';
+                            } else if (this.value === 'wrrapd') {
+                                if (wrrapdHintWrap) wrrapdHintWrap.style.display = 'flex';
                             }
                         });
                     });

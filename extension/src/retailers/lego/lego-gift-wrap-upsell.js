@@ -210,15 +210,33 @@ export function openLegoGiftServiceModal() {
   let currentUploadDataUrl = "";
   let currentAiPrompt = "";
   let currentAiDesign = null;
+  let currentWrrapdHint = "";
+
+  // Hint field shown when "Allow Wrrapd to choose" is selected
+  const wrrapdHintWrap = document.createElement("div");
+  wrrapdHintWrap.style.cssText = "display:flex;align-items:center;gap:6px;margin:2px 0 6px 22px;";
+  const wrrapdHintInput = document.createElement("input");
+  wrrapdHintInput.type = "text";
+  wrrapdHintInput.placeholder = "Occasion or other details (optional)";
+  wrrapdHintInput.style.cssText = "flex:1;padding:5px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;color:#0f172a;";
+  wrrapdHintInput.addEventListener("input", () => { currentWrrapdHint = wrrapdHintInput.value; });
+  wrrapdHintWrap.appendChild(wrrapdHintInput);
 
   const wrapRadios = wrapChoices.map(({ value, label }) => {
     const lbl = document.createElement("label");
     lbl.style.cssText = "display:flex;align-items:center;gap:6px;cursor:pointer;margin-bottom:4px;font-size:14px;color:#0f172a;";
     const inp = document.createElement("input");
     inp.type = "radio"; inp.name = "wrrapd-lego-wrap"; inp.value = value;
-    inp.addEventListener("change", () => { if (inp.checked) { currentWrapPref = value; refreshWrapSubs(); } });
+    inp.addEventListener("change", () => {
+      if (inp.checked) {
+        currentWrapPref = value;
+        refreshWrapSubs();
+      }
+    });
     lbl.append(inp, document.createTextNode(label));
     wrapFieldset.appendChild(lbl);
+    // Insert hint field directly after the "wrrapd" option row
+    if (value === "wrrapd") wrapFieldset.appendChild(wrrapdHintWrap);
     return inp;
   });
 
@@ -301,6 +319,7 @@ export function openLegoGiftServiceModal() {
   aiWrap.append(aiHint, aiInput, aiGenBtn, aiResults);
 
   const refreshWrapSubs = () => {
+    wrrapdHintWrap.style.display = currentWrapPref === "wrrapd" ? "flex" : "none";
     uploadWrap.style.display = currentWrapPref === "upload" ? "block" : "none";
     aiWrap.style.display = currentWrapPref === "ai" ? "block" : "none";
   };
@@ -405,6 +424,8 @@ export function openLegoGiftServiceModal() {
     currentUploadDataUrl = ch.uploadDataUrl || "";
     currentAiPrompt = ch.aiPrompt || "";
     currentAiDesign = ch.aiDesign || null;
+    currentWrrapdHint = ch.wrrapdHint || "";
+    wrrapdHintInput.value = currentWrrapdHint;
     wrapRadios.forEach((r) => { r.checked = r.value === currentWrapPref; });
 
     // Restore upload preview
@@ -442,6 +463,7 @@ export function openLegoGiftServiceModal() {
   function captureCurrentChoices() {
     allChoices[currentIdx] = {
       wrapPref: currentWrapPref,
+      wrrapdHint: currentWrrapdHint,
       uploadName: currentUploadName,
       uploadDataUrl: currentUploadDataUrl,
       aiPrompt: currentAiPrompt,

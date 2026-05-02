@@ -788,6 +788,7 @@ function normalizeOrderItems(orderData) {
                 deliveryInstructions: option.deliveryInstructions || null,
                 giftMessage: option.giftMessage || null,
                 senderName: option.senderName || null,
+                wrrapdHint: option.wrrapdHint || item.wrrapdHint || null,
                 amazonDeliveryDate: option.amazonDeliveryDate || item.amazonDeliveryDate || null,
                 deliveryDate: option.deliveryDate || item.deliveryDate || null,
                 estimatedDeliveryDate: option.estimatedDeliveryDate || item.estimatedDeliveryDate || null,
