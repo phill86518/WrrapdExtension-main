@@ -24,7 +24,14 @@
     "*://*.amazon.com.br/*",
     "*://*.amazon.mx/*",
     "*://*.target.com/*",
-    "*://*.lego.com/*"
+    "*://*.lego.com/*",
+    "*://*.ulta.com/*",
+    "*://*.walmart.com/*",
+    "*://*.nordstrom.com/*",
+    "*://*.kohls.com/*",
+    "*://*.sephora.com/*",
+    "*://*.bestbuy.com/*",
+    "*://*.etsy.com/*"
   ],
   "declarative_net_request": {
     "rule_resources": [
@@ -50,12 +57,58 @@
       "matches": ["*://*.lego.com/*"],
       "js": ["content-lego.js"],
       "run_at": "document_end"
+    },
+    {
+      "matches": ["*://*.ulta.com/*"],
+      "js": ["content-ulta.js"],
+      "run_at": "document_end"
+    },
+    {
+      "matches": ["*://*.walmart.com/*"],
+      "js": ["content-walmart.js"],
+      "run_at": "document_end"
+    },
+    {
+      "matches": ["*://*.nordstrom.com/*"],
+      "js": ["content-nordstrom.js"],
+      "run_at": "document_end"
+    },
+    {
+      "matches": ["*://*.kohls.com/*"],
+      "js": ["content-kohls.js"],
+      "run_at": "document_end"
+    },
+    {
+      "matches": ["*://*.sephora.com/*"],
+      "js": ["content-sephora.js"],
+      "run_at": "document_end"
+    },
+    {
+      "matches": ["*://*.bestbuy.com/*"],
+      "js": ["content-bestbuy.js"],
+      "run_at": "document_end"
+    },
+    {
+      "matches": ["*://*.etsy.com/*"],
+      "js": ["content-etsy.js"],
+      "run_at": "document_end"
     }
   ],
   "web_accessible_resources": [
     {
       "resources": ["assets/*"],
-      "matches": ["*://www.amazon.com/*", "*://*.target.com/*", "*://*.lego.com/*"]
+      "matches": [
+        "*://www.amazon.com/*",
+        "*://*.target.com/*",
+        "*://*.lego.com/*",
+        "*://*.ulta.com/*",
+        "*://*.walmart.com/*",
+        "*://*.nordstrom.com/*",
+        "*://*.kohls.com/*",
+        "*://*.sephora.com/*",
+        "*://*.bestbuy.com/*",
+        "*://*.etsy.com/*"
+      ]
     }
   ],
   "icons": {

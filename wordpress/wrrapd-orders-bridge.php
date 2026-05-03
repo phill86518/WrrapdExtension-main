@@ -315,11 +315,18 @@ function wrrapd_output_retailer_wheel_strip() {
 	$brands = wrrapd_home_retailer_wheel_brands();
 	echo '<style id="wrrapd-retailer-wheels-css">';
 	echo '@keyframes wrrapd-wheel-in{0%{transform:translateX(min(38vw,240px)) rotate(-540deg);opacity:0}100%{transform:translateX(0) rotate(0);opacity:1}}';
-	echo '.wrrapd-retailer-wheels{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:clamp(.75rem,3vw,1.35rem);padding:.35rem 1rem .55rem;max-width:100%;margin:0 auto;box-sizing:border-box;}';
-	echo '.wrrapd-retailer-wheels__item{flex:0 0 auto;width:100px;height:100px;border-radius:50%;overflow:hidden;box-shadow:0 2px 10px rgba(15,23,42,.12),inset 0 0 0 2px rgba(255,255,255,.75);background:#fff;animation:wrrapd-wheel-in 1.15s cubic-bezier(.2,.85,.15,1) forwards;opacity:0;text-decoration:none;color:inherit;display:block;outline-offset:3px;}';
+	echo '#wrrapd-retailer-wheels-row{width:100%;box-sizing:border-box;background:linear-gradient(180deg,rgba(248,250,252,.97) 0%,rgba(241,245,249,.98) 100%);border-bottom:1px solid rgba(15,23,42,.08);}';
+	echo '#wrrapd-retailer-wheels-row .wrrapd-retailer-wheels{display:flex;flex-direction:row;flex-wrap:nowrap;justify-content:center;align-items:flex-start;gap:clamp(.5rem,1.8vw,1.1rem);padding:.65rem clamp(.5rem,2vw,1.25rem) .85rem;max-width:100%;margin:0 auto;box-sizing:border-box;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:thin;}';
+	echo '.wrrapd-retailer-wheels__item{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:.32rem;max-width:5.75rem;text-decoration:none;color:#0f172a;outline-offset:4px;animation:wrrapd-wheel-in 1.15s cubic-bezier(.2,.85,.15,1) forwards;opacity:0;}';
 	echo '.wrrapd-retailer-wheels__item:focus-visible{outline:2px solid #f5c518;}';
-	echo '.wrrapd-retailer-wheels__item img{display:block;width:100%;height:100%;object-fit:cover;}';
+	echo '.wrrapd-retailer-wheels__badge{width:72px;height:72px;border-radius:50%;overflow:hidden;box-shadow:0 2px 10px rgba(15,23,42,.12),inset 0 0 0 2px rgba(255,255,255,.75);background:#fff;flex-shrink:0;}';
+	echo '@media(min-width:640px){.wrrapd-retailer-wheels__badge{width:88px;height:88px}}';
+	echo '@media(min-width:900px){.wrrapd-retailer-wheels__badge{width:100px;height:100px}}';
+	echo '.wrrapd-retailer-wheels__badge img{display:block;width:100%;height:100%;object-fit:cover;}';
+	echo '.wrrapd-retailer-wheels__title{font-size:.68rem;line-height:1.15;text-align:center;font-weight:600;color:#334155;letter-spacing:.01em;}';
+	echo '@media(min-width:640px){.wrrapd-retailer-wheels__title{font-size:.74rem}}';
 	echo '</style>';
+	echo '<div id="wrrapd-retailer-wheels-row" class="wrrapd-retailer-wheels-row">';
 	echo '<div id="wrrapd-retailer-wheels-strip" class="wrrapd-retailer-wheels" role="region" aria-label="' . esc_attr__( 'Shop at partner stores', 'wrrapd' ) . '">';
 	$idx = 0;
 	foreach ( $brands as $b ) {
@@ -327,20 +334,18 @@ function wrrapd_output_retailer_wheel_strip() {
 		$go    = esc_url( home_url( '/go/' . rawurlencode( $b['slug'] ) . '/' ) );
 		$src   = esc_url( wrrapd_mu_logo_url_for_slug( $b['slug'], $b['domain'] ) );
 		$fb    = 'https://www.google.com/s2/favicons?domain=' . rawurlencode( $b['domain'] ) . '&sz=128';
-		echo '<a class="wrrapd-retailer-wheels__item" href="' . $go . '" rel="sponsored noopener" style="animation-delay:' . esc_attr( (string) $delay ) . 's" aria-label="' . esc_attr(
-			sprintf(
-				/* translators: %s: store name */
-				__( 'Continue shopping at %s', 'wrrapd' ),
-				$b['label']
-			)
-		) . '">';
-		echo '<img src="' . $src . '" data-fallback="' . esc_url( $fb ) . '" width="100" height="100" alt="" loading="lazy" decoding="async" onerror="var u=this.dataset.fallback;if(u){this.onerror=null;this.src=u;}" />';
+		$label = $b['label'];
+		echo '<a class="wrrapd-retailer-wheels__item" href="' . $go . '" rel="sponsored noopener" style="animation-delay:' . esc_attr( (string) $delay ) . 's">';
+		echo '<span class="wrrapd-retailer-wheels__badge">';
+		echo '<img src="' . $src . '" data-fallback="' . esc_url( $fb ) . '" width="100" height="100" alt="' . esc_attr( $label ) . '" loading="lazy" decoding="async" onerror="var u=this.dataset.fallback;if(u){this.onerror=null;this.src=u;}" />';
+		echo '</span>';
+		echo '<span class="wrrapd-retailer-wheels__title">' . esc_html( $label ) . '</span>';
 		echo '</a>';
 		++$idx;
 	}
-	echo '</div>';
+	echo '</div></div>';
 	echo '<script>';
-	echo 'document.addEventListener("DOMContentLoaded",function(){var s=document.getElementById("wrrapd-retailer-wheels-strip");if(!s)return;var nodes=document.querySelectorAll("h1,h2,h3,p,.elementor-heading-title");var a=null;for(var i=0;i<nodes.length;i++){var el=nodes[i],t=(el.textContent||"");if(/gift[-\s]?wrapp/i.test(t)&&t.length<500){a=el;break;}}if(a&&a.parentNode){a.parentNode.insertBefore(s,a);}});';
+	echo 'document.addEventListener("DOMContentLoaded",function(){var row=document.getElementById("wrrapd-retailer-wheels-row");if(!row||!row.parentNode)return;var h=document.querySelector("[data-elementor-type=\\"header\\"]")||document.querySelector("body>header")||document.getElementById("masthead")||document.querySelector("header.site-header")||document.querySelector("header");if(h&&h.parentNode){h.insertAdjacentElement("afterend",row);}});';
 	echo '</script>';
 }
 

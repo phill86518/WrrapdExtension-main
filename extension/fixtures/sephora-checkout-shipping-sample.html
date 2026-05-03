@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<!--
+  Wrrapd dev fixture: Sephora frictionless checkout — shipping step (Checkout/FSCheckout).
+  Sanitized excerpt for DOM / selector work. Do not paste full "View source" with
+  Sephora.configurationSettings or session tokens into the repo.
+
+  Live path pattern: https://www.sephora.com/checkout/shipping
+  Template (from prod): Checkout/FSCheckout
+
+  Stable hooks (examples):
+    [data-at="first_name_input"]      #firstName
+    [data-at="last_name_input"]       #lastName
+    [data-at="phone_number_input"]    #phone
+    [data-at="street_address_input"]  #avs_input
+    [data-at="address_line_2"]        #address2
+    [data-at="zip_postal_code_input"] #postalCode
+    [data-at="save_continue_btn"]
+    [data-at="place_order_btn"]
+    [data-at="merch_subtotal_label"], [data-at="bsk_total_merch"], [data-at="bsk_total_ship"],
+    [data-at="bsk_total_tax"], [data-at="bsk_total_cc"], [data-at="total_label"]
+    [data-at="item_picture"] — product image URLs often contain /sku/sNNNNNNN-main-zoom.jpg
+-->
+<html lang="en" class="css-r6sydd no-touch isRecognized">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sephora</title>
+  </head>
+  <body>
+    <div
+      rootid="ErrorBoundary(ReduxProvider(EmotionGlobalProvider(AfterEventsRendering(FrictionlessCheckoutPage))))"
+      style="display: contents"
+    >
+      <div
+        data-comp="FrictionlessCheckoutPage FrictionlessCheckout FrictionlessCheckoutPage FrictionlessCheckout BaseComponent "
+        class="css-1j95292 e15t7owz0"
+      >
+        <div data-comp="Header Header BaseComponent " class="css-176hug1 e15t7owz0">
+          <div class="css-j9wzwt e15t7owz0" data-comp="BaseComponent ">
+            <a href="/" class="css-4zleql"
+              ><img src="/img/ufe/sephora.svg" alt="Sephora" data-at="sephora_logo_ref" class="css-4lh3zs e15t7owz0"
+            /></a>
+          </div>
+        </div>
+
+        <div class="css-j9wzwt e15t7owz0" data-comp="BaseComponent ">
+          <h1 class="css-1mr3mqj e15t7owz0" data-comp="BaseComponent ">Shipping and Delivery Checkout</h1>
+
+          <div data-comp="CheckoutLayout CheckoutLayout BaseComponent " class="css-3x71hy e15t7owz0">
+            <div class="css-zszak3 e15t7owz0" data-comp="BaseComponent ">
+              <!-- 1. Deliver To -->
+              <div
+                role="region"
+                data-comp="DeliverTo LayoutCard DeliverTo LayoutCard BaseComponent "
+                class="css-1ua4a61 e15t7owz0"
+                style="border: 2px solid rgb(0, 0, 0)"
+              >
+                <div id="Deliver_To" comps="ScrollAnchor" data-comp="ScrollAnchor " class="css-jqly5e"></div>
+                <div class="css-nyvi7f e15t7owz0" data-comp="BaseComponent ">
+                  <div class="css-1mwphgn e15t7owz0" data-comp="BaseComponent ">
+                    <div class="css-1fvnn8 e15t7owz0" data-comp="BaseComponent ">
+                      <h2 class="css-lejgin e15t7owz0" data-comp="BaseComponent ">1. Deliver To</h2>
+                    </div>
+                  </div>
+                </div>
+                <div comps="Divider" data-comp="Divider " class="css-kw2yry e15t7owz0"></div>
+                <div data-at="ship_addr_line_1" class="css-1c303y3 e15t7owz0" data-comp="BaseComponent ">
+                  <div id="ship_address_form">
+                    <div data-comp="RwdAddressForm ">
+                      <div comps="[object Object]" data-comp="TextInput " class="css-15k0iqi">
+                        <input
+                          data-at="first_name_input"
+                          type="text"
+                          required=""
+                          id="firstName"
+                          name="firstName"
+                          class="css-8fznj7"
+                          value=""
+                        /><label for="firstName" class="css-235ge5">First Name</label>
+                      </div>
+                      <div comps="[object Object]" data-comp="TextInput " class="css-15k0iqi">
+                        <input
+                          data-at="last_name_input"
+                          type="text"
+                          required=""
+                          id="lastName"
+                          name="lastName"
+                          class="css-8fznj7"
+                          value=""
+                        /><label for="lastName" class="css-235ge5">Last Name</label>
+                      </div>
+                      <div comps="[object Object]" data-comp="TextInput " class="css-15k0iqi">
+                        <input
+                          data-at="phone_number_input"
+                          type="tel"
+                          required=""
+                          id="phone"
+                          name="phone"
+                          class="css-8fznj7"
+                          value=""
+                        /><label for="phone" class="css-235ge5">Phone (for delivery questions)</label>
+                      </div>
+                      <div comps="[object Object]" data-comp="TextInput " class="css-15k0iqi">
+                        <input
+                          data-at="street_address_input"
+                          type="text"
+                          required=""
+                          id="avs_input"
+                          name="address1"
+                          class="css-8fznj7"
+                          value=""
+                        /><label for="avs_input" class="css-235ge5">Street Address</label>
+                      </div>
+                      <div comps="[object Object]" data-comp="TextInput " class="css-15k0iqi">
+                        <input
+                          data-at="address_line_2"
+                          type="text"
+                          id="address2"
+                          name="address2"
+                          class="css-8fznj7"
+                          value=""
+                        /><label for="address2" class="css-235ge5">Door buzzer, building code, Apt#...etc (Optional)</label>
+                      </div>
+                      <div comps="[object Object]" data-comp="TextInput " class="css-15k0iqi">
+                        <input
+                          data-at="zip_postal_code_input"
+                          type="tel"
+                          required=""
+                          id="postalCode"
+                          name="postalCode"
+                          class="css-8fznj7"
+                          value=""
+                        /><label for="postalCode" class="css-235ge5">ZIP/Postal Code</label>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="css-7s8z45 e15t7owz0" data-comp="BaseComponent ">
+                  <button data-at="save_continue_btn" class="css-187cuo2 e15t7owz0" type="button" data-comp="BaseComponent ">
+                    Save &amp; Continue
+                  </button>
+                </div>
+              </div>
+
+              <!-- Add a gift message (expand control) -->
+              <div data-comp="AddAGiftMessage AddAGiftMessage BaseComponent " class="css-qzjpvf e15t7owz0">
+                <button type="button" class="css-pt7bcr e15t7owz0" data-comp="BaseComponent ">
+                  <span class="css-1b9sf1t e15t7owz0" data-comp="BaseComponent ">Add a Gift Message</span>
+                </button>
+              </div>
+
+              <!-- 2. Shipping Method (collapsed summary example) -->
+              <div
+                aria-label="Shipping Method"
+                role="region"
+                data-comp="ShippingMethods LayoutCard ShippingMethods LayoutCard BaseComponent "
+                class="css-1ffewct e15t7owz0"
+              >
+                <h2 class="css-lejgin e15t7owz0" data-comp="BaseComponent ">2. Shipping Method</h2>
+                <div data-comp="CheckoutItemsList CheckoutItemsList BaseComponent " class="css-1r3r332 e15t7owz0">
+                  <div data-at="item_picture" data-comp="ProductImage ProductImage BaseComponent " class="css-dua61r e15t7owz0">
+                    <picture class="css-yq9732">
+                      <img
+                        src="https://www.sephora.com/productimages/sku/s2946333-main-zoom.jpg?pb=sephora-favorites-full-size&amp;imwidth=48"
+                        alt="Sample line item"
+                        class="css-tl1r8e e15t7owz0"
+                        data-comp="Image Image BaseComponent "
+                      />
+                    </picture>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 3. Payment (stub) -->
+              <div role="region" data-comp="Payment LayoutCard Payment LayoutCard BaseComponent " class="css-1ffewct e15t7owz0">
+                <h2 class="css-lejgin e15t7owz0" data-comp="BaseComponent ">3. Payment</h2>
+              </div>
+
+              <!-- Order summary -->
+              <div aria-label="Order Cost Summary" role="region" data-comp="CostSummary CostSummary BaseComponent " class="css-1nmvd17 e15t7owz0">
+                <div data-comp="CostSummaryBreakdown CostSummaryBreakdown BaseComponent " class="css-15pxgma e15t7owz0">
+                  <div role="row" aria-label="Subtotal: $98.00" class="css-alfb73 e15t7owz0" data-comp="BaseComponent ">
+                    <span data-at="merch_subtotal_label" role="cell">Subtotal</span>
+                    <span data-at="bsk_total_merch" role="cell">$98.00</span>
+                  </div>
+                  <div role="row" aria-label="Shipping: FREE" class="css-alfb73 e15t7owz0" data-comp="BaseComponent ">
+                    <button data-at="shippingHandlingLink" type="button" class="css-zhhyy5 e15t7owz0" data-comp="BaseComponent ">
+                      Shipping
+                    </button>
+                    <span data-at="bsk_total_ship" role="cell" class="css-w7qhwa e15t7owz0" data-comp="BaseComponent ">FREE</span>
+                  </div>
+                  <div aria-label="Estimated Tax" class="css-alfb73 e15t7owz0" data-comp="BaseComponent ">
+                    <span
+                      ><button data-at="tax_btn" aria-label="Estimated Tax" type="button" class="css-zhhyy5 e15t7owz0" data-comp="BaseComponent ">
+                        Estimated Tax
+                      </button></span
+                    >
+                    <span data-at="bsk_total_tax" class="css-1d7qtkv e15t7owz0" data-comp="BaseComponent ">TBD</span>
+                  </div>
+                </div>
+                <section aria-label="Order total and place order section" role="region" data-comp="EstimatedTotalSection ">
+                  <h4 role="row" aria-label="Estimated Total: $98.00" class="css-1pffvum e15t7owz0" data-comp="BaseComponent ">
+                    <span data-at="total_label" role="cell" class="css-1d7qtkv e15t7owz0" data-comp="BaseComponent ">Estimated Total</span>
+                    <span role="cell" class="css-ibum45 e15t7owz0" data-comp="BaseComponent ">
+                      <span data-at="bsk_total_cc" aria-label="Final total: $98.00" class="css-1d7qtkv e15t7owz0" data-comp="BaseComponent ">$98.00</span>
+                    </span>
+                  </h4>
+                  <button
+                    data-at="place_order_btn"
+                    aria-label="Place order for  $98.00"
+                    type="button"
+                    class="css-7zlhzg e15t7owz0"
+                    data-comp="BaseComponent "
+                  >
+                    Place Order
+                  </button>
+                </section>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div data-comp="CompactFooter CompactFooter BaseComponent " class="css-1er8y9w e15t7owz0">
+          <footer class="css-114foy7 e15t7owz0" data-comp="BaseComponent ">
+            <p class="css-7ncfqq e15t7owz0" data-comp="BaseComponent ">
+              © 2026 Sephora USA, Inc. All rights reserved.
+            </p>
+          </footer>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
