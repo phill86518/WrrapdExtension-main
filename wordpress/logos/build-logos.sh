@@ -33,10 +33,22 @@ fetch_src amazon amazon.com
 fetch_src target target.com
 fetch_src ulta ulta.com
 fetch_src lego lego.com
+fetch_src walmart walmart.com
+fetch_src nordstrom nordstrom.com
+fetch_src kohls kohls.com
+fetch_src sephora sephora.com
+fetch_src etsy etsy.com
+fetch_src bestbuy bestbuy.com
 
 to_circle amazon
 to_circle target
 to_circle ulta
 to_circle lego
+to_circle walmart
+to_circle nordstrom
+to_circle kohls
+to_circle sephora
+to_circle etsy
+to_circle bestbuy
 
 ls -la *.png

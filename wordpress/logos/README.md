@@ -12,6 +12,6 @@ chmod +x build-logos.sh to_circle.py
 ./build-logos.sh
 ```
 
-The bridge uses `amazon.png`, `target.png`, `ulta.png`, `lego.png` when present; otherwise it falls back to Google’s favicon CDN in the invoice UI and wheel strip (`data-fallback` on wheel images).
+The bridge uses `*.png` for these slugs when present: `amazon`, `target`, `ulta`, `lego`, `walmart`, `nordstrom`, `kohls`, `sephora`, `etsy`, `bestbuy`. Otherwise it falls back to Google’s favicon CDN in the invoice UI and wheel strip (`data-fallback` on wheel images).
 
 Trademark notice: logos are trademarks of their owners. Use only in accordance with each brand’s guidelines.

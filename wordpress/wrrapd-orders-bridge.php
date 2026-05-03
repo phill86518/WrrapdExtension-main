@@ -123,6 +123,118 @@ function wrrapd_mu_logo_url_for_slug( $slug, $favicon_domain ) {
 }
 
 /**
+ * Allowed slugs for /go/{slug}/ affiliate hop (must match wheel + wp-config constants).
+ *
+ * @return list<string>
+ */
+function wrrapd_affiliate_go_allowed_slugs() {
+	return array(
+		'ulta',
+		'lego',
+		'target',
+		'amazon',
+		'walmart',
+		'nordstrom',
+		'kohls',
+		'sephora',
+		'etsy',
+		'bestbuy',
+	);
+}
+
+/**
+ * wp-config constant name for optional Impact / network deep link (HTTPS URL only).
+ *
+ * @param string $slug Lowercase slug.
+ */
+function wrrapd_affiliate_go_constant_for_slug( $slug ) {
+	$map = array(
+		'ulta'      => 'WRRAPD_AFFILIATE_REDIRECT_ULTA',
+		'lego'      => 'WRRAPD_AFFILIATE_REDIRECT_LEGO',
+		'target'    => 'WRRAPD_AFFILIATE_REDIRECT_TARGET',
+		'amazon'    => 'WRRAPD_AFFILIATE_REDIRECT_AMAZON',
+		'walmart'   => 'WRRAPD_AFFILIATE_REDIRECT_WALMART',
+		'nordstrom' => 'WRRAPD_AFFILIATE_REDIRECT_NORDSTROM',
+		'kohls'     => 'WRRAPD_AFFILIATE_REDIRECT_KOHLS',
+		'sephora'   => 'WRRAPD_AFFILIATE_REDIRECT_SEPHORA',
+		'etsy'      => 'WRRAPD_AFFILIATE_REDIRECT_ETSY',
+		'bestbuy'   => 'WRRAPD_AFFILIATE_REDIRECT_BESTBUY',
+	);
+	$slug = strtolower( (string) $slug );
+	return isset( $map[ $slug ] ) ? $map[ $slug ] : null;
+}
+
+/**
+ * Public storefront URL when no affiliate constant is set (honest fallback, no cookie injection).
+ *
+ * @param string $slug Lowercase slug.
+ */
+function wrrapd_affiliate_fallback_public_url( $slug ) {
+	$map = array(
+		'ulta'      => 'https://www.ulta.com/',
+		'lego'      => 'https://www.lego.com/',
+		'target'    => 'https://www.target.com/',
+		'amazon'    => 'https://www.amazon.com/',
+		'walmart'   => 'https://www.walmart.com/',
+		'nordstrom' => 'https://www.nordstrom.com/',
+		'kohls'     => 'https://www.kohls.com/',
+		'sephora'   => 'https://www.sephora.com/',
+		'etsy'      => 'https://www.etsy.com/',
+		'bestbuy'   => 'https://www.bestbuy.com/',
+	);
+	$slug = strtolower( (string) $slug );
+	return isset( $map[ $slug ] ) ? $map[ $slug ] : home_url( '/' );
+}
+
+/**
+ * 302 from /go/{slug}/ to Impact (or other) tracking URL from wp-config, else retailer homepage.
+ * Affiliate credit is established by the network redirect + retailer cookie — not by setting cookies from wrrapd.com.
+ */
+function wrrapd_handle_go_affiliate_redirect() {
+	if ( is_admin() ) {
+		return;
+	}
+	$req = isset( $_SERVER['REQUEST_URI'] ) ? (string) wp_unslash( $_SERVER['REQUEST_URI'] ) : '';
+	$path = wp_parse_url( $req, PHP_URL_PATH );
+	$path = is_string( $path ) ? $path : '';
+	$home_path = wp_parse_url( home_url( '/' ), PHP_URL_PATH );
+	$home_path = is_string( $home_path ) ? untrailingslashit( $home_path ) : '';
+	if ( $home_path !== '' && $path !== '' && strpos( $path, $home_path ) === 0 ) {
+		$path = substr( $path, strlen( $home_path ) );
+		$path = '/' . ltrim( (string) $path, '/' );
+	}
+	if ( $path === '' ) {
+		return;
+	}
+	if ( preg_match( '#^/go/([a-z0-9-]+)/?$#i', $path, $m ) !== 1 ) {
+		return;
+	}
+	$slug = strtolower( (string) $m[1] );
+	if ( ! in_array( $slug, wrrapd_affiliate_go_allowed_slugs(), true ) ) {
+		status_header( 404 );
+		nocache_headers();
+		echo esc_html__( 'Not found.', 'wrrapd' );
+		exit;
+	}
+	$dest = '';
+	$cname = wrrapd_affiliate_go_constant_for_slug( $slug );
+	if ( $cname && defined( $cname ) ) {
+		$dest = trim( (string) constant( $cname ) );
+	}
+	if ( $dest === '' || ! preg_match( '#^https://#i', $dest ) ) {
+		$dest = wrrapd_affiliate_fallback_public_url( $slug );
+	}
+	$dest = esc_url_raw( $dest );
+	if ( $dest === '' ) {
+		$dest = esc_url_raw( wrrapd_affiliate_fallback_public_url( $slug ) );
+	}
+	wp_redirect( $dest, 302 );
+	exit;
+}
+
+add_action( 'template_redirect', 'wrrapd_handle_go_affiliate_redirect', 0 );
+
+/**
  * Map plain retailer name from order JSON to slug, label, and favicon domain.
  *
  * @param string $plain Raw retailer field.
@@ -166,7 +278,27 @@ function wrrapd_retailer_row_from_plain( $plain ) {
 }
 
 /**
- * Home page: retailer wheels (Ulta, LEGO, Target, Amazon) — JS moves the strip above “Gift-wrapping…” when that heading exists.
+ * Retailers shown on the home-page wheel (logos from mu-plugins/logos/{slug}.png when present, else favicon).
+ *
+ * @return list<array{slug:string,label:string,domain:string}>
+ */
+function wrrapd_home_retailer_wheel_brands() {
+	return array(
+		array( 'slug' => 'ulta', 'label' => __( 'Ulta', 'wrrapd' ), 'domain' => 'ulta.com' ),
+		array( 'slug' => 'lego', 'label' => __( 'LEGO', 'wrrapd' ), 'domain' => 'lego.com' ),
+		array( 'slug' => 'target', 'label' => __( 'Target', 'wrrapd' ), 'domain' => 'target.com' ),
+		array( 'slug' => 'amazon', 'label' => __( 'Amazon', 'wrrapd' ), 'domain' => 'amazon.com' ),
+		array( 'slug' => 'walmart', 'label' => __( 'Walmart', 'wrrapd' ), 'domain' => 'walmart.com' ),
+		array( 'slug' => 'nordstrom', 'label' => __( 'Nordstrom', 'wrrapd' ), 'domain' => 'nordstrom.com' ),
+		array( 'slug' => 'kohls', 'label' => __( 'Kohl’s', 'wrrapd' ), 'domain' => 'kohls.com' ),
+		array( 'slug' => 'sephora', 'label' => __( 'Sephora', 'wrrapd' ), 'domain' => 'sephora.com' ),
+		array( 'slug' => 'etsy', 'label' => __( 'Etsy', 'wrrapd' ), 'domain' => 'etsy.com' ),
+		array( 'slug' => 'bestbuy', 'label' => __( 'Best Buy', 'wrrapd' ), 'domain' => 'bestbuy.com' ),
+	);
+}
+
+/**
+ * Home page: retailer wheels — each logo links to /go/{slug}/ (302 to Impact URL from wp-config when set).
  */
 function wrrapd_output_retailer_wheel_strip() {
 	static $printed = false;
@@ -180,24 +312,31 @@ function wrrapd_output_retailer_wheel_strip() {
 		return;
 	}
 	$printed = true;
-	$brands = array(
-		array( 'slug' => 'ulta', 'label' => __( 'Ulta', 'wrrapd' ), 'domain' => 'ulta.com' ),
-		array( 'slug' => 'lego', 'label' => __( 'LEGO', 'wrrapd' ), 'domain' => 'lego.com' ),
-		array( 'slug' => 'target', 'label' => __( 'Target', 'wrrapd' ), 'domain' => 'target.com' ),
-		array( 'slug' => 'amazon', 'label' => __( 'Amazon', 'wrrapd' ), 'domain' => 'amazon.com' ),
-	);
+	$brands = wrrapd_home_retailer_wheel_brands();
 	echo '<style id="wrrapd-retailer-wheels-css">';
 	echo '@keyframes wrrapd-wheel-in{0%{transform:translateX(min(38vw,240px)) rotate(-540deg);opacity:0}100%{transform:translateX(0) rotate(0);opacity:1}}';
 	echo '.wrrapd-retailer-wheels{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:clamp(.75rem,3vw,1.35rem);padding:.35rem 1rem .55rem;max-width:100%;margin:0 auto;box-sizing:border-box;}';
-	echo '.wrrapd-retailer-wheels__item{flex:0 0 auto;width:100px;height:100px;border-radius:50%;overflow:hidden;box-shadow:0 2px 10px rgba(15,23,42,.12),inset 0 0 0 2px rgba(255,255,255,.75);background:#fff;animation:wrrapd-wheel-in 1.15s cubic-bezier(.2,.85,.15,1) forwards;opacity:0;}';
-	echo '.wrrapd-retailer-wheels__item:nth-child(1){animation-delay:.06s}.wrrapd-retailer-wheels__item:nth-child(2){animation-delay:.2s}.wrrapd-retailer-wheels__item:nth-child(3){animation-delay:.34s}.wrrapd-retailer-wheels__item:nth-child(4){animation-delay:.48s}';
+	echo '.wrrapd-retailer-wheels__item{flex:0 0 auto;width:100px;height:100px;border-radius:50%;overflow:hidden;box-shadow:0 2px 10px rgba(15,23,42,.12),inset 0 0 0 2px rgba(255,255,255,.75);background:#fff;animation:wrrapd-wheel-in 1.15s cubic-bezier(.2,.85,.15,1) forwards;opacity:0;text-decoration:none;color:inherit;display:block;outline-offset:3px;}';
+	echo '.wrrapd-retailer-wheels__item:focus-visible{outline:2px solid #f5c518;}';
 	echo '.wrrapd-retailer-wheels__item img{display:block;width:100%;height:100%;object-fit:cover;}';
 	echo '</style>';
-	echo '<div id="wrrapd-retailer-wheels-strip" class="wrrapd-retailer-wheels" role="region" aria-label="' . esc_attr__( 'Retailers: Ulta, LEGO, Target, and Amazon', 'wrrapd' ) . '">';
+	echo '<div id="wrrapd-retailer-wheels-strip" class="wrrapd-retailer-wheels" role="region" aria-label="' . esc_attr__( 'Shop at partner stores', 'wrrapd' ) . '">';
+	$idx = 0;
 	foreach ( $brands as $b ) {
-		$src = esc_url( wrrapd_mu_logo_url_for_slug( $b['slug'], $b['domain'] ) );
-		$fb  = 'https://www.google.com/s2/favicons?domain=' . rawurlencode( $b['domain'] ) . '&sz=128';
-		echo '<div class="wrrapd-retailer-wheels__item"><img src="' . $src . '" data-fallback="' . esc_url( $fb ) . '" width="100" height="100" alt="' . esc_attr( $b['label'] ) . '" loading="lazy" decoding="async" onerror="var u=this.dataset.fallback;if(u){this.onerror=null;this.src=u;}" /></div>';
+		$delay = 0.06 + ( $idx * 0.11 );
+		$go    = esc_url( home_url( '/go/' . rawurlencode( $b['slug'] ) . '/' ) );
+		$src   = esc_url( wrrapd_mu_logo_url_for_slug( $b['slug'], $b['domain'] ) );
+		$fb    = 'https://www.google.com/s2/favicons?domain=' . rawurlencode( $b['domain'] ) . '&sz=128';
+		echo '<a class="wrrapd-retailer-wheels__item" href="' . $go . '" rel="sponsored noopener" style="animation-delay:' . esc_attr( (string) $delay ) . 's" aria-label="' . esc_attr(
+			sprintf(
+				/* translators: %s: store name */
+				__( 'Continue shopping at %s', 'wrrapd' ),
+				$b['label']
+			)
+		) . '">';
+		echo '<img src="' . $src . '" data-fallback="' . esc_url( $fb ) . '" width="100" height="100" alt="" loading="lazy" decoding="async" onerror="var u=this.dataset.fallback;if(u){this.onerror=null;this.src=u;}" />';
+		echo '</a>';
+		++$idx;
 	}
 	echo '</div>';
 	echo '<script>';
