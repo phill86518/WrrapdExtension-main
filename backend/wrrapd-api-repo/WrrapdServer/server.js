@@ -1263,8 +1263,16 @@ function isLikelyWrrapdWarehouseAddressObj(addr) {
 function normalizeAddressShape(addr) {
     if (!addr || typeof addr !== 'object') return {};
     const street = String(addr.street || addr.line1 || '').trim();
+    const firstName =
+        addr.firstName != null ? String(addr.firstName).trim() : '';
+    const lastName = addr.lastName != null ? String(addr.lastName).trim() : '';
+    const name =
+        (addr.name != null ? String(addr.name).trim() : '') ||
+        [firstName, lastName].filter(Boolean).join(' ');
     return {
-        name: addr.name != null ? String(addr.name).trim() : '',
+        name,
+        firstName,
+        lastName,
         street,
         line1: addr.line1 != null ? String(addr.line1).trim() : street,
         line2: addr.line2 != null ? String(addr.line2).trim() : '',
@@ -1286,8 +1294,15 @@ function coerceFinalShippingFromPaymentPayload(f) {
     const streetOrLine1 =
         street || (typeof f.line1 === 'string' ? f.line1.trim() : '');
     if (!streetOrLine1 && !postal) return null;
+    const firstName = typeof f.firstName === 'string' ? f.firstName.trim() : '';
+    const lastName = typeof f.lastName === 'string' ? f.lastName.trim() : '';
+    const name =
+        (typeof f.name === 'string' ? f.name.trim() : '') ||
+        [firstName, lastName].filter(Boolean).join(' ');
     return {
-        name: typeof f.name === 'string' ? f.name : '',
+        name,
+        firstName,
+        lastName,
         street: streetOrLine1,
         city: typeof f.city === 'string' ? f.city : '',
         state: typeof f.state === 'string' ? f.state : '',
@@ -1648,6 +1663,8 @@ app.post('/process-payment', async (req, res) => {
         for (const it of normalizedOrderData) {
             it.finalShippingAddress = {
                 name: snap.name,
+                firstName: snap.firstName || '',
+                lastName: snap.lastName || '',
                 street: snap.street,
                 city: snap.city,
                 state: snap.state,

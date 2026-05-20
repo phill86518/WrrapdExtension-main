@@ -95,7 +95,8 @@ function addressExpectsStreet(addr) {
 /** True when session has a full giftee address but LEGO fields are still empty. */
 function formMissingRequiredFields(addr) {
   if (!addr) return false;
-  const { lastName } = splitName(addr.name);
+  const lastName =
+    String(addr.lastName || "").trim() || splitName(addr.name).lastName;
   const lastEl = document.getElementById("lastName");
   if (lastName && lastEl && !lastEl.value.trim()) return true;
 
@@ -121,7 +122,10 @@ function formNeedsFill(form, addr) {
 }
 
 function applyGifteeFields(form, addr) {
-  const { firstName, lastName } = splitName(addr.name);
+  const firstName =
+    String(addr.firstName || "").trim() || splitName(addr.name).firstName;
+  const lastName =
+    String(addr.lastName || "").trim() || splitName(addr.name).lastName;
   const street = String(addr.street || "").trim();
   const line2 = String(addr.line2 || "").trim();
 

@@ -142,6 +142,8 @@ function gifteeStubFromSession() {
   if (stored && String(stored.name || "").trim()) {
     return {
       name: stored.name,
+      firstName: stored.firstName || "",
+      lastName: stored.lastName || "",
       street: stored.street || "",
       city: stored.city || "",
       state: stored.state || "",
@@ -163,10 +165,16 @@ function gifteeStubFromSession() {
 function persistGifteeAddressFromPayMessage(eventData) {
   const raw = eventData && eventData.finalShippingAddress;
   if (!raw || typeof raw !== "object") return;
-  const name = String(raw.name || "").trim();
-  if (!name) return;
+  const firstName = String(raw.firstName || "").trim();
+  const lastName = String(raw.lastName || "").trim();
+  const name =
+    String(raw.name || "").trim() ||
+    [firstName, lastName].filter(Boolean).join(" ");
+  if (!name && !firstName) return;
   writeLegoGifteeAddress({
-    name,
+    name: name || firstName,
+    firstName,
+    lastName,
     street: String(raw.street || raw.line1 || "").trim(),
     line2: String(raw.line2 || "").trim(),
     city: String(raw.city || "").trim(),

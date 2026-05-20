@@ -264,9 +264,19 @@
         </div>
 
         <div class="heading-address">Delivery address (Giftee address)</div>
-        <div class="form-group">
+        <div id="giftee-name-split-row" class="row" hidden>
+            <div class="form-group">
+                <label for="giftee-first-name">Giftee first name*</label>
+                <input type="text" id="giftee-first-name" name="giftee-first-name" autocomplete="given-name" placeholder="John">
+            </div>
+            <div class="form-group">
+                <label for="giftee-last-name">Giftee last name*</label>
+                <input type="text" id="giftee-last-name" name="giftee-last-name" autocomplete="family-name" placeholder="Doe">
+            </div>
+        </div>
+        <div class="form-group" id="giftee-name-full-group">
             <label for="name">Giftee full name*</label>
-            <input type="text" id="name" name="name" required autocomplete="off" placeholder="John Doe">
+            <input type="text" id="name" name="name" required autocomplete="name" placeholder="John Doe">
         </div>
         <input type="hidden" id="line2" name="line2" value="">
         <div class="form-group">
@@ -410,6 +420,68 @@
         if (checkoutRetailer === 'Lego') {
             document.title = 'Wrrapd payment — LEGO order';
         }
+
+        /** LEGO (and similar retailers) use separate first/last on the retailer site; Amazon keeps one full-name field. */
+        const gifteeUsesSplitName = checkoutRetailer === 'Lego';
+
+        function getGifteeFirstName() {
+            if (gifteeUsesSplitName) {
+                const el = document.getElementById('giftee-first-name');
+                return el ? el.value.trim() : '';
+            }
+            const full = (document.getElementById('name') && document.getElementById('name').value.trim()) || '';
+            const parts = full.split(/\s+/).filter(Boolean);
+            return parts[0] || '';
+        }
+
+        function getGifteeLastName() {
+            if (gifteeUsesSplitName) {
+                const el = document.getElementById('giftee-last-name');
+                return el ? el.value.trim() : '';
+            }
+            const full = (document.getElementById('name') && document.getElementById('name').value.trim()) || '';
+            const parts = full.split(/\s+/).filter(Boolean);
+            return parts.length > 1 ? parts.slice(1).join(' ') : '';
+        }
+
+        function getGifteeFullName() {
+            const first = getGifteeFirstName();
+            const last = getGifteeLastName();
+            return [first, last].filter(Boolean).join(' ').trim();
+        }
+
+        function syncGifteeHiddenFullName() {
+            if (!gifteeUsesSplitName) return;
+            const hidden = document.getElementById('name');
+            if (hidden) hidden.value = getGifteeFullName();
+        }
+
+        function configureGifteeNameFields() {
+            const splitRow = document.getElementById('giftee-name-split-row');
+            const fullGroup = document.getElementById('giftee-name-full-group');
+            const nameEl = document.getElementById('name');
+            const firstEl = document.getElementById('giftee-first-name');
+            const lastEl = document.getElementById('giftee-last-name');
+            if (!splitRow || !fullGroup || !nameEl) return;
+            if (gifteeUsesSplitName) {
+                splitRow.hidden = false;
+                fullGroup.style.display = 'none';
+                nameEl.removeAttribute('required');
+                nameEl.setAttribute('aria-hidden', 'true');
+                if (firstEl) firstEl.required = true;
+                if (lastEl) lastEl.required = true;
+                syncGifteeHiddenFullName();
+            } else {
+                splitRow.hidden = true;
+                fullGroup.style.display = '';
+                nameEl.required = true;
+                nameEl.removeAttribute('aria-hidden');
+                if (firstEl) firstEl.removeAttribute('required');
+                if (lastEl) lastEl.removeAttribute('required');
+            }
+        }
+
+        configureGifteeNameFields();
 
         /** Set ?wrrapdDebug=1 on the checkout URL, or sessionStorage wrrapd_checkout_debug=1 then reload. */
         const wrrapdCheckoutDebug =
@@ -627,7 +699,13 @@
 
             /** Do not pre-fill from Amazon payload (avoid real customer defaults in demos). Shopper enters giftee on this page. */
             const setDefaultAddress = () => {
-                document.getElementById('name').value = 'John Doe';
+                if (gifteeUsesSplitName) {
+                    document.getElementById('giftee-first-name').value = 'John';
+                    document.getElementById('giftee-last-name').value = 'Doe';
+                    syncGifteeHiddenFullName();
+                } else {
+                    document.getElementById('name').value = 'John Doe';
+                }
                 document.getElementById('line1').value = '';
                 document.getElementById('line2').value = '';
                 document.getElementById('postal_code').value = '';
@@ -648,7 +726,9 @@
             function getDeliveryAddressFromForm() {
                 const line2El = document.getElementById('line2');
                 return {
-                    name: document.getElementById('name').value,
+                    name: getGifteeFullName(),
+                    firstName: getGifteeFirstName(),
+                    lastName: getGifteeLastName(),
                     line1: document.getElementById('line1').value,
                     line2: line2El ? line2El.value : '',
                     city: document.getElementById('city').value,
@@ -1268,16 +1348,21 @@
                     const line1v = document.getElementById('line1').value.trim();
                     const cityv = document.getElementById('city').value.trim();
                     const statev = document.getElementById('state').value.trim();
-                    const namev = document.getElementById('name').value.trim();
+                    const namev = gifteeUsesSplitName
+                        ? getGifteeFirstName() && getGifteeLastName()
+                        : document.getElementById('name').value.trim();
                     if (!namev || !line1v || !cityv || !statev) {
                         gifteeGoogleValidated = false;
-                        lastGifteeValidationHint = 'Fill giftee name, street, city, and state.';
+                        lastGifteeValidationHint = gifteeUsesSplitName
+                            ? 'Fill giftee first name, last name, street, city, and state.'
+                            : 'Fill giftee name, street, city, and state.';
                         if (seq === gifteeValidationSeq) updatePayButtonState();
                         syncBillingFromDeliveryIfLinked();
                         return;
                     }
+                    syncGifteeHiddenFullName();
                     const addr = {
-                        name: document.getElementById('name').value,
+                        name: getGifteeFullName(),
                         line1: document.getElementById('line1').value,
                         line2: document.getElementById('line2').value,
                         city: document.getElementById('city').value,
@@ -1289,8 +1374,9 @@
                     if (seq !== gifteeValidationSeq) return;
                     if (!r.valid && r.correctedComponents) {
                         applyGifteeCorrectedComponents(r.correctedComponents);
+                        syncGifteeHiddenFullName();
                         const addr2 = {
-                            name: document.getElementById('name').value,
+                            name: getGifteeFullName(),
                             line1: document.getElementById('line1').value,
                             line2: document.getElementById('line2').value,
                             city: document.getElementById('city').value,
@@ -1425,15 +1511,23 @@
                         setHint(zm || 'ZIP is not in the delivery area or is invalid.', true);
                         return;
                     }
+                    const gifteeNameOk = gifteeUsesSplitName
+                        ? getGifteeFirstName() && getGifteeLastName()
+                        : document.getElementById('name').value.trim();
                     const gifteeFilled =
                         document.getElementById('gifter-full-name').value.trim() &&
-                        document.getElementById('name').value.trim() &&
+                        gifteeNameOk &&
                         document.getElementById('line1').value.trim() &&
                         document.getElementById('city').value.trim() &&
                         document.getElementById('state').value.trim();
                     if (!gifteeFilled) {
                         submit.disabled = true;
-                        setHint('Fill gifter full name, giftee name, street address, city, and state.', true);
+                        setHint(
+                            gifteeUsesSplitName
+                                ? 'Fill gifter full name, giftee first and last name, street address, city, and state.'
+                                : 'Fill gifter full name, giftee name, street address, city, and state.',
+                            true,
+                        );
                         return;
                     }
                     const gifteeOk = zipOk && gifteeFilled && gifteeGoogleValidated;
@@ -1640,22 +1734,29 @@
                     }
                 });
 
-            ['name', 'line1', 'city', 'state', 'postal_code'].forEach(function (id) {
+            (gifteeUsesSplitName
+                ? ['giftee-first-name', 'giftee-last-name', 'line1', 'city', 'state', 'postal_code']
+                : ['name', 'line1', 'city', 'state', 'postal_code']
+            ).forEach(function (id) {
                 const el = document.getElementById(id);
                 if (!el) return;
                 el.addEventListener('input', function () {
+                    syncGifteeHiddenFullName();
                     scheduleGifteeAddressValidation();
                     syncBillingFromDeliveryIfLinked();
                 });
                 el.addEventListener('change', function () {
+                    syncGifteeHiddenFullName();
                     scheduleGifteeAddressValidation();
                     syncBillingFromDeliveryIfLinked();
                 });
                 // Browser autofill / Places often commits without firing input; blur keeps billing in sync when linked.
                 el.addEventListener('blur', function () {
+                    syncGifteeHiddenFullName();
                     syncBillingFromDeliveryIfLinked();
                 });
                 el.addEventListener('compositionend', function () {
+                    syncGifteeHiddenFullName();
                     syncBillingFromDeliveryIfLinked();
                 });
             });
@@ -1753,8 +1854,11 @@
                     updateGifteeZipOutsideDeliveryMessage();
 
                     // Validate Final shipping address
+                    syncGifteeHiddenFullName();
                     const finalShippingAddress = {
-                    name: document.getElementById('name').value,
+                        name: getGifteeFullName(),
+                        firstName: getGifteeFirstName(),
+                        lastName: getGifteeLastName(),
                         line1: document.getElementById('line1').value,
                         line2: document.getElementById('line2').value,
                         city: document.getElementById('city').value,
@@ -1857,9 +1961,10 @@
                             
                             // Show error message in the form field (AFTER auto-correction)
                             const errorField = shippingValidation.field || 'line1';
-                            const fieldId = errorField === 'postal_code' ? 'postal_code' : 
-                                             errorField === 'name' ? 'name' : 
-                                             errorField === 'city' ? 'city' : 
+                            const fieldId = errorField === 'postal_code' ? 'postal_code' :
+                                             errorField === 'name'
+                                                 ? (gifteeUsesSplitName ? 'giftee-first-name' : 'name')
+                                                 : errorField === 'city' ? 'city' : 
                                              errorField === 'state' ? 'state' : 
                                              errorField === 'country' ? 'country' : 'line1';
                             const fieldElement = document.getElementById(fieldId);
@@ -2196,6 +2301,8 @@
 
                     const finalShippingAddressForServer = {
                         name: finalShippingAddress.name,
+                        firstName: finalShippingAddress.firstName,
+                        lastName: finalShippingAddress.lastName,
                         street: finalShippingAddress.line1 + (finalShippingAddress.line2 ? ' ' + finalShippingAddress.line2 : ''),
                         city: finalShippingAddress.city,
                         state: finalShippingAddress.state,
