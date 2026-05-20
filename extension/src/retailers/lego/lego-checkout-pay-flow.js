@@ -7,10 +7,12 @@ import {
   readGiftLegalTermsAccepted,
   readGiftRadio,
   readHubShipAccepted,
+  readLegoGifteeAddress,
   readLegoItemChoices,
   readLegoPaymentSuccess,
   writeGiftLegalTermsAccepted,
   writeHubShipAccepted,
+  writeLegoGifteeAddress,
   writeLegoPaymentSuccess,
 } from "./lego-session-state.js";
 import { readLegoCartSnapshot } from "./lego-cart-extract.js";
@@ -135,6 +137,18 @@ function gifteeZip5() {
 }
 
 function gifteeStubFromSession() {
+  const stored = readLegoGifteeAddress();
+  if (stored && String(stored.name || "").trim()) {
+    return {
+      name: stored.name,
+      street: stored.street || "",
+      city: stored.city || "",
+      state: stored.state || "",
+      postalCode: stored.postalCode || gifteeZip5(),
+      country: stored.country || "United States",
+      phone: stored.phone || "",
+    };
+  }
   const zip = gifteeZip5();
   return {
     name: "Your giftee (LEGO delivery after wrap)",
@@ -143,6 +157,23 @@ function gifteeStubFromSession() {
     country: "United States",
     phone: "",
   };
+}
+
+function persistGifteeAddressFromPayMessage(eventData) {
+  const raw = eventData && eventData.finalShippingAddress;
+  if (!raw || typeof raw !== "object") return;
+  const name = String(raw.name || "").trim();
+  if (!name) return;
+  writeLegoGifteeAddress({
+    name,
+    street: String(raw.street || "").trim(),
+    line2: String(raw.line2 || "").trim(),
+    city: String(raw.city || "").trim(),
+    state: String(raw.state || "").trim(),
+    postalCode: String(raw.postalCode || "").trim(),
+    country: String(raw.country || "United States").trim() || "United States",
+    phone: String(eventData.customerPhone || raw.phone || "").trim(),
+  });
 }
 
 function computeServiceSubtotalCents() {
@@ -583,6 +614,7 @@ function bindPayMessageOnce() {
     if (retailer !== "lego") return;
     if (payPopupRef && event.source !== payPopupRef) return;
     void (async () => {
+      persistGifteeAddressFromPayMessage(event.data);
       const ok = await postLegoProcessPayment(event.data);
       if (!ok) {
         console.warn("[LEGO pay] process-payment did not complete; check api.wrrapd.com logs. Checkout will still unlock.");

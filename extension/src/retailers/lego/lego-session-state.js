@@ -2,6 +2,7 @@ import {
   LEGO_GIFT_CHOICES_SAVED_KEY,
   LEGO_GIFT_FLOWERS_INTEREST_KEY,
   LEGO_GIFT_GIFTEE_NAME_KEY,
+  LEGO_GIFTEE_ADDRESS_SESSION_KEY,
   LEGO_GIFT_RADIO_SESSION_KEY,
   LEGO_GIFT_TC_SESSION_KEY,
   LEGO_GIFT_WRAP_PREF_KEY,
@@ -120,6 +121,31 @@ export function writeLegoItemChoices(arr) {
   }
 }
 
+/** @returns {{ name?: string, street?: string, city?: string, state?: string, postalCode?: string, country?: string } | null} */
+export function readLegoGifteeAddress() {
+  try {
+    const raw = sessionStorage.getItem(LEGO_GIFTEE_ADDRESS_SESSION_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+/** @param {Record<string, string>} addr */
+export function writeLegoGifteeAddress(addr) {
+  try {
+    if (!addr || typeof addr !== "object") {
+      sessionStorage.removeItem(LEGO_GIFTEE_ADDRESS_SESSION_KEY);
+      return;
+    }
+    sessionStorage.setItem(LEGO_GIFTEE_ADDRESS_SESSION_KEY, JSON.stringify(addr));
+  } catch {
+    /* ignore */
+  }
+}
+
 /** Clears Wrrapd-specific flags when guest opts out of the gift path. */
 export function clearLegoGiftServiceFlags() {
   writeGiftLegalTermsAccepted(false);
@@ -130,6 +156,7 @@ export function clearLegoGiftServiceFlags() {
     sessionStorage.removeItem(LEGO_GIFT_WRAP_PREF_KEY);
     sessionStorage.removeItem(LEGO_GIFT_FLOWERS_INTEREST_KEY);
     sessionStorage.removeItem(LEGO_GIFT_GIFTEE_NAME_KEY);
+    sessionStorage.removeItem(LEGO_GIFTEE_ADDRESS_SESSION_KEY);
     sessionStorage.removeItem(LEGO_ITEM_CHOICES_KEY);
   } catch {
     /* ignore */

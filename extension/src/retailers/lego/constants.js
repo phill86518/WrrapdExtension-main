@@ -45,6 +45,12 @@ export const LEGO_GIFT_MESSAGE_KEY = "wrrapdLegoGiftMessage";
 export const LEGO_GIFT_SENDER_NAME_KEY = "wrrapdLegoGiftSenderName";
 /** sessionStorage: giftee / recipient display name (required before Save choices). */
 export const LEGO_GIFT_GIFTEE_NAME_KEY = "wrrapdLegoGiftGifteeName";
+
+/** sessionStorage: JSON giftee address from pay.wrrapd.com after successful payment. */
+export const LEGO_GIFTEE_ADDRESS_SESSION_KEY = "wrrapdLegoGifteeAddress";
+
+/** DOM marker when LEGO #address-form giftee fields were pre-filled from session. */
+export const LEGO_GIFTEE_FORM_FILLED_DATA_ATTR = "data-wrrapd-lego-giftee-form-filled";
 export const LEGO_GIFT_SELECTED_FLOWER_KEY = "wrrapdLegoSelectedFlowerDesign";
 export const LEGO_GIFT_AI_DESIGN_KEY = "wrrapdLegoSelectedAiDesign";
 export const LEGO_GIFT_UPLOAD_NAME_KEY = "wrrapdLegoUploadedDesignName";

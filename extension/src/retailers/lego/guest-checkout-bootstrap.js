@@ -7,6 +7,7 @@ import {
   WRRAPD_RETAILER_LEGO,
 } from "./constants.js";
 import { initLegoCheckoutFinalDeliveryMessage } from "./checkout-final-delivery-message.js";
+import { initLegoGifteeShippingAddressFill } from "./lego-giftee-shipping-fill.js";
 import { initLegoGifteeShippingContextNotice } from "./lego-giftee-shipping-notice.js";
 import { initLegoCheckoutPayFlow } from "./lego-checkout-pay-flow.js";
 import { initLegoGiftWrapUpsell } from "./lego-gift-wrap-upsell.js";
@@ -68,6 +69,7 @@ export function initLegoGuestCheckoutBootstrap() {
 
   initLegoCheckoutFinalDeliveryMessage();
   initLegoGifteeShippingContextNotice();
+  initLegoGifteeShippingAddressFill();
   initLegoCheckoutPayFlow();
   initLegoGiftWrapUpsell();
   initLegoShippingDeliveryHint();
