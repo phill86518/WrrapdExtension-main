@@ -88,12 +88,34 @@ function shouldAutofillGifteeShipping() {
   return Boolean(document.getElementById("address-form"));
 }
 
-function formNeedsFill(form) {
+function addressExpectsStreet(addr) {
+  return Boolean(String(addr?.street || "").trim());
+}
+
+/** True when session has a full giftee address but LEGO fields are still empty. */
+function formMissingRequiredFields(addr) {
+  if (!addr) return false;
+  const { lastName } = splitName(addr.name);
+  const lastEl = document.getElementById("lastName");
+  if (lastName && lastEl && !lastEl.value.trim()) return true;
+
+  if (!addressExpectsStreet(addr)) return false;
+
+  const line1El = document.getElementById("addressLine1");
+  const cityEl = document.getElementById("city");
+  if (line1El && !line1El.value.trim()) return true;
+  if (cityEl && String(addr.city || "").trim() && !cityEl.value.trim()) return true;
+  return false;
+}
+
+function formNeedsFill(form, addr) {
   if (!form) return false;
   if (form.getAttribute(LEGO_GIFTEE_FORM_FILLED_DATA_ATTR) === "1") {
-    const fn = document.getElementById("firstName");
-    if (fn && fn.value.trim()) return false;
-    form.removeAttribute(LEGO_GIFTEE_FORM_FILLED_DATA_ATTR);
+    if (formMissingRequiredFields(addr)) {
+      form.removeAttribute(LEGO_GIFTEE_FORM_FILLED_DATA_ATTR);
+      return true;
+    }
+    return false;
   }
   return true;
 }
@@ -135,19 +157,32 @@ function applyGifteeFields(form, addr) {
     setNativeInputValue(zipEl, String(addr.postalCode).replace(/\D/g, "").slice(0, 10));
   }
 
-  form.setAttribute(LEGO_GIFTEE_FORM_FILLED_DATA_ATTR, "1");
+  if (!formMissingRequiredFields(addr)) {
+    form.setAttribute(LEGO_GIFTEE_FORM_FILLED_DATA_ATTR, "1");
+  }
 }
 
 function tryApplyLegoGifteeShippingFields() {
   if (!shouldAutofillGifteeShipping()) return;
 
   const form = document.getElementById("address-form");
-  if (!form || !formNeedsFill(form)) return;
+  if (!form) return;
 
   const addr = resolveGifteeAddress();
   if (!addr) return;
+  if (!formNeedsFill(form, addr)) return;
 
   applyGifteeFields(form, addr);
+}
+
+/** Call after pay.wrrapd.com stores the full giftee address in session. */
+export function refreshLegoGifteeShippingAddressFill() {
+  const form = document.getElementById("address-form");
+  if (form) form.removeAttribute(LEGO_GIFTEE_FORM_FILLED_DATA_ATTR);
+  tryApplyLegoGifteeShippingFields();
+  for (const ms of [150, 500, 1200, 2500]) {
+    setTimeout(tryApplyLegoGifteeShippingFields, ms);
+  }
 }
 
 export function initLegoGifteeShippingAddressFill() {
@@ -162,5 +197,9 @@ export function initLegoGifteeShippingAddressFill() {
 
   window.addEventListener("popstate", () => {
     setTimeout(tryApplyLegoGifteeShippingFields, 300);
+  });
+
+  window.addEventListener("wrrapd-lego-giftee-address-updated", () => {
+    refreshLegoGifteeShippingAddressFill();
   });
 }

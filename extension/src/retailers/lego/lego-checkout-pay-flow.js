@@ -16,6 +16,7 @@ import {
   writeLegoPaymentSuccess,
 } from "./lego-session-state.js";
 import { readLegoCartSnapshot } from "./lego-cart-extract.js";
+import { refreshLegoGifteeShippingAddressFill } from "./lego-giftee-shipping-fill.js";
 
 const TERMS_MODAL_ID = "wrrapd-lego-terms-modal";
 const HUB_MODAL_ID = "wrrapd-lego-hub-modal";
@@ -166,14 +167,20 @@ function persistGifteeAddressFromPayMessage(eventData) {
   if (!name) return;
   writeLegoGifteeAddress({
     name,
-    street: String(raw.street || "").trim(),
+    street: String(raw.street || raw.line1 || "").trim(),
     line2: String(raw.line2 || "").trim(),
     city: String(raw.city || "").trim(),
     state: String(raw.state || "").trim(),
-    postalCode: String(raw.postalCode || "").trim(),
+    postalCode: String(raw.postalCode || raw.postal_code || "").trim(),
     country: String(raw.country || "United States").trim() || "United States",
     phone: String(eventData.customerPhone || raw.phone || "").trim(),
   });
+  try {
+    window.dispatchEvent(new CustomEvent("wrrapd-lego-giftee-address-updated"));
+  } catch {
+    /* ignore */
+  }
+  refreshLegoGifteeShippingAddressFill();
 }
 
 function computeServiceSubtotalCents() {
@@ -612,7 +619,14 @@ function bindPayMessageOnce() {
     if (!event.data || event.data.status !== "success") return;
     const retailer = String(event.data.retailer || event.data.name_of_retailer || "").toLowerCase();
     if (retailer !== "lego") return;
-    if (payPopupRef && event.source !== payPopupRef) return;
+    if (
+      payPopupRef &&
+      event.source !== payPopupRef &&
+      typeof payPopupRef.closed === "boolean" &&
+      !payPopupRef.closed
+    ) {
+      return;
+    }
     void (async () => {
       persistGifteeAddressFromPayMessage(event.data);
       const ok = await postLegoProcessPayment(event.data);
