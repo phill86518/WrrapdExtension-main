@@ -1,0 +1,266 @@
+/**
+ * Companion to wrrapd-gift-guides-section.html — paste into Elementor → Site Settings → Custom CSS.
+ * Scoped under .wrrapd-gift-guides so it won’t fight the rest of the theme.
+ * Does not modify wrrapd-orders-bridge.php.
+ */
+
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,560;1,9..144,560&family=Source+Sans+3:wght@400;600&display=swap");
+
+.wrrapd-gift-guides {
+	--wgg-ink: #0c1222;
+	--wgg-muted: #475569;
+	--wgg-paper: linear-gradient(165deg, #fdfcfa 0%, #f4f0e8 48%, #ebe4d8 100%);
+	--wgg-gold: #c9a227;
+	--wgg-gold-deep: #9a7618;
+	--wgg-card: rgba(255, 255, 255, 0.72);
+	--wgg-border: rgba(12, 18, 34, 0.08);
+	--wgg-shadow: 0 12px 40px rgba(12, 18, 34, 0.08);
+	font-family: "Source Sans 3", system-ui, sans-serif;
+	color: var(--wgg-ink);
+	background: var(--wgg-paper);
+	border-block: 1px solid var(--wgg-border);
+	padding-block: clamp(2.5rem, 7vmin, 4rem);
+	padding-inline: clamp(1rem, 4vw, 2rem);
+}
+
+.wrrapd-gift-guides__inner {
+	max-width: min(68rem, 100%);
+	margin-inline: auto;
+}
+
+.wrrapd-gift-guides__eyebrow {
+	font-size: clamp(0.7rem, 1.8vw, 0.82rem);
+	font-weight: 600;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	color: var(--wgg-gold-deep);
+	margin: 0 0 0.6rem;
+}
+
+.wrrapd-gift-guides__title {
+	font-family: Fraunces, Georgia, serif;
+	font-size: clamp(1.65rem, 4.2vw, 2.35rem);
+	font-weight: 560;
+	line-height: 1.15;
+	margin: 0 0 0.75rem;
+	letter-spacing: -0.02em;
+}
+
+.wrrapd-gift-guides__lede {
+	font-size: clamp(1rem, 2.4vw, 1.12rem);
+	line-height: 1.55;
+	color: var(--wgg-muted);
+	max-width: 42rem;
+	margin: 0 0 clamp(1rem, 3vmin, 1.35rem);
+}
+
+/* Partner logos row — same /go/ hops + mu-plugins/logos PNGs as the homepage wheel */
+.wrrapd-gift-guides__stores-wrap {
+	margin: 0 0 clamp(1.75rem, 4.5vmin, 2.75rem);
+}
+
+.wrrapd-gift-guides__stores-label {
+	font-size: clamp(0.72rem, 1.75vw, 0.8rem);
+	font-weight: 600;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--wgg-muted);
+	margin: 0 0 clamp(0.65rem, 2vmin, 0.85rem);
+}
+
+.wrrapd-gift-guides__stores {
+	display: flex;
+	flex-direction: row;
+	flex-wrap: wrap;
+	justify-content: center;
+	align-items: flex-start;
+	gap: clamp(0.45rem, 2vw, 0.85rem);
+	list-style: none;
+	padding: clamp(0.65rem, 2vmin, 0.85rem) clamp(0.35rem, 1.5vw, 0.65rem);
+	margin: 0;
+	max-width: 100%;
+	box-sizing: border-box;
+	background: rgba(255, 255, 255, 0.45);
+	border: 1px solid var(--wgg-border);
+	border-radius: clamp(0.65rem, 2vmin, 0.85rem);
+}
+
+.wrrapd-gift-guides__stores-item {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.wrrapd-gift-guides__store {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.28rem;
+	max-width: 5rem;
+	text-decoration: none;
+	color: var(--wgg-ink);
+	outline-offset: 3px;
+}
+
+.wrrapd-gift-guides__store:focus-visible {
+	outline: 2px solid var(--wgg-gold-deep);
+	border-radius: 0.35rem;
+}
+
+.wrrapd-gift-guides__store-badge {
+	width: clamp(2.1rem, 9vmin, 2.55rem);
+	height: clamp(2.1rem, 9vmin, 2.55rem);
+	border-radius: 50%;
+	overflow: hidden;
+	box-shadow: 0 2px 10px rgba(15, 23, 42, 0.1), inset 0 0 0 2px rgba(255, 255, 255, 0.75);
+	background: #fff;
+	flex-shrink: 0;
+}
+
+.wrrapd-gift-guides__store-badge img {
+	display: block;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.wrrapd-gift-guides__store-name {
+	font-size: clamp(0.62rem, 1.65vw, 0.72rem);
+	font-weight: 600;
+	text-align: center;
+	color: var(--wgg-muted);
+	line-height: 1.15;
+}
+
+/* Featured retailer logo on each occasion card */
+.wrrapd-gift-guides__card-top {
+	margin-bottom: 0.5rem;
+}
+
+.wrrapd-gift-guides__card-logo {
+	display: inline-flex;
+	text-decoration: none;
+	vertical-align: middle;
+	outline-offset: 3px;
+	border-radius: 50%;
+}
+
+.wrrapd-gift-guides__card-logo:focus-visible {
+	outline: 2px solid var(--wgg-gold-deep);
+}
+
+.wrrapd-gift-guides__card-logo-badge {
+	display: block;
+	width: clamp(2.15rem, 8.5vmin, 2.6rem);
+	height: clamp(2.15rem, 8.5vmin, 2.6rem);
+	border-radius: 50%;
+	overflow: hidden;
+	box-shadow: 0 2px 10px rgba(15, 23, 42, 0.1), inset 0 0 0 2px rgba(255, 255, 255, 0.75);
+	background: #fff;
+}
+
+.wrrapd-gift-guides__card-logo-badge img {
+	display: block;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+@media (max-width: 639px) {
+	.wrrapd-gift-guides__stores {
+		justify-content: flex-start;
+		overflow-x: auto;
+		flex-wrap: nowrap;
+		-webkit-overflow-scrolling: touch;
+		scrollbar-width: thin;
+		padding-left: max(2%, env(safe-area-inset-left));
+		padding-right: max(2%, env(safe-area-inset-right));
+	}
+}
+
+.wrrapd-gift-guides__grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));
+	gap: clamp(1rem, 2.8vw, 1.35rem);
+	list-style: none;
+	padding: 0;
+	margin: 0;
+}
+
+.wrrapd-gift-guides__card {
+	display: flex;
+	flex-direction: column;
+	background: var(--wgg-card);
+	backdrop-filter: blur(8px);
+	border: 1px solid var(--wgg-border);
+	border-radius: clamp(0.65rem, 2vmin, 0.85rem);
+	box-shadow: var(--wgg-shadow);
+	padding: clamp(1.1rem, 3vmin, 1.35rem);
+	min-height: 100%;
+	transition: transform 0.22s ease, box-shadow 0.22s ease;
+}
+
+.wrrapd-gift-guides__card:focus-within {
+	outline: 2px solid var(--wgg-gold);
+	outline-offset: 3px;
+}
+
+@media (hover: hover) {
+	.wrrapd-gift-guides__card:hover {
+		transform: translateY(-3px);
+		box-shadow: 0 18px 48px rgba(12, 18, 34, 0.12);
+	}
+}
+
+.wrrapd-gift-guides__card-title {
+	font-family: Fraunces, Georgia, serif;
+	font-size: clamp(1.12rem, 2.8vw, 1.28rem);
+	margin: 0 0 0.45rem;
+	font-weight: 560;
+}
+
+.wrrapd-gift-guides__card-copy {
+	font-size: clamp(0.88rem, 2.1vw, 0.95rem);
+	line-height: 1.45;
+	color: var(--wgg-muted);
+	margin: 0 0 1rem;
+	flex-grow: 1;
+}
+
+.wrrapd-gift-guides__cta {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.35em;
+	font-size: clamp(0.82rem, 2vw, 0.9rem);
+	font-weight: 600;
+	text-decoration: none;
+	color: var(--wgg-ink);
+	padding: 0.55em 0.95em;
+	border-radius: 999px;
+	background: linear-gradient(180deg, #f5e6a8, var(--wgg-gold));
+	border: 1px solid rgba(154, 118, 24, 0.35);
+	box-shadow: 0 2px 0 rgba(154, 118, 24, 0.25);
+	margin-top: auto;
+	width: fit-content;
+	max-width: 100%;
+}
+
+.wrrapd-gift-guides__cta:hover {
+	filter: brightness(1.05);
+}
+
+.wrrapd-gift-guides__cta:focus-visible {
+	outline: 2px solid var(--wgg-gold-deep);
+	outline-offset: 3px;
+}
+
+/* .wrrapd-gift-guides__note — commented out in HTML snippet for now
+.wrrapd-gift-guides__note {
+	font-size: clamp(0.75rem, 1.9vw, 0.82rem);
+	color: var(--wgg-muted);
+	margin: clamp(1.5rem, 3.5vmin, 2rem) 0 0;
+	line-height: 1.5;
+	max-width: 48rem;
+}
+*/

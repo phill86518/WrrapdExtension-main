@@ -316,12 +316,12 @@ function wrrapd_output_retailer_wheel_strip() {
 	echo '<style id="wrrapd-retailer-wheels-css">';
 	echo '@keyframes wrrapd-wheel-in{0%{transform:translateX(min(38vw,240px)) rotate(-540deg);opacity:0}100%{transform:translateX(0) rotate(0);opacity:1}}';
 	echo '#wrrapd-retailer-wheels-row{width:100%;box-sizing:border-box;background:linear-gradient(180deg,rgba(248,250,252,.97) 0%,rgba(241,245,249,.98) 100%);border-bottom:1px solid rgba(15,23,42,.08);}';
-	echo '#wrrapd-retailer-wheels-row .wrrapd-retailer-wheels{display:flex;flex-direction:row;flex-wrap:nowrap;justify-content:center;align-items:flex-start;gap:clamp(.4rem,1.4vw,.95rem);padding:.55rem clamp(.5rem,2vw,1.25rem) .75rem;max-width:100%;margin:0 auto;box-sizing:border-box;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:thin;}';
-	echo '.wrrapd-retailer-wheels__item{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:.28rem;max-width:4.85rem;text-decoration:none;color:#0f172a;outline-offset:4px;animation:wrrapd-wheel-in 1.15s cubic-bezier(.2,.85,.15,1) forwards;opacity:0;}';
+	echo '#wrrapd-retailer-wheels-row .wrrapd-retailer-wheels{display:flex;flex-direction:row;flex-wrap:nowrap;justify-content:center;align-items:flex-start;gap:clamp(.35rem,1.1vw,.8rem);padding:.5rem clamp(.65rem,2.4vw,1.25rem) .7rem;max-width:100%;margin:0 auto;box-sizing:border-box;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:thin;}';
+	echo '.wrrapd-retailer-wheels__item{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:.24rem;max-width:4.25rem;text-decoration:none;color:#0f172a;outline-offset:4px;animation:wrrapd-wheel-in 1.15s cubic-bezier(.2,.85,.15,1) forwards;opacity:0;}';
 	echo '.wrrapd-retailer-wheels__item:focus-visible{outline:2px solid #f5c518;}';
-	echo '.wrrapd-retailer-wheels__badge{width:60px;height:60px;border-radius:50%;overflow:hidden;box-shadow:0 2px 10px rgba(15,23,42,.12),inset 0 0 0 2px rgba(255,255,255,.75);background:#fff;flex-shrink:0;}';
-	echo '@media(min-width:640px){.wrrapd-retailer-wheels__badge{width:72px;height:72px}}';
-	echo '@media(min-width:900px){.wrrapd-retailer-wheels__badge{width:84px;height:84px}}';
+	echo '.wrrapd-retailer-wheels__badge{width:52px;height:52px;border-radius:50%;overflow:hidden;box-shadow:0 2px 10px rgba(15,23,42,.12),inset 0 0 0 2px rgba(255,255,255,.75);background:#fff;flex-shrink:0;}';
+	echo '@media(min-width:640px){.wrrapd-retailer-wheels__badge{width:66px;height:66px}}';
+	echo '@media(min-width:900px){.wrrapd-retailer-wheels__badge{width:76px;height:76px}}';
 	echo '.wrrapd-retailer-wheels__badge img{display:block;width:100%;height:100%;object-fit:cover;}';
 	echo '.wrrapd-retailer-wheels__title{font-size:.68rem;line-height:1.15;text-align:center;font-weight:600;color:#334155;letter-spacing:.01em;}';
 	echo '@media(min-width:640px){.wrrapd-retailer-wheels__title{font-size:.74rem}}';
@@ -337,7 +337,7 @@ function wrrapd_output_retailer_wheel_strip() {
 		$label = $b['label'];
 		echo '<a class="wrrapd-retailer-wheels__item" href="' . $go . '" rel="sponsored noopener" style="animation-delay:' . esc_attr( (string) $delay ) . 's">';
 		echo '<span class="wrrapd-retailer-wheels__badge">';
-		echo '<img src="' . $src . '" data-fallback="' . esc_url( $fb ) . '" width="84" height="84" alt="' . esc_attr( $label ) . '" loading="lazy" decoding="async" onerror="var u=this.dataset.fallback;if(u){this.onerror=null;this.src=u;}" />';
+		echo '<img src="' . $src . '" data-fallback="' . esc_url( $fb ) . '" width="76" height="76" alt="' . esc_attr( $label ) . '" loading="lazy" decoding="async" onerror="var u=this.dataset.fallback;if(u){this.onerror=null;this.src=u;}" />';
 		echo '</span>';
 		echo '<span class="wrrapd-retailer-wheels__title">' . esc_html( $label ) . '</span>';
 		echo '</a>';

@@ -1,0 +1,52 @@
+/**
+ * Paste into: Elementor → Site Settings → Custom CSS (or Theme → Customizer → Additional CSS).
+ * Does NOT require edits to wrrapd-orders-bridge.php.
+ *
+ * Units: no raw px — uses %, vmin, vw, rem, and clamp() so layout scales with viewport.
+ * Note: circle “% width” on the badge is a poor fit inside auto-width flex children (the
+ * percentage base wobbles). For logos we use vmin/vw + clamp (screen-fraction behavior).
+ *
+ * After pasting: purge SG Optimizer / W3, hard-refresh. Inspect live header classes if rules don’t bite.
+ */
+
+/* --- A) Header top breathing room (Hello + Elementor header) --- */
+body:not(.admin-bar) {
+	margin-top: 0 !important;
+}
+
+/* Tighten first header section top padding — scales with narrowest viewport axis */
+.elementor-location-header .elementor-top-section.elementor-section:first-child,
+[data-elementor-type="header"] > .elementor-section-wrap > .elementor-section:first-child {
+	padding-top: clamp(0, 0.6vmin, 0.35rem) !important;
+}
+
+/* Common Hello / sticky header wrapper — reduce if you still see a gap */
+header.site-header,
+.elementor-location-header {
+	margin-top: 0 !important;
+}
+
+/* If a strip remains: Elementor → Header template → select top Section → Advanced → Padding (top). */
+
+/* --- B) Retailer wheel — portrait phones: scale-friendly circles + inset --- */
+@media (max-width: 639px) {
+	#wrrapd-retailer-wheels-row .wrrapd-retailer-wheels__badge {
+		/* Square: size tracks the smaller of width/height (portrait-friendly) */
+		width: min(12vmin, 16vw) !important;
+		height: min(12vmin, 16vw) !important;
+	}
+
+	#wrrapd-retailer-wheels-row #wrrapd-retailer-wheels-strip.wrrapd-retailer-wheels {
+		justify-content: flex-start !important;
+		/* % of the full-width row — true edge padding that scales with screen width */
+		padding-left: max(3%, env(safe-area-inset-left)) !important;
+		padding-right: max(3%, env(safe-area-inset-right)) !important;
+		/* flex row-gap % can be quirky; vw tracks width consistently */
+		gap: min(1.5vw, 0.5rem) !important;
+	}
+
+	#wrrapd-retailer-wheels-row .wrrapd-retailer-wheels__title {
+		font-size: clamp(0.55rem, 2.75vw, 0.75rem) !important;
+		max-width: min(30vw, 5.5em) !important;
+	}
+}
