@@ -11,7 +11,7 @@ WordPress + Elementor + Hello theme content mostly lives **in the production dat
 ### 2026-05 — Gift guides: no duplicate logo strip; anchor after red divider (MU plugin)
 
 - **Snippets:** `wrrapd-gift-guides-section.html` — removed `.wrrapd-gift-guides__stores-wrap` (duplicate of header retailer wheel). Partner hops remain on the six occasion cards only.
-- **MU plugin:** `wrrapd_output_home_gift_guides_reposition_script()` — hides/removes dup strip on load; moves the **entire Elementor HTML widget** to **after** Jacksonville disclaimer + red divider (divider widget or next section). Header wheel: **size only** (54 / 68 / 78 px), same placement below header. Re-upload `mu-plugins/wrrapd-orders-bridge.php` after pull.
+- **MU plugin:** `wrrapd_output_home_gift_guides_reposition_script()` — hides/removes dup strip on load; moves the **entire Elementor HTML widget** to **immediately after** divider **`5601b5d`** (red line), **before** `#giftWrapRow` and “How it works” (`d0991cd` / `e7baa0c`). Fallbacks: insert before gift-wrap or How-it-works heading. Re-upload `mu-plugins/wrrapd-orders-bridge.php` after pull.
 
 ### 2026-05 — Gift guides block: reposition below Jacksonville disclaimer (MU plugin JS)
 
