@@ -178,7 +178,7 @@ function wrrapd_affiliate_fallback_public_url( $slug ) {
 		'walmart'   => 'https://www.walmart.com/',
 		'nordstrom' => 'https://www.nordstrom.com/',
 		'kohls'     => 'https://www.kohls.com/',
-		'sephora'   => 'https://www.sephora.com/',
+		'sephora'   => 'https://www.sephora.com/shop/gifts',
 		'etsy'      => 'https://www.etsy.com/',
 		'bestbuy'   => 'https://www.bestbuy.com/',
 	);
@@ -352,6 +352,39 @@ function wrrapd_output_retailer_wheel_strip() {
 add_action( 'wp_body_open', 'wrrapd_output_retailer_wheel_strip', 5 );
 /** Same callback, run-once guard: outputs here if the active theme never calls `wp_body_open`. */
 add_action( 'wp_footer', 'wrrapd_output_retailer_wheel_strip', 1 );
+
+/**
+ * Home page: move Elementor gift-guides block (.wrrapd-gift-guides) below the hero section
+ * that ends with the Jacksonville service-area disclaimer (red divider / Father's Day block).
+ */
+function wrrapd_output_home_gift_guides_reposition_script() {
+	static $printed = false;
+	if ( $printed ) {
+		return;
+	}
+	if ( is_admin() || is_paged() ) {
+		return;
+	}
+	if ( ! is_front_page() && ! is_home() ) {
+		return;
+	}
+	$printed = true;
+	echo '<script id="wrrapd-gift-guides-reposition-js">';
+	echo 'document.addEventListener("DOMContentLoaded",function(){';
+	echo 'var guides=document.querySelector(".wrrapd-gift-guides");';
+	echo 'if(!guides||!guides.parentNode)return;';
+	echo 'var anchor=null,nodes=document.querySelectorAll("p,div,span,.elementor-widget-text-editor");';
+	echo 'for(var i=0;i<nodes.length;i++){var t=(nodes[i].textContent||"");';
+	echo 'if(/Jacksonville,\\s*Florida/i.test(t)&&/new cities being added soon/i.test(t)){anchor=nodes[i];break;}}';
+	echo 'if(!anchor)return;';
+	echo 'var section=anchor.closest("section.elementor-section")||anchor.closest("section")||anchor.closest(".e-con.e-parent");';
+	echo 'if(!section||!section.parentNode)return;';
+	echo 'section.insertAdjacentElement("afterend",guides);';
+	echo '});';
+	echo '</script>';
+}
+
+add_action( 'wp_footer', 'wrrapd_output_home_gift_guides_reposition_script', 20 );
 
 if ( ! defined( 'WRRAPD_INTERNAL_API_KEY' ) || WRRAPD_INTERNAL_API_KEY === '' ) {
 	return;
