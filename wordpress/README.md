@@ -69,6 +69,31 @@ define( 'WRRAPD_API_BASE', 'https://api.wrrapd.com' );
 define( 'WRRAPD_INTERNAL_API_KEY', 'paste-the-same-secret-as-WRRAPD_INTERNAL_CLAIM_SECRET' );
 ```
 
+### Affiliate hops — `/go/{slug}/` (homepage retailer wheel)
+
+The MU plugin registers pretty links like **`https://wrrapd.com/go/etsy/`**. On each request, WordPress runs a **`template_redirect`** handler that:
+
+1. Matches **`/go/{slug}/`** against an allow list (`ulta`, `lego`, `target`, `amazon`, `walmart`, `nordstrom`, `kohls`, `sephora`, `etsy`, `bestbuy`).
+2. If **`wp-config.php`** defines the matching constant below with a non-empty value that **starts with `https://`**, the browser receives a **302** to that URL (your Impact or other network “tracking” link — commissions and attribution are handled **there** and by the retailer, not inside this plugin).
+3. If the constant is missing, empty, or not valid `https`, the plugin redirects to each retailer’s **gift hub** (e.g. Amazon → `https://www.amazon.com/gp/most-gifted`, Target → gift ideas, Sephora → `https://www.sephora.com/shop/gifts`) so visitors land on gifting pages, without affiliate credit from this hop.
+
+Optional defines (paste full URLs from your affiliate dashboard; **do not commit live tokenized URLs** to a public repo):
+
+```php
+define( 'WRRAPD_AFFILIATE_REDIRECT_ULTA', 'https://…' );
+define( 'WRRAPD_AFFILIATE_REDIRECT_LEGO', 'https://…' );
+define( 'WRRAPD_AFFILIATE_REDIRECT_TARGET', 'https://…' );
+define( 'WRRAPD_AFFILIATE_REDIRECT_AMAZON', 'https://…' );
+define( 'WRRAPD_AFFILIATE_REDIRECT_WALMART', 'https://…' );
+define( 'WRRAPD_AFFILIATE_REDIRECT_NORDSTROM', 'https://…' );
+define( 'WRRAPD_AFFILIATE_REDIRECT_KOHLS', 'https://…' );
+define( 'WRRAPD_AFFILIATE_REDIRECT_SEPHORA', 'https://…' );
+define( 'WRRAPD_AFFILIATE_REDIRECT_ETSY', 'https://…' );
+define( 'WRRAPD_AFFILIATE_REDIRECT_BESTBUY', 'https://…' );
+```
+
+The plugin does **not** set affiliate cookies on `wrrapd.com`; the redirect chain and the network’s URL do that. Reporting (clicks, sales, payouts) lives in your **affiliate network’s portal**, not in WordPress.
+
 ## Elementor / “Review Wrrapd Orders” page
 
 The `[wrrapd_review_orders]` shortcode **only outputs the table block you add**; it does not remove other Elementor widgets. If you had a richer “My orders” layout (dates, giftee, occasions, design, comments), use **that** page: add one **Shortcode** widget (or embed the shortcode inside a column) and keep your existing form/list widgets. A separate minimal **“My Orders”** page is optional.

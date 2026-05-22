@@ -172,15 +172,15 @@ function wrrapd_affiliate_go_constant_for_slug( $slug ) {
 function wrrapd_affiliate_fallback_public_url( $slug ) {
 	$map = array(
 		'ulta'      => 'https://www.ulta.com/',
-		'lego'      => 'https://www.lego.com/',
-		'target'    => 'https://www.target.com/',
-		'amazon'    => 'https://www.amazon.com/',
-		'walmart'   => 'https://www.walmart.com/',
-		'nordstrom' => 'https://www.nordstrom.com/',
-		'kohls'     => 'https://www.kohls.com/',
+		'lego'      => 'https://www.lego.com/en-us/gifts',
+		'target'    => 'https://www.target.com/c/gift-ideas/-/N-96d2i',
+		'amazon'    => 'https://www.amazon.com/gp/most-gifted',
+		'walmart'   => 'https://www.walmart.com/shop/gifts',
+		'nordstrom' => 'https://www.nordstrom.com/browse/gifts',
+		'kohls'     => 'https://www.kohls.com/catalog/gift-ideas-holiday.jsp?CN=Feature:Gift+Ideas+Occasion:Holiday',
 		'sephora'   => 'https://www.sephora.com/shop/gifts',
-		'etsy'      => 'https://www.etsy.com/',
-		'bestbuy'   => 'https://www.bestbuy.com/',
+		'etsy'      => 'https://www.etsy.com/c/gifts',
+		'bestbuy'   => 'https://www.bestbuy.com/site/electronics/gift-ideas/abcat0010000.c?id=abcat0010000',
 	);
 	$slug = strtolower( (string) $slug );
 	return isset( $map[ $slug ] ) ? $map[ $slug ] : home_url( '/' );
