@@ -32,8 +32,8 @@ header.site-header,
 @media (max-width: 639px) {
 	#wrrapd-retailer-wheels-row .wrrapd-retailer-wheels__badge {
 		/* Square: size tracks the smaller of width/height (portrait-friendly) */
-		width: min(12vmin, 16vw) !important;
-		height: min(12vmin, 16vw) !important;
+		width: min(14vmin, 19vw) !important;
+		height: min(14vmin, 19vw) !important;
 	}
 
 	#wrrapd-retailer-wheels-row #wrrapd-retailer-wheels-strip.wrrapd-retailer-wheels {

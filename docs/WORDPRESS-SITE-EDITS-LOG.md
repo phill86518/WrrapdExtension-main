@@ -8,6 +8,30 @@ WordPress + Elementor + Hello theme content mostly lives **in the production dat
 
 ## Recent changes
 
+### 2026-05 — Gift guides: no duplicate logo strip; anchor after red divider (MU plugin)
+
+- **Snippets:** `wrrapd-gift-guides-section.html` — removed `.wrrapd-gift-guides__stores-wrap` (duplicate of header retailer wheel). Partner hops remain on the six occasion cards only.
+- **MU plugin:** `wrrapd_output_home_gift_guides_reposition_script()` — hides/removes dup strip on load; moves the **entire Elementor HTML widget** to **after** Jacksonville disclaimer + red divider (divider widget or next section). Header wheel: **size only** (54 / 68 / 78 px), same placement below header. Re-upload `mu-plugins/wrrapd-orders-bridge.php` after pull.
+
+### 2026-05 — Gift guides block: reposition below Jacksonville disclaimer (MU plugin JS)
+
+- **Elementor:** Homepage HTML widget still outputs `.wrrapd-gift-guides` (six occasion cards).
+- **MU plugin:** `wrrapd_output_home_gift_guides_reposition_script()` in `wrrapd-orders-bridge.php` — on front page only, moves the **entire Elementor HTML widget** (not just inner `.wrrapd-gift-guides`) to **after** widget **`de3f6bb`** (Jacksonville disclaimer). Gift guides and Father’s Day live in the same container `306d6bd`; moving only the inner `<section>` left the cards at the top. Re-upload MU plugin after pull.
+
+### 2026-05 — JoinHoney.com links in registration legal copy (trust fix — Elementor only)
+
+**REALLY IMPORTANT — where to edit (confirmed on production):**
+
+- **NOT** Popup Maker (`Easter Sale`, `Halloween`, `popmake-*`) — unrelated plugin.
+- **NOT** Header template **6078**, **NOT** Ultimate Member forms (no `joinhoney` in UM).
+- **YES — Elementor popups:** **WP Admin → Elementor → Editor → Templates → Popups** (same list as Theme Builder popups; Elementor library post type).
+- **Popup post IDs on homepage (live HTML, May 2026):** `4997`, `5033`, `5121`, `5166`.
+- **`joinhoney.com` appears only in popup `5166`** (3 hrefs). Popup **`5121` has login/register (Essential Addons `eael-login-register`, widget `1f83ad1`) but zero `joinhoney` strings** — do not expect Honey URLs when editing 5121.
+- **Likely template name for the fix:** **Email_Registration_Popup** (verify post ID **5166** in the templates list or URL `post.php?post=5166&action=elementor`).
+- **Widget to edit:** **Text Editor** (Elementor widget id **`e234d56`**) sitting next to/below the **Login/Register** widget — legal paragraph *“Agree with Terms below and Register…”*. Visual editor shows **Wrrapd** link labels, not the word “honey”; open **Code** tab or click each blue link to see hrefs still pointing at `joinhoney.com`.
+- **Replace hrefs:** `ecomms-policy` and `terms` → `https://wrrapd.com/terms/`; `privacy` → `https://wrrapd.com/privacy/`.
+- **Not** in `wrrapd-orders-bridge.php`.
+
 ### 2026-04 — Orders shortcode `layout="studio"` (dashboard + editable overlays)
 
 - **Monorepo:** `[wrrapd_review_orders layout="studio"]` — full-width dashboard UI, occasion browse filter, mapped pay-server fields, customer **occasion label** + **notes** saved in **`wrrapd_order_line_overlays`** user meta via **`admin-ajax.php?action=wrrapd_save_order_line_overlay`**. Remove legacy Jet listing on the same page.

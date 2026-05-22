@@ -54,84 +54,6 @@
 	margin: 0 0 clamp(1rem, 3vmin, 1.35rem);
 }
 
-/* Partner logos row — same /go/ hops + mu-plugins/logos PNGs as the homepage wheel */
-.wrrapd-gift-guides__stores-wrap {
-	margin: 0 0 clamp(1.75rem, 4.5vmin, 2.75rem);
-}
-
-.wrrapd-gift-guides__stores-label {
-	font-size: clamp(0.72rem, 1.75vw, 0.8rem);
-	font-weight: 600;
-	letter-spacing: 0.06em;
-	text-transform: uppercase;
-	color: var(--wgg-muted);
-	margin: 0 0 clamp(0.65rem, 2vmin, 0.85rem);
-}
-
-.wrrapd-gift-guides__stores {
-	display: flex;
-	flex-direction: row;
-	flex-wrap: wrap;
-	justify-content: center;
-	align-items: flex-start;
-	gap: clamp(0.45rem, 2vw, 0.85rem);
-	list-style: none;
-	padding: clamp(0.65rem, 2vmin, 0.85rem) clamp(0.35rem, 1.5vw, 0.65rem);
-	margin: 0;
-	max-width: 100%;
-	box-sizing: border-box;
-	background: rgba(255, 255, 255, 0.45);
-	border: 1px solid var(--wgg-border);
-	border-radius: clamp(0.65rem, 2vmin, 0.85rem);
-}
-
-.wrrapd-gift-guides__stores-item {
-	margin: 0;
-	padding: 0;
-	list-style: none;
-}
-
-.wrrapd-gift-guides__store {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	gap: 0.28rem;
-	max-width: 5rem;
-	text-decoration: none;
-	color: var(--wgg-ink);
-	outline-offset: 3px;
-}
-
-.wrrapd-gift-guides__store:focus-visible {
-	outline: 2px solid var(--wgg-gold-deep);
-	border-radius: 0.35rem;
-}
-
-.wrrapd-gift-guides__store-badge {
-	width: clamp(2.1rem, 9vmin, 2.55rem);
-	height: clamp(2.1rem, 9vmin, 2.55rem);
-	border-radius: 50%;
-	overflow: hidden;
-	box-shadow: 0 2px 10px rgba(15, 23, 42, 0.1), inset 0 0 0 2px rgba(255, 255, 255, 0.75);
-	background: #fff;
-	flex-shrink: 0;
-}
-
-.wrrapd-gift-guides__store-badge img {
-	display: block;
-	width: 100%;
-	height: 100%;
-	object-fit: cover;
-}
-
-.wrrapd-gift-guides__store-name {
-	font-size: clamp(0.62rem, 1.65vw, 0.72rem);
-	font-weight: 600;
-	text-align: center;
-	color: var(--wgg-muted);
-	line-height: 1.15;
-}
-
 /* Featured retailer logo on each occasion card */
 .wrrapd-gift-guides__card-top {
 	margin-bottom: 0.5rem;
@@ -164,18 +86,6 @@
 	width: 100%;
 	height: 100%;
 	object-fit: cover;
-}
-
-@media (max-width: 639px) {
-	.wrrapd-gift-guides__stores {
-		justify-content: flex-start;
-		overflow-x: auto;
-		flex-wrap: nowrap;
-		-webkit-overflow-scrolling: touch;
-		scrollbar-width: thin;
-		padding-left: max(2%, env(safe-area-inset-left));
-		padding-right: max(2%, env(safe-area-inset-right));
-	}
 }
 
 .wrrapd-gift-guides__grid {
