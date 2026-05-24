@@ -2,7 +2,15 @@ import {
   SHIPPING_TIER_BESTBUY_LIMITED,
   describeTierForUi,
 } from "../../content/retailer-common.js";
-import { WRRAPD_RETAILER_BESTBUY } from "./constants.js";
+import { initRetailerCartGiftOptIn } from "../../shared/cart-gift-optin.js";
+import {
+  BESTBUY_CART_OPTIN_DATA_ATTR,
+  BESTBUY_CART_URL_HINTS,
+  BESTBUY_GIFT_MODAL_ID,
+  BESTBUY_SAVED_BANNER_ATTR,
+  BESTBUY_SESSION_PREFIX,
+  WRRAPD_RETAILER_BESTBUY,
+} from "./constants.js";
 
 function normalizeWhitespace(value) {
   return String(value || "").replace(/\s+/g, " ").trim();
@@ -159,12 +167,28 @@ export function extractBestbuyCartSnapshot(root = document) {
 }
 
 export function initBestbuyRetailerBootstrap() {
+  const shippingTierHint = describeTierForUi(SHIPPING_TIER_BESTBUY_LIMITED);
+  const cart = extractBestbuyCartSnapshot(document);
+
+  initRetailerCartGiftOptIn({
+    sessionPrefix: BESTBUY_SESSION_PREFIX,
+    retailerLabel: "Best Buy",
+    optInDataAttr: BESTBUY_CART_OPTIN_DATA_ATTR,
+    savedBannerAttr: BESTBUY_SAVED_BANNER_ATTR,
+    modalId: BESTBUY_GIFT_MODAL_ID,
+    shippingTierHint,
+    checkoutButtonPatterns: [/^checkout$/i, /^continue to checkout$/i],
+    summarySelector: "[data-testid='cart-order-summary']",
+    isCartPage: () => BESTBUY_CART_URL_HINTS.some((h) => location.pathname.toLowerCase().includes(h)),
+    getCartSnapshot: () => extractBestbuyCartSnapshot(document),
+  });
+
   window.__WRRAPD_BESTBUY_DEBUG__ = {
     retailer: WRRAPD_RETAILER_BESTBUY,
     href: window.location.href,
     shippingTier: SHIPPING_TIER_BESTBUY_LIMITED,
-    shippingTierHint: describeTierForUi(SHIPPING_TIER_BESTBUY_LIMITED),
-    cart: extractBestbuyCartSnapshot(document),
+    shippingTierHint,
+    cart,
     sampledAt: new Date().toISOString(),
   };
 }

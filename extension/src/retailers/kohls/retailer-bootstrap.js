@@ -2,7 +2,15 @@ import {
   SHIPPING_TIER_SINGLE,
   describeTierForUi,
 } from "../../content/retailer-common.js";
-import { WRRAPD_RETAILER_KOHLS } from "./constants.js";
+import { initRetailerCartGiftOptIn } from "../../shared/cart-gift-optin.js";
+import {
+  KOHLS_CART_OPTIN_DATA_ATTR,
+  KOHLS_CART_URL_HINTS,
+  KOHLS_GIFT_MODAL_ID,
+  KOHLS_SAVED_BANNER_ATTR,
+  KOHLS_SESSION_PREFIX,
+  WRRAPD_RETAILER_KOHLS,
+} from "./constants.js";
 
 function normalizeWhitespace(value) {
   return String(value || "").replace(/\s+/g, " ").trim();
@@ -164,12 +172,28 @@ export function extractKohlsCartSnapshot(root = document) {
 }
 
 export function initKohlsRetailerBootstrap() {
+  const shippingTierHint = describeTierForUi(SHIPPING_TIER_SINGLE);
+  const cart = extractKohlsCartSnapshot(document);
+
+  initRetailerCartGiftOptIn({
+    sessionPrefix: KOHLS_SESSION_PREFIX,
+    retailerLabel: "Kohl's",
+    optInDataAttr: KOHLS_CART_OPTIN_DATA_ATTR,
+    savedBannerAttr: KOHLS_SAVED_BANNER_ATTR,
+    modalId: KOHLS_GIFT_MODAL_ID,
+    shippingTierHint,
+    checkoutButtonPatterns: [/^checkout$/i, /^proceed to checkout$/i],
+    summarySelector: "aside[data-testid='order-summary'], [data-testid='order-summary']",
+    isCartPage: () => KOHLS_CART_URL_HINTS.some((h) => location.pathname.toLowerCase().includes(h)),
+    getCartSnapshot: () => extractKohlsCartSnapshot(document),
+  });
+
   window.__WRRAPD_KOHLS_DEBUG__ = {
     retailer: WRRAPD_RETAILER_KOHLS,
     href: window.location.href,
     shippingTier: SHIPPING_TIER_SINGLE,
-    shippingTierHint: describeTierForUi(SHIPPING_TIER_SINGLE),
-    cart: extractKohlsCartSnapshot(document),
+    shippingTierHint,
+    cart,
     sampledAt: new Date().toISOString(),
   };
 }
