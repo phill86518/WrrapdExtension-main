@@ -97,14 +97,14 @@ function openGiftChoicesModal(config, cartSnapshot) {
     "width:100%;max-width:480px;max-height:90vh;overflow:auto;background:#fff;border-radius:12px;padding:18px 16px;box-shadow:0 12px 40px rgba(0,0,0,.25);font-family:Arial,sans-serif;";
 
   const title = document.createElement("h2");
-  title.style.cssText = "margin:0 0 8px;font-size:18px;color:#111827;";
+  title.style.cssText = "margin:0 0 8px;font-size:18px;font-weight:800;color:#111827;";
   title.textContent = "Gift wrap with Wrrapd";
 
   const intro = document.createElement("p");
-  intro.style.cssText = "margin:0 0 12px;font-size:13px;line-height:1.45;color:#475569;";
+  intro.style.cssText = "margin:0 0 12px;font-size:13px;line-height:1.5;color:#475569;";
   intro.textContent =
     config.modalIntro ||
-    "Choose gift wrap for your order. You will complete Wrrapd payment during retailer checkout.";
+    "Add a gift message per item below. You'll complete Wrrapd's secure payment during checkout, then we wrap and ship to your giftee.";
 
   if (config.shippingTierHint) {
     const tier = document.createElement("p");
@@ -211,15 +211,27 @@ function mountCartGiftOptIn(config, cartSnapshot) {
   wrap.style.cssText =
     "box-sizing:border-box;width:100%;margin:0 0 12px;padding:14px 16px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;border-left:4px solid #ff8e14;box-shadow:0 1px 3px rgba(0,0,0,.06);";
 
+  const brandRow = document.createElement("div");
+  brandRow.style.cssText = "display:flex;align-items:center;gap:8px;margin:0 0 6px;";
+  const brandBadge = document.createElement("span");
+  brandBadge.style.cssText =
+    "display:inline-flex;align-items:center;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#fff;background:#111827;border-radius:999px;padding:3px 8px;";
+  brandBadge.textContent = "Wrrapd";
+  const brandTag = document.createElement("span");
+  brandTag.style.cssText = "font-size:12px;font-weight:600;color:#ff8e14;letter-spacing:.02em;";
+  brandTag.textContent = "Gift wrapping & handwritten note";
+  brandRow.append(brandBadge, brandTag);
+
   const hook = document.createElement("h2");
-  hook.style.cssText = "margin:0 0 4px;font-size:16px;font-weight:700;color:#111827;";
-  hook.textContent = "Would you like us to gift-wrap your order?";
+  hook.style.cssText = "margin:0 0 4px;font-size:17px;font-weight:800;color:#111827;line-height:1.3;";
+  hook.textContent =
+    config.hook || "Make it a gift — beautifully wrapped & delivered for you.";
 
   const sub = document.createElement("p");
-  sub.style.cssText = "margin:0 0 10px;font-size:13px;line-height:1.45;color:#475569;";
+  sub.style.cssText = "margin:0 0 12px;font-size:13px;line-height:1.5;color:#475569;";
   sub.textContent =
     config.subtitle ||
-    "Optional — choose below. You can always continue with the retailer's checkout without Wrrapd.";
+    "Add premium gift wrap, a handwritten card, and optional flowers. We wrap it and ship it to your giftee — no printer, no scissors, no awkward receipt.";
 
   if (readGiftChoicesSaved(config.sessionPrefix)) {
     wrap.append(buildSavedBanner(config));
@@ -259,8 +271,8 @@ function mountCartGiftOptIn(config, cartSnapshot) {
   };
 
   fieldset.append(
-    mkRow("yes", "Yes — gift-wrap with Wrrapd"),
-    mkRow("no", "No thanks — continue without Wrrapd gift wrap"),
+    mkRow("yes", "Yes — gift-wrap this order with Wrrapd"),
+    mkRow("no", "No thanks, ship it to me unwrapped"),
   );
 
   const edit = document.createElement("button");
@@ -271,7 +283,7 @@ function mountCartGiftOptIn(config, cartSnapshot) {
   edit.hidden = !readGiftChoicesSaved(config.sessionPrefix);
   edit.addEventListener("click", () => openGiftChoicesModal(config, cartSnapshot));
 
-  wrap.append(hook, sub, fieldset, edit);
+  wrap.append(brandRow, hook, sub, fieldset, edit);
   if (anchor.before) anchor.parent.insertBefore(wrap, anchor.before);
   else anchor.parent.append(wrap);
 }

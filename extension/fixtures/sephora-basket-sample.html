@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<!--
+  Wrrapd dev fixture: Sephora basket page (RwdBasketpage). Sanitized excerpt for
+  DOM / selector work. Do not paste full prod "View source" (session tokens, CMS).
+
+  Live path: https://www.sephora.com/basket   (seoName "/basket")
+
+  Stable hooks for the cart gift opt-in:
+    [data-comp="RwdBasketpage"]                  page shell
+    [data-at="product_refinement"] / [data-comp*="BasicSkuItem"]   line item
+    [data-at="bsk_sku_brand"]                    brand ("Touchland")
+    [data-at="bsk_sku_name"]                     product name
+    [data-at="sku_size"]                         "SIZE ... • ITEM 2556751"
+    [data-at="bsk_sku_price"]                    "$10.00"
+    [data-at="order_summary"] / [data-comp*="CostSummary"]   summary region
+    [data-at="merch_subtotal_label"], [data-at="bsk_total_merch"]
+    [data-at="total_label"], [data-at="bsk_total_cc"]
+    [data-at="basket_checkout_btn"]              Checkout CTA (mount Wrrapd before this)
+    [data-comp*="AddGiftMessage"]                Sephora's own gift message control
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Sephora Basket Sample</title>
+  </head>
+  <body>
+    <div data-comp="RwdBasketpage ">
+      <main>
+        <h2 data-at="basket_header">Shipping and Delivery Basket (1)</h2>
+
+        <div data-at="product_refinement" data-comp="ShippingDeliveryBasicSkuItem BasicSkuItem SkuItemLayout BaseComponent ">
+          <a href="/product/touchland-power-mist-hydrating-hand-sanitizer-P480529?skuId=2556751" data-at="product_image_link">
+            <img src="https://www.sephora.com/productimages/sku/s2556751-main-zoom.jpg?imwidth=74" alt="Touchland Power Mist Hydrating Hand Sanitizer" />
+          </a>
+          <p>
+            <a href="/product/touchland-power-mist-hydrating-hand-sanitizer-P480529?skuId=2556751">
+              <strong data-at="bsk_sku_brand">Touchland</strong><br />
+              <span data-at="bsk_sku_name">Power Mist Hydrating Hand Sanitizer</span>
+            </a>
+          </p>
+          <div data-at="sku_size">SIZE 1 fl. oz. / 30 mL<span>•</span>ITEM 2556751</div>
+          <div data-at="bsk_sku_price">$10.00</div>
+        </div>
+
+        <div data-comp="AddGiftMessageBanner AddGiftMessage BaseComponent ">
+          <button type="button"><span>Add a Gift Message</span></button>
+        </div>
+
+        <div data-at="order_summary" data-comp="CostSummary CostSummary BaseComponent ">
+          <div data-comp="CostSummaryBreakdown ">
+            <div>
+              <span data-at="merch_subtotal_label">Subtotal</span>
+              <span data-at="bsk_total_merch">$10.00</span>
+            </div>
+            <div>
+              <button data-at="shippingHandlingLink" type="button">Shipping</button>
+              <span data-at="bsk_total_ship">FREE</span>
+            </div>
+            <div>
+              <button data-at="tax_btn" type="button">Estimated Tax</button>
+              <span data-at="bsk_total_tax">TBD</span>
+            </div>
+          </div>
+          <h4>
+            <span data-at="total_label">Estimated Total</span>
+            <span data-at="bsk_total_cc">$10.00</span>
+          </h4>
+          <div data-comp="ButtonGrid ButtonGrid BaseComponent ">
+            <button data-at="basket_checkout_btn" data-comp="CheckoutButton " type="button">Checkout</button>
+            <button data-at="basket_paypal_btn" type="button">PayPal</button>
+            <button data-at="basket_venmo_btn" type="button">Venmo</button>
+          </div>
+        </div>
+      </main>
+    </div>
+  </body>
+</html>

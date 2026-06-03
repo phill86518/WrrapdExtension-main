@@ -18,28 +18,30 @@ function normalizeWhitespace(value) {
 }
 
 function extractSephoraCartSnapshot(root = document) {
-  /** @type {Array<{ title: string }>} */
+  /** @type {Array<{ title: string, brand?: string, itemId?: string }>} */
   const items = [];
   const seen = new Set();
 
-  for (const img of root.querySelectorAll('[data-at="item_picture"] img, img[alt]')) {
+  // Primary: Sephora basket line items expose stable data-at hooks.
+  const lineItems = root.querySelectorAll(
+    '[data-at="product_refinement"], [data-comp*="BasicSkuItem"]',
+  );
+  for (const node of lineItems) {
+    const brand = normalizeWhitespace(node.querySelector('[data-at="bsk_sku_brand"]')?.textContent || "");
+    const name = normalizeWhitespace(node.querySelector('[data-at="bsk_sku_name"]')?.textContent || "");
+    const sizeText = normalizeWhitespace(node.querySelector('[data-at="sku_size"]')?.textContent || "");
+    const itemMatch = sizeText.match(/ITEM\s+(\d+)/i);
+    const title = [brand, name].filter(Boolean).join(" ").trim() || name || brand;
+    if (!title || seen.has(title)) continue;
+    seen.add(title);
+    items.push({ title, brand, itemId: itemMatch ? itemMatch[1] : "" });
+  }
+
+  if (items.length > 0) return { itemCount: items.length, items };
+
+  // Fallback for checkout/other layouts: product image alt text.
+  for (const img of root.querySelectorAll('[data-at="item_picture"] img')) {
     const title = normalizeWhitespace(img.getAttribute("alt") || "");
-    if (!title || title.length < 3 || seen.has(title)) continue;
-    seen.add(title);
-    items.push({ title });
-  }
-
-  for (const link of root.querySelectorAll('a[href*="/product/"], a[href*="/p/"]')) {
-    const title = normalizeWhitespace(link.textContent || link.getAttribute("title") || "");
-    if (!title || title.length < 3 || seen.has(title)) continue;
-    seen.add(title);
-    items.push({ title });
-  }
-
-  for (const node of root.querySelectorAll('[data-comp*="BasketItem"], [data-comp*="ProductCard"]')) {
-    const title = normalizeWhitespace(
-      node.querySelector("a, h2, h3, [data-at*='product']")?.textContent || "",
-    );
     if (!title || title.length < 3 || seen.has(title)) continue;
     seen.add(title);
     items.push({ title });
@@ -71,6 +73,11 @@ export function initSephoraRetailerBootstrap() {
     shippingTierHint,
     checkoutButtonPatterns: [/^checkout$/i, /^place order$/i],
     findMountAnchor: () => {
+      // Basket: place above the real Checkout button (data-at hook).
+      const checkoutBtn = document.querySelector('[data-at="basket_checkout_btn"]');
+      if (checkoutBtn?.parentElement) {
+        return { parent: checkoutBtn.parentElement, before: checkoutBtn };
+      }
       if (isSephoraCheckoutPage()) {
         const deliver =
           document.querySelector("#Deliver_To")?.closest("[role='region']") ||
@@ -78,14 +85,14 @@ export function initSephoraRetailerBootstrap() {
         if (deliver?.parentElement) {
           return { parent: deliver.parentElement, before: deliver };
         }
+        const placeOrder = document.querySelector('[data-at="place_order_btn"]');
+        if (placeOrder?.parentElement) {
+          return { parent: placeOrder.parentElement, before: placeOrder };
+        }
       }
-      const checkoutBtn = [...document.querySelectorAll("button")].find((b) =>
-        /^checkout$/i.test(normalizeWhitespace(b.textContent || "")),
-      );
-      if (checkoutBtn?.parentElement) {
-        return { parent: checkoutBtn.parentElement, before: checkoutBtn };
-      }
-      const summary = document.querySelector('[data-comp*="CostSummary"], [data-at="total_label"]')?.closest("[role='region']");
+      const summary = document
+        .querySelector('[data-at="order_summary"], [data-comp*="CostSummary"]')
+        ?.closest("[role='region']");
       if (summary?.parentElement) {
         return { parent: summary.parentElement, before: summary };
       }
@@ -94,8 +101,11 @@ export function initSephoraRetailerBootstrap() {
     isCartPage: isSephoraBasketPage,
     isCheckoutPage: isSephoraCheckoutPage,
     getCartSnapshot: () => extractSephoraCartSnapshot(document),
+    hook: "Make it a gift — we'll wrap your Sephora order beautifully.",
+    subtitle:
+      "Premium gift wrap, a handwritten card, and optional flowers — wrapped by Wrrapd and shipped to your giftee. This is separate from Sephora's own gift message.",
     modalIntro:
-      "Sephora gift wrap through Wrrapd is separate from Sephora's own gift message. Save your choices here, then continue checkout.",
+      "Add a gift message per item. You'll complete Wrrapd's secure payment during checkout, then we wrap and ship to your giftee.",
   });
 
   window.__WRRAPD_SEPHORA_DEBUG__ = {
