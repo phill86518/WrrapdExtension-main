@@ -366,6 +366,66 @@ import { WRRAPD_RETAILER_AMAZON } from '../retailers/amazon/constants.js';
         return productObj && Array.isArray(productObj.options) ? productObj : null;
     }
 
+    function defaultWrrapdSubItem() {
+        return {
+            checkbox_wrrapd: false,
+            checkbox_flowers: false,
+            checkbox_amazon_combine: false,
+            selected_wrapping_option: 'wrrapd',
+            selected_flower_design: null,
+        };
+    }
+
+    function asinFromGiftRow(rowContainer) {
+        const direct =
+            rowContainer?.dataset?.asin ||
+            rowContainer?.querySelector?.('[data-asin]')?.getAttribute?.('data-asin') ||
+            '';
+        if (direct) return direct;
+        const href =
+            rowContainer?.querySelector?.('a[href*="/gp/product/"], a[href*="/dp/"]')?.getAttribute?.('href') || '';
+        const m = href.match(/\/(?:gp\/product|dp)\/([A-Z0-9]{10})/);
+        return m ? m[1] : '';
+    }
+
+    /**
+     * Guarantee a product object (with enough .options) for a gift-page row even when the
+     * cart "Proceed to checkout" scrape never populated wrrapd-items — e.g. Buy Now, direct
+     * navigation to the gift page, cleared storage, or a changed cart DOM. Synthesizes from
+     * the row DOM and persists so the Wrrapd UI always renders.
+     * @param {string} titleKey storage key to use (matched saved key, else the page title)
+     * @param {number} neededSubIndex sub-item index this row needs to occupy
+     */
+    function ensureWrrapdProductForRow(allItems, titleKey, rowContainer, neededSubIndex) {
+        if (!allItems || typeof allItems !== 'object' || !titleKey) return null;
+        let product = allItems[titleKey];
+        if (!product) {
+            const imageEl = rowContainer?.querySelector?.('img');
+            product = {
+                asin: asinFromGiftRow(rowContainer) || null,
+                title: titleKey,
+                imageUrl: imageEl ? (imageEl.src || imageEl.getAttribute('src') || null) : null,
+                options: [],
+                wrrapdSynthesized: true,
+            };
+            allItems[titleKey] = product;
+            console.warn(`[Wrrapd] Cart scrape missing — synthesized gift-row product from DOM: "${titleKey}".`);
+        }
+        if (!Array.isArray(product.options)) product.options = [];
+        const want = Math.max(1, (Number(neededSubIndex) || 0) + 1);
+        let changed = false;
+        while (product.options.length < want) {
+            product.options.push(defaultWrrapdSubItem());
+            changed = true;
+        }
+        if (changed || product.wrrapdSynthesized) {
+            try {
+                saveAllItemsToLocalStorage(allItems);
+            } catch (_) {}
+        }
+        return product;
+    }
+
     /**
      * Keep localStorage in sync with currently checked Wrrapd checkboxes on the gift page.
      * This makes "first-time" and "came-back-and-changed-mind" workflows identical.
@@ -2949,16 +3009,21 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
             }
     
             // Determine which subItem index to use for this row
-            const productObj = resolveProductByRowTitle(allItems, itemTitle, index, itemContainer);
+            let productObj = resolveProductByRowTitle(allItems, itemTitle, index, itemContainer);
+
+            const trackerKey =
+                (productObj && Object.keys(allItems).find((k) => allItems[k] === productObj)) || itemTitle;
+            const currentSubIndex = subItemIndexTracker[trackerKey] || 0;
+
+            // Fallback: synthesize/top-up from the row DOM when the cart scrape didn't store data
+            if (!productObj || !Array.isArray(productObj.options) || currentSubIndex >= productObj.options.length) {
+                productObj = ensureWrrapdProductForRow(allItems, trackerKey, itemContainer, currentSubIndex);
+            }
+
             if (!productObj || !productObj.options || productObj.options.length === 0) {
                 console.error(`[monitorAmazonGiftCheckbox] Row #${index}: No matching product or no sub-items for "${itemTitle}".`);
                 return;
             }
-
-            const trackerKey =
-                Object.keys(allItems).find((k) => allItems[k] === productObj) || itemTitle;
-    
-            const currentSubIndex = subItemIndexTracker[trackerKey] || 0;
             if (currentSubIndex >= productObj.options.length) {
                 console.warn(`[monitorAmazonGiftCheckbox] Row #${index}: No remaining sub-items for "${itemTitle}".`);
                 return;
@@ -3208,24 +3273,30 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                 }
             }
 
-            const productObj = resolveProductByRowTitle(allItems, itemTitle, i, item);
-            
+            let productObj = resolveProductByRowTitle(allItems, itemTitle, i, item);
+
+            const trackerKey =
+                (productObj && Object.keys(allItems).find((k) => allItems[k] === productObj)) || itemTitle;
+
+            // Determine which sub-item index we should use for this row.
+            // If we haven't used any sub-items for this title yet, start at 0.
+            const nextIndex = subItemIndexTracker[trackerKey] || 0;
+
+            // Fallback: synthesize/top-up from the row DOM when the cart scrape didn't store
+            // data (Buy Now, direct nav, cleared storage, changed cart DOM).
+            if (!productObj || !Array.isArray(productObj.options) || nextIndex >= productObj.options.length) {
+                productObj = ensureWrrapdProductForRow(allItems, trackerKey, item, nextIndex);
+            }
+
             if (!productObj) {
                 console.warn(`[insertWrrapdOptions] ⚠️ Skipping row #${i}: No matching data found for title "${itemTitle}".`);
                 continue;
             }
 
-            const trackerKey =
-                Object.keys(allItems).find((k) => allItems[k] === productObj) || itemTitle;
-
             // Make sure we have an array of sub-items in productObj.options
             if (!productObj.options || productObj.options.length === 0) {
                 continue;
             }
-
-            // Determine which sub-item index we should use for this row.
-            // If we haven't used any sub-items for this title yet, start at 0.
-            const nextIndex = subItemIndexTracker[trackerKey] || 0;
 
             // If we exceed the length, it means we have more rows in the Amazon UI
             // than sub-items in .options (which shouldn't happen normally, but just in case)
