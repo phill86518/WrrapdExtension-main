@@ -21,6 +21,8 @@
     "build:bestbuy:prod": "esbuild src/content/bestbuy-index.js --bundle --outfile=content-bestbuy.js --platform=browser --format=iife --legal-comments=none --minify --drop:console --drop:debugger",
     "build:etsy": "esbuild src/content/etsy-index.js --bundle --outfile=content-etsy.js --platform=browser --format=iife --legal-comments=none --minify --drop:debugger",
     "build:etsy:prod": "esbuild src/content/etsy-index.js --bundle --outfile=content-etsy.js --platform=browser --format=iife --legal-comments=none --minify --drop:console --drop:debugger",
+    "check:bestbuy-fixture": "node scripts/check-bestbuy-fixture.mjs",
+    "check:kohls-fixture": "node scripts/check-kohls-fixture.mjs",
     "build": "npm run build:amazon && npm run build:target && npm run build:lego && npm run build:ulta && npm run build:walmart && npm run build:nordstrom && npm run build:kohls && npm run build:sephora && npm run build:bestbuy && npm run build:etsy",
     "build:prod": "npm run build:amazon:prod && npm run build:target:prod && npm run build:lego:prod && npm run build:ulta:prod && npm run build:walmart:prod && npm run build:nordstrom:prod && npm run build:kohls:prod && npm run build:sephora:prod && npm run build:bestbuy:prod && npm run build:etsy:prod",
     "build:dev": "npm run build:amazon && npm run build:target && npm run build:lego && npm run build:ulta && npm run build:walmart && npm run build:nordstrom && npm run build:kohls && npm run build:sephora && npm run build:bestbuy && npm run build:etsy",
@@ -33,6 +35,7 @@
     "stripe": "^17.4.0"
   },
   "devDependencies": {
-    "esbuild": "^0.25.0"
+    "esbuild": "^0.25.0",
+    "jsdom": "^27.0.0"
   }
 }

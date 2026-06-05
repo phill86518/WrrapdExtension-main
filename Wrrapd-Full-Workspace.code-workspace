@@ -8,6 +8,9 @@
     },
     {
       "path": "tracking-platform"
+    },
+    {
+      "path": "."
     }
   ],
   "settings": {

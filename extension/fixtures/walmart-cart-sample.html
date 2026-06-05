@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<!-- Dev fixture: trimmed snapshot of a Walmart /cart page (single shipping item) for selector work. -->
+<html lang="en-US">
+  <head>
+    <meta charset="utf-8" />
+    <title>Walmart cart — Wrrapd fixture</title>
+  </head>
+  <body>
+    <div class="main-content mw1280 center" id="maincontent">
+      <div class="mb7" data-testid="cart-page">
+        <div class="mh4" data-testid="full-page-cart">
+          <section class="flex items-center mv4" aria-labelledby="cartHeader">
+            <h1 class="b f2 pa0 ma0 dark-gray" id="cartHeader">Cart</h1>
+            <span class="f2 mid-gray ml1">(1 item)</span>
+          </section>
+          <div class="flex">
+            <!-- Left column: cart items -->
+            <div class="flex w-two-thirds flex-column mr3 flex-shrink-0">
+              <section data-dca-type="module">
+                <div class="flex flex-column sans-serif pv2" data-testid="product-tile-container">
+                  <ul class="mt0 mb0 pa0 pt3">
+                    <li class="list dark-gray">
+                      <div class="f6 dark-blue">Free shipping on orders over $35</div>
+                      <div data-fs-element="usitemid" data-usitemid="17909062234" class="f7 mr0 ml2">
+                        <a
+                          link-identifier="itemClick"
+                          class="no-underline"
+                          href="/ip/seort/17909062234"
+                        >
+                          <div data-testid="productName" class="sans-serif overflow-hidden f4-l f5 mid-gray">
+                            <span class="ld_AY"
+                              >Wonder Nation Short Sleeve Boxy Pocket Tee, Size 4-18 &amp; Plus</span
+                            >
+                          </div>
+                        </a>
+                        <div class="mt1 wrap" data-testid="productDescription">
+                          <div class="lh-title f6-l lh-copy-l sans-serif gray">Actual Color: Lavneder Sunrise</div>
+                          <div class="lh-title f6-l lh-copy-l sans-serif gray">Clothing Size: M (8)</div>
+                        </div>
+                      </div>
+                    </li>
+                  </ul>
+                </div>
+              </section>
+            </div>
+
+            <!-- Right column: sticky order rail -->
+            <div class="flex w-third flex-column ml3">
+              <div class="sticky" style="top: 156px;">
+                <div class="shadow-1 br3">
+                  <div class="flex flex-column">
+                    <div>
+                      <div class="ph3 pv3">
+                        <button
+                          class="Button_button__s6lnv Button_primary___r9Bd Button_isFullWidth__8bg_i"
+                          type="button"
+                          data-automation-id="checkout"
+                          id="Continue to checkout button"
+                        >
+                          Continue to checkout
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <div
+                      class="flex flex-column center sans-serif ph3-l pb3-xl bt b--near-white"
+                      data-testid="purchase-order-summary"
+                      id="totalSummary"
+                    >
+                      <div class="flex flex-row justify-between dark-gray b pv3 f5">
+                        <label data-testid="grand-total-label">Estimated total</label>
+                        <div class="word-wrap green b f4-l" data-testid="grand-total-value">$12.57</div>
+                      </div>
+                    </div>
+                  </div>
+                  <!-- Walmart's own gift checkbox lives here too -->
+                  <section data-dca-type="module">
+                    <div class="flex flex-row sans-serif ph3 ph4-l relative shadow-1 br3 mt4">
+                      <label class="ld_AK">
+                        <input class="ld_AO" type="checkbox" />
+                        <span class="ld_AR">This order is a gift.</span>
+                      </label>
+                    </div>
+                  </section>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

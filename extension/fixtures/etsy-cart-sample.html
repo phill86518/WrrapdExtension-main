@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<!-- Dev fixture: trimmed snapshot of an Etsy /cart page (single shop, single listing) for selector work. -->
+<html lang="en-US">
+  <head>
+    <meta charset="utf-8" />
+    <title>Etsy - Shopping Cart</title>
+  </head>
+  <body class="en-US USD US" data-region="US">
+    <main id="content">
+      <div id="multi-shop-cart-list">
+        <div data-multi-shop-cart="">
+          <div class="wt-grid">
+            <ul class="cart-list-items">
+              <li data-multi-shop-cart-single="">
+                <ul class="wt-list-unstyled">
+                  <li
+                    data-cart-listing=""
+                    data-listing-id="4469874878"
+                    data-shop-id="60486139"
+                    data-listing-unit-price="85"
+                    data-listing-quantity="1"
+                    data-listing-title="Polaroid Frame with Brass Hearts | Custom Photo Mat (Instax Mini)"
+                  >
+                    <a
+                      href="https://www.etsy.com/listing/4469874878/polaroid-frame-with-brass-hearts-custom?ref=cart"
+                      data-title="Polaroid Frame with Brass Hearts | Custom Photo Mat (Instax Mini)"
+                      data-listing-title=""
+                    >
+                      Polaroid Frame with Brass Hearts | Custom Photo Mat (Instax Mini)
+                    </a>
+                  </li>
+                </ul>
+              </li>
+            </ul>
+
+            <div>
+              <div data-multi-shop-cart-payment="" data-shop-payment-unique-id="13602137670">
+                <div class="multi-shop-cart-payment">
+                  <form
+                    class="enter-checkout-form"
+                    action="/checkout/start?initial_cart_ids=13602137670"
+                    method="post"
+                  >
+                    <div class="cart-payment-section">
+                      <fieldset>
+                        <legend class="wt-text-title-01">How you'll pay</legend>
+                      </fieldset>
+                      <table>
+                        <tbody>
+                          <tr>
+                            <th>Total (1 item)</th>
+                            <td>$85.00</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    <div>
+                      <fieldset>
+                        <legend class="wt-screen-reader-only">Mark order as a gift</legend>
+                        <div class="wt-checkbox">
+                          <input
+                            id="gift-list-checkbox-input-13602137670"
+                            name="gift"
+                            type="checkbox"
+                            value="true"
+                          />
+                          <label for="gift-list-checkbox-input-13602137670">Mark order as a gift</label>
+                        </div>
+                      </fieldset>
+                      <button
+                        class="proceed-to-checkout wt-btn wt-btn--filled"
+                        type="submit"
+                        data-selector="cart-submit-button"
+                      >
+                        <span class="submit-button-text">Proceed to checkout</span>
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </body>
+</html>

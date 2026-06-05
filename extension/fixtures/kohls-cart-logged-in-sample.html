@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Kohl's Cart Logged-in Sample</title>
+  </head>
+  <body>
+    <main data-testid="cart-root">
+      <section class="bag-item" data-testid="bag-item" data-automation-id="bag-item">
+        <a class="product-title" data-testid="item-title" href="/product/prd-12345/womens-knit-top.jsp">
+          Women's Sonoma Goods For Life Everyday Knit Top
+        </a>
+        <div class="price" data-testid="item-price">$18.00</div>
+        <div class="line-item__quantity" data-testid="quantity">Qty 2</div>
+        <div class="fulfillment">Ships to home</div>
+      </section>
+
+      <section class="bag-item" data-testid="bag-item" data-automation-id="bag-item">
+        <a class="product-title" data-testid="item-title" href="/product/prd-67890/ninja-foodi-air-fryer.jsp">
+          Ninja Foodi 6-in-1 8-qt. Air Fryer
+        </a>
+        <div class="price" data-testid="item-price">$89.99</div>
+        <div class="line-item__quantity" data-testid="quantity">Quantity: 1</div>
+        <div class="fulfillment">Store Pickup - Ready in 2 hours</div>
+      </section>
+
+      <aside class="order-summary" data-testid="order-summary">
+        <div class="summary-row" data-testid="summary-row">Subtotal $125.99</div>
+        <div class="summary-row" data-testid="summary-row">Estimated total $125.99</div>
+      </aside>
+    </main>
+  </body>
+</html>
