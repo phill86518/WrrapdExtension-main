@@ -15,6 +15,22 @@ function normalizeWhitespace(value) {
   return String(value || "").replace(/\s+/g, " ").trim();
 }
 
+/** Stable per-session order number, shared with the checkout pay flow. */
+function getOrCreateOrderNumber(prefix) {
+  const key = `${prefix}OrderNumber`;
+  try {
+    let on = sessionStorage.getItem(key);
+    if (!on) {
+      const tag = String(prefix || "WRRAPD").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8) || "WRRAPD";
+      on = `${tag}-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+      sessionStorage.setItem(key, on);
+    }
+    return on;
+  } catch {
+    return "";
+  }
+}
+
 function findButtonByText(patterns, root = document) {
   const nodes = root.querySelectorAll("button, a[role='button'], input[type='submit']");
   for (const node of nodes) {
@@ -364,33 +380,97 @@ function openGiftChoicesModal(config, cartSnapshot) {
   });
   const aiGenBtn = document.createElement("button");
   aiGenBtn.type = "button";
-  aiGenBtn.textContent = "Generate ideas";
+  aiGenBtn.textContent = "Generate designs";
   aiGenBtn.style.cssText =
     "padding:6px 12px;border:1px solid #a88734;background:#f0c14b;border-radius:6px;cursor:pointer;font-size:13px;";
+  const aiStatus = document.createElement("div");
+  aiStatus.style.cssText = "font-size:12px;color:#64748b;margin-top:6px;";
   const aiResults = document.createElement("div");
-  aiResults.style.cssText = "display:grid;gap:6px;margin-top:8px;";
-  const renderAiResults = (items) => {
+  aiResults.style.cssText = "display:flex;flex-direction:column;gap:12px;margin-top:10px;";
+
+  // Persist the selected AI design to GCS (upscaled), mirroring the Amazon flow.
+  async function persistSelectedAiDesign(design, itemTitle) {
+    if (!design || !design.imageBase64) return;
+    try {
+      const resp = await fetch("https://api.wrrapd.com/api/save-ai-design", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          imageBase64: design.imageBase64,
+          designTitle: design.title,
+          designDescription: design.description || "",
+          itemTitle: itemTitle || `${config.retailerName || config.retailerLabel} item`,
+          orderNumber: getOrCreateOrderNumber(config.sessionPrefix),
+          prompt: currentAiPrompt || "",
+          folder: "designs",
+          shouldUpscale: true,
+        }),
+      });
+      if (!resp.ok) return;
+      const saved = await resp.json().catch(() => ({}));
+      // Only keep the selection if it's still the active one for this item.
+      if (currentAiDesign && currentAiDesign.title === design.title) {
+        currentAiDesign = {
+          title: design.title,
+          description: design.description || "",
+          gcsPath: saved.filePath || "",
+          gcsUrl: saved.publicUrl || "",
+        };
+      }
+    } catch {
+      /* keep the lightweight selection even if GCS save fails */
+    }
+  }
+
+  // Render up to 3 designs (Amazon-style): radio + title + description + image.
+  const renderDesigns = (items) => {
     aiResults.innerHTML = "";
     if (!Array.isArray(items) || !items.length) return;
-    items.slice(0, 4).forEach((it) => {
-      const ttl = String(it?.title || "AI Design");
-      const desc = String(it?.description || "");
+    items.slice(0, 3).forEach((design, idx) => {
+      const ttl = String(design?.title || `Design ${idx + 1}`);
+      const desc = String(design?.description || "");
+      const imgSrc = design?.imageUrl || design?.gcsUrl || "";
       const lbl = document.createElement("label");
       lbl.style.cssText =
-        "display:flex;gap:6px;align-items:flex-start;border:1px solid #e5e7eb;border-radius:6px;padding:6px 8px;cursor:pointer;font-size:13px;";
+        "display:flex;flex-direction:column;gap:8px;cursor:pointer;border:2px solid #e5e7eb;border-radius:8px;padding:10px;font-size:13px;";
+      const head = document.createElement("div");
+      head.style.cssText = "display:flex;align-items:flex-start;gap:8px;";
       const r = document.createElement("input");
       r.type = "radio";
       r.name = `${config.sessionPrefix}-ai-choice`;
-      if (currentAiDesign && currentAiDesign.title === ttl) r.checked = true;
+      r.style.marginTop = "3px";
+      if (currentAiDesign && currentAiDesign.title === ttl) {
+        r.checked = true;
+        lbl.style.borderColor = "#f0c14b";
+      }
       r.addEventListener("change", () => {
-        if (r.checked) currentAiDesign = { title: ttl, description: desc };
+        if (!r.checked) return;
+        aiResults.querySelectorAll("label").forEach((l) => (l.style.borderColor = "#e5e7eb"));
+        lbl.style.borderColor = "#f0c14b";
+        currentAiDesign = {
+          title: ttl,
+          description: desc,
+          imageUrl: design?.imageUrl || "",
+          imageBase64: design?.imageBase64 || "",
+        };
+        void persistSelectedAiDesign(design, lines[currentIdx]?.title);
       });
       const body = document.createElement("div");
-      body.innerHTML = `<div style="font-weight:600;color:#0f172a">${ttl}</div><div style="color:#334155;line-height:1.35">${desc}</div>`;
-      lbl.append(r, body);
+      body.innerHTML = `<div style="font-weight:700;color:#0f172a">${ttl}</div><div style="color:#475569;line-height:1.4">${desc}</div>`;
+      head.append(r, body);
+      lbl.append(head);
+      if (imgSrc) {
+        const img = document.createElement("img");
+        img.src = imgSrc;
+        img.alt = ttl;
+        img.style.cssText =
+          "width:100%;max-height:220px;object-fit:cover;border-radius:6px;border:1px solid #e5e7eb;";
+        lbl.append(img);
+      }
       aiResults.append(lbl);
     });
   };
+
   aiGenBtn.addEventListener("click", async () => {
     const prompt = aiInput.value.trim();
     if (!prompt) {
@@ -400,22 +480,41 @@ function openGiftChoicesModal(config, cartSnapshot) {
     currentAiPrompt = prompt;
     aiGenBtn.disabled = true;
     aiGenBtn.textContent = "Generating…";
+    aiResults.innerHTML = "";
+    aiStatus.textContent = "✨ Creating 3 custom designs… this can take 1–2 minutes.";
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 240000);
       const resp = await fetch("https://api.wrrapd.com/generate-ideas", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ occasion: prompt }),
+        signal: controller.signal,
       });
-      const data = await resp.json();
-      renderAiResults(Array.isArray(data?.ideas) ? data.ideas : []);
-    } catch {
-      aiResults.innerHTML = "<div style='color:#b91c1c;font-size:13px'>Could not generate ideas — please try again.</div>";
+      clearTimeout(timeoutId);
+      const rawData = await resp.text();
+      if (!resp.ok) throw new Error(`Server error ${resp.status}`);
+      // Server double-stringifies the JSON; parse twice with a single-parse fallback.
+      let data;
+      try {
+        data = JSON.parse(JSON.parse(rawData));
+      } catch {
+        data = JSON.parse(rawData);
+      }
+      const designs = Array.isArray(data?.designs) ? data.designs : [];
+      if (!designs.length) throw new Error("No designs returned");
+      renderDesigns(designs);
+      aiStatus.textContent = "Pick your favorite design above.";
+    } catch (err) {
+      aiStatus.textContent = "";
+      aiResults.innerHTML =
+        "<div style='color:#b91c1c;font-size:13px'>Could not generate designs — please try again.</div>";
     } finally {
       aiGenBtn.disabled = false;
-      aiGenBtn.textContent = "Generate ideas";
+      aiGenBtn.textContent = "Generate designs";
     }
   });
-  aiWrap.append(aiHint, aiInput, aiGenBtn, aiResults);
+  aiWrap.append(aiHint, aiInput, aiGenBtn, aiStatus, aiResults);
 
   const refreshWrapSubs = () => {
     wrrapdHintWrap.style.display = currentWrapPref === "wrrapd" ? "block" : "none";
@@ -486,26 +585,6 @@ function openGiftChoicesModal(config, cartSnapshot) {
   msgInput.style.cssText =
     "width:100%;box-sizing:border-box;font-size:13px;padding:6px 8px;border:1px solid #cbd5e1;border-radius:6px;resize:vertical;margin:0 0 14px;";
 
-  // ── Giftee ZIP (shown on the last item) ──
-  const zipWrap = document.createElement("div");
-  zipWrap.style.cssText = "margin:0 0 14px;";
-  const zipLabel = document.createElement("label");
-  zipLabel.style.cssText = "display:block;font-size:13px;font-weight:600;color:#334155;margin-bottom:4px;";
-  zipLabel.textContent = "Giftee ZIP (for delivery estimate)";
-  const zip = document.createElement("input");
-  zip.type = "text";
-  zip.inputMode = "numeric";
-  zip.maxLength = 10;
-  zip.placeholder = "e.g. 32218";
-  zip.style.cssText =
-    "width:100%;box-sizing:border-box;font-size:14px;padding:8px;border:1px solid #cbd5e1;border-radius:6px;";
-  try {
-    zip.value = sessionStorage.getItem(`${config.sessionPrefix}ValidatedEstimateZip`) || "";
-  } catch {
-    /* ignore */
-  }
-  zipWrap.append(zipLabel, zip);
-
   // ── Buttons ──
   const actions = document.createElement("div");
   actions.style.cssText = "display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:4px;";
@@ -535,7 +614,6 @@ function openGiftChoicesModal(config, cartSnapshot) {
     flowersGrid,
     msgLabel,
     msgInput,
-    zipWrap,
     actions,
   );
   overlay.append(panel);
@@ -580,7 +658,7 @@ function openGiftChoicesModal(config, cartSnapshot) {
 
     aiInput.value = currentAiPrompt;
     aiResults.innerHTML = "";
-    if (currentAiDesign) renderAiResults([currentAiDesign]);
+    if (currentAiDesign) renderDesigns([currentAiDesign]);
 
     refreshWrapSubs();
 
@@ -601,6 +679,17 @@ function openGiftChoicesModal(config, cartSnapshot) {
   }
 
   function captureCurrentChoices() {
+    // Persist only a lightweight AI design (no base64/data-URL) to stay within
+    // the sessionStorage quota; the full image lives in GCS after selection.
+    let aiDesign = null;
+    if (currentWrapPref === "ai" && currentAiDesign) {
+      aiDesign = {
+        title: currentAiDesign.title || "",
+        description: currentAiDesign.description || "",
+        gcsPath: currentAiDesign.gcsPath || "",
+        gcsUrl: currentAiDesign.gcsUrl || "",
+      };
+    }
     allChoices[currentIdx] = {
       title: lines[currentIdx]?.title || "Item",
       wrapPref: currentWrapPref,
@@ -609,7 +698,7 @@ function openGiftChoicesModal(config, cartSnapshot) {
       uploadName: currentUploadName,
       uploadDataUrl: currentUploadDataUrl,
       aiPrompt: currentAiPrompt,
-      aiDesign: currentAiDesign,
+      aiDesign,
       flowers: currentFlowers,
       flowerDesign: currentFlowerDesign,
       message: msgInput.value.trim(),
@@ -655,19 +744,8 @@ function openGiftChoicesModal(config, cartSnapshot) {
       return;
     }
 
-    // Last item — validate ZIP, then require legal terms before saving.
-    const zipVal = zip.value.replace(/\D/g, "").slice(0, 5);
-    if (zipVal.length < 5) {
-      zip.style.borderColor = "#dc2626";
-      zip.focus();
-      return;
-    }
-    try {
-      sessionStorage.setItem(`${config.sessionPrefix}ValidatedEstimateZip`, zipVal);
-    } catch {
-      /* ignore */
-    }
-
+    // Last item — require legal terms before saving. The giftee's full address
+    // is collected on pay.wrrapd.com, so no ZIP is needed here.
     writeItemChoices(config.sessionPrefix, allChoices);
     writeGiftChoicesSaved(config.sessionPrefix, true);
     writeGiftRadio(config.sessionPrefix, "yes");

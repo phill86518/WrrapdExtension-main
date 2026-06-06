@@ -306,7 +306,10 @@ async function openPaymentPopup(config, state) {
     alert("Invalid Wrrapd total. Please refresh and try again.");
     return null;
   }
-  const orderNumber = generateOrderNumber(config.retailerName);
+  // Reuse the order number created during the wizard (e.g. when an AI design was
+  // saved to GCS) so the design and payment share one order number.
+  const orderNumber =
+    readSession(orderNumberKey(config.sessionPrefix)) || generateOrderNumber(config.retailerName);
   try {
     sessionStorage.setItem(orderNumberKey(config.sessionPrefix), orderNumber);
   } catch {

@@ -286,24 +286,42 @@ export function openLegoGiftServiceModal() {
   const aiGenBtn = document.createElement("button");
   aiGenBtn.type = "button";
   aiGenBtn.className = "sk-button sk-button--secondary sk-button--small sk-button--neutral";
-  aiGenBtn.textContent = "Generate ideas";
+  aiGenBtn.textContent = "Generate designs";
+  const aiStatus = document.createElement("div");
+  aiStatus.style.cssText = "font-size:12px;color:#64748b;margin-top:6px;";
   const aiResults = document.createElement("div");
-  aiResults.style.cssText = "display:grid;gap:6px;margin-top:8px;";
+  aiResults.style.cssText = "display:flex;flex-direction:column;gap:12px;margin-top:10px;";
+  // Render up to 3 designs (Amazon-style): radio + title + description + image.
   const renderAiResults = (items) => {
     aiResults.innerHTML = "";
     if (!Array.isArray(items) || !items.length) return;
-    items.slice(0, 4).forEach((it) => {
-      const ttl = String(it?.title || "AI Design");
+    items.slice(0, 3).forEach((it, idx) => {
+      const ttl = String(it?.title || `Design ${idx + 1}`);
       const desc = String(it?.description || "");
+      const imgSrc = it?.imageUrl || it?.gcsUrl || "";
       const lbl = document.createElement("label");
-      lbl.style.cssText = "display:flex;gap:6px;align-items:flex-start;border:1px solid #e5e7eb;border-radius:6px;padding:6px 8px;cursor:pointer;font-size:13px;";
+      lbl.style.cssText = "display:flex;flex-direction:column;gap:8px;border:2px solid #e5e7eb;border-radius:8px;padding:10px;cursor:pointer;font-size:13px;";
+      const head = document.createElement("div");
+      head.style.cssText = "display:flex;gap:6px;align-items:flex-start;";
       const r = document.createElement("input");
-      r.type = "radio"; r.name = "wrrapd-lego-ai-choice";
-      if (currentAiDesign && currentAiDesign.title === ttl) r.checked = true;
-      r.addEventListener("change", () => { if (r.checked) currentAiDesign = { title: ttl, description: desc }; });
+      r.type = "radio"; r.name = "wrrapd-lego-ai-choice"; r.style.marginTop = "3px";
+      if (currentAiDesign && currentAiDesign.title === ttl) { r.checked = true; lbl.style.borderColor = "#f5cf00"; }
+      r.addEventListener("change", () => {
+        if (!r.checked) return;
+        aiResults.querySelectorAll("label").forEach((l) => (l.style.borderColor = "#e5e7eb"));
+        lbl.style.borderColor = "#f5cf00";
+        currentAiDesign = { title: ttl, description: desc };
+      });
       const body = document.createElement("div");
-      body.innerHTML = `<div style="font-weight:600;color:#0f172a">${ttl}</div><div style="color:#334155;line-height:1.35">${desc}</div>`;
-      lbl.append(r, body);
+      body.innerHTML = `<div style="font-weight:700;color:#0f172a">${ttl}</div><div style="color:#475569;line-height:1.4">${desc}</div>`;
+      head.append(r, body);
+      lbl.append(head);
+      if (imgSrc) {
+        const img = document.createElement("img");
+        img.src = imgSrc; img.alt = ttl;
+        img.style.cssText = "width:100%;max-height:220px;object-fit:cover;border-radius:6px;border:1px solid #e5e7eb;";
+        lbl.append(img);
+      }
       aiResults.append(lbl);
     });
   };
@@ -312,20 +330,34 @@ export function openLegoGiftServiceModal() {
     if (!prompt) { aiInput.focus(); return; }
     currentAiPrompt = prompt;
     aiGenBtn.disabled = true; aiGenBtn.textContent = "Generating…";
+    aiResults.innerHTML = "";
+    aiStatus.textContent = "✨ Creating 3 custom designs… this can take 1–2 minutes.";
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 240000);
       const resp = await fetch("https://api.wrrapd.com/generate-ideas", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ occasion: prompt }),
+        signal: controller.signal,
       });
-      const data = await resp.json();
-      renderAiResults(Array.isArray(data?.ideas) ? data.ideas : []);
+      clearTimeout(timeoutId);
+      const rawData = await resp.text();
+      if (!resp.ok) throw new Error(`Server error ${resp.status}`);
+      // Server double-stringifies the JSON; parse twice with a single-parse fallback.
+      let data;
+      try { data = JSON.parse(JSON.parse(rawData)); } catch { data = JSON.parse(rawData); }
+      const designs = Array.isArray(data?.designs) ? data.designs : [];
+      if (!designs.length) throw new Error("No designs returned");
+      renderAiResults(designs);
+      aiStatus.textContent = "Pick your favorite design above.";
     } catch {
-      aiResults.innerHTML = "<div style='color:#b91c1c;font-size:13px'>Could not generate ideas — please try again.</div>";
+      aiStatus.textContent = "";
+      aiResults.innerHTML = "<div style='color:#b91c1c;font-size:13px'>Could not generate designs — please try again.</div>";
     } finally {
-      aiGenBtn.disabled = false; aiGenBtn.textContent = "Generate ideas";
+      aiGenBtn.disabled = false; aiGenBtn.textContent = "Generate designs";
     }
   });
-  aiWrap.append(aiHint, aiInput, aiGenBtn, aiResults);
+  aiWrap.append(aiHint, aiInput, aiGenBtn, aiStatus, aiResults);
 
   const refreshWrapSubs = () => {
     occasionSelect.style.display = currentWrapPref === "wrrapd" ? "" : "none";
