@@ -394,11 +394,22 @@
         }, 60000); // Check every minute
         
         const urlParams = new URLSearchParams(window.location.search);
-        const checkoutRetailer =
-            /\/checkout\/lego\b/i.test(window.location.pathname || '') ||
-            /[?&]retailer=lego\b/i.test(window.location.search || '')
-                ? 'Lego'
-                : 'Amazon';
+        /**
+         * Resolve the retailer from /checkout/<retailer> or ?retailer=<retailer>.
+         * Defaults to Amazon (the legacy single-name flow). Any explicit retailer
+         * other than Amazon uses the split first/last giftee-name fields.
+         */
+        const checkoutRetailer = (function resolveCheckoutRetailer() {
+            const pathMatch = /\/checkout\/([a-z0-9_-]+)\b/i.exec(window.location.pathname || '');
+            const queryRetailer = urlParams.get('retailer');
+            const raw = (pathMatch && pathMatch[1]) || queryRetailer || '';
+            const slug = String(raw).trim().toLowerCase();
+            if (!slug || slug === 'amazon') return 'Amazon';
+            // Title-case the slug for display (e.g. "sephora" -> "Sephora", "best-buy" -> "Best Buy").
+            return slug
+                .replace(/[-_]+/g, ' ')
+                .replace(/\b\w/g, (c) => c.toUpperCase());
+        })();
         const encodedPayload = urlParams.get('data');
 
         if (!encodedPayload) {
@@ -417,12 +428,12 @@
         const { total, address, orderNumber, gifteeOriginalAddress: gifteeFromPayload } = payload;
         const gifteeOriginalAddress = gifteeFromPayload || address;
 
-        if (checkoutRetailer === 'Lego') {
-            document.title = 'Wrrapd payment — LEGO order';
+        if (checkoutRetailer !== 'Amazon') {
+            document.title = 'Wrrapd payment — ' + checkoutRetailer + ' order';
         }
 
-        /** LEGO (and similar retailers) use separate first/last on the retailer site; Amazon keeps one full-name field. */
-        const gifteeUsesSplitName = checkoutRetailer === 'Lego';
+        /** Non-Amazon retailers use separate first/last name fields on their site; Amazon keeps one full-name field. */
+        const gifteeUsesSplitName = checkoutRetailer !== 'Amazon';
 
         function getGifteeFirstName() {
             if (gifteeUsesSplitName) {

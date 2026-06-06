@@ -1,0 +1,68 @@
+import { initRetailerCheckoutPayFlow } from "../../shared/retailer-checkout-pay-flow.js";
+import { WRRAPD_HUB_ADDRESS } from "../../shared/wrrapd-hub.js";
+import { SEPHORA_CHECKOUT_URL_HINTS, SEPHORA_SESSION_PREFIX } from "./constants.js";
+import { extractSephoraCartSnapshot } from "./retailer-bootstrap.js";
+
+/** Phone shown to the retailer for hub delivery questions (Sephora requires a phone). */
+const HUB_PHONE = "904-204-0617";
+
+function setNativeInputValue(input, value) {
+  if (!input || value == null) return;
+  const str = String(value);
+  const proto = Object.getPrototypeOf(input);
+  const desc = Object.getOwnPropertyDescriptor(proto, "value");
+  const setter = desc && desc.set;
+  if (setter) setter.call(input, str);
+  else input.value = str;
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+  input.dispatchEvent(new Event("change", { bubbles: true }));
+  input.dispatchEvent(new Event("blur", { bubbles: true }));
+}
+
+function isSephoraCheckoutPage() {
+  const path = location.pathname.toLowerCase();
+  return SEPHORA_CHECKOUT_URL_HINTS.some((h) => path.includes(h));
+}
+
+function findSephoraCheckoutButton() {
+  return (
+    document.querySelector('[data-at="place_order_btn"]') ||
+    document.querySelector('[data-at="save_continue_btn"]') ||
+    null
+  );
+}
+
+/**
+ * Auto-fill Sephora's "Deliver To" shipping form with the Wrrapd hub address.
+ * Sephora derives city/state from the street + ZIP via address verification,
+ * so we only set the fields the form actually exposes.
+ */
+function fillSephoraHubShippingFields() {
+  const h = WRRAPD_HUB_ADDRESS;
+  const zip5 = String(h.postalCode || "").replace(/\D/g, "").slice(0, 5);
+
+  const first = document.querySelector('[data-at="first_name_input"], #firstName');
+  const last = document.querySelector('[data-at="last_name_input"], #lastName');
+  const phone = document.querySelector('[data-at="phone_number_input"], #phone');
+  const street = document.querySelector('[data-at="street_address_input"], #avs_input');
+  const zip = document.querySelector('[data-at="zip_postal_code_input"], #postalCode');
+
+  if (first && !first.value.trim()) setNativeInputValue(first, h.recipientFirstName);
+  if (last && !last.value.trim()) setNativeInputValue(last, h.recipientLastName);
+  if (phone && !phone.value.trim()) setNativeInputValue(phone, HUB_PHONE);
+  if (street && !street.value.trim()) setNativeInputValue(street, h.addressLine1);
+  if (zip && !zip.value.trim()) setNativeInputValue(zip, zip5);
+}
+
+export function initSephoraCheckoutPayFlow() {
+  if (!location.hostname.includes("sephora.com")) return;
+  initRetailerCheckoutPayFlow({
+    retailerName: "Sephora",
+    payRoute: "sephora",
+    sessionPrefix: SEPHORA_SESSION_PREFIX,
+    isCheckoutPage: isSephoraCheckoutPage,
+    findCheckoutButton: findSephoraCheckoutButton,
+    getCartSnapshot: () => extractSephoraCartSnapshot(document),
+    fillHubShippingFields: fillSephoraHubShippingFields,
+  });
+}

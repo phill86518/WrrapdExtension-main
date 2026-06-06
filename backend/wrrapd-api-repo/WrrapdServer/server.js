@@ -109,6 +109,21 @@ app.get('/checkout/lego', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'checkout.html'));
 });
 
+/**
+ * Generic per-retailer checkout (e.g. /checkout/sephora, /checkout/walmart).
+ * checkout.html reads the retailer from the path and adapts (split first/last
+ * name for non-Amazon retailers). Retailer slug must be simple alphanumerics.
+ */
+app.get('/checkout/:retailer', (req, res) => {
+    if (!req.isPayDomain) {
+        return res.status(403).send('Access forbidden.');
+    }
+    if (!/^[a-z0-9_-]{2,32}$/i.test(String(req.params.retailer || ''))) {
+        return res.status(404).send('Unknown checkout.');
+    }
+    res.sendFile(path.join(__dirname, 'public', 'checkout.html'));
+});
+
 // Increase body size limit to handle large base64 images (50MB)
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));

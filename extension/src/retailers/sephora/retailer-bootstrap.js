@@ -17,7 +17,7 @@ function normalizeWhitespace(value) {
   return String(value || "").replace(/\s+/g, " ").trim();
 }
 
-function extractSephoraCartSnapshot(root = document) {
+export function extractSephoraCartSnapshot(root = document) {
   /** @type {Array<{ title: string, brand?: string, itemId?: string }>} */
   const items = [];
   const seen = new Set();
