@@ -674,7 +674,6 @@ function openGiftChoicesModal(config, cartSnapshot) {
 
     back.style.display = idx > 0 ? "" : "none";
     const isLast = idx === totalItems - 1;
-    zipWrap.style.display = isLast ? "block" : "none";
     next.textContent = isLast ? "Save choices" : "Next →";
   }
 
