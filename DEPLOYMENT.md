@@ -104,7 +104,7 @@ Authoritative clone (example paths):
 From the **repo root** of that clone:
 
 ```bash
-git restore extension/content.js extension/content-target.js extension/content-lego.js
+git restore extension/
 git pull origin main
 cd extension
 npm install
@@ -114,7 +114,9 @@ cd ..
 
 Then **Chrome → Extensions → Wrrapd → Reload**.
 
-`git restore` removes dirty/generated bundles (`content.js` = Amazon, `content-target.js` = Target, `content-lego.js` = Lego) so `git pull` is not blocked. Details: [extension/README.md](extension/README.md).
+`git restore extension/` discards **all** locally-modified files under `extension/` so `git pull` is never blocked by a dirty working tree. This is safe because **every `content*.js` is a committed build artifact** (Amazon `content.js`, Target, Lego, Ulta, Walmart, Nordstrom, Kohl's, Sephora, Best Buy, Etsy) that `npm run build` regenerates after the pull — and Windows is a pull-and-build consumer only (all real edits happen on the VM). If you ever have local Windows edits you want to keep, use `git stash` instead of `git restore`. Details: [extension/README.md](extension/README.md).
+
+> **`npm install` warnings are normal.** On Node < 20.19 you'll see `EBADENGINE` warnings from `jsdom` and its CSS helpers. They're harmless: `jsdom` is a dev-only dependency for offline fixture checks and is **not** used by the esbuild bundling. Do **not** run `npm audit fix` — it can break the local toolchain for no benefit.
 
 **Skip this section** if you did not change the extension.
 

@@ -16,7 +16,7 @@ After pulling from GitHub, run **`npm run build` inside the `extension` folder**
 **Every extension release (from repo root — PowerShell or Git Bash):**
 
 ```bash
-git restore extension/content.js extension/content-target.js extension/content-lego.js
+git restore extension/
 git pull origin main
 cd extension
 npm install
@@ -25,7 +25,7 @@ cd ..
 ```
 
 Then Chrome → Extensions → Wrrapd → **Reload**.  
-`git restore` clears **generated** bundles so `git pull` is not blocked (`content.js` = Amazon, `content-target.js` = Target, `content-lego.js` = Lego).
+`git restore extension/` clears **all** locally-modified/generated bundles so `git pull` is never blocked. Every `content*.js` (Amazon `content.js`, Target, Lego, Ulta, Walmart, Nordstrom, Kohl's, Sephora, Best Buy, Etsy) is a committed build artifact that `npm run build` regenerates after the pull; Windows is pull-and-build only. (Prefer `git stash` instead if you have local Windows edits to keep.) `npm install` may print harmless `EBADENGINE` warnings from `jsdom` on Node < 20.19 — `jsdom` is dev-only and not used by the build.
 
 Full stack deploy order (VM push, PM2, Cloud Run, Windows): **[../DEPLOYMENT.md](../DEPLOYMENT.md)**.
 
