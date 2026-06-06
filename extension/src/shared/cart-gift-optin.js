@@ -1,12 +1,15 @@
 import {
   clearGiftServiceFlags,
   readGiftChoicesSaved,
+  readGiftLegalTermsAccepted,
   readGiftRadio,
   readItemChoices,
   writeGiftChoicesSaved,
+  writeGiftLegalTermsAccepted,
   writeGiftRadio,
   writeItemChoices,
 } from "./cart-gift-session.js";
+import { buildOccasionSelect, isValidOccasion } from "./occasions.js";
 
 function normalizeWhitespace(value) {
   return String(value || "").replace(/\s+/g, " ").trim();
@@ -59,30 +62,160 @@ function existingOptIn(config) {
   return document.querySelector(`[${config.optInDataAttr}]`);
 }
 
+/** True only when the customer fully completed the gift flow (choices + terms). */
+function giftFlowComplete(config) {
+  return readGiftChoicesSaved(config.sessionPrefix) && readGiftLegalTermsAccepted(config.sessionPrefix);
+}
+
+function summarizeChoice(ch) {
+  const bits = [];
+  if (ch.wrapPref === "upload") bits.push("your uploaded design");
+  else if (ch.wrapPref === "ai") bits.push("an AI-generated design");
+  else bits.push("Wrrapd's choice of wrap");
+  if (ch.occasion) bits.push(`for ${ch.occasion}`);
+  if (ch.flowers) bits.push("+ flowers");
+  return bits.join(" ");
+}
+
 function buildSavedBanner(config) {
   const choices = readItemChoices(config.sessionPrefix);
   const wrap = document.createElement("div");
   wrap.setAttribute(config.savedBannerAttr, "1");
   wrap.style.cssText =
     "margin:0 0 10px;padding:10px 12px;background:#ecfdf5;border:1px solid #6ee7b7;border-radius:8px;font-size:13px;color:#065f46;";
-  wrap.textContent =
-    choices.length > 0
-      ? `Wrrapd gift wrap saved for ${choices.length} item${choices.length === 1 ? "" : "s"}. Continue checkout when ready.`
-      : "Wrrapd gift wrap preference saved. Continue checkout when ready.";
+  const count = choices.length;
+  const head = document.createElement("div");
+  head.style.cssText = "font-weight:700;margin-bottom:4px;";
+  head.textContent =
+    count > 0
+      ? `Wrrapd gift wrap saved for ${count} item${count === 1 ? "" : "s"}.`
+      : "Wrrapd gift wrap preference saved.";
+  wrap.append(head);
+  if (count > 0) {
+    const first = choices[0];
+    const detail = document.createElement("div");
+    detail.style.cssText = "color:#047857;";
+    detail.textContent = summarizeChoice(first) + (count > 1 ? " …and more" : "");
+    wrap.append(detail);
+  }
   return wrap;
 }
+
+function emptyChoice(title) {
+  return {
+    title: title || "Item",
+    wrapPref: "wrrapd",
+    occasion: "",
+    wrrapdHint: "",
+    uploadName: "",
+    uploadDataUrl: "",
+    aiPrompt: "",
+    aiDesign: null,
+    flowers: false,
+    flowerDesign: "",
+    message: "",
+  };
+}
+
+// ─── Generic legal-terms modal (Amazon/LEGO-style scroll-to-accept) ─────────────
+
+function openGenericTermsModal(config, onAccepted) {
+  const id = `${config.modalId}-terms`;
+  if (document.getElementById(id)) return;
+  const retailer = config.retailerLabel || "this store";
+
+  const modal = document.createElement("div");
+  modal.id = id;
+  modal.style.cssText =
+    "position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:2147483647;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;";
+
+  const content = document.createElement("div");
+  content.style.cssText =
+    "background:#fff;border-radius:12px;max-width:560px;width:100%;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 4px 24px rgba(0,0,0,.35);position:relative;";
+
+  const closeBtn = document.createElement("button");
+  closeBtn.type = "button";
+  closeBtn.setAttribute("aria-label", "Close");
+  closeBtn.textContent = "×";
+  closeBtn.style.cssText =
+    "position:absolute;top:6px;right:12px;border:none;background:none;font-size:28px;color:#64748b;cursor:pointer;line-height:1;z-index:2;";
+  closeBtn.addEventListener("click", () => modal.remove());
+
+  const scrollable = document.createElement("div");
+  scrollable.style.cssText =
+    "padding:36px 28px 20px;overflow-y:auto;flex:1;font-family:Georgia,'Times New Roman',serif;line-height:1.75;color:#0f172a;font-size:15px;";
+  scrollable.innerHTML = `
+    <h1 style="margin:0 0 8px;font-size:24px;text-align:center;font-weight:600;color:#0f172a;">Wrrapd — gift service</h1>
+    <p style="margin:0 0 18px;text-align:center;color:#334155;font-size:14px;"><em>Terms for gift wrap &amp; fulfillment</em></p>
+    <div>
+      <p style="margin-bottom:14px;"><strong>1.</strong> These Terms apply to gift-wrapping and related fulfillment by Wrrapd Inc. (&quot;Wrrapd&quot;) for items you purchase on ${retailer}. Your purchase remains governed by ${retailer}&apos;s own terms and policies.</p>
+      <p style="margin-bottom:14px;"><strong>2.</strong> You must be at least 18 or the age of majority in your jurisdiction to use this service.</p>
+      <p style="margin-bottom:14px;"><strong>3.</strong> Privacy: see <a href="https://www.wrrapd.com/privacy" target="_blank" rel="noopener" style="color:#0369a1;">wrrapd.com/privacy</a>.</p>
+      <p style="margin-bottom:14px;"><strong>4.</strong> Limited agency: by agreeing, you appoint Wrrapd as your limited agent solely to assist with browser-based steps you direct in connection with this gift order.</p>
+      <p style="margin-bottom:14px;"><strong>5.</strong> Service: exterior gift-wrapping and optional add-ons (messages, uploads, AI-assisted themes, flowers where offered). Fees are shown before you pay Wrrapd.</p>
+      <p style="margin-bottom:14px;"><strong>6.</strong> Shipping: items are sent to Wrrapd&apos;s U.S. hub first for wrapping; outbound delivery to your giftee is coordinated by Wrrapd after payment and production. Timelines may extend beyond ${retailer}&apos;s default estimate.</p>
+      <p style="margin-bottom:14px;"><strong>7.</strong> Product issues, returns, and warranties remain between you and ${retailer} / sellers. Wrrapd does not replace ${retailer} support for the underlying merchandise.</p>
+      <p style="margin-bottom:14px;"><strong>8.</strong> Video proof: Wrrapd may record receipt, unwrap, wrap, and handoff for quality and dispute resolution.</p>
+      <p style="margin-bottom:14px;"><strong>9.</strong> Liability: service is provided as-is; Wrrapd&apos;s liability is limited to the service fees you paid for this wrap order, except where prohibited by law.</p>
+      <p style="margin-bottom:14px;"><strong>10.</strong> Disputes: governed by the laws of the State of Florida, USA; binding individual arbitration in Jacksonville, Florida; class action waiver.</p>
+    </div>`;
+
+  const agreement = document.createElement("div");
+  agreement.style.cssText =
+    "padding:18px 24px 22px;border-top:2px solid #e2e8f0;text-align:center;font-size:15px;font-family:Georgia,serif;color:#0f172a;";
+  const agreementText = document.createElement("div");
+  agreementText.innerHTML =
+    'By clicking <span class="wrrapd-agree-link" style="color:#94a3b8;cursor:not-allowed;text-decoration:underline;">here</span>, I appoint Wrrapd as my limited agent for this gift transaction and agree to the terms above.';
+  const agreeLink = agreementText.querySelector(".wrrapd-agree-link");
+
+  let linkEnabled = false;
+  const checkScroll = () => {
+    const max = scrollable.scrollHeight - scrollable.clientHeight;
+    const atBottom = max <= 5 || scrollable.scrollTop + scrollable.clientHeight >= scrollable.scrollHeight - 5;
+    linkEnabled = atBottom;
+    agreeLink.style.color = atBottom ? "#0369a1" : "#94a3b8";
+    agreeLink.style.cursor = atBottom ? "pointer" : "not-allowed";
+  };
+  scrollable.addEventListener("scroll", checkScroll);
+  window.setTimeout(checkScroll, 120);
+
+  agreeLink.addEventListener("click", (e) => {
+    if (!linkEnabled) {
+      e.preventDefault();
+      return;
+    }
+    writeGiftLegalTermsAccepted(config.sessionPrefix, true);
+    modal.remove();
+    if (typeof onAccepted === "function") onAccepted();
+  });
+
+  agreement.appendChild(agreementText);
+  content.append(closeBtn, scrollable, agreement);
+  modal.appendChild(content);
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) modal.remove();
+  });
+  document.body.appendChild(modal);
+}
+
+// ─── Full per-item gift wizard ──────────────────────────────────────────────────
 
 function openGiftChoicesModal(config, cartSnapshot) {
   const existing = document.getElementById(config.modalId);
   if (existing) existing.remove();
 
-  const items = (cartSnapshot?.items || []).map((it) => ({
+  const snapItems = (cartSnapshot?.items || []).map((it) => ({
     title: it.title || "Item",
-    message: "",
+    imageUrl: it.imageUrl || "",
   }));
-  if (items.length === 0) {
-    items.push({ title: `${config.retailerLabel} order`, message: "" });
-  }
+  const lines = snapItems.length > 0 ? snapItems : [{ title: `${config.retailerLabel} order`, imageUrl: "" }];
+  const totalItems = lines.length;
+
+  let allChoices = readItemChoices(config.sessionPrefix);
+  if (!Array.isArray(allChoices)) allChoices = [];
+  while (allChoices.length < totalItems) allChoices.push(emptyChoice(lines[allChoices.length]?.title));
+
+  let currentIdx = 0;
 
   const overlay = document.createElement("div");
   overlay.id = config.modalId;
@@ -94,49 +227,270 @@ function openGiftChoicesModal(config, cartSnapshot) {
 
   const panel = document.createElement("div");
   panel.style.cssText =
-    "width:100%;max-width:480px;max-height:90vh;overflow:auto;background:#fff;border-radius:12px;padding:18px 16px;box-shadow:0 12px 40px rgba(0,0,0,.25);font-family:Arial,sans-serif;";
+    "width:100%;max-width:44rem;max-height:90vh;overflow:auto;background:#fff;border-radius:12px;padding:18px 18px 14px;box-shadow:0 12px 40px rgba(0,0,0,.25);font-family:Arial,sans-serif;font-size:14px;line-height:1.5;color:#0f172a;";
 
   const title = document.createElement("h2");
   title.style.cssText = "margin:0 0 8px;font-size:18px;font-weight:800;color:#111827;";
-  title.textContent = "Gift wrap with Wrrapd";
 
   const intro = document.createElement("p");
   intro.style.cssText = "margin:0 0 12px;font-size:13px;line-height:1.5;color:#475569;";
   intro.textContent =
     config.modalIntro ||
-    "Add a gift message per item below. You'll complete Wrrapd's secure payment during checkout, then we wrap and ship to your giftee.";
+    "Customize each item below. You'll complete Wrrapd's secure payment during checkout, then we wrap and ship to your giftee.";
 
-  if (config.shippingTierHint) {
-    const tier = document.createElement("p");
-    tier.style.cssText = "margin:0 0 12px;font-size:12px;line-height:1.4;color:#64748b;";
-    tier.textContent = config.shippingTierHint;
-    panel.append(tier);
-  }
+  // Item preview
+  const itemPreview = document.createElement("div");
+  itemPreview.style.cssText =
+    "display:flex;align-items:center;gap:12px;margin:0 0 12px;padding:10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;";
+  const previewImg = document.createElement("img");
+  previewImg.style.cssText =
+    "width:56px;height:56px;object-fit:contain;border-radius:4px;border:1px solid #e2e8f0;flex:0 0 56px;background:#fff;";
+  const previewInfo = document.createElement("div");
+  previewInfo.style.cssText = "min-width:0;flex:1;";
+  const previewTitle = document.createElement("div");
+  previewTitle.style.cssText =
+    "font-weight:600;font-size:14px;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;";
+  previewInfo.append(previewTitle);
+  itemPreview.append(previewImg, previewInfo);
 
-  const list = document.createElement("div");
-  list.style.cssText = "display:flex;flex-direction:column;gap:10px;margin:0 0 12px;";
-  const messageInputs = [];
+  // ── Wrap style ──
+  const wrapLegend = document.createElement("p");
+  wrapLegend.style.cssText = "margin:0 0 6px;font-size:15px;font-weight:700;color:#0f172a;";
+  wrapLegend.textContent = "Choose your wrapping";
+  const wrapFieldset = document.createElement("div");
+  wrapFieldset.style.cssText = "border:1px solid #e2e8f0;border-radius:8px;padding:14px;margin:0 0 14px;";
 
-  for (const item of items) {
-    const row = document.createElement("div");
-    row.style.cssText = "border:1px solid #e2e8f0;border-radius:8px;padding:10px;";
-    const name = document.createElement("div");
-    name.style.cssText = "font-size:13px;font-weight:600;color:#111827;margin-bottom:6px;";
-    name.textContent = item.title;
-    const msgLabel = document.createElement("label");
-    msgLabel.style.cssText = "display:block;font-size:12px;color:#64748b;margin-bottom:4px;";
-    msgLabel.textContent = "Gift message (optional)";
-    const msg = document.createElement("textarea");
-    msg.rows = 2;
-    msg.style.cssText = "width:100%;box-sizing:border-box;font-size:13px;padding:6px;border:1px solid #cbd5e1;border-radius:6px;resize:vertical;";
-    msg.value = item.message || "";
-    messageInputs.push({ title: item.title, msg });
-    row.append(name, msgLabel, msg);
-    list.append(row);
-  }
+  let currentWrapPref = "wrrapd";
+  let currentOccasion = "";
+  let currentWrrapdHint = "";
+  let currentUploadName = "";
+  let currentUploadDataUrl = "";
+  let currentAiPrompt = "";
+  let currentAiDesign = null;
 
+  // "Allow Wrrapd to choose" row — radio on the left, occasion dropdown on the right
+  const wrrapdRow = document.createElement("label");
+  wrrapdRow.style.cssText =
+    "display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:10px;font-size:14px;color:#111827;";
+  const wrrapdRadio = document.createElement("input");
+  wrrapdRadio.type = "radio";
+  wrrapdRadio.name = `${config.sessionPrefix}-wrap`;
+  wrrapdRadio.value = "wrrapd";
+  const wrrapdText = document.createElement("span");
+  wrrapdText.style.cssText = "font-weight:600;";
+  wrrapdText.textContent = "Allow Wrrapd to choose the wrapping";
+  const occasionSelect = buildOccasionSelect({ id: `${config.modalId}-occasion` });
+  occasionSelect.style.cssText =
+    "margin-left:auto;padding:6px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;color:#0f172a;background:#fff;max-width:50%;";
+  occasionSelect.addEventListener("change", () => {
+    currentOccasion = occasionSelect.value;
+    occasionSelect.style.borderColor = "#cbd5e1";
+  });
+  occasionSelect.addEventListener("click", (e) => e.preventDefault());
+  wrrapdRow.append(wrrapdRadio, wrrapdText, occasionSelect);
+
+  // Optional free-text hint for the "Wrrapd chooses" path
+  const wrrapdHintWrap = document.createElement("div");
+  wrrapdHintWrap.style.cssText = "margin:0 0 10px 24px;";
+  const wrrapdHintInput = document.createElement("input");
+  wrrapdHintInput.type = "text";
+  wrrapdHintInput.placeholder = "Other details for our wrap team (optional)";
+  wrrapdHintInput.style.cssText =
+    "width:100%;box-sizing:border-box;padding:6px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;color:#0f172a;";
+  wrrapdHintInput.addEventListener("input", () => {
+    currentWrrapdHint = wrrapdHintInput.value;
+  });
+  wrrapdHintWrap.append(wrrapdHintInput);
+
+  // Upload row
+  const uploadRow = document.createElement("label");
+  uploadRow.style.cssText =
+    "display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:10px;font-size:14px;color:#111827;font-weight:600;";
+  const uploadRadio = document.createElement("input");
+  uploadRadio.type = "radio";
+  uploadRadio.name = `${config.sessionPrefix}-wrap`;
+  uploadRadio.value = "upload";
+  uploadRow.append(uploadRadio, document.createTextNode("Upload my own design"));
+
+  const uploadWrap = document.createElement("div");
+  uploadWrap.style.cssText = "display:none;margin:0 0 10px 24px;padding:8px;border:1px solid #e2e8f0;border-radius:6px;";
+  const uploadInput = document.createElement("input");
+  uploadInput.type = "file";
+  uploadInput.accept = "image/*";
+  uploadInput.style.cssText = "display:block;margin-bottom:6px;font-size:13px;";
+  const uploadPreview = document.createElement("div");
+  uploadPreview.style.display = "none";
+  const uploadImg = document.createElement("img");
+  uploadImg.style.cssText = "max-width:100%;max-height:120px;border:1px solid #ddd;border-radius:4px;";
+  uploadPreview.append(uploadImg);
+  uploadInput.addEventListener("change", () => {
+    const f = uploadInput.files && uploadInput.files[0];
+    if (!f) return;
+    currentUploadName = f.name;
+    const fr = new FileReader();
+    fr.onload = () => {
+      currentUploadDataUrl = typeof fr.result === "string" ? fr.result : "";
+      if (currentUploadDataUrl) {
+        uploadImg.src = currentUploadDataUrl;
+        uploadPreview.style.display = "block";
+      }
+    };
+    fr.readAsDataURL(f);
+  });
+  uploadWrap.append(uploadInput, uploadPreview);
+
+  // AI row
+  const aiRow = document.createElement("label");
+  aiRow.style.cssText =
+    "display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:6px;font-size:14px;color:#111827;font-weight:600;";
+  const aiRadio = document.createElement("input");
+  aiRadio.type = "radio";
+  aiRadio.name = `${config.sessionPrefix}-wrap`;
+  aiRadio.value = "ai";
+  aiRow.append(aiRadio, document.createTextNode("Generate a design with AI"));
+
+  const aiWrap = document.createElement("div");
+  aiWrap.style.cssText = "display:none;margin:0 0 4px 24px;padding:8px;border:1px solid #e2e8f0;border-radius:6px;";
+  const aiHint = document.createElement("div");
+  aiHint.style.cssText = "font-size:13px;color:#334155;margin-bottom:6px;";
+  aiHint.textContent = "Describe the occasion, recipient, or theme for AI-generated design ideas:";
+  const aiInput = document.createElement("input");
+  aiInput.type = "text";
+  aiInput.placeholder = "e.g., Birthday for my 10-year-old who loves space, elegant florals…";
+  aiInput.style.cssText =
+    "width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px;box-sizing:border-box;font-size:13px;margin-bottom:6px;";
+  aiInput.addEventListener("input", () => {
+    currentAiPrompt = aiInput.value;
+  });
+  const aiGenBtn = document.createElement("button");
+  aiGenBtn.type = "button";
+  aiGenBtn.textContent = "Generate ideas";
+  aiGenBtn.style.cssText =
+    "padding:6px 12px;border:1px solid #a88734;background:#f0c14b;border-radius:6px;cursor:pointer;font-size:13px;";
+  const aiResults = document.createElement("div");
+  aiResults.style.cssText = "display:grid;gap:6px;margin-top:8px;";
+  const renderAiResults = (items) => {
+    aiResults.innerHTML = "";
+    if (!Array.isArray(items) || !items.length) return;
+    items.slice(0, 4).forEach((it) => {
+      const ttl = String(it?.title || "AI Design");
+      const desc = String(it?.description || "");
+      const lbl = document.createElement("label");
+      lbl.style.cssText =
+        "display:flex;gap:6px;align-items:flex-start;border:1px solid #e5e7eb;border-radius:6px;padding:6px 8px;cursor:pointer;font-size:13px;";
+      const r = document.createElement("input");
+      r.type = "radio";
+      r.name = `${config.sessionPrefix}-ai-choice`;
+      if (currentAiDesign && currentAiDesign.title === ttl) r.checked = true;
+      r.addEventListener("change", () => {
+        if (r.checked) currentAiDesign = { title: ttl, description: desc };
+      });
+      const body = document.createElement("div");
+      body.innerHTML = `<div style="font-weight:600;color:#0f172a">${ttl}</div><div style="color:#334155;line-height:1.35">${desc}</div>`;
+      lbl.append(r, body);
+      aiResults.append(lbl);
+    });
+  };
+  aiGenBtn.addEventListener("click", async () => {
+    const prompt = aiInput.value.trim();
+    if (!prompt) {
+      aiInput.focus();
+      return;
+    }
+    currentAiPrompt = prompt;
+    aiGenBtn.disabled = true;
+    aiGenBtn.textContent = "Generating…";
+    try {
+      const resp = await fetch("https://api.wrrapd.com/generate-ideas", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ occasion: prompt }),
+      });
+      const data = await resp.json();
+      renderAiResults(Array.isArray(data?.ideas) ? data.ideas : []);
+    } catch {
+      aiResults.innerHTML = "<div style='color:#b91c1c;font-size:13px'>Could not generate ideas — please try again.</div>";
+    } finally {
+      aiGenBtn.disabled = false;
+      aiGenBtn.textContent = "Generate ideas";
+    }
+  });
+  aiWrap.append(aiHint, aiInput, aiGenBtn, aiResults);
+
+  const refreshWrapSubs = () => {
+    wrrapdHintWrap.style.display = currentWrapPref === "wrrapd" ? "block" : "none";
+    occasionSelect.style.display = currentWrapPref === "wrrapd" ? "" : "none";
+    uploadWrap.style.display = currentWrapPref === "upload" ? "block" : "none";
+    aiWrap.style.display = currentWrapPref === "ai" ? "block" : "none";
+  };
+
+  [wrrapdRadio, uploadRadio, aiRadio].forEach((r) => {
+    r.addEventListener("change", () => {
+      if (r.checked) {
+        currentWrapPref = r.value;
+        refreshWrapSubs();
+      }
+    });
+  });
+
+  wrapFieldset.append(wrrapdRow, wrrapdHintWrap, uploadRow, uploadWrap, aiRow, aiWrap);
+
+  // ── Flowers ──
+  let currentFlowers = false;
+  let currentFlowerDesign = "";
+  const flowersLabel = document.createElement("label");
+  flowersLabel.style.cssText =
+    "display:flex;align-items:center;gap:8px;margin:0 0 6px;font-size:15px;font-weight:700;color:#0f172a;cursor:pointer;";
+  const flowersCb = document.createElement("input");
+  flowersCb.type = "checkbox";
+  flowersLabel.append(flowersCb, document.createTextNode("Add flowers — 15–20 stem bouquet"));
+  const flowersGrid = document.createElement("div");
+  flowersGrid.style.cssText =
+    "display:none;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:4px 0 14px 24px;";
+  const flowerRadios = [1, 2, 3, 4].map((n) => {
+    const lab = document.createElement("label");
+    lab.style.cssText =
+      "display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;font-size:12px;color:#0f172a;";
+    const r = document.createElement("input");
+    r.type = "radio";
+    r.name = `${config.sessionPrefix}-flower-design`;
+    r.value = `flowers-${n}`;
+    r.addEventListener("change", () => {
+      if (r.checked) currentFlowerDesign = r.value;
+    });
+    const img = document.createElement("img");
+    try {
+      img.src = chrome.runtime.getURL(`assets/flowers/flowers-${n}.webp`);
+    } catch {
+      /* ignore */
+    }
+    img.alt = `Bouquet ${n}`;
+    img.style.cssText = "width:100%;aspect-ratio:1;object-fit:cover;border-radius:6px;border:1px solid #e5e7eb;";
+    lab.append(r, img);
+    flowersGrid.append(lab);
+    return r;
+  });
+  flowersCb.addEventListener("change", () => {
+    currentFlowers = flowersCb.checked;
+    flowersGrid.style.display = currentFlowers ? "grid" : "none";
+    if (!currentFlowers) currentFlowerDesign = "";
+  });
+
+  // ── Gift message ──
+  const msgLabel = document.createElement("label");
+  msgLabel.style.cssText = "display:block;font-size:13px;font-weight:600;color:#0f172a;margin:0 0 4px;";
+  msgLabel.textContent = "Gift message (optional)";
+  const msgInput = document.createElement("textarea");
+  msgInput.rows = 2;
+  msgInput.placeholder = "A short note for your giftee";
+  msgInput.style.cssText =
+    "width:100%;box-sizing:border-box;font-size:13px;padding:6px 8px;border:1px solid #cbd5e1;border-radius:6px;resize:vertical;margin:0 0 14px;";
+
+  // ── Giftee ZIP (shown on the last item) ──
+  const zipWrap = document.createElement("div");
+  zipWrap.style.cssText = "margin:0 0 14px;";
   const zipLabel = document.createElement("label");
-  zipLabel.style.cssText = "display:block;font-size:12px;color:#334155;margin-bottom:4px;";
+  zipLabel.style.cssText = "display:block;font-size:13px;font-weight:600;color:#334155;margin-bottom:4px;";
   zipLabel.textContent = "Giftee ZIP (for delivery estimate)";
   const zip = document.createElement("input");
   zip.type = "text";
@@ -144,57 +498,190 @@ function openGiftChoicesModal(config, cartSnapshot) {
   zip.maxLength = 10;
   zip.placeholder = "e.g. 32218";
   zip.style.cssText =
-    "width:100%;box-sizing:border-box;font-size:14px;padding:8px;border:1px solid #cbd5e1;border-radius:6px;margin-bottom:14px;";
+    "width:100%;box-sizing:border-box;font-size:14px;padding:8px;border:1px solid #cbd5e1;border-radius:6px;";
+  try {
+    zip.value = sessionStorage.getItem(`${config.sessionPrefix}ValidatedEstimateZip`) || "";
+  } catch {
+    /* ignore */
+  }
+  zipWrap.append(zipLabel, zip);
 
+  // ── Buttons ──
   const actions = document.createElement("div");
-  actions.style.cssText = "display:flex;gap:8px;justify-content:flex-end;";
-
+  actions.style.cssText = "display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:4px;";
   const cancel = document.createElement("button");
   cancel.type = "button";
   cancel.textContent = "Cancel";
   cancel.style.cssText =
     "padding:8px 14px;border:1px solid #cbd5e1;background:#fff;border-radius:8px;cursor:pointer;font-size:13px;";
-
-  const save = document.createElement("button");
-  save.type = "button";
-  save.textContent = "Save choices";
-  save.style.cssText =
+  const back = document.createElement("button");
+  back.type = "button";
+  back.textContent = "← Back";
+  back.style.cssText =
+    "padding:8px 14px;border:1px solid #cbd5e1;background:#fff;border-radius:8px;cursor:pointer;font-size:13px;";
+  const next = document.createElement("button");
+  next.type = "button";
+  next.style.cssText =
     "padding:8px 14px;border:none;background:#111827;color:#fff;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;";
+  actions.append(cancel, back, next);
 
-  cancel.addEventListener("click", () => overlay.remove());
+  panel.append(
+    title,
+    intro,
+    itemPreview,
+    wrapLegend,
+    wrapFieldset,
+    flowersLabel,
+    flowersGrid,
+    msgLabel,
+    msgInput,
+    zipWrap,
+    actions,
+  );
+  overlay.append(panel);
+
+  function renderItem(idx) {
+    const line = lines[idx];
+    const ch = allChoices[idx] || emptyChoice(line.title);
+
+    title.textContent =
+      totalItems > 1 ? `Item ${idx + 1} of ${totalItems} — Gift wrap with Wrrapd` : "Gift wrap with Wrrapd";
+
+    if (line.imageUrl) {
+      previewImg.src = line.imageUrl;
+      previewImg.style.display = "block";
+    } else {
+      previewImg.style.display = "none";
+    }
+    previewTitle.textContent = line.title || "Item";
+
+    currentWrapPref = ch.wrapPref || "wrrapd";
+    currentOccasion = ch.occasion || "";
+    currentWrrapdHint = ch.wrrapdHint || "";
+    currentUploadName = ch.uploadName || "";
+    currentUploadDataUrl = ch.uploadDataUrl || "";
+    currentAiPrompt = ch.aiPrompt || "";
+    currentAiDesign = ch.aiDesign || null;
+
+    wrrapdRadio.checked = currentWrapPref === "wrrapd";
+    uploadRadio.checked = currentWrapPref === "upload";
+    aiRadio.checked = currentWrapPref === "ai";
+    occasionSelect.value = currentOccasion;
+    occasionSelect.style.borderColor = "#cbd5e1";
+    wrrapdHintInput.value = currentWrrapdHint;
+
+    if (currentUploadDataUrl) {
+      uploadImg.src = currentUploadDataUrl;
+      uploadPreview.style.display = "block";
+    } else {
+      uploadPreview.style.display = "none";
+    }
+    uploadInput.value = "";
+
+    aiInput.value = currentAiPrompt;
+    aiResults.innerHTML = "";
+    if (currentAiDesign) renderAiResults([currentAiDesign]);
+
+    refreshWrapSubs();
+
+    currentFlowers = ch.flowers || false;
+    currentFlowerDesign = ch.flowerDesign || "";
+    flowersCb.checked = currentFlowers;
+    flowersGrid.style.display = currentFlowers ? "grid" : "none";
+    flowerRadios.forEach((r) => {
+      r.checked = r.value === currentFlowerDesign;
+    });
+
+    msgInput.value = ch.message || "";
+
+    back.style.display = idx > 0 ? "" : "none";
+    const isLast = idx === totalItems - 1;
+    zipWrap.style.display = isLast ? "block" : "none";
+    next.textContent = isLast ? "Save choices" : "Next →";
+  }
+
+  function captureCurrentChoices() {
+    allChoices[currentIdx] = {
+      title: lines[currentIdx]?.title || "Item",
+      wrapPref: currentWrapPref,
+      occasion: currentWrapPref === "wrrapd" ? currentOccasion : "",
+      wrrapdHint: currentWrrapdHint,
+      uploadName: currentUploadName,
+      uploadDataUrl: currentUploadDataUrl,
+      aiPrompt: currentAiPrompt,
+      aiDesign: currentAiDesign,
+      flowers: currentFlowers,
+      flowerDesign: currentFlowerDesign,
+      message: msgInput.value.trim(),
+    };
+  }
+
+  // Require an occasion whenever "Allow Wrrapd to choose" is selected.
+  function occasionMissing() {
+    return currentWrapPref === "wrrapd" && !isValidOccasion(currentOccasion);
+  }
+
+  cancel.addEventListener("click", () => {
+    overlay.remove();
+  });
   overlay.addEventListener("click", (e) => {
     if (e.target === overlay) overlay.remove();
   });
 
-  save.addEventListener("click", () => {
+  back.addEventListener("click", () => {
+    if (occasionMissing()) {
+      occasionSelect.style.borderColor = "#dc2626";
+      occasionSelect.focus();
+      return;
+    }
+    captureCurrentChoices();
+    currentIdx--;
+    renderItem(currentIdx);
+    panel.scrollTop = 0;
+  });
+
+  next.addEventListener("click", () => {
+    if (occasionMissing()) {
+      occasionSelect.style.borderColor = "#dc2626";
+      occasionSelect.focus();
+      return;
+    }
+    captureCurrentChoices();
+
+    if (currentIdx < totalItems - 1) {
+      currentIdx++;
+      renderItem(currentIdx);
+      panel.scrollTop = 0;
+      return;
+    }
+
+    // Last item — validate ZIP, then require legal terms before saving.
     const zipVal = zip.value.replace(/\D/g, "").slice(0, 5);
     if (zipVal.length < 5) {
       zip.style.borderColor = "#dc2626";
       zip.focus();
       return;
     }
-    const saved = messageInputs.map(({ title: t, msg: m }) => ({
-      title: t,
-      message: m.value.trim(),
-      wrapPref: "wrrapd",
-    }));
-    writeItemChoices(config.sessionPrefix, saved);
-    writeGiftChoicesSaved(config.sessionPrefix, true);
-    writeGiftRadio(config.sessionPrefix, "yes");
     try {
       sessionStorage.setItem(`${config.sessionPrefix}ValidatedEstimateZip`, zipVal);
     } catch {
       /* ignore */
     }
+
+    writeItemChoices(config.sessionPrefix, allChoices);
+    writeGiftChoicesSaved(config.sessionPrefix, true);
+    writeGiftRadio(config.sessionPrefix, "yes");
     overlay.remove();
-    mountCartGiftOptIn(config, cartSnapshot);
+    openGenericTermsModal(config, () => {
+      // Re-render the opt-in card so the saved banner + edit link appear.
+      existingOptIn(config)?.remove();
+      mountCartGiftOptIn(config, cartSnapshot);
+    });
   });
 
-  actions.append(cancel, save);
-  panel.append(title, intro, list, zipLabel, zip, actions);
-  overlay.append(panel);
+  renderItem(0);
   document.body.append(overlay);
-  zip.focus();
+  next.focus();
 }
 
 function mountCartGiftOptIn(config, cartSnapshot) {
@@ -219,13 +706,12 @@ function mountCartGiftOptIn(config, cartSnapshot) {
   brandBadge.textContent = "Wrrapd";
   const brandTag = document.createElement("span");
   brandTag.style.cssText = "font-size:12px;font-weight:600;color:#ff8e14;letter-spacing:.02em;";
-  brandTag.textContent = "Gift wrapping & handwritten note";
+  brandTag.textContent = "Gift wrapping, handwritten note & flowers";
   brandRow.append(brandBadge, brandTag);
 
   const hook = document.createElement("h2");
   hook.style.cssText = "margin:0 0 4px;font-size:17px;font-weight:800;color:#111827;line-height:1.3;";
-  hook.textContent =
-    config.hook || "Make it a gift — beautifully wrapped & delivered for you.";
+  hook.textContent = config.hook || "Make it a gift — beautifully wrapped & delivered for you.";
 
   const sub = document.createElement("p");
   sub.style.cssText = "margin:0 0 12px;font-size:13px;line-height:1.5;color:#475569;";
@@ -233,7 +719,7 @@ function mountCartGiftOptIn(config, cartSnapshot) {
     config.subtitle ||
     "Add premium gift wrap, a handwritten card, and optional flowers. We wrap it and ship it to your giftee — no printer, no scissors, no awkward receipt.";
 
-  if (readGiftChoicesSaved(config.sessionPrefix)) {
+  if (giftFlowComplete(config)) {
     wrap.append(buildSavedBanner(config));
   }
 
@@ -250,7 +736,7 @@ function mountCartGiftOptIn(config, cartSnapshot) {
     inp.value = value;
     inp.style.marginTop = "3px";
     const stored = readGiftRadio(config.sessionPrefix);
-    if (stored === value && (value !== "yes" || readGiftChoicesSaved(config.sessionPrefix))) {
+    if (stored === value && (value !== "yes" || giftFlowComplete(config))) {
       inp.checked = true;
     }
     inp.addEventListener("click", () => {
@@ -262,6 +748,8 @@ function mountCartGiftOptIn(config, cartSnapshot) {
         writeGiftRadio(config.sessionPrefix, "no");
         const saved = wrap.querySelector(`[${config.savedBannerAttr}]`);
         if (saved) saved.remove();
+        const editBtn = wrap.querySelector("[data-wrrapd-edit]");
+        if (editBtn) editBtn.hidden = true;
       }
     });
     const text = document.createElement("span");
@@ -277,10 +765,11 @@ function mountCartGiftOptIn(config, cartSnapshot) {
 
   const edit = document.createElement("button");
   edit.type = "button";
+  edit.setAttribute("data-wrrapd-edit", "1");
   edit.textContent = "Edit gift wrap choices";
   edit.style.cssText =
     "margin-top:4px;padding:0;border:none;background:none;color:#0066c0;font-size:12px;cursor:pointer;text-decoration:underline;";
-  edit.hidden = !readGiftChoicesSaved(config.sessionPrefix);
+  edit.hidden = !giftFlowComplete(config);
   edit.addEventListener("click", () => openGiftChoicesModal(config, cartSnapshot));
 
   wrap.append(brandRow, hook, sub, fieldset, edit);

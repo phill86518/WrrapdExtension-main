@@ -573,6 +573,7 @@ function buildLegoOrderDataForProcessPayment() {
       uploaded_design_name: wrap === "upload" ? (ch.uploadName || null) : null,
       aiPrompt: wrap === "ai" ? (ch.aiPrompt || null) : null,
       wrrapdHint: wrap === "wrrapd" ? (ch.wrrapdHint || null) : null,
+      occasion: wrap === "wrrapd" ? (ch.occasion || null) : null,
       giftMessage: ch.message || null,
     };
   });

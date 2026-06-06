@@ -30,6 +30,7 @@ import { getValueByLabel, getElementValue, generateOrderNumber } from './lib/ord
 import { ensureWrrapdSummaryAlignment } from './lib/summary-alignment.js';
 import { isZipCodeAllowed } from './lib/zip-codes.js';
 import { WRRAPD_RETAILER_AMAZON } from '../retailers/amazon/constants.js';
+import { occasionOptionsHtml, isValidOccasion } from '../shared/occasions.js';
 
 (function () {
 
@@ -3401,10 +3402,15 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                                         <label style="display: flex; align-items: start;">
                                             <input type="radio" name="wrapping-option-${i}" value="wrrapd" style="margin-right: 10px;" checked>
                                             <div style="width: 100%;">
-                                                <div style="font-weight: bold;">Allow Wrrapd to choose the wrapping</div>
+                                                <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                                                    <div style="font-weight: bold;">Allow Wrrapd to choose the wrapping</div>
+                                                    <select id="wrrapd-occasion-${i}" style="margin-left: auto; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; max-width: 60%;">
+                                                        ${occasionOptionsHtml(subItem.occasion || "")}
+                                                    </select>
+                                                </div>
                                                 <div id="wrrapd-hint-wrap-${i}" style="display: flex; align-items: center; gap: 6px; margin-top: 6px;">
                                                     <input type="text" id="wrrapd-hint-input-${i}"
-                                                        placeholder="Occasion or other details (optional)"
+                                                        placeholder="Other details for our wrap team (optional)"
                                                         style="flex: 1; padding: 6px 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;" />
                                                 </div>
                                             </div>
@@ -3652,6 +3658,21 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                         if (selectedWrappingOption) {
                             subItem.selected_wrapping_option = selectedWrappingOption.value;
                         }
+
+                        // When letting Wrrapd choose the wrapping, an occasion is required.
+                        const occasionSelectEl = document.getElementById(`wrrapd-occasion-${i}`);
+                        if ((selectedWrappingOption?.value || 'wrrapd') === 'wrrapd') {
+                            const chosen = occasionSelectEl?.value || '';
+                            if (!isValidOccasion(chosen)) {
+                                if (occasionSelectEl) {
+                                    occasionSelectEl.style.borderColor = '#dc2626';
+                                    occasionSelectEl.focus();
+                                }
+                                alert('Please choose an occasion for your gift wrap.');
+                                return false;
+                            }
+                            subItem.occasion = chosen;
+                        }
                         
                         const combineWithFlowersCheckbox = document.getElementById(`combine-with-flowers-${i}`);
                         if (combineWithFlowersCheckbox) {
@@ -3746,6 +3767,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                     const aiOptions = document.getElementById(`ai-options-${i}`);
                     const wrrapdHintWrap = document.getElementById(`wrrapd-hint-wrap-${i}`);
                     const wrrapdHintInput = document.getElementById(`wrrapd-hint-input-${i}`);
+                    const occasionSelect = document.getElementById(`wrrapd-occasion-${i}`);
 
                     // Save hint text as user types
                     if (wrrapdHintInput) {
@@ -3757,6 +3779,16 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                         if (subItem.wrrapdHint) wrrapdHintInput.value = subItem.wrrapdHint;
                     }
 
+                    // Required occasion dropdown for the "Allow Wrrapd to choose" path
+                    if (occasionSelect) {
+                        if (subItem.occasion) occasionSelect.value = subItem.occasion;
+                        occasionSelect.addEventListener('change', function() {
+                            subItem.occasion = this.value;
+                            this.style.borderColor = '#ddd';
+                            saveItemToLocalStorage(productObj);
+                        });
+                    }
+
                     wrappingOptions.forEach(option => {
                         option.addEventListener('change', function() {
                             // Hide all option-specific elements first
@@ -3764,6 +3796,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                             fileInput.style.display = 'none';
                             aiOptions.style.display = 'none';
                             if (wrrapdHintWrap) wrrapdHintWrap.style.display = 'none';
+                            if (occasionSelect) occasionSelect.style.display = 'none';
 
                             // Update storage with selected wrapping option
                             subItem.selected_wrapping_option = this.value;
@@ -3777,6 +3810,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                                 aiOptions.style.display = 'block';
                             } else if (this.value === 'wrrapd') {
                                 if (wrrapdHintWrap) wrrapdHintWrap.style.display = 'flex';
+                                if (occasionSelect) occasionSelect.style.display = '';
                             }
                         });
                     });

@@ -31,6 +31,7 @@ import {
   writeLegoItemChoices,
 } from "./lego-session-state.js";
 import { loadAllowedZipCodes } from "../../content/lib/zip-codes.js";
+import { buildOccasionSelect, isValidOccasion } from "../../shared/occasions.js";
 
 const FLOW_MODAL_ID = "wrrapd-lego-gift-service-modal";
 const LEGO_BAG_PAY_HINT_ATTR = "data-wrrapd-lego-bag-pay-hint";
@@ -63,7 +64,7 @@ function gifteeZip5() {
 // ─── Per-item default choice ──────────────────────────────────────────────────
 
 function emptyChoice() {
-  return { wrapPref: "wrrapd", uploadName: "", uploadDataUrl: "", aiPrompt: "", aiDesign: null, flowers: false, flowerDesign: "", message: "" };
+  return { wrapPref: "wrrapd", occasion: "", wrrapdHint: "", uploadName: "", uploadDataUrl: "", aiPrompt: "", aiDesign: null, flowers: false, flowerDesign: "", message: "" };
 }
 
 // ─── Migrate legacy single-value keys into per-item array ────────────────────
@@ -206,18 +207,24 @@ export function openLegoGiftServiceModal() {
   ];
   // Refs for current item's wrap state
   let currentWrapPref = "wrrapd";
+  let currentOccasion = "";
   let currentUploadName = "";
   let currentUploadDataUrl = "";
   let currentAiPrompt = "";
   let currentAiDesign = null;
   let currentWrrapdHint = "";
 
-  // Hint field shown when "Allow Wrrapd to choose" is selected
+  // Required occasion dropdown shown on the right of "Allow Wrrapd to choose"
+  const occasionSelect = buildOccasionSelect({ id: "wrrapd-lego-occasion" });
+  occasionSelect.style.cssText = "margin-left:auto;flex:0 0 auto;padding:5px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;color:#0f172a;background:#fff;max-width:55%;";
+  occasionSelect.addEventListener("change", () => { currentOccasion = occasionSelect.value; occasionSelect.style.borderColor = "#d1d5db"; });
+
+  // Optional free-text hint shown when "Allow Wrrapd to choose" is selected
   const wrrapdHintWrap = document.createElement("div");
   wrrapdHintWrap.style.cssText = "display:flex;align-items:center;gap:6px;margin:2px 0 6px 22px;";
   const wrrapdHintInput = document.createElement("input");
   wrrapdHintInput.type = "text";
-  wrrapdHintInput.placeholder = "Occasion or other details (optional)";
+  wrrapdHintInput.placeholder = "Other details for our wrap team (optional)";
   wrrapdHintInput.style.cssText = "flex:1;padding:5px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;color:#0f172a;";
   wrrapdHintInput.addEventListener("input", () => { currentWrrapdHint = wrrapdHintInput.value; });
   wrrapdHintWrap.appendChild(wrrapdHintInput);
@@ -234,6 +241,8 @@ export function openLegoGiftServiceModal() {
       }
     });
     lbl.append(inp, document.createTextNode(label));
+    // The "Allow Wrrapd to choose" row carries the occasion dropdown on the right.
+    if (value === "wrrapd") lbl.append(occasionSelect);
     wrapFieldset.appendChild(lbl);
     // Insert hint field directly after the "wrrapd" option row
     if (value === "wrrapd") wrapFieldset.appendChild(wrrapdHintWrap);
@@ -319,6 +328,7 @@ export function openLegoGiftServiceModal() {
   aiWrap.append(aiHint, aiInput, aiGenBtn, aiResults);
 
   const refreshWrapSubs = () => {
+    occasionSelect.style.display = currentWrapPref === "wrrapd" ? "" : "none";
     wrrapdHintWrap.style.display = currentWrapPref === "wrrapd" ? "flex" : "none";
     uploadWrap.style.display = currentWrapPref === "upload" ? "block" : "none";
     aiWrap.style.display = currentWrapPref === "ai" ? "block" : "none";
@@ -420,12 +430,15 @@ export function openLegoGiftServiceModal() {
 
     // Restore wrap pref
     currentWrapPref = ch.wrapPref || "wrrapd";
+    currentOccasion = ch.occasion || "";
     currentUploadName = ch.uploadName || "";
     currentUploadDataUrl = ch.uploadDataUrl || "";
     currentAiPrompt = ch.aiPrompt || "";
     currentAiDesign = ch.aiDesign || null;
     currentWrrapdHint = ch.wrrapdHint || "";
     wrrapdHintInput.value = currentWrrapdHint;
+    occasionSelect.value = currentOccasion;
+    occasionSelect.style.borderColor = "#d1d5db";
     wrapRadios.forEach((r) => { r.checked = r.value === currentWrapPref; });
 
     // Restore upload preview
@@ -463,6 +476,7 @@ export function openLegoGiftServiceModal() {
   function captureCurrentChoices() {
     allChoices[currentIdx] = {
       wrapPref: currentWrapPref,
+      occasion: currentWrapPref === "wrrapd" ? currentOccasion : "",
       wrrapdHint: currentWrrapdHint,
       uploadName: currentUploadName,
       uploadDataUrl: currentUploadDataUrl,
@@ -511,6 +525,12 @@ export function openLegoGiftServiceModal() {
   });
 
   nextBtn.addEventListener("click", async () => {
+    // When letting Wrrapd choose the wrap, an occasion must be selected.
+    if (currentWrapPref === "wrrapd" && !isValidOccasion(currentOccasion)) {
+      occasionSelect.style.borderColor = "#dc2626";
+      occasionSelect.focus();
+      return;
+    }
     captureCurrentChoices();
 
     if (currentIdx < totalItems - 1) {

@@ -11,6 +11,10 @@ export function itemChoicesKey(prefix) {
   return `${prefix}ItemChoices`;
 }
 
+export function legalTermsKey(prefix) {
+  return `${prefix}GiftLegalTermsAccepted`;
+}
+
 export function readGiftRadio(prefix) {
   try {
     return sessionStorage.getItem(giftRadioKey(prefix)) || "";
@@ -66,8 +70,26 @@ export function writeItemChoices(prefix, arr) {
   }
 }
 
+export function readGiftLegalTermsAccepted(prefix) {
+  try {
+    return sessionStorage.getItem(legalTermsKey(prefix)) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function writeGiftLegalTermsAccepted(prefix, on) {
+  try {
+    if (on) sessionStorage.setItem(legalTermsKey(prefix), "1");
+    else sessionStorage.removeItem(legalTermsKey(prefix));
+  } catch {
+    /* ignore */
+  }
+}
+
 export function clearGiftServiceFlags(prefix) {
   writeGiftChoicesSaved(prefix, false);
+  writeGiftLegalTermsAccepted(prefix, false);
   try {
     sessionStorage.removeItem(itemChoicesKey(prefix));
   } catch {
