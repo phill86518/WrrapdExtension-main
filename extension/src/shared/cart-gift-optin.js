@@ -10,6 +10,7 @@ import {
   writeItemChoices,
 } from "./cart-gift-session.js";
 import { buildOccasionSelect, isValidOccasion } from "./occasions.js";
+import { buildWrrapdTermsHtml } from "./wrrapd-terms.js";
 
 function normalizeWhitespace(value) {
   return String(value || "").replace(/\s+/g, " ").trim();
@@ -160,21 +161,7 @@ function openGenericTermsModal(config, onAccepted) {
   const scrollable = document.createElement("div");
   scrollable.style.cssText =
     "padding:36px 28px 20px;overflow-y:auto;flex:1;font-family:Georgia,'Times New Roman',serif;line-height:1.75;color:#0f172a;font-size:15px;";
-  scrollable.innerHTML = `
-    <h1 style="margin:0 0 8px;font-size:24px;text-align:center;font-weight:600;color:#0f172a;">Wrrapd — gift service</h1>
-    <p style="margin:0 0 18px;text-align:center;color:#334155;font-size:14px;"><em>Terms for gift wrap &amp; fulfillment</em></p>
-    <div>
-      <p style="margin-bottom:14px;"><strong>1.</strong> These Terms apply to gift-wrapping and related fulfillment by Wrrapd Inc. (&quot;Wrrapd&quot;) for items you purchase on ${retailer}. Your purchase remains governed by ${retailer}&apos;s own terms and policies.</p>
-      <p style="margin-bottom:14px;"><strong>2.</strong> You must be at least 18 or the age of majority in your jurisdiction to use this service.</p>
-      <p style="margin-bottom:14px;"><strong>3.</strong> Privacy: see <a href="https://www.wrrapd.com/privacy" target="_blank" rel="noopener" style="color:#0369a1;">wrrapd.com/privacy</a>.</p>
-      <p style="margin-bottom:14px;"><strong>4.</strong> Limited agency: by agreeing, you appoint Wrrapd as your limited agent solely to assist with browser-based steps you direct in connection with this gift order.</p>
-      <p style="margin-bottom:14px;"><strong>5.</strong> Service: exterior gift-wrapping and optional add-ons (messages, uploads, AI-assisted themes, flowers where offered). Fees are shown before you pay Wrrapd.</p>
-      <p style="margin-bottom:14px;"><strong>6.</strong> Shipping: items are sent to Wrrapd&apos;s U.S. hub first for wrapping; outbound delivery to your giftee is coordinated by Wrrapd after payment and production. Timelines may extend beyond ${retailer}&apos;s default estimate.</p>
-      <p style="margin-bottom:14px;"><strong>7.</strong> Product issues, returns, and warranties remain between you and ${retailer} / sellers. Wrrapd does not replace ${retailer} support for the underlying merchandise.</p>
-      <p style="margin-bottom:14px;"><strong>8.</strong> Video proof: Wrrapd may record receipt, unwrap, wrap, and handoff for quality and dispute resolution.</p>
-      <p style="margin-bottom:14px;"><strong>9.</strong> Liability: service is provided as-is; Wrrapd&apos;s liability is limited to the service fees you paid for this wrap order, except where prohibited by law.</p>
-      <p style="margin-bottom:14px;"><strong>10.</strong> Disputes: governed by the laws of the State of Florida, USA; binding individual arbitration in Jacksonville, Florida; class action waiver.</p>
-    </div>`;
+  scrollable.innerHTML = buildWrrapdTermsHtml(retailer);
 
   const agreement = document.createElement("div");
   agreement.style.cssText =

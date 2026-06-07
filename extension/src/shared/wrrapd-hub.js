@@ -42,3 +42,63 @@ export function hubAsPaymentAddress() {
     phone: "",
   };
 }
+
+function setNativeInputValue(input, value) {
+  if (!input || value == null) return;
+  const str = String(value);
+  const proto = Object.getPrototypeOf(input);
+  const desc = Object.getOwnPropertyDescriptor(proto, "value");
+  const setter = desc && desc.set;
+  if (setter) setter.call(input, str);
+  else input.value = str;
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+  input.dispatchEvent(new Event("change", { bubbles: true }));
+  input.dispatchEvent(new Event("blur", { bubbles: true }));
+}
+
+/**
+ * Best-effort hub-address autofill using standard HTML autocomplete tokens.
+ * Works on most checkout forms even without retailer-specific selectors.
+ * Returns the number of fields filled.
+ */
+export function fillHubShippingFieldsByAutocomplete() {
+  const h = WRRAPD_HUB_ADDRESS;
+  const zip5 = String(h.postalCode || "").replace(/\D/g, "").slice(0, 5);
+  const pairs = [
+    ['[autocomplete="given-name"]', h.recipientFirstName],
+    ['[autocomplete="shipping given-name"]', h.recipientFirstName],
+    ['[autocomplete="family-name"]', h.recipientLastName],
+    ['[autocomplete="shipping family-name"]', h.recipientLastName],
+    ['[autocomplete="organization"]', h.organization],
+    ['[autocomplete="address-line1"]', h.addressLine1],
+    ['[autocomplete="shipping address-line1"]', h.addressLine1],
+    ['[autocomplete="address-level2"]', h.city],
+    ['[autocomplete="shipping address-level2"]', h.city],
+    ['[autocomplete="address-level1"]', h.state],
+    ['[autocomplete="shipping address-level1"]', h.state],
+    ['[autocomplete="postal-code"]', zip5],
+    ['[autocomplete="shipping postal-code"]', zip5],
+  ];
+  let filled = 0;
+  for (const [sel, val] of pairs) {
+    if (!val) continue;
+    const el = document.querySelector(sel);
+    if (!el) continue;
+    if (el.tagName === "SELECT") {
+      const opt = [...el.options].find(
+        (o) =>
+          String(o.value).toUpperCase() === String(val).toUpperCase() ||
+          (o.textContent || "").trim().toUpperCase() === String(val).toUpperCase(),
+      );
+      if (opt) {
+        el.value = opt.value;
+        el.dispatchEvent(new Event("change", { bubbles: true }));
+        filled++;
+      }
+    } else if (!el.value || !el.value.trim()) {
+      setNativeInputValue(el, val);
+      filled++;
+    }
+  }
+  return filled;
+}

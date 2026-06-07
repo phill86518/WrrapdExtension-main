@@ -21,7 +21,7 @@ function listingIdFromHref(href) {
   return match ? match[1] : "";
 }
 
-function extractEtsyCartSnapshot(root = document) {
+export function extractEtsyCartSnapshot(root = document) {
   /** @type {Array<{ title: string, itemId?: string }>} */
   const items = [];
   const seen = new Set();
