@@ -97,7 +97,7 @@ export function initWalmartRetailerBootstrap() {
     getCartSnapshot: () => extractWalmartCartSnapshot(document),
     hook: "Make it a gift — we'll wrap your Walmart order beautifully.",
     subtitle:
-      "Premium gift wrap, a handwritten card, and optional flowers — wrapped by Wrrapd and shipped to your giftee. This is separate from Walmart's own gift option.",
+      "Premium gift wrap, a handwritten card, and optional flowers — wrapped by Wrrapd and shipped to your giftee.",
     modalIntro:
       "Add a gift message per item. You'll complete Wrrapd's secure payment during checkout, then we wrap and ship to your giftee.",
   });
