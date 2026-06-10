@@ -90,13 +90,16 @@ function getActiveUnitPrices(state) {
   return state.unitPriceOverride || UNIT_PRICES_FALLBACK;
 }
 
+const PRICE_REFRESH_TTL_MS = 5 * 60 * 1000;
+
 async function refreshUnitPricesFromServer(state, geo) {
   try {
     const u = new URL("https://api.wrrapd.com/api/pricing-preview");
     if (geo?.postalCode) u.searchParams.set("postalCode", String(geo.postalCode).trim().slice(0, 16));
     if (geo?.state) u.searchParams.set("state", String(geo.state).trim().slice(0, 16));
     if (geo?.country) u.searchParams.set("country", String(geo.country).trim().slice(0, 8));
-    const r = await fetch(u.toString(), { credentials: "omit" });
+    const signal = typeof AbortSignal?.timeout === "function" ? AbortSignal.timeout(8000) : undefined;
+    const r = await fetch(u.toString(), { credentials: "omit", signal });
     if (!r.ok) return;
     const j = await r.json();
     state.taxPercent =
@@ -117,6 +120,25 @@ async function refreshUnitPricesFromServer(state, geo) {
   } catch (e) {
     console.warn("[Wrrapd pay] pricing-preview", e);
   }
+}
+
+/**
+ * Memoized price refresh: at most one in-flight request, re-fetched only after
+ * the TTL expires. The summary UI re-renders on every DOM mutation on SPA-style
+ * checkouts (Etsy, Sephora), so the raw fetch must never run per-render.
+ */
+function ensureUnitPrices(state, geo) {
+  const now = Date.now();
+  if (state.lastPriceFetchAt && now - state.lastPriceFetchAt < PRICE_REFRESH_TTL_MS) {
+    return Promise.resolve();
+  }
+  if (!state.priceFetchPromise) {
+    state.priceFetchPromise = refreshUnitPricesFromServer(state, geo).finally(() => {
+      state.priceFetchPromise = null;
+      state.lastPriceFetchAt = Date.now();
+    });
+  }
+  return state.priceFetchPromise;
 }
 
 function computeServiceSubtotalCents(state, prefix) {
@@ -290,19 +312,60 @@ function mountSummaryNearButton(btn, invoiceRows, totalCents, paid) {
   host.append(h, linesWrap, total, payRow);
   const parent = btn.parentElement;
   if (parent) parent.insertBefore(host, btn);
-  return { payBtn };
+  return { host, payBtn };
 }
 
 // ─── Popup + postMessage handshake ─────────────────────────────────────────────
 
+/**
+ * Open the popup window SYNCHRONOUSLY (no awaits before window.open), so the
+ * browser ties it to the user's click gesture and doesn't block it. The popup
+ * starts on about:blank with a tiny loading note and is navigated afterwards.
+ */
+function openPaymentPopupShell(config) {
+  const w = 480;
+  const hgt = 820;
+  const sx = window.screenX !== undefined ? window.screenX : window.screenLeft;
+  const sy = window.screenY !== undefined ? window.screenY : window.screenTop;
+  const left = sx + (window.innerWidth - w) / 2;
+  const top = sy + (window.innerHeight - hgt) / 2;
+  const popup = window.open(
+    "about:blank",
+    `WrrapdPayment${config.retailerName}`,
+    `width=${w},height=${hgt},left=${left},top=${top},scrollbars=yes,resizable=yes`,
+  );
+  if (!popup) return null;
+  try {
+    popup.document.write(
+      '<title>Wrrapd payment</title><body style="font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;color:#334155;">Loading Wrrapd secure payment…</body>',
+    );
+  } catch {
+    /* cross-origin or closed; navigation below still works */
+  }
+  return popup;
+}
+
 async function openPaymentPopup(config, state) {
-  await refreshUnitPricesFromServer(state, {
+  // 1. Open the window first, while we still have the user gesture.
+  const popup = openPaymentPopupShell(config);
+  if (!popup) {
+    alert(`Please allow popups for ${location.hostname} to complete Wrrapd payment.`);
+    return null;
+  }
+
+  // 2. Now it's safe to do async work; the window is already open.
+  await ensureUnitPrices(state, {
     postalCode: gifteeZip5(config.sessionPrefix) || hubPostal5(),
     state: "",
     country: "US",
   });
   const { totalCents } = computeTotalBreakdown(state, config.sessionPrefix);
   if (!totalCents || totalCents < 50) {
+    try {
+      popup.close();
+    } catch {
+      /* ignore */
+    }
     alert("Invalid Wrrapd total. Please refresh and try again.");
     return null;
   }
@@ -332,20 +395,10 @@ async function openPaymentPopup(config, state) {
     /* ignore */
   }
 
-  const w = 480;
-  const hgt = 820;
-  const sx = window.screenX !== undefined ? window.screenX : window.screenLeft;
-  const sy = window.screenY !== undefined ? window.screenY : window.screenTop;
-  const left = sx + (window.innerWidth - w) / 2;
-  const top = sy + (window.innerHeight - hgt) / 2;
-  const popup = window.open(
-    url,
-    `WrrapdPayment${config.retailerName}`,
-    `width=${w},height=${hgt},left=${left},top=${top},scrollbars=yes,resizable=yes`,
-  );
-  if (!popup) {
-    alert(`Please allow popups for ${location.hostname} to complete Wrrapd payment.`);
-    return null;
+  try {
+    popup.location.href = url;
+  } catch {
+    /* popup was closed by the user mid-flight */
   }
   popup.focus();
   return popup;
@@ -413,14 +466,30 @@ export function initRetailerCheckoutPayFlow(config) {
   const ensureSummaryUi = async () => {
     const btn = config.findCheckoutButton?.();
     if (!btn?.parentElement) return;
-    await refreshUnitPricesFromServer(state, {
+    await ensureUnitPrices(state, {
       postalCode: gifteeZip5(config.sessionPrefix) || hubPostal5(),
       state: "",
       country: "US",
     });
     const paid = readPaymentSuccess(config.sessionPrefix);
     const { invoiceRows, totalCents } = buildSummaryLinesAndTotal(state, config.sessionPrefix);
-    const { payBtn } = mountSummaryNearButton(btn, invoiceRows, totalCents, paid);
+    // Skip remounting when nothing changed. Remounting on every MutationObserver
+    // tick destroys the Pay button between mousedown and mouseup, so clicks on it
+    // never fire (the popup appears blocked). Only rebuild when content/position changed.
+    const renderSig = `${paid ? 1 : 0}|${totalCents}|${invoiceRows
+      .map((r) => `${r?.label ?? ""}=${r?.amount ?? r?.cents ?? ""}`)
+      .join("~")}`;
+    const existing = document.querySelector(`[${SUMMARY_HOST_ATTR}]`);
+    if (
+      existing &&
+      existing.isConnected &&
+      existing.dataset.wrrapdRenderSig === renderSig &&
+      existing.parentElement === btn.parentElement
+    ) {
+      return;
+    }
+    const { host, payBtn } = mountSummaryNearButton(btn, invoiceRows, totalCents, paid);
+    host.dataset.wrrapdRenderSig = renderSig;
     if (!paid) {
       payBtn.addEventListener("click", async () => {
         payPopupRef = await openPaymentPopup(config, state);
