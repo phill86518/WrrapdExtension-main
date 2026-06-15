@@ -203,7 +203,7 @@ export default async function AdminPage({
           </div>
         </div>
 
-        <section className="mb-10 grid gap-5 md:grid-cols-2">
+        <section className="mb-10 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
           <a
             href="/admin/drivers"
             className="group relative overflow-hidden rounded-2xl border-2 border-[#1a2744]/35 bg-[#faf8f4] p-6 shadow-lg shadow-[#0f172a]/15 transition hover:border-[#c9a227] hover:shadow-xl"
@@ -225,6 +225,19 @@ export default async function AdminPage({
             <h3 className="mt-2 font-bold text-[#0f172a]">Delivery reports</h3>
             <p className="mt-2 text-sm leading-relaxed text-[#2d4a38]">
               View daily metrics and export CSV for operations.
+            </p>
+            <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-[#1a2744] group-hover:text-amber-700">
+              Open →
+            </p>
+          </a>
+          <a
+            href="/admin/pricing"
+            className="group relative overflow-hidden rounded-2xl border-2 border-[#1a2744]/35 bg-[#faf8f4] p-6 shadow-lg shadow-[#0f172a]/15 transition hover:border-[#c9a227] hover:shadow-xl"
+          >
+            <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-[#c9a227] via-amber-500 to-[#c9a227]" />
+            <h3 className="mt-2 font-bold text-[#0f172a]">Dynamic pricing</h3>
+            <p className="mt-2 text-sm leading-relaxed text-[#2d4a38]">
+              Set gift-wrap, AI/upload, and flowers prices per retailer.
             </p>
             <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-[#1a2744] group-hover:text-amber-700">
               Open →

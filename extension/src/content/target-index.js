@@ -1,9 +1,8 @@
-/**
- * Target.com content script entry (separate bundle from Amazon `content.js`).
- * Checkout / cart DOM integration will live under `src/retailers/target/`.
- * This stub loads on Target origins declared in manifest.json so adding
- * `host_permissions` + `content_scripts` ships in one CWS submission.
- */
-if (typeof window !== 'undefined') {
-    window.__WRRAPD_TARGET_CONTENT_BUILD__ = '2026-04-25-stub';
+import { initTargetRetailerBootstrap } from "../retailers/target/retailer-bootstrap.js";
+import { initTargetCheckoutPayFlow } from "../retailers/target/target-checkout.js";
+
+if (typeof window !== "undefined") {
+  window.__WRRAPD_TARGET_CONTENT_BUILD__ = "2026-06-10-target-full-v1";
+  initTargetRetailerBootstrap();
+  initTargetCheckoutPayFlow();
 }

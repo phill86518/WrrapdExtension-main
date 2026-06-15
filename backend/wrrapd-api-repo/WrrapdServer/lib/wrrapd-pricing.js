@@ -1,7 +1,10 @@
 /**
- * Dynamic Wrrapd unit pricing (geo hints, calendar surges, global multiplier).
- * Configure with env WRRAPD_PRICE_CONFIG_JSON (stringified JSON). Safe defaults when unset.
+ * Dynamic Wrrapd unit pricing (geo hints, calendar surges, global multiplier, per-retailer overrides).
+ * Priority: data/wrrapd-pricing-config.json → env WRRAPD_PRICE_CONFIG_JSON → built-in defaults.
  */
+
+const fs = require('fs');
+const path = require('path');
 
 const DEFAULT_UNIT = Object.freeze({
     giftWrapBase: 6.99,
@@ -15,47 +18,99 @@ const DEFAULT_CONFIG = Object.freeze({
     defaultUnitPrices: { ...DEFAULT_UNIT },
     globalMultiplier: 1,
     rules: [],
+    retailers: {},
 });
 
+const PRICING_CONFIG_PATH = path.join(__dirname, '..', 'data', 'wrrapd-pricing-config.json');
+
 let cachedConfig = null;
-let cachedConfigRaw = '';
+let cachedConfigSignature = '';
 
 const salesTaxZip = require('./sales-tax-zip');
 
-function parseConfigFromEnv() {
-    const raw = (process.env.WRRAPD_PRICE_CONFIG_JSON || '').trim();
-    if (!raw) {
-        cachedConfig = { ...DEFAULT_CONFIG, defaultUnitPrices: { ...DEFAULT_UNIT } };
-        cachedConfigRaw = '';
-        return cachedConfig;
-    }
-    if (raw === cachedConfigRaw && cachedConfig) return cachedConfig;
-    let parsed;
-    try {
-        parsed = JSON.parse(raw);
-    } catch (e) {
-        console.error('[wrrapd-pricing] Invalid WRRAPD_PRICE_CONFIG_JSON, using defaults:', e.message);
-        cachedConfig = { ...DEFAULT_CONFIG, defaultUnitPrices: { ...DEFAULT_UNIT } };
-        cachedConfigRaw = raw;
-        return cachedConfig;
-    }
-    const base = parsed.defaultUnitPrices && typeof parsed.defaultUnitPrices === 'object' ? parsed.defaultUnitPrices : {};
-    const defaultUnitPrices = {
+function normalizeRetailerSlug(retailer) {
+    if (retailer == null) return '';
+    return String(retailer)
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '')
+        .slice(0, 32);
+}
+
+function normalizeUnitPricesObject(raw) {
+    const base = raw && typeof raw === 'object' ? raw : {};
+    return {
         giftWrapBase: numOr(base.giftWrapBase, DEFAULT_UNIT.giftWrapBase),
         customDesignAi: numOr(base.customDesignAi, DEFAULT_UNIT.customDesignAi),
         customDesignUpload: numOr(base.customDesignUpload, DEFAULT_UNIT.customDesignUpload),
         flowers: numOr(base.flowers, DEFAULT_UNIT.flowers),
     };
-    const globalMultiplier = clampMult(parsed.globalMultiplier, 1);
-    const rules = Array.isArray(parsed.rules) ? parsed.rules.slice(0, 64) : [];
-    cachedConfig = {
-        version: typeof parsed.version === 'string' ? parsed.version.slice(0, 64) : 'custom',
+}
+
+function normalizeRetailersMap(raw) {
+    const out = {};
+    if (!raw || typeof raw !== 'object') return out;
+    for (const [key, val] of Object.entries(raw)) {
+        const slug = normalizeRetailerSlug(key);
+        if (!slug || !val || typeof val !== 'object') continue;
+        out[slug] = normalizeUnitPricesObject(val);
+    }
+    return out;
+}
+
+function normalizePricingConfig(parsed) {
+    const src = parsed && typeof parsed === 'object' ? parsed : {};
+    const defaultUnitPrices = normalizeUnitPricesObject(src.defaultUnitPrices);
+    const globalMultiplier = clampMult(src.globalMultiplier, 1);
+    const rules = Array.isArray(src.rules) ? src.rules.slice(0, 64) : [];
+    const retailers = normalizeRetailersMap(src.retailers);
+    return {
+        version: typeof src.version === 'string' ? src.version.slice(0, 64) : 'custom',
         defaultUnitPrices,
         globalMultiplier,
         rules,
+        retailers,
     };
-    cachedConfigRaw = raw;
+}
+
+function readPricingConfigFileRaw() {
+    try {
+        return fs.readFileSync(PRICING_CONFIG_PATH, 'utf8');
+    } catch (_) {
+        return '';
+    }
+}
+
+function loadPricingConfig() {
+    const fileRaw = readPricingConfigFileRaw();
+    const envRaw = (process.env.WRRAPD_PRICE_CONFIG_JSON || '').trim();
+    const signature = `${fileRaw.length}:${fileRaw.slice(0, 64)}|${envRaw.length}:${envRaw.slice(0, 64)}`;
+    if (signature === cachedConfigSignature && cachedConfig) return cachedConfig;
+
+    let parsed = null;
+    if (fileRaw.trim()) {
+        try {
+            parsed = JSON.parse(fileRaw);
+        } catch (e) {
+            console.error('[wrrapd-pricing] Invalid data/wrrapd-pricing-config.json:', e.message);
+        }
+    }
+    if (!parsed && envRaw) {
+        try {
+            parsed = JSON.parse(envRaw);
+        } catch (e) {
+            console.error('[wrrapd-pricing] Invalid WRRAPD_PRICE_CONFIG_JSON:', e.message);
+        }
+    }
+
+    cachedConfig = parsed ? normalizePricingConfig(parsed) : { ...DEFAULT_CONFIG, defaultUnitPrices: { ...DEFAULT_UNIT }, retailers: {} };
+    cachedConfigSignature = signature;
     return cachedConfig;
+}
+
+/** @deprecated internal alias */
+function parseConfigFromEnv() {
+    return loadPricingConfig();
 }
 
 function numOr(v, d) {
@@ -187,9 +242,10 @@ function mergeOverrides(base, ov) {
 
 /**
  * @param {{ postalCode?: string, state?: string, country?: string, now?: Date }} geo
+ * @param {string} [retailer] e.g. "lego", "etsy"
  */
-function resolveWrrapdUnitPrices(geo) {
-    const cfg = parseConfigFromEnv();
+function resolveWrrapdUnitPrices(geo, retailer) {
+    const cfg = loadPricingConfig();
     const timeZone = (process.env.WRRAPD_PRICING_TIMEZONE || 'America/New_York').trim() || 'America/New_York';
     const now = geo && geo.now instanceof Date ? geo.now : new Date();
     const ctx = {
@@ -200,6 +256,10 @@ function resolveWrrapdUnitPrices(geo) {
         countryNorm: normCountry(geo && geo.country),
     };
     let prices = { ...cfg.defaultUnitPrices };
+    const retailerSlug = normalizeRetailerSlug(retailer);
+    if (retailerSlug && cfg.retailers && cfg.retailers[retailerSlug]) {
+        prices = mergeOverrides(prices, cfg.retailers[retailerSlug]);
+    }
     const appliedRuleIds = [];
     for (const rule of cfg.rules) {
         if (!rule || typeof rule !== 'object') continue;
@@ -221,6 +281,7 @@ function resolveWrrapdUnitPrices(geo) {
         configVersion: cfg.version,
         appliedRuleIds,
         timeZone,
+        retailer: retailerSlug || null,
     };
 }
 
@@ -276,8 +337,9 @@ function computeTotalUsdFromPricingCart(pricingCart) {
         postalCode: pricingCart && pricingCart.postalCode,
         state: pricingCart && pricingCart.state,
         country: pricingCart && pricingCart.country,
+        retailer: pricingCart && pricingCart.retailer,
     };
-    const resolved = resolveWrrapdUnitPrices(geo);
+    const resolved = resolveWrrapdUnitPrices(geo, geo.retailer);
     const { unitPrices, configVersion, appliedRuleIds, timeZone } = resolved;
     const br = computeSubtotalFromPricingCartItems(pricingCart && pricingCart.items, unitPrices);
     const subtotal = round2(
@@ -371,7 +433,28 @@ function sanitizePricingCartFromRequest(body) {
         postalCode: postalCode || undefined,
         state: state || undefined,
         country: country || undefined,
+        retailer:
+            typeof body.retailer === 'string'
+                ? normalizeRetailerSlug(body.retailer)
+                : undefined,
     };
+}
+
+function getPricingConfigForAdmin() {
+    return loadPricingConfig();
+}
+
+function savePricingConfigFromAdmin(body) {
+    const next = normalizePricingConfig(body);
+    next.version =
+        typeof body.version === 'string' && body.version.trim()
+            ? body.version.trim().slice(0, 64)
+            : new Date().toISOString().slice(0, 10);
+    fs.mkdirSync(path.dirname(PRICING_CONFIG_PATH), { recursive: true });
+    fs.writeFileSync(PRICING_CONFIG_PATH, `${JSON.stringify(next, null, 2)}\n`, 'utf8');
+    cachedConfig = next;
+    cachedConfigSignature = '';
+    return next;
 }
 
 module.exports = {
@@ -380,5 +463,9 @@ module.exports = {
     computeTotalUsdFromPricingCart,
     sanitizePricingCartFromRequest,
     parseConfigFromEnv,
+    loadPricingConfig,
+    getPricingConfigForAdmin,
+    savePricingConfigFromAdmin,
+    normalizeRetailerSlug,
     DEFAULT_UNIT,
 };

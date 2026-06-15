@@ -91,6 +91,17 @@ function existingOptIn(config) {
   return document.querySelector(`[${config.optInDataAttr}]`);
 }
 
+function cartHasWrappableItems(cartSnapshot) {
+  const snap = cartSnapshot && typeof cartSnapshot === "object" ? cartSnapshot : {};
+  const count =
+    typeof snap.itemCount === "number" && Number.isFinite(snap.itemCount)
+      ? snap.itemCount
+      : Array.isArray(snap.items)
+        ? snap.items.length
+        : 0;
+  return count > 0;
+}
+
 /** True only when the customer fully completed the gift flow (choices + terms). */
 function giftFlowComplete(config) {
   return readGiftChoicesSaved(config.sessionPrefix) && readGiftLegalTermsAccepted(config.sessionPrefix);
@@ -201,6 +212,7 @@ function openGenericTermsModal(config, onAccepted) {
     }
     writeGiftLegalTermsAccepted(config.sessionPrefix, true);
     modal.remove();
+    notifyGiftRadioChange(config.sessionPrefix);
     if (typeof onAccepted === "function") onAccepted();
   });
 
@@ -762,6 +774,12 @@ function openGiftChoicesModal(config, cartSnapshot) {
 
 function mountCartGiftOptIn(config, cartSnapshot) {
   if (!config.isCartPage?.() && !config.isCheckoutPage?.()) return;
+
+  if (!cartHasWrappableItems(cartSnapshot)) {
+    existingOptIn(config)?.remove();
+    return;
+  }
+
   if (existingOptIn(config)) return;
 
   const anchor = findMountBeforeCheckout(config);

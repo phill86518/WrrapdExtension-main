@@ -258,7 +258,8 @@ app.get('/api/pricing-preview', (req, res) => {
         state: typeof req.query.state === 'string' ? req.query.state : '',
         country: typeof req.query.country === 'string' ? req.query.country : '',
     };
-    const r = wrrapdPricing.resolveWrrapdUnitPrices(geo);
+    const retailer = typeof req.query.retailer === 'string' ? req.query.retailer : '';
+    const r = wrrapdPricing.resolveWrrapdUnitPrices(geo, retailer);
     const zip5 = String(geo.postalCode || '')
         .replace(/\D/g, '')
         .slice(0, 5);
@@ -272,8 +273,47 @@ app.get('/api/pricing-preview', (req, res) => {
         configVersion: r.configVersion,
         appliedRuleIds: r.appliedRuleIds,
         timeZone: r.timeZone,
+        retailer: r.retailer,
         ...(estimatedSalesTaxPercent !== null ? { estimatedSalesTaxPercent } : {}),
     });
+});
+
+function requireWrrapdAdminKey(req, res) {
+    const expected = (process.env.WRRAPD_ADMIN_API_KEY || '').trim();
+    if (!expected) {
+        res.status(503).json({ error: 'WRRAPD_ADMIN_API_KEY is not configured on the server' });
+        return false;
+    }
+    const auth = String(req.headers.authorization || '').trim();
+    if (auth !== `Bearer ${expected}`) {
+        res.status(401).json({ error: 'Unauthorized' });
+        return false;
+    }
+    return true;
+}
+
+/** Admin: read dynamic pricing config (all retailers). */
+app.get('/api/admin/pricing-config', (req, res) => {
+    if (!req.isApiDomain) {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
+    if (!requireWrrapdAdminKey(req, res)) return;
+    res.status(200).json({ ok: true, config: wrrapdPricing.getPricingConfigForAdmin() });
+});
+
+/** Admin: save dynamic pricing config (all retailers). */
+app.put('/api/admin/pricing-config', express.json(), (req, res) => {
+    if (!req.isApiDomain) {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
+    if (!requireWrrapdAdminKey(req, res)) return;
+    try {
+        const saved = wrrapdPricing.savePricingConfigFromAdmin(req.body && req.body.config ? req.body.config : req.body);
+        res.status(200).json({ ok: true, config: saved });
+    } catch (e) {
+        console.error('[admin/pricing-config] save failed', e);
+        res.status(500).json({ error: 'Failed to save pricing config' });
+    }
 });
 
 // Endpoint specific to api.wrrapd.com

@@ -20,20 +20,37 @@ function isWalmartPayGatePage() {
   );
 }
 
+function findWalmartCheckoutButtons() {
+  /** @type {HTMLElement[]} */
+  const buttons = [];
+  const seen = new Set();
+
+  const add = (node) => {
+    if (!node || seen.has(node)) return;
+    seen.add(node);
+    buttons.push(node);
+  };
+
+  for (const sel of [
+    "button[data-automation-id='checkout']",
+    "#Continue\\ to\\ checkout\\ button",
+    "button[data-automation-id='place-order']",
+    "button[data-automation-id='continue']",
+    "button[data-automation-id='submit-order']",
+  ]) {
+    document.querySelectorAll(sel).forEach(add);
+  }
+
+  for (const node of document.querySelectorAll("button, a[role='button'], input[type='submit']")) {
+    const text = normalizeWhitespace(node.textContent || node.value || "");
+    if (/^(continue to checkout|place order|submit order|review order|check out)$/i.test(text)) add(node);
+  }
+
+  return buttons;
+}
+
 function findWalmartCheckoutButton() {
-  return (
-    document.querySelector("button[data-automation-id='checkout']") ||
-    document.querySelector("#Continue\\ to\\ checkout\\ button") ||
-    document.querySelector("button[data-automation-id='place-order']") ||
-    document.querySelector("button[data-automation-id='continue']") ||
-    document.querySelector("button[data-automation-id='submit-order']") ||
-    [...document.querySelectorAll("button, a[role='button'], input[type='submit']")].find((node) =>
-      /^(continue to checkout|place order|submit order|review order|check out)$/i.test(
-        normalizeWhitespace(node.textContent || node.value || ""),
-      ),
-    ) ||
-    null
-  );
+  return findWalmartCheckoutButtons()[0] || null;
 }
 
 export function initWalmartCheckoutPayFlow() {
@@ -44,6 +61,7 @@ export function initWalmartCheckoutPayFlow() {
     sessionPrefix: WALMART_SESSION_PREFIX,
     isCheckoutPage: isWalmartPayGatePage,
     findCheckoutButton: findWalmartCheckoutButton,
+    findGatedCheckoutButtons: findWalmartCheckoutButtons,
     getCartSnapshot: () => extractWalmartCartSnapshot(document),
     fillHubShippingFields: fillHubShippingFieldsByAutocomplete,
     paymentPendingHint: "Please complete payment to Wrrapd before proceeding to checkout.",

@@ -3,22 +3,40 @@ import { fillHubShippingFieldsByAutocomplete } from "../../shared/wrrapd-hub.js"
 import { ETSY_CHECKOUT_URL_HINTS, ETSY_SESSION_PREFIX } from "./constants.js";
 import { extractEtsyCartSnapshot } from "./retailer-bootstrap.js";
 
+function normalizeWhitespace(value) {
+  return String(value || "").replace(/\s+/g, " ").trim();
+}
+
 function isEtsyCheckoutPage() {
   const path = location.pathname.toLowerCase();
   return ETSY_CHECKOUT_URL_HINTS.some((h) => path.includes(h));
 }
 
+function findEtsyCheckoutButtons() {
+  /** @type {HTMLElement[]} */
+  const buttons = [];
+  const seen = new Set();
+
+  const add = (node) => {
+    if (!node || seen.has(node)) return;
+    seen.add(node);
+    buttons.push(node);
+  };
+
+  for (const sel of ["[data-selector='cart-submit-button']", ".proceed-to-checkout"]) {
+    document.querySelectorAll(sel).forEach(add);
+  }
+
+  for (const node of document.querySelectorAll("button, a[role='button'], a.proceed-to-checkout, input[type='submit']")) {
+    const text = normalizeWhitespace(node.textContent || node.value || "");
+    if (/^(proceed to checkout|place your order|continue to checkout|check out)$/i.test(text)) add(node);
+  }
+
+  return buttons;
+}
+
 function findEtsyCheckoutButton() {
-  return (
-    document.querySelector("[data-selector='cart-submit-button']") ||
-    document.querySelector(".proceed-to-checkout") ||
-    [...document.querySelectorAll("button, a[role='button']")].find((b) =>
-      /^(proceed to checkout|place your order|continue to checkout)/i.test(
-        (b.textContent || "").replace(/\s+/g, " ").trim(),
-      ),
-    ) ||
-    null
-  );
+  return findEtsyCheckoutButtons()[0] || null;
 }
 
 /**
@@ -38,7 +56,9 @@ export function initEtsyCheckoutPayFlow() {
     sessionPrefix: ETSY_SESSION_PREFIX,
     isCheckoutPage: isEtsyCheckoutPage,
     findCheckoutButton: findEtsyCheckoutButton,
+    findGatedCheckoutButtons: findEtsyCheckoutButtons,
     getCartSnapshot: () => extractEtsyCartSnapshot(document),
     fillHubShippingFields: fillEtsyHubShippingFields,
+    paymentPendingHint: "Please complete payment to Wrrapd before proceeding to checkout.",
   });
 }

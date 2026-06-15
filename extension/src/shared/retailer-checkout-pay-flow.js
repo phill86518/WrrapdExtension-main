@@ -25,6 +25,7 @@ import {
   WRRAPD_GIFT_RADIO_CHANGE_EVENT,
 } from "./cart-gift-session.js";
 import { hubAsPaymentAddress, hubPostal5 } from "./wrrapd-hub.js";
+import { buildGiftWrapInvoiceRows } from "./wrrapd-invoice-lines.js";
 
 const PAY_ORIGIN = "https://pay.wrrapd.com";
 const SUMMARY_HOST_ATTR = "data-wrrapd-pay-summary-host";
@@ -85,12 +86,13 @@ function getActiveUnitPrices(state) {
 
 const PRICE_REFRESH_TTL_MS = 5 * 60 * 1000;
 
-async function refreshUnitPricesFromServer(state, geo) {
+async function refreshUnitPricesFromServer(state, geo, retailer) {
   try {
     const u = new URL("https://api.wrrapd.com/api/pricing-preview");
     if (geo?.postalCode) u.searchParams.set("postalCode", String(geo.postalCode).trim().slice(0, 16));
     if (geo?.state) u.searchParams.set("state", String(geo.state).trim().slice(0, 16));
     if (geo?.country) u.searchParams.set("country", String(geo.country).trim().slice(0, 8));
+    if (retailer) u.searchParams.set("retailer", String(retailer).trim().slice(0, 32));
     const signal = typeof AbortSignal?.timeout === "function" ? AbortSignal.timeout(8000) : undefined;
     const r = await fetch(u.toString(), { credentials: "omit", signal });
     if (!r.ok) return;
@@ -120,13 +122,13 @@ async function refreshUnitPricesFromServer(state, geo) {
  * the TTL expires. The summary UI re-renders on every DOM mutation on SPA-style
  * checkouts (Etsy, Sephora), so the raw fetch must never run per-render.
  */
-function ensureUnitPrices(state, geo) {
+function ensureUnitPrices(state, geo, retailer) {
   const now = Date.now();
   if (state.lastPriceFetchAt && now - state.lastPriceFetchAt < PRICE_REFRESH_TTL_MS) {
     return Promise.resolve();
   }
   if (!state.priceFetchPromise) {
-    state.priceFetchPromise = refreshUnitPricesFromServer(state, geo).finally(() => {
+    state.priceFetchPromise = refreshUnitPricesFromServer(state, geo, retailer).finally(() => {
       state.priceFetchPromise = null;
       state.lastPriceFetchAt = Date.now();
     });
@@ -162,25 +164,7 @@ function computeTotalBreakdown(state, prefix) {
 function buildSummaryLinesAndTotal(state, prefix) {
   const p = getActiveUnitPrices(state);
   const choices = readItemChoices(prefix);
-  const n = Math.max(1, choices.length);
-  /** @type {Array<{ label: string, amount: string | null }>} */
-  const rows = [];
-  let hasAi = false;
-  let hasUpload = false;
-  let flowerCount = 0;
-  for (const ch of choices) {
-    if (ch.wrapPref === "ai") hasAi = true;
-    if (ch.wrapPref === "upload") hasUpload = true;
-    if (ch.flowers) flowerCount++;
-  }
-  const xN = n > 1 ? ` (×${n})` : "";
-  rows.push({ label: `${DEFAULT_PAY_COPY.lineGiftWrap}${xN}`, amount: `$${(p.giftWrapBase * n).toFixed(2)}` });
-  if (hasAi) rows.push({ label: "AI design assist", amount: `$${p.customDesignAi.toFixed(2)}` });
-  if (hasUpload) rows.push({ label: "Custom upload", amount: `$${p.customDesignUpload.toFixed(2)}` });
-  if (flowerCount > 0) {
-    const xF = flowerCount > 1 ? ` (×${flowerCount})` : "";
-    rows.push({ label: `Flowers${xF}`, amount: `$${(p.flowers * flowerCount).toFixed(2)}` });
-  }
+  const rows = buildGiftWrapInvoiceRows(choices, p);
   const br = computeTotalBreakdown(state, prefix);
   if (br.taxUsd > 0) rows.push({ label: "Sales tax", amount: `$${br.taxUsd.toFixed(2)}` });
   return { invoiceRows: rows, totalCents: br.totalCents };
@@ -218,7 +202,7 @@ function buildOrderData(config) {
 }
 
 /** Server-side PaymentIntent amount (must mirror Amazon/LEGO checkout math). */
-function buildPricingCart(state, prefix) {
+function buildPricingCart(state, prefix, retailer) {
   const choices = readItemChoices(prefix);
   const zipForTax = gifteeZip5(prefix) || hubPostal5();
   const taxRatePercent =
@@ -247,6 +231,7 @@ function buildPricingCart(state, prefix) {
     postalCode: zipForTax,
     state: "",
     country: "US",
+    retailer: retailer ? String(retailer).trim().slice(0, 32) : "",
   };
 }
 
@@ -288,6 +273,37 @@ function getGatedCheckoutButtons(config) {
   }
   const one = config.findCheckoutButton?.();
   return one ? [one] : [];
+}
+
+const CHECKOUT_GATED_ATTR = "data-wrrapd-checkout-gated";
+
+function setCheckoutControlGated(node, gated) {
+  if (!node) return;
+  if (gated) {
+    node.setAttribute(CHECKOUT_GATED_ATTR, "1");
+    node.setAttribute("aria-disabled", "true");
+    if ("disabled" in node) node.disabled = true;
+    node.style.opacity = "0.55";
+    node.style.pointerEvents = "none";
+    node.style.cursor = "not-allowed";
+    if (node.tagName === "A") node.tabIndex = -1;
+  } else if (node.getAttribute(CHECKOUT_GATED_ATTR) === "1") {
+    node.removeAttribute(CHECKOUT_GATED_ATTR);
+    node.removeAttribute("aria-disabled");
+    if ("disabled" in node) node.disabled = false;
+    node.style.opacity = "";
+    node.style.pointerEvents = "";
+    node.style.cursor = "";
+    if (node.tagName === "A") node.tabIndex = 0;
+  }
+}
+
+/** Visually disable retailer checkout controls until Wrrapd payment succeeds. */
+function applyCheckoutGate(config, giftReady, paid) {
+  const shouldBlock = giftReady && !paid;
+  for (const btn of getGatedCheckoutButtons(config)) {
+    setCheckoutControlGated(btn, shouldBlock);
+  }
 }
 
 function mountSummaryPanel(mountAnchor, invoiceRows, totalCents, paid, copy = DEFAULT_PAY_COPY) {
@@ -388,11 +404,15 @@ async function openPaymentPopup(config, state) {
   }
 
   // 2. Now it's safe to do async work; the window is already open.
-  await ensureUnitPrices(state, {
-    postalCode: gifteeZip5(config.sessionPrefix) || hubPostal5(),
-    state: "",
-    country: "US",
-  });
+  await ensureUnitPrices(
+    state,
+    {
+      postalCode: gifteeZip5(config.sessionPrefix) || hubPostal5(),
+      state: "",
+      country: "US",
+    },
+    config.payRoute,
+  );
   const { totalCents } = computeTotalBreakdown(state, config.sessionPrefix);
   if (!totalCents || totalCents < 50) {
     try {
@@ -417,7 +437,7 @@ async function openPaymentPopup(config, state) {
     address: hubAsPaymentAddress(),
     gifteeOriginalAddress: gifteeStub(config.sessionPrefix),
     orderNumber,
-    pricingCart: buildPricingCart(state, config.sessionPrefix),
+    pricingCart: buildPricingCart(state, config.sessionPrefix, config.payRoute),
     retailer: config.retailerName,
     name_of_retailer: config.retailerName,
   };
@@ -497,19 +517,36 @@ export function initRetailerCheckoutPayFlow(config) {
   const retailerLc = String(config.retailerName).toLowerCase();
   let payPopupRef = null;
 
-  const giftFlowReady = () =>
-    readGiftRadio(config.sessionPrefix) === "yes" &&
-    readGiftChoicesSaved(config.sessionPrefix) &&
-    readGiftLegalTermsAccepted(config.sessionPrefix);
+  const giftFlowReady = () => {
+    const snap = config.getCartSnapshot?.();
+    const count =
+      snap && typeof snap === "object"
+        ? typeof snap.itemCount === "number"
+          ? snap.itemCount
+          : Array.isArray(snap.items)
+            ? snap.items.length
+            : 0
+        : 0;
+    if (count <= 0) return false;
+    return (
+      readGiftRadio(config.sessionPrefix) === "yes" &&
+      readGiftChoicesSaved(config.sessionPrefix) &&
+      readGiftLegalTermsAccepted(config.sessionPrefix)
+    );
+  };
 
   const ensureSummaryUi = async () => {
     const mountAnchor = resolveSummaryMountAnchor(config);
     if (!mountAnchor?.parent) return;
-    await ensureUnitPrices(state, {
-      postalCode: gifteeZip5(config.sessionPrefix) || hubPostal5(),
-      state: "",
-      country: "US",
-    });
+    await ensureUnitPrices(
+      state,
+      {
+        postalCode: gifteeZip5(config.sessionPrefix) || hubPostal5(),
+        state: "",
+        country: "US",
+      },
+      config.payRoute,
+    );
     const paid = readPaymentSuccess(config.sessionPrefix);
     const { invoiceRows, totalCents } = buildSummaryLinesAndTotal(state, config.sessionPrefix);
     // Skip remounting when nothing changed. Remounting on every MutationObserver
@@ -554,45 +591,62 @@ export function initRetailerCheckoutPayFlow(config) {
     }
     void (async () => {
       const ok = await postProcessPayment(config, event.data);
-      if (!ok) console.warn("[Wrrapd pay] process-payment did not complete; checkout will still unlock.");
+      if (!ok) {
+        console.warn("[Wrrapd pay] process-payment did not complete; checkout remains blocked.");
+        alert(
+          "We could not confirm your Wrrapd payment. Please try again, or contact support if you were charged.",
+        );
+        return;
+      }
       writePaymentSuccess(config.sessionPrefix, true);
       payPopupRef = null;
       config.fillHubShippingFields?.();
+      applyCheckoutGate(config, giftFlowReady(), true);
       void ensureSummaryUi();
     })();
   });
 
+  const blockCheckoutNavigation = (e) => {
+    const gated = getGatedCheckoutButtons(config);
+    if (!gated.length || !e.target) return;
+    const btn = gated.find((b) => b.contains(e.target));
+    if (!btn) return;
+    if (!giftFlowReady()) return;
+    if (e.target.closest(`[${SUMMARY_HOST_ATTR}]`)) return;
+    if (readPaymentSuccess(config.sessionPrefix)) {
+      config.fillHubShippingFields?.();
+      return;
+    }
+    e.preventDefault();
+    e.stopPropagation();
+    e.stopImmediatePropagation?.();
+    void ensureSummaryUi().then(() => {
+      document.querySelector(`[${SUMMARY_HOST_ATTR}]`)?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    });
+  };
+
   // Intercept the retailer checkout/place-order button until Wrrapd is paid.
-  document.addEventListener(
-    "click",
-    (e) => {
-      const gated = getGatedCheckoutButtons(config);
-      if (!gated.length || !e.target) return;
-      const btn = gated.find((b) => b.contains(e.target));
-      if (!btn) return;
-      if (!giftFlowReady()) return;
-      if (e.target.closest(`[${SUMMARY_HOST_ATTR}]`)) return;
-      if (readPaymentSuccess(config.sessionPrefix)) {
-        config.fillHubShippingFields?.();
-        return;
-      }
-      e.preventDefault();
-      e.stopPropagation();
-      e.stopImmediatePropagation?.();
-      void ensureSummaryUi().then(() => {
-        document.querySelector(`[${SUMMARY_HOST_ATTR}]`)?.scrollIntoView({ block: "nearest", behavior: "smooth" });
-      });
-    },
-    true,
-  );
+  document.addEventListener("click", blockCheckoutNavigation, true);
+  document.addEventListener("submit", (e) => {
+    if (!giftFlowReady() || readPaymentSuccess(config.sessionPrefix)) return;
+    const gated = getGatedCheckoutButtons(config);
+    if (!gated.length) return;
+    const form = e.target;
+    if (!(form instanceof HTMLFormElement)) return;
+    if (gated.some((btn) => form.contains(btn))) blockCheckoutNavigation(e);
+  }, true);
 
   const tick = () => {
     if (!config.isCheckoutPage?.()) return;
-    if (!giftFlowReady()) {
+    const ready = giftFlowReady();
+    const paid = readPaymentSuccess(config.sessionPrefix);
+    if (!ready) {
       removeSummary();
+      applyCheckoutGate(config, false, paid);
       return;
     }
-    if (readPaymentSuccess(config.sessionPrefix)) config.fillHubShippingFields?.();
+    applyCheckoutGate(config, true, paid);
+    if (paid) config.fillHubShippingFields?.();
     void ensureSummaryUi();
   };
 

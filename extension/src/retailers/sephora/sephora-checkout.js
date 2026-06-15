@@ -24,12 +24,23 @@ function isSephoraCheckoutPage() {
   return SEPHORA_CHECKOUT_URL_HINTS.some((h) => path.includes(h));
 }
 
+function findSephoraCheckoutButtons() {
+  /** @type {HTMLElement[]} */
+  const buttons = [];
+  const seen = new Set();
+  const add = (node) => {
+    if (!node || seen.has(node)) return;
+    seen.add(node);
+    buttons.push(node);
+  };
+  for (const sel of ['[data-at="place_order_btn"]', '[data-at="save_continue_btn"]']) {
+    document.querySelectorAll(sel).forEach(add);
+  }
+  return buttons;
+}
+
 function findSephoraCheckoutButton() {
-  return (
-    document.querySelector('[data-at="place_order_btn"]') ||
-    document.querySelector('[data-at="save_continue_btn"]') ||
-    null
-  );
+  return findSephoraCheckoutButtons()[0] || null;
 }
 
 /**
@@ -62,6 +73,7 @@ export function initSephoraCheckoutPayFlow() {
     sessionPrefix: SEPHORA_SESSION_PREFIX,
     isCheckoutPage: isSephoraCheckoutPage,
     findCheckoutButton: findSephoraCheckoutButton,
+    findGatedCheckoutButtons: findSephoraCheckoutButtons,
     getCartSnapshot: () => extractSephoraCartSnapshot(document),
     fillHubShippingFields: fillSephoraHubShippingFields,
   });

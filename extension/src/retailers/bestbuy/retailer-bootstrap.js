@@ -50,15 +50,8 @@ function detectFulfillmentType(itemRoot) {
 function extractBestbuyItems(root = document) {
   const itemNodes = Array.from(
     root.querySelectorAll(
-      [
-        "[data-testid='cart-line-item']",
-        "[data-track='line-item']",
-        "[class*='line-item']",
-        ".cart-item",
-        "[data-track*='line-item']",
-        "[data-track='cart-item']",
-      ].join(",")
-    )
+      ["[data-testid='cart-line-item']", "[data-track='line-item']"].join(","),
+    ),
   );
 
   const items = itemNodes

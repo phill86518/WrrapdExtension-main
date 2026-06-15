@@ -18,6 +18,7 @@ import {
 import { readLegoCartSnapshot } from "./lego-cart-extract.js";
 import { refreshLegoGifteeShippingAddressFill } from "./lego-giftee-shipping-fill.js";
 import { buildWrrapdTermsHtml } from "../../shared/wrrapd-terms.js";
+import { buildGiftWrapInvoiceRows } from "../../shared/wrrapd-invoice-lines.js";
 
 const TERMS_MODAL_ID = "wrrapd-lego-terms-modal";
 const HUB_MODAL_ID = "wrrapd-lego-hub-modal";
@@ -75,6 +76,7 @@ async function refreshCheckoutUnitPricesFromServer(geo) {
     if (geo && geo.postalCode) u.searchParams.set("postalCode", String(geo.postalCode).trim().slice(0, 16));
     if (geo && geo.state) u.searchParams.set("state", String(geo.state).trim().slice(0, 16));
     if (geo && geo.country) u.searchParams.set("country", String(geo.country).trim().slice(0, 8));
+    u.searchParams.set("retailer", "lego");
     const r = await fetch(u.toString(), { credentials: "omit" });
     if (!r.ok) return false;
     const j = await r.json();
@@ -244,6 +246,7 @@ function buildLegoPricingCart() {
     postalCode: zipForTax,
     state: "",
     country: "US",
+    retailer: "lego",
   };
 }
 
@@ -634,7 +637,11 @@ function bindPayMessageOnce() {
       persistGifteeAddressFromPayMessage(event.data);
       const ok = await postLegoProcessPayment(event.data);
       if (!ok) {
-        console.warn("[LEGO pay] process-payment did not complete; check api.wrrapd.com logs. Checkout will still unlock.");
+        console.warn("[LEGO pay] process-payment did not complete; checkout remains blocked.");
+        alert(
+          "We could not confirm your Wrrapd payment. Please try again, or contact support if you were charged.",
+        );
+        return;
       }
       writeLegoPaymentSuccess(true);
       payPopupRef = null;
@@ -653,27 +660,7 @@ function bindPayMessageOnce() {
 function buildSummaryLinesAndTotal() {
   const p = getActiveCheckoutUnitPrices();
   const allChoices = readLegoItemChoices();
-  const cartLines = readLegoCartSnapshot();
-  const n = Math.max(1, allChoices.length > 0 ? allChoices.length : cartLines.length);
-  /** @type {Array<{ label: string, amount: string | null }>} */
-  const invoiceRows = [];
-
-  // Per-line breakdown
-  let hasAi = false; let hasUpload = false; let flowerCount = 0;
-  for (const ch of allChoices) {
-    if (ch.wrapPref === "ai") hasAi = true;
-    if (ch.wrapPref === "upload") hasUpload = true;
-    if (ch.flowers) flowerCount++;
-  }
-  const xN = n > 1 ? ` (×${n})` : "";
-  invoiceRows.push({ label: `Gift-wrapping${xN}`, amount: `$${(p.giftWrapBase * n).toFixed(2)}` });
-  if (hasAi) invoiceRows.push({ label: "AI design assist", amount: `$${p.customDesignAi.toFixed(2)}` });
-  if (hasUpload) invoiceRows.push({ label: "Custom upload", amount: `$${p.customDesignUpload.toFixed(2)}` });
-  if (flowerCount > 0) {
-    const xF = flowerCount > 1 ? ` (×${flowerCount})` : "";
-    invoiceRows.push({ label: `Flowers${xF}`, amount: `$${(p.flowers * flowerCount).toFixed(2)}` });
-  }
-
+  const invoiceRows = buildGiftWrapInvoiceRows(allChoices, p);
   const br = computeLegoTotalBreakdown();
   if (br.taxUsd > 0) {
     invoiceRows.push({ label: "Sales tax", amount: `$${br.taxUsd.toFixed(2)}` });

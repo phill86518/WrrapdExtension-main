@@ -5,6 +5,6 @@ import { initLegoGuestCheckoutBootstrap } from "../retailers/lego/guest-checkout
  * Keep retailer-specific logic isolated from Amazon/Target bundles.
  */
 if (typeof window !== "undefined") {
-  window.__WRRAPD_LEGO_CONTENT_BUILD__ = "2026-04-26-lego-gift-flow-v2";
+  window.__WRRAPD_LEGO_CONTENT_BUILD__ = "2026-06-10-lego-pay-gate-v2";
   initLegoGuestCheckoutBootstrap();
 }

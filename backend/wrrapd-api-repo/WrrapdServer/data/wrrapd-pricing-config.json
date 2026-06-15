@@ -1,0 +1,73 @@
+{
+  "version": "2026-06-10",
+  "defaultUnitPrices": {
+    "giftWrapBase": 6.99,
+    "customDesignAi": 2.99,
+    "customDesignUpload": 1.99,
+    "flowers": 17.99
+  },
+  "globalMultiplier": 1,
+  "rules": [],
+  "retailers": {
+    "amazon": {
+      "giftWrapBase": 6.99,
+      "customDesignAi": 2.99,
+      "customDesignUpload": 1.99,
+      "flowers": 17.99
+    },
+    "lego": {
+      "giftWrapBase": 6.99,
+      "customDesignAi": 2.99,
+      "customDesignUpload": 1.99,
+      "flowers": 17.99
+    },
+    "etsy": {
+      "giftWrapBase": 6.99,
+      "customDesignAi": 2.99,
+      "customDesignUpload": 1.99,
+      "flowers": 17.99
+    },
+    "walmart": {
+      "giftWrapBase": 6.99,
+      "customDesignAi": 2.99,
+      "customDesignUpload": 1.99,
+      "flowers": 17.99
+    },
+    "nordstrom": {
+      "giftWrapBase": 6.99,
+      "customDesignAi": 2.99,
+      "customDesignUpload": 1.99,
+      "flowers": 17.99
+    },
+    "sephora": {
+      "giftWrapBase": 6.99,
+      "customDesignAi": 2.99,
+      "customDesignUpload": 1.99,
+      "flowers": 17.99
+    },
+    "target": {
+      "giftWrapBase": 6.99,
+      "customDesignAi": 2.99,
+      "customDesignUpload": 1.99,
+      "flowers": 17.99
+    },
+    "ulta": {
+      "giftWrapBase": 6.99,
+      "customDesignAi": 2.99,
+      "customDesignUpload": 1.99,
+      "flowers": 17.99
+    },
+    "kohls": {
+      "giftWrapBase": 6.99,
+      "customDesignAi": 2.99,
+      "customDesignUpload": 1.99,
+      "flowers": 17.99
+    },
+    "bestbuy": {
+      "giftWrapBase": 6.99,
+      "customDesignAi": 2.99,
+      "customDesignUpload": 1.99,
+      "flowers": 17.99
+    }
+  }
+}

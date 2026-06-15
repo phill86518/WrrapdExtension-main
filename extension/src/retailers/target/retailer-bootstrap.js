@@ -1,0 +1,152 @@
+import {
+  SHIPPING_TIER_SINGLE,
+  describeTierForUi,
+} from "../../content/retailer-common.js";
+import { initRetailerCartGiftOptIn } from "../../shared/cart-gift-optin.js";
+import {
+  TARGET_CART_OPTIN_DATA_ATTR,
+  TARGET_CART_URL_HINTS,
+  TARGET_GIFT_MODAL_ID,
+  TARGET_SAVED_BANNER_ATTR,
+  TARGET_SESSION_PREFIX,
+  WRRAPD_RETAILER_TARGET,
+} from "./constants.js";
+
+function normalizeWhitespace(value) {
+  return String(value || "").replace(/\s+/g, " ").trim();
+}
+
+function parseMoney(value) {
+  const text = normalizeWhitespace(value);
+  const match = text.match(/\$?\s*([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?)/);
+  if (!match) return null;
+  const amount = Number(match[1].replace(/,/g, ""));
+  return Number.isFinite(amount) ? amount : null;
+}
+
+function getTextBySelectors(selectors, root = document) {
+  for (const selector of selectors) {
+    const node = root.querySelector(selector);
+    const text = normalizeWhitespace(node?.textContent || "");
+    if (text) return text;
+  }
+  return "";
+}
+
+function tcinFromHref(href) {
+  const match = String(href || "").match(/\/A-(\d+)/i);
+  return match ? match[1] : "";
+}
+
+function extractTargetItems(root = document) {
+  const itemNodes = Array.from(root.querySelectorAll('[data-test="cartItem"]'));
+  return itemNodes
+    .map((node) => {
+      const title =
+        getTextBySelectors(
+          [
+            '[data-test="cartItem-title"]',
+            '[data-test="cartItem-link"]',
+            "h3",
+            "a[href*='/p/']",
+          ],
+          node,
+        ) || "";
+      if (!title) return null;
+
+      const link = node.querySelector("a[href*='/p/']");
+      const itemId = tcinFromHref(link?.getAttribute("href"));
+      const priceText = getTextBySelectors(
+        [
+          '[data-test="cartItem-price"]',
+          '[data-test="current-price"]',
+          '[data-test="offerPrice"]',
+        ],
+        node,
+      );
+
+      return {
+        title,
+        itemId,
+        priceText,
+        unitPrice: parseMoney(priceText),
+        quantity: 1,
+      };
+    })
+    .filter(Boolean);
+}
+
+function extractSummaryAmount(labelMatcher, root = document) {
+  const summary =
+    root.querySelector('[data-test="orderSummary"]') ||
+    root.querySelector('[data-test="cart-summary"]');
+  const scope = summary || root;
+  const rows = Array.from(scope.querySelectorAll("div, li, span, p"));
+  for (const row of rows) {
+    const text = normalizeWhitespace(row.textContent || "");
+    if (!text || !labelMatcher.test(text)) continue;
+    const amount = parseMoney(text);
+    if (amount !== null) return amount;
+  }
+  return null;
+}
+
+export function extractTargetCartSnapshot(root = document) {
+  const items = extractTargetItems(root);
+  const subtotal = extractSummaryAmount(/\bsubtotal\b/i, root);
+  const orderTotal = extractSummaryAmount(/\b(estimated total|total)\b/i, root);
+
+  return {
+    itemCount: items.length,
+    items,
+    subtotal,
+    orderTotal,
+  };
+}
+
+export function initTargetRetailerBootstrap() {
+  const shippingTierHint = describeTierForUi(SHIPPING_TIER_SINGLE);
+  const cart = extractTargetCartSnapshot(document);
+
+  initRetailerCartGiftOptIn({
+    sessionPrefix: TARGET_SESSION_PREFIX,
+    retailerLabel: "Target",
+    optInDataAttr: TARGET_CART_OPTIN_DATA_ATTR,
+    savedBannerAttr: TARGET_SAVED_BANNER_ATTR,
+    modalId: TARGET_GIFT_MODAL_ID,
+    shippingTierHint,
+    checkoutButtonPatterns: [/^check out$/i, /^checkout$/i, /^proceed to checkout$/i],
+    checkoutButtonSelector: '[data-test="checkout-button"]',
+    summarySelector: '[data-test="orderSummary"]',
+    findMountAnchor: () => {
+      const checkoutBtn =
+        document.querySelector('[data-test="checkout-button"]') ||
+        findButtonByText([/^check out$/i, /^checkout$/i]);
+      if (checkoutBtn?.parentElement) {
+        return { parent: checkoutBtn.parentElement, before: checkoutBtn };
+      }
+      const summary = document.querySelector('[data-test="orderSummary"]');
+      if (summary) return { parent: summary, before: summary.firstElementChild };
+      return null;
+    },
+    isCartPage: () => TARGET_CART_URL_HINTS.some((h) => location.pathname.toLowerCase().includes(h)),
+    getCartSnapshot: () => extractTargetCartSnapshot(document),
+  });
+
+  window.__WRRAPD_TARGET_DEBUG__ = {
+    retailer: WRRAPD_RETAILER_TARGET,
+    href: window.location.href,
+    shippingTier: SHIPPING_TIER_SINGLE,
+    shippingTierHint,
+    cart,
+    sampledAt: new Date().toISOString(),
+  };
+}
+
+function findButtonByText(patterns, root = document) {
+  for (const node of root.querySelectorAll("button, a[role='button'], input[type='submit']")) {
+    const text = normalizeWhitespace(node.textContent || node.value || "");
+    if (text && patterns.some((re) => re.test(text))) return node;
+  }
+  return null;
+}
