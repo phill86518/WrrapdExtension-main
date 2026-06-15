@@ -278,6 +278,72 @@ app.get('/api/pricing-preview', (req, res) => {
     });
 });
 
+const EXTENSION_RETAILER_ORIGIN =
+    /^https:\/\/(www\.)?(amazon\.(com|ca|co\.uk|de|fr|es|it|nl|co\.jp|in|com\.au|com\.br|mx)|target\.com|lego\.com|ulta\.com|walmart\.com|nordstrom\.com|kohls\.com|sephora\.com|bestbuy\.com|etsy\.com)(:\d+)?$/i;
+
+function isExtensionRetailerOrigin(origin) {
+    return typeof origin === 'string' && EXTENSION_RETAILER_ORIGIN.test(origin);
+}
+
+/** Server-side Gemini proxy for Amazon DOM selector hints — keys stay on the server. */
+app.options('/api/dom-selector', (req, res) => {
+    if (!req.isApiDomain) return res.status(403).end();
+    const origin = req.headers.origin || '';
+    if (origin && !isExtensionRetailerOrigin(origin)) return res.status(403).end();
+    res.header('Access-Control-Allow-Origin', origin || '*');
+    res.header('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type');
+    res.status(204).end();
+});
+
+app.post('/api/dom-selector', async (req, res) => {
+    if (!req.isApiDomain) {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
+    const origin = req.headers.origin || '';
+    if (origin && !isExtensionRetailerOrigin(origin)) {
+        return res.status(403).json({ error: 'Forbidden origin' });
+    }
+    if (origin) {
+        res.header('Access-Control-Allow-Origin', origin);
+    }
+
+    const prompt = typeof req.body?.prompt === 'string' ? req.body.prompt.trim() : '';
+    if (!prompt || prompt.length > 12000) {
+        return res.status(400).json({ error: 'Invalid prompt' });
+    }
+
+    const geminiKey = process.env.GEMINI_API_KEY;
+    if (!geminiKey) {
+        return res.status(503).json({ error: 'Service unavailable' });
+    }
+
+    try {
+        const upstream = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${encodeURIComponent(geminiKey)}`,
+            {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: prompt }] }],
+                }),
+            },
+        );
+        if (!upstream.ok) {
+            return res.status(502).json({ error: 'Upstream error' });
+        }
+        const data = await upstream.json();
+        const text =
+            data?.candidates?.[0]?.content?.parts?.[0]?.text != null
+                ? String(data.candidates[0].content.parts[0].text).trim()
+                : null;
+        return res.status(200).json({ ok: true, text });
+    } catch (err) {
+        console.error('[dom-selector] Gemini proxy error:', err?.message || err);
+        return res.status(500).json({ error: 'Internal error' });
+    }
+});
+
 function requireWrrapdAdminKey(req, res) {
     const expected = (process.env.WRRAPD_ADMIN_API_KEY || '').trim();
     if (!expected) {

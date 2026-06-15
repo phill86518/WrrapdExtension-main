@@ -5,6 +5,7 @@ import {
   TARGET_SESSION_PREFIX,
 } from "./constants.js";
 import { extractTargetCartSnapshot } from "./retailer-bootstrap.js";
+import { findTargetWrrapdMountAnchor } from "./target-layout.js";
 
 function normalizeWhitespace(value) {
   return String(value || "").replace(/\s+/g, " ").trim();
@@ -49,11 +50,7 @@ function findTargetCheckoutButton() {
 }
 
 function findTargetSummaryMountAnchor() {
-  const btn = findTargetCheckoutButton();
-  if (btn?.parentElement) return { parent: btn.parentElement, before: btn };
-  const summary = document.querySelector('[data-test="orderSummary"]');
-  if (summary) return { parent: summary, before: summary.firstElementChild };
-  return null;
+  return findTargetWrrapdMountAnchor();
 }
 
 export function initTargetCheckoutPayFlow() {

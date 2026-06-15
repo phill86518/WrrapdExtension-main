@@ -1,3 +1,4 @@
+import { exposeDebugGlobal } from "../../shared/store-build.js";
 import {
   SHIPPING_TIER_BESTBUY_LIMITED,
   describeTierForUi,
@@ -195,12 +196,12 @@ export function initBestbuyRetailerBootstrap() {
     getCartSnapshot: () => extractBestbuyCartSnapshot(document),
   });
 
-  window.__WRRAPD_BESTBUY_DEBUG__ = {
+  exposeDebugGlobal("__WRRAPD_BESTBUY_DEBUG__", {
     retailer: WRRAPD_RETAILER_BESTBUY,
     href: window.location.href,
     shippingTier: SHIPPING_TIER_BESTBUY_LIMITED,
     shippingTierHint,
     cart,
     sampledAt: new Date().toISOString(),
-  };
+  });
 }

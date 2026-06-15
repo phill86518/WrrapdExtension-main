@@ -995,160 +995,15 @@ import { occasionOptionsHtml, isValidOccasion } from '../shared/occasions.js';
     
     // Cache for storing successful selectors to avoid repeated API calls
     const elementSelectorCache = new Map();
-    
-    // Wrrapd Gemini API Key - Automatically configured
-    const WRRAPD_GEMINI_API_KEY = 'AIzaSyCf5zz3Nkl0E4jeiusobT-ab8Nn7xnxAfI';
-    
-    // Automatically set the API key on extension load
-    if (WRRAPD_GEMINI_API_KEY && WRRAPD_GEMINI_API_KEY !== 'YOUR_GEMINI_API_KEY') {
-        localStorage.setItem('gemini-api-key', WRRAPD_GEMINI_API_KEY);
-    }
-    
-    /**
-     * Helper function to set the Gemini API key (for manual override if needed)
-     * Can be called from browser console: setGeminiAPIKey('your-api-key-here')
-     * @param {string} apiKey - Your Gemini API key from Google AI Studio
-     */
-    window.setGeminiAPIKey = function(apiKey) {
-        if (!apiKey || typeof apiKey !== 'string') {
-            console.error('[setGeminiAPIKey] Invalid API key provided');
-            return false;
-        }
-        localStorage.setItem('gemini-api-key', apiKey);
-        console.log('[setGeminiAPIKey] Gemini API key has been set successfully');
-        console.log('[setGeminiAPIKey] To get your API key, visit: https://makersuite.google.com/app/apikey');
-        return true;
-    };
-    
-    /**
-     * Creates a UI modal for setting the Gemini API key
-     */
-    function createGeminiAPIKeyModal() {
-        // Check if modal already exists
-        if (document.getElementById('wrrapd-gemini-api-modal')) {
-            return;
-        }
 
-        const modal = document.createElement('div');
-        modal.id = 'wrrapd-gemini-api-modal';
-        modal.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.7);
-            z-index: 999999;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-family: Arial, sans-serif;
-        `;
-
-        const content = document.createElement('div');
-        content.style.cssText = `
-            background: white;
-            padding: 30px;
-            border-radius: 8px;
-            max-width: 500px;
-            width: 90%;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-        `;
-
-        content.innerHTML = `
-            <h2 style="margin-top: 0; color: #333;">Wrrapd Extension - Gemini API Key Setup</h2>
-            <p style="color: #666; line-height: 1.6;">
-                To enable AI-powered element detection on Amazon pages, please set your Gemini API key.
-                This helps the extension automatically find checkout buttons even when Amazon changes their page structure.
-            </p>
-            <ol style="color: #666; line-height: 1.8;">
-                <li>Get your free API key from: <a href="https://makersuite.google.com/app/apikey" target="_blank" style="color: #0066cc;">Google AI Studio</a></li>
-                <li>Paste your API key below:</li>
-            </ol>
-            <input 
-                type="password" 
-                id="wrrapd-api-key-input" 
-                placeholder="Enter your Gemini API key here"
-                style="width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; box-sizing: border-box;"
-            />
-            <div style="display: flex; gap: 10px; margin-top: 20px;">
-                <button 
-                    id="wrrapd-save-api-key" 
-                    style="flex: 1; padding: 12px; background: #0066cc; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold;"
-                >Save API Key</button>
-                <button 
-                    id="wrrapd-skip-api-key" 
-                    style="flex: 1; padding: 12px; background: #ccc; color: #333; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;"
-                >Skip (Use Fallback)</button>
-            </div>
-            <p style="color: #999; font-size: 12px; margin-top: 15px; margin-bottom: 0;">
-                The extension will work without the API key using fallback selectors, but AI detection provides better reliability.
-            </p>
-        `;
-
-        modal.appendChild(content);
-        document.body.appendChild(modal);
-
-        // Event handlers
-        document.getElementById('wrrapd-save-api-key').addEventListener('click', () => {
-            const apiKey = document.getElementById('wrrapd-api-key-input').value.trim();
-            if (apiKey) {
-                if (setGeminiAPIKey(apiKey)) {
-                    modal.remove();
-                    // Show success message
-                    const successMsg = document.createElement('div');
-                    successMsg.style.cssText = `
-                        position: fixed;
-                        top: 20px;
-                        right: 20px;
-                        background: #4CAF50;
-                        color: white;
-                        padding: 15px 20px;
-                        border-radius: 4px;
-                        z-index: 1000000;
-                        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-                        font-family: Arial, sans-serif;
-                    `;
-                    successMsg.textContent = '✓ Gemini API Key saved successfully!';
-                    document.body.appendChild(successMsg);
-                    setTimeout(() => successMsg.remove(), 3000);
-                }
-            } else {
-                alert('Please enter a valid API key');
-            }
-        });
-
-        document.getElementById('wrrapd-skip-api-key').addEventListener('click', () => {
-            modal.remove();
-            localStorage.setItem('wrrapd-api-key-skipped', 'true');
-        });
-
-        // Close on background click
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                modal.remove();
-            }
-        });
+    // Legacy installs may have cached a client-side Gemini key — remove it.
+    try {
+        localStorage.removeItem('gemini-api-key');
+        localStorage.removeItem('wrrapd-api-key-skipped');
+    } catch (_) {
+        /* ignore */
     }
 
-    // API key is now automatically configured, so we don't need to show the modal
-    // The modal function is still available if needed for manual setup in the future
-    // Uncomment the code below if you want to show the modal for manual entry:
-    /*
-    if (!localStorage.getItem('gemini-api-key') && !localStorage.getItem('wrrapd-api-key-skipped')) {
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', createGeminiAPIKeyModal);
-        } else {
-            setTimeout(createGeminiAPIKeyModal, 1000);
-        }
-    }
-    */
-    
-    // Verify API key is set
-    if (localStorage.getItem('gemini-api-key')) {
-        // API key is configured and ready
-    }
-    
     /**
      * Uses Gemini API to identify elements on the page dynamically
      * @param {string} elementDescription - Description of the element to find (e.g., "Proceed to checkout button")
@@ -1208,51 +1063,27 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
     }
     
     /**
-     * Calls the Gemini API to get element selector
-     * @param {string} prompt - The prompt to send to Gemini
-     * @returns {Promise<string>} - The CSS selector returned by Gemini
+     * Server-side Gemini proxy — no API keys in the extension bundle.
+     * @param {string} prompt
+     * @returns {Promise<string|null>}
      */
     async function callGeminiAPI(prompt) {
-        // Get API key from localStorage or use a default (you should set this)
-        const apiKey = localStorage.getItem('gemini-api-key') || 'YOUR_GEMINI_API_KEY';
-        
-        if (!apiKey || apiKey === 'YOUR_GEMINI_API_KEY') {
-            console.warn('[callGeminiAPI] Gemini API key not configured. Please set it in localStorage with key "gemini-api-key"');
-            return null;
-        }
-        
+        const text = String(prompt || '').trim();
+        if (!text) return null;
+
         try {
-            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+            const response = await fetch('https://api.wrrapd.com/api/dom-selector', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    contents: [{
-                        parts: [{
-                            text: prompt
-                        }]
-                    }]
-                })
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'omit',
+                body: JSON.stringify({ prompt: text.slice(0, 12000) }),
             });
-            
-            if (!response.ok) {
-                throw new Error(`Gemini API error: ${response.status} ${response.statusText}`);
-            }
-            
+            if (!response.ok) return null;
             const data = await response.json();
-            
-            if (data.candidates && data.candidates[0] && data.candidates[0].content) {
-                const text = data.candidates[0].content.parts[0].text.trim();
-                
-                // Return the full text response - let the caller parse it as needed
-                return text;
-            }
-            
+            const out = data && typeof data.text === 'string' ? data.text.trim() : '';
+            return out || null;
+        } catch (_) {
             return null;
-        } catch (error) {
-            console.error('[callGeminiAPI] Error calling Gemini API:', error);
-            throw error;
         }
     }
     
@@ -1387,30 +1218,23 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
             }
         }
         
-        // Strategy 3: Try AI (with timeout to avoid blocking)
-        const apiKey = localStorage.getItem('gemini-api-key');
-        if (apiKey && apiKey !== 'YOUR_GEMINI_API_KEY') {
-            try {
-                const aiPromise = findElementWithAI(elementDescription, pageContext);
-                const timeoutPromise = new Promise((_, reject) => 
-                    setTimeout(() => reject(new Error('AI timeout')), 5000) // Increased to 5 seconds
-                );
-                
-                const aiSelector = await Promise.race([aiPromise, timeoutPromise]);
-                if (aiSelector) {
-                    const element = document.querySelector(aiSelector);
-                    if (element) {
-                        return element;
-                    } else {
-                        console.warn(`[findElementWithFallback] AI returned selector "${aiSelector}" but element not found in DOM`);
-                    }
+        // Strategy 3: Try AI via Wrrapd server proxy (with timeout to avoid blocking)
+        try {
+            const aiPromise = findElementWithAI(elementDescription, pageContext);
+            const timeoutPromise = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('AI timeout')), 5000),
+            );
+
+            const aiSelector = await Promise.race([aiPromise, timeoutPromise]);
+            if (aiSelector) {
+                const element = document.querySelector(aiSelector);
+                if (element) {
+                    return element;
                 }
-            } catch (error) {
-                if (error.message !== 'AI timeout') {
-                    console.warn(`[findElementWithFallback] AI search failed for "${elementDescription}":`, error.message);
-                } else {
-                    console.warn(`[findElementWithFallback] AI search timed out for "${elementDescription}"`);
-                }
+            }
+        } catch (error) {
+            if (error.message !== 'AI timeout') {
+                console.warn(`[findElementWithFallback] AI search failed for "${elementDescription}":`, error.message);
             }
         }
         return null;

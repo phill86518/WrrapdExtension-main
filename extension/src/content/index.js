@@ -8,14 +8,17 @@
  * - `wrrapdTraceEnableHud()` — HUD without localStorage
  * Production bundle no longer drops `console` so `[Wrrapd]` logs are visible if you add them.
  */
+import { IS_STORE_BUILD, exposeBuildTag } from '../shared/store-build.js';
 import { initWrrapdCheckoutDebug } from './lib/wrrapd-debug.js';
 import './lib/amazon-account-signed-in.js';
 import './lib/amazon-delivery-hints.js';
 import './content-legacy.js';
 
-/** Bump when verifying deploy — in DevTools: `window.__WRRAPD_CONTENT_BUILD_TAG__`. */
-export const WRRAPD_CONTENT_BUILD_TAG = '2026-04-25-retailer-amazon-target-stub';
+/** Dev-only build tag — omitted from Chrome Web Store bundles. */
+export const WRRAPD_CONTENT_BUILD_TAG = '2026-06-15-store-prep-v1';
 if (typeof window !== 'undefined') {
-    window.__WRRAPD_CONTENT_BUILD_TAG__ = WRRAPD_CONTENT_BUILD_TAG;
-    initWrrapdCheckoutDebug({ tag: WRRAPD_CONTENT_BUILD_TAG });
+    exposeBuildTag('__WRRAPD_CONTENT_BUILD_TAG__', WRRAPD_CONTENT_BUILD_TAG);
+    if (!IS_STORE_BUILD) {
+        initWrrapdCheckoutDebug({ tag: WRRAPD_CONTENT_BUILD_TAG });
+    }
 }

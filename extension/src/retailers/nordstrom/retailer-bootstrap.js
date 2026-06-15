@@ -1,3 +1,4 @@
+import { exposeDebugGlobal } from "../../shared/store-build.js";
 import {
   SHIPPING_TIER_SINGLE,
   describeTierForUi,
@@ -108,7 +109,7 @@ export function initNordstromRetailerBootstrap() {
       "Add a gift message per item. You'll complete Wrrapd's secure payment during checkout, then we wrap and ship to your giftee.",
   });
 
-  window.__WRRAPD_NORDSTROM_DEBUG__ = {
+  exposeDebugGlobal("__WRRAPD_NORDSTROM_DEBUG__", {
     retailer: WRRAPD_RETAILER_NORDSTROM,
     href: window.location.href,
     shippingTier: SHIPPING_TIER_SINGLE,
@@ -116,5 +117,5 @@ export function initNordstromRetailerBootstrap() {
     cart,
     isCart: isNordstromCartPage(),
     sampledAt: new Date().toISOString(),
-  };
+  });
 }

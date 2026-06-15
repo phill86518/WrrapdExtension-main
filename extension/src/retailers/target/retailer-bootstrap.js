@@ -1,3 +1,4 @@
+import { exposeDebugGlobal } from "../../shared/store-build.js";
 import {
   SHIPPING_TIER_SINGLE,
   describeTierForUi,
@@ -11,6 +12,7 @@ import {
   TARGET_SESSION_PREFIX,
   WRRAPD_RETAILER_TARGET,
 } from "./constants.js";
+import { findTargetWrrapdMountAnchor } from "./target-layout.js";
 
 function normalizeWhitespace(value) {
   return String(value || "").replace(/\s+/g, " ").trim();
@@ -118,35 +120,17 @@ export function initTargetRetailerBootstrap() {
     checkoutButtonPatterns: [/^check out$/i, /^checkout$/i, /^proceed to checkout$/i],
     checkoutButtonSelector: '[data-test="checkout-button"]',
     summarySelector: '[data-test="orderSummary"]',
-    findMountAnchor: () => {
-      const checkoutBtn =
-        document.querySelector('[data-test="checkout-button"]') ||
-        findButtonByText([/^check out$/i, /^checkout$/i]);
-      if (checkoutBtn?.parentElement) {
-        return { parent: checkoutBtn.parentElement, before: checkoutBtn };
-      }
-      const summary = document.querySelector('[data-test="orderSummary"]');
-      if (summary) return { parent: summary, before: summary.firstElementChild };
-      return null;
-    },
+    findMountAnchor: findTargetWrrapdMountAnchor,
     isCartPage: () => TARGET_CART_URL_HINTS.some((h) => location.pathname.toLowerCase().includes(h)),
     getCartSnapshot: () => extractTargetCartSnapshot(document),
   });
 
-  window.__WRRAPD_TARGET_DEBUG__ = {
+  exposeDebugGlobal("__WRRAPD_TARGET_DEBUG__", {
     retailer: WRRAPD_RETAILER_TARGET,
     href: window.location.href,
     shippingTier: SHIPPING_TIER_SINGLE,
     shippingTierHint,
     cart,
     sampledAt: new Date().toISOString(),
-  };
-}
-
-function findButtonByText(patterns, root = document) {
-  for (const node of root.querySelectorAll("button, a[role='button'], input[type='submit']")) {
-    const text = normalizeWhitespace(node.textContent || node.value || "");
-    if (text && patterns.some((re) => re.test(text))) return node;
-  }
-  return null;
+  });
 }

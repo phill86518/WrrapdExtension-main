@@ -1,3 +1,4 @@
+import { exposeDebugGlobal } from "../../shared/store-build.js";
 import {
   LEGO_CHECKOUT_CTA_PATTERNS,
   LEGO_CHECKOUT_URL_HINTS,
@@ -54,7 +55,7 @@ export function initLegoGuestCheckoutBootstrap() {
     giftChoicesSaved = false;
   }
 
-  window.__WRRAPD_LEGO_DEBUG__ = {
+  exposeDebugGlobal("__WRRAPD_LEGO_DEBUG__", {
     retailer: WRRAPD_RETAILER_LEGO,
     href,
     isCheckoutLike,
@@ -65,7 +66,7 @@ export function initLegoGuestCheckoutBootstrap() {
     ctaFound: cta.found,
     ctaText: cta.text,
     sampledAt: new Date().toISOString(),
-  };
+  });
 
   initLegoCheckoutFinalDeliveryMessage();
   initLegoGifteeShippingContextNotice();

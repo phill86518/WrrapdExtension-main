@@ -4,6 +4,8 @@
  * or `localStorage.setItem('wrrapd-trace','1')` then reload Amazon checkout tab.
  */
 
+import { IS_STORE_BUILD } from '../../shared/store-build.js';
+
 const MAX_TRACE = 600;
 const HUD_MAX_LINES = 16;
 
@@ -78,6 +80,7 @@ function appendDebugHud(entry) {
  * @param {unknown} [data]
  */
 export function wrrapdTrace(cat, msg, data) {
+  if (IS_STORE_BUILD) return;
   try {
     if (typeof window === 'undefined') return;
     if (!window.__WRRAPD_TRACE__) window.__WRRAPD_TRACE__ = [];
@@ -110,6 +113,7 @@ export function wrrapdTrace(cat, msg, data) {
 }
 
 export function wrrapdTraceEnableHud() {
+  if (IS_STORE_BUILD) return;
   window.__WRRAPD_DEBUG_UI__ = true;
 }
 
@@ -117,7 +121,7 @@ export function wrrapdTraceEnableHud() {
  * @param {{ tag?: string }} [opts]
  */
 export function initWrrapdCheckoutDebug(opts) {
-  if (typeof window === 'undefined') return;
+  if (IS_STORE_BUILD || typeof window === 'undefined') return;
   const tag = (opts && opts.tag) || window.__WRRAPD_CONTENT_BUILD_TAG__ || '?';
   window.wrrapdDumpTrace = () => JSON.stringify(window.__WRRAPD_TRACE__ || [], null, 2);
   window.wrrapdClearTrace = () => {

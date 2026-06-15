@@ -1,3 +1,4 @@
+import { exposeDebugGlobal } from "../../shared/store-build.js";
 import {
   SHIPPING_TIER_SINGLE,
   describeTierForUi,
@@ -208,12 +209,12 @@ export function initKohlsRetailerBootstrap() {
     getCartSnapshot: () => extractKohlsCartSnapshot(document),
   });
 
-  window.__WRRAPD_KOHLS_DEBUG__ = {
+  exposeDebugGlobal("__WRRAPD_KOHLS_DEBUG__", {
     retailer: WRRAPD_RETAILER_KOHLS,
     href: window.location.href,
     shippingTier: SHIPPING_TIER_SINGLE,
     shippingTierHint,
     cart,
     sampledAt: new Date().toISOString(),
-  };
+  });
 }
