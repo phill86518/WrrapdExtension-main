@@ -224,17 +224,37 @@ function buildOrderData(config) {
   });
 }
 
+/** Server-side PaymentIntent amount (must mirror Amazon/LEGO checkout math). */
 function buildPricingCart(state, prefix) {
-  const p = getActiveUnitPrices(state);
   const choices = readItemChoices(prefix);
-  const n = Math.max(1, choices.length);
-  const cart = [{ name: "Gift wrap", quantity: n, unitPrice: p.giftWrapBase }];
-  for (const ch of choices) {
-    if (ch.wrapPref === "ai") cart.push({ name: "AI design assist", quantity: 1, unitPrice: p.customDesignAi });
-    if (ch.wrapPref === "upload") cart.push({ name: "Custom upload", quantity: 1, unitPrice: p.customDesignUpload });
-    if (ch.flowers) cart.push({ name: "Flowers", quantity: 1, unitPrice: p.flowers });
-  }
-  return cart;
+  const zipForTax = gifteeZip5(prefix) || hubPostal5();
+  const taxRatePercent =
+    typeof state.taxPercent === "number" && Number.isFinite(state.taxPercent) ? state.taxPercent : 0;
+  const items =
+    choices.length > 0
+      ? choices.map((ch) => ({
+          options: [
+            {
+              checkbox_wrrapd: true,
+              selected_wrapping_option: ch.wrapPref || "wrrapd",
+              checkbox_flowers: ch.flowers === true,
+            },
+          ],
+        }))
+      : [
+          {
+            options: [
+              { checkbox_wrrapd: true, selected_wrapping_option: "wrrapd", checkbox_flowers: false },
+            ],
+          },
+        ];
+  return {
+    items,
+    taxRatePercent,
+    postalCode: zipForTax,
+    state: "",
+    country: "US",
+  };
 }
 
 /** Giftee stub from the validated estimate ZIP (full address arrives on the pay page). */

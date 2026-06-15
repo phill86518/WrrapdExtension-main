@@ -21,7 +21,7 @@ function usItemIdFromHref(href) {
   return match ? match[1] : "";
 }
 
-function extractWalmartCartSnapshot(root = document) {
+export function extractWalmartCartSnapshot(root = document) {
   /** @type {Array<{ title: string, itemId?: string }>} */
   const items = [];
   const seen = new Set();
@@ -69,6 +69,7 @@ export function initWalmartRetailerBootstrap() {
     modalId: WALMART_GIFT_MODAL_ID,
     shippingTierHint,
     checkoutButtonPatterns: [/^continue to checkout$/i, /^checkout$/i],
+    checkoutButtonSelector: "button[data-automation-id='checkout']",
     findMountAnchor: () => {
       // Top of the right-hand order rail, above the "Continue to checkout" box.
       const checkoutBtn = document.querySelector(

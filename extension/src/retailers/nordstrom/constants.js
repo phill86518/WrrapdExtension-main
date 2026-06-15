@@ -12,3 +12,6 @@ export const NORDSTROM_GIFT_MODAL_ID = "wrrapd-nordstrom-gift-modal";
 
 /** Path hints for the Nordstrom shopping bag page */
 export const NORDSTROM_CART_URL_HINTS = ["/shopping-bag"];
+
+/** Path hints for Nordstrom checkout (ship-to-hub pay flow) */
+export const NORDSTROM_CHECKOUT_URL_HINTS = ["/checkout"];

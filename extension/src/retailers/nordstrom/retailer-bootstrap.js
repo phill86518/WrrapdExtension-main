@@ -22,7 +22,7 @@ function styleIdFromHref(href) {
   return match ? match[1] : "";
 }
 
-function extractNordstromCartSnapshot(root = document) {
+export function extractNordstromCartSnapshot(root = document) {
   /** @type {Array<{ title: string, itemId?: string }>} */
   const items = [];
   const seen = new Set();

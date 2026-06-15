@@ -11,3 +11,6 @@ export const WALMART_GIFT_MODAL_ID = "wrrapd-walmart-gift-modal";
 
 /** Path hints for the Walmart cart page */
 export const WALMART_CART_URL_HINTS = ["/cart"];
+
+/** Path hints for Walmart checkout (multi-step flow after cart) */
+export const WALMART_CHECKOUT_URL_HINTS = ["/checkout"];

@@ -42,6 +42,16 @@ function findButtonByText(patterns, root = document) {
   return null;
 }
 
+function safeQuerySelector(selector, root = document) {
+  const sel = String(selector || "").trim();
+  if (!sel) return null;
+  try {
+    return root.querySelector(sel);
+  } catch {
+    return null;
+  }
+}
+
 function findMountBeforeCheckout(config) {
   if (typeof config.findMountAnchor === "function") {
     const custom = config.findMountAnchor();
@@ -50,14 +60,14 @@ function findMountBeforeCheckout(config) {
 
   const checkoutBtn =
     findButtonByText(config.checkoutButtonPatterns || [/^checkout$/i, /^proceed to checkout$/i]) ||
-    document.querySelector(config.checkoutButtonSelector || "");
+    safeQuerySelector(config.checkoutButtonSelector);
 
   if (checkoutBtn?.parentElement) {
     return { parent: checkoutBtn.parentElement, before: checkoutBtn };
   }
 
   const summary =
-    document.querySelector(config.summarySelector || "") ||
+    safeQuerySelector(config.summarySelector) ||
     document.querySelector("aside[data-testid='order-summary']") ||
     document.querySelector("[data-testid='cart-order-summary']") ||
     document.querySelector("[data-comp*='CostSummary']");
