@@ -16,7 +16,11 @@ import {
   LEGO_GIFT_WRAP_PREF_KEY,
   LEGO_HUB_SHIP_HINT_DATA_ATTR,
 } from "./constants.js";
-import { applyCheckoutSecurelyGate, openLegoTermsModal } from "./lego-checkout-pay-flow.js";
+import {
+  applyCheckoutSecurelyGate,
+  clearLegoPaymentSummaryUi,
+  openLegoTermsModal,
+} from "./lego-checkout-pay-flow.js";
 import { readLegoCartSnapshot, snapshotLegoCartToSession } from "./lego-cart-extract.js";
 import { isLegoCheckoutReviewLikePage } from "./lego-checkout-review-detect.js";
 import {
@@ -29,6 +33,7 @@ import {
   writeGiftChoicesSaved,
   writeGiftRadio,
   writeLegoItemChoices,
+  writeLegoPaymentSuccess,
 } from "./lego-session-state.js";
 import { loadAllowedZipCodes } from "../../content/lib/zip-codes.js";
 import { buildOccasionSelect, isValidOccasion } from "../../shared/occasions.js";
@@ -666,6 +671,8 @@ function mountCartGiftOptIn() {
         startLegoGiftYesFlow();
       } else {
         clearLegoGiftServiceFlags();
+        writeLegoPaymentSuccess(false);
+        clearLegoPaymentSummaryUi();
         applyCheckoutSecurelyGate();
       }
     });

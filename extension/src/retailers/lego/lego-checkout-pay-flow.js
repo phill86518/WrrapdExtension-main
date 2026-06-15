@@ -447,6 +447,11 @@ function removeLegoPaymentSummary() {
   if (root) root.remove();
 }
 
+/** Hide/disable Wrrapd pay UI when the customer opts out of gift wrap. */
+export function clearLegoPaymentSummaryUi() {
+  removeLegoPaymentSummary();
+}
+
 /**
  * @param {Array<{ label: string, amount: string | null }>} invoiceRows amount null = full-width note row
  */

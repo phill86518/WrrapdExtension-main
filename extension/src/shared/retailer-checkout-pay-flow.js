@@ -20,6 +20,9 @@ import {
   readGiftLegalTermsAccepted,
   readGiftRadio,
   readItemChoices,
+  readPaymentSuccess,
+  writePaymentSuccess,
+  WRRAPD_GIFT_RADIO_CHANGE_EVENT,
 } from "./cart-gift-session.js";
 import { hubAsPaymentAddress, hubPostal5 } from "./wrrapd-hub.js";
 
@@ -42,27 +45,8 @@ const UNIT_PRICES_FALLBACK = Object.freeze({
   flowers: 17.99,
 });
 
-function paymentSuccessKey(prefix) {
-  return `${prefix}PaymentSuccess`;
-}
 function orderNumberKey(prefix) {
   return `${prefix}OrderNumber`;
-}
-
-function readPaymentSuccess(prefix) {
-  try {
-    return sessionStorage.getItem(paymentSuccessKey(prefix)) === "1";
-  } catch {
-    return false;
-  }
-}
-function writePaymentSuccess(prefix, on) {
-  try {
-    if (on) sessionStorage.setItem(paymentSuccessKey(prefix), "1");
-    else sessionStorage.removeItem(paymentSuccessKey(prefix));
-  } catch {
-    /* ignore */
-  }
 }
 
 function gifteeZip5(prefix) {
@@ -604,7 +588,10 @@ export function initRetailerCheckoutPayFlow(config) {
 
   const tick = () => {
     if (!config.isCheckoutPage?.()) return;
-    if (!giftFlowReady()) return;
+    if (!giftFlowReady()) {
+      removeSummary();
+      return;
+    }
     if (readPaymentSuccess(config.sessionPrefix)) config.fillHubShippingFields?.();
     void ensureSummaryUi();
   };
@@ -621,4 +608,8 @@ export function initRetailerCheckoutPayFlow(config) {
   const observer = new MutationObserver(schedule);
   observer.observe(document.documentElement, { childList: true, subtree: true });
   window.addEventListener("popstate", () => setTimeout(schedule, 200));
+  window.addEventListener(WRRAPD_GIFT_RADIO_CHANGE_EVENT, (event) => {
+    if (event?.detail?.prefix !== config.sessionPrefix) return;
+    schedule();
+  });
 }

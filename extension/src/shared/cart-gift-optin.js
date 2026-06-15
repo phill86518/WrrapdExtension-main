@@ -1,5 +1,6 @@
 import {
   clearGiftServiceFlags,
+  notifyGiftRadioChange,
   readGiftChoicesSaved,
   readGiftLegalTermsAccepted,
   readGiftRadio,
@@ -8,6 +9,7 @@ import {
   writeGiftLegalTermsAccepted,
   writeGiftRadio,
   writeItemChoices,
+  writePaymentSuccess,
 } from "./cart-gift-session.js";
 import { buildOccasionSelect, isValidOccasion } from "./occasions.js";
 import { buildWrrapdTermsHtml } from "./wrrapd-terms.js";
@@ -819,12 +821,14 @@ function mountCartGiftOptIn(config, cartSnapshot) {
         openGiftChoicesModal(config, cartSnapshot);
       } else {
         clearGiftServiceFlags(config.sessionPrefix);
+        writePaymentSuccess(config.sessionPrefix, false);
         writeGiftRadio(config.sessionPrefix, "no");
         const saved = wrap.querySelector(`[${config.savedBannerAttr}]`);
         if (saved) saved.remove();
         const editBtn = wrap.querySelector("[data-wrrapd-edit]");
         if (editBtn) editBtn.hidden = true;
       }
+      notifyGiftRadioChange(config.sessionPrefix);
     });
     const text = document.createElement("span");
     text.textContent = labelText;

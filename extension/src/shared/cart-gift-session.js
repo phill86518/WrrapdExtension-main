@@ -96,3 +96,37 @@ export function clearGiftServiceFlags(prefix) {
     /* ignore */
   }
 }
+
+export function paymentSuccessKey(prefix) {
+  return `${prefix}PaymentSuccess`;
+}
+
+export function readPaymentSuccess(prefix) {
+  try {
+    return sessionStorage.getItem(paymentSuccessKey(prefix)) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function writePaymentSuccess(prefix, on) {
+  try {
+    if (on) sessionStorage.setItem(paymentSuccessKey(prefix), "1");
+    else sessionStorage.removeItem(paymentSuccessKey(prefix));
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Fired when the cart gift opt-in radio changes (yes ↔ no). */
+export const WRRAPD_GIFT_RADIO_CHANGE_EVENT = "wrrapd-gift-radio-change";
+
+export function notifyGiftRadioChange(prefix) {
+  try {
+    window.dispatchEvent(
+      new CustomEvent(WRRAPD_GIFT_RADIO_CHANGE_EVENT, { detail: { prefix: String(prefix || "") } }),
+    );
+  } catch {
+    /* ignore */
+  }
+}
