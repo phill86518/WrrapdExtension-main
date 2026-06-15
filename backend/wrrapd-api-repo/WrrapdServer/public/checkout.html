@@ -556,7 +556,18 @@
 
                 if (!response.ok) {
                     const errorText = await response.text();
-                    throw new Error(`Failed to create payment intent: ${response.status} ${response.statusText}`);
+                    let detail = errorText.trim();
+                    try {
+                        const parsed = JSON.parse(errorText);
+                        if (parsed && parsed.error) detail = String(parsed.error);
+                    } catch (_) {
+                        /* keep raw body */
+                    }
+                    throw new Error(
+                        `Failed to create payment intent: ${response.status} ${response.statusText}${
+                            detail ? ` — ${detail}` : ''
+                        }`,
+                    );
                 }
 
                 const responseData = await response.json();

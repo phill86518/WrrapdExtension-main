@@ -120,10 +120,11 @@ function syncLegoBagPayReminder() {
   hint.style.cssText = "box-sizing:border-box;width:100%;margin:0 0 0.75rem 0;padding:12px 14px;background:linear-gradient(180deg,#fffbeb,#fff7ed);border:1px solid #fbbf24;border-radius:0.5rem;";
   const t = document.createElement("p");
   t.style.cssText = "margin:0 0 6px;font-size:15px;color:#78350f;font-weight:600;";
-  t.textContent = "Complete Wrrapd payment to continue";
+  t.textContent = "Please complete payment to Wrrapd to continue";
   const p = document.createElement("p");
   p.style.cssText = "margin:0 0 8px;font-size:14px;color:#92400e;";
-  p.textContent = "Your gift-wrap choices are saved. Click Checkout Securely, accept hub shipping, then use Pay Wrrapd in the payment summary.";
+  p.textContent =
+    "Your gift-wrap choices are saved. Please click Checkout Securely, then complete payment to Wrrapd when prompted.";
   const go = document.createElement("button");
   go.type = "button";
   go.className = "sk-button sk-button--primary sk-button--small sk-button--neutral";

@@ -46,5 +46,6 @@ export function initWalmartCheckoutPayFlow() {
     findCheckoutButton: findWalmartCheckoutButton,
     getCartSnapshot: () => extractWalmartCartSnapshot(document),
     fillHubShippingFields: fillHubShippingFieldsByAutocomplete,
+    paymentPendingHint: "Please complete payment to Wrrapd before proceeding to checkout.",
   });
 }

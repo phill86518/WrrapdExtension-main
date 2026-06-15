@@ -463,7 +463,7 @@ function mountSummaryNearButton(btn, invoiceRows, totalCents, paid) {
 
   const h = document.createElement("div");
   h.style.cssText = "font-weight:700;font-size:16px;margin-bottom:8px;color:#92400e;";
-  h.textContent = "Wrrapd gift service — payment";
+  h.textContent = "Your Wrrapd gift order";
 
   const linesWrap = document.createElement("div");
   linesWrap.style.cssText = "margin:0 0 4px;display:flex;flex-direction:column;gap:8px;";
@@ -509,12 +509,14 @@ function mountSummaryNearButton(btn, invoiceRows, totalCents, paid) {
   payBtn.style.cssText = `
     padding:10px 18px;border-radius:8px;border:none;background:#f0c14b;color:#111;font-weight:700;
     cursor:pointer;font-size:14px;box-shadow:0 1px 2px rgba(0,0,0,.12);`;
-  payBtn.textContent = paid ? "Paid — you can continue on LEGO" : "Pay Wrrapd (secure window)";
+  payBtn.textContent = paid ? "Thank you — you may continue" : "Pay Wrrapd (secure window)";
 
   const status = document.createElement("span");
   status.style.fontSize = "14px";
   status.style.color = paid ? "#15803d" : "#64748b";
-  status.textContent = paid ? "Payment received. Use Checkout Securely again to continue." : "Complete payment before continuing LEGO checkout.";
+  status.textContent = paid
+    ? "Thank you! Your payment was received — you may continue with Checkout Securely."
+    : "Please complete payment to Wrrapd before continuing with checkout.";
 
   if (paid) payBtn.disabled = true;
 
@@ -659,12 +661,12 @@ function buildSummaryLinesAndTotal() {
     if (ch.flowers) flowerCount++;
   }
   const xN = n > 1 ? ` (×${n})` : "";
-  invoiceRows.push({ label: `Gift wrap base${xN}`, amount: `$${(p.giftWrapBase * n).toFixed(2)}` });
+  invoiceRows.push({ label: `Gift-wrapping${xN}`, amount: `$${(p.giftWrapBase * n).toFixed(2)}` });
   if (hasAi) invoiceRows.push({ label: "AI design assist", amount: `$${p.customDesignAi.toFixed(2)}` });
   if (hasUpload) invoiceRows.push({ label: "Custom upload", amount: `$${p.customDesignUpload.toFixed(2)}` });
   if (flowerCount > 0) {
     const xF = flowerCount > 1 ? ` (×${flowerCount})` : "";
-    invoiceRows.push({ label: `Flowers add-on${xF}`, amount: `$${(p.flowers * flowerCount).toFixed(2)}` });
+    invoiceRows.push({ label: `Flowers${xF}`, amount: `$${(p.flowers * flowerCount).toFixed(2)}` });
   }
 
   const br = computeLegoTotalBreakdown();
@@ -725,7 +727,7 @@ async function openLegoPaymentPopup() {
     `width=${popupWidth},height=${popupHeight},left=${left},top=${top},scrollbars=yes,resizable=yes`,
   );
   if (!popup) {
-    alert("Please allow popups for LEGO.com to complete Wrrapd payment.");
+    alert("Please allow popups for LEGO.com so you can complete your Wrrapd payment.");
     return;
   }
   payPopupRef = popup;

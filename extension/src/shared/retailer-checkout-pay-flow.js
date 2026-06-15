@@ -26,6 +26,15 @@ import { hubAsPaymentAddress, hubPostal5 } from "./wrrapd-hub.js";
 const PAY_ORIGIN = "https://pay.wrrapd.com";
 const SUMMARY_HOST_ATTR = "data-wrrapd-pay-summary-host";
 
+/** Default customer-facing payment panel copy (override per retailer via config). */
+const DEFAULT_PAY_COPY = Object.freeze({
+  panelTitle: "Your Wrrapd gift order",
+  lineGiftWrap: "Gift-wrapping",
+  pendingHint: "Please complete payment to Wrrapd before continuing.",
+  successHint: "Thank you! Your payment was received — you may continue checkout.",
+  paidButton: "Thank you — you may continue",
+});
+
 const UNIT_PRICES_FALLBACK = Object.freeze({
   giftWrapBase: 6.99,
   customDesignAi: 2.99,
@@ -181,12 +190,12 @@ function buildSummaryLinesAndTotal(state, prefix) {
     if (ch.flowers) flowerCount++;
   }
   const xN = n > 1 ? ` (×${n})` : "";
-  rows.push({ label: `Gift wrap base${xN}`, amount: `$${(p.giftWrapBase * n).toFixed(2)}` });
+  rows.push({ label: `${DEFAULT_PAY_COPY.lineGiftWrap}${xN}`, amount: `$${(p.giftWrapBase * n).toFixed(2)}` });
   if (hasAi) rows.push({ label: "AI design assist", amount: `$${p.customDesignAi.toFixed(2)}` });
   if (hasUpload) rows.push({ label: "Custom upload", amount: `$${p.customDesignUpload.toFixed(2)}` });
   if (flowerCount > 0) {
     const xF = flowerCount > 1 ? ` (×${flowerCount})` : "";
-    rows.push({ label: `Flowers add-on${xF}`, amount: `$${(p.flowers * flowerCount).toFixed(2)}` });
+    rows.push({ label: `Flowers${xF}`, amount: `$${(p.flowers * flowerCount).toFixed(2)}` });
   }
   const br = computeTotalBreakdown(state, prefix);
   if (br.taxUsd > 0) rows.push({ label: "Sales tax", amount: `$${br.taxUsd.toFixed(2)}` });
@@ -277,7 +286,27 @@ function removeSummary() {
   document.querySelectorAll(`[${SUMMARY_HOST_ATTR}]`).forEach((n) => n.remove());
 }
 
-function mountSummaryNearButton(btn, invoiceRows, totalCents, paid) {
+/** @returns {{ parent: Element, before?: Element|null } | null} */
+function resolveSummaryMountAnchor(config) {
+  if (typeof config.findSummaryMountAnchor === "function") {
+    const custom = config.findSummaryMountAnchor();
+    if (custom?.parent) return custom;
+  }
+  const btn = config.findCheckoutButton?.();
+  if (btn?.parentElement) return { parent: btn.parentElement, before: btn };
+  return null;
+}
+
+function getGatedCheckoutButtons(config) {
+  if (typeof config.findGatedCheckoutButtons === "function") {
+    const list = config.findGatedCheckoutButtons();
+    return Array.isArray(list) ? list.filter(Boolean) : [];
+  }
+  const one = config.findCheckoutButton?.();
+  return one ? [one] : [];
+}
+
+function mountSummaryPanel(mountAnchor, invoiceRows, totalCents, paid, copy = DEFAULT_PAY_COPY) {
   removeSummary();
   const host = document.createElement("div");
   host.setAttribute(SUMMARY_HOST_ATTR, "1");
@@ -286,7 +315,7 @@ function mountSummaryNearButton(btn, invoiceRows, totalCents, paid) {
 
   const h = document.createElement("div");
   h.style.cssText = "font-weight:700;font-size:16px;margin-bottom:8px;color:#92400e;";
-  h.textContent = "Wrrapd gift service — payment";
+  h.textContent = copy.panelTitle || DEFAULT_PAY_COPY.panelTitle;
 
   const linesWrap = document.createElement("div");
   linesWrap.style.cssText = "margin:0 0 4px;display:flex;flex-direction:column;gap:8px;";
@@ -320,18 +349,19 @@ function mountSummaryNearButton(btn, invoiceRows, totalCents, paid) {
   payBtn.setAttribute("data-wrrapd-pay-open", "1");
   payBtn.style.cssText =
     "padding:10px 18px;border-radius:8px;border:none;background:#f0c14b;color:#111;font-weight:700;cursor:pointer;font-size:14px;box-shadow:0 1px 2px rgba(0,0,0,.12);";
-  payBtn.textContent = paid ? "Paid — you can continue" : "Pay Wrrapd (secure window)";
+  payBtn.textContent = paid ? copy.paidButton || DEFAULT_PAY_COPY.paidButton : "Pay Wrrapd (secure window)";
   if (paid) payBtn.disabled = true;
   const status = document.createElement("span");
   status.style.cssText = `font-size:14px;color:${paid ? "#15803d" : "#64748b"};`;
   status.textContent = paid
-    ? "Payment received. Wrrapd will wrap and ship to your giftee."
-    : "Complete Wrrapd payment, then place your retailer order (it ships to the Wrrapd hub).";
+    ? copy.successHint || DEFAULT_PAY_COPY.successHint
+    : copy.pendingHint || DEFAULT_PAY_COPY.pendingHint;
   payRow.append(payBtn, status);
 
   host.append(h, linesWrap, total, payRow);
-  const parent = btn.parentElement;
-  if (parent) parent.insertBefore(host, btn);
+  const { parent, before } = mountAnchor;
+  if (before) parent.insertBefore(host, before);
+  else parent.appendChild(host);
   return { host, payBtn };
 }
 
@@ -369,7 +399,7 @@ async function openPaymentPopup(config, state) {
   // 1. Open the window first, while we still have the user gesture.
   const popup = openPaymentPopupShell(config);
   if (!popup) {
-    alert(`Please allow popups for ${location.hostname} to complete Wrrapd payment.`);
+    alert(`Please allow popups for ${location.hostname} so you can complete your Wrrapd payment.`);
     return null;
   }
 
@@ -386,7 +416,7 @@ async function openPaymentPopup(config, state) {
     } catch {
       /* ignore */
     }
-    alert("Invalid Wrrapd total. Please refresh and try again.");
+    alert("We couldn't calculate your Wrrapd total. Please refresh the page and try again.");
     return null;
   }
   // Reuse the order number created during the wizard (e.g. when an AI design was
@@ -469,8 +499,13 @@ async function postProcessPayment(config, eventData) {
  * @param {string} config.sessionPrefix       e.g. "wrrapdSephora"
  * @param {() => boolean} config.isCheckoutPage
  * @param {() => HTMLElement|null} config.findCheckoutButton  retailer place-order/continue button
+ * @param {() => HTMLElement[]} [config.findGatedCheckoutButtons]  all buttons to block until paid (sidebar + main)
+ * @param {() => { parent: Element, before?: Element|null } | null} [config.findSummaryMountAnchor]
+ *        where to mount the pay panel (defaults to immediately before findCheckoutButton)
  * @param {() => object} config.getCartSnapshot
  * @param {() => void} config.fillHubShippingFields  autofill hub address into the retailer form
+ * @param {string} [config.paymentPendingHint]  shown before Wrrapd payment (defaults to polite generic copy)
+ * @param {string} [config.paymentSuccessHint]  shown after Wrrapd payment succeeds
  */
 export function initRetailerCheckoutPayFlow(config) {
   if (!config?.retailerName || !config?.payRoute || !config?.sessionPrefix) return;
@@ -484,8 +519,8 @@ export function initRetailerCheckoutPayFlow(config) {
     readGiftLegalTermsAccepted(config.sessionPrefix);
 
   const ensureSummaryUi = async () => {
-    const btn = config.findCheckoutButton?.();
-    if (!btn?.parentElement) return;
+    const mountAnchor = resolveSummaryMountAnchor(config);
+    if (!mountAnchor?.parent) return;
     await ensureUnitPrices(state, {
       postalCode: gifteeZip5(config.sessionPrefix) || hubPostal5(),
       state: "",
@@ -504,11 +539,16 @@ export function initRetailerCheckoutPayFlow(config) {
       existing &&
       existing.isConnected &&
       existing.dataset.wrrapdRenderSig === renderSig &&
-      existing.parentElement === btn.parentElement
+      existing.parentElement === mountAnchor.parent
     ) {
       return;
     }
-    const { host, payBtn } = mountSummaryNearButton(btn, invoiceRows, totalCents, paid);
+    const payCopy = {
+      ...DEFAULT_PAY_COPY,
+      ...(config.paymentPendingHint ? { pendingHint: config.paymentPendingHint } : {}),
+      ...(config.paymentSuccessHint ? { successHint: config.paymentSuccessHint } : {}),
+    };
+    const { host, payBtn } = mountSummaryPanel(mountAnchor, invoiceRows, totalCents, paid, payCopy);
     host.dataset.wrrapdRenderSig = renderSig;
     if (!paid) {
       payBtn.addEventListener("click", async () => {
@@ -542,8 +582,10 @@ export function initRetailerCheckoutPayFlow(config) {
   document.addEventListener(
     "click",
     (e) => {
-      const btn = config.findCheckoutButton?.();
-      if (!btn || !e.target || !btn.contains(e.target)) return;
+      const gated = getGatedCheckoutButtons(config);
+      if (!gated.length || !e.target) return;
+      const btn = gated.find((b) => b.contains(e.target));
+      if (!btn) return;
       if (!giftFlowReady()) return;
       if (e.target.closest(`[${SUMMARY_HOST_ATTR}]`)) return;
       if (readPaymentSuccess(config.sessionPrefix)) {

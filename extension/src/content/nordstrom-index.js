@@ -2,7 +2,7 @@ import { initNordstromRetailerBootstrap } from "../retailers/nordstrom/retailer-
 import { initNordstromCheckoutPayFlow } from "../retailers/nordstrom/nordstrom-checkout.js";
 
 if (typeof window !== "undefined") {
-  window.__WRRAPD_NORDSTROM_CONTENT_BUILD__ = "2026-06-10-full-checkout";
+  window.__WRRAPD_NORDSTROM_CONTENT_BUILD__ = "2026-06-10-nordstrom-pay-top-v2";
   initNordstromRetailerBootstrap();
   initNordstromCheckoutPayFlow();
 }
