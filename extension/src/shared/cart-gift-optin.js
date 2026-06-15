@@ -11,6 +11,13 @@ import {
   writeItemChoices,
   writePaymentSuccess,
 } from "./cart-gift-session.js";
+import {
+  buildCartFingerprint,
+  createSharedGiftSessionAdapter,
+  defaultEmptyChoice,
+  syncGiftSessionWithCart,
+  writeCartFingerprint,
+} from "./cart-gift-sync.js";
 import { buildOccasionSelect, isValidOccasion } from "./occasions.js";
 import { buildWrrapdTermsHtml } from "./wrrapd-terms.js";
 
@@ -123,11 +130,20 @@ function summarizeChoice(ch) {
 
 function buildSavedBanner(config) {
   const choices = readItemChoices(config.sessionPrefix);
+  const cartSnap = config.getCartSnapshot?.();
+  const cartCount =
+    cartSnap && typeof cartSnap === "object"
+      ? typeof cartSnap.itemCount === "number"
+        ? cartSnap.itemCount
+        : Array.isArray(cartSnap.items)
+          ? cartSnap.items.length
+          : choices.length
+      : choices.length;
+  const count = cartCount > 0 ? cartCount : choices.length;
   const wrap = document.createElement("div");
   wrap.setAttribute(config.savedBannerAttr, "1");
   wrap.style.cssText =
     "margin:0 0 10px;padding:10px 12px;background:#ecfdf5;border:1px solid #6ee7b7;border-radius:8px;font-size:13px;color:#065f46;";
-  const count = choices.length;
   const head = document.createElement("div");
   head.style.cssText = "font-weight:700;margin-bottom:4px;";
   head.textContent =
@@ -143,6 +159,33 @@ function buildSavedBanner(config) {
     wrap.append(detail);
   }
   return wrap;
+}
+
+function buildCartChangedNotice() {
+  const wrap = document.createElement("div");
+  wrap.setAttribute("data-wrrapd-cart-changed", "1");
+  wrap.style.cssText =
+    "margin:0 0 10px;padding:10px 12px;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;font-size:13px;color:#92400e;";
+  wrap.textContent =
+    "Your cart changed — please tap Edit gift wrap choices to update selections for new items.";
+  return wrap;
+}
+
+function runCartGiftSync(config, cartSnapshot) {
+  return syncGiftSessionWithCart(
+    createSharedGiftSessionAdapter(config.sessionPrefix),
+    cartSnapshot,
+    (title) => defaultEmptyChoice(title),
+  );
+}
+
+function optInUiSignature(config, cartSnapshot, syncResult) {
+  const fp = buildCartFingerprint(cartSnapshot);
+  const radio = readGiftRadio(config.sessionPrefix);
+  const complete = giftFlowComplete(config) ? 1 : 0;
+  const review = syncResult?.requiresReview ? 1 : 0;
+  const choiceCount = readItemChoices(config.sessionPrefix).length;
+  return `${fp}|${radio}|${complete}|${review}|${choiceCount}`;
 }
 
 function emptyChoice(title) {
@@ -245,6 +288,7 @@ function openGiftChoicesModal(config, cartSnapshot) {
   let allChoices = readItemChoices(config.sessionPrefix);
   if (!Array.isArray(allChoices)) allChoices = [];
   while (allChoices.length < totalItems) allChoices.push(emptyChoice(lines[allChoices.length]?.title));
+  while (allChoices.length > totalItems) allChoices.pop();
 
   let currentIdx = 0;
 
@@ -781,10 +825,15 @@ function mountCartGiftOptIn(config, cartSnapshot) {
 
   if (!cartHasWrappableItems(cartSnapshot, config)) {
     existingOptIn(config)?.remove();
+    writeCartFingerprint(config.sessionPrefix, "");
     return;
   }
 
-  if (existingOptIn(config)) return;
+  const syncResult = runCartGiftSync(config, cartSnapshot);
+  const uiSig = optInUiSignature(config, cartSnapshot, syncResult);
+  const existing = existingOptIn(config);
+  if (existing && existing.dataset.wrrapdUiSig === uiSig) return;
+  if (existing) existing.remove();
 
   const anchor = findMountBeforeCheckout(config);
   if (!anchor?.parent) return;
@@ -819,6 +868,8 @@ function mountCartGiftOptIn(config, cartSnapshot) {
 
   if (giftFlowComplete(config)) {
     wrap.append(buildSavedBanner(config));
+  } else if (syncResult.requiresReview && readGiftRadio(config.sessionPrefix) === "yes") {
+    wrap.append(buildCartChangedNotice());
   }
 
   const fieldset = document.createElement("fieldset");
@@ -873,6 +924,7 @@ function mountCartGiftOptIn(config, cartSnapshot) {
   edit.addEventListener("click", () => openGiftChoicesModal(config, cartSnapshot));
 
   wrap.append(brandRow, hook, sub, fieldset, edit);
+  wrap.dataset.wrrapdUiSig = uiSig;
   if (anchor.before) anchor.parent.insertBefore(wrap, anchor.before);
   else anchor.parent.append(wrap);
 }

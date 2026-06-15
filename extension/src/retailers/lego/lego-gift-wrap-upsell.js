@@ -21,7 +21,7 @@ import {
   clearLegoPaymentSummaryUi,
   openLegoTermsModal,
 } from "./lego-checkout-pay-flow.js";
-import { readLegoCartSnapshot, snapshotLegoCartToSession } from "./lego-cart-extract.js";
+import { readLegoCartSnapshot, snapshotLegoCartToSession, syncLegoCartGiftState } from "./lego-cart-extract.js";
 import { isLegoCheckoutReviewLikePage } from "./lego-checkout-review-detect.js";
 import {
   clearLegoGiftServiceFlags,
@@ -161,6 +161,7 @@ export function openLegoGiftServiceModal() {
   // Load/init per-item choices array
   let allChoices = readLegoItemChoices();
   while (allChoices.length < totalItems) allChoices.push(emptyChoice());
+  while (allChoices.length > totalItems) allChoices.pop();
 
   let currentIdx = 0;
 
@@ -619,7 +620,12 @@ export function openLegoGiftServiceModal() {
 // ─── Bag cart opt-in ──────────────────────────────────────────────────────────
 
 function mountCartGiftOptIn() {
-  if (existingCartOptIn()) return;
+  syncLegoCartGiftState();
+  const lines = readLegoCartSnapshot();
+  const uiSig = `${lines.length}|${readGiftRadio()}|${readGiftChoicesSaved() ? 1 : 0}`;
+  const existing = existingCartOptIn();
+  if (existing && existing.dataset.wrrapdUiSig === uiSig) return;
+  if (existing) existing.remove();
   const btn = findCheckoutSecurelyButton();
   if (!btn?.parentElement) return;
 
@@ -687,6 +693,7 @@ function mountCartGiftOptIn() {
   );
 
   wrap.append(hook, sub, fieldset);
+  wrap.dataset.wrrapdUiSig = uiSig;
   btn.parentElement.insertBefore(wrap, btn);
   applyCheckoutSecurelyGate();
 }
@@ -782,7 +789,7 @@ function tryMountGiftUpsell() {
   const isCheckout = path.includes("/checkout") || path.includes("/checkouts");
 
   if (isCart) {
-    snapshotLegoCartToSession();
+    syncLegoCartGiftState();
     removeLegacyHubShipCard();
     mountCartGiftOptIn();
     syncLegoBagPayReminder();

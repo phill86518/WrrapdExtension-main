@@ -1,4 +1,22 @@
 import { LEGO_ITEM_CHOICES_KEY } from "./constants.js";
+import {
+  buildCartFingerprint,
+  defaultEmptyChoice,
+  readCartFingerprint,
+  syncGiftSessionWithCart,
+  writeCartFingerprint,
+} from "../../shared/cart-gift-sync.js";
+import {
+  readGiftChoicesSaved,
+  readGiftLegalTermsAccepted,
+  readLegoItemChoices,
+  writeGiftChoicesSaved,
+  writeGiftLegalTermsAccepted,
+  writeLegoItemChoices,
+  writeLegoPaymentSuccess,
+} from "./lego-session-state.js";
+
+const LEGO_SYNC_PREFIX = "wrrapdLego";
 
 const LEGO_CART_SNAPSHOT_KEY = "wrrapdLegoCartSnapshot";
 
@@ -64,3 +82,40 @@ export function readLegoCartSnapshot() {
     return [];
   }
 }
+
+export function getLegoCartSnapshotFromDocument() {
+  const lines = extractLegoCartProductLines();
+  return {
+    itemCount: lines.length,
+    items: lines.map((line) => ({
+      title: line.title,
+      itemId: line.sku || line.id,
+      sku: line.sku,
+      id: line.id,
+    })),
+  };
+}
+
+function legoGiftSessionAdapter() {
+  return {
+    prefix: LEGO_SYNC_PREFIX,
+    readChoices: readLegoItemChoices,
+    writeChoices: writeLegoItemChoices,
+    readFingerprint: () => readCartFingerprint(LEGO_SYNC_PREFIX),
+    writeFingerprint: (fp) => writeCartFingerprint(LEGO_SYNC_PREFIX, fp),
+    clearPayment: () => writeLegoPaymentSuccess(false),
+    invalidateSaved: () => {
+      writeGiftChoicesSaved(false);
+      writeGiftLegalTermsAccepted(false);
+    },
+    readWasComplete: () => readGiftChoicesSaved() && readGiftLegalTermsAccepted(),
+  };
+}
+
+/** Keep LEGO per-item gift choices aligned when bag lines change. */
+export function syncLegoCartGiftState() {
+  snapshotLegoCartToSession();
+  return syncGiftSessionWithCart(legoGiftSessionAdapter(), getLegoCartSnapshotFromDocument(), defaultEmptyChoice);
+}
+
+export { buildCartFingerprint as buildLegoCartFingerprint };

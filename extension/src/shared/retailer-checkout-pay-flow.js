@@ -24,6 +24,14 @@ import {
   writePaymentSuccess,
   WRRAPD_GIFT_RADIO_CHANGE_EVENT,
 } from "./cart-gift-session.js";
+import {
+  buildCartFingerprint,
+  createSharedGiftSessionAdapter,
+  defaultEmptyChoice,
+  syncGiftSessionWithCart,
+  WRRAPD_CART_SYNC_EVENT,
+  writeCartFingerprint,
+} from "./cart-gift-sync.js";
 import { hubAsPaymentAddress, hubPostal5 } from "./wrrapd-hub.js";
 import { buildGiftWrapInvoiceRows } from "./wrrapd-invoice-lines.js";
 
@@ -528,10 +536,22 @@ export function initRetailerCheckoutPayFlow(config) {
             : 0
         : 0;
     if (count <= 0) return false;
+    const choices = readItemChoices(config.sessionPrefix);
+    if (choices.length !== count) return false;
     return (
       readGiftRadio(config.sessionPrefix) === "yes" &&
       readGiftChoicesSaved(config.sessionPrefix) &&
       readGiftLegalTermsAccepted(config.sessionPrefix)
+    );
+  };
+
+  const syncCartGiftState = () => {
+    const snap = config.getCartSnapshot?.();
+    if (!snap) return null;
+    return syncGiftSessionWithCart(
+      createSharedGiftSessionAdapter(config.sessionPrefix),
+      snap,
+      defaultEmptyChoice,
     );
   };
 
@@ -549,10 +569,8 @@ export function initRetailerCheckoutPayFlow(config) {
     );
     const paid = readPaymentSuccess(config.sessionPrefix);
     const { invoiceRows, totalCents } = buildSummaryLinesAndTotal(state, config.sessionPrefix);
-    // Skip remounting when nothing changed. Remounting on every MutationObserver
-    // tick destroys the Pay button between mousedown and mouseup, so clicks on it
-    // never fire (the popup appears blocked). Only rebuild when content/position changed.
-    const renderSig = `${paid ? 1 : 0}|${totalCents}|${invoiceRows
+    const cartFp = buildCartFingerprint(config.getCartSnapshot?.());
+    const renderSig = `${paid ? 1 : 0}|${totalCents}|${cartFp}|${invoiceRows
       .map((r) => `${r?.label ?? ""}=${r?.amount ?? r?.cents ?? ""}`)
       .join("~")}`;
     const existing = document.querySelector(`[${SUMMARY_HOST_ATTR}]`);
@@ -599,6 +617,7 @@ export function initRetailerCheckoutPayFlow(config) {
         return;
       }
       writePaymentSuccess(config.sessionPrefix, true);
+      writeCartFingerprint(config.sessionPrefix, buildCartFingerprint(config.getCartSnapshot?.()));
       payPopupRef = null;
       config.fillHubShippingFields?.();
       applyCheckoutGate(config, giftFlowReady(), true);
@@ -638,6 +657,7 @@ export function initRetailerCheckoutPayFlow(config) {
 
   const tick = () => {
     if (!config.isCheckoutPage?.()) return;
+    syncCartGiftState();
     const ready = giftFlowReady();
     const paid = readPaymentSuccess(config.sessionPrefix);
     if (!ready) {
@@ -664,6 +684,12 @@ export function initRetailerCheckoutPayFlow(config) {
   window.addEventListener("popstate", () => setTimeout(schedule, 200));
   window.addEventListener(WRRAPD_GIFT_RADIO_CHANGE_EVENT, (event) => {
     if (event?.detail?.prefix !== config.sessionPrefix) return;
+    schedule();
+  });
+  window.addEventListener(WRRAPD_CART_SYNC_EVENT, (event) => {
+    if (event?.detail?.prefix !== config.sessionPrefix) return;
+    state.lastPriceFetchAt = 0;
+    state.unitPriceOverride = null;
     schedule();
   });
 }

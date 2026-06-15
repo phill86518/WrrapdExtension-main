@@ -15,7 +15,7 @@ import {
   writeLegoGifteeAddress,
   writeLegoPaymentSuccess,
 } from "./lego-session-state.js";
-import { readLegoCartSnapshot } from "./lego-cart-extract.js";
+import { readLegoCartSnapshot, syncLegoCartGiftState } from "./lego-cart-extract.js";
 import { refreshLegoGifteeShippingAddressFill } from "./lego-giftee-shipping-fill.js";
 import { buildWrrapdTermsHtml } from "../../shared/wrrapd-terms.js";
 import { buildGiftWrapInvoiceRows } from "../../shared/wrrapd-invoice-lines.js";
@@ -727,6 +727,7 @@ async function openLegoPaymentPopup() {
 }
 
 async function ensurePaymentSummaryUi() {
+  syncLegoCartGiftState();
   const btn = findCheckoutSecurelyButton();
   if (!btn?.parentElement) return;
   await refreshCheckoutUnitPricesFromServer({
