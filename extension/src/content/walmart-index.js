@@ -2,7 +2,7 @@ import { initWalmartRetailerBootstrap } from "../retailers/walmart/retailer-boot
 import { initWalmartCheckoutPayFlow } from "../retailers/walmart/walmart-checkout.js";
 
 if (typeof window !== "undefined") {
-  window.__WRRAPD_WALMART_CONTENT_BUILD__ = "2026-06-10-full-checkout";
+  window.__WRRAPD_WALMART_CONTENT_BUILD__ = "2026-06-10-walmart-pay-copy-v2";
   initWalmartRetailerBootstrap();
   initWalmartCheckoutPayFlow();
 }
