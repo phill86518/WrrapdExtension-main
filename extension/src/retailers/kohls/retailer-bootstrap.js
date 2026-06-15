@@ -97,9 +97,6 @@ function extractKohlsItems(root = document) {
     "[data-testid='bag-item']",
     "[data-automation-id='cart-line-item']",
     "[data-automation-id='bag-item']",
-    ".bag-item",
-    ".cart-item",
-    ".line-item",
   ];
   const seen = new Set();
   const nodes = [];
@@ -150,7 +147,28 @@ function extractKohlsItems(root = document) {
     .filter(Boolean);
 }
 
+export function isKohlsCartEmpty(root = document) {
+  if (root.querySelector("[data-testid='empty-cart'], [data-automation-id='empty-cart'], .empty-cart-message")) {
+    return true;
+  }
+  const pageText = normalizeWhitespace(
+    root.querySelector("main, [role='main'], #main-content")?.textContent?.slice(0, 1200) || "",
+  );
+  if (/your (shopping )?(bag|cart) is empty/i.test(pageText)) return true;
+  return extractKohlsItems(root).length === 0;
+}
+
 export function extractKohlsCartSnapshot(root = document) {
+  if (isKohlsCartEmpty(root)) {
+    return {
+      itemCount: 0,
+      items: [],
+      isEmpty: true,
+      subtotal: null,
+      orderTotal: null,
+      fulfillmentCounts: { shipping: 0, pickup: 0, mixed: 0, unknown: 0 },
+    };
+  }
   const items = extractKohlsItems(root);
   const subtotal = extractSummaryAmount(/\bsubtotal\b/i, root);
   const orderTotal = extractSummaryAmount(/\b(total|order total|estimated total)\b/i, root);
@@ -168,6 +186,7 @@ export function extractKohlsCartSnapshot(root = document) {
     subtotal,
     orderTotal,
     fulfillmentCounts,
+    isEmpty: items.length === 0,
   };
 }
 
@@ -185,6 +204,7 @@ export function initKohlsRetailerBootstrap() {
     checkoutButtonPatterns: [/^checkout$/i, /^proceed to checkout$/i],
     summarySelector: "aside[data-testid='order-summary'], [data-testid='order-summary']",
     isCartPage: () => KOHLS_CART_URL_HINTS.some((h) => location.pathname.toLowerCase().includes(h)),
+    isCartEmpty: () => isKohlsCartEmpty(document),
     getCartSnapshot: () => extractKohlsCartSnapshot(document),
   });
 

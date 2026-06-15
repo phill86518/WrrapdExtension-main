@@ -138,7 +138,24 @@ function extractSummaryAmount(labelMatcher, root = document) {
   return null;
 }
 
+export function isBestbuyCartEmpty(root = document) {
+  const main = root.querySelector("main[data-testid='cart-root'], main");
+  const text = normalizeWhitespace(main?.textContent?.slice(0, 800) || "");
+  if (/your cart is empty/i.test(text)) return true;
+  return extractBestbuyItems(root).length === 0;
+}
+
 export function extractBestbuyCartSnapshot(root = document) {
+  if (isBestbuyCartEmpty(root)) {
+    return {
+      itemCount: 0,
+      items: [],
+      isEmpty: true,
+      subtotal: null,
+      orderTotal: null,
+      fulfillmentCounts: { shipping: 0, pickup: 0, mixed: 0, unknown: 0 },
+    };
+  }
   const items = extractBestbuyItems(root);
   const subtotal = extractSummaryAmount(/\bsubtotal\b/i, root);
   const orderTotal = extractSummaryAmount(/\b(order\s*total|estimated\s*total|total)\b/i, root);
@@ -156,6 +173,7 @@ export function extractBestbuyCartSnapshot(root = document) {
     subtotal,
     orderTotal,
     fulfillmentCounts,
+    isEmpty: items.length === 0,
   };
 }
 
@@ -173,6 +191,7 @@ export function initBestbuyRetailerBootstrap() {
     checkoutButtonPatterns: [/^checkout$/i, /^continue to checkout$/i],
     summarySelector: "[data-testid='cart-order-summary']",
     isCartPage: () => BESTBUY_CART_URL_HINTS.some((h) => location.pathname.toLowerCase().includes(h)),
+    isCartEmpty: () => isBestbuyCartEmpty(document),
     getCartSnapshot: () => extractBestbuyCartSnapshot(document),
   });
 

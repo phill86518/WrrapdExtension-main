@@ -11,3 +11,5 @@ export const ULTA_GIFT_MODAL_ID = "wrrapd-ulta-gift-modal";
 
 /** Path hints for the Ulta bag/cart page */
 export const ULTA_CART_URL_HINTS = ["/bag"];
+/** Bag + checkout: Wrrapd payment is gated on both. */
+export const ULTA_CHECKOUT_URL_HINTS = ["/bag", "/checkout"];

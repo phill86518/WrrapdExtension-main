@@ -91,8 +91,12 @@ function existingOptIn(config) {
   return document.querySelector(`[${config.optInDataAttr}]`);
 }
 
-function cartHasWrappableItems(cartSnapshot) {
+function cartHasWrappableItems(cartSnapshot, config) {
+  if (config && typeof config.isCartEmpty === "function" && config.isCartEmpty()) {
+    return false;
+  }
   const snap = cartSnapshot && typeof cartSnapshot === "object" ? cartSnapshot : {};
+  if (snap.isEmpty === true) return false;
   const count =
     typeof snap.itemCount === "number" && Number.isFinite(snap.itemCount)
       ? snap.itemCount
@@ -775,7 +779,7 @@ function openGiftChoicesModal(config, cartSnapshot) {
 function mountCartGiftOptIn(config, cartSnapshot) {
   if (!config.isCartPage?.() && !config.isCheckoutPage?.()) return;
 
-  if (!cartHasWrappableItems(cartSnapshot)) {
+  if (!cartHasWrappableItems(cartSnapshot, config)) {
     existingOptIn(config)?.remove();
     return;
   }

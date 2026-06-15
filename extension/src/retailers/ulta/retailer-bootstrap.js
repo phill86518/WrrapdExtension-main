@@ -16,12 +16,38 @@ function normalizeWhitespace(value) {
   return String(value || "").replace(/\s+/g, " ").trim();
 }
 
-function extractUltaCartSnapshot(root = document) {
+/** True when the Ulta bag page has no purchasable line items (not recommendations). */
+export function isUltaBagEmpty(root = document) {
+  const bagHeader = root.querySelector(".BagHeader");
+  const headerText = normalizeWhitespace(bagHeader?.textContent || "");
+  if (/your bag is empty/i.test(headerText)) return true;
+  if (/^bag\s*0 items?$/i.test(headerText.replace(/\s+/g, " "))) return true;
+
+  const bagItems = root.querySelector(".BagItemsSplit");
+  if (bagItems && !bagItems.querySelector(".DeliveryGroup__item .BagProductCardSplit, .BagProductCardSplit")) {
+    return true;
+  }
+
+  return false;
+}
+
+export function extractUltaCartSnapshot(root = document) {
+  if (isUltaBagEmpty(root)) {
+    return { itemCount: 0, items: [], isEmpty: true };
+  }
+
   /** @type {Array<{ title: string, brand?: string, itemId?: string }>} */
   const items = [];
   const seen = new Set();
 
-  for (const card of root.querySelectorAll(".BagProductCardSplit")) {
+  const bagRoot =
+    root.querySelector(".BagItemsSplit") ||
+    root.querySelector(".DeliveryGroup__itemList") ||
+    root;
+
+  for (const card of bagRoot.querySelectorAll(".DeliveryGroup__item .BagProductCardSplit, .BagProductCardSplit")) {
+    if (!card.closest(".BagItemsSplit, .DeliveryGroup__itemList, .BagSection")) continue;
+
     const detail = card.querySelector(".BagProductCardDetails__ProductDetails");
     const brand = normalizeWhitespace(detail?.querySelector("span.Text-ds")?.textContent || "");
     const name = normalizeWhitespace(detail?.querySelector("h3")?.textContent || "");
@@ -39,7 +65,7 @@ function extractUltaCartSnapshot(root = document) {
     items.push({ title, brand, itemId });
   }
 
-  return { itemCount: items.length, items };
+  return { itemCount: items.length, items, isEmpty: items.length === 0 };
 }
 
 function isUltaCartPage() {
@@ -86,6 +112,7 @@ export function initUltaRetailerBootstrap() {
       return null;
     },
     isCartPage: isUltaCartPage,
+    isCartEmpty: () => isUltaBagEmpty(document),
     getCartSnapshot: () => extractUltaCartSnapshot(document),
     hook: "Make it a gift — we'll wrap your Ulta order beautifully.",
     subtitle:
