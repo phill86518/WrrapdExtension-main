@@ -109,7 +109,8 @@ export default async function AdminPage({
   if (!session || session.role !== "admin") {
     return (
       <main className="mx-auto min-h-screen max-w-xl px-4 py-16">
-        <h1 className="text-3xl font-semibold">Admin Login</h1>
+        <WrrapdLogo className="h-10 w-auto max-w-[180px] object-contain object-left" />
+        <h1 className="mt-4 text-3xl font-semibold">Admin Login</h1>
         <p className="mt-2 text-sm text-slate-600">Sign in to the command center.</p>
         {query.error === "1" && (
           <p className="mt-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">

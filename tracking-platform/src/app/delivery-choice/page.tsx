@@ -1,5 +1,6 @@
 import { getOrderByDeliveryPreferenceToken } from "@/lib/data";
 import { formatWrrapdDeliveryWindowEtForNotifications } from "@/lib/email-templates/transactional";
+import { WrrapdLogo } from "@/components/wrrapd-logo";
 import { formatInTimeZone } from "date-fns-tz";
 import { submitDeliveryPreference } from "./actions";
 
@@ -46,8 +47,8 @@ export default async function DeliveryChoicePage({
   return (
     <main className="mx-auto min-h-screen max-w-lg px-4 py-12">
       <div className="rounded-2xl border border-amber-200/80 bg-gradient-to-b from-amber-50 to-white p-6 shadow-sm">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-900/70">Wrrapd</p>
-        <h1 className="mt-2 text-2xl font-semibold text-slate-900">How should we plan your visit?</h1>
+        <WrrapdLogo className="h-9 w-auto max-w-[160px] object-contain object-left" />
+        <h1 className="mt-3 text-2xl font-semibold text-slate-900">How should we plan your visit?</h1>
         <p className="mt-3 text-sm leading-relaxed text-slate-700">
           Amazon shows <strong>different arrival dates</strong> for your gift-wrap items:{" "}
           <span className="whitespace-pre-wrap">{dates.join(", ")}</span>.

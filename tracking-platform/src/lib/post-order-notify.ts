@@ -101,11 +101,15 @@ export async function sendPostOrderNotifications(order: Order): Promise<PostOrde
   const trackingPath = `/track/${order.trackingToken}`;
   const trackingUrl = origin ? `${origin}${trackingPath}` : trackingPath;
   const addressLine = `${order.addressLine1}, ${order.city}, ${order.state} ${order.postalCode}`;
-  const scheduledEtLabel = formatWrrapdDeliveryWindowEtForNotifications({
-    scheduledFor: order.scheduledFor,
-    amazonDeliveryDatesSnapshot: order.amazonDeliveryDatesSnapshot,
-    deliveryPreferenceChoice: order.deliveryPreferenceChoice,
-  });
+  const isAmazon = !order.retailer || order.retailer === "Amazon";
+  const retailerLabel = order.retailer || "Your retailer";
+  const scheduledEtLabel = isAmazon
+    ? formatWrrapdDeliveryWindowEtForNotifications({
+        scheduledFor: order.scheduledFor,
+        amazonDeliveryDatesSnapshot: order.amazonDeliveryDatesSnapshot,
+        deliveryPreferenceChoice: order.deliveryPreferenceChoice,
+      })
+    : `${retailerLabel}'s delivery date + 1 day`;
   /** Customer-facing reference only (no internal ord-*). */
   const customerVisibleRef =
     order.externalOrderId?.trim() || order.recipientName?.trim() || "your Wrrapd order";
@@ -124,6 +128,7 @@ export async function sendPostOrderNotifications(order: Order): Promise<PostOrde
     addressLine,
     scheduledEtLabel,
     lineItems: order.lineItems,
+    showTrackingLink: isAmazon,
   });
 
   if (order.customerEmail?.trim()) {

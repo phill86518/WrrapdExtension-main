@@ -2404,9 +2404,6 @@ app.post('/process-payment', async (req, res) => {
     }
 });
 
-// Updated /generate-ideas endpoint for server.js
-// Replace the existing endpoint (lines 501-570 approximately) with this code
-
 // Handle OPTIONS preflight for /generate-ideas (redundant but explicit)
 app.options('/generate-ideas', (req, res) => {
     console.log('[generate-ideas] OPTIONS preflight request received');
@@ -2420,6 +2417,128 @@ app.options('/generate-ideas', (req, res) => {
     res.status(204).send();
     console.log('[generate-ideas] OPTIONS response sent with status 204');
 });
+
+const GENERIC_WRAP_TITLE_WORDS = new Set([
+    'confetti', 'botanical', 'modern', 'lines', 'classic', 'elegant', 'festive', 'pattern', 'wrap', 'design',
+]);
+
+function isGenericWrapTitle(title) {
+    const words = String(title || '').toLowerCase().split(/[\s\-–—]+/).filter(Boolean);
+    if (words.length <= 2 && words.some((w) => GENERIC_WRAP_TITLE_WORDS.has(w))) return true;
+    return words.length === 1 && GENERIC_WRAP_TITLE_WORDS.has(words[0]);
+}
+
+function sanitizeDesignIdeas(rawDesigns) {
+    if (!Array.isArray(rawDesigns)) return [];
+    return rawDesigns
+        .map((d) => ({
+            title: String(d?.title || '').trim(),
+            description: String(d?.description || '').trim(),
+        }))
+        .filter((d) => d.title.length >= 8 && d.description.length >= 40 && !isGenericWrapTitle(d.title))
+        .slice(0, 3);
+}
+
+function buildOccasionFallbackDesigns(occasion, productTitle) {
+    const topic = String(occasion || 'gift').trim() || 'gift';
+    const product = String(productTitle || '').trim();
+    const productBit = product ? ` for ${product}` : '';
+    const lo = topic.toLowerCase();
+    if (/\bbirthday\b|\bturning\s+\d+|\b\d+(?:st|nd|rd|th)\b/.test(lo)) {
+        return [
+            {
+                title: 'Midnight Galaxy Birthday',
+                description: `Deep navy wrapping paper scattered with gold star clusters and tiny planet rings${productBit}. Playful but polished — a seamless repeat that feels celebratory without cartoon balloons.`,
+            },
+            {
+                title: 'Confetti Streamer Parade',
+                description: `Diagonal ribbon streamers in coral, teal, and butter yellow over a cream ground${productBit}. Energetic birthday motion with crisp edges and balanced white space for a premium look.`,
+            },
+            {
+                title: 'Hand-Drawn Candle Glow',
+                description: `Warm watercolor-style birthday candles and soft wax drips in peach and lilac on matte ivory${productBit}. Cozy, handmade feeling with subtle texture — ideal for an intimate celebration.`,
+            },
+        ];
+    }
+    if (/\bwedding\b|\bbridal\b|\banniversary\b|\bengagement\b/.test(lo)) {
+        return [
+            {
+                title: 'Pressed Peony Garland',
+                description: `Blush and ivory peony silhouettes linked by delicate gold vine lines${productBit}. Romantic and airy — a seamless floral repeat suited to formal gifting.`,
+            },
+            {
+                title: 'Champagne Foil Toasts',
+                description: `Champagne bubbles rising through soft taupe linen texture with muted gold foil accents${productBit}. Understated luxury without glitter overload.`,
+            },
+            {
+                title: 'Monogram Wreath Frame',
+                description: `Laurel wreath corners framing a blank center panel on warm white paper${productBit}. Classic wedding stationery energy translated into wrap — elegant negative space.`,
+            },
+        ];
+    }
+    if (/\bbaby\b|\bshower\b|\bnursery\b|\bnewborn\b/.test(lo)) {
+        return [
+            {
+                title: 'Cloud and Star Lullaby',
+                description: `Powder blue clouds with tiny brass stars on a soft grey ground${productBit}. Gentle nursery palette with a seamless, calming repeat.`,
+            },
+            {
+                title: 'Woodland Critter Trail',
+                description: `Tiny fox, fawn, and hedgehog footprints winding through sage and oatmeal tones${productBit}. Storybook charm with muted earth colors — not overly cute.`,
+            },
+            {
+                title: 'Rainbow Arc Patchwork',
+                description: `Rounded rainbow arcs in muted terracotta, mustard, and dusty rose on cream${productBit}. Modern baby aesthetic — playful geometry without primary-color chaos.`,
+            },
+        ];
+    }
+    if (/\bchristmas\b|\bholiday\b|\bhanukkah\b|\bwinter\b|\bkwanzaa\b/.test(lo)) {
+        return [
+            {
+                title: 'Evergreen Plaid Glow',
+                description: `Forest green and cranberry plaid with fine gold thread lines${productBit}. Cozy holiday warmth with a tailored, boutique feel.`,
+            },
+            {
+                title: 'Snowflake Constellation',
+                description: `Geometric snowflakes in ice blue and silver on deep midnight paper${productBit}. Wintry and crisp — high contrast without busy clutter.`,
+            },
+            {
+                title: 'Citrus Pomander Spice',
+                description: `Dried orange slices, cloves, and cinnamon stick motifs in burnt orange and brown${productBit}. Old-world holiday scent visual — artisan market vibe.`,
+            },
+        ];
+    }
+    if (/\bgraduation\b|\bgraduate\b|\bcommencement\b/.test(lo)) {
+        return [
+            {
+                title: 'Cap Toss Horizon',
+                description: `Tiny mortarboards drifting across a dawn gradient from navy to gold${productBit}. Aspirational and clean — celebrates achievement without clip-art.`,
+            },
+            {
+                title: 'Laurel Achievement Band',
+                description: `Interlocking laurel bands in emerald and antique gold on ivory${productBit}. Timeless academic honor styling with strong horizontal rhythm.`,
+            },
+            {
+                title: 'Future Map Grid',
+                description: `Subtle topographic map lines and compass roses in charcoal and sage${productBit}. Forward-looking, adventurous tone for a new chapter.`,
+            },
+        ];
+    }
+    return [
+        {
+            title: 'Watercolor Storybook Bloom',
+            description: `Loose peony and eucalyptus washes in dusty rose and sage on textured cream paper${productBit}. Thoughtful, artisan wrap inspired by "${topic}" — soft edges, seamless floral repeat.`,
+        },
+        {
+            title: 'Art Deco Fan Mosaic',
+            description: `Fan-shaped geometric tiles in teal, brass, and blush forming a rhythmic pattern${productBit}. Bold but refined — tailored to "${topic}" with vintage glamour.`,
+        },
+        {
+            title: 'Hand-Lettered Ribbon Script',
+            description: `Flowing satin ribbon loops and subtle script curves (no readable words) in wine and gold on matte white${productBit}. Personal and celebratory for "${topic}" without literal text on the paper.`,
+        },
+    ];
+}
 
 app.post('/generate-ideas', async (req, res) => {
     // Set CORS headers IMMEDIATELY for ALL responses (including errors)
@@ -2441,30 +2560,49 @@ app.post('/generate-ideas', async (req, res) => {
         return res.status(403).json({ error: 'Access forbidden.' });
     }
 
-    const { occasion } = req.body;
+    const { occasion, productTitle, retailer } = req.body;
 
     if (!occasion) {
         return res.status(400).json({ error: 'Occasion is required' });
     }
 
     try {
-	            console.log(`[generate-ideas] Received occasion: ${occasion}`);
+        const safeOccasion = String(occasion || 'gift').trim() || 'gift';
+        const safeProduct = String(productTitle || '').trim();
+        const safeRetailer = String(retailer || '').trim();
+        console.log(`[generate-ideas] Received occasion: ${safeOccasion}`, {
+            productTitle: safeProduct || '(none)',
+            retailer: safeRetailer || '(none)',
+        });
 
-	            // Step 1: Generate text descriptions using GPT-4o
+        // Step 1: Generate text descriptions using GPT-4o
         console.log('[generate-ideas] Generating design descriptions...');
         let designs = [];
         try {
+            const userBrief = [
+                `Occasion / creative brief: ${safeOccasion}`,
+                safeProduct ? `Product being wrapped: ${safeProduct}` : '',
+                safeRetailer ? `Purchased from: ${safeRetailer}` : '',
+                'Return exactly 3 distinct wrapping-paper concepts with evocative multi-word titles (never a single generic word like Confetti, Botanical, or Modern Lines).',
+                'Each description must specify colors, motifs, layout, and mood in 2 vivid sentences suitable for a seamless gift-wrap repeat.',
+            ].filter(Boolean).join('\n');
+
             const completion = await openai.chat.completions.create({
                 model: "gpt-4o",
                 messages: [{
                     role: "system",
-                    content: "You are a creative gift wrapping designer. Generate 3 unique wrapping paper design ideas. Keep each description brief and impactful - maximum two short sentences per design."
+                    content: [
+                        'You are an expert gift-wrap art director for Wrrapd.',
+                        'Invent three premium, occasion-specific wrapping paper patterns a customer would proudly choose.',
+                        'Titles must be 3–6 words, concrete and memorable — never "[Occasion] Confetti/Botanical/Modern Lines".',
+                        'Descriptions must mention specific colors, shapes, and textures; avoid vague one-word themes.',
+                    ].join(' '),
                 }, {
                     role: "user",
-                    content: `Generate 3 concise wrapping paper designs for this occasion: ${occasion}`
+                    content: userBrief,
                 }],
-                temperature: 0.7,
-                max_tokens: 200,
+                temperature: 0.85,
+                max_tokens: 700,
                 response_format: {
                     type: "json_schema",
                     json_schema: {
@@ -2504,28 +2642,13 @@ app.post('/generate-ideas', async (req, res) => {
                 throw new Error('OpenAI returned empty structured content');
             }
             const designsData = JSON.parse(rawContent);
-            designs = Array.isArray(designsData?.designs) ? designsData.designs : [];
+            designs = sanitizeDesignIdeas(designsData?.designs);
         } catch (openAiError) {
             console.error('[generate-ideas] OpenAI structured output failed; using fallback text designs:', openAiError.message);
         }
 
-        // Always return useful choices even when OpenAI structured output is unavailable.
-        if (!Array.isArray(designs) || designs.length === 0) {
-            const safeOccasion = String(occasion || 'gift').trim() || 'gift';
-            designs = [
-                {
-                    title: `${safeOccasion} Confetti`,
-                    description: `Playful repeating confetti and ribbon motifs inspired by ${safeOccasion}. Balanced colors, clean shapes, seamless pattern.`
-                },
-                {
-                    title: `${safeOccasion} Botanical`,
-                    description: `Soft floral and leaf geometry themed for ${safeOccasion}. Elegant spacing, subtle contrast, seamless wrapping-paper texture.`
-                },
-                {
-                    title: `${safeOccasion} Modern Lines`,
-                    description: `Modern abstract lines and geometric accents for ${safeOccasion}. Contemporary palette, high legibility, seamless repeat.`
-                }
-            ];
+        if (!Array.isArray(designs) || designs.length < 3) {
+            designs = buildOccasionFallbackDesigns(safeOccasion, safeProduct);
         }
 
         console.log(`[generate-ideas] Generated ${designs.length} design descriptions`);

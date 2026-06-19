@@ -1,4 +1,5 @@
 import { AdminPricingEditor } from "@/components/admin-pricing-editor";
+import { WrrapdLogo } from "@/components/wrrapd-logo";
 import { getSession } from "@/lib/auth";
 import {
   fetchWrrapdPricingConfig,
@@ -45,7 +46,8 @@ export default async function AdminPricingPage() {
       <a href="/admin" className="text-sm text-blue-700 underline">
         Back to Command Center
       </a>
-      <h1 className="mt-3 text-3xl font-semibold">Dynamic pricing</h1>
+      <WrrapdLogo className="mt-4 h-10 w-auto max-w-[180px] object-contain object-left" />
+      <h1 className="mt-2 text-3xl font-semibold">Dynamic pricing</h1>
       <p className="mt-1 text-sm text-slate-600">
         Adjust Wrrapd gift-wrap, AI/upload add-ons, and flowers pricing for each retailer. Changes apply to new
         checkout sessions after save (extension caches prices for about five minutes).

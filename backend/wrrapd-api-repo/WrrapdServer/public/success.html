@@ -76,16 +76,14 @@
             Thank you for your purchase! Your payment was completed successfully.
             You will receive a confirmation email with further details shortly.
         </p>
-        <p id="redirect-message" style="font-weight: bold;">
-            Re-directing to Amazon page in <span id="countdown">5</span> seconds.
-            Please complete your Amazon order!
-        </p>
+        <p id="redirect-message" style="font-weight: bold;"></p>
     </div>
 
     <script>
         (async function notifyOpenerThenCountdown() {
             const params = new URLSearchParams(window.location.search);
             const sessionId = params.get('session_id');
+            const retailerParam = (params.get('retailer') || 'Amazon').trim() || 'Amazon';
 
             if (sessionId && window.opener) {
                 try {
@@ -107,6 +105,24 @@
                     }
                 } catch (e) {
                     console.error('[success] notify opener failed:', e);
+                }
+            }
+
+            const retailerLabel = retailerParam;
+            const redirectMessage = document.getElementById('redirect-message');
+            if (redirectMessage) {
+                if (/^amazon$/i.test(retailerParam)) {
+                    redirectMessage.innerHTML =
+                        'Re-directing to Amazon in <span id="countdown">5</span> seconds. ' +
+                        'Please complete your Amazon order!';
+                } else {
+                    redirectMessage.innerHTML =
+                        'Re-directing to ' +
+                        retailerLabel +
+                        ' in <span id="countdown">5</span> seconds. ' +
+                        'Please complete your ' +
+                        retailerLabel +
+                        ' order!';
                 }
             }
 

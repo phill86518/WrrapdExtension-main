@@ -98,10 +98,17 @@ function isValidYyyyMmDd(key: string): boolean {
 function parseExplicitRetailer(p: IngestOrderPayload, invalidFields: string[]): OrderRetailer | undefined {
   const raw = str(p.retailer);
   if (!raw) return undefined;
-  const lo = raw.toLowerCase();
+  const lo = raw.toLowerCase().replace(/['']/g, "");
   if (lo === "amazon") return "Amazon";
   if (lo === "target") return "Target";
   if (lo === "lego") return "Lego";
+  if (lo === "ulta") return "Ulta";
+  if (lo === "walmart") return "Walmart";
+  if (lo === "nordstrom") return "Nordstrom";
+  if (lo === "kohls" || lo === "kohls") return "Kohl's";
+  if (lo === "sephora") return "Sephora";
+  if (lo === "bestbuy" || lo === "best buy") return "Best Buy";
+  if (lo === "etsy") return "Etsy";
   invalidFields.push("retailer");
   return undefined;
 }

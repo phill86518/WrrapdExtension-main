@@ -1,15 +1,23 @@
 import { initRetailerCheckoutPayFlow } from "../../shared/retailer-checkout-pay-flow.js";
 import { fillHubShippingFieldsByAutocomplete } from "../../shared/wrrapd-hub.js";
-import { NORDSTROM_CHECKOUT_URL_HINTS, NORDSTROM_SESSION_PREFIX } from "./constants.js";
+import {
+  NORDSTROM_CART_URL_HINTS,
+  NORDSTROM_CHECKOUT_URL_HINTS,
+  NORDSTROM_SESSION_PREFIX,
+} from "./constants.js";
 import { extractNordstromCartSnapshot } from "./retailer-bootstrap.js";
 
 function normalizeWhitespace(value) {
   return String(value || "").replace(/\s+/g, " ").trim();
 }
 
-function isNordstromCheckoutPage() {
+/** Shopping bag + checkout: gate "Check Out" on the bag page and place-order on checkout. */
+function isNordstromPayGatePage() {
   const path = location.pathname.toLowerCase();
-  return NORDSTROM_CHECKOUT_URL_HINTS.some((h) => path.includes(h));
+  return (
+    NORDSTROM_CART_URL_HINTS.some((h) => path.includes(h)) ||
+    NORDSTROM_CHECKOUT_URL_HINTS.some((h) => path.includes(h))
+  );
 }
 
 function findNordstromCheckoutButtons() {
@@ -24,15 +32,16 @@ function findNordstromCheckoutButtons() {
   };
 
   for (const sel of [
+    "a[href='/checkout']",
     "button[type='submit'][data-testid='place-order-button']",
     "button[data-testid='checkout-submit-button']",
   ]) {
     document.querySelectorAll(sel).forEach(add);
   }
 
-  for (const node of document.querySelectorAll("button, a[role='button'], input[type='submit']")) {
+  for (const node of document.querySelectorAll("button, a[role='button'], input[type='submit'], a[href='/checkout']")) {
     const text = normalizeWhitespace(node.textContent || node.value || "");
-    if (/^(place order|submit order|review order)$/i.test(text)) add(node);
+    if (/^(check out|checkout|place order|submit order|review order)$/i.test(text)) add(node);
   }
 
   return buttons;
@@ -45,10 +54,21 @@ function findNordstromCheckoutButton() {
 const NORDSTROM_PAY_SLOT_ID = "wrrapd-nordstrom-checkout-pay-slot";
 
 /**
- * Mount Wrrapd payment at the top of checkout so customers pay Wrrapd before
- * Nordstrom payment / Review Order — not buried at the bottom of the page.
+ * Mount Wrrapd payment above the bag "Check Out" link or at the top of checkout
+ * so customers pay Wrrapd before Nordstrom payment / Review Order.
  */
 function findNordstromSummaryMountAnchor() {
+  const checkoutLink = document.querySelector("a[href='/checkout']");
+  if (checkoutLink) {
+    const block = checkoutLink.closest("div");
+    if (block?.parentElement) {
+      return { parent: block.parentElement, before: block };
+    }
+    if (checkoutLink.parentElement) {
+      return { parent: checkoutLink.parentElement, before: checkoutLink };
+    }
+  }
+
   let slot = document.getElementById(NORDSTROM_PAY_SLOT_ID);
   if (slot && !slot.isConnected) slot = null;
 
@@ -74,7 +94,7 @@ export function initNordstromCheckoutPayFlow() {
     retailerName: "Nordstrom",
     payRoute: "nordstrom",
     sessionPrefix: NORDSTROM_SESSION_PREFIX,
-    isCheckoutPage: isNordstromCheckoutPage,
+    isCheckoutPage: isNordstromPayGatePage,
     findCheckoutButton: findNordstromCheckoutButton,
     findGatedCheckoutButtons: findNordstromCheckoutButtons,
     findSummaryMountAnchor: findNordstromSummaryMountAnchor,

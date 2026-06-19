@@ -2380,7 +2380,8 @@
                             '*'
                         );
                     }
-                    window.location.href = '/success';
+                    window.location.href =
+                        '/success?retailer=' + encodeURIComponent(checkoutRetailer);
                 } catch (error) {
                     alert(`Payment could not complete: ${error.message || error}. If this persists, check your network connection and try again.`);
                     submitButton.textContent = 'Pay Now';

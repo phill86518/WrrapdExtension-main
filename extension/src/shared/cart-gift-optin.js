@@ -20,6 +20,7 @@ import {
 } from "./cart-gift-sync.js";
 import { buildOccasionSelect, isValidOccasion } from "./occasions.js";
 import { buildWrrapdTermsHtml } from "./wrrapd-terms.js";
+import { createWrrapdBrandLogo } from "./wrrapd-brand.js";
 
 function normalizeWhitespace(value) {
   return String(value || "").replace(/\s+/g, " ").trim();
@@ -547,7 +548,11 @@ function openGiftChoicesModal(config, cartSnapshot) {
       const resp = await fetch("https://api.wrrapd.com/generate-ideas", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ occasion: prompt }),
+        body: JSON.stringify({
+          occasion: prompt,
+          productTitle: lines[currentIdx]?.title || lines[0]?.title || "",
+          retailer: config.retailerLabel || "",
+        }),
         signal: controller.signal,
       });
       clearTimeout(timeoutId);
@@ -847,14 +852,11 @@ function mountCartGiftOptIn(config, cartSnapshot) {
 
   const brandRow = document.createElement("div");
   brandRow.style.cssText = "display:flex;align-items:center;gap:8px;margin:0 0 6px;";
-  const brandBadge = document.createElement("span");
-  brandBadge.style.cssText =
-    "display:inline-flex;align-items:center;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#fff;background:#111827;border-radius:999px;padding:3px 8px;";
-  brandBadge.textContent = "Wrrapd";
+  const brandLogo = createWrrapdBrandLogo(22);
   const brandTag = document.createElement("span");
   brandTag.style.cssText = "font-size:12px;font-weight:600;color:#ff8e14;letter-spacing:.02em;";
   brandTag.textContent = "Gift wrapping, handwritten note & flowers";
-  brandRow.append(brandBadge, brandTag);
+  brandRow.append(brandLogo, brandTag);
 
   const hook = document.createElement("h2");
   hook.style.cssText = "margin:0 0 4px;font-size:17px;font-weight:800;color:#111827;line-height:1.3;";
@@ -866,14 +868,33 @@ function mountCartGiftOptIn(config, cartSnapshot) {
     config.subtitle ||
     "Add premium gift wrap, a handwritten card, and optional flowers. We wrap it and ship it to your giftee — no printer, no scissors, no awkward receipt.";
 
+  let tierNotice = null;
+  if (config.shippingTierHint) {
+    tierNotice = document.createElement("p");
+    tierNotice.style.cssText =
+      "margin:0 0 12px;padding:10px 12px;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;font-size:13px;line-height:1.5;color:#78350f;";
+    const retailer = config.retailerLabel || "This store";
+    tierNotice.innerHTML =
+      `<strong>Please note:</strong> ${retailer} ships an entire order to one address — unlike Amazon, we cannot send items to different recipients in the same checkout. ` +
+      "If only some items should be gift-wrapped, please place those in a separate order. " +
+      "When you choose Wrrapd for this order, every item here will be wrapped and forwarded together.";
+  }
+
+  let statusBanner = null;
   if (giftFlowComplete(config)) {
-    wrap.append(buildSavedBanner(config));
+    statusBanner = buildSavedBanner(config);
   } else if (syncResult.requiresReview && readGiftRadio(config.sessionPrefix) === "yes") {
-    wrap.append(buildCartChangedNotice());
+    statusBanner = buildCartChangedNotice();
   }
 
   const fieldset = document.createElement("fieldset");
   fieldset.style.cssText = "border:none;padding:0;margin:0;";
+
+  let storedRadio = readGiftRadio(config.sessionPrefix);
+  if (!storedRadio) {
+    writeGiftRadio(config.sessionPrefix, "no");
+    storedRadio = "no";
+  }
 
   const mkRow = (value, labelText) => {
     const lab = document.createElement("label");
@@ -884,8 +905,7 @@ function mountCartGiftOptIn(config, cartSnapshot) {
     inp.name = `${config.sessionPrefix}-gift`;
     inp.value = value;
     inp.style.marginTop = "3px";
-    const stored = readGiftRadio(config.sessionPrefix);
-    if (stored === value && (value !== "yes" || giftFlowComplete(config))) {
+    if (storedRadio === value && (value !== "yes" || giftFlowComplete(config))) {
       inp.checked = true;
     }
     inp.addEventListener("click", () => {
@@ -923,7 +943,10 @@ function mountCartGiftOptIn(config, cartSnapshot) {
   edit.hidden = !giftFlowComplete(config);
   edit.addEventListener("click", () => openGiftChoicesModal(config, cartSnapshot));
 
-  wrap.append(brandRow, hook, sub, fieldset, edit);
+  wrap.append(brandRow, hook, sub);
+  if (tierNotice) wrap.append(tierNotice);
+  if (statusBanner) wrap.append(statusBanner);
+  wrap.append(fieldset, edit);
   wrap.dataset.wrrapdUiSig = uiSig;
   if (anchor.before) anchor.parent.insertBefore(wrap, anchor.before);
   else anchor.parent.append(wrap);

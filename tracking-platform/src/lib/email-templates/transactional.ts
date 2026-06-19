@@ -101,6 +101,8 @@ export function thankYouEmailHtml(input: {
   addressLine: string;
   scheduledEtLabel: string;
   lineItems?: OrderLineItem[];
+  /** When false, omit the Track your delivery button (non-Amazon orders). */
+  showTrackingLink?: boolean;
 }): string {
   const wrappedRows = (input.lineItems || [])
     .map((li) => {
@@ -150,9 +152,13 @@ export function thankYouEmailHtml(input: {
       <table role="presentation" width="100%">${wrappedRows}</table>`
           : ""
       }
-      <p style="margin:20px 0 0;">
+      ${
+        input.showTrackingLink !== false
+          ? `<p style="margin:20px 0 0;">
         <a href="${escapeAttr(input.trackingUrl)}" style="display:inline-block;background:#1a3d2e;color:#fff;text-decoration:none;padding:12px 22px;border-radius:8px;font-size:14px;font-weight:600;">Track your delivery</a>
-      </p>
+      </p>`
+          : ""
+      }
     </td></tr>
   </table>
 </td></tr>
