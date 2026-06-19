@@ -34,6 +34,7 @@ import {
 } from "./cart-gift-sync.js";
 import { hubAsPaymentAddress, hubPostal5 } from "./wrrapd-hub.js";
 import { buildGiftWrapInvoiceRows } from "./wrrapd-invoice-lines.js";
+import { generateWrrapdOrderNumber } from "./wrrapd-order-code.js";
 
 const PAY_ORIGIN = "https://pay.wrrapd.com";
 const SUMMARY_HOST_ATTR = "data-wrrapd-pay-summary-host";
@@ -69,9 +70,7 @@ function gifteeZip5(prefix) {
 }
 
 function generateOrderNumber(retailerName) {
-  const tag = String(retailerName || "WRRAPD").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6) || "WRRAPD";
-  const rand = Math.random().toString(36).slice(2, 8).toUpperCase();
-  return `${tag}-${Date.now().toString(36).toUpperCase()}-${rand}`;
+  return generateWrrapdOrderNumber(retailerName);
 }
 
 function readSession(key) {

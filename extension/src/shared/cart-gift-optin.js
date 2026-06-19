@@ -21,6 +21,7 @@ import {
 import { buildOccasionSelect, isValidOccasion } from "./occasions.js";
 import { buildWrrapdTermsHtml } from "./wrrapd-terms.js";
 import { createWrrapdBrandLogo } from "./wrrapd-brand.js";
+import { generateWrrapdOrderNumber } from "./wrrapd-order-code.js";
 
 function normalizeWhitespace(value) {
   return String(value || "").replace(/\s+/g, " ").trim();
@@ -32,8 +33,7 @@ function getOrCreateOrderNumber(prefix) {
   try {
     let on = sessionStorage.getItem(key);
     if (!on) {
-      const tag = String(prefix || "WRRAPD").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8) || "WRRAPD";
-      on = `${tag}-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+      on = generateWrrapdOrderNumber(prefix);
       sessionStorage.setItem(key, on);
     }
     return on;

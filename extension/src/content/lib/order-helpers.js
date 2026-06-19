@@ -35,7 +35,7 @@ export function generateOrderNumber(zipCode) {
   }
   const zipComponent = (100000 - zip).toString().padStart(5, '0');
   const counter = '01';
-  const orderNumber = `100-${yearHex}${timeComponent}-${zipComponent}${counter}`;
+  const orderNumber = `AZ-${yearHex}${timeComponent}-${zipComponent}${counter}`;
 
   console.log(`[generateOrderNumber] Generated order number: ${orderNumber}`);
   return orderNumber;
