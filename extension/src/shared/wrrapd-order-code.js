@@ -42,14 +42,27 @@ export function wrrapdRetailerCode(input) {
   return "WR";
 }
 
+/** Exactly `n` uppercase base36 characters (robust against short Math.random output). */
+function randBase36(n) {
+  let s = "";
+  while (s.length < n) s += Math.random().toString(36).slice(2);
+  return s.slice(0, n).toUpperCase();
+}
+
 /**
- * `<CODE>-<base36 time>-<random>` — e.g. `SF-MQK3ATYM-R6LJUM`.
+ * Every Wrrapd order number — for every retailer — uses one identical
+ * fixed-length shape: `CC-TTTTTTTTT-RRRRRR`
+ *   - `CC`        2-letter retailer code
+ *   - `TTTTTTTTT` 9-char base36 timestamp (zero-padded; chronological)
+ *   - `RRRRRR`    6-char base36 random
+ * Total length is always 19 characters, identical across Amazon, LEGO, and
+ * every other retailer.
  * @param {string} input retailer name or session prefix
  * @returns {string}
  */
 export function generateWrrapdOrderNumber(input) {
   const code = wrrapdRetailerCode(input);
-  const ts = Date.now().toString(36).toUpperCase();
-  const rand = Math.random().toString(36).slice(2, 8).toUpperCase();
-  return `${code}-${ts}-${rand}`;
+  const time = Date.now().toString(36).toUpperCase().padStart(9, "0").slice(-9);
+  const rand = randBase36(6);
+  return `${code}-${time}-${rand}`;
 }

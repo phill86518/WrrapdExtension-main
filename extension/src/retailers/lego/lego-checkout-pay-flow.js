@@ -19,6 +19,7 @@ import { readLegoCartSnapshot, syncLegoCartGiftState } from "./lego-cart-extract
 import { refreshLegoGifteeShippingAddressFill } from "./lego-giftee-shipping-fill.js";
 import { buildWrrapdTermsHtml } from "../../shared/wrrapd-terms.js";
 import { buildGiftWrapInvoiceRows } from "../../shared/wrrapd-invoice-lines.js";
+import { generateWrrapdOrderNumber } from "../../shared/wrrapd-order-code.js";
 
 const TERMS_MODAL_ID = "wrrapd-lego-terms-modal";
 const HUB_MODAL_ID = "wrrapd-lego-hub-modal";
@@ -251,9 +252,7 @@ function buildLegoPricingCart() {
 }
 
 function generateLegoOrderNumber() {
-  const zip = hubPostalForPricing();
-  const rnd = Math.floor(1000 + Math.random() * 9000);
-  return `LG${zip}${rnd}`;
+  return generateWrrapdOrderNumber("lego");
 }
 
 function setNativeInputValue(el, value) {
