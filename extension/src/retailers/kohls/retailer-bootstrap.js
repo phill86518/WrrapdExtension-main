@@ -4,6 +4,7 @@ import {
   describeTierForUi,
 } from "../../content/retailer-common.js";
 import { initRetailerCartGiftOptIn } from "../../shared/cart-gift-optin.js";
+import { initWrrapdConflictGuard } from "../../shared/wrrapd-conflict-guard.js";
 import {
   KOHLS_CART_OPTIN_DATA_ATTR,
   KOHLS_CART_URL_HINTS,
@@ -207,6 +208,12 @@ export function initKohlsRetailerBootstrap() {
     isCartPage: () => KOHLS_CART_URL_HINTS.some((h) => location.pathname.toLowerCase().includes(h)),
     isCartEmpty: () => isKohlsCartEmpty(document),
     getCartSnapshot: () => extractKohlsCartSnapshot(document),
+  });
+
+  initWrrapdConflictGuard({
+    sessionPrefix: KOHLS_SESSION_PREFIX,
+    retailerLabel: "Kohl's",
+    savedBannerAttr: KOHLS_SAVED_BANNER_ATTR,
   });
 
   exposeDebugGlobal("__WRRAPD_KOHLS_DEBUG__", {

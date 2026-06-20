@@ -4,6 +4,7 @@ import {
   describeTierForUi,
 } from "../../content/retailer-common.js";
 import { initRetailerCartGiftOptIn } from "../../shared/cart-gift-optin.js";
+import { initWrrapdConflictGuard } from "../../shared/wrrapd-conflict-guard.js";
 import {
   TARGET_CART_OPTIN_DATA_ATTR,
   TARGET_CART_URL_HINTS,
@@ -123,6 +124,12 @@ export function initTargetRetailerBootstrap() {
     findMountAnchor: findTargetWrrapdMountAnchor,
     isCartPage: () => TARGET_CART_URL_HINTS.some((h) => location.pathname.toLowerCase().includes(h)),
     getCartSnapshot: () => extractTargetCartSnapshot(document),
+  });
+
+  initWrrapdConflictGuard({
+    sessionPrefix: TARGET_SESSION_PREFIX,
+    retailerLabel: "Target",
+    savedBannerAttr: TARGET_SAVED_BANNER_ATTR,
   });
 
   exposeDebugGlobal("__WRRAPD_TARGET_DEBUG__", {

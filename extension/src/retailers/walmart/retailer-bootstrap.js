@@ -4,6 +4,7 @@ import {
   describeTierForUi,
 } from "../../content/retailer-common.js";
 import { initRetailerCartGiftOptIn } from "../../shared/cart-gift-optin.js";
+import { initWrrapdConflictGuard } from "../../shared/wrrapd-conflict-guard.js";
 import {
   WALMART_CART_OPTIN_DATA_ATTR,
   WALMART_CART_URL_HINTS,
@@ -102,6 +103,12 @@ export function initWalmartRetailerBootstrap() {
       "Premium gift wrap, a handwritten card, and optional flowers — wrapped by Wrrapd and shipped to your giftee.",
     modalIntro:
       "Add a gift message per item. You'll complete Wrrapd's secure payment during checkout, then we wrap and ship to your giftee.",
+  });
+
+  initWrrapdConflictGuard({
+    sessionPrefix: WALMART_SESSION_PREFIX,
+    retailerLabel: "Walmart",
+    savedBannerAttr: WALMART_SAVED_BANNER_ATTR,
   });
 
   exposeDebugGlobal("__WRRAPD_WALMART_DEBUG__", {

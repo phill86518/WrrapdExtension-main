@@ -4,6 +4,7 @@ import {
   describeTierForUi,
 } from "../../content/retailer-common.js";
 import { initRetailerCartGiftOptIn } from "../../shared/cart-gift-optin.js";
+import { initWrrapdConflictGuard } from "../../shared/wrrapd-conflict-guard.js";
 import {
   BESTBUY_CART_OPTIN_DATA_ATTR,
   BESTBUY_CART_URL_HINTS,
@@ -194,6 +195,12 @@ export function initBestbuyRetailerBootstrap() {
     isCartPage: () => BESTBUY_CART_URL_HINTS.some((h) => location.pathname.toLowerCase().includes(h)),
     isCartEmpty: () => isBestbuyCartEmpty(document),
     getCartSnapshot: () => extractBestbuyCartSnapshot(document),
+  });
+
+  initWrrapdConflictGuard({
+    sessionPrefix: BESTBUY_SESSION_PREFIX,
+    retailerLabel: "Best Buy",
+    savedBannerAttr: BESTBUY_SAVED_BANNER_ATTR,
   });
 
   exposeDebugGlobal("__WRRAPD_BESTBUY_DEBUG__", {
