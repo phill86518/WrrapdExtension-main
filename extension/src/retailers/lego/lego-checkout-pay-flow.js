@@ -470,7 +470,7 @@ function mountSummaryNearButton(btn, invoiceRows, totalCents, paid) {
 
   const h = document.createElement("div");
   h.style.cssText = "font-weight:700;font-size:16px;margin-bottom:8px;color:#92400e;";
-  h.textContent = "Your Wrrapd gift order";
+  h.textContent = "Your Wrrapd gift-wrap order";
 
   const linesWrap = document.createElement("div");
   linesWrap.style.cssText = "margin:0 0 4px;display:flex;flex-direction:column;gap:8px;";

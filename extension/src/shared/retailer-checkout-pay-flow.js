@@ -41,7 +41,7 @@ const SUMMARY_HOST_ATTR = "data-wrrapd-pay-summary-host";
 
 /** Default customer-facing payment panel copy (override per retailer via config). */
 const DEFAULT_PAY_COPY = Object.freeze({
-  panelTitle: "Your Wrrapd gift order",
+  panelTitle: "Your Wrrapd gift-wrap order",
   lineGiftWrap: "Gift-wrapping",
   pendingHint: "Please complete payment to Wrrapd before continuing.",
   successHint: "Thank you! Your payment was received — you may continue checkout.",
