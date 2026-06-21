@@ -4135,46 +4135,91 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
         }
     }
 
+    // Parses a single one-line US address string of the form:
+    //   "123 Main St, Jacksonville, FL, 32218-6002, US"
+    // Returns { street, city, state, postalCode, country } or null.
+    function parseAmazonAddressLine(line) {
+        if (!line) return null;
+        const addressRegex = /^(.*?),\s*(.*?),\s*([A-Z]{2}),\s*(\d{5})(?:-\d{4})?,\s*(.*)$/;
+        const match = String(line).trim().match(addressRegex);
+        if (!match) return null;
+        const [, street, city, state, postalCode, country] = match;
+        if (!street || !city || !state) return null;
+        return {
+            street: street.trim(),
+            city: city.trim(),
+            state: state.trim(),
+            postalCode: postalCode.trim(),
+            country: (country || '').trim() || 'United States',
+        };
+    }
+
+    // Fallback scraper for checkout layouts that do NOT expose the classic
+    // `.list-address-selected` block — e.g. multi-address / `pipelineType=Chewbacca`
+    // checkouts. These still render a visible "Delivering to <Name>" header followed by
+    // the address line, so we scan visible text for both.
+    function scrapeVisibleDeliveryAddress() {
+        let name = null;
+        let parsed = null;
+
+        const nodes = document.querySelectorAll('div, span, p, li, h1, h2, h3, h4');
+        for (const el of nodes) {
+            if (!el || el.offsetParent === null) continue;
+            const text = (el.innerText || '').trim();
+            if (!text || text.length > 400) continue;
+
+            if (!name) {
+                const nm = text.match(/^Deliver(?:ing)?\s+to[:\s]+(.+)$/i);
+                if (nm) name = nm[1].split('\n')[0].trim();
+            }
+
+            if (!parsed) {
+                const lines = text.split('\n');
+                for (const line of lines) {
+                    const p = parseAmazonAddressLine(line);
+                    if (p) { parsed = p; break; }
+                }
+            }
+
+            if (name && parsed) break;
+        }
+
+        if (!parsed) return null;
+        return { name: name || '', ...parsed };
+    }
+
     function extractDefaultAddress() {
         console.log("[extractDefaultAddress] Extracting default address from the page.");
-    
+
+        // Strategy 1: classic "selected address" block (single-address checkout).
         const defaultNameElement = document.querySelector('.list-address-selected .a-text-bold > .break-word');
         const defaultAddressElement = document.querySelector('.list-address-selected .a-label > .break-word');
-    
+
         const name = defaultNameElement ? defaultNameElement.innerText.trim() : null;
         const fullAddress = defaultAddressElement ? defaultAddressElement.innerText.trim() : null;
-    
+
         if (fullAddress) {
-            const addressRegex = /^(.*?),\s*(.*?),\s*([A-Z]{2}),\s*(\d{5})(?:-\d{4})?,\s*(.*)$/;
-            const match = fullAddress.match(addressRegex);
-    
-            if (match) {
-                const [_, street, city, state, postalCode, country] = match;
-    
-                console.log("[extractDefaultAddress] Address Parts:");
-                console.log(`[extractDefaultAddress] Name: ${name}`);
-                console.log(`[extractDefaultAddress] Street: ${street}`);
-                console.log(`[extractDefaultAddress] City: ${city}`);
-                console.log(`[extractDefaultAddress] State: ${state}`);
-                console.log(`[extractDefaultAddress] Postal Code: ${postalCode}`);
-                console.log(`[extractDefaultAddress] Country: ${country}`);
-    
-                const addressObject = { name, street, city, state, postalCode, country };
-    
-                // Guardar en localStorage
+            const parsed = parseAmazonAddressLine(fullAddress);
+            if (parsed) {
+                const addressObject = { name: name || '', ...parsed };
                 localStorage.setItem('wrrapd-default-address', JSON.stringify(addressObject));
                 // Do NOT snapshot giftee here: this is the account default ("Deliver to" list), not the
                 // per-line recipient for Wrrapd-wrapped items. Snapshotting can overwrite real giftee data on mixed carts.
-                console.log("[extractDefaultAddress] Address saved to localStorage:", addressObject);
-    
+                console.log("[extractDefaultAddress] Address saved (classic block):", addressObject);
                 return addressObject;
-            } else {
-                console.error("[extractDefaultAddress] Unable to parse the address.");
             }
-        } else {
-            console.error("[extractDefaultAddress] No default address found.");
+            console.warn("[extractDefaultAddress] Classic address block present but unparseable; trying fallback.");
         }
-    
+
+        // Strategy 2: visible "Delivering to" block (multi-address / Chewbacca layouts).
+        const scraped = scrapeVisibleDeliveryAddress();
+        if (scraped) {
+            localStorage.setItem('wrrapd-default-address', JSON.stringify(scraped));
+            console.log("[extractDefaultAddress] Address recovered via visible-delivery fallback:", scraped);
+            return scraped;
+        }
+
+        console.error("[extractDefaultAddress] No default address found (all strategies failed).");
         return null;
     }
 
@@ -11207,7 +11252,14 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                 console.log("[createWrrapdSummary] 'Pay Wrrapd' button clicked. Initiating payment.");
 
                 try {
-                    const addressData = localStorage.getItem('wrrapd-default-address');
+                    let addressData = localStorage.getItem('wrrapd-default-address');
+                    if (!addressData) {
+                        // Last-ditch: scrape the address straight off the current checkout page.
+                        // Handles multi-address / pipelineType=Chewbacca layouts where the classic
+                        // selected-address block isn't present but the address IS visible on the page.
+                        const recovered = extractDefaultAddress();
+                        if (recovered) addressData = JSON.stringify(recovered);
+                    }
                     if (!addressData) {
                         payBtn.dataset.wrrapdPayInFlight = '0';
                         payBtn.disabled = false;
@@ -11217,7 +11269,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                         payBtn.style.backgroundColor = '#f0c14b';
                         payBtn.style.color = 'black';
                         payBtn.textContent = 'Pay Wrrapd';
-                        alert('Default address information is missing. Please set your address before proceeding.');
+                        alert("We couldn't read a shipping address from this Amazon checkout. Please set or select your default delivery address in Amazon first, then choose the Wrrapd gift-wrapping option again.");
                         return;
                     }
 
