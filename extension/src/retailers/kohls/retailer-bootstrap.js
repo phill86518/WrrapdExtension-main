@@ -8,6 +8,7 @@ import { initWrrapdConflictGuard } from "../../shared/wrrapd-conflict-guard.js";
 import {
   KOHLS_CART_OPTIN_DATA_ATTR,
   KOHLS_CART_URL_HINTS,
+  KOHLS_CHECKOUT_URL_HINTS,
   KOHLS_GIFT_MODAL_ID,
   KOHLS_SAVED_BANNER_ATTR,
   KOHLS_SESSION_PREFIX,
@@ -99,6 +100,10 @@ function extractKohlsItems(root = document) {
     "[data-testid='bag-item']",
     "[data-automation-id='cart-line-item']",
     "[data-automation-id='bag-item']",
+    ".bag-item",
+    ".cart-line-item",
+    "[class*='bag-item']",
+    "[class*='cart-line-item']",
   ];
   const seen = new Set();
   const nodes = [];
@@ -110,7 +115,7 @@ function extractKohlsItems(root = document) {
     }
   }
 
-  return nodes
+  const itemsFromNodes = nodes
     .map((node) => {
       const title = getTextBySelectors(
         [
@@ -122,9 +127,10 @@ function extractKohlsItems(root = document) {
           "h2",
           "h3",
           "a[title]",
+          "a[href*='/product/']",
           "a",
         ],
-        node
+        node,
       );
       if (!title) return null;
       const priceText = getTextBySelectors(
@@ -136,7 +142,7 @@ function extractKohlsItems(root = document) {
           ".price .amount",
           ".price",
         ],
-        node
+        node,
       );
       return {
         title,
@@ -147,6 +153,36 @@ function extractKohlsItems(root = document) {
       };
     })
     .filter(Boolean);
+
+  if (itemsFromNodes.length > 0) return itemsFromNodes;
+
+  /** Fallback: Kohl's bag lines often expose stable /product/prd-* links only. */
+  const linkSeen = new Set();
+  /** @type {ReturnType<typeof extractKohlsItems>} */
+  const fromLinks = [];
+  const scope =
+    root.querySelector("main, [role='main'], #main-content, .shopping-bag, .cart-container") || root;
+  for (const link of scope.querySelectorAll("a[href*='/product/prd-'], a[href*='/product/prd']")) {
+    const href = link.getAttribute("href") || "";
+    if (!href || linkSeen.has(href)) continue;
+    const title = normalizeWhitespace(link.getAttribute("title") || link.textContent || "");
+    if (!title || title.length < 4) continue;
+    linkSeen.add(href);
+    const row =
+      link.closest("[data-testid='bag-item'], [data-automation-id='bag-item'], .bag-item, li, article, section, div") ||
+      link.parentElement;
+    const priceText = row
+      ? getTextBySelectors(["[data-testid='item-price']", ".price", "[class*='price']"], row)
+      : "";
+    fromLinks.push({
+      title,
+      priceText,
+      unitPrice: parseMoney(priceText),
+      quantity: row ? parseQuantity(row) : 1,
+      fulfillment: row ? detectFulfillment(row) : "unknown",
+    });
+  }
+  return fromLinks;
 }
 
 export function isKohlsCartEmpty(root = document) {
@@ -196,6 +232,14 @@ export function initKohlsRetailerBootstrap() {
   const shippingTierHint = describeTierForUi(SHIPPING_TIER_SINGLE);
   const cart = extractKohlsCartSnapshot(document);
 
+  const isKohlsCartOrCheckoutPage = () => {
+    const path = location.pathname.toLowerCase();
+    return (
+      KOHLS_CART_URL_HINTS.some((h) => path.includes(h)) ||
+      KOHLS_CHECKOUT_URL_HINTS.some((h) => path.includes(h))
+    );
+  };
+
   initRetailerCartGiftOptIn({
     sessionPrefix: KOHLS_SESSION_PREFIX,
     retailerLabel: "Kohl's",
@@ -203,9 +247,34 @@ export function initKohlsRetailerBootstrap() {
     savedBannerAttr: KOHLS_SAVED_BANNER_ATTR,
     modalId: KOHLS_GIFT_MODAL_ID,
     shippingTierHint,
-    checkoutButtonPatterns: [/^checkout$/i, /^proceed to checkout$/i],
-    summarySelector: "aside[data-testid='order-summary'], [data-testid='order-summary']",
-    isCartPage: () => KOHLS_CART_URL_HINTS.some((h) => location.pathname.toLowerCase().includes(h)),
+    checkoutButtonPatterns: [/^checkout$/i, /^proceed to checkout$/i, /^check out$/i],
+    summarySelector: "aside[data-testid='order-summary'], [data-testid='order-summary'], .order-summary",
+    findMountAnchor: () => {
+      for (const sel of [
+        "[data-testid='checkout-button']",
+        "[data-automation-id='checkout-button']",
+        "button[name='checkout']",
+        "a[href*='checkout']",
+      ]) {
+        const btn = document.querySelector(sel);
+        if (btn?.parentElement) return { parent: btn.parentElement, before: btn };
+      }
+      for (const node of document.querySelectorAll("button, a[role='button'], input[type='submit']")) {
+        const text = normalizeWhitespace(node.textContent || node.value || "");
+        if (/^(checkout|proceed to checkout|check out)$/i.test(text) && node.parentElement) {
+          return { parent: node.parentElement, before: node };
+        }
+      }
+      const summary = document.querySelector(
+        "aside[data-testid='order-summary'], [data-testid='order-summary'], .order-summary",
+      );
+      if (summary?.parentElement) return { parent: summary.parentElement, before: summary };
+      const main = document.querySelector("main, [role='main'], #main-content");
+      if (main) return { parent: main, before: main.firstElementChild };
+      return null;
+    },
+    isCartPage: isKohlsCartOrCheckoutPage,
+    isCheckoutPage: isKohlsCartOrCheckoutPage,
     isCartEmpty: () => isKohlsCartEmpty(document),
     getCartSnapshot: () => extractKohlsCartSnapshot(document),
   });

@@ -20,6 +20,7 @@ import { refreshLegoGifteeShippingAddressFill } from "./lego-giftee-shipping-fil
 import { buildWrrapdTermsHtml } from "../../shared/wrrapd-terms.js";
 import { buildGiftWrapInvoiceRows } from "../../shared/wrrapd-invoice-lines.js";
 import { generateWrrapdOrderNumber } from "../../shared/wrrapd-order-code.js";
+import { resolveTaxRatePercent, taxPostalForPricing, WRRAPD_DEFAULT_TAX_RATE_PERCENT } from "../../shared/wrrapd-tax.js";
 
 const TERMS_MODAL_ID = "wrrapd-lego-terms-modal";
 const HUB_MODAL_ID = "wrrapd-lego-hub-modal";
@@ -34,8 +35,9 @@ const WRRAPD_CHECKOUT_UNIT_PRICES_FALLBACK = Object.freeze({
 });
 
 let wrrapdCheckoutUnitPriceOverride = null;
-/** Whole-number sales-tax percent from api.wrrapd.com/pricing-preview (giftee ZIP), or null. */
-let legoPreviewTaxPercent = null;
+/** Whole-number sales-tax percent from api.wrrapd.com/pricing-preview, or Duval default. */
+let legoPreviewTaxPercent = WRRAPD_DEFAULT_TAX_RATE_PERCENT;
+let legoPricingFetchComplete = false;
 
 function findCheckoutSecurelyButton() {
   return (
@@ -86,7 +88,7 @@ async function refreshCheckoutUnitPricesFromServer(geo) {
       legoPreviewTaxPercent = j.estimatedSalesTaxPercent;
       gotTax = true;
     } else {
-      legoPreviewTaxPercent = null;
+      legoPreviewTaxPercent = WRRAPD_DEFAULT_TAX_RATE_PERCENT;
     }
     const up = j && j.unitPrices && typeof j.unitPrices === "object" ? j.unitPrices : null;
     if (!up) return gotTax;
@@ -107,6 +109,8 @@ async function refreshCheckoutUnitPricesFromServer(geo) {
     return pricesOk || gotTax;
   } catch (e) {
     console.warn("[LEGO pay] pricing-preview", e);
+  } finally {
+    legoPricingFetchComplete = true;
   }
   return false;
 }
@@ -215,8 +219,7 @@ function round2(n) {
 /** Matches server wrrapd-pricing tax line (giftee ZIP in pricingCart). */
 function computeLegoTotalBreakdown() {
   const sub = computeServiceSubtotalCents() / 100;
-  const tr =
-    legoPreviewTaxPercent != null && Number.isFinite(legoPreviewTaxPercent) ? legoPreviewTaxPercent : 0;
+  const tr = resolveTaxRatePercent(legoPreviewTaxPercent);
   const tax = round2(sub * (tr / 100));
   const total = round2(sub + tax);
   return {
@@ -229,9 +232,8 @@ function computeLegoTotalBreakdown() {
 
 function buildLegoPricingCart() {
   const allChoices = readLegoItemChoices();
-  const zipForTax = gifteeZip5() || hubPostalForPricing();
-  const tr =
-    legoPreviewTaxPercent != null && Number.isFinite(legoPreviewTaxPercent) ? legoPreviewTaxPercent : 0;
+  const zipForTax = taxPostalForPricing(gifteeZip5());
+  const tr = resolveTaxRatePercent(legoPreviewTaxPercent);
   const items = allChoices.length > 0
     ? allChoices.map((ch) => ({
         options: [{
@@ -457,7 +459,7 @@ export function clearLegoPaymentSummaryUi() {
 /**
  * @param {Array<{ label: string, amount: string | null }>} invoiceRows amount null = full-width note row
  */
-function mountSummaryNearButton(btn, invoiceRows, totalCents, paid) {
+function mountSummaryNearButton(btn, invoiceRows, totalCents, paid, payReady = true) {
   removeLegoPaymentSummary();
   const host = document.createElement("div");
   host.setAttribute(SUMMARY_HOST_ATTR, "1");
@@ -516,16 +518,22 @@ function mountSummaryNearButton(btn, invoiceRows, totalCents, paid) {
   payBtn.style.cssText = `
     padding:10px 18px;border-radius:8px;border:none;background:#f0c14b;color:#111;font-weight:700;
     cursor:pointer;font-size:14px;box-shadow:0 1px 2px rgba(0,0,0,.12);`;
-  payBtn.textContent = paid ? "Thank you — you may continue" : "Pay Wrrapd (secure window)";
+  payBtn.textContent = paid
+    ? "Thank you — you may continue"
+    : payReady
+      ? "Pay Wrrapd (secure window)"
+      : "Calculating total…";
 
   const status = document.createElement("span");
   status.style.fontSize = "14px";
   status.style.color = paid ? "#15803d" : "#64748b";
   status.textContent = paid
     ? "Thank you! Your payment was received — you may continue with Checkout Securely."
-    : "Please complete payment to Wrrapd before continuing with checkout.";
+    : !payReady
+      ? "Loading Wrrapd pricing…"
+      : "Please complete payment to Wrrapd before continuing with checkout.";
 
-  if (paid) payBtn.disabled = true;
+  if (paid || !payReady) payBtn.disabled = true;
 
   payRow.append(payBtn, status);
   host.append(h, linesWrap, total, payRow);
@@ -668,10 +676,13 @@ function buildSummaryLinesAndTotal() {
 }
 
 async function openLegoPaymentPopup() {
-  const zipGiftee = gifteeZip5();
+  if (!legoPricingFetchComplete) {
+    alert("Wrrapd pricing is still loading. Please wait a moment and try again.");
+    return;
+  }
   const geo = {
-    postalCode: zipGiftee || hubPostalForPricing(),
-    state: "",
+    postalCode: taxPostalForPricing(gifteeZip5()),
+    state: "FL",
     country: "US",
   };
   await refreshCheckoutUnitPricesFromServer(geo);
@@ -730,14 +741,15 @@ async function ensurePaymentSummaryUi() {
   const btn = findCheckoutSecurelyButton();
   if (!btn?.parentElement) return;
   await refreshCheckoutUnitPricesFromServer({
-    postalCode: gifteeZip5() || hubPostalForPricing(),
-    state: "",
+    postalCode: taxPostalForPricing(gifteeZip5()),
+    state: "FL",
     country: "US",
   });
   const paid = readLegoPaymentSuccess();
+  const payReady = legoPricingFetchComplete === true;
   const { invoiceRows, totalCents } = buildSummaryLinesAndTotal();
-  const { payBtn } = mountSummaryNearButton(btn, invoiceRows, totalCents, paid);
-  if (!paid) {
+  const { payBtn } = mountSummaryNearButton(btn, invoiceRows, totalCents, paid, payReady);
+  if (!paid && payReady) {
     payBtn.addEventListener("click", () => {
       openLegoPaymentPopup();
     });

@@ -28,9 +28,12 @@ import {
   readGiftRadio,
   writeGiftRadio,
   writePaymentSuccess,
+  WRRAPD_GIFT_RADIO_CHANGE_EVENT,
 } from "./cart-gift-session.js";
 
 const MODAL_ATTR = "data-wrrapd-conflict-modal";
+const PICKUP_LOCK_ATTR = "data-wrrapd-pickup-locked";
+const PICKUP_BADGE_ATTR = "data-wrrapd-pickup-badge";
 
 const DEFAULT_PICKUP_PATTERNS = [
   /\border\s*pickup\b/i,
@@ -226,6 +229,70 @@ function switchToNoThanks(config) {
   }
 }
 
+/** Visually disable a detected pickup control while Wrrapd is selected. */
+function lockPickupControl(el) {
+  if (!el || el.hasAttribute(PICKUP_LOCK_ATTR)) return;
+  el.setAttribute(PICKUP_LOCK_ATTR, "1");
+  el.dataset.wrrapdPrevCss = el.style.cssText || "";
+  el.style.opacity = "0.45";
+  el.style.pointerEvents = "none";
+  el.style.cursor = "not-allowed";
+  el.setAttribute("aria-disabled", "true");
+  el.title = "Unavailable while Wrrapd gift-wrapping is selected — items ship to the Wrrapd studio first.";
+
+  try {
+    const badge = document.createElement("span");
+    badge.setAttribute(PICKUP_BADGE_ATTR, "1");
+    badge.textContent = "Unavailable with Wrrapd";
+    badge.style.cssText =
+      "display:inline-block;margin-left:8px;padding:1px 7px;border-radius:9px;background:#fff3e0;" +
+      "color:#b45309;font-size:11px;font-weight:700;border:1px solid #fcd34d;vertical-align:middle;";
+    el.appendChild(badge);
+  } catch {
+    /* ignore */
+  }
+}
+
+function unlockPickupControl(el) {
+  if (!el) return;
+  el.removeAttribute(PICKUP_LOCK_ATTR);
+  el.style.cssText = el.dataset.wrrapdPrevCss || "";
+  delete el.dataset.wrrapdPrevCss;
+  el.removeAttribute("aria-disabled");
+  el.removeAttribute("title");
+  el.querySelectorAll?.(`[${PICKUP_BADGE_ATTR}]`).forEach((b) => b.remove());
+}
+
+/** Find the outermost selectable pickup controls on the page. */
+function findPickupControls(pickupPatterns) {
+  const out = [];
+  const seen = new Set();
+  const candidates = document.querySelectorAll(
+    'button, label, a[role="button"], [role="radio"], [role="tab"], [role="option"], [data-test*="pickup" i], [data-testid*="pickup" i]',
+  );
+  for (const el of candidates) {
+    if (seen.has(el)) continue;
+    if (el.closest(`[${MODAL_ATTR}]`)) continue;
+    const text = controlText(el);
+    if (!matchesAny(text, pickupPatterns)) continue;
+    // Skip if an ancestor we'll also lock already matches (lock the outer one only).
+    const outer = el.closest(`[${PICKUP_LOCK_ATTR}]`);
+    if (outer && outer !== el) continue;
+    seen.add(el);
+    out.push(el);
+  }
+  return out;
+}
+
+function applyPickupLock(config, pickupPatterns) {
+  const selected = wrrapdSelected(config.sessionPrefix);
+  if (!selected) {
+    document.querySelectorAll(`[${PICKUP_LOCK_ATTR}]`).forEach(unlockPickupControl);
+    return;
+  }
+  for (const el of findPickupControls(pickupPatterns)) lockPickupControl(el);
+}
+
 /**
  * @param {object} config
  * @param {string} config.sessionPrefix
@@ -239,6 +306,27 @@ export function initWrrapdConflictGuard(config) {
 
   const pickupPatterns = config.pickupPatterns || DEFAULT_PICKUP_PATTERNS;
   const addressPatterns = config.addressPatterns || DEFAULT_ADDRESS_PATTERNS;
+
+  // Visually disable pickup options whenever Wrrapd is selected, re-applying as the
+  // retailer's SPA re-renders. The click guard below remains a backstop.
+  let scheduled = 0;
+  const scheduleLock = () => {
+    if (scheduled) cancelAnimationFrame(scheduled);
+    scheduled = requestAnimationFrame(() => {
+      scheduled = 0;
+      applyPickupLock(config, pickupPatterns);
+    });
+  };
+  scheduleLock();
+  try {
+    new MutationObserver(scheduleLock).observe(document.documentElement, {
+      childList: true,
+      subtree: true,
+    });
+  } catch {
+    /* ignore */
+  }
+  window.addEventListener(WRRAPD_GIFT_RADIO_CHANGE_EVENT, scheduleLock);
 
   const onClick = (e) => {
     // Only genuine user clicks. Our own autofill fires untrusted clicks.

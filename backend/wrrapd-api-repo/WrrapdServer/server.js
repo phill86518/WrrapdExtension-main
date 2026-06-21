@@ -260,13 +260,11 @@ app.get('/api/pricing-preview', (req, res) => {
     };
     const retailer = typeof req.query.retailer === 'string' ? req.query.retailer : '';
     const r = wrrapdPricing.resolveWrrapdUnitPrices(geo, retailer);
-    const zip5 = String(geo.postalCode || '')
+    const zip5 = String(geo.postalCode || '32226')
         .replace(/\D/g, '')
-        .slice(0, 5);
-    let estimatedSalesTaxPercent = null;
-    if (zip5.length === 5) {
-        estimatedSalesTaxPercent = salesTaxZip.getCombinedRateAsTaxPercent(zip5);
-    }
+        .slice(0, 5) || '32226';
+    let estimatedSalesTaxPercent = salesTaxZip.getCombinedRateAsTaxPercent(zip5);
+    if (estimatedSalesTaxPercent === null) estimatedSalesTaxPercent = 7.5;
     res.status(200).json({
         ok: true,
         unitPrices: r.unitPrices,
@@ -799,10 +797,25 @@ function normalizePayRetailer(body) {
         (body && typeof body.retailer === 'string' && body.retailer) ||
         (body && typeof body.name_of_retailer === 'string' && body.name_of_retailer) ||
         '';
-    const lo = String(raw).trim().toLowerCase();
+    const lo = String(raw).trim().toLowerCase().replace(/['’]/g, '');
     if (lo === 'lego') return 'Lego';
     if (lo === 'target') return 'Target';
+    if (lo === 'ulta') return 'Ulta';
+    if (lo === 'walmart') return 'Walmart';
+    if (lo === 'nordstrom') return 'Nordstrom';
+    if (lo === 'kohls') return 'Kohls';
+    if (lo === 'sephora') return 'Sephora';
+    if (lo === 'bestbuy' || lo === 'best buy') return 'Best Buy';
+    if (lo === 'etsy') return 'Etsy';
     return 'Amazon';
+}
+
+/** Wrrapd scheduled instant = retailer's promised delivery day + 1, nominal 2:00 PM Eastern. */
+function wrrapdIsoFromRetailerYmd(ymd) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(ymd || ''))) return null;
+    const [y, m, d] = ymd.split('-').map(Number);
+    // 18:00Z ≈ 2:00 PM ET; +1 calendar day via Date.UTC normalization.
+    return new Date(Date.UTC(y, m - 1, d + 1, 18, 0, 0)).toISOString();
 }
 
 // Function to save order data to a JSON file
@@ -2278,11 +2291,10 @@ app.post('/process-payment', async (req, res) => {
                     sourceNote: `Lego order ${orderNumber}; ${wrappedOnly.length} Wrrapd item(s). [${WRRAPD_INGEST_VERSION}]`,
                     scheduledFor: legoScheduled,
                 };
-            } else {
-                const trackingRetailer = payRetailer === 'Target' ? 'Target' : 'Amazon';
+            } else if (payRetailer === 'Amazon') {
                 ingestPayload = {
                     ...ingestCommon,
-                    retailer: trackingRetailer,
+                    retailer: 'Amazon',
                     sourceNote: `Amazon order ${orderNumber}; ${wrappedOnly.length} Wrrapd item(s); Amazon dates ${
                         effectiveAmazonDays.join(', ') || fallbackAmazonDay
                     }; Wrrapd +1 (${
@@ -2297,6 +2309,31 @@ app.post('/process-payment', async (req, res) => {
                             // Always prefer Amazon date key input so tracking computes +1 day in America/New_York.
                             amazonDeliveryDay: fallbackAmazonDay,
                         }),
+                };
+            } else {
+                /**
+                 * Non-Amazon retailers (Target, Walmart, Nordstrom, Kohls, Sephora, Best Buy, Ulta, Etsy).
+                 * We can only schedule from the retailer's OWN promised delivery date when the extension
+                 * captured one at checkout. Wrrapd delivers that date + 1. When no date was captured we do
+                 * NOT fabricate a concrete date — the email falls back to safe wording, and scheduledFor is
+                 * a placeholder ops can adjust. Crucially: never route these through the Amazon +1 machinery
+                 * (it would trigger Amazon "choose your delivery date" flows).
+                 */
+                const retailerDays = [...new Set(
+                    wrappedOnly.map((it) => amazonDateKeyFromItem(it)).filter((d) => !!d)
+                )].sort();
+                const retailerDeliveryYmd = retailerDays.length ? retailerDays[retailerDays.length - 1] : null;
+                const scheduledForNonAmazon =
+                    wrrapdIsoFromRetailerYmd(retailerDeliveryYmd) ||
+                    new Date(Date.now() + 86400000).toISOString();
+                ingestPayload = {
+                    ...ingestCommon,
+                    retailer: payRetailer,
+                    sourceNote: retailerDeliveryYmd
+                        ? `${payRetailer} order ${orderNumber}; ${wrappedOnly.length} Wrrapd item(s); ${payRetailer} delivery ${retailerDeliveryYmd} → Wrrapd +1 day. [${WRRAPD_INGEST_VERSION}]`
+                        : `${payRetailer} order ${orderNumber}; ${wrappedOnly.length} Wrrapd item(s); no retailer delivery date captured → Wrrapd schedules retailer date + 1. [${WRRAPD_INGEST_VERSION}]`,
+                    scheduledFor: scheduledForNonAmazon,
+                    ...(retailerDeliveryYmd ? { retailerEstimatedDeliveryDate: retailerDeliveryYmd } : {}),
                 };
             }
             const ingestResult = await ingestOrderIntoTracking(ingestPayload);

@@ -16,6 +16,19 @@ import { formatInTimeZone } from "date-fns-tz";
 
 const NY = "America/New_York";
 
+/**
+ * Retailer's promised delivery day (YYYY-MM-DD, Eastern) + 1 day → long Eastern label,
+ * e.g. "Friday, June 26, 2026". Returns null when the date is missing/invalid.
+ */
+function formatRetailerDeliveryPlusOneEt(ymd: string | undefined): string | null {
+  if (!ymd || !/^\d{4}-\d{2}-\d{2}$/.test(ymd)) return null;
+  const [y, m, d] = ymd.split("-").map(Number);
+  // 16:00Z ≈ noon ET (avoids day flips); +1 calendar day via Date.UTC normalization.
+  const plusOne = new Date(Date.UTC(y, m - 1, d + 1, 16, 0, 0));
+  if (Number.isNaN(plusOne.getTime())) return null;
+  return formatInTimeZone(plusOne, NY, "EEEE, MMMM d, yyyy");
+}
+
 export type PostOrderNotifySummary = {
   skipped: boolean;
   skipReason?: string;
@@ -103,13 +116,21 @@ export async function sendPostOrderNotifications(order: Order): Promise<PostOrde
   const addressLine = `${order.addressLine1}, ${order.city}, ${order.state} ${order.postalCode}`;
   const isAmazon = !order.retailer || order.retailer === "Amazon";
   const retailerLabel = order.retailer || "Your retailer";
-  const scheduledEtLabel = isAmazon
-    ? formatWrrapdDeliveryWindowEtForNotifications({
-        scheduledFor: order.scheduledFor,
-        amazonDeliveryDatesSnapshot: order.amazonDeliveryDatesSnapshot,
-        deliveryPreferenceChoice: order.deliveryPreferenceChoice,
-      })
-    : `${retailerLabel}'s delivery date + 1 day`;
+  let scheduledEtLabel: string;
+  if (isAmazon) {
+    scheduledEtLabel = formatWrrapdDeliveryWindowEtForNotifications({
+      scheduledFor: order.scheduledFor,
+      amazonDeliveryDatesSnapshot: order.amazonDeliveryDatesSnapshot,
+      deliveryPreferenceChoice: order.deliveryPreferenceChoice,
+    });
+  } else {
+    // Wrrapd delivers the retailer's promised date + 1 day. Show the real date only when the
+    // extension captured it at checkout; otherwise use safe wording (never a fabricated date).
+    const retailerDatePlusOne = formatRetailerDeliveryPlusOneEt(order.retailerEstimatedDeliveryDate);
+    scheduledEtLabel = retailerDatePlusOne
+      ? `${retailerDatePlusOne} (estimated)`
+      : `${retailerLabel}'s estimated delivery date + 1 day`;
+  }
   /** Customer-facing reference only (no internal ord-*). */
   const customerVisibleRef =
     order.externalOrderId?.trim() || order.recipientName?.trim() || "your Wrrapd order";

@@ -32,9 +32,15 @@ import {
   WRRAPD_CART_SYNC_EVENT,
   writeCartFingerprint,
 } from "./cart-gift-sync.js";
-import { hubAsPaymentAddress, hubPostal5 } from "./wrrapd-hub.js";
+import { hubAsPaymentAddress } from "./wrrapd-hub.js";
 import { buildGiftWrapInvoiceRows } from "./wrrapd-invoice-lines.js";
+import { captureRetailerDeliveryDate } from "./retailer-delivery-date.js";
 import { generateWrrapdOrderNumber } from "./wrrapd-order-code.js";
+import {
+  resolveTaxRatePercent,
+  taxPostalForPricing,
+  WRRAPD_DEFAULT_TAX_RATE_PERCENT,
+} from "./wrrapd-tax.js";
 
 const PAY_ORIGIN = "https://pay.wrrapd.com";
 const SUMMARY_HOST_ATTR = "data-wrrapd-pay-summary-host";
@@ -84,7 +90,11 @@ function readSession(key) {
 // ─── Pricing ────────────────────────────────────────────────────────────────
 
 function createPricingState() {
-  return { unitPriceOverride: null, taxPercent: null };
+  return {
+    unitPriceOverride: null,
+    taxPercent: WRRAPD_DEFAULT_TAX_RATE_PERCENT,
+    pricingFetchComplete: false,
+  };
 }
 
 function getActiveUnitPrices(state) {
@@ -104,10 +114,9 @@ async function refreshUnitPricesFromServer(state, geo, retailer) {
     const r = await fetch(u.toString(), { credentials: "omit", signal });
     if (!r.ok) return;
     const j = await r.json();
-    state.taxPercent =
-      typeof j.estimatedSalesTaxPercent === "number" && Number.isFinite(j.estimatedSalesTaxPercent)
-        ? j.estimatedSalesTaxPercent
-        : null;
+    state.taxPercent = resolveTaxRatePercent(
+      typeof j.estimatedSalesTaxPercent === "number" ? j.estimatedSalesTaxPercent : null,
+    );
     const up = j && typeof j.unitPrices === "object" ? j.unitPrices : null;
     if (!up) return;
     const next = {
@@ -138,6 +147,7 @@ function ensureUnitPrices(state, geo, retailer) {
     state.priceFetchPromise = refreshUnitPricesFromServer(state, geo, retailer).finally(() => {
       state.priceFetchPromise = null;
       state.lastPriceFetchAt = Date.now();
+      state.pricingFetchComplete = true;
     });
   }
   return state.priceFetchPromise;
@@ -158,7 +168,7 @@ function computeServiceSubtotalCents(state, prefix) {
 
 function computeTotalBreakdown(state, prefix) {
   const subtotalCents = computeServiceSubtotalCents(state, prefix);
-  const pct = typeof state.taxPercent === "number" ? state.taxPercent : 0;
+  const pct = resolveTaxRatePercent(state.taxPercent);
   const taxCents = Math.round(subtotalCents * (pct / 100));
   return {
     subtotalCents,
@@ -185,6 +195,9 @@ function buildOrderData(config) {
     ? snapshot.items
     : [{ title: `${config.retailerName} order`, itemId: "", imageUrl: "" }];
   const choices = readItemChoices(config.sessionPrefix);
+  // Retailer's own promised delivery date (Wrrapd schedules its delivery for this + 1 day).
+  const estimatedDeliveryDate =
+    captureRetailerDeliveryDate({ deliveryDateSelectors: config.deliveryDateSelectors }) || null;
   return cartLines.map((line, idx) => {
     const ch = choices[idx] || {};
     const wrap = ch.wrapPref || "wrrapd";
@@ -204,6 +217,7 @@ function buildOrderData(config) {
       wrrapdHint: wrap === "wrrapd" ? (ch.wrrapdHint || null) : null,
       occasion: wrap === "wrrapd" ? (ch.occasion || null) : null,
       giftMessage: ch.message || null,
+      estimatedDeliveryDate,
     };
   });
 }
@@ -211,9 +225,8 @@ function buildOrderData(config) {
 /** Server-side PaymentIntent amount (must mirror Amazon/LEGO checkout math). */
 function buildPricingCart(state, prefix, retailer) {
   const choices = readItemChoices(prefix);
-  const zipForTax = gifteeZip5(prefix) || hubPostal5();
-  const taxRatePercent =
-    typeof state.taxPercent === "number" && Number.isFinite(state.taxPercent) ? state.taxPercent : 0;
+  const zipForTax = taxPostalForPricing(gifteeZip5(prefix));
+  const taxRatePercent = resolveTaxRatePercent(state.taxPercent);
   const items =
     choices.length > 0
       ? choices.map((ch) => ({
@@ -313,7 +326,7 @@ function applyCheckoutGate(config, giftReady, paid) {
   }
 }
 
-function mountSummaryPanel(mountAnchor, invoiceRows, totalCents, paid, copy = DEFAULT_PAY_COPY) {
+function mountSummaryPanel(mountAnchor, invoiceRows, totalCents, paid, payReady, copy = DEFAULT_PAY_COPY) {
   removeSummary();
   const host = document.createElement("div");
   host.setAttribute(SUMMARY_HOST_ATTR, "1");
@@ -356,13 +369,23 @@ function mountSummaryPanel(mountAnchor, invoiceRows, totalCents, paid, copy = DE
   payBtn.setAttribute("data-wrrapd-pay-open", "1");
   payBtn.style.cssText =
     "padding:10px 18px;border-radius:8px;border:none;background:#f0c14b;color:#111;font-weight:700;cursor:pointer;font-size:14px;box-shadow:0 1px 2px rgba(0,0,0,.12);";
-  payBtn.textContent = paid ? copy.paidButton || DEFAULT_PAY_COPY.paidButton : "Pay Wrrapd (secure window)";
-  if (paid) payBtn.disabled = true;
+  payBtn.textContent = paid
+    ? copy.paidButton || DEFAULT_PAY_COPY.paidButton
+    : payReady
+      ? "Pay Wrrapd (secure window)"
+      : "Calculating total…";
+  if (paid || !payReady) payBtn.disabled = true;
+  if (!paid && !payReady) {
+    payBtn.style.opacity = "0.65";
+    payBtn.style.cursor = "wait";
+  }
   const status = document.createElement("span");
   status.style.cssText = `font-size:14px;color:${paid ? "#15803d" : "#64748b"};`;
   status.textContent = paid
     ? copy.successHint || DEFAULT_PAY_COPY.successHint
-    : copy.pendingHint || DEFAULT_PAY_COPY.pendingHint;
+    : !payReady
+      ? "Loading Wrrapd pricing…"
+      : copy.pendingHint || DEFAULT_PAY_COPY.pendingHint;
   payRow.append(payBtn, status);
 
   host.append(h, linesWrap, total, payRow);
@@ -414,12 +437,21 @@ async function openPaymentPopup(config, state) {
   await ensureUnitPrices(
     state,
     {
-      postalCode: gifteeZip5(config.sessionPrefix) || hubPostal5(),
-      state: "",
+      postalCode: taxPostalForPricing(gifteeZip5(config.sessionPrefix)),
+      state: "FL",
       country: "US",
     },
     config.payRoute,
   );
+  if (!state.pricingFetchComplete) {
+    try {
+      popup.close();
+    } catch {
+      /* ignore */
+    }
+    alert("Wrrapd pricing is still loading. Please wait a moment and try again.");
+    return null;
+  }
   const { totalCents } = computeTotalBreakdown(state, config.sessionPrefix);
   if (!totalCents || totalCents < 50) {
     try {
@@ -560,16 +592,17 @@ export function initRetailerCheckoutPayFlow(config) {
     await ensureUnitPrices(
       state,
       {
-        postalCode: gifteeZip5(config.sessionPrefix) || hubPostal5(),
-        state: "",
+        postalCode: taxPostalForPricing(gifteeZip5(config.sessionPrefix)),
+        state: "FL",
         country: "US",
       },
       config.payRoute,
     );
     const paid = readPaymentSuccess(config.sessionPrefix);
+    const payReady = state.pricingFetchComplete === true;
     const { invoiceRows, totalCents } = buildSummaryLinesAndTotal(state, config.sessionPrefix);
     const cartFp = buildCartFingerprint(config.getCartSnapshot?.());
-    const renderSig = `${paid ? 1 : 0}|${totalCents}|${cartFp}|${invoiceRows
+    const renderSig = `${paid ? 1 : 0}|${payReady ? 1 : 0}|${totalCents}|${cartFp}|${invoiceRows
       .map((r) => `${r?.label ?? ""}=${r?.amount ?? r?.cents ?? ""}`)
       .join("~")}`;
     const existing = document.querySelector(`[${SUMMARY_HOST_ATTR}]`);
@@ -586,9 +619,16 @@ export function initRetailerCheckoutPayFlow(config) {
       ...(config.paymentPendingHint ? { pendingHint: config.paymentPendingHint } : {}),
       ...(config.paymentSuccessHint ? { successHint: config.paymentSuccessHint } : {}),
     };
-    const { host, payBtn } = mountSummaryPanel(mountAnchor, invoiceRows, totalCents, paid, payCopy);
+    const { host, payBtn } = mountSummaryPanel(
+      mountAnchor,
+      invoiceRows,
+      totalCents,
+      paid,
+      payReady,
+      payCopy,
+    );
     host.dataset.wrrapdRenderSig = renderSig;
-    if (!paid) {
+    if (!paid && payReady) {
       payBtn.addEventListener("click", async () => {
         payPopupRef = await openPaymentPopup(config, state);
       });
@@ -689,6 +729,7 @@ export function initRetailerCheckoutPayFlow(config) {
     if (event?.detail?.prefix !== config.sessionPrefix) return;
     state.lastPriceFetchAt = 0;
     state.unitPriceOverride = null;
+    state.pricingFetchComplete = false;
     schedule();
   });
 }

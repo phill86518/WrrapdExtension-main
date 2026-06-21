@@ -102,6 +102,11 @@ export type Order = {
   lineItems?: OrderLineItem[];
   /** E-tailer attribution; omit on legacy rows (treat as unknown / Amazon-only flows historically). */
   retailer?: OrderRetailer;
+  /**
+   * Non-Amazon retailer's OWN promised delivery date (YYYY-MM-DD, Eastern) captured at checkout.
+   * When present, customer notifications show this date + 1 day; when absent, safe wording is used.
+   */
+  retailerEstimatedDeliveryDate?: string;
 };
 
 export type Driver = {

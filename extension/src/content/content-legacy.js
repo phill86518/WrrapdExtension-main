@@ -786,9 +786,14 @@ import { occasionOptionsHtml, isValidOccasion } from '../shared/occasions.js';
                         removeLoadingScreen();
                     }
                     
-                    // Call paymentSection immediately - it will disable buttons and create summary
-                        paymentSection(allItems);
-                        checkChangeAddress();
+                    // Payment step: addresses are set — never re-run address automation here.
+                    paymentSection(allItems);
+                    if (hasAnyWrrapdGiftWrapInCart(allItems)) {
+                        localStorage.setItem('wrrapd-should-change-address', 'false');
+                        if (localStorage.getItem('wrrapd-payment-status') !== 'success') {
+                            disableAmazonAddressChangeControls();
+                        }
+                    }
                 }
 
                 // Review & Shipping page (old format only - new format /checkout/.../spc is payment page)
@@ -9734,6 +9739,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
         if (paymentStatus === 'success') {
             console.log("[paymentSection] Payment already successful - re-enabling Place your order buttons...");
             enablePlaceOrderButtons();
+            enableAmazonAddressChangeControls();
             attachWrrapdPlaceOrderTrackingHook();
         } else {
             // IMMEDIATELY disable "Place your order" buttons if Wrrapd is selected
@@ -9744,6 +9750,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             if (wrrapdSelected) {
                 console.log("[paymentSection] Wrrapd selected - IMMEDIATELY disabling Place your order buttons...");
                 disablePlaceOrderButtons();
+                disableAmazonAddressChangeControls();
             }
         }
 
@@ -9853,6 +9860,114 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
         }, 500);
         
         console.log("[monitorAddGiftOptionsButton] Monitoring active - will insert Wrrapd options when gift interface appears");
+    }
+
+    const AMAZON_ADDRESS_CHANGE_GATED_ATTR = 'data-wrrapd-address-change-gated';
+
+    /** Shipping-address "Change" controls on Amazon payment — disabled until Wrrapd payment succeeds. */
+    function amazonPaymentAddressChangeCandidates() {
+        /** @type {HTMLElement[]} */
+        const out = [];
+        const seen = new Set();
+        const add = (node) => {
+            if (!node || seen.has(node)) return;
+            seen.add(node);
+            out.push(node);
+        };
+        const roots = [
+            document.querySelector('#spc-order-summary'),
+            document.querySelector('#checkout-main'),
+            document.querySelector('[data-testid="shipping-address"]'),
+            document.body,
+        ].filter(Boolean);
+        for (const root of roots) {
+            for (const node of root.querySelectorAll(
+                'a, button, span[role="button"], input[type="button"], input[type="submit"]',
+            )) {
+                if (!node || node.offsetParent === null) continue;
+                const label = (
+                    node.getAttribute('aria-label') ||
+                    node.textContent ||
+                    node.value ||
+                    ''
+                ).replace(/\s+/g, ' ').trim();
+                const href = String(node.getAttribute('href') || '').toLowerCase();
+                const labelLc = label.toLowerCase();
+                const exactChange = /^change$/i.test(label);
+                const changeAddressLabel =
+                    /change\s+(delivery|shipping)\s+address/i.test(label) ||
+                    /change\s+address/i.test(labelLc);
+                const hrefLooksLikeAddress =
+                    href.includes('addressselect') ||
+                    href.includes('itemselect') ||
+                    href.includes('address') ||
+                    href.includes('ship');
+                if (exactChange || changeAddressLabel || (labelLc.includes('change') && hrefLooksLikeAddress)) {
+                    add(node);
+                }
+            }
+        }
+        return out;
+    }
+
+    function setAmazonAddressChangeGated(node, gated) {
+        if (!node) return;
+        if (gated) {
+            node.setAttribute(AMAZON_ADDRESS_CHANGE_GATED_ATTR, '1');
+            node.setAttribute('aria-disabled', 'true');
+            if ('disabled' in node) node.disabled = true;
+            node.style.pointerEvents = 'none';
+            node.style.opacity = '0.45';
+            node.style.cursor = 'not-allowed';
+            node.style.textDecoration = 'none';
+            if (node.tagName === 'A') {
+                node.tabIndex = -1;
+                node.addEventListener('click', wrrapdBlockAmazonAddressChangeClick, true);
+            }
+        } else if (node.getAttribute(AMAZON_ADDRESS_CHANGE_GATED_ATTR) === '1') {
+            node.removeAttribute(AMAZON_ADDRESS_CHANGE_GATED_ATTR);
+            node.removeAttribute('aria-disabled');
+            if ('disabled' in node) node.disabled = false;
+            node.style.pointerEvents = '';
+            node.style.opacity = '';
+            node.style.cursor = '';
+            node.style.textDecoration = '';
+            if (node.tagName === 'A') node.tabIndex = 0;
+            node.removeEventListener('click', wrrapdBlockAmazonAddressChangeClick, true);
+        }
+    }
+
+    function wrrapdBlockAmazonAddressChangeClick(e) {
+        if (localStorage.getItem('wrrapd-payment-status') === 'success') return;
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation?.();
+        console.log('[Wrrapd] Blocked Amazon shipping-address Change until Wrrapd payment completes.');
+        return false;
+    }
+
+    function disableAmazonAddressChangeControls() {
+        if (localStorage.getItem('wrrapd-payment-status') === 'success') return;
+        const nodes = amazonPaymentAddressChangeCandidates();
+        for (const node of nodes) {
+            setAmazonAddressChangeGated(node, true);
+        }
+        if (!window.__WRRAPD_AMAZON_ADDRESS_CHANGE_CAPTURE__) {
+            window.__WRRAPD_AMAZON_ADDRESS_CHANGE_CAPTURE__ = true;
+            document.addEventListener('click', (e) => {
+                if (localStorage.getItem('wrrapd-payment-status') === 'success') return;
+                const t = e.target;
+                if (!t || !t.closest) return;
+                const gated = t.closest(`[${AMAZON_ADDRESS_CHANGE_GATED_ATTR}="1"]`);
+                if (gated) wrrapdBlockAmazonAddressChangeClick(e);
+            }, true);
+        }
+    }
+
+    function enableAmazonAddressChangeControls() {
+        for (const node of document.querySelectorAll(`[${AMAZON_ADDRESS_CHANGE_GATED_ATTR}="1"]`)) {
+            setAmazonAddressChangeGated(node, false);
+        }
     }
 
     function disablePlaceOrderButtons() {

@@ -3,6 +3,6 @@ export const BESTBUY_SESSION_PREFIX = "wrrapdBestbuy";
 export const BESTBUY_CART_OPTIN_DATA_ATTR = "data-wrrapd-bestbuy-cart-gift-optin";
 export const BESTBUY_SAVED_BANNER_ATTR = "data-wrrapd-bestbuy-gift-saved";
 export const BESTBUY_GIFT_MODAL_ID = "wrrapd-bestbuy-gift-modal";
-export const BESTBUY_CART_URL_HINTS = ["/cart"];
+export const BESTBUY_CART_URL_HINTS = ["/cart", "/shop/cart"];
 /** Cart + checkout: Wrrapd payment is gated on both. */
-export const BESTBUY_CHECKOUT_URL_HINTS = ["/cart", "/checkout"];
+export const BESTBUY_CHECKOUT_URL_HINTS = ["/cart", "/shop/cart", "/checkout"];

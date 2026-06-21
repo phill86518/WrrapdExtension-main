@@ -28,6 +28,10 @@ let cachedConfigSignature = '';
 
 const salesTaxZip = require('./sales-tax-zip');
 
+/** Wrrapd hub ZIP (Duval County FL) — default sales-tax jurisdiction for extension checkouts. */
+const HUB_TAX_ZIP5 = '32226';
+const HUB_DEFAULT_TAX_PERCENT = 7.5;
+
 function normalizeRetailerSlug(retailer) {
     if (retailer == null) return '';
     return String(retailer)
@@ -410,9 +414,9 @@ function sanitizePricingCartFromRequest(body) {
     const postalCode = typeof body.postalCode === 'string' ? body.postalCode.slice(0, 16) : '';
     const state = typeof body.state === 'string' ? body.state.slice(0, 16) : '';
     const country = typeof body.country === 'string' ? body.country.slice(0, 8) : '';
-    const zip5 = String(postalCode || '')
+    const zip5 = String(postalCode || HUB_TAX_ZIP5)
         .replace(/\D/g, '')
-        .slice(0, 5);
+        .slice(0, 5) || HUB_TAX_ZIP5;
     const countryU = String(country || 'US')
         .trim()
         .toUpperCase();
@@ -426,11 +430,13 @@ function sanitizePricingCartFromRequest(body) {
         const fromTable = salesTaxZip.getCombinedRateAsTaxPercent(zip5);
         if (fromTable !== null) taxRatePercent = fromTable;
     }
-    if (taxRatePercent === null || !Number.isFinite(taxRatePercent)) taxRatePercent = 0;
+    if (taxRatePercent === null || !Number.isFinite(taxRatePercent)) {
+        taxRatePercent = HUB_DEFAULT_TAX_PERCENT;
+    }
     return {
         items,
         taxRatePercent,
-        postalCode: postalCode || undefined,
+        postalCode: zip5,
         state: state || undefined,
         country: country || undefined,
         retailer:

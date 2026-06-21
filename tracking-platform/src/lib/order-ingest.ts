@@ -66,6 +66,8 @@ export type IngestOrderPayload = {
   lineItems?: unknown;
   /** Canonical: Amazon | Target (case-insensitive on ingest). */
   retailer?: unknown;
+  /** Non-Amazon retailer's promised delivery date (YYYY-MM-DD); notifications show this + 1 day. */
+  retailerEstimatedDeliveryDate?: unknown;
 };
 
 export type IngestSuccess = {
@@ -314,6 +316,15 @@ export function parseIngestOrderPayload(body: unknown): IngestSuccess | IngestFa
     scheduledFor = deliveryDateStr;
   }
 
+  const retailerEstimatedDeliveryDateRaw = str(p.retailerEstimatedDeliveryDate);
+  const retailerEstimatedDeliveryDate =
+    retailerEstimatedDeliveryDateRaw && isValidYyyyMmDd(retailerEstimatedDeliveryDateRaw)
+      ? retailerEstimatedDeliveryDateRaw
+      : undefined;
+  if (retailerEstimatedDeliveryDateRaw && !retailerEstimatedDeliveryDate) {
+    invalidFields.push("retailerEstimatedDeliveryDate");
+  }
+
   const externalOrderId = str(p.externalOrderId) || str(p.orderNumber);
   let sourceNote = str(p.sourceNote);
   const lineItems = parseLineItems(p.lineItems, invalidFields);
@@ -393,6 +404,7 @@ export function parseIngestOrderPayload(body: unknown): IngestSuccess | IngestFa
         ? { amazonDeliveryDatesSnapshot: [...amazonDeliveryDatesSnapshot] }
         : {}),
       ...(retailer ? { retailer } : {}),
+      ...(retailerEstimatedDeliveryDate ? { retailerEstimatedDeliveryDate } : {}),
     },
   };
 }

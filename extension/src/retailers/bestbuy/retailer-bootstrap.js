@@ -8,6 +8,7 @@ import { initWrrapdConflictGuard } from "../../shared/wrrapd-conflict-guard.js";
 import {
   BESTBUY_CART_OPTIN_DATA_ATTR,
   BESTBUY_CART_URL_HINTS,
+  BESTBUY_CHECKOUT_URL_HINTS,
   BESTBUY_GIFT_MODAL_ID,
   BESTBUY_SAVED_BANNER_ATTR,
   BESTBUY_SESSION_PREFIX,
@@ -50,11 +51,24 @@ function detectFulfillmentType(itemRoot) {
 }
 
 function extractBestbuyItems(root = document) {
-  const itemNodes = Array.from(
-    root.querySelectorAll(
-      ["[data-testid='cart-line-item']", "[data-track='line-item']"].join(","),
-    ),
-  );
+  const itemSelectors = [
+    "[data-testid='cart-line-item']",
+    "[data-track='line-item']",
+    "li.cart-item",
+    ".cart-item",
+    "[class*='cart-line-item']",
+    "[class*='CartLineItem']",
+    "article[class*='line-item']",
+  ];
+  const seen = new Set();
+  const itemNodes = [];
+  for (const sel of itemSelectors) {
+    for (const node of root.querySelectorAll(sel)) {
+      if (seen.has(node)) continue;
+      seen.add(node);
+      itemNodes.push(node);
+    }
+  }
 
   const items = itemNodes
     .map((node) => {
@@ -70,26 +84,23 @@ function extractBestbuyItems(root = document) {
             "h2",
             "h3",
           ],
-          node
+          node,
         ) ||
-        [
-          "a",
-        ].reduce((found, selector) => {
+        Array.from(node.querySelectorAll("a[href*='/site/']")).reduce((found, link) => {
           if (found) return found;
-          const links = Array.from(node.querySelectorAll(selector));
-          const bestLink = links.find((link) => /\/site\//i.test(link.getAttribute("href") || ""));
-          return normalizeWhitespace(bestLink?.textContent || "");
+          return normalizeWhitespace(link.textContent || link.getAttribute("title") || "");
         }, "");
       if (!title) return null;
       const priceText = getTextBySelectors(
         [
           "[data-track='line-item-price']",
           "[data-testid='cart-line-item-price']",
+          "[data-testid='customer-price']",
           ".pricing-price__regular-price",
           ".item-price",
           ".price",
         ],
-        node
+        node,
       );
       const quantityText = getTextBySelectors(
         [
@@ -98,7 +109,7 @@ function extractBestbuyItems(root = document) {
           ".quantity .select-selected-value",
           ".quantity",
         ],
-        node
+        node,
       );
       const quantityMatch = quantityText.match(/\b([1-9][0-9]*)\b/);
       const quantity = quantityMatch ? Number(quantityMatch[1]) : 1;
@@ -112,7 +123,39 @@ function extractBestbuyItems(root = document) {
     })
     .filter(Boolean);
 
-  return items;
+  if (items.length > 0) return items;
+
+  /** Fallback: product links under /site/…skuId= on the cart page. */
+  const linkSeen = new Set();
+  /** @type {typeof items} */
+  const fromLinks = [];
+  const scope = root.querySelector("main[data-testid='cart-root'], main, [role='main']") || root;
+  for (const link of scope.querySelectorAll("a[href*='/site/']")) {
+    const href = link.getAttribute("href") || "";
+    if (!href || linkSeen.has(href)) continue;
+    if (!/\/site\//i.test(href)) continue;
+    const title = normalizeWhitespace(link.textContent || link.getAttribute("title") || "");
+    if (!title || title.length < 4) continue;
+    linkSeen.add(href);
+    const row =
+      link.closest(
+        "[data-testid='cart-line-item'], [data-track='line-item'], li, article, section, div[class*='item']",
+      ) || link.parentElement;
+    const priceText = row
+      ? getTextBySelectors(
+          ["[data-testid='cart-line-item-price']", "[data-testid='customer-price']", ".price"],
+          row,
+        )
+      : "";
+    fromLinks.push({
+      title,
+      priceText,
+      unitPrice: parseMoney(priceText),
+      quantity: row ? 1 : 1,
+      fulfillment: row ? detectFulfillmentType(row) : "unknown",
+    });
+  }
+  return fromLinks;
 }
 
 function extractSummaryAmount(labelMatcher, root = document) {
@@ -183,6 +226,14 @@ export function initBestbuyRetailerBootstrap() {
   const shippingTierHint = describeTierForUi(SHIPPING_TIER_BESTBUY_LIMITED);
   const cart = extractBestbuyCartSnapshot(document);
 
+  const isBestbuyCartOrCheckoutPage = () => {
+    const path = location.pathname.toLowerCase();
+    return (
+      BESTBUY_CART_URL_HINTS.some((h) => path.includes(h)) ||
+      BESTBUY_CHECKOUT_URL_HINTS.some((h) => path.includes(h))
+    );
+  };
+
   initRetailerCartGiftOptIn({
     sessionPrefix: BESTBUY_SESSION_PREFIX,
     retailerLabel: "Best Buy",
@@ -191,8 +242,32 @@ export function initBestbuyRetailerBootstrap() {
     modalId: BESTBUY_GIFT_MODAL_ID,
     shippingTierHint,
     checkoutButtonPatterns: [/^checkout$/i, /^continue to checkout$/i],
-    summarySelector: "[data-testid='cart-order-summary']",
-    isCartPage: () => BESTBUY_CART_URL_HINTS.some((h) => location.pathname.toLowerCase().includes(h)),
+    summarySelector: "[data-testid='cart-order-summary'], .order-summary",
+    findMountAnchor: () => {
+      for (const sel of [
+        "[data-track='checkout']",
+        "button[data-testid='checkout-button']",
+        "a[data-track='checkout']",
+        "a[href*='/checkout/r/']",
+        ".btn-primary[href*='checkout']",
+      ]) {
+        const btn = document.querySelector(sel);
+        if (btn?.parentElement) return { parent: btn.parentElement, before: btn };
+      }
+      for (const node of document.querySelectorAll("button, a[role='button'], a.btn-primary, input[type='submit']")) {
+        const text = normalizeWhitespace(node.textContent || node.value || "");
+        if (/^(checkout|continue to checkout)$/i.test(text) && node.parentElement) {
+          return { parent: node.parentElement, before: node };
+        }
+      }
+      const summary = document.querySelector("[data-testid='cart-order-summary'], .order-summary");
+      if (summary?.parentElement) return { parent: summary.parentElement, before: summary };
+      const main = document.querySelector("main[data-testid='cart-root'], main");
+      if (main) return { parent: main, before: main.firstElementChild };
+      return null;
+    },
+    isCartPage: isBestbuyCartOrCheckoutPage,
+    isCheckoutPage: isBestbuyCartOrCheckoutPage,
     isCartEmpty: () => isBestbuyCartEmpty(document),
     getCartSnapshot: () => extractBestbuyCartSnapshot(document),
   });

@@ -261,6 +261,8 @@ export type CreateOrderInput = {
   /** Admin / internal creates: set true to skip thank-you email & SMS */
   skipCustomerNotifications?: boolean;
   retailer?: OrderRetailer;
+  /** Non-Amazon retailer's promised delivery date (YYYY-MM-DD, Eastern); notifications show this + 1 day. */
+  retailerEstimatedDeliveryDate?: string;
 };
 
 export async function createOrder(
@@ -493,6 +495,9 @@ export async function createOrder(
       : {}),
     ...(input.lineItems?.length ? { lineItems: [...input.lineItems] } : {}),
     ...(input.retailer ? { retailer: input.retailer } : {}),
+    ...(input.retailerEstimatedDeliveryDate
+      ? { retailerEstimatedDeliveryDate: input.retailerEstimatedDeliveryDate }
+      : {}),
   };
   const ocCreate = getOrdersCollection();
   if (ocCreate) {
