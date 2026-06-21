@@ -9970,67 +9970,130 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
         }
     }
 
+    let wrrapdPlaceOrderGateInstalled = false;
+    let wrrapdPlaceOrderGateObserver = null;
+    let wrrapdPlaceOrderGateInterval = null;
+    let wrrapdPlaceOrderGateRaf = 0;
+
+    // Scans the DOM and gates EVERY visible "Place your order" control. Idempotent: a button we've
+    // already gated is skipped (prevents re-cloning + MutationObserver feedback loops). Returns true
+    // if at least one matching button exists (gated or already-gated).
+    function findAndDisablePlaceOrderButtons() {
+        const allButtons = document.querySelectorAll('button, input[type="submit"], span[role="button"], input[type="button"], a[role="button"]');
+
+        let foundAny = false;
+        for (const btn of allButtons) {
+            if (!btn) continue;
+
+            // Already gated by Wrrapd — leave it (and re-assert disabled state in case Amazon flipped it back).
+            if (btn.getAttribute('data-wrrapd-disabled') === 'true') {
+                if ((btn.tagName === 'INPUT' || btn.tagName === 'BUTTON') && !btn.disabled) btn.disabled = true;
+                if (btn.style.pointerEvents !== 'none') btn.style.pointerEvents = 'none';
+                foundAny = true;
+                continue;
+            }
+
+            // Inputs can carry the label in `value` even before layout; only skip non-input hidden nodes.
+            if (btn.offsetParent === null && btn.tagName !== 'INPUT') continue;
+
+            const text = (btn.textContent || btn.value || btn.getAttribute('aria-label') || btn.innerText || '').toLowerCase();
+            if (text.includes('place your order') || text.includes('place order')) {
+                console.log("[disablePlaceOrderButtons] ✓ Found and disabling button:", text.substring(0, 50));
+
+                // Mark button as disabled by Wrrapd
+                btn.setAttribute('data-wrrapd-disabled', 'true');
+
+                // Disable the button completely
+                if (btn.tagName === 'INPUT' || btn.tagName === 'BUTTON') {
+                    btn.disabled = true;
+                }
+                btn.style.pointerEvents = 'none';
+                btn.style.opacity = '0.5';
+                btn.style.cursor = 'not-allowed';
+                btn.setAttribute('aria-disabled', 'true');
+
+                // Remove all existing event listeners by cloning
+                const newBtn = btn.cloneNode(true);
+                newBtn.disabled = true;
+                newBtn.style.pointerEvents = 'none';
+                newBtn.style.opacity = '0.5';
+                newBtn.style.cursor = 'not-allowed';
+                newBtn.setAttribute('aria-disabled', 'true');
+                newBtn.setAttribute('data-wrrapd-disabled', 'true');
+                if (btn.parentNode) btn.parentNode.replaceChild(newBtn, btn);
+
+                // Create overlay to intercept clicks - this is critical to prevent order placement
+                createOverlayButton(newBtn, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.stopImmediatePropagation();
+                    console.log("[disablePlaceOrderButtons] Blocked click on Place your order button");
+                    return false;
+                });
+
+                foundAny = true;
+            }
+        }
+
+        return foundAny;
+    }
+
+    // Keep BOTH Amazon "Place your order" buttons gated while Wrrapd is selected and unpaid.
+    // Amazon renders the second (bottom) button lower/later and re-renders the checkout aggressively,
+    // so a one-shot scan is not enough — we watch the DOM and re-gate on every mutation.
+    function installPlaceOrderGateWatchers() {
+        if (wrrapdPlaceOrderGateInstalled) return;
+        wrrapdPlaceOrderGateInstalled = true;
+
+        const rescan = () => {
+            wrrapdPlaceOrderGateRaf = 0;
+            try {
+                if (localStorage.getItem('wrrapd-payment-status') === 'success') return;
+            } catch (e) { /* ignore */ }
+            findAndDisablePlaceOrderButtons();
+        };
+
+        try {
+            wrrapdPlaceOrderGateObserver = new MutationObserver(() => {
+                if (wrrapdPlaceOrderGateRaf) return;
+                wrrapdPlaceOrderGateRaf = requestAnimationFrame(rescan);
+            });
+            wrrapdPlaceOrderGateObserver.observe(document.body, { childList: true, subtree: true });
+        } catch (e) { /* ignore */ }
+
+        // Belt-and-suspenders for re-renders the observer might race with.
+        wrrapdPlaceOrderGateInterval = setInterval(rescan, 1200);
+    }
+
+    function teardownPlaceOrderGateWatchers() {
+        wrrapdPlaceOrderGateInstalled = false;
+        if (wrrapdPlaceOrderGateObserver) {
+            try { wrrapdPlaceOrderGateObserver.disconnect(); } catch (e) { /* ignore */ }
+            wrrapdPlaceOrderGateObserver = null;
+        }
+        if (wrrapdPlaceOrderGateInterval) {
+            clearInterval(wrrapdPlaceOrderGateInterval);
+            wrrapdPlaceOrderGateInterval = null;
+        }
+        if (wrrapdPlaceOrderGateRaf) {
+            cancelAnimationFrame(wrrapdPlaceOrderGateRaf);
+            wrrapdPlaceOrderGateRaf = 0;
+        }
+    }
+
     function disablePlaceOrderButtons() {
         console.log("[disablePlaceOrderButtons] Searching for Place your order buttons...");
-        
-        const findAndDisableButtons = () => {
-            // Search for all possible "Place your order" buttons
-            const allButtons = document.querySelectorAll('button, input[type="submit"], span[role="button"], input[type="button"], a[role="button"]');
-            
-            let foundAny = false;
-            for (const btn of allButtons) {
-                if (!btn || btn.offsetParent === null) continue;
-                
-                const text = (btn.textContent || btn.value || btn.getAttribute('aria-label') || btn.innerText || '').toLowerCase();
-                if (text.includes('place your order') || text.includes('place order')) {
-                    console.log("[disablePlaceOrderButtons] ✓ Found and disabling button:", text.substring(0, 50));
-                    
-                    // Mark button as disabled by Wrrapd
-                    btn.setAttribute('data-wrrapd-disabled', 'true');
-                    
-                    // Disable the button completely
-                    if (btn.tagName === 'INPUT' || btn.tagName === 'BUTTON') {
-                        btn.disabled = true;
-                    }
-                    btn.style.pointerEvents = 'none';
-                    btn.style.opacity = '0.5';
-                    btn.style.cursor = 'not-allowed';
-                    btn.setAttribute('aria-disabled', 'true');
-                    
-                    // Remove all existing event listeners by cloning
-                    const newBtn = btn.cloneNode(true);
-                    newBtn.disabled = true;
-                    newBtn.style.pointerEvents = 'none';
-                    newBtn.style.opacity = '0.5';
-                    newBtn.style.cursor = 'not-allowed';
-                    newBtn.setAttribute('aria-disabled', 'true');
-                    newBtn.setAttribute('data-wrrapd-disabled', 'true');
-                    btn.parentNode.replaceChild(newBtn, btn);
-                    
-                    // Create overlay to intercept clicks - this is critical to prevent order placement
-                    createOverlayButton(newBtn, (e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        e.stopImmediatePropagation();
-                        console.log("[disablePlaceOrderButtons] Blocked click on Place your order button");
-                        return false;
-                    });
-                    
-                    foundAny = true;
-                }
-            }
-            
-            return foundAny;
-        };
-        
-        // Try immediately
-        if (!findAndDisableButtons()) {
-            console.log("[disablePlaceOrderButtons] Buttons not found yet, will retry...");
-            // Retry after a short delay
-            setTimeout(() => findAndDisableButtons(), 500);
-            setTimeout(() => findAndDisableButtons(), 1000);
-            setTimeout(() => findAndDisableButtons(), 2000);
-        }
+
+        findAndDisablePlaceOrderButtons();
+
+        // Always retry regardless of the first result — the SECOND ("place your order") button
+        // typically renders lower on the page and a bit later than the top one.
+        setTimeout(findAndDisablePlaceOrderButtons, 500);
+        setTimeout(findAndDisablePlaceOrderButtons, 1000);
+        setTimeout(findAndDisablePlaceOrderButtons, 2000);
+
+        // Persistent watcher so re-rendered / lazily-mounted buttons stay gated.
+        installPlaceOrderGateWatchers();
     }
 
     /**
@@ -10038,7 +10101,10 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
      */
     function enablePlaceOrderButtons() {
         console.log("[enablePlaceOrderButtons] Re-enabling Place your order buttons...");
-        
+
+        // Stop the persistent gate first, otherwise it would immediately re-disable the buttons.
+        teardownPlaceOrderGateWatchers();
+
         const findAndEnableButtons = () => {
             // Search for all possible "Place your order" buttons
             const allButtons = document.querySelectorAll('button, input[type="submit"], span[role="button"], input[type="button"], a[role="button"]');
