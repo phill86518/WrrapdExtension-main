@@ -11,8 +11,12 @@ export function createWrrapdBrandLogo(heightPx = 22) {
     "display:block",
     `height:${heightPx}px`,
     "width:auto",
-    "max-width:200px",
+    "max-width:280px",
     "object-fit:contain",
+    // Don't let flit/flex parents squash or stretch the wordmark, and keep it optically
+    // centered against the text that sits beside it.
+    "flex:0 0 auto",
+    "vertical-align:middle",
   ].join(";");
   return img;
 }

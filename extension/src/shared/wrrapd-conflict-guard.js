@@ -139,11 +139,11 @@ function buildModal(config, kind, onConfirm, onCancel) {
   card.style.cssText =
     "box-sizing:border-box;width:100%;max-width:440px;background:#fff;border-radius:14px;" +
     "border-top:5px solid #ff8e14;box-shadow:0 18px 48px rgba(0,0,0,.32);padding:22px 22px 18px;" +
-    "font-family:system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;color:#111827;";
+    "font-family:inherit;color:#111827;";
 
   const brandRow = document.createElement("div");
-  brandRow.style.cssText = "display:flex;align-items:center;gap:8px;margin:0 0 12px;";
-  brandRow.append(createWrrapdBrandLogo(24));
+  brandRow.style.cssText = "display:flex;align-items:center;gap:10px;margin:0 0 12px;";
+  brandRow.append(createWrrapdBrandLogo(40));
 
   const heading = document.createElement("h2");
   heading.style.cssText = "margin:0 0 8px;font-size:18px;font-weight:800;line-height:1.3;";

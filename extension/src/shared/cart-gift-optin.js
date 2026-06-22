@@ -303,7 +303,7 @@ function openGiftChoicesModal(config, cartSnapshot) {
 
   const panel = document.createElement("div");
   panel.style.cssText =
-    "width:100%;max-width:44rem;max-height:90vh;overflow:auto;background:#fff;border-radius:12px;padding:18px 18px 14px;box-shadow:0 12px 40px rgba(0,0,0,.25);font-family:Arial,sans-serif;font-size:14px;line-height:1.5;color:#0f172a;";
+    "width:100%;max-width:44rem;max-height:90vh;overflow:auto;background:#fff;border-radius:12px;padding:18px 18px 14px;box-shadow:0 12px 40px rgba(0,0,0,.25);font-family:inherit;font-size:14px;line-height:1.5;color:#0f172a;";
 
   const title = document.createElement("h2");
   title.style.cssText = "margin:0 0 8px;font-size:18px;font-weight:800;color:#111827;";
@@ -847,14 +847,17 @@ function mountCartGiftOptIn(config, cartSnapshot) {
   wrap.setAttribute(config.optInDataAttr, "1");
   wrap.setAttribute("role", "region");
   wrap.setAttribute("aria-label", "Gift wrap with Wrrapd");
+  // `font:inherit` makes every Wrrapd surface adopt the retailer's own typeface so the card
+  // blends into the host page (Kohl's, Nordstrom, etc.) instead of looking bolted-on.
   wrap.style.cssText =
-    "box-sizing:border-box;width:100%;margin:0 0 12px;padding:14px 16px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;border-left:4px solid #ff8e14;box-shadow:0 1px 3px rgba(0,0,0,.06);";
+    "box-sizing:border-box;width:100%;margin:0 0 12px;padding:16px 18px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;border-left:4px solid #ff8e14;box-shadow:0 1px 3px rgba(0,0,0,.06);font-family:inherit;color:#111827;";
 
   const brandRow = document.createElement("div");
-  brandRow.style.cssText = "display:flex;align-items:center;gap:10px;margin:0 0 8px;";
-  const brandLogo = createWrrapdBrandLogo(34);
+  brandRow.style.cssText = "display:flex;align-items:center;gap:12px;margin:0 0 10px;";
+  const brandLogo = createWrrapdBrandLogo(52);
   const brandTag = document.createElement("span");
-  brandTag.style.cssText = "font-size:13px;font-weight:600;color:#ff8e14;letter-spacing:.02em;";
+  brandTag.style.cssText =
+    "font-family:inherit;font-size:14px;font-weight:700;color:#ff8e14;letter-spacing:.01em;line-height:1.25;";
   brandTag.textContent = "Gift wrapping, handwritten note & flowers";
   brandRow.append(brandLogo, brandTag);
 

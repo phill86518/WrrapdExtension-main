@@ -336,7 +336,7 @@ function mountSummaryPanel(mountAnchor, invoiceRows, totalCents, paid, payReady,
   const host = document.createElement("div");
   host.setAttribute(SUMMARY_HOST_ATTR, "1");
   host.style.cssText =
-    "box-sizing:border-box;width:100%;max-width:36rem;margin:12px 0 14px;padding:14px 16px;border:1px solid #fcd34d;border-radius:10px;background:linear-gradient(180deg,#fffbeb,#fff);color:#0f172a;font-size:15px;line-height:1.45;";
+    "box-sizing:border-box;width:100%;max-width:36rem;margin:12px 0 14px;padding:14px 16px;border:1px solid #fcd34d;border-radius:10px;background:linear-gradient(180deg,#fffbeb,#fff);color:#0f172a;font-family:inherit;font-size:15px;line-height:1.45;";
 
   const h = document.createElement("div");
   h.style.cssText = "font-weight:700;font-size:16px;margin-bottom:8px;color:#92400e;";
