@@ -36,6 +36,38 @@ function getTextBySelectors(selectors, root = document) {
   return "";
 }
 
+const EXCLUDED_REGION_RE =
+  /recommend|carousel|you[-_ ]?may|also[-_ ]?(like|bought|viewed)|recently[-_ ]?viewed|sponsored|footer|trending|related|upsell|cross[-_ ]?sell|you[-_ ]?might/;
+const EXCLUDED_HEADING_RE =
+  /you may (also )?like|recommend|recently viewed|trending|you might|customers also|related (items|products)|sponsored/;
+
+/**
+ * True when an element sits inside a region that is NOT the real cart line list —
+ * e.g. "You may like these" recommendation carousels, sponsored tiles, or the page
+ * footer/nav. Used to keep the fallback link scrapers from counting non-cart products
+ * (and footer legal links) as gift-wrappable items.
+ */
+function isExcludedScrapeRegion(el) {
+  let node = el;
+  let depth = 0;
+  while (node && node.nodeType === 1 && depth < 25) {
+    const tag = node.tagName;
+    if (tag === "FOOTER" || tag === "NAV" || tag === "HEADER") return true;
+    const role = (node.getAttribute("role") || "").toLowerCase();
+    if (role === "contentinfo" || role === "navigation" || role === "banner") return true;
+    const hay = `${node.id || ""} ${node.getAttribute("class") || ""} ${node.getAttribute("data-testid") || ""} ${node.getAttribute("data-track") || ""} ${node.getAttribute("aria-label") || ""}`.toLowerCase();
+    if (EXCLUDED_REGION_RE.test(hay)) return true;
+    if (tag === "SECTION" || tag === "ASIDE" || role === "region" || role === "complementary") {
+      const heading = node.querySelector("h1,h2,h3,h4");
+      const htext = heading ? normalizeWhitespace(heading.textContent || "").toLowerCase() : "";
+      if (htext && EXCLUDED_HEADING_RE.test(htext)) return true;
+    }
+    node = node.parentElement;
+    depth++;
+  }
+  return false;
+}
+
 function detectFulfillmentType(itemRoot) {
   const text = normalizeWhitespace(itemRoot?.textContent || "").toLowerCase();
   if (!text) return "unknown";
@@ -65,6 +97,7 @@ function extractBestbuyItems(root = document) {
   for (const sel of itemSelectors) {
     for (const node of root.querySelectorAll(sel)) {
       if (seen.has(node)) continue;
+      if (isExcludedScrapeRegion(node)) continue;
       seen.add(node);
       itemNodes.push(node);
     }
@@ -125,7 +158,7 @@ function extractBestbuyItems(root = document) {
 
   if (items.length > 0) return items;
 
-  /** Fallback: product links under /site/…skuId= on the cart page. */
+  /** Fallback: real product tiles link to /site/<slug>/<sku>.p (or carry skuId=). */
   const linkSeen = new Set();
   /** @type {typeof items} */
   const fromLinks = [];
@@ -133,7 +166,11 @@ function extractBestbuyItems(root = document) {
   for (const link of scope.querySelectorAll("a[href*='/site/']")) {
     const href = link.getAttribute("href") || "";
     if (!href || linkSeen.has(href)) continue;
-    if (!/\/site\//i.test(href)) continue;
+    // Only genuine product pages — excludes footer help/legal links (Terms, Privacy, etc.)
+    // that also live under /site/ but are not products.
+    if (!/\/site\/[^?#]*\.p(\?|#|$)/i.test(href) && !/[?&]skuId=/i.test(href)) continue;
+    // Skip recommendations / "you may also like" / sponsored / footer regions.
+    if (isExcludedScrapeRegion(link)) continue;
     const title = normalizeWhitespace(link.textContent || link.getAttribute("title") || "");
     if (!title || title.length < 4) continue;
     linkSeen.add(href);

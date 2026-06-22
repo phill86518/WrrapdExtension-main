@@ -11,7 +11,7 @@ export function createWrrapdBrandLogo(heightPx = 22) {
     "display:block",
     `height:${heightPx}px`,
     "width:auto",
-    "max-width:128px",
+    "max-width:200px",
     "object-fit:contain",
   ].join(";");
   return img;

@@ -851,10 +851,10 @@ function mountCartGiftOptIn(config, cartSnapshot) {
     "box-sizing:border-box;width:100%;margin:0 0 12px;padding:14px 16px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;border-left:4px solid #ff8e14;box-shadow:0 1px 3px rgba(0,0,0,.06);";
 
   const brandRow = document.createElement("div");
-  brandRow.style.cssText = "display:flex;align-items:center;gap:8px;margin:0 0 6px;";
-  const brandLogo = createWrrapdBrandLogo(22);
+  brandRow.style.cssText = "display:flex;align-items:center;gap:10px;margin:0 0 8px;";
+  const brandLogo = createWrrapdBrandLogo(34);
   const brandTag = document.createElement("span");
-  brandTag.style.cssText = "font-size:12px;font-weight:600;color:#ff8e14;letter-spacing:.02em;";
+  brandTag.style.cssText = "font-size:13px;font-weight:600;color:#ff8e14;letter-spacing:.02em;";
   brandTag.textContent = "Gift wrapping, handwritten note & flowers";
   brandRow.append(brandLogo, brandTag);
 
@@ -896,6 +896,11 @@ function mountCartGiftOptIn(config, cartSnapshot) {
     storedRadio = "no";
   }
 
+  // "Yes" is only the selected default once the customer has fully completed the Wrrapd
+  // wizard (choices + legal terms). In every other state — including a partially-started or
+  // abandoned flow — the default selection stays on "No thanks" so intent is always explicit.
+  const yesChecked = storedRadio === "yes" && giftFlowComplete(config);
+
   const mkRow = (value, labelText) => {
     const lab = document.createElement("label");
     lab.style.cssText =
@@ -905,7 +910,7 @@ function mountCartGiftOptIn(config, cartSnapshot) {
     inp.name = `${config.sessionPrefix}-gift`;
     inp.value = value;
     inp.style.marginTop = "3px";
-    if (storedRadio === value && (value !== "yes" || giftFlowComplete(config))) {
+    if (value === "yes" ? yesChecked : !yesChecked) {
       inp.checked = true;
     }
     inp.addEventListener("click", () => {

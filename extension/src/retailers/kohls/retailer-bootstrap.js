@@ -36,6 +36,38 @@ function getTextBySelectors(selectors, root = document) {
   return "";
 }
 
+const EXCLUDED_REGION_RE =
+  /recommend|carousel|you[-_ ]?may|also[-_ ]?(like|bought|viewed)|recently[-_ ]?viewed|sponsored|footer|trending|related|upsell|cross[-_ ]?sell|you[-_ ]?might/;
+const EXCLUDED_HEADING_RE =
+  /you may (also )?like|recommend|recently viewed|trending|you might|customers also|related (items|products)|sponsored/;
+
+/**
+ * True when an element sits inside a region that is NOT the real cart/bag line list —
+ * e.g. "You may like these" recommendation carousels, sponsored tiles, or the page
+ * footer/nav. Keeps the fallback link scraper from counting recommended products as
+ * gift-wrappable items.
+ */
+function isExcludedScrapeRegion(el) {
+  let node = el;
+  let depth = 0;
+  while (node && node.nodeType === 1 && depth < 25) {
+    const tag = node.tagName;
+    if (tag === "FOOTER" || tag === "NAV" || tag === "HEADER") return true;
+    const role = (node.getAttribute("role") || "").toLowerCase();
+    if (role === "contentinfo" || role === "navigation" || role === "banner") return true;
+    const hay = `${node.id || ""} ${node.getAttribute("class") || ""} ${node.getAttribute("data-testid") || ""} ${node.getAttribute("data-automation-id") || ""} ${node.getAttribute("aria-label") || ""}`.toLowerCase();
+    if (EXCLUDED_REGION_RE.test(hay)) return true;
+    if (tag === "SECTION" || tag === "ASIDE" || role === "region" || role === "complementary") {
+      const heading = node.querySelector("h1,h2,h3,h4");
+      const htext = heading ? normalizeWhitespace(heading.textContent || "").toLowerCase() : "";
+      if (htext && EXCLUDED_HEADING_RE.test(htext)) return true;
+    }
+    node = node.parentElement;
+    depth++;
+  }
+  return false;
+}
+
 function parseQuantity(node) {
   const quantityText = getTextBySelectors(
     [
@@ -110,6 +142,7 @@ function extractKohlsItems(root = document) {
   for (const selector of selectors) {
     for (const node of root.querySelectorAll(selector)) {
       if (seen.has(node)) continue;
+      if (isExcludedScrapeRegion(node)) continue;
       seen.add(node);
       nodes.push(node);
     }
@@ -165,6 +198,8 @@ function extractKohlsItems(root = document) {
   for (const link of scope.querySelectorAll("a[href*='/product/prd-'], a[href*='/product/prd']")) {
     const href = link.getAttribute("href") || "";
     if (!href || linkSeen.has(href)) continue;
+    // Skip "You may like these", recently-viewed, sponsored, footer/nav regions.
+    if (isExcludedScrapeRegion(link)) continue;
     const title = normalizeWhitespace(link.getAttribute("title") || link.textContent || "");
     if (!title || title.length < 4) continue;
     linkSeen.add(href);
