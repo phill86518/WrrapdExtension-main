@@ -970,6 +970,27 @@ function mountCartGiftOptIn(config, cartSnapshot) {
  * @param {string} [config.shippingTierHint]
  */
 export function initRetailerCartGiftOptIn(config) {
+  // Always-on heartbeat (survives store builds): lets any beta tester confirm in the
+  // console that the Wrrapd content script actually injected, on which retailer, and which
+  // version — the fastest way to tell a stale CWS install apart from a real mount failure.
+  try {
+    const label = config.retailerLabel || config.sessionPrefix || "retailer";
+    const version =
+      (typeof chrome !== "undefined" && chrome.runtime?.getManifest?.().version) || "?";
+    const beats = (window.__WRRAPD_HEARTBEAT__ = window.__WRRAPD_HEARTBEAT__ || {});
+    if (!beats[label]) {
+      beats[label] = version;
+      // eslint-disable-next-line no-console
+      console.info(
+        `%c[Wrrapd]%c v${version} active — ${label} cart/checkout watcher started`,
+        "color:#ff8e14;font-weight:700",
+        "color:inherit",
+      );
+    }
+  } catch {
+    /* never let diagnostics break init */
+  }
+
   let scheduled = 0;
 
   const tick = () => {
