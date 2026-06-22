@@ -5,6 +5,7 @@ import {
 } from "../../content/retailer-common.js";
 import { initRetailerCartGiftOptIn } from "../../shared/cart-gift-optin.js";
 import { initWrrapdConflictGuard } from "../../shared/wrrapd-conflict-guard.js";
+import { isExcludedScrapeRegion } from "../../shared/cart-scrape-region.js";
 import {
   WALMART_CART_OPTIN_DATA_ATTR,
   WALMART_CART_URL_HINTS,
@@ -31,6 +32,9 @@ export function extractWalmartCartSnapshot(root = document) {
   for (const nameEl of root.querySelectorAll("[data-testid='productName']")) {
     const title = normalizeWhitespace(nameEl.textContent || "");
     if (!title) continue;
+
+    // Skip "You may also like" / sponsored / recently-viewed tiles that reuse productName.
+    if (isExcludedScrapeRegion(nameEl)) continue;
 
     const scope =
       nameEl.closest("li") ||

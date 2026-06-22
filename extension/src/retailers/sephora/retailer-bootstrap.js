@@ -5,6 +5,7 @@ import {
 } from "../../content/retailer-common.js";
 import { initRetailerCartGiftOptIn } from "../../shared/cart-gift-optin.js";
 import { initWrrapdConflictGuard } from "../../shared/wrrapd-conflict-guard.js";
+import { isExcludedScrapeRegion } from "../../shared/cart-scrape-region.js";
 import {
   SEPHORA_BASKET_URL_HINTS,
   SEPHORA_CART_OPTIN_DATA_ATTR,
@@ -29,6 +30,7 @@ export function extractSephoraCartSnapshot(root = document) {
     '[data-at="product_refinement"], [data-comp*="BasicSkuItem"]',
   );
   for (const node of lineItems) {
+    if (isExcludedScrapeRegion(node)) continue;
     const brand = normalizeWhitespace(node.querySelector('[data-at="bsk_sku_brand"]')?.textContent || "");
     const name = normalizeWhitespace(node.querySelector('[data-at="bsk_sku_name"]')?.textContent || "");
     const sizeText = normalizeWhitespace(node.querySelector('[data-at="sku_size"]')?.textContent || "");
@@ -43,6 +45,7 @@ export function extractSephoraCartSnapshot(root = document) {
 
   // Fallback for checkout/other layouts: product image alt text.
   for (const img of root.querySelectorAll('[data-at="item_picture"] img')) {
+    if (isExcludedScrapeRegion(img)) continue;
     const title = normalizeWhitespace(img.getAttribute("alt") || "");
     if (!title || title.length < 3 || seen.has(title)) continue;
     seen.add(title);
