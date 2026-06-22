@@ -243,7 +243,16 @@ export function extractKohlsCartSnapshot(root = document) {
 
 export function initKohlsRetailerBootstrap() {
   const shippingTierHint = describeTierForUi(SHIPPING_TIER_SINGLE);
-  const cart = extractKohlsCartSnapshot(document);
+  // The opt-in mount must never depend on the initial debug snapshot succeeding — Kohl's bag
+  // markup shifts, and a scrape throw here previously killed the whole bootstrap before the panel
+  // ever mounted. Capture defensively; the live snapshot used for mounting runs inside the opt-in.
+  let cart = null;
+  try {
+    cart = extractKohlsCartSnapshot(document);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("[Wrrapd] Kohl's cart snapshot failed (continuing to mount anyway):", err);
+  }
 
   const isKohlsCartOrCheckoutPage = () => {
     const path = location.pathname.toLowerCase();
@@ -288,8 +297,27 @@ export function initKohlsRetailerBootstrap() {
     },
     isCartPage: isKohlsCartOrCheckoutPage,
     isCheckoutPage: isKohlsCartOrCheckoutPage,
-    isCartEmpty: () => isKohlsCartEmpty(document),
-    getCartSnapshot: () => extractKohlsCartSnapshot(document),
+    isCartEmpty: () => {
+      try {
+        return isKohlsCartEmpty(document);
+      } catch {
+        return false;
+      }
+    },
+    getCartSnapshot: () => {
+      try {
+        return extractKohlsCartSnapshot(document);
+      } catch {
+        return {
+          itemCount: 0,
+          items: [],
+          isEmpty: false,
+          subtotal: null,
+          orderTotal: null,
+          fulfillmentCounts: { shipping: 0, pickup: 0, mixed: 0, unknown: 0 },
+        };
+      }
+    },
   });
 
   initWrrapdConflictGuard({
