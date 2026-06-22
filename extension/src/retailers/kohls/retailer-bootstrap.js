@@ -98,6 +98,8 @@ function extractSummaryAmount(labelMatcher, root = document) {
 
 function extractKohlsItems(root = document) {
   const selectors = [
+    // Kohl's redesigned cart (current): one `.cart-item-panel-item` per product line.
+    ".cart-item-panel-item",
     "[data-testid='cart-line-item']",
     "[data-testid='bag-item']",
     "[data-automation-id='cart-line-item']",
@@ -122,6 +124,8 @@ function extractKohlsItems(root = document) {
     .map((node) => {
       const title = getTextBySelectors(
         [
+          ".product-name a",
+          ".product-name",
           "[data-testid='item-title']",
           "[data-automation-id='item-title']",
           ".bag-item__title",
@@ -129,6 +133,7 @@ function extractKohlsItems(root = document) {
           ".product-title",
           "h2",
           "h3",
+          "a[href*='/product/prd-']",
           "a[title]",
           "a[href*='/product/']",
           "a",
@@ -138,6 +143,9 @@ function extractKohlsItems(root = document) {
       if (!title) return null;
       const priceText = getTextBySelectors(
         [
+          ".product-price-list-sale-price",
+          ".final-item-price-container",
+          ".product-price-list-strikethrough",
           "[data-testid='item-price']",
           "[data-automation-id='item-price']",
           ".bag-item__price",

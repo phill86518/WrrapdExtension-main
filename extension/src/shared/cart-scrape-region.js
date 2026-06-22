@@ -7,7 +7,7 @@ function normalizeWhitespace(value) {
 }
 
 const EXCLUDED_REGION_RE =
-  /recommend|carousel|you[-_ ]?may|also[-_ ]?(like|bought|viewed)|recently[-_ ]?viewed|sponsored|trending|upsell|cross[-_ ]?sell|you[-_ ]?might|related[-_ ]?(item|product|carousel|content)/;
+  /recommend|carousel|you[-_ ]?may|also[-_ ]?(like|bought|viewed)|recently[-_ ]?viewed|sponsored|trending|upsell|cross[-_ ]?sell|you[-_ ]?might|related[-_ ]?(item|product|carousel|content)|save[-_ ]?for[-_ ]?later|bd[-_]?flat[-_]?view|bd[-_]?rec|big[-_]?data/;
 const EXCLUDED_HEADING_RE =
   /you may (also )?like|recommend|recently viewed|trending|you might|customers also|related (items|products)|sponsored|inspired by|complete the look|wear it with/;
 
