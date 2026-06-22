@@ -53,6 +53,50 @@ function findKohlsCheckoutButton() {
   return findKohlsCheckoutButtons()[0] || null;
 }
 
+/**
+ * Stable mount for the Wrrapd pay summary. Kohl's checkout CTA is a <kds-button> web
+ * component inside a framework-managed panel; mounting next to it (the shared default)
+ * gets wiped on re-render. Anchor to structural containers instead so the summary + pay
+ * button persist — preferring the right-hand order-summary rail next to the totals.
+ */
+function findKohlsSummaryMountAnchor() {
+  const directChild = (parent, selector) => {
+    if (!parent) return null;
+    for (const child of parent.children) {
+      if (child.matches?.(selector)) return child;
+    }
+    return null;
+  };
+
+  // 1) Top of the order-summary rail (right column), above the summary block.
+  const summary = document.querySelector(
+    "[data-testid='order-summary'], .order-summary-container",
+  );
+  if (summary?.parentElement) {
+    return { parent: summary.parentElement, before: summary };
+  }
+  const summaryBlock = document.querySelector(".order-summary-block");
+  if (summaryBlock?.parentElement) {
+    return { parent: summaryBlock.parentElement, before: summaryBlock };
+  }
+
+  // 2) Right column container, then left column (above the items), then cart screen.
+  const rightColumn = document.querySelector(".right-column-block");
+  if (rightColumn) return { parent: rightColumn, before: rightColumn.firstElementChild };
+  const leftColumn = document.querySelector(".left-column-block");
+  if (leftColumn) {
+    const before =
+      directChild(leftColumn, ".cartItemPanel-hook-position, .cart-item-panel") ||
+      leftColumn.firstElementChild;
+    return { parent: leftColumn, before };
+  }
+  const cartScreen = document.querySelector(
+    "#main-content-cart, [data-testid='smart-cart-screen-block'], .smart-cart-screen-block",
+  );
+  if (cartScreen) return { parent: cartScreen, before: cartScreen.firstElementChild };
+  return null;
+}
+
 export function initKohlsCheckoutPayFlow() {
   if (!location.hostname.includes("kohls.com")) return;
   initRetailerCheckoutPayFlow({
@@ -62,6 +106,10 @@ export function initKohlsCheckoutPayFlow() {
     isCheckoutPage: isKohlsPayGatePage,
     findCheckoutButton: findKohlsCheckoutButton,
     findGatedCheckoutButtons: findKohlsCheckoutButtons,
+    findSummaryMountAnchor: findKohlsSummaryMountAnchor,
+    // Kohl's lets shoppers change shipping speed/expedite, so a scraped concrete delivery date is
+    // unreliable. Skip capture → confirmation email uses "Kohl's delivery date + 1 day" wording.
+    captureDeliveryDate: false,
     getCartSnapshot: () => extractKohlsCartSnapshot(document),
     fillHubShippingFields: fillHubShippingFieldsByAutocomplete,
     paymentPendingHint: "Please complete payment to Wrrapd before proceeding to checkout.",

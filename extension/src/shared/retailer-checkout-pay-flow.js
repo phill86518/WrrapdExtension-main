@@ -196,8 +196,13 @@ function buildOrderData(config) {
     : [{ title: `${config.retailerName} order`, itemId: "", imageUrl: "" }];
   const choices = readItemChoices(config.sessionPrefix);
   // Retailer's own promised delivery date (Wrrapd schedules its delivery for this + 1 day).
+  // Some retailers (e.g. Kohl's) let the shopper change shipping speed / expedite at checkout,
+  // so any concrete date we scrape is unreliable — those set `captureDeliveryDate:false` and the
+  // confirmation email falls back to the safe generic "<retailer>'s delivery date + 1 day" wording.
   const estimatedDeliveryDate =
-    captureRetailerDeliveryDate({ deliveryDateSelectors: config.deliveryDateSelectors }) || null;
+    config.captureDeliveryDate === false
+      ? null
+      : captureRetailerDeliveryDate({ deliveryDateSelectors: config.deliveryDateSelectors }) || null;
   return cartLines.map((line, idx) => {
     const ch = choices[idx] || {};
     const wrap = ch.wrapPref || "wrrapd";
