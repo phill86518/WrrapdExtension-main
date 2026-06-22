@@ -272,25 +272,38 @@ export function initKohlsRetailerBootstrap() {
     checkoutButtonPatterns: [/^checkout$/i, /^proceed to checkout$/i, /^check out$/i],
     summarySelector: "aside[data-testid='order-summary'], [data-testid='order-summary'], .order-summary",
     findMountAnchor: () => {
-      for (const sel of [
-        "[data-testid='checkout-button']",
-        "[data-automation-id='checkout-button']",
-        "button[name='checkout']",
-        "a[href*='checkout']",
-      ]) {
-        const btn = document.querySelector(sel);
-        if (btn?.parentElement) return { parent: btn.parentElement, before: btn };
-      }
-      for (const node of document.querySelectorAll("button, a[role='button'], input[type='submit']")) {
-        const text = normalizeWhitespace(node.textContent || node.value || "");
-        if (/^(checkout|proceed to checkout|check out)$/i.test(text) && node.parentElement) {
-          return { parent: node.parentElement, before: node };
+      // Kohl's renders the checkout CTA as a <kds-button> Stencil web component. Injecting our
+      // card into that component's internal DOM is fragile — it's visually clipped and gets wiped
+      // on the component's next hydration/re-render, so the panel "never shows". Anchor to stable
+      // layout containers instead. `before` MUST be a direct child of `parent` for insertBefore.
+      const directChild = (parent, selector) => {
+        if (!parent) return null;
+        for (const child of parent.children) {
+          if (child.matches?.(selector)) return child;
         }
+        return null;
+      };
+
+      // 1) Top of the cart's left column, above the item list — wide and prominent (Kohl's bag).
+      const leftColumn = document.querySelector(".left-column-block");
+      if (leftColumn) {
+        const before =
+          directChild(leftColumn, ".cartItemPanel-hook-position, .cart-item-panel") ||
+          leftColumn.firstElementChild;
+        return { parent: leftColumn, before };
       }
+
+      // 2) Top of the right-hand order-summary rail.
       const summary = document.querySelector(
-        "aside[data-testid='order-summary'], [data-testid='order-summary'], .order-summary",
+        "[data-testid='order-summary'], .order-summary-container, .order-summary-block, aside[data-testid='order-summary'], .order-summary",
       );
       if (summary?.parentElement) return { parent: summary.parentElement, before: summary };
+
+      // 3) Whole cart screen container, then generic main.
+      const cartScreen = document.querySelector(
+        "#main-content-cart, [data-testid='smart-cart-screen-block'], .smart-cart-screen-block, .smart-cart-screen",
+      );
+      if (cartScreen) return { parent: cartScreen, before: cartScreen.firstElementChild };
       const main = document.querySelector("main, [role='main'], #main-content");
       if (main) return { parent: main, before: main.firstElementChild };
       return null;

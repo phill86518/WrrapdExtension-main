@@ -24,6 +24,12 @@ function findKohlsCheckoutButtons() {
   };
 
   for (const sel of [
+    // Kohl's live bag/checkout CTA is a <kds-button> web component.
+    "kds-button.checkout-button",
+    "kds-button[data-testid^='checkout-btn']",
+    "[data-testid^='checkout-btn']",
+    ".checkout-button",
+    ".checkout-btn",
     "[data-testid='checkout-button']",
     "[data-automation-id='checkout-button']",
     "button[name='checkout']",
@@ -31,8 +37,12 @@ function findKohlsCheckoutButtons() {
     document.querySelectorAll(sel).forEach(add);
   }
 
-  for (const node of document.querySelectorAll("button, a[role='button'], input[type='submit']")) {
-    const text = normalizeWhitespace(node.textContent || node.value || "");
+  for (const node of document.querySelectorAll(
+    "button, a[role='button'], input[type='submit'], kds-button",
+  )) {
+    const text = normalizeWhitespace(
+      node.textContent || node.value || node.getAttribute?.("title") || "",
+    );
     if (/^(checkout|proceed to checkout|place order|continue)$/i.test(text)) add(node);
   }
 
