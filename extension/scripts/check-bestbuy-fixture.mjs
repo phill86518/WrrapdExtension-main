@@ -18,11 +18,11 @@ const cart = extractBestbuyCartSnapshot(dom.window.document);
 if (cart.itemCount !== 2) {
   throw new Error(`Expected 2 items, got ${cart.itemCount}`);
 }
-if (cart.subtotal !== 899.97) {
-  throw new Error(`Expected subtotal 899.97, got ${String(cart.subtotal)}`);
+if (cart.subtotal !== 649.98) {
+  throw new Error(`Expected subtotal 649.98, got ${String(cart.subtotal)}`);
 }
-if (cart.orderTotal !== 899.97) {
-  throw new Error(`Expected total 899.97, got ${String(cart.orderTotal)}`);
+if (cart.orderTotal !== 649.98) {
+  throw new Error(`Expected total 649.98, got ${String(cart.orderTotal)}`);
 }
 if (cart.fulfillmentCounts.shipping !== 1 || cart.fulfillmentCounts.pickup !== 1) {
   throw new Error(

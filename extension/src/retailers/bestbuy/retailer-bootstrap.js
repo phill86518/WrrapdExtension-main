@@ -3,6 +3,7 @@ import {
   SHIPPING_TIER_BESTBUY_LIMITED,
   describeTierForUi,
 } from "../../content/retailer-common.js";
+import { readItemChoices } from "../../shared/cart-gift-session.js";
 import { initRetailerCartGiftOptIn } from "../../shared/cart-gift-optin.js";
 import { initWrrapdConflictGuard } from "../../shared/wrrapd-conflict-guard.js";
 import { isExcludedScrapeRegion } from "../../shared/cart-scrape-region.js";
@@ -52,12 +53,23 @@ function detectFulfillmentType(itemRoot) {
   return "unknown";
 }
 
+function isBestbuyProductHref(href) {
+  const path = String(href || "");
+  return (
+    /\/site\/[^?#]*\.p(\?|#|$)/i.test(path) ||
+    /[?&]skuId=/i.test(path) ||
+    /\/product\/[^?#]+\/sku\/\d+/i.test(path)
+  );
+}
+
 function extractBestbuyItems(root = document) {
   const itemSelectors = [
+    ".fluid-item[data-test-sku]",
     "[data-testid='cart-line-item']",
     "[data-track='line-item']",
     // Best Buy's current React cart renders each line item as `.fluid-item`
     // (large view) / `.small-view-item` (small view) with `cart-item__*` children.
+    ".fluid-item.flex",
     ".fluid-item",
     ".small-view-item--parent",
     "li.cart-item",
@@ -86,23 +98,31 @@ function extractBestbuyItems(root = document) {
             "[data-track='cart-item-title']",
             "[data-testid='cart-line-item-title']",
             ".line-item__title",
+            "a.cart-item__title",
             ".cart-item__title",
+            ".cart-item__title-heading a",
             ".item-title",
             "h2",
             "h3",
           ],
           node,
         ) ||
-        Array.from(node.querySelectorAll("a[href*='/site/']")).reduce((found, link) => {
-          if (found) return found;
-          return normalizeWhitespace(link.textContent || link.getAttribute("title") || "");
-        }, "");
+        Array.from(node.querySelectorAll("a[href*='/site/'], a[href*='/product/']")).reduce(
+          (found, link) => {
+            if (found) return found;
+            const href = link.getAttribute("href") || "";
+            if (!isBestbuyProductHref(href)) return found;
+            return normalizeWhitespace(link.textContent || link.getAttribute("title") || "");
+          },
+          "",
+        );
       if (!title) return null;
       const priceText = getTextBySelectors(
         [
           "[data-track='line-item-price']",
           "[data-testid='cart-line-item-price']",
           "[data-testid='customer-price']",
+          ".fluid-item__price",
           ".pricing-price__regular-price",
           ".item-price",
           ".price",
@@ -136,13 +156,14 @@ function extractBestbuyItems(root = document) {
   const linkSeen = new Set();
   /** @type {typeof items} */
   const fromLinks = [];
-  const scope = root.querySelector("main[data-testid='cart-root'], main, [role='main']") || root;
-  for (const link of scope.querySelectorAll("a[href*='/site/']")) {
+  const scope =
+    root.querySelector(
+      ".fluid-large-view__main-content, main[data-testid='cart-root'], main, [role='main']",
+    ) || root;
+  for (const link of scope.querySelectorAll("a[href*='/site/'], a[href*='/product/']")) {
     const href = link.getAttribute("href") || "";
     if (!href || linkSeen.has(href)) continue;
-    // Only genuine product pages — excludes footer help/legal links (Terms, Privacy, etc.)
-    // that also live under /site/ but are not products.
-    if (!/\/site\/[^?#]*\.p(\?|#|$)/i.test(href) && !/[?&]skuId=/i.test(href)) continue;
+    if (!isBestbuyProductHref(href)) continue;
     // Skip recommendations / "you may also like" / sponsored / footer regions.
     if (isExcludedScrapeRegion(link)) continue;
     const title = normalizeWhitespace(link.textContent || link.getAttribute("title") || "");
@@ -169,23 +190,24 @@ function extractBestbuyItems(root = document) {
   return fromLinks;
 }
 
-function extractSummaryAmount(labelMatcher, root = document) {
-  const rows = Array.from(
-    root.querySelectorAll(
-      [
-        "[data-track='order-summary-subtotal']",
-        "[data-track='order-summary-total']",
-        "[data-testid='cart-order-summary']",
-        ".order-summary",
-        "div",
-        "li",
-        "tr",
-        "p",
-        "span",
-      ].join(",")
-    )
+function findBestbuyOrderSummaryRoot(root = document) {
+  return (
+    root.querySelector(".order-summary .price-summary") ||
+    root.querySelector(".order-summary") ||
+    root.querySelector("#cart-order-summary")?.closest(".order-summary") ||
+    root.querySelector("section[aria-label='order summary']")
   );
-  for (const row of rows) {
+}
+
+function extractSummaryAmount(labelMatcher, root = document) {
+  // Never scan the whole Best Buy document — the cart page is huge and a broad
+  // `div, li, tr, p, span` query freezes the content script before the panel mounts.
+  const scope = findBestbuyOrderSummaryRoot(root);
+  if (!scope) return null;
+
+  for (const row of scope.querySelectorAll(
+    "tr, [data-track='order-summary-subtotal'], [data-track='order-summary-total']",
+  )) {
     const text = normalizeWhitespace(row.textContent || "");
     if (!text || !labelMatcher.test(text)) continue;
     const amount = parseMoney(text);
@@ -194,11 +216,118 @@ function extractSummaryAmount(labelMatcher, root = document) {
   return null;
 }
 
+export function findBestbuyCartMountAnchor() {
+  const directChild = (parent, selector) => {
+    if (!parent) return null;
+    for (const child of parent.children) {
+      if (child.matches?.(selector)) return child;
+    }
+    return null;
+  };
+
+  // 1) Top of the order-summary card in the right sidebar — stable across React re-renders.
+  const summary = document.querySelector(".order-summary");
+  if (summary) {
+    const before =
+      document.getElementById("cart-order-summary") ||
+      directChild(summary, ".order-summary__heading") ||
+      summary.firstElementChild;
+    return { parent: summary, before };
+  }
+
+  // 2) Top of the cart's main column, below the "Your Cart" heading.
+  const mainContent = document.querySelector(".fluid-large-view__main-content");
+  if (mainContent) {
+    const pageHeading = directChild(mainContent, ".page-heading");
+    if (pageHeading?.nextElementSibling) {
+      return { parent: mainContent, before: pageHeading.nextElementSibling };
+    }
+    return { parent: mainContent, before: mainContent.firstElementChild };
+  }
+
+  // 3) Sidebar shell, then checkout CTA row.
+  const sidebar = document.querySelector(
+    "section.fluid-large-view__sidebar, .fluid-large-view__sidebar",
+  );
+  if (sidebar) {
+    const inner =
+      sidebar.querySelector(
+        ".fluid-large-view__sidebar-content-wrapper, .fluid-large-view__sidebar-content",
+      ) || sidebar;
+    return { parent: inner, before: inner.firstElementChild };
+  }
+
+  for (const sel of [
+    ".checkout-buttons__checkout button",
+    "button[data-track*='Checkout']",
+    "[data-track='checkout']",
+    "button[data-testid='checkout-button']",
+    "a[data-track='checkout']",
+    "a[href*='/checkout/r/']",
+  ]) {
+    const btn = document.querySelector(sel);
+    if (btn?.parentElement) return { parent: btn.parentElement, before: btn };
+  }
+
+  for (const node of document.querySelectorAll(
+    "button, a[role='button'], a.btn-primary, input[type='submit']",
+  )) {
+    const text = normalizeWhitespace(node.textContent || node.value || "");
+    if (/^(checkout|continue to checkout)$/i.test(text) && node.parentElement) {
+      return { parent: node.parentElement, before: node };
+    }
+  }
+
+  const main = document.querySelector("main[data-testid='cart-root'], main, [role='main']");
+  if (main) return { parent: main, before: main.firstElementChild };
+  return null;
+}
+
+function isBestbuyCheckoutPath(pathname = location.pathname) {
+  return String(pathname || "").toLowerCase().includes("/checkout");
+}
+
 export function isBestbuyCartEmpty(root = document) {
-  const main = root.querySelector("main[data-testid='cart-root'], main");
+  const main = root.querySelector(
+    ".fluid-large-view__main-content, main[data-testid='cart-root'], main",
+  );
   const text = normalizeWhitespace(main?.textContent?.slice(0, 800) || "");
   if (/your cart is empty/i.test(text)) return true;
   return extractBestbuyItems(root).length === 0;
+}
+
+export function getBestbuyCartSnapshotSafe(root = document) {
+  try {
+    const snap = extractBestbuyCartSnapshot(root);
+    if (snap.itemCount > 0 || !isBestbuyCheckoutPath()) return snap;
+
+    // Checkout markup often omits line-item tiles; keep the opt-in alive from session.
+    const choices = readItemChoices(BESTBUY_SESSION_PREFIX);
+    if (choices.length === 0) return snap;
+    return {
+      ...snap,
+      itemCount: choices.length,
+      items: choices.map((choice, index) => ({
+        title: choice.title || `Item ${index + 1}`,
+        priceText: "",
+        unitPrice: null,
+        quantity: 1,
+        fulfillment: "unknown",
+      })),
+      isEmpty: false,
+    };
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("[Wrrapd] Best Buy cart snapshot failed:", err);
+    return {
+      itemCount: 0,
+      items: [],
+      isEmpty: false,
+      subtotal: null,
+      orderTotal: null,
+      fulfillmentCounts: { shipping: 0, pickup: 0, mixed: 0, unknown: 0 },
+    };
+  }
 }
 
 export function extractBestbuyCartSnapshot(root = document) {
@@ -235,7 +364,13 @@ export function extractBestbuyCartSnapshot(root = document) {
 
 export function initBestbuyRetailerBootstrap() {
   const shippingTierHint = describeTierForUi(SHIPPING_TIER_BESTBUY_LIMITED);
-  const cart = extractBestbuyCartSnapshot(document);
+  let cart = null;
+  try {
+    cart = getBestbuyCartSnapshotSafe(document);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("[Wrrapd] Best Buy cart snapshot failed (continuing to mount anyway):", err);
+  }
 
   const isBestbuyCartOrCheckoutPage = () => {
     const path = location.pathname.toLowerCase();
@@ -252,35 +387,19 @@ export function initBestbuyRetailerBootstrap() {
     savedBannerAttr: BESTBUY_SAVED_BANNER_ATTR,
     modalId: BESTBUY_GIFT_MODAL_ID,
     shippingTierHint,
-    checkoutButtonPatterns: [/^checkout$/i, /^continue to checkout$/i],
-    summarySelector: "[data-testid='cart-order-summary'], .order-summary",
-    findMountAnchor: () => {
-      for (const sel of [
-        "[data-track='checkout']",
-        "button[data-testid='checkout-button']",
-        "a[data-track='checkout']",
-        "a[href*='/checkout/r/']",
-        ".btn-primary[href*='checkout']",
-      ]) {
-        const btn = document.querySelector(sel);
-        if (btn?.parentElement) return { parent: btn.parentElement, before: btn };
-      }
-      for (const node of document.querySelectorAll("button, a[role='button'], a.btn-primary, input[type='submit']")) {
-        const text = normalizeWhitespace(node.textContent || node.value || "");
-        if (/^(checkout|continue to checkout)$/i.test(text) && node.parentElement) {
-          return { parent: node.parentElement, before: node };
-        }
-      }
-      const summary = document.querySelector("[data-testid='cart-order-summary'], .order-summary");
-      if (summary?.parentElement) return { parent: summary.parentElement, before: summary };
-      const main = document.querySelector("main[data-testid='cart-root'], main");
-      if (main) return { parent: main, before: main.firstElementChild };
-      return null;
-    },
+    checkoutButtonPatterns: [/^checkout$/i, /^continue to checkout$/i, /^place order$/i],
+    summarySelector: ".order-summary, #cart-order-summary, [data-testid='cart-order-summary']",
+    findMountAnchor: findBestbuyCartMountAnchor,
     isCartPage: isBestbuyCartOrCheckoutPage,
     isCheckoutPage: isBestbuyCartOrCheckoutPage,
-    isCartEmpty: () => isBestbuyCartEmpty(document),
-    getCartSnapshot: () => extractBestbuyCartSnapshot(document),
+    isCartEmpty: () => {
+      try {
+        return isBestbuyCartEmpty(document);
+      } catch {
+        return false;
+      }
+    },
+    getCartSnapshot: () => getBestbuyCartSnapshotSafe(document),
   });
 
   initWrrapdConflictGuard({

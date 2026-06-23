@@ -4,7 +4,10 @@ import {
   BESTBUY_CHECKOUT_URL_HINTS,
   BESTBUY_SESSION_PREFIX,
 } from "./constants.js";
-import { extractBestbuyCartSnapshot } from "./retailer-bootstrap.js";
+import {
+  findBestbuyCartMountAnchor,
+  getBestbuyCartSnapshotSafe,
+} from "./retailer-bootstrap.js";
 
 function normalizeWhitespace(value) {
   return String(value || "").replace(/\s+/g, " ").trim();
@@ -27,6 +30,8 @@ function findBestbuyCheckoutButtons() {
   };
 
   for (const sel of [
+    ".checkout-buttons__checkout button",
+    "button[data-track*='Checkout']",
     "[data-track='checkout']",
     "button[data-testid='checkout-button']",
     "a[data-track='checkout']",
@@ -35,9 +40,11 @@ function findBestbuyCheckoutButtons() {
     document.querySelectorAll(sel).forEach(add);
   }
 
-  for (const node of document.querySelectorAll("button, a[role='button'], a.btn-primary, input[type='submit']")) {
+  for (const node of document.querySelectorAll(
+    "button, a[role='button'], a.btn-primary, input[type='submit']",
+  )) {
     const text = normalizeWhitespace(node.textContent || node.value || "");
-    if (/^(checkout|continue to checkout)$/i.test(text)) add(node);
+    if (/^(checkout|continue to checkout|place order|continue)$/i.test(text)) add(node);
   }
 
   return buttons;
@@ -48,11 +55,7 @@ function findBestbuyCheckoutButton() {
 }
 
 function findBestbuySummaryMountAnchor() {
-  const btn = findBestbuyCheckoutButton();
-  if (btn?.parentElement) return { parent: btn.parentElement, before: btn };
-  const summary = document.querySelector("[data-testid='cart-order-summary']");
-  if (summary) return { parent: summary, before: summary.firstElementChild };
-  return null;
+  return findBestbuyCartMountAnchor();
 }
 
 export function initBestbuyCheckoutPayFlow() {
@@ -65,7 +68,7 @@ export function initBestbuyCheckoutPayFlow() {
     findCheckoutButton: findBestbuyCheckoutButton,
     findGatedCheckoutButtons: findBestbuyCheckoutButtons,
     findSummaryMountAnchor: findBestbuySummaryMountAnchor,
-    getCartSnapshot: () => extractBestbuyCartSnapshot(document),
+    getCartSnapshot: () => getBestbuyCartSnapshotSafe(document),
     fillHubShippingFields: fillHubShippingFieldsByAutocomplete,
     paymentPendingHint: "Please complete payment to Wrrapd before proceeding to checkout.",
   });

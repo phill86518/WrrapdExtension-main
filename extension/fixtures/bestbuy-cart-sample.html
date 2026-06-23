@@ -5,29 +5,56 @@
     <title>Best Buy Cart Sample</title>
   </head>
   <body>
-    <main data-testid="cart-root">
-      <section data-testid="cart-line-item" data-track="line-item">
-        <a data-track="line-item-title" href="/site/sony-wh-1000xm5/6505727.p?skuId=6505727">
-          Sony WH-1000XM5 Wireless Noise Canceling Headphones
-        </a>
-        <div data-testid="cart-line-item-price">$399.99</div>
-        <div data-track="line-item-quantity">Qty: 1</div>
-        <div>Ship it</div>
-      </section>
-
-      <section data-testid="cart-line-item" data-track="line-item">
-        <a data-track="line-item-title" href="/site/apple-airpods-pro-2/4900964.p?skuId=4900964">
-          Apple AirPods Pro 2
-        </a>
-        <div data-testid="cart-line-item-price">$249.99</div>
-        <div data-track="line-item-quantity">Quantity 2</div>
-        <div>Ready for pickup</div>
-      </section>
-
-      <section class="order-summary" data-testid="cart-order-summary">
-        <div data-track="order-summary-subtotal">Subtotal: $899.97</div>
-        <div data-track="order-summary-total">Total: $899.97</div>
-      </section>
+    <main>
+      <div class="fluid-large-view">
+        <section class="fluid-large-view__main-content">
+          <div class="page-heading">
+            <h1 class="page-heading__title">Your Cart</h1>
+          </div>
+          <div class="fluid-item flex" data-test-sku="6505727" data-test-lineitemid="line-1">
+            <div class="fluid-item__title">
+              <a class="cart-item__title" href="/product/sony-wh-1000xm5/6505727.p?skuId=6505727">
+                Sony WH-1000XM5 Wireless Noise Canceling Headphones
+              </a>
+            </div>
+            <div class="fluid-item__price">$399.99</div>
+            <div>Ship it</div>
+          </div>
+          <div class="fluid-item flex" data-test-sku="4900964" data-test-lineitemid="line-2">
+            <div class="fluid-item__title">
+              <a class="cart-item__title" href="/product/apple-airpods-pro-2/4900964.p?skuId=4900964">
+                Apple AirPods Pro 2
+              </a>
+            </div>
+            <div class="fluid-item__price">$249.99</div>
+            <div>Ready for pickup</div>
+          </div>
+        </section>
+        <section aria-label="order summary" class="fluid-large-view__sidebar">
+          <div class="fluid-large-view__sidebar-content">
+            <div class="order-summary">
+              <h2 id="cart-order-summary" class="order-summary__heading">Order Summary</h2>
+              <div class="price-summary">
+                <table>
+                  <tbody>
+                    <tr><th scope="row">Subtotal</th><td>$649.98</td></tr>
+                    <tr class="border-top"><th scope="row"><span>Total</span></th><td>$649.98</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="order-summary__checkout-buttons-container">
+                <div class="checkout-buttons">
+                  <div class="checkout-buttons__checkout">
+                    <button class="btn btn-primary" type="button" data-track="Checkout - Top">
+                      Checkout
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
     </main>
   </body>
 </html>
