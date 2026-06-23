@@ -56,6 +56,10 @@ function extractBestbuyItems(root = document) {
   const itemSelectors = [
     "[data-testid='cart-line-item']",
     "[data-track='line-item']",
+    // Best Buy's current React cart renders each line item as `.fluid-item`
+    // (large view) / `.small-view-item` (small view) with `cart-item__*` children.
+    ".fluid-item",
+    ".small-view-item--parent",
     "li.cart-item",
     ".cart-item",
     "[class*='cart-line-item']",
