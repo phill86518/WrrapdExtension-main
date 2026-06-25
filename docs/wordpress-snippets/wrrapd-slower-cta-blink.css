@@ -21,10 +21,11 @@
 	}
 }
 
-/* Header Theme Builder button 7f1bdc1 + homepage hero duplicate eb0b235 — match WORDPRESS-SITE-EDITS-LOG.md */
+/* Header Theme Builder button 7f1bdc1 + homepage hero duplicate eb0b235 + inline HTML CTAs — match WORDPRESS-SITE-EDITS-LOG.md */
 .elementor-element-7f1bdc1 .elementor-button,
 .elementor-element-eb0b235 .elementor-button,
 .elementor-element-7f1bdc1 a.elementor-button,
-.elementor-element-eb0b235 a.elementor-button {
+.elementor-element-eb0b235 a.elementor-button,
+a.wrrapd-ext-cta {
 	animation: wrrapd-cta-blink-slow 3.5s ease-in-out infinite !important;
 }

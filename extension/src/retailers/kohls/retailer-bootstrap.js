@@ -76,17 +76,20 @@ function detectFulfillment(node) {
 }
 
 function extractSummaryAmount(labelMatcher, root = document) {
+  const summary =
+    root.querySelector("[data-testid='order-summary']") ||
+    root.querySelector("[data-automation-id='order-summary']") ||
+    root.querySelector(".order-summary");
+  if (!summary) return null;
   const rowSelectors = [
-    "[data-testid='order-summary'] [data-testid='summary-row']",
-    "[data-automation-id='order-summary'] [data-automation-id='summary-row']",
-    ".order-summary .summary-row",
-    ".order-summary li",
-    ".order-summary div",
+    "[data-testid='summary-row']",
+    "[data-automation-id='summary-row']",
+    ".summary-row",
     "li",
     "div",
     "tr",
   ];
-  const rows = Array.from(root.querySelectorAll(rowSelectors.join(",")));
+  const rows = Array.from(summary.querySelectorAll(rowSelectors.join(",")));
   for (const row of rows) {
     const text = normalizeWhitespace(row.textContent || "");
     if (!text || !labelMatcher.test(text)) continue;

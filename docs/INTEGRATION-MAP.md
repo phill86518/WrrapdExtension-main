@@ -4,8 +4,8 @@ High-level map of how the major pieces talk today, and where **customer identity
 
 ```mermaid
 flowchart LR
-  subgraph amazon [Amazon.com]
-    A[Cart / Checkout DOM]
+  subgraph retailer [Retailer sites]
+    A[Cart / Checkout DOM<br/>Amazon, Target, LEGO, Ulta, Walmart,<br/>Nordstrom, Kohl's, Sephora, Best Buy, Etsy]
   end
 
   subgraph ext [Chrome extension]
@@ -50,7 +50,7 @@ flowchart LR
 
 | Host / process | Repo path | Notes |
 |----------------|-----------|--------|
-| `api.wrrapd.com`, `pay.wrrapd.com` | `backend/wrrapd-api-repo/WrrapdServer/server.js` | PM2 name **`wrrapd-server`**. CORS allows Amazon origins; Stripe checkout; saves orders under `orders/`. |
+| `api.wrrapd.com`, `pay.wrrapd.com` | `backend/wrrapd-api-repo/WrrapdServer/server.js` | PM2 name **`wrrapd-server`**. CORS allows retailer extension origins; Stripe checkout; saves orders under `orders/`. |
 | Tracking ingest | Same server → `POST /api/proxy-tracking-ingest` (see `TRACKING_INGEST_URL`) | Forwards to Cloud Run `…/api/orders/ingest` with shared secret header. |
 | Tracking UI | `tracking-platform/` | Firestore-backed orders; admin/driver/public track routes. |
 | `wrrapd.com` | **Not** in this git repo | WordPress + Elementor + plugins; production DB tables commonly prefixed `dfy_`. |
@@ -98,15 +98,20 @@ Never expose the internal key in Elementor HTML or browser JavaScript.
 | Path | Role |
 |------|------|
 | `extension/src/content/index.js` | **Amazon** entry; bundled to root `extension/content.js` (`npm run build:amazon`). |
-| `extension/src/content/target-index.js` | **Target** entry; bundled to `extension/content-target.js` (`npm run build:target`). Must stay independent of Amazon legacy. |
-| `extension/src/content/lego-index.js` | **Lego** entry; bundled to `extension/content-lego.js` (`npm run build:lego`). Guest-checkout-first scaffold. |
+| `extension/src/content/<retailer>-index.js` | Store-retailer entries for **Target, LEGO, Ulta, Walmart, Nordstrom, Kohl's, Sephora, Best Buy, Etsy**; bundled to `extension/content-<retailer>.js`. Must stay independent of Amazon legacy. |
 | `extension/src/content/content-legacy.js` | Amazon-only legacy flow (checkout monitoring, pay handoff, etc.). |
 | `extension/src/content/lib/` | Modules imported by the **Amazon** entry (sign-in heuristics, delivery hints, DOM helpers, etc.). |
-| `extension/src/retailers/` | Per-retailer constants/adapters (Amazon, Target, Lego, ...). |
+| `extension/src/retailers/` | Per-retailer constants/adapters and DOM selectors. Shared store behavior lives in `extension/src/shared/`. |
 
 `npm run build` produces all retailer bundles; `manifest.json` uses **separate `content_scripts`** so only the matching retailer code runs on each host. Full framework, CWS notes, and naming (`content.js` vs `content-<retailer>.js`): **[extension/README.md](../extension/README.md)** and **[docs/EXTENSION-ARCHITECTURE.md](EXTENSION-ARCHITECTURE.md)**.
 
-The Amazon bundle’s job is to **complete Amazon checkout** and **invoke** pay server and ingest paths with consistent **order numbers**, **`retailer: Amazon`**, and **customer email** when available. Additional retailers use the same API patterns with the correct **`retailer`** on ingest. Long-term **order listing** for logged-in shoppers is **server + WP**, not the extension alone.
+The Amazon bundle’s job is to **complete Amazon checkout** and **invoke** pay server and ingest paths with consistent **order numbers**, **`retailer: Amazon`**, and **customer email** when available. Store-retailer bundles use the same API patterns with the correct **`retailer`** on payment and ingest, then release the real retailer checkout/place-order button after Wrrapd payment succeeds.
+
+Store-retailer safety rules:
+
+- Cart extraction must count real cart/bag lines only, not recommendation/sponsored/related products.
+- Delivery-date capture must ignore stale dates before today; when uncertain, emails and orders fall back to generic “retailer delivery date + 1 day” wording.
+- Kohl's intentionally skips concrete delivery-date capture because shoppers can change shipping speed/expedite.
 
 ---
 

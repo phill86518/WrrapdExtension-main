@@ -6,10 +6,10 @@ One Git repo (e.g. [`phill86518/WrrapdExtension-main`](https://github.com/phill8
 
 ## Extension (`extension/`)
 
-- **Manifest V3** Chrome extension; content script matches **www.amazon.com** (see `manifest.json`).
-- **Production bundle:** `npm run build` in `extension/` writes root **`content.js`** from **`src/content/index.js`** and dependencies (including `content-legacy.js`).
-- **`content.js` is generated** — edit **`src/content/`** and rebuild; do not treat root `content.js` as the only source of truth.
-- Shared logic is progressively moved into **`src/content/lib/*.js`**.
+- **Manifest V3** multi-retailer Chrome extension; `manifest.json` uses one content script bundle per retailer host.
+- **Production bundles:** `npm run build` in `extension/` writes root **`content*.js`** files from **`src/content/*-index.js`** entries and dependencies.
+- **Root `content*.js` files are generated** — edit **`src/content/`**, **`src/retailers/`**, and **`src/shared/`**, then rebuild.
+- Shared non-Amazon retailer logic lives in **`src/shared/*.js`**; Amazon-only legacy logic remains in `src/content/content-legacy.js`.
 
 ## Backend (real production)
 
@@ -24,7 +24,7 @@ One Git repo (e.g. [`phill86518/WrrapdExtension-main`](https://github.com/phill8
 ## Workflow
 
 1. Implement on **GCP VM** (or any dev machine), **`git push origin main`** from monorepo root when ready.
-2. Roger’s **Windows** clone: **`git pull`**, **`cd extension && npm run build`**, Chrome **Reload** on the extension.
+2. Roger’s **Windows** clone: **`git restore extension/`**, **`git pull origin main`**, **`cd extension && npm install && npm run build`**, Chrome **Reload** on the extension. After testing, run **`npm run build:store`** from `extension/` to create the Chrome Web Store zip.
 3. Do **not** recommend **`git pull` on the production GCP VM** as a default step before push (see repo `.cursor/rules/gcp-vm-no-git-pull.mdc`).
 
 ## Deploy commands (canonical)

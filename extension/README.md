@@ -2,7 +2,16 @@
 
 **Public install:** [Wrrapd on the Chrome Web Store](https://chromewebstore.google.com/detail/wrrapd/eampapdpkmnnbfdojhmbpckpljnbpapo). For development, use **Load unpacked** on this folder after `npm run build`.
 
-Manifest V3 **multi-retailer** extension (see `manifest.json`): a **separate content script bundle per retailer domain**, not one script on all stores. Today **Amazon** (`content.js` → `www.amazon.com`) carries checkout UX, pay summary, and **Place your order** integration; **Target** (`content-target.js` → `*.target.com`) and **Lego** (`content-lego.js` → `*.lego.com`) are separate entries and bundles.
+Manifest V3 **multi-retailer** extension (see `manifest.json`): a **separate content script bundle per retailer domain**, not one script on all stores. Current build supports Amazon, Target, LEGO, Ulta, Walmart, Nordstrom, Kohl's, Sephora, Best Buy, and Etsy, with generated `content*.js` bundles committed for Chrome loading.
+
+## Current release notes
+
+**Version:** `2.0.15`
+
+- Store-retailer checkout gates release after successful Wrrapd payment, including route-id success messages such as `bestbuy` / `kohls`.
+- LEGO cart extraction is scoped to cart/bag containers so recommendation products do not become Wrrapd gift-wrap items.
+- Shared recommendation filtering excludes related, sponsored, similar, popular, featured, and “complete your/this” sections.
+- Retailer delivery-date capture ignores stale dates before today; uncertain dates fall back to generic retailer-date-plus-one wording.
 
 ## Windows — where to build (Roger’s machine)
 
@@ -27,20 +36,28 @@ cd ..
 Then Chrome → Extensions → Wrrapd → **Reload**.  
 `git restore extension/` clears **all** locally-modified/generated bundles so `git pull` is never blocked. Every `content*.js` (Amazon `content.js`, Target, Lego, Ulta, Walmart, Nordstrom, Kohl's, Sephora, Best Buy, Etsy) is a committed build artifact that `npm run build` regenerates after the pull; Windows is pull-and-build only. (Prefer `git stash` instead if you have local Windows edits to keep.) `npm install` may print harmless `EBADENGINE` warnings from `jsdom` on Node < 20.19 — `jsdom` is dev-only and not used by the build.
 
+After browser testing passes, create the Chrome Web Store zip from `extension/`:
+
+```bash
+npm run build:store
+```
+
 Full stack deploy order (VM push, PM2, Cloud Run, Windows): **[../DEPLOYMENT.md](../DEPLOYMENT.md)**.
 
 ## Source layout and build
 
 - **Amazon entry:** `src/content/index.js` → imports Amazon-only helpers, then **`content-legacy.js`** (IIFE).
-- **Target entry:** `src/content/target-index.js` → **must not** import `content-legacy.js` or Amazon DOM modules. Add Target logic only under `src/retailers/target/` (and optional thin `src/shared/` for API URLs / ingest helpers).
-- **Lego entry:** `src/content/lego-index.js` → guest-checkout-first scaffold for `*.lego.com`; keep it isolated from Amazon legacy modules.
+- **Store-retailer entries:** `src/content/<retailer>-index.js` → one isolated bundle per retailer (`target`, `lego`, `ulta`, `walmart`, `nordstrom`, `kohls`, `sephora`, `bestbuy`, `etsy`).
+- **Shared store flow:** `src/shared/cart-gift-optin.js`, `src/shared/retailer-checkout-pay-flow.js`, `src/shared/cart-scrape-region.js`, and `src/shared/retailer-delivery-date.js` hold cross-retailer behavior. Keep retailer DOM selectors under `src/retailers/<retailer>/`.
 - **Bundled outputs (generated — do not edit by hand):**
   - **`content.js`** — Amazon; loaded only on `*://www.amazon.com/*` (`manifest.json` `content_scripts`).
   - **`content-target.js`** — Target; loaded only on `*://*.target.com/*`.
-  - **`content-lego.js`** — Lego; loaded only on `*://*.lego.com/*`.
-- **`npm run build`** — runs **`build:amazon`**, **`build:target`**, and **`build:lego`**.
-- **`npm run build:pretty`** — both bundles without minify (easier to read while debugging).
-- **`npm run build:prod`** — Amazon + Target + Lego with `drop:console` where configured in `package.json`.
+  - **`content-lego.js`** — LEGO; loaded only on `*://*.lego.com/*`.
+  - **`content-ulta.js`**, **`content-walmart.js`**, **`content-nordstrom.js`**, **`content-kohls.js`**, **`content-sephora.js`**, **`content-bestbuy.js`**, **`content-etsy.js`** — store-retailer bundles.
+- **`npm run build`** — builds every retailer bundle for local testing.
+- **`npm run build:pretty`** — all bundles without minify (easier to read while debugging).
+- **`npm run build:prod`** — all retailer bundles with production flags from `package.json`.
+- **`npm run build:store`** — production build plus Chrome Web Store zip packaging.
 - **Legacy Amazon checkout / cart / pay:** `src/content/content-legacy.js` (large; refactor only inside Amazon paths).
 
 ### Naming convention for more retailers
@@ -59,12 +76,19 @@ Chrome injects scripts **only** on URLs matched by each `content_scripts` entry.
 |---------------------|--------------------|------------------------------------------------|
 | `www.amazon.com`    | `content.js`       | Full Amazon legacy checkout / pay integration |
 | `*.target.com`      | `content-target.js`| Target-only bundle (no Amazon legacy)         |
-| `*.lego.com`        | `content-lego.js`  | Lego-only bundle (guest-first scaffold)       |
+| `*.lego.com`        | `content-lego.js`  | LEGO-only bundle (custom checkout flow)       |
+| `*.ulta.com`        | `content-ulta.js`  | Ulta store-retailer shared flow               |
+| `*.walmart.com`     | `content-walmart.js` | Walmart store-retailer shared flow          |
+| `*.nordstrom.com`   | `content-nordstrom.js` | Nordstrom store-retailer shared flow      |
+| `*.kohls.com`       | `content-kohls.js` | Kohl's store-retailer shared flow             |
+| `*.sephora.com`     | `content-sephora.js` | Sephora store-retailer shared flow          |
+| `*.bestbuy.com`     | `content-bestbuy.js` | Best Buy store-retailer shared flow         |
+| `*.etsy.com`        | `content-etsy.js`  | Etsy store-retailer shared flow               |
 
 **Rules of thumb**
 
 1. **Never** import `content-legacy.js` (or `src/content/lib/*` Amazon-only modules) from the Target entry.
-2. **Shared** code should be retailer-agnostic (constants, `fetch` to `api.wrrapd.com`, types). If something touches Amazon DOM or ASINs, it stays in the Amazon tree (`src/retailers/amazon/`, legacy, etc.).
+2. **Shared** code should be retailer-agnostic (cart opt-in, pay gating, recommendation exclusion, delivery-date sanity checks, constants, `fetch` to `api.wrrapd.com`, types). If something touches Amazon DOM or ASINs, it stays in the Amazon tree (`src/retailers/amazon/`, legacy, etc.).
 3. Tracking ingest payloads must set **`retailer`** (`Amazon` \| `Target` \| …) to match [tracking-platform](../tracking-platform) `OrderRetailer` (see pay server + `parseIngestOrderPayload`).
 
 ### Does Chrome Web Store allow multiple content JavaScript files?
@@ -97,7 +121,7 @@ Includes, among others:
 
 1. **Signed out on Amazon:** Wrrapd does not inject checkout UI, does not disable Amazon controls, does not scrape delivery hints (hints cleared from `sessionStorage` when inactive).
 2. **Signed in:** Normal Wrrapd flows on cart, gift, address, payment pages when Wrrapd gift-wrap is in play.
-3. **After Pay Wrrapd succeeds:** **`attachWrrapdPlaceOrderTrackingHook`** intercepts the real **Place your order** click once: refreshes delivery hints, POSTs tracking ingest, then resubmits so Amazon places the order.
+3. **After Pay Wrrapd succeeds:** Amazon’s **`attachWrrapdPlaceOrderTrackingHook`** intercepts the real **Place your order** click once: refreshes delivery hints, POSTs tracking ingest, then resubmits so Amazon places the order. Store retailers release the real checkout/place-order button after `retailer-checkout-pay-flow.js` confirms payment and fills the Wrrapd hub address.
 
 ## Do I restart `wrrapd-server` on the VM?
 

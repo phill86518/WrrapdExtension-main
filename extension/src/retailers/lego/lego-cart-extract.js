@@ -15,6 +15,7 @@ import {
   writeLegoItemChoices,
   writeLegoPaymentSuccess,
 } from "./lego-session-state.js";
+import { isExcludedScrapeRegion } from "../../shared/cart-scrape-region.js";
 
 const LEGO_SYNC_PREFIX = "wrrapdLego";
 
@@ -26,6 +27,31 @@ const LEGO_CART_SNAPSHOT_KEY = "wrrapdLegoCartSnapshot";
  * The numeric set ID at the end of the slug is the SKU.
  */
 const PRODUCT_SLUG_SKU = /\/product\/[^/]+-(\d{4,6})(?:\/|[?#]|$)/i;
+
+const LEGO_CART_LINE_ROOT_SELECTOR = [
+  "[data-test*='cart' i]",
+  "[data-test*='bag' i]",
+  "[data-testid*='cart' i]",
+  "[data-testid*='bag' i]",
+  "[aria-label*='cart' i]",
+  "[aria-label*='bag' i]",
+  "[class*='Cart' i]",
+  "[class*='Bag' i]",
+  "[class*='Basket' i]",
+  "[id*='cart' i]",
+  "[id*='bag' i]",
+].join(",");
+
+function closestLegoCartLineRoot(el) {
+  let node = el?.closest?.(LEGO_CART_LINE_ROOT_SELECTOR) || null;
+  while (node) {
+    if (!isExcludedScrapeRegion(node) && node.querySelector?.('a[href*="/product/"]')) {
+      return node;
+    }
+    node = node.parentElement?.closest?.(LEGO_CART_LINE_ROOT_SELECTOR) || null;
+  }
+  return null;
+}
 
 /**
  * @returns {Array<{ id: string, sku: string, title: string, productUrl: string, imageUrl: string }>}
@@ -40,6 +66,9 @@ export function extractLegoCartProductLines() {
   const out = [];
   const seen = new Set();
   for (const a of links) {
+    if (isExcludedScrapeRegion(a)) continue;
+    const cartRoot = closestLegoCartLineRoot(a);
+    if (!cartRoot) continue;
     const hrefRaw = a.href || a.getAttribute("href") || "";
     const href = String(hrefRaw).split("#")[0].split("?")[0];
     const m = href.match(PRODUCT_SLUG_SKU);
@@ -52,7 +81,7 @@ export function extractLegoCartProductLines() {
       `LEGO #${sku}`;
     const title = rawTitle.length > 100 ? rawTitle.slice(0, 100) + "…" : rawTitle;
     let imageUrl = "";
-    const card = a.closest("article, [data-test*='cart' i], li, tr, [class*='ProductCard' i]") || a.parentElement;
+    const card = a.closest("article, [data-test*='cart' i], li, tr, [class*='ProductCard' i]") || cartRoot;
     if (card) {
       const im = card.querySelector("img[src]");
       if (im) imageUrl = im.getAttribute("src") || "";

@@ -1,0 +1,388 @@
+/**
+ * Top Gifting Choices — homepage teaser + /top-gifting-choices/ hub page.
+ * Paste into Elementor → Site Settings → Custom CSS (or Appearance → Customize → Additional CSS).
+ */
+
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,560;1,9..144,560&family=Source+Sans+3:wght@400;600;700&display=swap");
+
+.wrrapd-top-gifts {
+	--wtg-ink: #0c1222;
+	--wtg-muted: #475569;
+	--wtg-paper: linear-gradient(165deg, #fdfcfa 0%, #f4f0e8 48%, #ebe4d8 100%);
+	--wtg-gold: #c9a227;
+	--wtg-gold-deep: #9a7618;
+	--wtg-card: rgba(255, 255, 255, 0.72);
+	--wtg-border: rgba(12, 18, 34, 0.08);
+	--wtg-shadow: 0 12px 40px rgba(12, 18, 34, 0.08);
+	font-family: "Source Sans 3", system-ui, sans-serif !important;
+	color: var(--wtg-ink);
+	background: var(--wtg-paper);
+	border-block: 1px solid var(--wtg-border);
+	padding-block: clamp(2.5rem, 7vmin, 4rem);
+	padding-inline: clamp(1rem, 4vw, 2rem);
+}
+
+/* Beat Elementor / theme fonts inside HTML widgets */
+.elementor-widget-html .wrrapd-top-gifts,
+.elementor-widget-html .wrrapd-top-gifts p,
+.elementor-widget-html .wrrapd-top-gifts li,
+.elementor-widget-html .wrrapd-top-gifts a.wrrapd-top-gifts__card-cta,
+.elementor-widget-html .wrrapd-top-gifts a.wrrapd-top-gifts__pill,
+.elementor-widget-html .wrrapd-top-gifts .wrrapd-top-gifts__eyebrow,
+.elementor-widget-html .wrrapd-top-gifts .wrrapd-top-gifts__fine,
+.elementor-widget-html .wrrapd-top-gifts .wrrapd-top-gifts__disclaimer {
+	font-family: "Source Sans 3", system-ui, sans-serif !important;
+}
+
+.elementor-widget-html .wrrapd-top-gifts h1,
+.elementor-widget-html .wrrapd-top-gifts h2,
+.elementor-widget-html .wrrapd-top-gifts h3,
+.elementor-widget-html .wrrapd-top-gifts .wrrapd-top-gifts__title,
+.elementor-widget-html .wrrapd-top-gifts .wrrapd-top-gifts__category,
+.elementor-widget-html .wrrapd-top-gifts .wrrapd-top-gifts__card-title,
+.elementor-widget-html .wrrapd-top-gifts .wrrapd-top-gifts__lede--display {
+	font-family: Fraunces, Georgia, serif !important;
+	font-weight: 560 !important;
+	letter-spacing: -0.02em !important;
+}
+
+.wrrapd-top-gifts__inner {
+	max-width: min(68rem, 100%);
+	margin-inline: auto;
+}
+
+.wrrapd-top-gifts__eyebrow {
+	font-family: "Source Sans 3", system-ui, sans-serif !important;
+	font-size: clamp(0.7rem, 1.8vw, 0.82rem) !important;
+	font-weight: 600 !important;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	color: var(--wtg-gold-deep);
+	margin: 0 0 0.6rem;
+}
+
+.wrrapd-top-gifts__title,
+.wrrapd-top-gifts h1 {
+	font-family: Fraunces, Georgia, serif !important;
+	font-size: clamp(1.65rem, 4.2vw, 2.35rem) !important;
+	font-weight: 560 !important;
+	line-height: 1.15 !important;
+	margin: 0 0 0.75rem;
+	letter-spacing: -0.02em !important;
+}
+
+.wrrapd-top-gifts__lede {
+	font-family: "Source Sans 3", system-ui, sans-serif !important;
+	font-size: clamp(1rem, 2.4vw, 1.12rem) !important;
+	line-height: 1.55 !important;
+	color: var(--wtg-muted);
+	max-width: none;
+	margin: 0 0 clamp(1rem, 3vmin, 1.35rem);
+	text-wrap: pretty;
+}
+
+.wrrapd-top-gifts__lede--display {
+	font-family: Fraunces, Georgia, serif !important;
+	font-size: clamp(1.05rem, 2.6vw, 1.22rem) !important;
+	font-weight: 560 !important;
+	line-height: 1.45 !important;
+	letter-spacing: -0.01em !important;
+	color: var(--wtg-muted);
+}
+
+.wrrapd-top-gifts__lede--display a {
+	font-family: Fraunces, Georgia, serif !important;
+	font-weight: 560 !important;
+	color: #0b1780;
+}
+
+.wrrapd-top-gifts__lede--display sup a {
+	font-size: 0.72em;
+	font-weight: 700 !important;
+	color: var(--wtg-muted);
+	text-decoration: none;
+	vertical-align: super;
+	line-height: 0;
+}
+
+.wrrapd-top-gifts--teaser .wrrapd-top-gifts__lede--display {
+	max-width: none;
+}
+
+.wrrapd-top-gifts__chip-row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.45rem 0.55rem;
+	list-style: none;
+	padding: 0;
+	margin: 0 0 1.25rem;
+}
+
+.wrrapd-top-gifts__chip-row li {
+	font-size: 0.82rem;
+	font-weight: 600;
+	padding: 0;
+	border-radius: 999px;
+	background: transparent;
+	border: none;
+	color: var(--wtg-muted);
+}
+
+.wrrapd-top-gifts__chip-row a,
+.wrrapd-top-gifts__pill {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	font-family: "Source Sans 3", system-ui, sans-serif !important;
+	font-size: clamp(0.82rem, 2vw, 0.9rem) !important;
+	font-weight: 600 !important;
+	text-decoration: none !important;
+	color: var(--wtg-ink) !important;
+	padding: 0.55em 0.95em;
+	border-radius: 999px;
+	background: linear-gradient(180deg, #f5e6a8, var(--wtg-gold));
+	border: 1px solid rgba(154, 118, 24, 0.35);
+	box-shadow: 0 2px 0 rgba(154, 118, 24, 0.25);
+	transition: filter 0.15s ease;
+}
+
+.wrrapd-top-gifts__chip-row a:hover,
+.wrrapd-top-gifts__pill:hover {
+	filter: brightness(1.05);
+}
+
+.wrrapd-top-gifts__cta-row {
+	margin: 0 0 0.75rem;
+}
+
+.wrrapd-top-gifts__cta {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	font-size: clamp(0.88rem, 2vw, 0.95rem);
+	font-weight: 600;
+	text-decoration: none;
+	color: var(--wtg-ink);
+	padding: 0.6em 1.15em;
+	border-radius: 999px;
+	background: linear-gradient(180deg, #f5e6a8, var(--wtg-gold));
+	border: 1px solid rgba(154, 118, 24, 0.35);
+	box-shadow: 0 2px 0 rgba(154, 118, 24, 0.25);
+}
+
+.wrrapd-top-gifts__cta:hover {
+	filter: brightness(1.05);
+}
+
+.wrrapd-top-gifts__fine {
+	font-size: 0.82rem;
+	color: var(--wtg-muted);
+	margin: 0;
+	line-height: 1.5;
+}
+
+.wrrapd-top-gifts__fine a {
+	color: #0b1780;
+	font-weight: 600;
+}
+
+.wrrapd-top-gifts__category {
+	margin-block: clamp(1.75rem, 4vmin, 2.25rem) 0.75rem;
+	font-family: Fraunces, Georgia, serif !important;
+	font-size: clamp(1.2rem, 3vw, 1.45rem) !important;
+	font-weight: 560 !important;
+	line-height: 1.2 !important;
+	text-wrap: balance;
+}
+
+.wrrapd-top-gifts__grid {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: clamp(0.85rem, 2.5vw, 1.15rem);
+	list-style: none;
+	padding: 0;
+	margin: 0 0 0.5rem;
+}
+
+@media (max-width: 899px) {
+	.wrrapd-top-gifts__grid {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}
+
+@media (max-width: 599px) {
+	.wrrapd-top-gifts__grid {
+		grid-template-columns: 1fr;
+	}
+}
+
+.wrrapd-top-gifts__card {
+	display: flex;
+	flex-direction: column;
+	background: var(--wtg-card);
+	backdrop-filter: blur(8px);
+	border: 1px solid var(--wtg-border);
+	border-radius: clamp(0.65rem, 2vmin, 0.85rem);
+	box-shadow: var(--wtg-shadow);
+	padding: clamp(1rem, 2.8vw, 1.2rem);
+	min-height: 100%;
+}
+
+.wrrapd-top-gifts__card-top {
+	display: flex;
+	align-items: center;
+	gap: 0.65rem;
+	margin-bottom: 0.45rem;
+}
+
+.wrrapd-top-gifts__logo {
+	flex-shrink: 0;
+	width: 2.35rem;
+	height: 2.35rem;
+	border-radius: 50%;
+	overflow: hidden;
+	background: #fff;
+	box-shadow: 0 2px 10px rgba(15, 23, 42, 0.1), inset 0 0 0 2px rgba(255, 255, 255, 0.75);
+}
+
+.wrrapd-top-gifts__logo img {
+	display: block;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.wrrapd-top-gifts__card-title {
+	font-family: Fraunces, Georgia, serif !important;
+	font-size: clamp(1.12rem, 2.8vw, 1.28rem) !important;
+	margin: 0;
+	font-weight: 560 !important;
+	line-height: 1.25 !important;
+	text-wrap: balance;
+}
+
+.wrrapd-top-gifts__card-copy {
+	font-family: "Source Sans 3", system-ui, sans-serif !important;
+	font-size: clamp(0.88rem, 2.1vw, 0.95rem) !important;
+	line-height: 1.45 !important;
+	color: var(--wtg-muted);
+	margin: 0 0 0.85rem;
+	flex-grow: 1;
+	text-wrap: pretty;
+	overflow-wrap: break-word;
+}
+
+.wrrapd-top-gifts__card-cta {
+	display: inline-flex;
+	font-size: 0.84rem;
+	font-weight: 600;
+	text-decoration: none;
+	color: var(--wtg-ink);
+	margin-top: auto;
+}
+
+.wrrapd-top-gifts__card-cta:hover {
+	text-decoration: underline;
+}
+
+.wrrapd-top-gifts__disclaimer {
+	font-family: "Source Sans 3", system-ui, sans-serif !important;
+	font-size: clamp(0.82rem, 1.9vw, 0.88rem) !important;
+	color: var(--wtg-muted);
+	line-height: 1.55 !important;
+	margin-top: clamp(1.5rem, 3.5vmin, 2rem);
+	padding-top: 1rem;
+	border-top: 1px solid var(--wtg-border);
+	max-width: 42rem;
+	text-wrap: pretty;
+}
+
+.wrrapd-top-gifts__nav {
+	margin: 0 0 clamp(1.5rem, 4vmin, 2.25rem);
+	padding: clamp(0.85rem, 2.5vw, 1.1rem);
+	background: var(--wtg-card);
+	border: 1px solid var(--wtg-border);
+	border-radius: clamp(0.65rem, 2vmin, 0.85rem);
+	box-shadow: var(--wtg-shadow);
+}
+
+.wrrapd-top-gifts__nav-list {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.55rem 0.65rem;
+	list-style: none;
+	padding: 0;
+	margin: 0;
+	justify-content: center;
+}
+
+.wrrapd-top-gifts__section {
+	scroll-margin-top: clamp(4rem, 10vmin, 5.5rem);
+}
+
+.wrrapd-top-gifts__grid--featured {
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+@media (max-width: 1099px) {
+	.wrrapd-top-gifts__grid--featured {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}
+
+@media (max-width: 599px) {
+	.wrrapd-top-gifts__grid--featured {
+		grid-template-columns: 1fr;
+	}
+}
+
+.wrrapd-top-gifts__legal h2 {
+	font-family: Fraunces, Georgia, serif !important;
+	font-size: clamp(1.15rem, 2.8vw, 1.35rem) !important;
+	font-weight: 560 !important;
+	margin: 1.5rem 0 0.5rem;
+}
+
+.wrrapd-top-gifts__legal p,
+.wrrapd-top-gifts__legal li {
+	font-family: "Source Sans 3", system-ui, sans-serif !important;
+	font-size: clamp(0.95rem, 2vw, 1.02rem) !important;
+	line-height: 1.62 !important;
+	color: var(--wtg-muted);
+	text-wrap: pretty;
+	max-width: 42rem;
+}
+
+.wrrapd-top-gifts__legal ul {
+	margin: 0 0 1rem;
+	padding-left: 1.25rem;
+	line-height: 1.62;
+	color: var(--wtg-muted);
+	max-width: 42rem;
+}
+
+.wrrapd-top-gifts--legal .wrrapd-top-gifts__inner {
+	max-width: min(42rem, 100%);
+}
+
+.wrrapd-top-gifts--legal .wrrapd-top-gifts__legal {
+	background: var(--wtg-card);
+	border: 1px solid var(--wtg-border);
+	border-radius: clamp(0.65rem, 2vmin, 0.85rem);
+	box-shadow: var(--wtg-shadow);
+	padding: clamp(1.25rem, 4vmin, 2rem);
+	margin-top: 0.5rem;
+}
+
+.wrrapd-top-gifts--teaser {
+	text-align: center;
+}
+
+.wrrapd-top-gifts--teaser .wrrapd-top-gifts__lede,
+.wrrapd-top-gifts--teaser .wrrapd-top-gifts__fine {
+	margin-inline: auto;
+}
+
+.wrrapd-top-gifts--teaser .wrrapd-top-gifts__chip-row {
+	justify-content: center;
+}

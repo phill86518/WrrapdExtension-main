@@ -15,7 +15,7 @@
 	--wgg-card: rgba(255, 255, 255, 0.72);
 	--wgg-border: rgba(12, 18, 34, 0.08);
 	--wgg-shadow: 0 12px 40px rgba(12, 18, 34, 0.08);
-	font-family: "Source Sans 3", system-ui, sans-serif;
+	font-family: "Source Sans 3", system-ui, sans-serif !important;
 	color: var(--wgg-ink);
 	background: var(--wgg-paper);
 	border-block: 1px solid var(--wgg-border);
@@ -23,9 +23,40 @@
 	padding-inline: clamp(1rem, 4vw, 2rem);
 }
 
+.elementor-widget-html .wrrapd-gift-guides,
+.elementor-widget-html .wrrapd-gift-guides p,
+.elementor-widget-html .wrrapd-gift-guides .wrrapd-gift-guides__card-copy,
+.elementor-widget-html .wrrapd-gift-guides .wrrapd-gift-guides__cta {
+	font-family: "Source Sans 3", system-ui, sans-serif !important;
+}
+
+.elementor-widget-html .wrrapd-gift-guides h2,
+.elementor-widget-html .wrrapd-gift-guides h3,
+.elementor-widget-html .wrrapd-gift-guides .wrrapd-gift-guides__title,
+.elementor-widget-html .wrrapd-gift-guides .wrrapd-gift-guides__card-title,
+.elementor-widget-html .wrrapd-gift-guides p.wrrapd-gift-guides__lede,
+.elementor-widget-html .wrrapd-gift-guides .wrrapd-gift-guides__lede {
+	font-family: Fraunces, Georgia, serif !important;
+	font-weight: 560 !important;
+	letter-spacing: -0.02em !important;
+}
+
+.elementor-widget-html .wrrapd-gift-guides p.wrrapd-gift-guides__lede,
+.elementor-widget-html .wrrapd-gift-guides .wrrapd-gift-guides__lede {
+	font-size: clamp(1.05rem, 2.6vw, 1.22rem) !important;
+	line-height: 1.45 !important;
+	letter-spacing: -0.01em !important;
+}
+
 .wrrapd-gift-guides__inner {
-	max-width: min(68rem, 100%);
+	max-width: min(76rem, 100%);
 	margin-inline: auto;
+}
+
+.wrrapd-gift-guides__intro {
+	width: 100%;
+	max-width: none;
+	margin-bottom: clamp(1.25rem, 3vmin, 1.75rem);
 }
 
 .wrrapd-gift-guides__eyebrow {
@@ -38,20 +69,53 @@
 }
 
 .wrrapd-gift-guides__title {
-	font-family: Fraunces, Georgia, serif;
-	font-size: clamp(1.65rem, 4.2vw, 2.35rem);
-	font-weight: 560;
-	line-height: 1.15;
+	font-family: Fraunces, Georgia, serif !important;
+	font-size: clamp(1.65rem, 4.2vw, 2.35rem) !important;
+	font-weight: 560 !important;
+	line-height: 1.2 !important;
 	margin: 0 0 0.75rem;
-	letter-spacing: -0.02em;
+	letter-spacing: -0.02em !important;
+	max-width: none;
 }
 
 .wrrapd-gift-guides__lede {
-	font-size: clamp(1rem, 2.4vw, 1.12rem);
-	line-height: 1.55;
+	font-family: Fraunces, Georgia, serif !important;
+	font-size: clamp(1.05rem, 2.6vw, 1.22rem) !important;
+	font-weight: 560 !important;
+	line-height: 1.45 !important;
 	color: var(--wgg-muted);
-	max-width: 42rem;
-	margin: 0 0 clamp(1rem, 3vmin, 1.35rem);
+	max-width: none;
+	margin: 0;
+	letter-spacing: -0.01em !important;
+}
+
+.wrrapd-gift-guides__lede .wrrapd-ext-cta {
+	font-family: Fraunces, Georgia, serif !important;
+	font-weight: 560 !important;
+	font-size: inherit !important;
+	color: #0b1780;
+}
+
+.wrrapd-gift-guides__aff-note {
+	font-family: "Source Sans 3", system-ui, sans-serif !important;
+	font-size: clamp(0.72rem, 1.7vw, 0.78rem) !important;
+	color: var(--wgg-muted);
+	margin: 0.45rem 0 0;
+	line-height: 1.45;
+	opacity: 0.85;
+}
+
+.wrrapd-gift-guides__aff-note a {
+	color: #0b1780;
+	font-weight: 600;
+}
+
+.wrrapd-gift-guides__fine {
+	font-size: clamp(0.78rem, 1.9vw, 0.82rem);
+	color: var(--wgg-muted);
+	margin: clamp(1.5rem, 3.5vmin, 2rem) 0 0;
+	line-height: 1.5;
+	max-width: none;
 }
 
 /* Featured retailer logo on each occasion card */
@@ -135,37 +199,39 @@
 }
 
 .wrrapd-gift-guides__card-title {
-	font-family: Fraunces, Georgia, serif;
-	font-size: clamp(1.12rem, 2.8vw, 1.28rem);
+	font-family: Fraunces, Georgia, serif !important;
+	font-size: clamp(1.05rem, 2.5vw, 1.2rem) !important;
 	margin: 0 0 0.45rem;
-	font-weight: 560;
+	font-weight: 560 !important;
+	line-height: 1.25 !important;
 }
 
 .wrrapd-gift-guides__card-copy {
-	font-size: clamp(0.88rem, 2.1vw, 0.95rem);
-	line-height: 1.45;
+	font-family: "Source Sans 3", system-ui, sans-serif !important;
+	font-size: clamp(0.84rem, 2vw, 0.92rem) !important;
+	line-height: 1.4 !important;
 	color: var(--wgg-muted);
 	margin: 0 0 1rem;
 	flex-grow: 1;
 }
 
 .wrrapd-gift-guides__cta {
-	display: inline-flex;
+	display: flex;
 	align-items: center;
 	justify-content: center;
 	gap: 0.35em;
-	font-size: clamp(0.82rem, 2vw, 0.9rem);
+	font-size: clamp(0.8rem, 1.9vw, 0.88rem);
 	font-weight: 600;
 	text-decoration: none;
 	color: var(--wgg-ink);
-	padding: 0.55em 0.95em;
+	padding: 0.55em 0.85em;
 	border-radius: 999px;
 	background: linear-gradient(180deg, #f5e6a8, var(--wgg-gold));
 	border: 1px solid rgba(154, 118, 24, 0.35);
 	box-shadow: 0 2px 0 rgba(154, 118, 24, 0.25);
 	margin-top: auto;
-	width: fit-content;
-	max-width: 100%;
+	width: 100%;
+	white-space: nowrap;
 }
 
 .wrrapd-gift-guides__cta:hover {

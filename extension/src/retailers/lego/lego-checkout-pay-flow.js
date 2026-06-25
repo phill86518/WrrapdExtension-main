@@ -737,7 +737,7 @@ async function openLegoPaymentPopup() {
 }
 
 async function ensurePaymentSummaryUi() {
-  syncLegoCartGiftState();
+  if (!readLegoPaymentSuccess()) syncLegoCartGiftState();
   const btn = findCheckoutSecurelyButton();
   if (!btn?.parentElement) return;
   await refreshCheckoutUnitPricesFromServer({

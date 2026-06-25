@@ -8,6 +8,12 @@ WordPress + Elementor + Hello theme content mostly lives **in the production dat
 
 ## Recent changes
 
+### 2026-06 — Extension partner cards + static legal/contact snippets
+
+- **Snippets:** `docs/wordpress-snippets/wrrapd-gift-guides-section.html` / `.css` — reframed homepage cards as “Checkout gift wrap” partner-store cards that point shoppers to the Chrome Web Store extension and supported retailer sites instead of older `/go/<slug>/` affiliate hops.
+- **Snippets:** `docs/wordpress-snippets/wrrapd-slower-cta-blink.css` — includes `.wrrapd-ext-cta` so inline extension CTAs share the slower blink treatment.
+- **New static page snippets:** affiliate disclosure, contact, terms, top gifting choices, and shared static-page CSS live under `docs/wordpress-snippets/` for copy/paste into WordPress/Elementor.
+
 ### 2026-05 — Gift guides: no duplicate logo strip; anchor after red divider (MU plugin)
 
 - **Snippets:** `wrrapd-gift-guides-section.html` — removed `.wrrapd-gift-guides__stores-wrap` (duplicate of header retailer wheel). Partner hops remain on the six occasion cards only.

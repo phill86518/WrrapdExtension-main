@@ -5,6 +5,7 @@ import {
 } from "../../content/retailer-common.js";
 import { initRetailerCartGiftOptIn } from "../../shared/cart-gift-optin.js";
 import { initWrrapdConflictGuard } from "../../shared/wrrapd-conflict-guard.js";
+import { isExcludedScrapeRegion } from "../../shared/cart-scrape-region.js";
 import {
   TARGET_CART_OPTIN_DATA_ATTR,
   TARGET_CART_URL_HINTS,
@@ -45,6 +46,7 @@ function extractTargetItems(root = document) {
   const itemNodes = Array.from(root.querySelectorAll('[data-test="cartItem"]'));
   return itemNodes
     .map((node) => {
+      if (isExcludedScrapeRegion(node)) return null;
       const title =
         getTextBySelectors(
           [
@@ -83,7 +85,8 @@ function extractSummaryAmount(labelMatcher, root = document) {
   const summary =
     root.querySelector('[data-test="orderSummary"]') ||
     root.querySelector('[data-test="cart-summary"]');
-  const scope = summary || root;
+  if (!summary) return null;
+  const scope = summary;
   const rows = Array.from(scope.querySelectorAll("div, li, span, p"));
   for (const row of rows) {
     const text = normalizeWhitespace(row.textContent || "");

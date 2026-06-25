@@ -1,0 +1,286 @@
+/* Wrrapd Contact + Terms page polish. Paste into Appearance -> Customize -> Additional CSS. */
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,560;1,9..144,560&family=Source+Sans+3:wght@400;600;700;800&display=swap");
+
+.wrrapd-page-shell,
+.wrrapd-contact-polish {
+	--wp-ink: #0c1222;
+	--wp-muted: #475569;
+	--wp-paper: linear-gradient(165deg, #fdfcfa 0%, #f4f0e8 48%, #ebe4d8 100%);
+	--wp-gold: #c9a227;
+	--wp-gold-deep: #9a7618;
+	--wp-card: rgba(255, 255, 255, 0.76);
+	--wp-border: rgba(12, 18, 34, 0.09);
+	--wp-shadow: 0 16px 44px rgba(12, 18, 34, 0.09);
+	font-family: "Source Sans 3", Roboto, system-ui, -apple-system, Segoe UI, Arial, sans-serif;
+	color: var(--wp-ink);
+}
+
+.wrrapd-page-shell {
+	background: var(--wp-paper);
+	border-block: 1px solid var(--wp-border);
+	padding: clamp(2.5rem, 7vmin, 4.25rem) clamp(1rem, 4vw, 2rem);
+}
+
+.wrrapd-page-shell a,
+.wrrapd-contact-polish a {
+	color: #0b1780;
+	font-weight: 700;
+	text-decoration-thickness: 0.08em;
+	text-underline-offset: 0.18em;
+}
+
+.wrrapd-card-grid,
+.wrrapd-contact-form-card,
+.wrrapd-contact-polish > .elementor-container,
+.wrrapd-contact-polish > .e-con-inner {
+	max-width: min(68rem, 100%);
+	margin-inline: auto;
+}
+
+/* Prose pages (Terms, Affiliate Disclosure): narrow measure for readable line length */
+.wrrapd-page-hero,
+.wrrapd-legal-card {
+	max-width: min(42rem, 100%);
+	margin-inline: auto;
+}
+
+.wrrapd-page-eyebrow {
+	margin: 0 0 0.65rem;
+	color: var(--wp-gold-deep);
+	font-size: clamp(0.72rem, 1.8vw, 0.84rem);
+	font-weight: 800;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+}
+
+.wrrapd-page-hero h1,
+.wrrapd-page-shell h1,
+.elementor-widget-html .wrrapd-page-shell h1 {
+	margin: 0 0 0.75rem;
+	font-family: Fraunces, Georgia, serif !important;
+	font-size: clamp(2rem, 5vw, 3.15rem) !important;
+	font-weight: 560 !important;
+	line-height: 1.08 !important;
+	letter-spacing: -0.03em !important;
+	color: var(--wp-ink) !important;
+}
+
+.wrrapd-contact-polish h1,
+.wrrapd-contact-polish .elementor-heading-title {
+	font-family: Fraunces, Georgia, serif !important;
+	letter-spacing: -0.03em;
+	color: var(--wp-ink) !important;
+}
+
+.wrrapd-contact-polish h1,
+.wrrapd-contact-polish h1.elementor-heading-title {
+	font-size: clamp(2rem, 5vw, 3.15rem) !important;
+	font-weight: 560 !important;
+	line-height: 1.08 !important;
+}
+
+.wrrapd-contact-polish h2,
+.wrrapd-contact-polish h2.elementor-heading-title,
+.wrrapd-contact-polish h3,
+.wrrapd-contact-polish h3.elementor-heading-title {
+	font-size: clamp(1.25rem, 2.8vw, 1.55rem) !important;
+	font-weight: 560 !important;
+	line-height: 1.2 !important;
+	margin-bottom: 0.55rem !important;
+}
+
+.wrrapd-page-lede {
+	max-width: 42rem;
+	margin: 0 0 clamp(1.6rem, 4vmin, 2.2rem);
+	color: var(--wp-muted);
+	font-family: "Source Sans 3", Roboto, system-ui, sans-serif !important;
+	font-size: clamp(1rem, 2.3vw, 1.12rem) !important;
+	line-height: 1.6 !important;
+	text-wrap: pretty;
+}
+
+.wrrapd-contact-polish,
+.wrrapd-contact-polish p,
+.wrrapd-contact-polish li,
+.wrrapd-contact-polish .elementor-text-editor,
+.wrrapd-contact-polish .elementor-widget-text-editor {
+	font-family: "Source Sans 3", Roboto, system-ui, -apple-system, Segoe UI, Arial, sans-serif !important;
+	color: var(--wp-muted);
+	font-size: clamp(0.98rem, 2vw, 1.08rem);
+	line-height: 1.65;
+}
+
+.wrrapd-contact-polish ul {
+	padding-left: 1.15rem;
+}
+
+.wrrapd-contact-polish strong,
+.wrrapd-contact-polish b {
+	color: var(--wp-ink);
+	font-weight: 800;
+}
+
+.wrrapd-updated {
+	display: inline-flex;
+	margin: 0 0 clamp(1.8rem, 4vmin, 2.4rem);
+	padding: 0.45rem 0.75rem;
+	border: 1px solid rgba(154, 118, 24, 0.22);
+	border-radius: 999px;
+	background: rgba(245, 230, 168, 0.55);
+	color: #5f480d;
+	font-size: 0.9rem;
+	font-weight: 700;
+}
+
+.wrrapd-card-grid {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: clamp(1rem, 2.8vw, 1.35rem);
+	margin-bottom: clamp(1.4rem, 4vmin, 2rem);
+}
+
+.wrrapd-info-card,
+.wrrapd-contact-form-card,
+.wrrapd-legal-card,
+.wrrapd-contact-polish .elementor-widget-container:has(> ul),
+.wrrapd-contact-polish .elementor-widget-google_maps,
+.wrrapd-contact-polish .elementor-widget-shortcode,
+.wrrapd-contact-polish .elementor-widget-form {
+	background: var(--wp-card);
+	border: 1px solid var(--wp-border);
+	border-radius: clamp(0.75rem, 2vmin, 1rem);
+	box-shadow: var(--wp-shadow);
+	backdrop-filter: blur(8px);
+}
+
+.wrrapd-info-card,
+.wrrapd-contact-form-card {
+	padding: clamp(1.15rem, 3vmin, 1.45rem);
+}
+
+.wrrapd-contact-polish .elementor-widget-container:has(> ul),
+.wrrapd-contact-polish .elementor-widget-google_maps,
+.wrrapd-contact-polish .elementor-widget-shortcode,
+.wrrapd-contact-polish .elementor-widget-form {
+	padding: clamp(1.1rem, 3vmin, 1.45rem);
+}
+
+.wrrapd-contact-polish .elementor-widget-google_maps iframe {
+	border-radius: 0.75rem;
+	overflow: hidden;
+}
+
+.wrrapd-contact-polish input,
+.wrrapd-contact-polish textarea,
+.wrrapd-contact-polish select {
+	border: 1px solid rgba(12, 18, 34, 0.16) !important;
+	border-radius: 0.65rem !important;
+	box-shadow: none !important;
+	font-family: "Source Sans 3", Roboto, system-ui, sans-serif !important;
+}
+
+.wrrapd-contact-polish button,
+.wrrapd-contact-polish input[type="submit"],
+.wrrapd-contact-polish .elementor-button {
+	border-radius: 999px !important;
+	background: linear-gradient(180deg, #f5e6a8, var(--wp-gold)) !important;
+	border: 1px solid rgba(154, 118, 24, 0.35) !important;
+	color: var(--wp-ink) !important;
+	font-weight: 800 !important;
+	box-shadow: 0 2px 0 rgba(154, 118, 24, 0.25) !important;
+}
+
+.wrrapd-info-card h2,
+.wrrapd-contact-form-card h2,
+.wrrapd-legal-card h2 {
+	margin: 0 0 0.55rem;
+	font-family: Fraunces, Georgia, serif;
+	font-size: clamp(1.15rem, 2.6vw, 1.35rem);
+	font-weight: 560;
+	color: var(--wp-ink);
+}
+
+.wrrapd-info-card p,
+.wrrapd-contact-form-card p,
+.wrrapd-legal-card p,
+.wrrapd-legal-card li {
+	color: var(--wp-muted);
+	font-size: clamp(0.95rem, 2vw, 1.02rem);
+	line-height: 1.62;
+}
+
+.wrrapd-info-card p,
+.wrrapd-contact-form-card p {
+	margin: 0.35rem 0 0;
+}
+
+.wrrapd-muted {
+	color: var(--wp-muted);
+}
+
+.wrrapd-legal-card {
+	padding: clamp(1.25rem, 4vmin, 2.1rem);
+}
+
+.wrrapd-legal-card h2,
+.wrrapd-page-shell h2,
+.elementor-widget-html .wrrapd-page-shell h2 {
+	margin-top: clamp(1.25rem, 3vmin, 1.75rem);
+	font-family: Fraunces, Georgia, serif !important;
+	font-size: clamp(1.15rem, 2.6vw, 1.35rem) !important;
+	font-weight: 560 !important;
+	line-height: 1.2 !important;
+	color: var(--wp-ink) !important;
+}
+
+.wrrapd-legal-card h2:first-child {
+	margin-top: 0;
+}
+
+.wrrapd-legal-card p,
+.wrrapd-legal-card li,
+.wrrapd-page-shell p,
+.wrrapd-page-shell li,
+.elementor-widget-html .wrrapd-page-shell p,
+.elementor-widget-html .wrrapd-page-shell li {
+	font-family: "Source Sans 3", Roboto, system-ui, sans-serif !important;
+	font-size: clamp(0.95rem, 2vw, 1.02rem) !important;
+	line-height: 1.62 !important;
+	text-wrap: pretty;
+}
+
+.wrrapd-legal-card p {
+	margin: 0 0 0.85rem;
+}
+
+.wrrapd-legal-card ul {
+	margin: 0 0 1rem;
+	padding-left: 1.25rem;
+}
+
+.wrrapd-legal-card li {
+	margin-bottom: 0.55rem;
+}
+
+.wrrapd-legal-card li:last-child {
+	margin-bottom: 0;
+}
+
+.wrrapd-affiliate-disclosure .wrrapd-updated {
+	margin-top: 0.5rem;
+	margin-bottom: 0;
+}
+
+/* Elementor HTML widget: let our sections span the content column */
+.elementor-widget-html:has(.wrrapd-page-shell),
+.elementor-widget-html:has(.wrrapd-top-gifts),
+.elementor-widget-html:has(.wrrapd-gift-guides) {
+	width: 100% !important;
+	max-width: none !important;
+}
+
+@media (max-width: 899px) {
+	.wrrapd-card-grid {
+		grid-template-columns: 1fr;
+	}
+}

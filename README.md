@@ -1,12 +1,12 @@
 # Wrrapd (monorepo)
 
-Single Git repository for the **Chrome extension** (Amazon checkout), the **Node pay/API server** (`api.wrrapd.com` / `pay.wrrapd.com`), and the **tracking web app** (admin, driver, customer tracking on Cloud Run).
+Single Git repository for the **multi-retailer Chrome extension**, the **Node pay/API server** (`api.wrrapd.com` / `pay.wrrapd.com`), and the **tracking web app** (admin, driver, customer tracking on Cloud Run).
 
 ## Layout
 
 | Path | What it is |
 |------|------------|
-| [`extension/`](extension/) | Manifest V3 extension — [Chrome Web Store](https://chromewebstore.google.com/detail/wrrapd/eampapdpkmnnbfdojhmbpckpljnbpapo) for shoppers; **Load unpacked** for dev. Source under `src/content/`; bundled to root `content.js`. |
+| [`extension/`](extension/) | Manifest V3 extension — [Chrome Web Store](https://chromewebstore.google.com/detail/wrrapd/eampapdpkmnnbfdojhmbpckpljnbpapo) for shoppers; **Load unpacked** for dev. One content bundle per retailer under `src/content/`; generated root bundles are committed. |
 | [`backend/wrrapd-api-repo/WrrapdServer/`](backend/wrrapd-api-repo/WrrapdServer/) | Node `server.js`, `public/checkout.html`, PM2 process **`wrrapd-server`**, Stripe, proxies, order ingest. |
 | [`tracking-platform/`](tracking-platform/) | Next.js app: ops hub at `/`, admin `/admin`, driver `/driver`, public `/track/[token]`. Deployed to **Cloud Run** (`wrrapd-tracking`). |
 
@@ -33,7 +33,7 @@ npm install
 npm run build
 ```
 
-Do not hand-edit root `extension/content.js`; the build overwrites it.
+For Chrome Web Store packaging, run `npm run build:store` from `extension/` after pulling and testing. Do not hand-edit root `extension/content*.js` files; the build overwrites all generated bundles.
 
 ## Server on GCP (PM2)
 
@@ -46,8 +46,9 @@ Adjust if your home directory differs. See [backend/wrrapd-api-repo/WrrapdServer
 ## Product / engineering notes (high level)
 
 - **Amazon sign-in:** Gated on nav text when present; on **cart / checkout / gp/buy** we assume the tab is signed-in unless we see an explicit **“Hello, sign in”** (checkout often omits `#nav-link-accountList-nav-line-1` until late). See `extension/src/content/lib/amazon-account-signed-in.js`.
-- **Place your order:** After **Pay Wrrapd** succeeds, tracking ingest runs on Amazon’s real **Place your order** control, then Amazon submit proceeds.
-- **Delivery dates:** Hints use **Wrrapd-address** shipment rows and **checked** delivery radios only; multi-address must not merge other recipients’ dates (`amazon-delivery-hints.js`).
+- **Checkout release after Wrrapd payment:** Amazon and store-retailer flows must re-enable the real retailer checkout/place-order control after Wrrapd payment succeeds. Store adapters share `retailer-checkout-pay-flow.js`; LEGO has its own equivalent.
+- **Delivery dates:** Amazon hints use **Wrrapd-address** shipment rows and **checked** delivery radios only; multi-address must not merge other recipients’ dates (`amazon-delivery-hints.js`). Store-retailer date capture rejects stale dates before today and falls back to generic “retailer delivery date + 1 day” wording when uncertain.
+- **Cart scraping:** Store retailers must scope item extraction to real cart/bag line containers and exclude recommendations/sponsored/related sections via `cart-scrape-region.js`.
 - **Tracking UI:** Firestore-backed; ingest from pay server / extension must match expected recipient fields (see `tracking-platform/README.md`).
 
 ## Docs index
@@ -57,6 +58,7 @@ Adjust if your home directory differs. See [backend/wrrapd-api-repo/WrrapdServer
 | **[DEPLOYMENT.md](DEPLOYMENT.md)** | **Copy-paste deploy commands (canonical)** |
 | [docs/CUSTOMER-ACCOUNTS-AND-ORDER-HISTORY.md](docs/CUSTOMER-ACCOUNTS-AND-ORDER-HISTORY.md) | Guest vs account, order backfill, customer numbers, SQL vs JSON vs Supabase |
 | [docs/INTEGRATION-MAP.md](docs/INTEGRATION-MAP.md) | Extension ↔ pay server ↔ tracking ↔ WordPress (and `wrrapd-logins` GCP) |
+| [docs/EXTENSION-ARCHITECTURE.md](docs/EXTENSION-ARCHITECTURE.md) | Multi-retailer extension bundle/adaptor rules and release packaging |
 | [docs/WORDPRESS-SITE-EDITS-LOG.md](docs/WORDPRESS-SITE-EDITS-LOG.md) | Changelog of Elementor / Hello CSS / DB-touch site work |
 | [docs/GCP-WRRAPD-LOGINS-ACCESS.md](docs/GCP-WRRAPD-LOGINS-ACCESS.md) | IAM and `gcloud`: access `wrrapd-logins` vs `wrrapd-chrome-extension` |
 | [extension/README.md](extension/README.md) | Extension build, Windows paths, content layout |

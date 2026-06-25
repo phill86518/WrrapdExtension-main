@@ -12,7 +12,8 @@
  *     delivery date and must never drive the Wrrapd schedule.
  *   • Only month-name dates ("Jun 25", "Wednesday, June 25, 2026") and explicit
  *     today/tomorrow phrases are parsed — never bare numbers (avoids prices/quantities).
- *   • Dates must fall in a sane window (yesterday … +60 days).
+ *   • Dates must fall in a sane window (today … +60 days). Stale retailer dates are ignored
+ *     so the backend falls back to generic "<retailer> delivery date + 1 day" wording.
  *   • When several delivery dates are found we keep the **latest** (Wrrapd wraps after the
  *     last item lands), matching the Amazon "latest" grouping.
  *
@@ -80,7 +81,7 @@ function parseTodayTomorrow(text, ref) {
 function withinWindow(ymd, ref) {
   const [y, m, d] = ymd.split("-").map(Number);
   const t = new Date(y, m - 1, d).getTime();
-  const lo = ref.getTime() - 2 * 86400000;
+  const lo = ref.getTime();
   const hi = ref.getTime() + 60 * 86400000;
   return t >= lo && t <= hi;
 }

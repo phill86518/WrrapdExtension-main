@@ -79,6 +79,10 @@ function generateOrderNumber(retailerName) {
   return generateWrrapdOrderNumber(retailerName);
 }
 
+function normalizeRetailerKey(value) {
+  return String(value || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
 function readSession(key) {
   try {
     return sessionStorage.getItem(key) || "";
@@ -316,6 +320,7 @@ function setCheckoutControlGated(node, gated) {
     node.removeAttribute(CHECKOUT_GATED_ATTR);
     node.removeAttribute("aria-disabled");
     if ("disabled" in node) node.disabled = false;
+    node.removeAttribute("disabled");
     node.style.opacity = "";
     node.style.pointerEvents = "";
     node.style.cursor = "";
@@ -328,6 +333,16 @@ function applyCheckoutGate(config, giftReady, paid) {
   const shouldBlock = giftReady && !paid;
   for (const btn of getGatedCheckoutButtons(config)) {
     setCheckoutControlGated(btn, shouldBlock);
+  }
+}
+
+function releaseCheckoutGate(config) {
+  const nodes = new Set([
+    ...Array.from(document.querySelectorAll(`[${CHECKOUT_GATED_ATTR}]`)),
+    ...getGatedCheckoutButtons(config),
+  ]);
+  for (const btn of nodes) {
+    setCheckoutControlGated(btn, false);
   }
 }
 
@@ -558,7 +573,10 @@ async function postProcessPayment(config, eventData) {
 export function initRetailerCheckoutPayFlow(config) {
   if (!config?.retailerName || !config?.payRoute || !config?.sessionPrefix) return;
   const state = createPricingState();
-  const retailerLc = String(config.retailerName).toLowerCase();
+  const acceptedRetailerKeys = new Set([
+    normalizeRetailerKey(config.retailerName),
+    normalizeRetailerKey(config.payRoute),
+  ]);
   let payPopupRef = null;
 
   const giftFlowReady = () => {
@@ -646,8 +664,8 @@ export function initRetailerCheckoutPayFlow(config) {
   window.addEventListener("message", (event) => {
     if (!event || event.origin !== PAY_ORIGIN) return;
     if (!event.data || event.data.status !== "success") return;
-    const retailer = String(event.data.retailer || event.data.name_of_retailer || "").toLowerCase();
-    if (retailer !== retailerLc) return;
+    const retailer = normalizeRetailerKey(event.data.retailer || event.data.name_of_retailer);
+    if (!acceptedRetailerKeys.has(retailer)) return;
     if (payPopupRef && event.source !== payPopupRef && typeof payPopupRef.closed === "boolean" && !payPopupRef.closed) {
       return;
     }
@@ -664,7 +682,7 @@ export function initRetailerCheckoutPayFlow(config) {
       writeCartFingerprint(config.sessionPrefix, buildCartFingerprint(config.getCartSnapshot?.()));
       payPopupRef = null;
       config.fillHubShippingFields?.();
-      applyCheckoutGate(config, giftFlowReady(), true);
+      releaseCheckoutGate(config);
       void ensureSummaryUi();
     })();
   });
@@ -701,16 +719,24 @@ export function initRetailerCheckoutPayFlow(config) {
 
   const tick = () => {
     if (!config.isCheckoutPage?.()) return;
-    syncCartGiftState();
+    const wasPaid = readPaymentSuccess(config.sessionPrefix);
+    if (!wasPaid) syncCartGiftState();
     const ready = giftFlowReady();
     const paid = readPaymentSuccess(config.sessionPrefix);
+    if (paid) {
+      releaseCheckoutGate(config);
+      if (ready) {
+        config.fillHubShippingFields?.();
+        void ensureSummaryUi();
+      }
+      return;
+    }
     if (!ready) {
       removeSummary();
-      applyCheckoutGate(config, false, paid);
+      releaseCheckoutGate(config);
       return;
     }
     applyCheckoutGate(config, true, paid);
-    if (paid) config.fillHubShippingFields?.();
     void ensureSummaryUi();
   };
 

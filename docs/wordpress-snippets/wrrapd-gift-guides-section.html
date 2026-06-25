@@ -1,139 +1,142 @@
 <!--
   ELEMENTOR: HTML widget on the homepage.
 
-  1) Paste this block (remove HTML comments if Elementor strips them).
-  2) Change https://wrrapd.com if needed; keep /go/{slug}/ for affiliate hops.
-  3) Logo files: wp-content/mu-plugins/logos/{slug}.png — same as the retailer wheel.
-     Missing PNGs fall back to Google favicons (same idea as wrrapd-orders-bridge.php).
+  Purpose: Wrrapd checkout partners — gift wrap via the Chrome extension at normal checkout.
+  Separate from Top Gifting Choices (curated partner picks) below.
 
-  Links: rel="sponsored noopener noreferrer"
+  1) Paste this block (remove HTML comments if Elementor strips them).
+  2) Logo files: wp-content/mu-plugins/logos/{slug}.png — same as the retailer wheel.
+  3) Extension: https://chromewebstore.google.com/detail/wrrapd/eampapdpkmnnbfdojhmbpckpljnbpapo
 -->
 
 <section class="wrrapd-gift-guides" aria-labelledby="wgg-title">
 	<div class="wrrapd-gift-guides__inner">
-		<p class="wrrapd-gift-guides__eyebrow">Browse by gifting job</p>
-		<h2 id="wgg-title" class="wrrapd-gift-guides__title">Ideas for real occasions—not generic “products.”</h2>
-		<p class="wrrapd-gift-guides__lede">
-			Every occasion deserves its own aisle. Pick yours below and step straight into each store’s gift shop—curated ideas, one tap away.
-		</p>
+		<div class="wrrapd-gift-guides__intro">
+			<p class="wrrapd-gift-guides__eyebrow">Checkout gift wrap</p>
+			<h2 id="wgg-title" class="wrrapd-gift-guides__title">Shop as usual. We wrap what you chose.</h2>
+			<p class="wrrapd-gift-guides__lede">
+				<a class="wrrapd-ext-cta" href="https://chromewebstore.google.com/detail/wrrapd/eampapdpkmnnbfdojhmbpckpljnbpapo" rel="noopener noreferrer">Install the free Wrrapd Chrome extension</a>, shop any online store below and seamlessly gift-wrap (with optional flowers for delivery) with any purchase below at Checkout.
+			</p>
+		</div>
 
 		<ul class="wrrapd-gift-guides__grid">
 			<li class="wrrapd-gift-guides__card">
 				<div class="wrrapd-gift-guides__card-top">
-					<a class="wrrapd-gift-guides__card-logo" href="https://wrrapd.com/go/target/" rel="sponsored noopener noreferrer" aria-label="Target — partner hop">
+					<a class="wrrapd-gift-guides__card-logo" href="https://www.target.com/" rel="noopener noreferrer" aria-label="Target — shop with Wrrapd gift wrap at checkout">
 						<span class="wrrapd-gift-guides__card-logo-badge">
 							<img src="https://wrrapd.com/wp-content/mu-plugins/logos/target.png" width="64" height="64" alt="" decoding="async" loading="lazy" data-fallback="https://www.google.com/s2/favicons?domain=target.com&amp;sz=128" onerror="var u=this.dataset.fallback;if(u){this.onerror=null;this.src=u;}" />
 						</span>
 					</a>
 				</div>
 				<h3 class="wrrapd-gift-guides__card-title">Birthdays &amp; milestones</h3>
-				<p class="wrrapd-gift-guides__card-copy">Curated aisles and seasonal drops—good when you know the vibe but not the SKU.</p>
-				<a class="wrrapd-gift-guides__cta" href="https://wrrapd.com/go/target/" rel="sponsored noopener noreferrer">Shop gift ideas at Target</a>
+				<p class="wrrapd-gift-guides__card-copy">Birthdays, graduations, just-because—Wrrapd at Target checkout.</p>
+				<a class="wrrapd-gift-guides__cta" href="https://chromewebstore.google.com/detail/wrrapd/eampapdpkmnnbfdojhmbpckpljnbpapo" rel="noopener noreferrer">Get the extension</a>
 			</li>
 			<li class="wrrapd-gift-guides__card">
 				<div class="wrrapd-gift-guides__card-top">
-					<a class="wrrapd-gift-guides__card-logo" href="https://wrrapd.com/go/nordstrom/" rel="sponsored noopener noreferrer" aria-label="Nordstrom — partner hop">
+					<a class="wrrapd-gift-guides__card-logo" href="https://www.nordstrom.com/" rel="noopener noreferrer" aria-label="Nordstrom — shop with Wrrapd gift wrap at checkout">
 						<span class="wrrapd-gift-guides__card-logo-badge">
 							<img src="https://wrrapd.com/wp-content/mu-plugins/logos/nordstrom.png" width="64" height="64" alt="" decoding="async" loading="lazy" data-fallback="https://www.google.com/s2/favicons?domain=nordstrom.com&amp;sz=128" onerror="var u=this.dataset.fallback;if(u){this.onerror=null;this.src=u;}" />
 						</span>
 					</a>
 				</div>
 				<h3 class="wrrapd-gift-guides__card-title">Weddings &amp; showers</h3>
-				<p class="wrrapd-gift-guides__card-copy">Registry-adjacent picks and finishing touches without wandering every department.</p>
-				<a class="wrrapd-gift-guides__cta" href="https://wrrapd.com/go/nordstrom/" rel="sponsored noopener noreferrer">Browse Nordstrom gifts</a>
+				<p class="wrrapd-gift-guides__card-copy">Registry-worthy gifts—Wrrapd at Nordstrom checkout.</p>
+				<a class="wrrapd-gift-guides__cta" href="https://chromewebstore.google.com/detail/wrrapd/eampapdpkmnnbfdojhmbpckpljnbpapo" rel="noopener noreferrer">Get the extension</a>
 			</li>
 			<li class="wrrapd-gift-guides__card">
 				<div class="wrrapd-gift-guides__card-top">
-					<a class="wrrapd-gift-guides__card-logo" href="https://wrrapd.com/go/kohls/" rel="sponsored noopener noreferrer" aria-label="Kohl’s — partner hop">
+					<a class="wrrapd-gift-guides__card-logo" href="https://www.kohls.com/" rel="noopener noreferrer" aria-label="Kohl’s — shop with Wrrapd gift wrap at checkout">
 						<span class="wrrapd-gift-guides__card-logo-badge">
 							<img src="https://wrrapd.com/wp-content/mu-plugins/logos/kohls.png" width="64" height="64" alt="" decoding="async" loading="lazy" data-fallback="https://www.google.com/s2/favicons?domain=kohls.com&amp;sz=128" onerror="var u=this.dataset.fallback;if(u){this.onerror=null;this.src=u;}" />
 						</span>
 					</a>
 				</div>
 				<h3 class="wrrapd-gift-guides__card-title">Holiday-ready finds</h3>
-				<p class="wrrapd-gift-guides__card-copy">Seasonal picks, cozy staples, and easy crowd-pleasers for every name on the list.</p>
-				<a class="wrrapd-gift-guides__cta" href="https://wrrapd.com/go/kohls/" rel="sponsored noopener noreferrer">Shop Kohl’s gift ideas</a>
+				<p class="wrrapd-gift-guides__card-copy">Seasonal crowd-pleasers—Wrrapd at Kohl’s checkout.</p>
+				<a class="wrrapd-gift-guides__cta" href="https://chromewebstore.google.com/detail/wrrapd/eampapdpkmnnbfdojhmbpckpljnbpapo" rel="noopener noreferrer">Get the extension</a>
 			</li>
 			<li class="wrrapd-gift-guides__card">
 				<div class="wrrapd-gift-guides__card-top">
-					<a class="wrrapd-gift-guides__card-logo" href="https://wrrapd.com/go/ulta/" rel="sponsored noopener noreferrer" aria-label="Ulta — partner hop">
+					<a class="wrrapd-gift-guides__card-logo" href="https://www.ulta.com/" rel="noopener noreferrer" aria-label="Ulta — shop with Wrrapd gift wrap at checkout">
 						<span class="wrrapd-gift-guides__card-logo-badge">
 							<img src="https://wrrapd.com/wp-content/mu-plugins/logos/ulta.png" width="64" height="64" alt="" decoding="async" loading="lazy" data-fallback="https://www.google.com/s2/favicons?domain=ulta.com&amp;sz=128" onerror="var u=this.dataset.fallback;if(u){this.onerror=null;this.src=u;}" />
 						</span>
 					</a>
 				</div>
 				<h3 class="wrrapd-gift-guides__card-title">Beauty &amp; fragrance sets</h3>
-				<p class="wrrapd-gift-guides__card-copy">Gift-ready bundles—the kind people actually want to unwrap.</p>
-				<a class="wrrapd-gift-guides__cta" href="https://wrrapd.com/go/ulta/" rel="sponsored noopener noreferrer">Ulta gift shop</a>
+				<p class="wrrapd-gift-guides__card-copy">Gift-ready beauty—Wrrapd at Ulta checkout.</p>
+				<a class="wrrapd-gift-guides__cta" href="https://chromewebstore.google.com/detail/wrrapd/eampapdpkmnnbfdojhmbpckpljnbpapo" rel="noopener noreferrer">Get the extension</a>
 			</li>
 			<li class="wrrapd-gift-guides__card">
 				<div class="wrrapd-gift-guides__card-top">
-					<a class="wrrapd-gift-guides__card-logo" href="https://wrrapd.com/go/sephora/" rel="sponsored noopener noreferrer" aria-label="Sephora — partner hop">
+					<a class="wrrapd-gift-guides__card-logo" href="https://www.sephora.com/" rel="noopener noreferrer" aria-label="Sephora — shop with Wrrapd gift wrap at checkout">
 						<span class="wrrapd-gift-guides__card-logo-badge">
 							<img src="https://wrrapd.com/wp-content/mu-plugins/logos/sephora.png" width="64" height="64" alt="" decoding="async" loading="lazy" data-fallback="https://www.google.com/s2/favicons?domain=sephora.com&amp;sz=128" onerror="var u=this.dataset.fallback;if(u){this.onerror=null;this.src=u;}" />
 						</span>
 					</a>
 				</div>
 				<h3 class="wrrapd-gift-guides__card-title">Luxury little moments</h3>
-				<p class="wrrapd-gift-guides__card-copy">Makeup, skincare, and fragrance gifts that feel polished before the wrapping starts.</p>
-				<a class="wrrapd-gift-guides__cta" href="https://wrrapd.com/go/sephora/" rel="sponsored noopener noreferrer">Sephora gift shop</a>
+				<p class="wrrapd-gift-guides__card-copy">Premium sets and splurges—Wrrapd at Sephora checkout.</p>
+				<a class="wrrapd-gift-guides__cta" href="https://chromewebstore.google.com/detail/wrrapd/eampapdpkmnnbfdojhmbpckpljnbpapo" rel="noopener noreferrer">Get the extension</a>
 			</li>
 			<li class="wrrapd-gift-guides__card">
 				<div class="wrrapd-gift-guides__card-top">
-					<a class="wrrapd-gift-guides__card-logo" href="https://wrrapd.com/go/etsy/" rel="sponsored noopener noreferrer" aria-label="Etsy — partner hop">
+					<a class="wrrapd-gift-guides__card-logo" href="https://www.etsy.com/" rel="noopener noreferrer" aria-label="Etsy — shop with Wrrapd gift wrap at checkout">
 						<span class="wrrapd-gift-guides__card-logo-badge">
 							<img src="https://wrrapd.com/wp-content/mu-plugins/logos/etsy.png" width="64" height="64" alt="" decoding="async" loading="lazy" data-fallback="https://www.google.com/s2/favicons?domain=etsy.com&amp;sz=128" onerror="var u=this.dataset.fallback;if(u){this.onerror=null;this.src=u;}" />
 						</span>
 					</a>
 				</div>
 				<h3 class="wrrapd-gift-guides__card-title">Handmade &amp; one-of-a-kind</h3>
-				<p class="wrrapd-gift-guides__card-copy">When the story behind the gift matters as much as the thing itself.</p>
-				<a class="wrrapd-gift-guides__cta" href="https://wrrapd.com/go/etsy/" rel="sponsored noopener noreferrer">Etsy gift ideas</a>
+				<p class="wrrapd-gift-guides__card-copy">Unique handmade gifts—Wrrapd at Etsy checkout.</p>
+				<a class="wrrapd-gift-guides__cta" href="https://chromewebstore.google.com/detail/wrrapd/eampapdpkmnnbfdojhmbpckpljnbpapo" rel="noopener noreferrer">Get the extension</a>
 			</li>
 			<li class="wrrapd-gift-guides__card">
 				<div class="wrrapd-gift-guides__card-top">
-					<a class="wrrapd-gift-guides__card-logo" href="https://wrrapd.com/go/walmart/" rel="sponsored noopener noreferrer" aria-label="Walmart — partner hop">
+					<a class="wrrapd-gift-guides__card-logo" href="https://www.walmart.com/" rel="noopener noreferrer" aria-label="Walmart — shop with Wrrapd gift wrap at checkout">
 						<span class="wrrapd-gift-guides__card-logo-badge">
 							<img src="https://wrrapd.com/wp-content/mu-plugins/logos/walmart.png" width="64" height="64" alt="" decoding="async" loading="lazy" data-fallback="https://www.google.com/s2/favicons?domain=walmart.com&amp;sz=128" onerror="var u=this.dataset.fallback;if(u){this.onerror=null;this.src=u;}" />
 						</span>
 					</a>
 				</div>
 				<h3 class="wrrapd-gift-guides__card-title">One-stop gifting runs</h3>
-				<p class="wrrapd-gift-guides__card-copy">Practical, playful, and last-minute friendly when the list is longer than expected.</p>
-				<a class="wrrapd-gift-guides__cta" href="https://wrrapd.com/go/walmart/" rel="sponsored noopener noreferrer">Walmart gifts</a>
+				<p class="wrrapd-gift-guides__card-copy">Last-minute and long lists—Wrrapd at Walmart checkout.</p>
+				<a class="wrrapd-gift-guides__cta" href="https://chromewebstore.google.com/detail/wrrapd/eampapdpkmnnbfdojhmbpckpljnbpapo" rel="noopener noreferrer">Get the extension</a>
 			</li>
 			<li class="wrrapd-gift-guides__card">
 				<div class="wrrapd-gift-guides__card-top">
-					<a class="wrrapd-gift-guides__card-logo" href="https://wrrapd.com/go/lego/" rel="sponsored noopener noreferrer" aria-label="LEGO — partner hop">
+					<a class="wrrapd-gift-guides__card-logo" href="https://www.lego.com/en-us/" rel="noopener noreferrer" aria-label="LEGO — shop with Wrrapd gift wrap at checkout">
 						<span class="wrrapd-gift-guides__card-logo-badge">
 							<img src="https://wrrapd.com/wp-content/mu-plugins/logos/lego.png" width="64" height="64" alt="" decoding="async" loading="lazy" data-fallback="https://www.google.com/s2/favicons?domain=lego.com&amp;sz=128" onerror="var u=this.dataset.fallback;if(u){this.onerror=null;this.src=u;}" />
 						</span>
 					</a>
 				</div>
 				<h3 class="wrrapd-gift-guides__card-title">Kids &amp; LEGO fans</h3>
-				<p class="wrrapd-gift-guides__card-copy">Sets and surprises when “something to build” beats another gadget.</p>
-				<a class="wrrapd-gift-guides__cta" href="https://wrrapd.com/go/lego/" rel="sponsored noopener noreferrer">Explore LEGO gifting</a>
+				<p class="wrrapd-gift-guides__card-copy">Sets they’ll build for hours—Wrrapd at LEGO checkout.</p>
+				<a class="wrrapd-gift-guides__cta" href="https://chromewebstore.google.com/detail/wrrapd/eampapdpkmnnbfdojhmbpckpljnbpapo" rel="noopener noreferrer">Get the extension</a>
 			</li>
 			<li class="wrrapd-gift-guides__card">
 				<div class="wrrapd-gift-guides__card-top">
-					<a class="wrrapd-gift-guides__card-logo" href="https://wrrapd.com/go/bestbuy/" rel="sponsored noopener noreferrer" aria-label="Best Buy — partner hop">
+					<a class="wrrapd-gift-guides__card-logo" href="https://www.bestbuy.com/" rel="noopener noreferrer" aria-label="Best Buy — shop with Wrrapd gift wrap at checkout">
 						<span class="wrrapd-gift-guides__card-logo-badge">
 							<img src="https://wrrapd.com/wp-content/mu-plugins/logos/bestbuy.png" width="64" height="64" alt="" decoding="async" loading="lazy" data-fallback="https://www.google.com/s2/favicons?domain=bestbuy.com&amp;sz=128" onerror="var u=this.dataset.fallback;if(u){this.onerror=null;this.src=u;}" />
 						</span>
 					</a>
 				</div>
-				<h3 class="wrrapd-gift-guides__card-title">Everything else—big-box breadth</h3>
-				<p class="wrrapd-gift-guides__card-copy">Catch-all run when you need options fast (electronics, home, more).</p>
-				<a class="wrrapd-gift-guides__cta" href="https://wrrapd.com/go/bestbuy/" rel="sponsored noopener noreferrer">Best Buy gift hub</a>
+				<h3 class="wrrapd-gift-guides__card-title">Tech &amp; big-box breadth</h3>
+				<p class="wrrapd-gift-guides__card-copy">Gadgets, games, and gear—Wrrapd at Best Buy checkout.</p>
+				<a class="wrrapd-gift-guides__cta" href="https://chromewebstore.google.com/detail/wrrapd/eampapdpkmnnbfdojhmbpckpljnbpapo" rel="noopener noreferrer">Get the extension</a>
 			</li>
 		</ul>
 
-		<!--
-		<p class="wrrapd-gift-guides__note">
-			Logos load from <code>wp-content/mu-plugins/logos/</code> (same as the header wheel). If you point a store’s
-			<code>WRRAPD_AFFILIATE_REDIRECT_*</code> in <code>wp-config.php</code> at a gift-hub URL, every <code>/go/slug/</code>
-			link—including these—lands there after the hop.
+		<p class="wrrapd-gift-guides__fine">
+			These stores work with the Wrrapd Chrome extension at checkout.
+			For hand-picked gift ideas from more brands, see <strong>Top Gifting Choices</strong> below.
 		</p>
-		-->
+		<p class="wrrapd-gift-guides__aff-note" id="wrrapd-aff-note">
+			<sup>*</sup> We may earn a commission when you shop through affiliate links.
+			<a href="https://wrrapd.com/affiliate-disclosure/">Disclosure</a>
+		</p>
 	</div>
 </section>

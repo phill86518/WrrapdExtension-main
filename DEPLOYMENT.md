@@ -118,6 +118,16 @@ Then **Chrome → Extensions → Wrrapd → Reload**.
 
 > **`npm install` warnings are normal.** On Node < 20.19 you'll see `EBADENGINE` warnings from `jsdom` and its CSS helpers. They're harmless: `jsdom` is a dev-only dependency for offline fixture checks and is **not** used by the esbuild bundling. Do **not** run `npm audit fix` — it can break the local toolchain for no benefit.
 
+After Windows testing passes and you are ready to make the Chrome Web Store artifact:
+
+```bash
+cd extension
+npm run build:store
+cd ..
+```
+
+`npm run build:store` runs the production extension build and writes the latest store ZIP from the Windows clone.
+
 **Skip this section** if you did not change the extension.
 
 ---
