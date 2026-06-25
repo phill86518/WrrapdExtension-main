@@ -1284,28 +1284,153 @@ body.wrrapd-account-page .ur-frontend-form > h2:first-child {
 	box-shadow: 0 2px 0 rgba(154, 118, 24, 0.22);
 }
 
+.wrrapd-account-layout .user-registration-MyAccount-user {
+	text-align: center;
+	padding-bottom: 0.65rem;
+	margin-bottom: 0.5rem;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.wrrapd-account-layout .user-registration-MyAccount-user img,
+.wrrapd-account-layout .user-registration-MyAccount-user .profile-photo {
+	border-radius: 50% !important;
+	border: 2px solid rgba(245, 197, 24, 0.55) !important;
+	box-shadow: 0 4px 14px rgba(12, 18, 34, 0.18);
+}
+
+.wrrapd-account-layout .user-registration-MyAccount-user strong {
+	display: block;
+	margin-top: 0.45rem;
+	color: #fff !important;
+	font-size: 0.95rem;
+	font-weight: 700;
+}
+
+.wrrapd-account-layout .user-registration-MyAccount-user .edit-profile {
+	font-size: 0.78rem;
+	font-weight: 600;
+	color: rgba(245, 197, 24, 0.95) !important;
+	text-decoration: none !important;
+}
+
+.wrrapd-account-hero {
+	text-align: center;
+	margin-bottom: clamp(1rem, 3vw, 1.5rem);
+}
+
+/* === Compact site header (all visitors) === */
+.elementor-location-header .elementor-element-6835e730 {
+	padding-block: clamp(0.2rem, 0.8vmin, 0.45rem) !important;
+}
+
+.elementor-location-header .elementor-element-68a38868 img {
+	max-height: clamp(2.35rem, 7.5vmin, 3.35rem) !important;
+	width: auto !important;
+	height: auto !important;
+}
+
+.elementor-location-header .elementor-element-1c0d63ad img {
+	max-height: clamp(0.75rem, 2.2vmin, 1rem) !important;
+	width: auto !important;
+}
+
+.elementor-location-header #wrrapd-location,
+.elementor-location-header #location-text {
+	font-size: clamp(0.68rem, 1.8vmin, 0.82rem) !important;
+	line-height: 1.25 !important;
+}
+
+.elementor-location-header .elementor-element-6835e730 > .e-con {
+	align-items: center !important;
+}
+
+/* === Logged-in member cluster (top right) === */
+body.logged-in .elementor-location-header [data-id="693b4ea7"] {
+	display: flex !important;
+	flex-direction: column !important;
+	align-items: flex-end !important;
+	justify-content: center !important;
+	min-width: 0 !important;
+}
+
+body.logged-in .elementor-location-header .greeting-container {
+	margin: 0 !important;
+	margin-left: 0 !important;
+	text-align: right !important;
+	width: auto !important;
+}
+
+body.logged-in .elementor-location-header [data-id="2b05a213"] {
+	display: none !important;
+}
+
+.wrrapd-header-member {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-end;
+	gap: 0.2rem;
+	width: 100%;
+	max-width: 11.75rem;
+	margin-left: auto;
+}
+
+.wrrapd-header-member-top {
+	width: 100%;
+}
+
+body.logged-in .elementor-location-header .wrrapd-header-member-top .elementor-nav-menu--main ul {
+	display: flex !important;
+	flex-direction: row !important;
+	justify-content: flex-end !important;
+	gap: 0.65rem !important;
+	margin: 0 !important;
+	padding: 0 !important;
+	list-style: none !important;
+}
+
+body.logged-in .elementor-location-header .wrrapd-header-member-top .elementor-item {
+	font-family: "Source Sans 3", Helvetica, Arial, sans-serif !important;
+	font-size: 0.68rem !important;
+	font-weight: 700 !important;
+	color: #fff300 !important;
+	padding: 0 !important;
+	line-height: 1.2 !important;
+}
+
+.wrrapd-header-member-greet .greeting-text {
+	margin: 0 !important;
+	font-family: "Source Sans 3", Helvetica, Arial, sans-serif !important;
+	font-size: 0.72rem !important;
+	font-weight: 600 !important;
+	text-align: right !important;
+	color: rgba(255, 243, 0, 0.92) !important;
+}
+
 .wrrapd-header-user-actions {
 	display: flex !important;
 	flex-direction: row !important;
-	flex-wrap: wrap !important;
-	gap: 0.35rem !important;
-	justify-content: center !important;
+	flex-wrap: nowrap !important;
+	gap: 0.28rem !important;
+	justify-content: flex-end !important;
 	align-items: center !important;
-	margin-top: 0.3125rem !important;
+	margin: 0 !important;
+	width: 100% !important;
 }
 
 .wrrapd-header-user-actions .gift-ideas-button {
 	display: inline-block !important;
+	width: auto !important;
+	min-width: 0 !important;
+	flex: 1 1 auto;
+	max-width: 5.75rem;
 	margin-top: 0 !important;
-	flex: 0 1 auto;
-	min-width: 5.5rem;
 	font-family: Helvetica, Arial, sans-serif !important;
-	font-size: 0.75rem !important;
+	font-size: 0.68rem !important;
 	font-weight: 700 !important;
 	color: #000 !important;
 	background-color: #fff300 !important;
 	border: 0.0625rem solid #000 !important;
-	padding: 0.1875rem 0.375rem !important;
+	padding: 0.22rem 0.45rem !important;
 	border-radius: 1.25rem !important;
 	text-decoration: none !important;
 	text-align: center !important;
@@ -1316,6 +1441,26 @@ body.wrrapd-account-page .ur-frontend-form > h2:first-child {
 
 .wrrapd-header-user-actions .gift-ideas-button:hover {
 	filter: brightness(1.05);
+}
+
+@media (max-width: 767px) {
+	.elementor-location-header .elementor-element-68a38868 img {
+		max-height: clamp(2rem, 9vmin, 2.65rem) !important;
+	}
+
+	.wrrapd-header-member {
+		max-width: 10.5rem;
+	}
+
+	body.logged-in .elementor-location-header .wrrapd-header-member-top .elementor-item {
+		font-size: 0.64rem !important;
+	}
+
+	.wrrapd-header-user-actions .gift-ideas-button {
+		font-size: 0.62rem !important;
+		padding: 0.2rem 0.35rem !important;
+		max-width: 5.25rem;
+	}
 }
 
 .wrrapd-orders-page .wrrapd-review-orders,

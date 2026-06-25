@@ -1,0 +1,23 @@
+<!--
+  ELEMENTOR: Header template #6078 → HTML widget (data-id da02c22)
+
+  Replace the old greeting widget HTML (remove the inline <style>, width-matching
+  <script>, and margin-left hacks). The MU plugin reorganizes this into a tidy
+  logged-in cluster and injects “Your orders” beside Hot Gifts.
+
+  Keep the hidden inputs from wrrapd-member-header plugin — do not duplicate them here.
+-->
+
+<div class="greeting-container" id="greeting-message" style="display: none;">
+	<p class="greeting-text">
+		Hello, <span id="user-first-name">User</span>!
+	</p>
+	<a
+		href="https://www.amazon.com/gp/most-gifted"
+		target="_blank"
+		rel="noopener noreferrer"
+		class="gift-ideas-button"
+	>
+		Hot Gifts
+	</a>
+</div>

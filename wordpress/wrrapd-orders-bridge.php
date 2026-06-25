@@ -128,33 +128,39 @@ function wrrapd_body_class_site_pages( $classes ) {
 add_filter( 'body_class', 'wrrapd_body_class_site_pages' );
 
 /**
- * Logged-in header: “Your orders” pill beside “Hot Gifts” (same row, same pill style).
+ * Compact header + logged-in member cluster (overrides legacy inline greeting styles).
  */
-function wrrapd_output_header_user_actions_css() {
+function wrrapd_output_header_member_css() {
 	if ( is_admin() ) {
 		return;
 	}
-	echo '<style id="wrrapd-header-user-actions-css">';
-	echo '.wrrapd-header-user-actions{display:flex!important;flex-direction:row!important;flex-wrap:wrap!important;gap:0.35rem!important;justify-content:center!important;align-items:center!important;margin-top:0.3125rem!important;width:100%;}';
-	echo '.wrrapd-header-user-actions .gift-ideas-button{display:inline-block!important;font-family:Helvetica,Arial,sans-serif!important;font-size:0.75rem!important;font-weight:700!important;color:#000!important;background-color:#fff300!important;border:0.0625rem solid #000!important;padding:0.1875rem 0.375rem!important;border-radius:1.25rem!important;text-decoration:none!important;text-align:center!important;white-space:nowrap!important;margin:0!important;line-height:1.2!important;box-sizing:border-box!important;}';
+	echo '<style id="wrrapd-header-member-css">';
+	echo 'body.logged-in .elementor-location-header .greeting-container{margin:0!important;margin-left:0!important;text-align:right!important;width:auto!important;}';
+	echo 'body.logged-in .elementor-location-header [data-id="2b05a213"]{display:none!important;}';
+	echo '.wrrapd-header-member{display:flex;flex-direction:column;align-items:flex-end;gap:.2rem;width:100%;max-width:11.75rem;margin-left:auto;}';
+	echo '.wrrapd-header-member-top{width:100%;}.wrrapd-header-member-top .elementor-nav-menu--main ul{display:flex!important;flex-direction:row!important;justify-content:flex-end!important;gap:.65rem!important;margin:0!important;padding:0!important;}';
+	echo '.wrrapd-header-member-top .elementor-item{font-size:.68rem!important;font-weight:700!important;padding:0!important;line-height:1.2!important;}';
+	echo '.wrrapd-header-member-greet .greeting-text{margin:0!important;font-size:.72rem!important;font-weight:600!important;text-align:right!important;color:rgba(255,243,0,.92)!important;}';
+	echo '.wrrapd-header-user-actions{display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;gap:.28rem!important;justify-content:flex-end!important;align-items:center!important;margin:0!important;width:100%!important;}';
+	echo '.wrrapd-header-user-actions .gift-ideas-button{display:inline-block!important;width:auto!important;min-width:0!important;flex:1 1 auto;max-width:5.75rem;font-family:Helvetica,Arial,sans-serif!important;font-size:.68rem!important;font-weight:700!important;color:#000!important;background-color:#fff300!important;border:.0625rem solid #000!important;padding:.22rem .45rem!important;border-radius:1.25rem!important;text-decoration:none!important;text-align:center!important;white-space:nowrap!important;margin:0!important;line-height:1.2!important;box-sizing:border-box!important;}';
 	echo '.wrrapd-header-user-actions .gift-ideas-button:hover{filter:brightness(1.05);}';
 	echo '</style>';
 }
-add_action( 'wp_head', 'wrrapd_output_header_user_actions_css', 99 );
+add_action( 'wp_head', 'wrrapd_output_header_member_css', 99 );
 
 /**
- * Logged-in header: inject “Your orders” link into the Hot Gifts row.
+ * Logged-in header: stack Account / greeting / pills; inject “Your orders” beside Hot Gifts.
  */
-function wrrapd_output_header_your_orders_button_script() {
-	if ( is_admin() || ! is_user_logged_in() ) {
+function wrrapd_output_header_member_polish_script() {
+	if ( is_admin() ) {
 		return;
 	}
 	$url_json = wp_json_encode( wrrapd_orders_page_url() );
-	echo '<script id="wrrapd-your-orders-btn">';
-	echo '(function(){var U=' . $url_json . ';function hideDupAccountTitles(){if(!document.body.classList.contains("wrrapd-account-page"))return;document.querySelectorAll("h1.elementor-heading-title,h2.elementor-heading-title,.entry-title").forEach(function(h){if(/^Account\\s*$/i.test((h.textContent||"").trim()))h.style.display="none";});}function go(){hideDupAccountTitles();var hot=document.querySelector(".gift-ideas-button:not(.wrrapd-your-orders-button)");if(!hot||document.querySelector(".wrrapd-your-orders-button"))return;var row=hot.closest(".wrrapd-header-user-actions");if(!row){row=document.createElement("div");row.className="wrrapd-header-user-actions";hot.parentNode.insertBefore(row,hot);row.appendChild(hot);}hot.style.display="";hot.style.marginTop="0";var a=document.createElement("a");a.href=U;a.className="gift-ideas-button wrrapd-your-orders-button";a.textContent="Your orders";row.appendChild(a);}document.addEventListener("DOMContentLoaded",go);window.addEventListener("load",go);setTimeout(go,400);setTimeout(go,1200);})();';
+	echo '<script id="wrrapd-header-member-polish">';
+	echo '(function(){var U=' . $url_json . ';function hideDupAccountTitles(){if(!document.body.classList.contains("wrrapd-account-page"))return;document.querySelectorAll("h1.elementor-heading-title,h2.elementor-heading-title,.entry-title").forEach(function(h){if(/^Account\\s*$/i.test((h.textContent||"").trim()))h.style.display="none";});}function firstName(){var i=document.getElementById("wrrapd-user-first-name");return i&&i.value?i.value:"User";}function polish(){hideDupAccountTitles();if(!document.body.classList.contains("logged-in"))return;var header=document.querySelector(".elementor-location-header");if(!header)return;var rightCol=header.querySelector(\'[data-id="693b4ea7"]\');var nav=header.querySelector(\'[data-id="1112277b"]\');var greeting=header.querySelector("#greeting-message")||header.querySelector(".greeting-container");if(!rightCol||!nav||!greeting)return;greeting.style.display="block";greeting.style.margin="0";greeting.style.marginLeft="0";greeting.style.textAlign="right";greeting.style.width="auto";var nameEl=document.getElementById("user-first-name");if(nameEl)nameEl.textContent=firstName();var panel=header.querySelector(".wrrapd-header-member");if(!panel){panel=document.createElement("div");panel.className="wrrapd-header-member";rightCol.insertBefore(panel,rightCol.firstChild);var top=document.createElement("div");top.className="wrrapd-header-member-top";top.appendChild(nav);panel.appendChild(top);var greetRow=document.createElement("div");greetRow.className="wrrapd-header-member-greet";var hello=greeting.querySelector(".greeting-text");if(hello)greetRow.appendChild(hello);panel.appendChild(greetRow);var pills=document.createElement("div");pills.className="wrrapd-header-user-actions";var hot=greeting.querySelector(".gift-ideas-button:not(.wrrapd-your-orders-button)");if(hot){hot.style.display="";hot.style.marginTop="0";hot.style.width="auto";pills.appendChild(hot);}panel.appendChild(pills);}var pillsRow=panel.querySelector(".wrrapd-header-user-actions");if(pillsRow){var hotBtn=pillsRow.querySelector(".gift-ideas-button:not(.wrrapd-your-orders-button)");if(hotBtn){hotBtn.style.width="auto";hotBtn.style.marginTop="0";}if(!panel.querySelector(".wrrapd-your-orders-button")){var a=document.createElement("a");a.href=U;a.className="gift-ideas-button wrrapd-your-orders-button";a.textContent="Your orders";pillsRow.appendChild(a);}}var loginStack=header.querySelector(\'[data-id="2b05a213"]\');if(loginStack)loginStack.style.display="none";header.dataset.wrrapdMemberPolished="1";}function run(){polish();}document.addEventListener("DOMContentLoaded",run);window.addEventListener("load",run);setTimeout(run,400);setTimeout(run,1200);})();';
 	echo '</script>';
 }
-add_action( 'wp_footer', 'wrrapd_output_header_your_orders_button_script', 22 );
+add_action( 'wp_footer', 'wrrapd_output_header_member_polish_script', 22 );
 
 /**
  * On-disk folder for circular retailer PNGs (`mu-plugins/logos/`).

@@ -8,6 +8,12 @@ WordPress + Elementor + Hello theme content mostly lives **in the production dat
 
 ## Recent changes
 
+### 2026-06 — Compact logged-in header + account page polish (CSS/MU)
+
+- **Header (logged in):** MU plugin stacks Account · Logout → Hello → Hot Gifts | Your orders; kills legacy width-matching JS and `margin-left: 8.75rem` offset. Smaller logo + location text via Additional CSS.
+- **Optional Elementor:** replace greeting HTML widget content with `wrrapd-header-greeting-html.html` (Header #6078, widget `da02c22`).
+- **Account page:** CSS ready in Additional CSS; Elementor layout steps in `wrrapd-my-account-page.html` (hero + `wrrapd-account-layout` + shortcode).
+
 ### 2026-06 — Account + About fonts; Your orders header button
 
 - **MU plugin:** **Your orders** → existing **`/my-orders/`** (not a new page). Side-by-side yellow pills with Hot Gifts; inline CSS overrides `display:block` on gift button.
