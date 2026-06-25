@@ -8,6 +8,12 @@ WordPress + Elementor + Hello theme content mostly lives **in the production dat
 
 ## Recent changes
 
+### 2026-06 — Account, About Us, Your orders polish
+
+- **Snippets:** `wrrapd-my-account-page.html`, `wrrapd-your-orders-page.html`, `wrrapd-about-us-page.html`; account CSS in `wrrapd-additional-css-complete.css`.
+- **MU plugin:** `wrrapd_orders_page_url()`, body classes, **Your orders** button beside Hot Gifts when logged in.
+- **Elementor:** My Account section class `wrrapd-account-layout`; new page slug `your-orders` with `[wrrapd_review_orders layout="studio"]`.
+
 ### 2026-06 — Extension partner cards + static legal/contact snippets
 
 - **Snippets:** `docs/wordpress-snippets/wrrapd-gift-guides-section.html` / `.css` — homepage “Checkout gift wrap” cards; **card CTAs and logos** use `/go/<slug>/` → retailer gift hubs (extension install stays in section lede only). MU plugin fallbacks: Ulta → `/shop/gifts`, Kohl’s → general gift-ideas catalog (not holiday-only).
