@@ -171,13 +171,13 @@ function wrrapd_affiliate_go_constant_for_slug( $slug ) {
  */
 function wrrapd_affiliate_fallback_public_url( $slug ) {
 	$map = array(
-		'ulta'      => 'https://www.ulta.com/',
+		'ulta'      => 'https://www.ulta.com/shop/gifts',
 		'lego'      => 'https://www.lego.com/en-us/gifts',
-		'target'    => 'https://www.target.com/c/gift-ideas/-/N-96d2i',
+		'target'    => 'https://www.target.com/gift-ideas',
 		'amazon'    => 'https://www.amazon.com/gp/most-gifted',
 		'walmart'   => 'https://www.walmart.com/shop/gifts',
 		'nordstrom' => 'https://www.nordstrom.com/browse/gifts',
-		'kohls'     => 'https://www.kohls.com/catalog/gift-ideas-holiday.jsp?CN=Feature:Gift+Ideas+Occasion:Holiday',
+		'kohls'     => 'https://www.kohls.com/catalog/gift-ideas.jsp?CN=Feature:Gift%20Ideas',
 		'sephora'   => 'https://www.sephora.com/shop/gifts',
 		'etsy'      => 'https://www.etsy.com/c/gifts',
 		'bestbuy'   => 'https://www.bestbuy.com/site/electronics/gift-ideas/abcat0010000.c?id=abcat0010000',
