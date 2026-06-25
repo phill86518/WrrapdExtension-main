@@ -96,13 +96,10 @@ export function thankYouEmailHtml(input: {
   customerName: string;
   customerGreetingName?: string;
   orderId: string;
-  trackingUrl: string;
   recipientName: string;
   addressLine: string;
   scheduledEtLabel: string;
   lineItems?: OrderLineItem[];
-  /** When false, omit the Track your delivery button (non-Amazon orders). */
-  showTrackingLink?: boolean;
 }): string {
   const wrappedRows = (input.lineItems || [])
     .map((li) => {
@@ -150,13 +147,6 @@ export function thankYouEmailHtml(input: {
         wrappedRows
           ? `<p style="margin:16px 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:0.12em;color:#6b6560;">Items for gift-wrapping</p>
       <table role="presentation" width="100%">${wrappedRows}</table>`
-          : ""
-      }
-      ${
-        input.showTrackingLink !== false
-          ? `<p style="margin:20px 0 0;">
-        <a href="${escapeAttr(input.trackingUrl)}" style="display:inline-block;background:#1a3d2e;color:#fff;text-decoration:none;padding:12px 22px;border-radius:8px;font-size:14px;font-weight:600;">Track your delivery</a>
-      </p>`
           : ""
       }
     </td></tr>
@@ -245,7 +235,6 @@ export function adminNewOrderEmailHtml(input: {
   state: string;
   postalCode: string;
   scheduledEtLabel: string;
-  trackingUrl: string;
   sourceNote?: string;
   deliveryPreferencePending?: boolean;
   amazonDeliveryDatesSnapshot?: string[];
@@ -316,7 +305,7 @@ export function adminNewOrderEmailHtml(input: {
       <span style="font-size:9px;letter-spacing:0.22em;text-transform:uppercase;color:rgba(255,255,255,0.65);white-space:nowrap;">Ops</span>
     </td>
   </tr></table>
-  <p style="margin:4px 0 0;font-size:12px;font-weight:600;color:rgba(255,255,255,0.95);line-height:1.3;">${escapeHtml(input.publicOrderRef)} · new order · tracking</p>
+  <p style="margin:4px 0 0;font-size:12px;font-weight:600;color:rgba(255,255,255,0.95);line-height:1.3;">${escapeHtml(input.publicOrderRef)} · new order · ops alert</p>
 </td></tr>
 <tr><td style="padding:12px 14px 16px;">
   <table role="presentation" width="100%" style="background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">
@@ -357,9 +346,6 @@ export function adminNewOrderEmailHtml(input: {
           : ""
       }
       ${wrappedRows ? `<p style="margin:8px 0 4px;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:#64748b;">Gift-wrap items</p>${wrappedRows}` : ""}
-      <p style="margin:10px 0 0;">
-        <a href="${escapeAttr(input.trackingUrl)}" style="display:inline-block;background:#0f172a;color:#fff;text-decoration:none;padding:8px 16px;border-radius:6px;font-size:13px;font-weight:600;">Open in tracking app</a>
-      </p>
     </td></tr>
   </table>
 </td></tr>`;

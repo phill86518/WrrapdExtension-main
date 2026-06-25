@@ -235,7 +235,7 @@ async function sendProcessPaymentPairEmails(opts) {
             'h:Reply-To': customerReplyTo,
             'h:X-Mailgun-Attachments': 'inline',
             'o:tag': 'order-confirmation',
-            'o:tracking': true,
+            'o:tracking': false,
             ...(customerAttachments.length > 0 ? { inline: customerAttachments } : {}),
         }),
     ]);

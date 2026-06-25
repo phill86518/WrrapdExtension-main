@@ -8,11 +8,12 @@ WordPress + Elementor + Hello theme content mostly lives **in the production dat
 
 ## Recent changes
 
-### 2026-06 — Account, About Us, Your orders polish
+### 2026-06 — Account + About fonts; Your orders header button
 
-- **Snippets:** `wrrapd-my-account-page.html`, `wrrapd-your-orders-page.html`, `wrrapd-about-us-page.html`; account CSS in `wrrapd-additional-css-complete.css`.
-- **MU plugin:** `wrrapd_orders_page_url()`, body classes, **Your orders** button beside Hot Gifts when logged in.
-- **Elementor:** My Account section class `wrrapd-account-layout`; new page slug `your-orders` with `[wrrapd_review_orders layout="studio"]`.
+- **MU plugin:** **Your orders** → existing **`/my-orders/`** (not a new page). Side-by-side yellow pills with Hot Gifts; inline CSS overrides `display:block` on gift button.
+- **About Us:** fonts only via `body.wrrapd-about-polish` + Additional CSS — **keep Elementor content** (no HTML snippet).
+- **Account:** `wrrapd-my-account-page.html` hero + `wrrapd-account-layout` (Steps 3–4 postponed by user).
+- **Removed:** `wrrapd-your-orders-page.html`, `wrrapd-about-us-page.html`.
 
 ### 2026-06 — Extension partner cards + static legal/contact snippets
 

@@ -104,7 +104,7 @@ function wrrapd_orders_page_url() {
 	if ( defined( 'WRRAPD_ORDERS_PAGE_URL' ) && is_string( WRRAPD_ORDERS_PAGE_URL ) && WRRAPD_ORDERS_PAGE_URL !== '' ) {
 		return esc_url( WRRAPD_ORDERS_PAGE_URL );
 	}
-	return home_url( '/your-orders/' );
+	return home_url( '/my-orders/' );
 }
 
 /**
@@ -120,7 +120,7 @@ function wrrapd_body_class_site_pages( $classes ) {
 	if ( is_page( 4548 ) || is_page( 'about-us' ) ) {
 		$classes[] = 'wrrapd-about-polish';
 	}
-	if ( is_page( 'your-orders' ) ) {
+	if ( is_page( 'my-orders' ) ) {
 		$classes[] = 'wrrapd-orders-page';
 	}
 	return $classes;
@@ -128,7 +128,22 @@ function wrrapd_body_class_site_pages( $classes ) {
 add_filter( 'body_class', 'wrrapd_body_class_site_pages' );
 
 /**
- * Logged-in header: “Your orders” pill beside “Hot Gifts”.
+ * Logged-in header: “Your orders” pill beside “Hot Gifts” (same row, same pill style).
+ */
+function wrrapd_output_header_user_actions_css() {
+	if ( is_admin() ) {
+		return;
+	}
+	echo '<style id="wrrapd-header-user-actions-css">';
+	echo '.wrrapd-header-user-actions{display:flex!important;flex-direction:row!important;flex-wrap:wrap!important;gap:0.35rem!important;justify-content:center!important;align-items:center!important;margin-top:0.3125rem!important;width:100%;}';
+	echo '.wrrapd-header-user-actions .gift-ideas-button{display:inline-block!important;font-family:Helvetica,Arial,sans-serif!important;font-size:0.75rem!important;font-weight:700!important;color:#000!important;background-color:#fff300!important;border:0.0625rem solid #000!important;padding:0.1875rem 0.375rem!important;border-radius:1.25rem!important;text-decoration:none!important;text-align:center!important;white-space:nowrap!important;margin:0!important;line-height:1.2!important;box-sizing:border-box!important;}';
+	echo '.wrrapd-header-user-actions .gift-ideas-button:hover{filter:brightness(1.05);}';
+	echo '</style>';
+}
+add_action( 'wp_head', 'wrrapd_output_header_user_actions_css', 99 );
+
+/**
+ * Logged-in header: inject “Your orders” link into the Hot Gifts row.
  */
 function wrrapd_output_header_your_orders_button_script() {
 	if ( is_admin() || ! is_user_logged_in() ) {
@@ -136,7 +151,7 @@ function wrrapd_output_header_your_orders_button_script() {
 	}
 	$url_json = wp_json_encode( wrrapd_orders_page_url() );
 	echo '<script id="wrrapd-your-orders-btn">';
-	echo '(function(){var U=' . $url_json . ';function hideDupAccountTitles(){if(!document.body.classList.contains("wrrapd-account-page"))return;document.querySelectorAll("h1.elementor-heading-title,h2.elementor-heading-title,.entry-title").forEach(function(h){if(/^Account\\s*$/i.test((h.textContent||"").trim()))h.style.display="none";});}function go(){hideDupAccountTitles();var hot=document.querySelector(".gift-ideas-button:not(.wrrapd-your-orders-button)");if(!hot||document.querySelector(".wrrapd-your-orders-button"))return;var row=hot.closest(".wrrapd-header-user-actions");if(!row){row=document.createElement("div");row.className="wrrapd-header-user-actions";hot.parentNode.insertBefore(row,hot);row.appendChild(hot);}var a=document.createElement("a");a.href=U;a.className="gift-ideas-button wrrapd-your-orders-button";a.textContent="Your orders";row.appendChild(a);}document.addEventListener("DOMContentLoaded",go);window.addEventListener("load",go);setTimeout(go,400);})();';
+	echo '(function(){var U=' . $url_json . ';function hideDupAccountTitles(){if(!document.body.classList.contains("wrrapd-account-page"))return;document.querySelectorAll("h1.elementor-heading-title,h2.elementor-heading-title,.entry-title").forEach(function(h){if(/^Account\\s*$/i.test((h.textContent||"").trim()))h.style.display="none";});}function go(){hideDupAccountTitles();var hot=document.querySelector(".gift-ideas-button:not(.wrrapd-your-orders-button)");if(!hot||document.querySelector(".wrrapd-your-orders-button"))return;var row=hot.closest(".wrrapd-header-user-actions");if(!row){row=document.createElement("div");row.className="wrrapd-header-user-actions";hot.parentNode.insertBefore(row,hot);row.appendChild(hot);}hot.style.display="";hot.style.marginTop="0";var a=document.createElement("a");a.href=U;a.className="gift-ideas-button wrrapd-your-orders-button";a.textContent="Your orders";row.appendChild(a);}document.addEventListener("DOMContentLoaded",go);window.addEventListener("load",go);setTimeout(go,400);setTimeout(go,1200);})();';
 	echo '</script>';
 }
 add_action( 'wp_footer', 'wrrapd_output_header_your_orders_button_script', 22 );

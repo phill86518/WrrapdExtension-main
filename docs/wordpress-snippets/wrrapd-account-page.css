@@ -1,47 +1,12 @@
-/* Account + About polish — included in wrrapd-additional-css-complete.css */
+/* Account + About font polish — merged into wrrapd-additional-css-complete.css */
 
-.wrrapd-about-page .wrrapd-about-card,
 .wrrapd-account-layout .user-registration,
 .wrrapd-account-layout #user-registration {
 	max-width: min(56rem, 100%);
 	margin-inline: auto;
 }
 
-.wrrapd-about-address {
-	padding: 1rem 1.15rem;
-	border-radius: 0.75rem;
-	background: rgba(255, 255, 255, 0.55);
-	border: 1px solid rgba(12, 18, 34, 0.08);
-	line-height: 1.55;
-}
-
-.wrrapd-about-checklist {
-	padding-left: 0;
-	list-style: none;
-}
-
-.wrrapd-about-checklist li {
-	position: relative;
-	padding-left: 1.35rem;
-	margin-bottom: 0.65rem;
-}
-
-.wrrapd-about-checklist li::before {
-	content: "✓";
-	position: absolute;
-	left: 0;
-	color: #9a7618;
-	font-weight: 800;
-}
-
-.wrrapd-about-tagline {
-	font-family: Fraunces, Georgia, serif !important;
-	font-size: clamp(1.15rem, 2.8vw, 1.45rem) !important;
-	color: #162a52 !important;
-	margin-top: 1.25rem !important;
-}
-
-/* About Us — Elementor-native page fallback (page-id-4548) */
+/* About Us — Elementor content only (keep your existing widgets; fonts via body.wrrapd-about-polish) */
 body.wrrapd-about-polish .elementor-page-4548 .elementor-widget-heading h1,
 body.wrrapd-about-polish .elementor-page-4548 .elementor-widget-heading h2,
 body.wrrapd-about-polish .elementor-page-4548 .elementor-widget-heading h3,
@@ -189,7 +154,7 @@ body.wrrapd-account-page .ur-frontend-form > h2:first-child {
 	padding: 0.62rem 1.35rem !important;
 	border-radius: 999px !important;
 	border: 1px solid rgba(154, 118, 24, 0.35) !important;
-	background: linear-gradient(180deg, #f5e6a8, #c9a227) !important;
+	background: linear-gradient(180deg, #f5e6a8, #c9a7618) !important;
 	color: #0c1222 !important;
 	font-weight: 800 !important;
 	font-size: 0.92rem !important;
@@ -197,56 +162,34 @@ body.wrrapd-account-page .ur-frontend-form > h2:first-child {
 	box-shadow: 0 2px 0 rgba(154, 118, 24, 0.22);
 }
 
-.wrrapd-account-layout .user-registration-MyAccount-content .ur-submit-button:hover,
-.wrrapd-account-layout .user-registration-MyAccount-content button[type="submit"]:hover {
-	filter: brightness(1.04);
-}
-
-/* Profile avatar strip — less default purple */
-.wrrapd-account-layout .user-registration-MyAccount-navigation .user-registration-MyAccount-navigation__profile,
-.wrrapd-account-layout .user-registration-profile-header {
-	text-align: center;
-	padding: 0.35rem 0.5rem 0.85rem;
-	border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-	margin-bottom: 0.65rem;
-}
-
-.wrrapd-account-layout .user-registration-MyAccount-navigation img,
-.wrrapd-account-layout .user-registration-MyAccount-navigation .profile-image,
-.wrrapd-account-layout .user-registration-profile-header img {
-	border-radius: 50%;
-	border: 3px solid #f5c518;
-	box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
-}
-
-.wrrapd-account-layout .user-registration-MyAccount-navigation .user-registration-MyAccount-navigation__profile-name {
-	color: #fff;
-	font-family: Fraunces, Georgia, serif !important;
-	font-weight: 560;
-	font-size: 1.05rem;
-}
-
-/* Header: Your orders + Hot Gifts side by side */
 .wrrapd-header-user-actions {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 0.35rem;
-	justify-content: center;
-	align-items: center;
-	margin-top: 0.3125rem;
+	display: flex !important;
+	flex-direction: row !important;
+	flex-wrap: wrap !important;
+	gap: 0.35rem !important;
+	justify-content: center !important;
+	align-items: center !important;
+	margin-top: 0.3125rem !important;
 }
 
 .wrrapd-header-user-actions .gift-ideas-button {
+	display: inline-block !important;
 	margin-top: 0 !important;
-	flex: 1 1 auto;
-	min-width: 5.5rem;
-}
-
-.wrrapd-your-orders-button {
+	font-family: Helvetica, Arial, sans-serif !important;
+	font-size: 0.75rem !important;
+	font-weight: 700 !important;
+	color: #000 !important;
 	background-color: #fff300 !important;
+	border: 0.0625rem solid #000 !important;
+	padding: 0.1875rem 0.375rem !important;
+	border-radius: 1.25rem !important;
+	text-decoration: none !important;
+	text-align: center !important;
+	white-space: nowrap !important;
+	line-height: 1.2 !important;
+	box-sizing: border-box !important;
 }
 
-.wrrapd-orders-shell + .elementor-widget-shortcode,
 .wrrapd-orders-page .wrrapd-review-orders,
 .wrrapd-orders-page .wrrapd-amz-root {
 	max-width: min(960px, 100%);
@@ -256,9 +199,5 @@ body.wrrapd-account-page .ur-frontend-form > h2:first-child {
 @media (max-width: 767px) {
 	.wrrapd-account-layout .user-registration-MyAccount {
 		grid-template-columns: 1fr;
-	}
-
-	.wrrapd-account-layout .user-registration-MyAccount-navigation {
-		padding: 0.65rem;
 	}
 }

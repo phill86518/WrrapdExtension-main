@@ -111,8 +111,6 @@ export async function sendPostOrderNotifications(order: Order): Promise<PostOrde
   });
 
   const origin = getPublicOrigin();
-  const trackingPath = `/track/${order.trackingToken}`;
-  const trackingUrl = origin ? `${origin}${trackingPath}` : trackingPath;
   const addressLine = `${order.addressLine1}, ${order.city}, ${order.state} ${order.postalCode}`;
   const isAmazon = !order.retailer || order.retailer === "Amazon";
   const retailerLabel = order.retailer || "Your retailer";
@@ -144,12 +142,10 @@ export async function sendPostOrderNotifications(order: Order): Promise<PostOrde
     customerName: order.customerName,
     customerGreetingName: order.customerGreetingName,
     orderId: customerVisibleRef,
-    trackingUrl,
     recipientName: order.recipientName,
     addressLine,
     scheduledEtLabel,
     lineItems: order.lineItems,
-    showTrackingLink: isAmazon,
   });
 
   if (order.customerEmail?.trim()) {
@@ -182,7 +178,6 @@ export async function sendPostOrderNotifications(order: Order): Promise<PostOrde
     state: order.state,
     postalCode: order.postalCode,
     scheduledEtLabel,
-    trackingUrl,
     sourceNote: order.sourceNote,
     deliveryPreferencePending: order.deliveryPreferencePending,
     amazonDeliveryDatesSnapshot: order.amazonDeliveryDatesSnapshot,
@@ -205,8 +200,7 @@ export async function sendPostOrderNotifications(order: Order): Promise<PostOrde
   const e164 = toUsE164(order.customerPhone);
   if (e164) {
     const sms =
-      `Wrrapd: Thanks for your order (${customerVisibleRef})! Track: ${trackingUrl} ` +
-      `Delivery window ${scheduledEtLabel}.`;
+      `Wrrapd: Thanks for your order (${customerVisibleRef})! Delivery window ${scheduledEtLabel}.`;
     try {
       const ok = await sendTransactionalSms({ toE164: e164, body: sms.slice(0, 1500) });
       base.customerSmsSent = ok;
