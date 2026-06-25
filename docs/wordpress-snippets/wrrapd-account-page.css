@@ -1,0 +1,264 @@
+/* Account + About polish — included in wrrapd-additional-css-complete.css */
+
+.wrrapd-about-page .wrrapd-about-card,
+.wrrapd-account-layout .user-registration,
+.wrrapd-account-layout #user-registration {
+	max-width: min(56rem, 100%);
+	margin-inline: auto;
+}
+
+.wrrapd-about-address {
+	padding: 1rem 1.15rem;
+	border-radius: 0.75rem;
+	background: rgba(255, 255, 255, 0.55);
+	border: 1px solid rgba(12, 18, 34, 0.08);
+	line-height: 1.55;
+}
+
+.wrrapd-about-checklist {
+	padding-left: 0;
+	list-style: none;
+}
+
+.wrrapd-about-checklist li {
+	position: relative;
+	padding-left: 1.35rem;
+	margin-bottom: 0.65rem;
+}
+
+.wrrapd-about-checklist li::before {
+	content: "✓";
+	position: absolute;
+	left: 0;
+	color: #9a7618;
+	font-weight: 800;
+}
+
+.wrrapd-about-tagline {
+	font-family: Fraunces, Georgia, serif !important;
+	font-size: clamp(1.15rem, 2.8vw, 1.45rem) !important;
+	color: #162a52 !important;
+	margin-top: 1.25rem !important;
+}
+
+/* About Us — Elementor-native page fallback (page-id-4548) */
+body.wrrapd-about-polish .elementor-page-4548 .elementor-widget-heading h1,
+body.wrrapd-about-polish .elementor-page-4548 .elementor-widget-heading h2,
+body.wrrapd-about-polish .elementor-page-4548 .elementor-widget-heading h3,
+body.wrrapd-about-polish .elementor-page-4548 .elementor-widget-text-editor,
+body.wrrapd-about-polish .elementor-page-4548 .elementor-widget-text-editor p,
+body.wrrapd-about-polish .elementor-page-4548 .elementor-widget-text-editor li {
+	font-family: "Source Sans 3", Roboto, system-ui, sans-serif !important;
+}
+
+body.wrrapd-about-polish .elementor-page-4548 .elementor-widget-heading h1,
+body.wrrapd-about-polish .elementor-page-4548 .elementor-widget-heading h2,
+body.wrrapd-about-polish .elementor-page-4548 .elementor-widget-heading h3 {
+	font-family: Fraunces, Georgia, serif !important;
+	font-weight: 560 !important;
+	letter-spacing: -0.02em !important;
+	color: #0c1222 !important;
+}
+
+body.wrrapd-about-polish .elementor-page-4548 .e-con-inner,
+body.wrrapd-about-polish .elementor-page-4548 .elementor-section-wrap {
+	background: linear-gradient(165deg, #fdfcfa 0%, #f4f0e8 48%, #ebe4d8 100%);
+}
+
+/* Hide duplicate “Account” titles (theme + UR plugin) */
+body.wrrapd-account-page .entry-title,
+body.wrrapd-account-page .page-title,
+body.wrrapd-account-page .elementor-widget-theme-post-title,
+body.wrrapd-account-page .user-registration-MyAccount-content > h1,
+body.wrrapd-account-page .user-registration-MyAccount-content > h2:first-child,
+body.wrrapd-account-page .ur-frontend-form > h2:first-child {
+	display: none !important;
+}
+
+.wrrapd-account-layout {
+	background: linear-gradient(165deg, #fdfcfa 0%, #f4f0e8 46%, #ebe4d8 100%);
+	padding: clamp(1.5rem, 4vw, 2.5rem) clamp(0.75rem, 3vw, 1.5rem) clamp(2.5rem, 6vw, 4rem);
+}
+
+.wrrapd-account-layout .user-registration,
+.wrrapd-account-layout #user-registration,
+.wrrapd-account-layout .ur-frontend-form {
+	font-family: "Source Sans 3", Roboto, system-ui, sans-serif !important;
+	color: #0f172a;
+}
+
+.wrrapd-account-layout .user-registration-MyAccount {
+	display: grid;
+	grid-template-columns: minmax(0, 220px) minmax(0, 1fr);
+	gap: clamp(1rem, 3vw, 1.75rem);
+	align-items: start;
+	max-width: min(56rem, 100%);
+	margin: 0 auto;
+	padding: clamp(1rem, 3vw, 1.35rem);
+	background: rgba(255, 255, 255, 0.72);
+	border: 1px solid rgba(12, 18, 34, 0.09);
+	border-radius: clamp(0.85rem, 2vmin, 1.1rem);
+	box-shadow: 0 16px 44px rgba(12, 18, 34, 0.08);
+	backdrop-filter: blur(8px);
+}
+
+.wrrapd-account-layout .user-registration-MyAccount-navigation {
+	background: linear-gradient(180deg, #162a52 0%, #1e3a5f 100%);
+	border-radius: 0.75rem;
+	padding: 0.85rem 0.65rem;
+	border: none;
+}
+
+.wrrapd-account-layout .user-registration-MyAccount-navigation ul {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.wrrapd-account-layout .user-registration-MyAccount-navigation li {
+	margin: 0.2rem 0;
+}
+
+.wrrapd-account-layout .user-registration-MyAccount-navigation a {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.5rem;
+	padding: 0.55rem 0.65rem;
+	border-radius: 0.55rem;
+	color: rgba(255, 255, 255, 0.88) !important;
+	text-decoration: none !important;
+	font-size: 0.92rem;
+	font-weight: 600;
+	transition: background 0.15s ease, color 0.15s ease;
+}
+
+.wrrapd-account-layout .user-registration-MyAccount-navigation li.is-active a,
+.wrrapd-account-layout .user-registration-MyAccount-navigation a:hover,
+.wrrapd-account-layout .user-registration-MyAccount-navigation a:focus-visible {
+	background: rgba(245, 197, 24, 0.18);
+	color: #fff !important;
+}
+
+.wrrapd-account-layout .user-registration-MyAccount-content {
+	background: #fff;
+	border: 1px solid rgba(12, 18, 34, 0.08);
+	border-radius: 0.75rem;
+	padding: clamp(1rem, 3vw, 1.35rem);
+}
+
+.wrrapd-account-layout .user-registration-MyAccount-content label,
+.wrrapd-account-layout .ur-frontend-form label {
+	font-size: 0.78rem;
+	font-weight: 700;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	color: #475569;
+}
+
+.wrrapd-account-layout .user-registration-MyAccount-content input[type="text"],
+.wrrapd-account-layout .user-registration-MyAccount-content input[type="email"],
+.wrrapd-account-layout .user-registration-MyAccount-content input[type="password"],
+.wrrapd-account-layout .ur-frontend-form input[type="text"],
+.wrrapd-account-layout .ur-frontend-form input[type="email"],
+.wrrapd-account-layout .ur-frontend-form input[type="password"] {
+	width: 100%;
+	border: 1px solid rgba(12, 18, 34, 0.14) !important;
+	border-radius: 0.6rem !important;
+	padding: 0.62rem 0.75rem !important;
+	font-family: "Source Sans 3", Roboto, system-ui, sans-serif !important;
+	font-size: 0.98rem !important;
+	box-shadow: none !important;
+	background: #fff !important;
+}
+
+.wrrapd-account-layout .user-registration-MyAccount-content input:focus,
+.wrrapd-account-layout .ur-frontend-form input:focus {
+	border-color: #162a52 !important;
+	outline: 2px solid rgba(22, 42, 82, 0.15) !important;
+	outline-offset: 1px;
+}
+
+.wrrapd-account-layout .user-registration-MyAccount-content .ur-submit-button,
+.wrrapd-account-layout .user-registration-MyAccount-content button[type="submit"],
+.wrrapd-account-layout .ur-frontend-form button[type="submit"] {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	margin-top: 0.75rem;
+	padding: 0.62rem 1.35rem !important;
+	border-radius: 999px !important;
+	border: 1px solid rgba(154, 118, 24, 0.35) !important;
+	background: linear-gradient(180deg, #f5e6a8, #c9a227) !important;
+	color: #0c1222 !important;
+	font-weight: 800 !important;
+	font-size: 0.92rem !important;
+	cursor: pointer;
+	box-shadow: 0 2px 0 rgba(154, 118, 24, 0.22);
+}
+
+.wrrapd-account-layout .user-registration-MyAccount-content .ur-submit-button:hover,
+.wrrapd-account-layout .user-registration-MyAccount-content button[type="submit"]:hover {
+	filter: brightness(1.04);
+}
+
+/* Profile avatar strip — less default purple */
+.wrrapd-account-layout .user-registration-MyAccount-navigation .user-registration-MyAccount-navigation__profile,
+.wrrapd-account-layout .user-registration-profile-header {
+	text-align: center;
+	padding: 0.35rem 0.5rem 0.85rem;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+	margin-bottom: 0.65rem;
+}
+
+.wrrapd-account-layout .user-registration-MyAccount-navigation img,
+.wrrapd-account-layout .user-registration-MyAccount-navigation .profile-image,
+.wrrapd-account-layout .user-registration-profile-header img {
+	border-radius: 50%;
+	border: 3px solid #f5c518;
+	box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+}
+
+.wrrapd-account-layout .user-registration-MyAccount-navigation .user-registration-MyAccount-navigation__profile-name {
+	color: #fff;
+	font-family: Fraunces, Georgia, serif !important;
+	font-weight: 560;
+	font-size: 1.05rem;
+}
+
+/* Header: Your orders + Hot Gifts side by side */
+.wrrapd-header-user-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.35rem;
+	justify-content: center;
+	align-items: center;
+	margin-top: 0.3125rem;
+}
+
+.wrrapd-header-user-actions .gift-ideas-button {
+	margin-top: 0 !important;
+	flex: 1 1 auto;
+	min-width: 5.5rem;
+}
+
+.wrrapd-your-orders-button {
+	background-color: #fff300 !important;
+}
+
+.wrrapd-orders-shell + .elementor-widget-shortcode,
+.wrrapd-orders-page .wrrapd-review-orders,
+.wrrapd-orders-page .wrrapd-amz-root {
+	max-width: min(960px, 100%);
+	margin-inline: auto;
+}
+
+@media (max-width: 767px) {
+	.wrrapd-account-layout .user-registration-MyAccount {
+		grid-template-columns: 1fr;
+	}
+
+	.wrrapd-account-layout .user-registration-MyAccount-navigation {
+		padding: 0.65rem;
+	}
+}

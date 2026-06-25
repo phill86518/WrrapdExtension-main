@@ -98,6 +98,50 @@ add_filter(
 );
 
 /**
+ * Canonical URL for the logged-in “Your orders” header button and account links.
+ */
+function wrrapd_orders_page_url() {
+	if ( defined( 'WRRAPD_ORDERS_PAGE_URL' ) && is_string( WRRAPD_ORDERS_PAGE_URL ) && WRRAPD_ORDERS_PAGE_URL !== '' ) {
+		return esc_url( WRRAPD_ORDERS_PAGE_URL );
+	}
+	return home_url( '/your-orders/' );
+}
+
+/**
+ * Body classes for account / about / orders styling hooks.
+ *
+ * @param list<string> $classes Existing classes.
+ * @return list<string>
+ */
+function wrrapd_body_class_site_pages( $classes ) {
+	if ( is_page( array( 4621, 5284 ) ) || is_page( array( 'my-account-2', 'account' ) ) ) {
+		$classes[] = 'wrrapd-account-page';
+	}
+	if ( is_page( 4548 ) || is_page( 'about-us' ) ) {
+		$classes[] = 'wrrapd-about-polish';
+	}
+	if ( is_page( 'your-orders' ) ) {
+		$classes[] = 'wrrapd-orders-page';
+	}
+	return $classes;
+}
+add_filter( 'body_class', 'wrrapd_body_class_site_pages' );
+
+/**
+ * Logged-in header: “Your orders” pill beside “Hot Gifts”.
+ */
+function wrrapd_output_header_your_orders_button_script() {
+	if ( is_admin() || ! is_user_logged_in() ) {
+		return;
+	}
+	$url_json = wp_json_encode( wrrapd_orders_page_url() );
+	echo '<script id="wrrapd-your-orders-btn">';
+	echo '(function(){var U=' . $url_json . ';function hideDupAccountTitles(){if(!document.body.classList.contains("wrrapd-account-page"))return;document.querySelectorAll("h1.elementor-heading-title,h2.elementor-heading-title,.entry-title").forEach(function(h){if(/^Account\\s*$/i.test((h.textContent||"").trim()))h.style.display="none";});}function go(){hideDupAccountTitles();var hot=document.querySelector(".gift-ideas-button:not(.wrrapd-your-orders-button)");if(!hot||document.querySelector(".wrrapd-your-orders-button"))return;var row=hot.closest(".wrrapd-header-user-actions");if(!row){row=document.createElement("div");row.className="wrrapd-header-user-actions";hot.parentNode.insertBefore(row,hot);row.appendChild(hot);}var a=document.createElement("a");a.href=U;a.className="gift-ideas-button wrrapd-your-orders-button";a.textContent="Your orders";row.appendChild(a);}document.addEventListener("DOMContentLoaded",go);window.addEventListener("load",go);setTimeout(go,400);})();';
+	echo '</script>';
+}
+add_action( 'wp_footer', 'wrrapd_output_header_your_orders_button_script', 22 );
+
+/**
  * On-disk folder for circular retailer PNGs (`mu-plugins/logos/`).
  */
 function wrrapd_mu_logos_dir() {
