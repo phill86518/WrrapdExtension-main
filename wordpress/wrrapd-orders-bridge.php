@@ -335,7 +335,7 @@ function wrrapd_output_retailer_wheel_strip() {
 		$src   = esc_url( wrrapd_mu_logo_url_for_slug( $b['slug'], $b['domain'] ) );
 		$fb    = 'https://www.google.com/s2/favicons?domain=' . rawurlencode( $b['domain'] ) . '&sz=128';
 		$label = $b['label'];
-		echo '<a class="wrrapd-retailer-wheels__item" href="' . $go . '" rel="sponsored noopener" style="animation-delay:' . esc_attr( (string) $delay ) . 's">';
+		echo '<a class="wrrapd-retailer-wheels__item" href="' . $go . '" target="_blank" rel="sponsored noopener noreferrer" style="animation-delay:' . esc_attr( (string) $delay ) . 's">';
 		echo '<span class="wrrapd-retailer-wheels__badge">';
 		echo '<img src="' . $src . '" data-fallback="' . esc_url( $fb ) . '" width="78" height="78" alt="' . esc_attr( $label ) . '" loading="lazy" decoding="async" onerror="var u=this.dataset.fallback;if(u){this.onerror=null;this.src=u;}" />';
 		echo '</span>';
@@ -352,6 +352,22 @@ function wrrapd_output_retailer_wheel_strip() {
 add_action( 'wp_body_open', 'wrrapd_output_retailer_wheel_strip', 5 );
 /** Same callback, run-once guard: outputs here if the active theme never calls `wp_body_open`. */
 add_action( 'wp_footer', 'wrrapd_output_retailer_wheel_strip', 1 );
+
+/**
+ * Retailer, /go/, and Chrome Web Store links open in a new tab (belt-and-suspenders for Elementor HTML).
+ */
+function wrrapd_output_external_retailer_links_new_tab_script() {
+	if ( is_admin() ) {
+		return;
+	}
+	echo '<script id="wrrapd-ext-links-new-tab">';
+	echo '(function(){var sel=[".wrrapd-retailer-wheels__item",".wrrapd-gift-guides__cta",".wrrapd-gift-guides__card-logo",".wrrapd-gift-guides a.wrrapd-ext-cta",".wrrapd-top-gifts__card-cta","a[href*=\\"chromewebstore.google.com\\"]"];';
+	echo 'function wrrapdApplyExtNewTab(){sel.forEach(function(s){document.querySelectorAll(s).forEach(function(a){a.target="_blank";var r=(a.getAttribute("rel")||"").split(/\\s+/).filter(Boolean);["noopener","noreferrer"].forEach(function(x){if(r.indexOf(x)<0)r.push(x);});if((a.getAttribute("href")||"").indexOf("/go/")>=0&&r.indexOf("sponsored")<0)r.unshift("sponsored");a.rel=r.join(" ");});});}';
+	echo 'document.addEventListener("DOMContentLoaded",wrrapdApplyExtNewTab);window.addEventListener("load",wrrapdApplyExtNewTab);})();';
+	echo '</script>';
+}
+
+add_action( 'wp_footer', 'wrrapd_output_external_retailer_links_new_tab_script', 25 );
 
 /**
  * Home page: move Elementor gift-guides HTML widget below the hero (after Jacksonville + red divider).

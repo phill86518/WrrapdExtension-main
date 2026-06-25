@@ -27,10 +27,28 @@ const FEATURED = [
 
 const FEATURED_DOMAINS = new Set(FEATURED.map((f) => f.domain));
 
+/** Fallback gift-hub URLs when an item has no explicit href (avoid 404-prone paths). */
+const DEFAULT_GIFT_HREFS = {
+	'anthropologie.com': 'https://www.anthropologie.com/gifts',
+	'clinique.com': 'https://www.clinique.com/',
+	'fossil.com': 'https://www.fossil.com/en-us/gifts/',
+	'fragrancenet.com': 'https://www.fragrancenet.com/',
+	'kerastase-usa.com': 'https://www.kerastase-usa.com/gifts/',
+	'kiehls.com': 'https://www.kiehls.com/gifts/',
+	'macys.com': 'https://www.macys.com/shop/gift-guide',
+	'monicavinader.com': 'https://www.monicavinader.com/',
+	'movado.com': 'https://www.movado.com/us/en/gifts',
+	'prada-beauty.com': 'https://www.prada-beauty.com/',
+	'russellstover.com': 'https://www.russellstover.com/shop/gifts',
+	'toddsnyder.com': 'https://www.toddsnyder.com/',
+	'yslbeauty.com': 'https://www.yslbeauty.com/',
+	'zchocolates.com': 'https://www.zchocolates.com/',
+};
+
 function card({ title, domain, copy, href }) {
 	const host = domain.replace(/^https?:\/\//, '').split('/')[0].replace(/^www\./, '');
 	if (EXTENSION_RETAILERS.has(host) || BLOCKLIST.has(host)) return '';
-	const url = href || `https://www.${host}/`;
+	const url = href || DEFAULT_GIFT_HREFS[host] || `https://www.${host}/`;
 	return `
 			<li class="wrrapd-top-gifts__card">
 				<div class="wrrapd-top-gifts__card-top">
@@ -38,7 +56,7 @@ function card({ title, domain, copy, href }) {
 					<h3 class="wrrapd-top-gifts__card-title">${title}</h3>
 				</div>
 				<p class="wrrapd-top-gifts__card-copy">${copy}</p>
-				<a class="wrrapd-top-gifts__card-cta" href="${url}" rel="sponsored noopener noreferrer">Shop ${title} →</a>
+				<a class="wrrapd-top-gifts__card-cta" href="${url}" target="_blank" rel="sponsored noopener noreferrer">Shop ${title} →</a>
 			</li>`;
 }
 
@@ -48,7 +66,7 @@ const categories = [
 		label: 'Chocolates &amp; coffee',
 		items: [
 			{ title: 'Peet\u2019s Coffee', domain: 'peets.com', copy: 'Subscription and bean gifts for the caffeine loyalist.', href: 'https://www.peets.com/gifts' },
-			{ title: 'Baked by Melissa', domain: 'bakedbymelissa.com', copy: 'Tiny cupcakes in gift tins—office-party hero.', href: 'https://www.bakedbymelissa.com/gifts' },
+			{ title: 'Baked by Melissa', domain: 'bakedbymelissa.com', copy: 'Tiny cupcakes in gift tins—office-party hero.', href: 'https://www.bakedbymelissa.com/collections/gifts' },
 			{ title: 'Pressed Juicery', domain: 'pressedjuicery.com', copy: 'Juice and wellness drops—clean-ingredient care packages.' },
 			{ title: 'Ka\u2019Chava', domain: 'kachava.com', copy: 'Plant-based meal shakes—fitness-minded stocking stuffers.' },
 		],
@@ -58,7 +76,7 @@ const categories = [
 		label: 'Beauty &amp; fragrance',
 		items: [
 			{ title: 'Benefit Cosmetics', domain: 'benefitcosmetics.com', copy: 'Brow kits and cheek pops—playful beauty gifts.', href: 'https://www.benefitcosmetics.com/us/en/gifts' },
-			{ title: 'Clinique', domain: 'clinique.com', copy: 'Skincare sets with gift-with-purchase energy.', href: 'https://www.clinique.com/gifts' },
+			{ title: 'Clinique', domain: 'clinique.com', copy: 'Skincare sets with gift-with-purchase energy.', href: 'https://www.clinique.com/' },
 			{ title: 'Givenchy Beauty', domain: 'givenchybeauty.com', copy: 'Designer fragrance and couture color—luxury unboxing.' },
 			{ title: 'Anastasia Beverly Hills', domain: 'anastasiabeverlyhills.com', copy: 'Brow and glam essentials for the makeup obsessed.' },
 			{ title: 'Moroccanoil', domain: 'moroccanoil.com', copy: 'Hair oil rituals—salon-quality gift sets.' },
@@ -68,7 +86,7 @@ const categories = [
 			{ title: 'FragranceX', domain: 'fragrancex.com', copy: 'Wide fragrance selection when you know their vibe, not the bottle.' },
 			{ title: 'Kiehl\u2019s', domain: 'kiehls.com', copy: 'Skincare sets and minis that feel luxe before the bow goes on.', href: 'https://www.kiehls.com/gifts/' },
 			{ title: 'K\u00e9rastase', domain: 'kerastase-usa.com', copy: 'Salon-grade hair care bundles.', href: 'https://www.kerastase-usa.com/gifts/' },
-			{ title: 'YSL Beauty', domain: 'yslbeauty.com', copy: 'Iconic fragrance and makeup—high-impact unboxing.', href: 'https://www.yslbeauty.com/gifts/' },
+			{ title: 'YSL Beauty', domain: 'yslbeauty.com', copy: 'Iconic fragrance and makeup—high-impact unboxing.', href: 'https://www.yslbeauty.com/' },
 			{ title: 'Prada Beauty', domain: 'prada-beauty.com', copy: 'Designer fragrance and color for a polished moment.' },
 			{ title: 'SK-II', domain: 'sk-ii.com', copy: 'Prestige skincare rituals—self-care done right.' },
 			{ title: 'Maison Margiela Fragrances', domain: 'maisonmargiela-fragrances.us', copy: 'Niche scent profiles for someone who has everything.' },
@@ -91,13 +109,13 @@ const categories = [
 		label: 'Electronics',
 		items: [
 			{ title: 'HP', domain: 'hp.com', copy: 'Laptops and printers—graduation and WFH upgrades.', href: 'https://www.hp.com/us-en/shop/gifts.html' },
-			{ title: 'Acer', domain: 'acer.com', copy: 'Value-forward laptops and monitors—student gifting.', href: 'https://store.acer.com/en-us/gifts' },
+			{ title: 'Acer', domain: 'acer.com', copy: 'Value-forward laptops and monitors—student gifting.', href: 'https://www.acer.com/us-en/' },
 			{ title: 'SanDisk', domain: 'sandisk.com', copy: 'Storage and memory—small box, high utility.', href: 'https://shop.sandisk.com/' },
 			{ title: 'Monoprice', domain: 'monoprice.com', copy: 'Cables, AV, and maker gear—for the tinkerer.' },
 			{ title: 'SodaStream', domain: 'sodastream.com', copy: 'Sparkling-water makers—kitchen gadget gifts.' },
 			{ title: 'Click & Grow', domain: 'clickandgrow.com', copy: 'Smart indoor gardens—grow-your-own presents.' },
 			{ title: 'Bandolier', domain: 'bandolierstyle.com', copy: 'Phone-case crossbodies—hands-free fashion tech.' },
-			{ title: 'Shutterfly', domain: 'shutterfly.com', copy: 'Photo books and custom prints—memory gifts.', href: 'https://www.shutterfly.com/gifts/' },
+			{ title: 'Shutterfly', domain: 'shutterfly.com', copy: 'Photo books and custom prints—memory gifts.', href: 'https://www.shutterfly.com/personalized-gifts/' },
 			{ title: 'VAIO US', domain: 'us.vaio.com', copy: 'Premium lightweight laptops—niche but loyal audience.' },
 			{ title: 'Philips Home Appliances', domain: 'philips.com', copy: 'Air fryers, espresso, and kitchen tech.' },
 		],
@@ -115,11 +133,11 @@ const categories = [
 			{ title: 'David\u2019s Bridal', domain: 'davidsbridal.com', copy: 'Bridal and occasion wear—shower and wedding gifts.' },
 			{ title: 'Macy\u2019s', domain: 'macys.com', copy: 'Department-store breadth—one stop when the list is long.', href: 'https://www.macys.com/shop/gift-guide' },
 			{ title: 'JCPenney', domain: 'jcpenney.com', copy: 'Apparel, home, and kids—practical gifting.', href: 'https://www.jcpenney.com/g/gifts' },
-			{ title: 'J.Crew Factory', domain: 'jcrewfactory.com', copy: 'Classic American style—easy apparel gifts.', href: 'https://factory.jcrew.com/gifts' },
+			{ title: 'J.Crew Factory', domain: 'jcrewfactory.com', copy: 'Classic American style—easy apparel gifts.', href: 'https://factory.jcrew.com/' },
 			{ title: 'Todd Snyder', domain: 'toddsnyder.com', copy: 'Elevated menswear—considered gifts for him.' },
 			{ title: 'Kenneth Cole', domain: 'kennethcole.com', copy: 'Shoes, bags, and fragrance—city-polished ideas.' },
-			{ title: 'LACOSTE', domain: 'lacoste.com', copy: 'Preppy polos and staples—recognizable gift boxes.', href: 'https://www.lacoste.com/us/lacoste/gifts.html' },
-			{ title: 'Hunter Boots', domain: 'hunterboots.com', copy: 'Iconic wellies—statement gifts with utility.', href: 'https://www.hunterboots.com/us/en/gifts' },
+			{ title: 'LACOSTE', domain: 'lacoste.com', copy: 'Preppy polos and staples—recognizable gift boxes.', href: 'https://www.lacoste.com/us/' },
+			{ title: 'Hunter Boots', domain: 'hunterboots.com', copy: 'Iconic wellies—statement gifts with utility.', href: 'https://www.hunterboots.com/' },
 			{ title: 'ECCO', domain: 'ecco.com', copy: 'Comfort footwear—walk-all-day gifts.' },
 			{ title: 'Forsake', domain: 'forsake.com', copy: 'Outdoor sneakers—trail-to-town versatility.' },
 			{ title: 'Foxcroft', domain: 'foxcroftcollection.com', copy: 'Wrinkle-free women\u2019s shirts—travel-friendly gifts.' },
@@ -129,7 +147,7 @@ const categories = [
 			{ title: 'Estella Bartlett', domain: 'estellabartlett.com', copy: 'Jewelry and accessories with sentiment packaging.' },
 			{ title: 'Papinelle', domain: 'papinelle.com', copy: 'Sleepwear and loungewear—cozy gifts that ship flat.' },
 			{ title: 'Komar Brands', domain: 'komarbrands.com', copy: 'Sleepwear and layering—soft, wrap-friendly finds.' },
-			{ title: 'Lands\u2019 End', domain: 'landsend.com', copy: 'Monogram-ready classics—family-list friendly.', href: 'https://www.landsend.com/gifts/' },
+			{ title: 'Lands\u2019 End', domain: 'landsend.com', copy: 'Monogram-ready classics—family-list friendly.', href: 'https://www.landsend.com/shop/gifts/S-xec-xeb' },
 			{ title: 'Stacy Adams', domain: 'stacyadams.com', copy: 'Men\u2019s dress shoes—Father\u2019s Day and formal events.' },
 		],
 	},
@@ -140,7 +158,7 @@ const categories = [
 			{ title: 'Monica Vinader', domain: 'monicavinader.com', copy: 'Demi-fine jewelry—personalized, stackable gifts.' },
 			{ title: 'Movado', domain: 'movado.com', copy: 'Minimalist watches—clean dial, classic presentation.', href: 'https://www.movado.com/us/en/gifts' },
 			{ title: 'Fossil', domain: 'fossil.com', copy: 'Watches and leather—easy wins for him or her.', href: 'https://www.fossil.com/en-us/gifts/' },
-			{ title: 'Timex', domain: 'timex.com', copy: 'Dependable watches from casual to dress.', href: 'https://timex.com/collections/gifts' },
+			{ title: 'Timex', domain: 'timex.com', copy: 'Dependable watches from casual to dress.', href: 'https://timex.com/' },
 			{ title: 'Kay Jewelers', domain: 'kay.com', copy: 'Classic fine jewelry for milestones.', href: 'https://www.kay.com/jewelry/gifts' },
 			{ title: 'Zales', domain: 'zales.com', copy: 'Rings, chains, and sparkle across budgets.', href: 'https://www.zales.com/gifts' },
 			{ title: 'JTV Jewelry', domain: 'jtv.com', copy: 'Gemstone jewelry—sparkle across budgets online.' },
@@ -155,8 +173,8 @@ const categories = [
 		label: 'Home &amp; kitchen',
 		items: [
 			{ title: 'Jonathan Adler', domain: 'jonathanadler.com', copy: 'Whimsical décor and pottery—bold host gifts.' },
-			{ title: 'Vitamix', domain: 'vitamix.com', copy: 'Big-ticket kitchen hero—registry-worthy.', href: 'https://www.vitamix.com/gifts' },
-			{ title: 'Cuisinart', domain: 'cuisinart.com', copy: 'Small appliances—housewarming staples.', href: 'https://www.cuisinart.com/shopping/gifts/' },
+			{ title: 'Vitamix', domain: 'vitamix.com', copy: 'Big-ticket kitchen hero—registry-worthy.', href: 'https://www.vitamix.com/us/en_us/' },
+			{ title: 'Cuisinart', domain: 'cuisinart.com', copy: 'Small appliances—housewarming staples.', href: 'https://www.cuisinart.com/' },
 			{ title: 'Simon Pearce', domain: 'simonpearce.com', copy: 'Handcrafted glass—elevated entertaining gifts.', href: 'https://simonpearce.com/collections/gifts' },
 			{ title: 'Portmeirion', domain: 'portmeirion.co.uk', copy: 'Tableware and pottery—British charm for the dining room.' },
 			{ title: 'Spode', domain: 'spode.com', copy: 'Fine china and holiday patterns—heirloom-style gifts.' },
@@ -171,8 +189,8 @@ const categories = [
 		id: 'kids-family',
 		label: 'Kids &amp; family',
 		items: [
-			{ title: 'Jellycat', domain: 'jellycat.com', copy: 'Plush animals—soft gifts kids actually clutch.', href: 'https://us.jellycat.com/gifts/' },
-			{ title: 'Fat Brain Toys', domain: 'fatbraintoys.com', copy: 'STEM and creative toys—parent-approved unboxing.', href: 'https://www.fatbraintoys.com/gift_guide/' },
+			{ title: 'Jellycat', domain: 'jellycat.com', copy: 'Plush animals—soft gifts kids actually clutch.', href: 'https://us.jellycat.com/' },
+			{ title: 'Fat Brain Toys', domain: 'fatbraintoys.com', copy: 'STEM and creative toys—parent-approved unboxing.', href: 'https://www.fatbraintoys.com/' },
 			{ title: 'Kidrobot', domain: 'kidrobot.com', copy: 'Designer vinyl toys—collectible gifts for teens and adults.' },
 			{ title: 'Gerber Childrenswear', domain: 'gerberchildrenswear.com', copy: 'Baby essentials—shower and new-parent gifts.' },
 			{ title: 'Tinybeans', domain: 'tinybeans.com', copy: 'Family photo journal app—digital gift for new parents.' },
@@ -193,7 +211,7 @@ const categories = [
 		label: 'Books &amp; sports',
 		items: [
 			{ title: 'Books-A-Million', domain: 'booksamillion.com', copy: 'Books, games, and collectibles—reader gifts.', href: 'https://www.booksamillion.com/gifts' },
-			{ title: 'Academy Sports', domain: 'academy.com', copy: 'Sports and outdoor gear—active-lifestyle gifting.', href: 'https://www.academy.com/c/gifts' },
+			{ title: 'Academy Sports', domain: 'academy.com', copy: 'Sports and outdoor gear—active-lifestyle gifting.', href: 'https://www.academy.com/c/shops/gift-guide' },
 			{ title: 'Nathan Sports', domain: 'nathansports.com', copy: 'Running packs and hydration gear.' },
 			{ title: 'Golf Direct Now', domain: 'golfdirectnow.com', copy: 'Golf gear—Father\u2019s Day and retirement lists.' },
 		],
