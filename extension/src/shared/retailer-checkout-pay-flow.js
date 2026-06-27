@@ -670,18 +670,26 @@ export function initRetailerCheckoutPayFlow(config) {
       return;
     }
     void (async () => {
+      // Stripe already succeeded in the popup; release the retailer CTA immediately.
+      // If server-side order finalization fails, roll back below and block checkout again.
+      writePaymentSuccess(config.sessionPrefix, true);
+      writeCartFingerprint(config.sessionPrefix, buildCartFingerprint(config.getCartSnapshot?.()));
+      config.fillHubShippingFields?.();
+      releaseCheckoutGate(config);
+      void ensureSummaryUi();
+
       const ok = await postProcessPayment(config, event.data);
       if (!ok) {
+        writePaymentSuccess(config.sessionPrefix, false);
+        applyCheckoutGate(config, giftFlowReady(), false);
+        void ensureSummaryUi();
         console.warn("[Wrrapd pay] process-payment did not complete; checkout remains blocked.");
         alert(
           "We could not confirm your Wrrapd payment. Please try again, or contact support if you were charged.",
         );
         return;
       }
-      writePaymentSuccess(config.sessionPrefix, true);
-      writeCartFingerprint(config.sessionPrefix, buildCartFingerprint(config.getCartSnapshot?.()));
       payPopupRef = null;
-      config.fillHubShippingFields?.();
       releaseCheckoutGate(config);
       void ensureSummaryUi();
     })();

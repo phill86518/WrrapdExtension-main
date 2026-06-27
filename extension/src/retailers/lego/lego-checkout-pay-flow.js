@@ -642,16 +642,30 @@ function bindPayMessageOnce() {
     }
     void (async () => {
       persistGifteeAddressFromPayMessage(event.data);
+      // Stripe already succeeded in the popup; let LEGO checkout recover immediately.
+      // If server-side order finalization fails, roll back and block again below.
+      writeLegoPaymentSuccess(true);
+      payPopupRef = null;
+      applyCheckoutSecurelyGate();
+      const optimisticBtn = findCheckoutSecurelyButton();
+      if (optimisticBtn) {
+        const { invoiceRows, totalCents } = buildSummaryLinesAndTotal();
+        const host = document.getElementById(SUMMARY_ROOT_ID);
+        if (host) host.remove();
+        mountSummaryNearButton(optimisticBtn, invoiceRows, totalCents, true);
+      }
+
       const ok = await postLegoProcessPayment(event.data);
       if (!ok) {
+        writeLegoPaymentSuccess(false);
+        applyCheckoutSecurelyGate();
+        void ensurePaymentSummaryUi();
         console.warn("[LEGO pay] process-payment did not complete; checkout remains blocked.");
         alert(
           "We could not confirm your Wrrapd payment. Please try again, or contact support if you were charged.",
         );
         return;
       }
-      writeLegoPaymentSuccess(true);
-      payPopupRef = null;
       applyCheckoutSecurelyGate();
       const btn = findCheckoutSecurelyButton();
       if (btn) {

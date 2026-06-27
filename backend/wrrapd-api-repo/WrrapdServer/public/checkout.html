@@ -274,10 +274,7 @@
                 <input type="text" id="giftee-last-name" name="giftee-last-name" autocomplete="family-name" placeholder="Doe">
             </div>
         </div>
-        <div class="form-group" id="giftee-name-full-group">
-            <label for="name">Giftee full name*</label>
-            <input type="text" id="name" name="name" required autocomplete="name" placeholder="John Doe">
-        </div>
+        <input type="hidden" id="name" name="name" value="">
         <input type="hidden" id="line2" name="line2" value="">
         <div class="form-group">
             <label for="line1">Address Line 1</label>
@@ -396,8 +393,7 @@
         const urlParams = new URLSearchParams(window.location.search);
         /**
          * Resolve the retailer from /checkout/<retailer> or ?retailer=<retailer>.
-         * Defaults to Amazon (the legacy single-name flow). Any explicit retailer
-         * other than Amazon uses the split first/last giftee-name fields.
+         * Defaults to Amazon for the legacy route.
          */
         const checkoutRetailer = (function resolveCheckoutRetailer() {
             const pathMatch = /\/checkout\/([a-z0-9_-]+)\b/i.exec(window.location.pathname || '');
@@ -432,8 +428,8 @@
             document.title = 'Wrrapd payment — ' + checkoutRetailer + ' order';
         }
 
-        /** Non-Amazon retailers use separate first/last name fields on their site; Amazon keeps one full-name field. */
-        const gifteeUsesSplitName = checkoutRetailer !== 'Amazon';
+        /** Shopper-facing giftee entry is always first/last only; hidden full name is server compatibility. */
+        const gifteeUsesSplitName = true;
 
         function getGifteeFirstName() {
             if (gifteeUsesSplitName) {
@@ -469,14 +465,12 @@
 
         function configureGifteeNameFields() {
             const splitRow = document.getElementById('giftee-name-split-row');
-            const fullGroup = document.getElementById('giftee-name-full-group');
             const nameEl = document.getElementById('name');
             const firstEl = document.getElementById('giftee-first-name');
             const lastEl = document.getElementById('giftee-last-name');
-            if (!splitRow || !fullGroup || !nameEl) return;
+            if (!splitRow || !nameEl) return;
             if (gifteeUsesSplitName) {
                 splitRow.hidden = false;
-                fullGroup.style.display = 'none';
                 nameEl.removeAttribute('required');
                 nameEl.setAttribute('aria-hidden', 'true');
                 if (firstEl) firstEl.required = true;
@@ -484,7 +478,6 @@
                 syncGifteeHiddenFullName();
             } else {
                 splitRow.hidden = true;
-                fullGroup.style.display = '';
                 nameEl.required = true;
                 nameEl.removeAttribute('aria-hidden');
                 if (firstEl) firstEl.removeAttribute('required');

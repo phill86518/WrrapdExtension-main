@@ -113,13 +113,13 @@
             if (redirectMessage) {
                 if (/^amazon$/i.test(retailerParam)) {
                     redirectMessage.innerHTML =
-                        'Re-directing to Amazon in <span id="countdown">5</span> seconds. ' +
+                        'Re-directing to Amazon in <span id="countdown">1</span> second. ' +
                         'Please complete your Amazon order!';
                 } else {
                     redirectMessage.innerHTML =
                         'Re-directing to ' +
                         retailerLabel +
-                        ' in <span id="countdown">5</span> seconds. ' +
+                        ' in <span id="countdown">1</span> second. ' +
                         'Please complete your ' +
                         retailerLabel +
                         ' order!';
@@ -127,7 +127,7 @@
             }
 
             const countdownElement = document.getElementById('countdown');
-            let countdown = 5;
+            let countdown = 1;
             const interval = setInterval(() => {
                 countdown -= 1;
                 countdownElement.textContent = countdown;
