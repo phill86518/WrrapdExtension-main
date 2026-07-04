@@ -110,6 +110,12 @@ a.wrrapd-ext-cta:focus-visible {
 	margin: 0 0 16px 0;
 }
 
+.wrrapd-howto-intro__title {
+	color: var(--mf-dark-color, #0b1780);
+	font-size: clamp(24px, 2.8vw, 30px);
+	font-weight: 800;
+}
+
 .wrrapd-howto-row {
 	display: grid;
 	grid-template-columns: minmax(0, 1.05fr) minmax(0, 1.15fr);
@@ -225,7 +231,9 @@ a.wrrapd-ext-cta:focus-visible {
 @media (max-width: 767px) {
 	.wrrapd-howto-row,
 	.wrrapd-howto-row.is-flip {
-		grid-template-columns: 1fr;
+		grid-template-columns: minmax(0, 34%) minmax(0, 1fr);
+		gap: 0.4rem;
+		padding: 0.4rem;
 	}
 
 	.wrrapd-howto-row.is-flip .wrrapd-howto-shot,
@@ -234,7 +242,7 @@ a.wrrapd-ext-cta:focus-visible {
 	}
 
 	.wrrapd-howto-shot img {
-		max-height: 240px;
+		max-height: 4.25rem;
 	}
 
 	.elementor-element-eb0b235 .elementor-button-wrapper .elementor-button {
@@ -245,6 +253,14 @@ a.wrrapd-ext-cta:focus-visible {
 	.elementor-button,
 	a.elementor-button {
 		min-height: 44px;
+	}
+
+	/* Header auth buttons stay compact on mobile (MU plugin also enforces this). */
+	.elementor-location-header .elementor-button,
+	.elementor-location-header a.elementor-button {
+		min-height: 0 !important;
+		padding: 0.32rem 0.5rem !important;
+		font-size: clamp(0.62rem, 2.8vw, 0.75rem) !important;
 	}
 }
 
@@ -268,6 +284,53 @@ img, video {
 	height: auto;
 }
 
+/* Occasion ticker — show/hide bar (homepage HTML widget) */
+.occasion-ticker-shell {
+	width: 100%;
+	background: #f8f8f8;
+	border-top: 1px solid #ff9900;
+	border-bottom: 1px solid #ff9900;
+}
+
+.occasion-ticker-bar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.75rem;
+	padding: 0.35rem 0.65rem;
+	font-family: "Source Sans 3", system-ui, sans-serif;
+	font-size: 0.82rem;
+	font-weight: 600;
+	color: #333;
+}
+
+.occasion-ticker-toggle {
+	flex: 0 0 auto;
+	font-family: "Source Sans 3", system-ui, sans-serif;
+	font-size: 0.78rem;
+	font-weight: 700;
+	color: #0c1222;
+	background: linear-gradient(180deg, #f5e6a8, #c9a227);
+	border: 1px solid rgba(154, 118, 24, 0.35);
+	border-radius: 999px;
+	padding: 0.28rem 0.75rem;
+	cursor: pointer;
+	line-height: 1.2;
+}
+
+.occasion-ticker-toggle:hover {
+	filter: brightness(1.04);
+}
+
+.occasion-ticker-toggle:focus-visible {
+	outline: 2px solid #162a52;
+	outline-offset: 2px;
+}
+
+.occasion-ticker-shell.is-collapsed .occasion-ticker-panel {
+	display: none;
+}
+
 @media (max-width: 767px) {
 	.gift-wrap-row {
 		justify-content: flex-start;
@@ -282,6 +345,36 @@ img, video {
 
 	.occasion-ticker .ticker-wrap {
 		animation-duration: 65s;
+	}
+
+	.occasion-ticker-bar {
+		padding: 0.18rem 0.4rem !important;
+		gap: 0.35rem !important;
+		font-size: 0.62rem !important;
+	}
+
+	.occasion-ticker-toggle {
+		font-size: 0.58rem !important;
+		padding: 0.14rem 0.45rem !important;
+	}
+
+	.occasion-ticker .ticker {
+		gap: 0.65rem !important;
+	}
+
+	.occasion-ticker .ticker a {
+		font-size: 0.58rem !important;
+		padding-bottom: 0.15rem !important;
+	}
+
+	.occasion-ticker .date {
+		font-size: 0.5rem !important;
+		margin-top: 0.05rem !important;
+		min-height: 0 !important;
+	}
+
+	body.logged-in .elementor-location-header .elementor-element-68a38868 img {
+		max-height: clamp(2.85rem, 13vmin, 3.75rem) !important;
 	}
 
 	.elementor-section .elementor-container {
@@ -561,7 +654,22 @@ img, video {
 
 @media (max-width: 599px) {
 	.wrrapd-gift-guides__grid {
-		grid-template-columns: 1fr;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: 0.35rem;
+	}
+
+	.wrrapd-gift-guides__card {
+		padding: 0.4rem 0.35rem 0.45rem;
+	}
+
+	.wrrapd-gift-guides__card-copy {
+		display: none;
+	}
+
+	.wrrapd-gift-guides__cta {
+		font-size: 0.48rem;
+		padding: 0.28rem 0.22rem;
+		white-space: normal;
 	}
 }
 
@@ -799,6 +907,7 @@ img, video {
 .elementor-widget-html .wrrapd-top-gifts a.wrrapd-top-gifts__pill,
 .elementor-widget-html .wrrapd-top-gifts .wrrapd-top-gifts__eyebrow,
 .elementor-widget-html .wrrapd-top-gifts .wrrapd-top-gifts__fine,
+.elementor-widget-html .wrrapd-top-gifts .wrrapd-top-gifts__affiliate-notice,
 .elementor-widget-html .wrrapd-top-gifts .wrrapd-top-gifts__disclaimer {
 	font-family: "Source Sans 3", system-ui, sans-serif !important;
 }
@@ -873,6 +982,28 @@ img, video {
 	text-decoration: none;
 	vertical-align: super;
 	line-height: 0;
+}
+
+.wrrapd-top-gifts__affiliate-notice {
+	font-family: "Source Sans 3", system-ui, sans-serif !important;
+	font-size: clamp(0.75rem, 1.7vw, 0.82rem) !important;
+	color: #64748b;
+	line-height: 1.5 !important;
+	margin: 0 0 clamp(1rem, 2.5vmin, 1.35rem);
+	padding-top: clamp(0.85rem, 2vmin, 1rem);
+	border-top: 1px solid var(--wtg-border);
+	max-width: 46rem;
+	text-wrap: pretty;
+}
+
+.wrrapd-top-gifts__affiliate-notice a {
+	color: var(--wtg-muted);
+	text-decoration: underline;
+	text-underline-offset: 0.12em;
+}
+
+.wrrapd-top-gifts__affiliate-notice a:hover {
+	color: var(--wtg-ink);
 }
 
 .wrrapd-top-gifts--teaser .wrrapd-top-gifts__lede {
@@ -1127,7 +1258,9 @@ img, video {
 
 /* === Account + About (fonts) + orders page width === */
 .wrrapd-account-layout .user-registration,
-.wrrapd-account-layout #user-registration {
+.wrrapd-account-layout #user-registration,
+body.wrrapd-account-page .user-registration,
+body.wrrapd-account-page #user-registration {
 	max-width: min(56rem, 100%);
 	margin-inline: auto;
 }
@@ -1162,19 +1295,34 @@ body.wrrapd-account-page .ur-frontend-form > h2:first-child {
 	display: none !important;
 }
 
-.wrrapd-account-layout {
+.wrrapd-account-layout,
+body.wrrapd-account-page .elementor-page-4621,
+body.wrrapd-account-page .site-main,
+body.wrrapd-account-page #primary {
 	background: linear-gradient(165deg, #fdfcfa 0%, #f4f0e8 46%, #ebe4d8 100%);
+}
+
+.wrrapd-account-layout {
 	padding: clamp(1.5rem, 4vw, 2.5rem) clamp(0.75rem, 3vw, 1.5rem) clamp(2.5rem, 6vw, 4rem);
+}
+
+body.wrrapd-account-page .elementor-page-4621 .e-con-inner,
+body.wrrapd-account-page .elementor-page-4621 .elementor-section-wrap {
+	padding-block: clamp(1.25rem, 4vw, 2rem) clamp(2rem, 5vw, 3rem) !important;
 }
 
 .wrrapd-account-layout .user-registration,
 .wrrapd-account-layout #user-registration,
-.wrrapd-account-layout .ur-frontend-form {
+.wrrapd-account-layout .ur-frontend-form,
+body.wrrapd-account-page .user-registration,
+body.wrrapd-account-page #user-registration,
+body.wrrapd-account-page .ur-frontend-form {
 	font-family: "Source Sans 3", Roboto, system-ui, sans-serif !important;
 	color: #0f172a;
 }
 
-.wrrapd-account-layout .user-registration-MyAccount {
+.wrrapd-account-layout .user-registration-MyAccount,
+body.wrrapd-account-page .user-registration-MyAccount {
 	display: grid;
 	grid-template-columns: minmax(0, 220px) minmax(0, 1fr);
 	gap: clamp(1rem, 3vw, 1.75rem);
@@ -1189,24 +1337,28 @@ body.wrrapd-account-page .ur-frontend-form > h2:first-child {
 	backdrop-filter: blur(8px);
 }
 
-.wrrapd-account-layout .user-registration-MyAccount-navigation {
+.wrrapd-account-layout .user-registration-MyAccount-navigation,
+body.wrrapd-account-page .user-registration-MyAccount-navigation {
 	background: linear-gradient(180deg, #162a52 0%, #1e3a5f 100%);
 	border-radius: 0.75rem;
 	padding: 0.85rem 0.65rem;
 	border: none;
 }
 
-.wrrapd-account-layout .user-registration-MyAccount-navigation ul {
+.wrrapd-account-layout .user-registration-MyAccount-navigation ul,
+body.wrrapd-account-page .user-registration-MyAccount-navigation ul {
 	list-style: none;
 	margin: 0;
 	padding: 0;
 }
 
-.wrrapd-account-layout .user-registration-MyAccount-navigation li {
+.wrrapd-account-layout .user-registration-MyAccount-navigation li,
+body.wrrapd-account-page .user-registration-MyAccount-navigation li {
 	margin: 0.2rem 0;
 }
 
-.wrrapd-account-layout .user-registration-MyAccount-navigation a {
+.wrrapd-account-layout .user-registration-MyAccount-navigation a,
+body.wrrapd-account-page .user-registration-MyAccount-navigation a {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
@@ -1222,12 +1374,16 @@ body.wrrapd-account-page .ur-frontend-form > h2:first-child {
 
 .wrrapd-account-layout .user-registration-MyAccount-navigation li.is-active a,
 .wrrapd-account-layout .user-registration-MyAccount-navigation a:hover,
-.wrrapd-account-layout .user-registration-MyAccount-navigation a:focus-visible {
+.wrrapd-account-layout .user-registration-MyAccount-navigation a:focus-visible,
+body.wrrapd-account-page .user-registration-MyAccount-navigation li.is-active a,
+body.wrrapd-account-page .user-registration-MyAccount-navigation a:hover,
+body.wrrapd-account-page .user-registration-MyAccount-navigation a:focus-visible {
 	background: rgba(245, 197, 24, 0.18);
 	color: #fff !important;
 }
 
-.wrrapd-account-layout .user-registration-MyAccount-content {
+.wrrapd-account-layout .user-registration-MyAccount-content,
+body.wrrapd-account-page .user-registration-MyAccount-content {
 	background: #fff;
 	border: 1px solid rgba(12, 18, 34, 0.08);
 	border-radius: 0.75rem;
@@ -1235,7 +1391,9 @@ body.wrrapd-account-page .ur-frontend-form > h2:first-child {
 }
 
 .wrrapd-account-layout .user-registration-MyAccount-content label,
-.wrrapd-account-layout .ur-frontend-form label {
+.wrrapd-account-layout .ur-frontend-form label,
+body.wrrapd-account-page .user-registration-MyAccount-content label,
+body.wrrapd-account-page .ur-frontend-form label {
 	font-size: 0.78rem;
 	font-weight: 700;
 	letter-spacing: 0.04em;
@@ -1248,7 +1406,13 @@ body.wrrapd-account-page .ur-frontend-form > h2:first-child {
 .wrrapd-account-layout .user-registration-MyAccount-content input[type="password"],
 .wrrapd-account-layout .ur-frontend-form input[type="text"],
 .wrrapd-account-layout .ur-frontend-form input[type="email"],
-.wrrapd-account-layout .ur-frontend-form input[type="password"] {
+.wrrapd-account-layout .ur-frontend-form input[type="password"],
+body.wrrapd-account-page .user-registration-MyAccount-content input[type="text"],
+body.wrrapd-account-page .user-registration-MyAccount-content input[type="email"],
+body.wrrapd-account-page .user-registration-MyAccount-content input[type="password"],
+body.wrrapd-account-page .ur-frontend-form input[type="text"],
+body.wrrapd-account-page .ur-frontend-form input[type="email"],
+body.wrrapd-account-page .ur-frontend-form input[type="password"] {
 	width: 100%;
 	border: 1px solid rgba(12, 18, 34, 0.14) !important;
 	border-radius: 0.6rem !important;
@@ -1260,7 +1424,9 @@ body.wrrapd-account-page .ur-frontend-form > h2:first-child {
 }
 
 .wrrapd-account-layout .user-registration-MyAccount-content input:focus,
-.wrrapd-account-layout .ur-frontend-form input:focus {
+.wrrapd-account-layout .ur-frontend-form input:focus,
+body.wrrapd-account-page .user-registration-MyAccount-content input:focus,
+body.wrrapd-account-page .ur-frontend-form input:focus {
 	border-color: #162a52 !important;
 	outline: 2px solid rgba(22, 42, 82, 0.15) !important;
 	outline-offset: 1px;
@@ -1268,7 +1434,10 @@ body.wrrapd-account-page .ur-frontend-form > h2:first-child {
 
 .wrrapd-account-layout .user-registration-MyAccount-content .ur-submit-button,
 .wrrapd-account-layout .user-registration-MyAccount-content button[type="submit"],
-.wrrapd-account-layout .ur-frontend-form button[type="submit"] {
+.wrrapd-account-layout .ur-frontend-form button[type="submit"],
+body.wrrapd-account-page .user-registration-MyAccount-content .ur-submit-button,
+body.wrrapd-account-page .user-registration-MyAccount-content button[type="submit"],
+body.wrrapd-account-page .ur-frontend-form button[type="submit"] {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
@@ -1284,7 +1453,8 @@ body.wrrapd-account-page .ur-frontend-form > h2:first-child {
 	box-shadow: 0 2px 0 rgba(154, 118, 24, 0.22);
 }
 
-.wrrapd-account-layout .user-registration-MyAccount-user {
+.wrrapd-account-layout .user-registration-MyAccount-user,
+body.wrrapd-account-page .user-registration-MyAccount-user {
 	text-align: center;
 	padding-bottom: 0.65rem;
 	margin-bottom: 0.5rem;
@@ -1292,13 +1462,16 @@ body.wrrapd-account-page .ur-frontend-form > h2:first-child {
 }
 
 .wrrapd-account-layout .user-registration-MyAccount-user img,
-.wrrapd-account-layout .user-registration-MyAccount-user .profile-photo {
+.wrrapd-account-layout .user-registration-MyAccount-user .profile-photo,
+body.wrrapd-account-page .user-registration-MyAccount-user img,
+body.wrrapd-account-page .user-registration-MyAccount-user .profile-photo {
 	border-radius: 50% !important;
 	border: 2px solid rgba(245, 197, 24, 0.55) !important;
 	box-shadow: 0 4px 14px rgba(12, 18, 34, 0.18);
 }
 
-.wrrapd-account-layout .user-registration-MyAccount-user strong {
+.wrrapd-account-layout .user-registration-MyAccount-user strong,
+body.wrrapd-account-page .user-registration-MyAccount-user strong {
 	display: block;
 	margin-top: 0.45rem;
 	color: #fff !important;
@@ -1306,31 +1479,328 @@ body.wrrapd-account-page .ur-frontend-form > h2:first-child {
 	font-weight: 700;
 }
 
-.wrrapd-account-layout .user-registration-MyAccount-user .edit-profile {
+.wrrapd-account-layout .user-registration-MyAccount-user .edit-profile,
+body.wrrapd-account-page .user-registration-MyAccount-user .edit-profile {
 	font-size: 0.78rem;
 	font-weight: 600;
 	color: rgba(245, 197, 24, 0.95) !important;
 	text-decoration: none !important;
 }
 
-.wrrapd-account-hero {
+.wrrapd-account-hero,
+.wrrapd-account-hero-injected {
 	text-align: center;
-	margin-bottom: clamp(1rem, 3vw, 1.5rem);
+	margin: 0 auto clamp(1.25rem, 3vw, 1.75rem);
+	max-width: min(42rem, 100%);
 }
 
-/* === Compact site header (all visitors) === */
+.wrrapd-account-hero-injected .wrrapd-page-eyebrow {
+	margin: 0 0 0.65rem;
+	color: #9a7618;
+	font-size: 0.82rem;
+	font-weight: 800;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	font-family: "Source Sans 3", system-ui, sans-serif !important;
+}
+
+.wrrapd-account-hero-injected h1,
+.wrrapd-account-hero h1 {
+	margin: 0 0 0.75rem;
+	font-family: Fraunces, Georgia, serif !important;
+	font-size: clamp(2rem, 5vw, 2.75rem) !important;
+	font-weight: 560 !important;
+	line-height: 1.08 !important;
+	letter-spacing: -0.03em !important;
+	color: #0c1222 !important;
+}
+
+.wrrapd-account-hero-injected .wrrapd-page-lede,
+.wrrapd-account-hero .wrrapd-page-lede {
+	max-width: 42rem;
+	margin: 0 auto;
+	color: #475569;
+	font-family: "Source Sans 3", system-ui, sans-serif !important;
+	font-size: clamp(1rem, 2.3vw, 1.1rem) !important;
+	line-height: 1.6 !important;
+}
+
+.wrrapd-account-hero-injected .wrrapd-page-lede a {
+	color: #162a52;
+	font-weight: 700;
+}
+
+/* === My Account — force Wrrapd theme over User Registration plugin defaults === */
+body.wrrapd-account-page .elementor-page-4621 .e-con,
+body.wrrapd-account-page .elementor-page-4621 .elementor-element,
+body.wrrapd-account-page .elementor-page-4621 .e-con-inner {
+	background: transparent !important;
+	background-color: transparent !important;
+}
+
+body.wrrapd-account-page #user-registration,
+body.wrrapd-account-page .user-registration {
+	background: transparent !important;
+	border: 0 !important;
+	box-shadow: none !important;
+	padding: 0 !important;
+}
+
+body.wrrapd-account-page .user-registration-MyAccount {
+	display: grid !important;
+	grid-template-columns: minmax(0, 252px) minmax(0, 1fr) !important;
+	grid-template-rows: auto auto !important;
+	gap: 0 clamp(1rem, 3vw, 1.75rem) !important;
+	align-items: stretch !important;
+	max-width: min(56rem, 100%) !important;
+	margin: 0 auto !important;
+	padding: clamp(1rem, 3vw, 1.35rem) !important;
+	background: rgba(255, 255, 255, 0.78) !important;
+	border: 1px solid rgba(12, 18, 34, 0.09) !important;
+	border-radius: clamp(0.85rem, 2vmin, 1.1rem) !important;
+	box-shadow: 0 16px 44px rgba(12, 18, 34, 0.08) !important;
+	backdrop-filter: blur(8px);
+}
+
+body.wrrapd-account-page .user-registration-MyAccount-user {
+	grid-column: 1 !important;
+	grid-row: 1 !important;
+	background: linear-gradient(180deg, #162a52 0%, #1e3a5f 100%) !important;
+	border-radius: 0.75rem 0.75rem 0 0 !important;
+	padding: 1rem 0.75rem 0.65rem !important;
+	margin: 0 !important;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+body.wrrapd-account-page .user-registration-MyAccount-navigation {
+	grid-column: 1 !important;
+	grid-row: 2 !important;
+	background: linear-gradient(180deg, #1e3a5f 0%, #162a52 100%) !important;
+	border-radius: 0 0 0.75rem 0.75rem !important;
+	padding: 0.5rem 0.65rem 0.85rem !important;
+	border: 0 !important;
+	margin: 0 !important;
+}
+
+body.wrrapd-account-page .user-registration-MyAccount-content {
+	grid-column: 2 !important;
+	grid-row: 1 / span 2 !important;
+	align-self: start !important;
+}
+
+body.wrrapd-account-page .user-registration-MyAccount-user img,
+body.wrrapd-account-page .user-registration-MyAccount-user .profile-photo,
+body.wrrapd-account-page .user-registration-MyAccount-user .user-registration-profile-header,
+body.wrrapd-account-page .user-registration-MyAccount-user figure,
+body.wrrapd-account-page .user-registration-MyAccount-user .profile-preview,
+body.wrrapd-account-page .user-registration-MyAccount-user [class*="avatar"],
+body.wrrapd-account-page .user-registration-MyAccount-user [class*="Avatar"],
+body.wrrapd-account-page .user-registration-MyAccount-user [class*="profile-img"] {
+	background: linear-gradient(145deg, #f5e6a8, #c9a227) !important;
+	background-color: transparent !important;
+	color: #162a52 !important;
+	border-radius: 50% !important;
+	border: 2px solid rgba(245, 197, 24, 0.65) !important;
+	box-shadow: 0 4px 14px rgba(12, 18, 34, 0.18) !important;
+}
+
+body.wrrapd-account-page .user-registration-MyAccount-user a,
+body.wrrapd-account-page .user-registration-MyAccount-user .edit-profile,
+body.wrrapd-account-page .user-registration-MyAccount-user .user-registration-view-profile {
+	color: rgba(245, 197, 24, 0.95) !important;
+	text-decoration: none !important;
+	font-weight: 600 !important;
+}
+
+body.wrrapd-account-page .user-registration-MyAccount-navigation ul {
+	list-style: none !important;
+	margin: 0 !important;
+	padding: 0 !important;
+}
+
+body.wrrapd-account-page .user-registration-MyAccount-navigation li {
+	margin: 0.15rem 0 !important;
+	background: transparent !important;
+	border: 0 !important;
+}
+
+body.wrrapd-account-page .user-registration-MyAccount-navigation a {
+	display: flex !important;
+	align-items: center !important;
+	justify-content: space-between !important;
+	gap: 0.5rem !important;
+	padding: 0.55rem 0.65rem !important;
+	border-radius: 0.55rem !important;
+	color: rgba(255, 255, 255, 0.9) !important;
+	background: transparent !important;
+	border: 0 !important;
+	text-decoration: none !important;
+	font-family: "Source Sans 3", system-ui, sans-serif !important;
+	font-size: 0.92rem !important;
+	font-weight: 600 !important;
+	box-shadow: none !important;
+}
+
+body.wrrapd-account-page .user-registration-MyAccount-navigation li.is-active,
+body.wrrapd-account-page .user-registration-MyAccount-navigation li.active,
+body.wrrapd-account-page .user-registration-MyAccount-navigation li.woocommerce-MyAccount-navigation-link--dashboard.is-active {
+	background: transparent !important;
+	border: 0 !important;
+}
+
+body.wrrapd-account-page .user-registration-MyAccount-navigation li.is-active a,
+body.wrrapd-account-page .user-registration-MyAccount-navigation li.active a,
+body.wrrapd-account-page .user-registration-MyAccount-navigation a:hover,
+body.wrrapd-account-page .user-registration-MyAccount-navigation a:focus-visible {
+	background: rgba(245, 197, 24, 0.2) !important;
+	color: #fff !important;
+	border-left: 3px solid #f5c518 !important;
+}
+
+body.wrrapd-account-page .user-registration-MyAccount-content > h1,
+body.wrrapd-account-page .user-registration-MyAccount-content > h2,
+body.wrrapd-account-page .user-registration-MyAccount-content > h3,
+body.wrrapd-account-page .user-registration-MyAccount-content .ur-form-title,
+body.wrrapd-account-page .user-registration-MyAccount-content .user-registration-MyAccount-content__title,
+body.wrrapd-account-page .user-registration-MyAccount-content header h2,
+body.wrrapd-account-page .user-registration-MyAccount-content header h3 {
+	display: none !important;
+}
+
+body.wrrapd-account-page .user-registration-MyAccount-content .ur-frontend-form,
+body.wrrapd-account-page .user-registration-MyAccount-content form {
+	margin: 0 !important;
+	padding: 0 !important;
+	border: 0 !important;
+	background: transparent !important;
+}
+
+body.wrrapd-account-page .user-registration-MyAccount-content .ur-form-row {
+	margin-bottom: 0.85rem !important;
+}
+
+body.wrrapd-account-page .user-registration-MyAccount-content label,
+body.wrrapd-account-page .user-registration-MyAccount-content .ur-label {
+	font-family: "Source Sans 3", system-ui, sans-serif !important;
+	font-size: 0.78rem !important;
+	font-weight: 700 !important;
+	letter-spacing: 0.04em !important;
+	text-transform: uppercase !important;
+	color: #475569 !important;
+}
+
+body.wrrapd-account-page .user-registration-MyAccount-content input[type="text"],
+body.wrrapd-account-page .user-registration-MyAccount-content input[type="email"],
+body.wrrapd-account-page .user-registration-MyAccount-content input[type="password"],
+body.wrrapd-account-page .user-registration-MyAccount-content input[type="url"],
+body.wrrapd-account-page .user-registration-MyAccount-content select,
+body.wrrapd-account-page .user-registration-MyAccount-content textarea,
+body.wrrapd-account-page .user-registration-MyAccount-content .input-text {
+	width: 100% !important;
+	border: 1px solid rgba(12, 18, 34, 0.14) !important;
+	border-radius: 0.6rem !important;
+	padding: 0.62rem 0.75rem !important;
+	font-family: "Source Sans 3", system-ui, sans-serif !important;
+	font-size: 0.98rem !important;
+	background: #fff !important;
+	color: #0f172a !important;
+	box-shadow: none !important;
+}
+
+body.wrrapd-account-page .user-registration-MyAccount-content .user-registration-Button,
+body.wrrapd-account-page .user-registration-MyAccount-content .ur-submit-button,
+body.wrrapd-account-page .user-registration-MyAccount-content button[type="submit"],
+body.wrrapd-account-page .user-registration-MyAccount-content input[type="submit"],
+body.wrrapd-account-page .user-registration-MyAccount-content .ur-button-wrapper .button,
+body.wrrapd-account-page .user-registration-MyAccount-content .ur-button-container .ur-submit-button {
+	display: inline-flex !important;
+	align-items: center !important;
+	justify-content: center !important;
+	margin-top: 0.75rem !important;
+	padding: 0.62rem 1.35rem !important;
+	border-radius: 999px !important;
+	border: 1px solid rgba(154, 118, 24, 0.35) !important;
+	background: linear-gradient(180deg, #f5e6a8, #c9a227) !important;
+	background-color: transparent !important;
+	color: #0c1222 !important;
+	font-family: "Source Sans 3", system-ui, sans-serif !important;
+	font-weight: 800 !important;
+	font-size: 0.92rem !important;
+	cursor: pointer !important;
+	box-shadow: 0 2px 0 rgba(154, 118, 24, 0.22) !important;
+	text-transform: none !important;
+	min-height: auto !important;
+	width: auto !important;
+}
+
+body.wrrapd-account-page .user-registration-MyAccount-content .user-registration-Button:hover,
+body.wrrapd-account-page .user-registration-MyAccount-content .ur-submit-button:hover,
+body.wrrapd-account-page .user-registration-MyAccount-content button[type="submit"]:hover,
+body.wrrapd-account-page .user-registration-MyAccount-content input[type="submit"]:hover {
+	filter: brightness(1.04) !important;
+	background: linear-gradient(180deg, #f8ebb8, #d4ad2f) !important;
+	color: #0c1222 !important;
+}
+
+body.wrrapd-account-page .user-registration-MyAccount-content .ur-button-container {
+	margin: 0 !important;
+	padding: 0 !important;
+	text-align: left !important;
+}
+
+@media (max-width: 767px) {
+	body.wrrapd-account-page .user-registration-MyAccount {
+		grid-template-columns: 1fr !important;
+		grid-template-rows: auto auto auto !important;
+	}
+
+	body.wrrapd-account-page .user-registration-MyAccount-user,
+	body.wrrapd-account-page .user-registration-MyAccount-navigation,
+	body.wrrapd-account-page .user-registration-MyAccount-content {
+		grid-column: 1 !important;
+		grid-row: auto !important;
+	}
+
+	body.wrrapd-account-page .user-registration-MyAccount-user {
+		border-radius: 0.75rem 0.75rem 0 0 !important;
+	}
+
+	body.wrrapd-account-page .user-registration-MyAccount-navigation {
+		border-radius: 0 0 0.75rem 0.75rem !important;
+		margin-bottom: 0.75rem !important;
+	}
+}
+
+/* === Site header: compact when logged in; full logo on homepage for guests === */
 .elementor-location-header .elementor-element-6835e730 {
 	padding-block: clamp(0.2rem, 0.8vmin, 0.45rem) !important;
 }
 
-.elementor-location-header .elementor-element-68a38868 img {
-	max-height: clamp(2.35rem, 7.5vmin, 3.35rem) !important;
+/* Logged-in — smaller header (account, orders, etc.) */
+body.logged-in .elementor-location-header .elementor-element-68a38868 img {
+	max-height: clamp(3.25rem, 11vmin, 4.85rem) !important;
 	width: auto !important;
 	height: auto !important;
 }
 
-.elementor-location-header .elementor-element-1c0d63ad img {
-	max-height: clamp(0.75rem, 2.2vmin, 1rem) !important;
+body.logged-in .elementor-location-header .elementor-element-1c0d63ad img {
+	max-height: clamp(1rem, 3vmin, 1.35rem) !important;
+	width: auto !important;
+}
+
+/* Homepage guests — near-original logo (Elementor natural size, no shrink) */
+body.home:not(.logged-in) .elementor-location-header .elementor-element-68a38868 img,
+body.page-id-4857:not(.logged-in) .elementor-location-header .elementor-element-68a38868 img {
+	max-height: none !important;
+	max-width: min(13.5rem, 42vw) !important;
+	width: auto !important;
+	height: auto !important;
+}
+
+body.home:not(.logged-in) .elementor-location-header .elementor-element-1c0d63ad img,
+body.page-id-4857:not(.logged-in) .elementor-location-header .elementor-element-1c0d63ad img {
+	max-height: none !important;
+	max-width: min(11rem, 34vw) !important;
 	width: auto !important;
 }
 
@@ -1388,22 +1858,24 @@ body.logged-in .elementor-location-header .wrrapd-header-member-top .elementor-n
 	list-style: none !important;
 }
 
-body.logged-in .elementor-location-header .wrrapd-header-member-top .elementor-item {
+body.logged-in .elementor-location-header .wrrapd-header-member-top .elementor-item,
+body.logged-in .elementor-location-header .elementor-nav-menu--main .elementor-item {
 	font-family: "Source Sans 3", Helvetica, Arial, sans-serif !important;
-	font-size: 0.68rem !important;
+	font-size: clamp(0.8rem, 2vmin, 0.875rem) !important;
 	font-weight: 700 !important;
 	color: #fff300 !important;
 	padding: 0 !important;
-	line-height: 1.2 !important;
+	line-height: 1.25 !important;
 }
 
-.wrrapd-header-member-greet .greeting-text {
+.wrrapd-header-member-greet .greeting-text,
+body.logged-in .elementor-location-header .greeting-text {
 	margin: 0 !important;
 	font-family: "Source Sans 3", Helvetica, Arial, sans-serif !important;
-	font-size: 0.72rem !important;
+	font-size: clamp(0.82rem, 2.1vmin, 0.9rem) !important;
 	font-weight: 600 !important;
 	text-align: right !important;
-	color: rgba(255, 243, 0, 0.92) !important;
+	color: rgba(255, 243, 0, 0.95) !important;
 }
 
 .wrrapd-header-user-actions {
@@ -1444,22 +1916,109 @@ body.logged-in .elementor-location-header .wrrapd-header-member-top .elementor-i
 }
 
 @media (max-width: 767px) {
-	.elementor-location-header .elementor-element-68a38868 img {
-		max-height: clamp(2rem, 9vmin, 2.65rem) !important;
+	body.logged-in .elementor-location-header .elementor-element-68a38868 img {
+		max-height: clamp(2.85rem, 13vmin, 3.75rem) !important;
 	}
 
 	.wrrapd-header-member {
-		max-width: 10.5rem;
+		max-width: 11.5rem;
 	}
 
-	body.logged-in .elementor-location-header .wrrapd-header-member-top .elementor-item {
-		font-size: 0.64rem !important;
+	body.logged-in .elementor-location-header .wrrapd-header-member-top .elementor-item,
+	body.logged-in .elementor-location-header .elementor-nav-menu--main .elementor-item {
+		font-size: 0.78rem !important;
+	}
+
+	.wrrapd-header-member-greet .greeting-text,
+	body.logged-in .elementor-location-header .greeting-text {
+		font-size: 0.8rem !important;
 	}
 
 	.wrrapd-header-user-actions .gift-ideas-button {
 		font-size: 0.62rem !important;
 		padding: 0.2rem 0.35rem !important;
 		max-width: 5.25rem;
+	}
+
+	/* Guest homepage header — logo left (large), auth right (Samsung layout). */
+	.elementor-location-header .elementor-element-6835e730 {
+		max-height: none !important;
+		overflow: visible !important;
+	}
+
+	body.home:not(.logged-in) .elementor-location-header .elementor-element-68a38868 img,
+	body.page-id-4857:not(.logged-in) .elementor-location-header .elementor-element-68a38868 img {
+		max-height: clamp(3rem, 14vw, 3.85rem) !important;
+		max-width: min(12rem, 60vw) !important;
+	}
+
+	body.home:not(.logged-in) .elementor-location-header .elementor-element-1c0d63ad img,
+	body.page-id-4857:not(.logged-in) .elementor-location-header .elementor-element-1c0d63ad img {
+		max-height: clamp(1.05rem, 5vw, 1.4rem) !important;
+		max-width: min(9rem, 52vw) !important;
+	}
+
+	.elementor-location-header [data-id="2b05a213"] {
+		max-width: min(11.5rem, 46vw) !important;
+	}
+
+	.elementor-location-header [data-id="69de726e"],
+	.elementor-location-header [data-id="2ca99876"] {
+		flex: 0 0 auto !important;
+		max-width: 100% !important;
+		width: 100% !important;
+	}
+
+	/* Hero — legacy section df1501e: image left, copy right */
+	.elementor-4857 .elementor-element-df1501e > .elementor-container {
+		display: flex !important;
+		flex-direction: row !important;
+		flex-wrap: nowrap !important;
+		align-items: flex-start !important;
+		gap: 0.35rem !important;
+	}
+
+	.elementor-4857 .elementor-element-efd024d {
+		flex: 0 0 34% !important;
+		max-width: 34% !important;
+		width: auto !important;
+	}
+
+	.elementor-4857 .elementor-element-2d48b08 {
+		flex: 1 1 66% !important;
+		max-width: 66% !important;
+		width: auto !important;
+	}
+
+	.elementor-4857 .elementor-element.elementor-element-6466f5b.elementor-widget-text-editor h1,
+	.elementor-4857 .elementor-element.elementor-element-6466f5b.elementor-widget-text-editor h1 strong {
+		font-size: clamp(0.72rem, 3.2vw, 0.92rem) !important;
+		line-height: 1.1 !important;
+		text-align: left !important;
+	}
+
+	.elementor-4857 .elementor-element.elementor-element-6466f5b.elementor-widget-text-editor p,
+	.elementor-4857 .elementor-element.elementor-element-6466f5b.elementor-widget-text-editor p span,
+	.elementor-4857 .elementor-element.elementor-element-936189a.elementor-widget-text-editor,
+	.elementor-4857 .elementor-element.elementor-element-936189a.elementor-widget-text-editor p,
+	.elementor-4857 .elementor-element.elementor-element-936189a.elementor-widget-text-editor p span,
+	.elementor-4857 .elementor-element.elementor-element-5f358ea.elementor-widget-text-editor p,
+	.elementor-4857 .elementor-element.elementor-element-5f358ea.elementor-widget-text-editor p span,
+	.elementor-4857 .elementor-element.elementor-element-4b29ae5.elementor-widget-text-editor p,
+	.elementor-4857 .elementor-element.elementor-element-4b29ae5.elementor-widget-text-editor p span {
+		font-size: clamp(0.55rem, 2.4vw, 0.68rem) !important;
+		line-height: 1.25 !important;
+		text-align: left !important;
+	}
+
+	/* f68c5e7 holds How-it-works + footer — stack full width on phones */
+	.elementor-4857 .elementor-element-f68c5e7 {
+		flex-direction: column !important;
+	}
+
+	.elementor-4857 .elementor-element-f68c5e7 > .e-con {
+		width: 100% !important;
+		max-width: 100% !important;
 	}
 }
 
@@ -1470,7 +2029,8 @@ body.logged-in .elementor-location-header .wrrapd-header-member-top .elementor-i
 }
 
 @media (max-width: 767px) {
-	.wrrapd-account-layout .user-registration-MyAccount {
+	.wrrapd-account-layout .user-registration-MyAccount,
+	body.wrrapd-account-page .user-registration-MyAccount {
 		grid-template-columns: 1fr;
 	}
 }

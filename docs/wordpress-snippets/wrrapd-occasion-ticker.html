@@ -1,0 +1,219 @@
+<!--
+  ELEMENTOR: Homepage HTML widget — scrolling gifting occasions + dates.
+
+  Replace the existing “Occasion Scrolling Ticker” HTML widget content.
+  Adds Show/Hide dates button; remembers choice in localStorage.
+  CSS for the bar: wrrapd-additional-css-complete.css (.occasion-ticker-shell)
+-->
+
+<div class="occasion-ticker-shell" id="occasionTickerShell">
+	<div class="occasion-ticker-bar">
+		<span>Gifting occasions &amp; upcoming dates</span>
+		<button type="button" class="occasion-ticker-toggle" id="occasionTickerToggle" aria-expanded="true" aria-controls="occasionTickerPanel">
+			Hide dates
+		</button>
+	</div>
+	<div class="occasion-ticker-panel" id="occasionTickerPanel">
+		<div class="ticker-container occasion-ticker" id="occasionTickerContainer">
+			<div class="ticker-wrap">
+				<div class="ticker" id="occasionTicker"></div>
+			</div>
+		</div>
+	</div>
+</div>
+
+<style>
+	.occasion-ticker-panel .ticker-container {
+		width: 100%;
+		overflow: hidden;
+		background: #f8f8f8;
+		padding: 5px;
+		white-space: nowrap;
+		border: 0;
+	}
+
+	.occasion-ticker .ticker-wrap {
+		display: flex;
+		width: max-content;
+		animation: tickerScrollRight 50s linear infinite;
+	}
+
+	.ticker {
+		display: flex;
+		gap: 20px;
+		white-space: nowrap;
+	}
+
+	.ticker a {
+		text-decoration: none;
+		color: #333;
+		font-weight: bold;
+		text-align: center;
+		display: inline-block;
+		padding-bottom: 10px;
+	}
+
+	.date {
+		display: block;
+		font-size: 12px;
+		color: #777;
+		margin-top: 3px;
+		min-height: 15px;
+	}
+
+	.hide-date {
+		color: white;
+	}
+
+	@keyframes tickerScrollRight {
+		from { transform: translateX(0%); }
+		to { transform: translateX(-50%); }
+	}
+
+	@media (max-width: 960px) {
+		.occasion-ticker-bar {
+			padding: 0.18rem 0.4rem;
+			gap: 0.35rem;
+			font-size: 0.62rem;
+		}
+
+		.occasion-ticker-toggle {
+			font-size: 0.58rem;
+			padding: 0.14rem 0.45rem;
+		}
+
+		.occasion-ticker-panel .ticker-container {
+			padding: 0.15rem 0;
+		}
+
+		.occasion-ticker .ticker-wrap {
+			animation-duration: 75s;
+		}
+
+		.ticker {
+			gap: 0.65rem;
+		}
+
+		.ticker a {
+			font-size: 0.58rem;
+			padding-bottom: 0.15rem;
+		}
+
+		.date {
+			font-size: 0.5rem;
+			margin-top: 0.05rem;
+			min-height: 0;
+		}
+	}
+</style>
+
+<script>
+(function () {
+	var MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+	function sod(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
+	function fmt(d) { return d.getDate() + '-' + MONTHS[d.getMonth()] + '-' + String(d.getFullYear()).slice(-2); }
+	var today = sod(new Date());
+
+	function nthWeekdayOfMonth(year, month0, weekdaySun0, n) {
+		var count = 0;
+		for (var day = 1; day <= 31; day++) {
+			var dt = new Date(year, month0, day);
+			if (dt.getMonth() !== month0) break;
+			if (dt.getDay() === weekdaySun0) {
+				count++;
+				if (count === n) return sod(dt);
+			}
+		}
+		return null;
+	}
+	function easterSunday(y) {
+		var a = y % 19, b = Math.floor(y / 100), c = y % 100;
+		var d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3);
+		var h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4), k = c % 4;
+		var l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451);
+		var month = Math.floor((h + l - 7 * m + 114) / 31);
+		var day = ((h + l - 7 * m + 114) % 31) + 1;
+		return sod(new Date(y, month - 1, day));
+	}
+	function nextFixed(month0, day) {
+		return function () {
+			for (var i = 0; i <= 30; i++) {
+				var y = today.getFullYear() + i;
+				var d = sod(new Date(y, month0, day));
+				if (d >= today) return d;
+			}
+		};
+	}
+	function nextFromFn(fnYear) {
+		return function () {
+			for (var i = 0; i <= 30; i++) {
+				var y = today.getFullYear() + i;
+				var d = fnYear(y);
+				if (d && d >= today) return d;
+			}
+		};
+	}
+
+	var CNY = {2025:[0,29],2026:[1,17],2027:[1,6],2028:[0,26],2029:[1,13],2030:[1,3],2031:[0,23],2032:[1,11],2033:[0,31],2034:[1,19],2035:[1,8],2036:[0,28],2037:[1,15],2038:[1,4],2039:[0,24],2040:[1,12],2041:[0,31],2042:[0,22],2043:[1,9],2044:[0,29],2045:[1,17],2046:[1,6],2047:[0,26],2048:[1,14],2049:[1,2],2050:[0,23],2051:[1,11],2052:[0,31],2053:[1,18],2054:[1,7],2055:[0,26]};
+	function cnyForYear(y) { var p = CNY[y]; if (!p) return null; return sod(new Date(y, p[0], p[1])); }
+
+	var HAN = {2025:[11,15],2026:[11,4],2027:[11,23],2028:[11,12],2029:[11,2],2030:[11,20],2031:[11,9],2032:[11,27],2033:[11,16],2034:[11,5],2035:[11,23],2036:[11,11],2037:[10,30],2038:[11,19],2039:[11,8],2040:[11,26],2041:[11,15],2042:[11,4],2043:[11,23],2044:[11,11],2045:[10,29],2046:[11,17],2047:[11,6],2048:[11,24],2049:[11,13],2050:[11,2],2051:[11,21],2052:[11,9],2053:[11,28],2054:[11,18],2055:[11,7]};
+	function hanForYear(y) { var p = HAN[y]; if (!p) return null; return sod(new Date(y, p[0], p[1])); }
+
+	var defs = [
+		{ name: 'Chinese New Year', emoji: '🏮', url: 'https://www.amazon.com/s?k=chinese+new+year+gift+ideas', next: nextFromFn(cnyForYear) },
+		{ name: "Valentine's Day", emoji: '💖', url: "https://www.amazon.com/s?k=valentine%27s+day+gifts", next: nextFixed(1, 14) },
+		{ name: "St. Patrick's Day", emoji: '🎉', url: "https://www.amazon.com/s?k=st.+patrick%27s+day", next: nextFixed(2, 17) },
+		{ name: 'Easter', emoji: '🐣', url: 'https://www.amazon.com/s?k=easter', next: nextFromFn(function (y) { return easterSunday(y); }) },
+		{ name: 'Mother\u2019s Day', emoji: '🌸', url: "https://www.amazon.com/s?k=birthday+for+mother%27s+day+gift+ideas", next: nextFromFn(function (y) { return nthWeekdayOfMonth(y, 4, 0, 2); }) },
+		{ name: 'Graduation', emoji: '🎓', url: 'https://www.amazon.com/s?k=graduation+gift+ideas', next: null },
+		{ name: 'Father\u2019s Day', emoji: '🎩', url: "https://www.amazon.com/s?k=birthday+for+father%27s+day+gift+ideas", next: nextFromFn(function (y) { return nthWeekdayOfMonth(y, 5, 0, 3); }) },
+		{ name: 'Fourth of July', emoji: '🇺🇸', url: 'https://www.amazon.com/s?k=fourth+of+july+gifts', next: nextFixed(6, 4) },
+		{ name: 'Bridal Shower', emoji: '👰', url: 'https://www.amazon.com/s?k=bridal+shower+gifts', next: null },
+		{ name: 'Wedding', emoji: '💍', url: 'https://www.amazon.com/s?k=wedding+gifts', next: null },
+		{ name: 'Baby Shower', emoji: '🍼', url: 'https://www.amazon.com/s?k=baby+shower+gifts', next: null },
+		{ name: "Kids' Birthday", emoji: '🎈', url: 'https://www.amazon.com/s?k=birthday+for+kids+gift+ideas', next: null },
+		{ name: 'Thanksgiving', emoji: '🦃', url: 'https://www.amazon.com/s?k=thanksgiving+day+gifts', next: nextFromFn(function (y) { return nthWeekdayOfMonth(y, 10, 4, 4); }) },
+		{ name: 'Corporate Gifts', emoji: '🏢', url: 'https://www.amazon.com/s?k=corporate+gift+ideas', next: null },
+		{ name: 'Hanukkah', emoji: '🕎', url: 'https://www.amazon.com/s?k=hannukah+gift+ideas', next: nextFromFn(hanForYear) },
+		{ name: 'Christmas', emoji: '🎄', url: 'https://www.amazon.com/s?k=christmas+gift+ideas', next: nextFixed(11, 25) },
+		{ name: "New Year's", emoji: '🎆', url: "https://www.amazon.com/s?k=new+year%27s+gift+ideas", next: nextFixed(0, 1) }
+	];
+
+	var occasionTicker = document.getElementById('occasionTicker');
+	if (occasionTicker) {
+		defs.forEach(function (occ) {
+			var dt = occ.next ? occ.next() : null;
+			var dateStr = dt ? fmt(dt) : '';
+			occasionTicker.innerHTML += '<a href="' + occ.url + '" target="_blank" rel="noopener noreferrer">' +
+				occ.emoji + ' ' + occ.name + '<br><span class="date ' + (dateStr ? '' : 'hide-date') + '">' + dateStr + '</span></a>';
+		});
+	}
+
+	var tickerWrap = document.querySelector('.occasion-ticker .ticker-wrap');
+	if (tickerWrap) {
+		tickerWrap.addEventListener('mouseenter', function () { tickerWrap.style.animationPlayState = 'paused'; });
+		tickerWrap.addEventListener('mouseleave', function () { tickerWrap.style.animationPlayState = 'running'; });
+	}
+
+	var shell = document.getElementById('occasionTickerShell');
+	var toggle = document.getElementById('occasionTickerToggle');
+	var storageKey = 'wrrapd-occasion-ticker-collapsed';
+
+	function setCollapsed(collapsed) {
+		if (!shell || !toggle) return;
+		shell.classList.toggle('is-collapsed', collapsed);
+		toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+		toggle.textContent = collapsed ? 'Show dates' : 'Hide dates';
+	}
+
+	if (shell && toggle) {
+		if (localStorage.getItem(storageKey) === '1') setCollapsed(true);
+		toggle.addEventListener('click', function () {
+			var collapsed = !shell.classList.contains('is-collapsed');
+			setCollapsed(collapsed);
+			localStorage.setItem(storageKey, collapsed ? '1' : '0');
+		});
+	}
+})();
+</script>

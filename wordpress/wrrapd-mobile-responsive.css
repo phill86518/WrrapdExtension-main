@@ -1,0 +1,809 @@
+/**
+ * Wrrapd sitewide mobile / touch layout (rem-based).
+ * Loaded by wrrapd-orders-bridge.php — upload with MU plugins.
+ * Build: 2026-07-04-mobile-v5
+ */
+
+@media (max-width: 960px) {
+	/* Header layout: brand (logo+tagline) left, auth column right; location under brand.
+	   NOTE: 2b05a213 (Google/Amazon) is NESTED inside 693b4ea7 — auth spans both rows. */
+	.elementor-location-header .elementor-element-6835e730 {
+		display: grid !important;
+		grid-template-columns: minmax(0, 1fr) auto !important;
+		grid-template-areas:
+			"brand auth"
+			"loc auth" !important;
+		gap: 0.1rem 0.35rem !important;
+		padding: 0.3rem 0.45rem 0.35rem !important;
+		max-height: none !important;
+		overflow: visible !important;
+		align-items: start !important;
+	}
+
+	.elementor-location-header .elementor-element-6e478726 {
+		grid-area: brand !important;
+		display: flex !important;
+		flex-direction: column !important;
+		flex-wrap: nowrap !important;
+		justify-content: flex-start !important;
+		align-items: flex-start !important;
+		gap: 0.08rem !important;
+		width: auto !important;
+		max-width: 100% !important;
+	}
+
+	.elementor-location-header .elementor-element-1913a20 {
+		grid-area: loc !important;
+		justify-self: start !important;
+		align-self: end !important;
+		width: auto !important;
+		max-width: 100% !important;
+	}
+
+	/* Right column: Register/Login nav + Google/Amazon buttons stacked tight */
+	.elementor-location-header .elementor-element-693b4ea7 {
+		grid-area: auth !important;
+		justify-self: end !important;
+		align-self: start !important;
+		width: auto !important;
+		display: flex !important;
+		flex-direction: column !important;
+		align-items: flex-end !important;
+		gap: 0.2rem !important;
+		padding: 0 !important;
+		min-height: 0 !important;
+	}
+
+	/* Kill Elementor container padding/min-heights inside the button stack */
+	.elementor-location-header .elementor-element-2b05a213,
+	.elementor-location-header .elementor-element-2b05a213 .e-con-inner,
+	.elementor-location-header .elementor-element-2b05a213 .e-con,
+	.elementor-location-header .elementor-element-2b05a213 .e-con-full {
+		display: flex !important;
+		flex-direction: column !important;
+		flex-wrap: nowrap !important;
+		gap: 0.18rem !important;
+		padding: 0 !important;
+		margin: 0 !important;
+		min-height: 0 !important;
+		width: 100% !important;
+		max-width: min(11.5rem, 46vw) !important;
+	}
+
+	.elementor-location-header .elementor-element-2b05a213 .e-con-inner,
+	.elementor-location-header .elementor-element-2b05a213 .e-con,
+	.elementor-location-header .elementor-element-2b05a213 .e-con-full {
+		max-width: 100% !important;
+	}
+
+	/* Bigger brand: logo + Wrapping Happiness tagline visible */
+	.elementor-location-header .elementor-element-68a38868 img,
+	body.home:not(.logged-in) .elementor-location-header .elementor-element-68a38868 img,
+	body.page-id-4857:not(.logged-in) .elementor-location-header .elementor-element-68a38868 img {
+		max-height: clamp(3rem, 14vw, 3.85rem) !important;
+		max-width: min(12rem, 60vw) !important;
+		width: auto !important;
+		height: auto !important;
+	}
+
+	.elementor-location-header .elementor-element-1c0d63ad img,
+	body.home:not(.logged-in) .elementor-location-header .elementor-element-1c0d63ad img,
+	body.page-id-4857:not(.logged-in) .elementor-location-header .elementor-element-1c0d63ad img {
+		max-height: clamp(1.05rem, 5vw, 1.4rem) !important;
+		max-width: min(9rem, 52vw) !important;
+		width: auto !important;
+		height: auto !important;
+	}
+
+	.elementor-location-header #wrrapd-location,
+	.elementor-location-header #wrrapd-location #location-text,
+	.elementor-location-header #wrrapd-location #location-text strong {
+		font-size: clamp(0.58rem, 2.6vw, 0.72rem) !important;
+		line-height: 1.15 !important;
+	}
+}
+
+html {
+	font-size: 100%;
+	-webkit-text-size-adjust: 100%;
+	text-size-adjust: 100%;
+}
+
+/* =============================================================================
+   HEADER — cap at ~18% viewport height; compact auth buttons
+   ============================================================================= */
+@media (max-width: 960px) {
+	.elementor-location-header {
+		max-height: none !important;
+		overflow: visible !important;
+	}
+
+	.elementor-location-header .elementor-section,
+	.elementor-location-header .e-con,
+	.elementor-location-header [data-elementor-type="header"] .e-con {
+		min-height: 0 !important;
+		--min-height: 0 !important;
+		--container-widget-height: auto !important;
+	}
+
+	.elementor-location-header #wrrapd-location,
+	.elementor-location-header #location-text,
+	.elementor-location-header #location-text strong {
+		font-size: clamp(0.58rem, 2.6vw, 0.72rem) !important;
+		line-height: 1.15 !important;
+	}
+
+	/* Login / Register / Google / Amazon */
+	.elementor-location-header .elementor-button,
+	.elementor-location-header a.elementor-button,
+	.elementor-location-header .elementor-button-link {
+		display: inline-flex !important;
+		align-items: center !important;
+		justify-content: center !important;
+		text-align: center !important;
+		font-size: clamp(0.62rem, 2.8vw, 0.75rem) !important;
+		line-height: 1.15 !important;
+		padding: 0.32rem 0.5rem !important;
+		min-height: 0 !important;
+		height: auto !important;
+		width: 100% !important;
+		max-width: 100% !important;
+		white-space: nowrap !important;
+		border-radius: 0.4rem !important;
+	}
+
+	.elementor-location-header [data-id="2b05a213"] {
+		flex: 0 0 auto !important;
+		min-width: 0 !important;
+		max-width: min(11.5rem, 46vw) !important;
+	}
+
+	.elementor-location-header [data-id="69de726e"],
+	.elementor-location-header [data-id="2ca99876"] {
+		flex: 0 0 auto !important;
+		min-width: 0 !important;
+		max-width: 100% !important;
+		width: 100% !important;
+	}
+
+	.elementor-location-header [data-id="2b05a213"] .elementor-widget-container,
+	.elementor-location-header [data-id="69de726e"] .elementor-widget-container,
+	.elementor-location-header [data-id="2ca99876"] .elementor-widget-container {
+		width: 100% !important;
+	}
+
+	.elementor-location-header [data-id="2b05a213"] .elementor-button-wrapper,
+	.elementor-location-header [data-id="69de726e"] .elementor-button-wrapper,
+	.elementor-location-header [data-id="2ca99876"] .elementor-button-wrapper {
+		width: 100% !important;
+	}
+
+	.elementor-location-header [data-id="2b05a213"] .elementor-button,
+	.elementor-location-header [data-id="69de726e"] .elementor-button,
+	.elementor-location-header [data-id="2ca99876"] .elementor-button {
+		width: 100% !important;
+	}
+
+	.elementor-location-header .elementor-nav-menu--main .elementor-item,
+	.elementor-location-header .elementor-nav-menu .elementor-item {
+		font-size: 0.62rem !important;
+		padding: 0.15rem 0.3rem !important;
+	}
+
+	.wrrapd-header-member {
+		max-width: 100% !important;
+		gap: 0.1rem !important;
+	}
+
+	.wrrapd-header-user-actions .gift-ideas-button {
+		font-size: 0.55rem !important;
+		padding: 0.15rem 0.32rem !important;
+		max-width: 4.5rem !important;
+	}
+}
+
+/* =============================================================================
+   RETAILER WHEEL — left promo | logos | right bullets (Samsung layout)
+   ============================================================================= */
+@media (max-width: 960px), (hover: none) and (pointer: coarse) {
+	.wrrapd-wrap-promo-mobile,
+	.wrrapd-wrap-promo-mobile--tagline,
+	.wrrapd-wrap-promo-mobile__features--stack {
+		display: none !important;
+	}
+
+	.wrrapd-wrap-promo {
+		display: flex !important;
+	}
+
+	.wrrapd-wheel-mobile-stack {
+		display: block !important;
+		width: 100% !important;
+	}
+
+	.wrrapd-wrap-promo--ulta {
+		flex: 0 0 auto !important;
+		max-width: min(5.5rem, 22vw) !important;
+		margin: 0 !important;
+		align-items: center !important;
+		gap: 0.15rem !important;
+	}
+
+	.wrrapd-wrap-promo--bestbuy {
+		flex: 0 0 auto !important;
+		max-width: min(6.25rem, 26vw) !important;
+		margin: 0 !important;
+		align-items: flex-start !important;
+	}
+
+	.wrrapd-wrap-promo__line {
+		font-size: clamp(0.52rem, 2.4vw, 0.68rem) !important;
+		white-space: normal !important;
+		line-height: 1.05 !important;
+	}
+
+	.wrrapd-wrap-promo__line--premium {
+		font-size: clamp(0.58rem, 2.6vw, 0.74rem) !important;
+	}
+
+	.wrrapd-wrap-promo__line--mid,
+	.wrrapd-wrap-promo__line--for {
+		font-size: clamp(0.5rem, 2.2vw, 0.64rem) !important;
+	}
+
+	.wrrapd-wrap-promo__arrow {
+		width: 0.85rem !important;
+		height: 0.85rem !important;
+		flex-shrink: 0 !important;
+	}
+
+	.wrrapd-wrap-promo__copy--right {
+		text-align: right !important;
+	}
+
+	.wrrapd-wrap-promo__bullets {
+		display: flex !important;
+		flex-direction: column !important;
+		align-items: flex-start !important;
+		gap: 0.04rem !important;
+	}
+
+	.wrrapd-wrap-promo__bullet {
+		font-size: clamp(0.44rem, 2vw, 0.54rem) !important;
+		line-height: 1.12 !important;
+		margin: 0.04rem 0 !important;
+		white-space: normal !important;
+	}
+
+	#wrrapd-retailer-wheels-row .wrrapd-retailer-wheels {
+		display: flex !important;
+		flex-wrap: nowrap !important;
+		align-items: flex-start !important;
+		justify-content: space-between !important;
+		overflow-x: hidden !important;
+		overflow-y: visible !important;
+		gap: clamp(0.06rem, 0.6vw, 0.18rem) !important;
+		padding: 0.28rem clamp(0.2rem, 1.5vw, 0.45rem) !important;
+		scroll-snap-type: none !important;
+	}
+
+	.wrrapd-retailer-wheels__item {
+		flex: 1 1 0 !important;
+		min-width: 0 !important;
+		max-width: none !important;
+		animation: none !important;
+		opacity: 1 !important;
+	}
+
+	.wrrapd-retailer-wheels__badge {
+		width: clamp(1.35rem, 7.5vw, 1.85rem) !important;
+		height: clamp(1.35rem, 7.5vw, 1.85rem) !important;
+		margin-inline: auto !important;
+	}
+
+	.wrrapd-retailer-wheels__title {
+		display: none !important;
+	}
+}
+
+/* =============================================================================
+   HOMEPAGE HERO — flowers left, copy right (section df1501e + legacy columns)
+   ============================================================================= */
+@media (max-width: 960px) {
+	.elementor-4857 .elementor-element-df1501e .elementor-container.wrrapd-hero-row-mobile,
+	.elementor-4857 .elementor-element-df1501e > .elementor-container {
+		display: flex !important;
+		flex-direction: row !important;
+		flex-wrap: nowrap !important;
+		align-items: flex-start !important;
+		gap: 0.35rem !important;
+		width: 100% !important;
+	}
+
+	.elementor-4857 .elementor-element-df1501e .elementor-column,
+	.elementor-4857 .elementor-element-df1501e .elementor-col-33,
+	.elementor-4857 .elementor-element-df1501e .elementor-col-66 {
+		width: auto !important;
+		min-height: 0 !important;
+	}
+
+	.elementor-4857 .elementor-element-efd024d,
+	.elementor-4857 .wrrapd-hero-photo-col.elementor-column {
+		flex: 0 0 34% !important;
+		max-width: 34% !important;
+	}
+
+	.elementor-4857 .elementor-element-2d48b08,
+	.elementor-4857 .wrrapd-hero-copy-col.elementor-column {
+		flex: 1 1 66% !important;
+		max-width: 66% !important;
+		min-width: 0 !important;
+	}
+
+	.elementor-4857 .elementor-element-bf62bbc img,
+	.elementor-4857 .elementor-element-efd024d .elementor-widget-image img {
+		display: block !important;
+		width: 100% !important;
+		height: auto !important;
+		max-height: 5.25rem !important;
+		object-fit: contain !important;
+	}
+
+	.elementor-4857 .elementor-element-6466f5b,
+	.elementor-4857 .elementor-element-6466f5b .elementor-widget-container,
+	.elementor-4857 .elementor-element-2d48b08,
+	.elementor-4857 .elementor-element-2d48b08 .elementor-widget-text-editor {
+		text-align: left !important;
+	}
+
+	/* Elementor custom widths/offsets push copy past the viewport — clamp them */
+	.elementor-4857 .elementor-element-2d48b08 .elementor-widget-wrap > .elementor-element,
+	.elementor-4857 .elementor-element-2d48b08 .elementor-widget,
+	.elementor-4857 .elementor-element-6466f5b,
+	.elementor-4857 .elementor-element-936189a,
+	.elementor-4857 .elementor-element-5f358ea,
+	.elementor-4857 .elementor-element-4b29ae5 {
+		width: 100% !important;
+		max-width: 100% !important;
+		margin-left: 0 !important;
+		margin-right: 0 !important;
+		left: auto !important;
+	}
+
+	/* Full-specificity selectors: must beat Customizer desktop rules like
+	   ".elementor-4857 .elementor-element.elementor-element-XXX.elementor-widget-text-editor p span" */
+	body .elementor-4857 .elementor-element.elementor-element-6466f5b h1,
+	body .elementor-4857 .elementor-element.elementor-element-6466f5b h1 strong,
+	body .elementor-4857 .elementor-element.elementor-element-6466f5b.elementor-widget-text-editor h1,
+	body .elementor-4857 .elementor-element.elementor-element-6466f5b.elementor-widget-text-editor h1 strong,
+	body .elementor-4857 .elementor-element.elementor-element-6466f5b.wrrapd-season-headline-injected h1,
+	body .elementor-4857 .elementor-element.elementor-element-6466f5b.wrrapd-season-headline-injected h1 strong {
+		font-size: clamp(0.72rem, 3.2vw, 0.92rem) !important;
+		line-height: 1.1 !important;
+		text-align: left !important;
+		margin: 0 0 0.2rem !important;
+	}
+
+	body .elementor-4857 .elementor-element.elementor-element-6466f5b p,
+	body .elementor-4857 .elementor-element.elementor-element-6466f5b p span,
+	body .elementor-4857 .elementor-element.elementor-element-6466f5b.elementor-widget-text-editor p,
+	body .elementor-4857 .elementor-element.elementor-element-6466f5b.elementor-widget-text-editor p span,
+	body .elementor-4857 .wrrapd-season-hero-body,
+	body .elementor-4857 .wrrapd-season-hero-body span,
+	body .elementor-4857 .wrrapd-season-hero-tagline {
+		font-size: clamp(0.55rem, 2.4vw, 0.68rem) !important;
+		line-height: 1.22 !important;
+		text-align: left !important;
+	}
+
+	body .elementor-4857 .elementor-element.elementor-element-936189a.elementor-widget-text-editor,
+	body .elementor-4857 .elementor-element.elementor-element-936189a.elementor-widget-text-editor p,
+	body .elementor-4857 .elementor-element.elementor-element-936189a.elementor-widget-text-editor p span,
+	body .elementor-4857 .elementor-element.elementor-element-5f358ea.elementor-widget-text-editor p,
+	body .elementor-4857 .elementor-element.elementor-element-5f358ea.elementor-widget-text-editor p span,
+	body .elementor-4857 .elementor-element.elementor-element-4b29ae5.elementor-widget-text-editor p,
+	body .elementor-4857 .elementor-element.elementor-element-4b29ae5.elementor-widget-text-editor p span {
+		font-size: clamp(0.55rem, 2.4vw, 0.68rem) !important;
+		line-height: 1.25 !important;
+		text-align: left !important;
+	}
+
+	.elementor-4857 .elementor-element-2d48b08 .elementor-widget-wrap {
+		padding: 0 !important;
+	}
+
+	.elementor-section .elementor-container {
+		padding-left: max(0.5rem, env(safe-area-inset-left)) !important;
+		padding-right: max(0.5rem, env(safe-area-inset-right)) !important;
+	}
+}
+
+@media (max-width: 380px) {
+	.elementor-4857 .elementor-element-efd024d,
+	.elementor-4857 .wrrapd-hero-photo-col.elementor-column {
+		flex: 0 0 30% !important;
+		max-width: 30% !important;
+	}
+
+	.elementor-4857 .elementor-element-bf62bbc img {
+		max-height: 4.25rem !important;
+	}
+}
+
+/* =============================================================================
+   OCCASION TICKER — smaller type and spacing
+   ============================================================================= */
+@media (max-width: 960px) {
+	.occasion-ticker-shell {
+		border-top-width: 1px !important;
+		border-bottom-width: 1px !important;
+	}
+
+	.occasion-ticker-bar {
+		padding: 0.18rem 0.4rem !important;
+		gap: 0.35rem !important;
+		font-size: 0.62rem !important;
+	}
+
+	.occasion-ticker-toggle {
+		font-size: 0.58rem !important;
+		padding: 0.14rem 0.45rem !important;
+		line-height: 1.1 !important;
+	}
+
+	.occasion-ticker-panel .ticker-container {
+		padding: 0.15rem 0 !important;
+	}
+
+	.occasion-ticker .ticker-wrap {
+		animation-duration: 75s !important;
+	}
+
+	.occasion-ticker .ticker {
+		gap: 0.65rem !important;
+	}
+
+	.occasion-ticker .ticker a {
+		font-size: 0.58rem !important;
+		font-weight: 600 !important;
+		padding-bottom: 0.15rem !important;
+		line-height: 1.15 !important;
+	}
+
+	.occasion-ticker .date {
+		font-size: 0.5rem !important;
+		margin-top: 0.05rem !important;
+		min-height: 0 !important;
+	}
+}
+
+/* =============================================================================
+   HOT GIFTS + SECTIONS
+   ============================================================================= */
+@media (max-width: 768px) {
+	.wrrapd-hot-gifts-rail__title {
+		font-size: 0.75rem !important;
+	}
+
+	.wrrapd-hot-gifts-rail__grid {
+		gap: 0.35rem !important;
+	}
+
+	.wrrapd-hot-gifts-rail__card {
+		flex: 0 0 2.85rem !important;
+		min-width: 2.85rem !important;
+		max-width: 2.85rem !important;
+	}
+
+	.wrrapd-hot-gifts-rail__card-title {
+		font-size: 0.38rem !important;
+	}
+
+	.gift-wrap-row img {
+		width: 3.5rem !important;
+		height: 3.5rem !important;
+	}
+}
+
+/* =============================================================================
+   FLOATING LIVE CHAT — Tidio (wrrapd.com uses tidio.co plugin)
+   ============================================================================= */
+/* Scale is applied by the bridge JS (inline style), not here, so the opened
+   chat panel can restore full size. Tidio v4 renders in a shadow root; the
+   "Chat with us" label is hidden by a style the bridge JS injects into it. */
+@media (max-width: 960px) {
+	#tidio-chat {
+		transform-origin: bottom right !important;
+		z-index: 999990 !important;
+	}
+
+	.crisp-client .cc-1no03,
+	#hubspot-messages-iframe-container,
+	#chaty-widget-0,
+	.chaty-widget,
+	.joinchat,
+	.e-floating-bubble {
+		transform: scale(0.52) !important;
+		transform-origin: bottom right !important;
+	}
+
+	.chaty-widget .chaty-channels,
+	.chaty-widget .chaty-i-trigger .chaty-channel-list {
+		display: none !important;
+		opacity: 0 !important;
+		visibility: hidden !important;
+		pointer-events: none !important;
+	}
+}
+
+/* Prevent horizontal scroll */
+body.home,
+body.page-id-4857 {
+	overflow-x: hidden;
+	max-width: 100vw;
+}
+
+body.home .elementor-location-header,
+body.home #wrrapd-retailer-wheels-row,
+body.page-id-4857 .elementor-location-header,
+body.page-id-4857 #wrrapd-retailer-wheels-row {
+	max-width: 100vw;
+	overflow-x: clip;
+}
+
+/* =============================================================================
+   f68c5e7 mega-container — stop horizontal squeeze (How it works + footer)
+   ============================================================================= */
+@media (max-width: 960px) {
+	.elementor-4857 .elementor-element-f68c5e7 {
+		display: flex !important;
+		flex-direction: column !important;
+		flex-wrap: nowrap !important;
+		align-items: stretch !important;
+		width: 100% !important;
+		max-width: 100% !important;
+		gap: 0.35rem !important;
+	}
+
+	.elementor-4857 .elementor-element-f68c5e7 > .e-con {
+		width: 100% !important;
+		max-width: 100% !important;
+		flex: 0 0 auto !important;
+		min-width: 0 !important;
+	}
+
+	.elementor-4857 .elementor-element-c1f0118,
+	.elementor-4857 .elementor-widget-html:has(.wrrapd-howto-flow),
+	.elementor-4857 .elementor-element-e7baa0c {
+		width: 100% !important;
+		max-width: 100% !important;
+	}
+
+	.elementor-4857 .elementor-element-d0991cd,
+	.elementor-4857 .elementor-element-d0991cd .elementor-widget-container {
+		width: 100% !important;
+		max-width: 100% !important;
+		text-align: center !important;
+		overflow: visible !important;
+	}
+
+	.elementor-4857 .elementor-element-d0991cd p {
+		font-size: clamp(0.95rem, 4.5vw, 1.15rem) !important;
+		line-height: 1.15 !important;
+		white-space: normal !important;
+	}
+}
+
+/* =============================================================================
+   HOW IT WORKS — image left, copy right on phones (not stacked narrow column)
+   ============================================================================= */
+@media (max-width: 960px) {
+	.wrrapd-howto-flow {
+		width: 100% !important;
+		max-width: 100% !important;
+		padding-inline: 0 !important;
+	}
+
+	.wrrapd-howto-row,
+	.wrrapd-howto-row.is-flip {
+		display: grid !important;
+		grid-template-columns: minmax(0, 34%) minmax(0, 1fr) !important;
+		gap: 0.4rem !important;
+		padding: 0.4rem !important;
+		margin-bottom: 0.45rem !important;
+		width: 100% !important;
+		max-width: 100% !important;
+		box-sizing: border-box !important;
+	}
+
+	.wrrapd-howto-row.is-flip .wrrapd-howto-shot,
+	.wrrapd-howto-row.is-flip .wrrapd-howto-copy,
+	.wrrapd-howto-row .wrrapd-howto-shot,
+	.wrrapd-howto-row .wrrapd-howto-copy {
+		order: unset !important;
+		width: auto !important;
+		max-width: 100% !important;
+		min-width: 0 !important;
+	}
+
+	.wrrapd-howto-shot img {
+		max-height: 4.25rem !important;
+		object-fit: cover !important;
+	}
+
+	.wrrapd-howto-shot:hover img,
+	.wrrapd-howto-shot:focus-visible img {
+		transform: none !important;
+	}
+
+	.wrrapd-howto-kicker {
+		font-size: 0.48rem !important;
+		padding: 0.18rem 0.35rem !important;
+		margin-bottom: 0.25rem !important;
+	}
+
+	.wrrapd-howto-stepheading {
+		font-size: 0.68rem !important;
+		line-height: 1.15 !important;
+		margin-bottom: 0.25rem !important;
+	}
+
+	.wrrapd-howto-copy p {
+		font-size: 0.58rem !important;
+		line-height: 1.32 !important;
+	}
+}
+
+/* =============================================================================
+   GIFT GUIDES — 3×3 grid on phones (not single column)
+   ============================================================================= */
+@media (max-width: 960px) {
+	.wrrapd-gift-guides {
+		padding-block: 0.65rem !important;
+		padding-inline: 0.45rem !important;
+	}
+
+	.wrrapd-gift-guides__title {
+		font-size: clamp(0.95rem, 4.2vw, 1.15rem) !important;
+	}
+
+	.wrrapd-gift-guides__lede,
+	.wrrapd-gift-guides p.wrrapd-gift-guides__lede {
+		font-size: clamp(0.62rem, 2.8vw, 0.74rem) !important;
+		line-height: 1.3 !important;
+	}
+
+	.wrrapd-gift-guides__grid {
+		display: grid !important;
+		grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+		gap: 0.35rem !important;
+	}
+
+	.wrrapd-gift-guides__card {
+		padding: 0.4rem 0.35rem 0.45rem !important;
+		border-radius: 0.45rem !important;
+	}
+
+	.wrrapd-gift-guides__card-logo-badge {
+		width: 1.45rem !important;
+		height: 1.45rem !important;
+	}
+
+	.wrrapd-gift-guides__card-title {
+		font-size: 0.58rem !important;
+		line-height: 1.15 !important;
+		margin-bottom: 0.2rem !important;
+	}
+
+	.wrrapd-gift-guides__card-copy {
+		display: none !important;
+	}
+
+	.wrrapd-gift-guides__cta {
+		font-size: 0.48rem !important;
+		padding: 0.28rem 0.22rem !important;
+		line-height: 1.1 !important;
+		white-space: normal !important;
+		text-align: center !important;
+	}
+}
+
+/* =============================================================================
+   FOOTER — lives in the footer template (elementor-location-footer, post 6447),
+   NOT on page 4857. Compact: logo+address row, then 2-column links.
+   ============================================================================= */
+@media (max-width: 960px) {
+	.elementor-location-footer .elementor-element-7aa7d62 {
+		display: grid !important;
+		grid-template-columns: 1fr 1fr !important;
+		gap: 0.2rem 0.45rem !important;
+		padding: 0.5rem 0.55rem 0.6rem !important;
+		width: 100% !important;
+		max-width: 100% !important;
+	}
+
+	.elementor-location-footer .elementor-element-9545954 {
+		grid-column: 1 / -1 !important;
+		padding: 0 !important;
+	}
+
+	.elementor-location-footer .elementor-element-9545954 > .e-con-inner {
+		display: flex !important;
+		flex-direction: row !important;
+		flex-wrap: nowrap !important;
+		align-items: center !important;
+		justify-content: center !important;
+		gap: 0.45rem !important;
+		padding: 0 !important;
+	}
+
+	.elementor-location-footer .elementor-element-1101871 {
+		width: auto !important;
+	}
+
+	.elementor-location-footer .elementor-element-1101871 img {
+		max-height: 2rem !important;
+		width: auto !important;
+		height: auto !important;
+	}
+
+	.elementor-location-footer .elementor-element-a75f890 pre,
+	.elementor-location-footer .elementor-element-a75f890 code {
+		font-family: "Source Sans 3", system-ui, sans-serif !important;
+		font-size: 0.55rem !important;
+		line-height: 1.25 !important;
+		white-space: normal !important;
+		margin: 0 !important;
+		padding: 0 !important;
+		background: transparent !important;
+		color: #fff300 !important;
+	}
+
+	.elementor-location-footer .elementor-element-c9b773b,
+	.elementor-location-footer .elementor-element-18367d9,
+	.elementor-location-footer .elementor-element-321261a {
+		width: 100% !important;
+		max-width: 100% !important;
+		padding: 0 !important;
+		min-height: 0 !important;
+	}
+
+	.elementor-location-footer .elementor-element-c9b773b > .e-con-inner,
+	.elementor-location-footer .elementor-element-18367d9 > .e-con-inner,
+	.elementor-location-footer .elementor-element-321261a > .e-con-inner {
+		padding: 0 !important;
+	}
+
+	.elementor-location-footer .elementor-element-dd5e6ef .elementor-heading-title,
+	.elementor-location-footer .elementor-element-5a6824b .elementor-heading-title,
+	.elementor-location-footer .elementor-element-9e3340e .elementor-heading-title {
+		font-size: 0.72rem !important;
+		margin: 0 0 0.15rem !important;
+	}
+
+	.elementor-location-footer .elementor-element-90bbf99 p,
+	.elementor-location-footer .elementor-element-5d74f43 p,
+	.elementor-location-footer .elementor-element-fa0f949 {
+		font-size: 0.62rem !important;
+		line-height: 1.3 !important;
+		margin: 0 0 0.1rem !important;
+	}
+
+	.elementor-location-footer .elementor-element-321261a {
+		grid-column: 1 / -1 !important;
+	}
+
+	.elementor-location-footer .elementor-element-2ff401c .elementor-icon {
+		font-size: 0.85rem !important;
+	}
+
+	.elementor-location-footer .elementor-element-90bbf99,
+	.elementor-location-footer .elementor-element-5d74f43,
+	.elementor-location-footer .elementor-element-fa0f949,
+	.elementor-location-footer .elementor-element-dd5e6ef,
+	.elementor-location-footer .elementor-element-5a6824b,
+	.elementor-location-footer .elementor-element-9e3340e {
+		width: auto !important;
+		margin: 0 !important;
+	}
+}

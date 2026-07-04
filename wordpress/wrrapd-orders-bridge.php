@@ -4,12 +4,21 @@
  * Description: Orders bridge (claim + list shortcodes + studio layout) for Ulta, LEGO, Target, and Amazon; logout nonce fix; strip leading admin sort prefixes (e.g. 07.) from front-end titles (Elementor, menus, Yoast/Rank Math).
  * Author: Wrrapd
  *
- * Install: copy this file to wp-content/mu-plugins/wrrapd-orders-bridge.php (must-use plugins load automatically).
+ * Install: copy wrrapd-orders-bridge.php to wp-content/mu-plugins/ (required).
+ * Also copy wrrapd-account-critical.css to the same mu-plugins/ folder (My Account styling).
  * Define WRRAPD_INTERNAL_API_KEY and optionally WRRAPD_API_BASE in wp-config.php — see wordpress/README.md in the monorepo.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
+}
+
+/** Bump when account UI / header polish changes — view-source should contain this string. */
+define( 'WRRAPD_MU_BUILD', '2026-07-04-mobile-v5' );
+
+$wrrapd_seasonal = dirname( __FILE__ ) . '/wrrapd-seasonal-campaigns.php';
+if ( is_readable( $wrrapd_seasonal ) ) {
+	require_once $wrrapd_seasonal;
 }
 
 /**
@@ -139,8 +148,8 @@ function wrrapd_output_header_member_css() {
 	echo 'body.logged-in .elementor-location-header [data-id="2b05a213"]{display:none!important;}';
 	echo '.wrrapd-header-member{display:flex;flex-direction:column;align-items:flex-end;gap:.2rem;width:100%;max-width:11.75rem;margin-left:auto;}';
 	echo '.wrrapd-header-member-top{width:100%;}.wrrapd-header-member-top .elementor-nav-menu--main ul{display:flex!important;flex-direction:row!important;justify-content:flex-end!important;gap:.65rem!important;margin:0!important;padding:0!important;}';
-	echo '.wrrapd-header-member-top .elementor-item{font-size:.68rem!important;font-weight:700!important;padding:0!important;line-height:1.2!important;}';
-	echo '.wrrapd-header-member-greet .greeting-text{margin:0!important;font-size:.72rem!important;font-weight:600!important;text-align:right!important;color:rgba(255,243,0,.92)!important;}';
+	echo '.wrrapd-header-member-top .elementor-item{font-size:clamp(.8rem,2vmin,.875rem)!important;font-weight:700!important;padding:0!important;line-height:1.25!important;}';
+	echo '.wrrapd-header-member-greet .greeting-text,.elementor-location-header .greeting-text{margin:0!important;font-size:clamp(.82rem,2.1vmin,.9rem)!important;font-weight:600!important;text-align:right!important;color:rgba(255,243,0,.95)!important;}';
 	echo '.wrrapd-header-user-actions{display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;gap:.28rem!important;justify-content:flex-end!important;align-items:center!important;margin:0!important;width:100%!important;}';
 	echo '.wrrapd-header-user-actions .gift-ideas-button{display:inline-block!important;width:auto!important;min-width:0!important;flex:1 1 auto;max-width:5.75rem;font-family:Helvetica,Arial,sans-serif!important;font-size:.68rem!important;font-weight:700!important;color:#000!important;background-color:#fff300!important;border:.0625rem solid #000!important;padding:.22rem .45rem!important;border-radius:1.25rem!important;text-decoration:none!important;text-align:center!important;white-space:nowrap!important;margin:0!important;line-height:1.2!important;box-sizing:border-box!important;}';
 	echo '.wrrapd-header-user-actions .gift-ideas-button:hover{filter:brightness(1.05);}';
@@ -161,6 +170,72 @@ function wrrapd_output_header_member_polish_script() {
 	echo '</script>';
 }
 add_action( 'wp_footer', 'wrrapd_output_header_member_polish_script', 22 );
+
+/**
+ * Header "Delivering to" — reliable geolocation with Jacksonville fallback.
+ * Elementor HTML widget still renders #wrrapd-location / #location-text; this MU script
+ * runs in the footer (after the header DOM exists) and fixes stuck "Loading..." when ipapi fails.
+ */
+function wrrapd_output_header_location_script() {
+	if ( is_admin() ) {
+		return;
+	}
+	$fallback = wp_json_encode( 'Jacksonville, FL 32218' );
+	echo '<script id="wrrapd-header-location">';
+	echo '(function(){';
+	echo 'var FALLBACK=' . $fallback . ';';
+	echo 'function target(){return document.querySelector("#location-text strong");}';
+	echo 'function paint(text){var el=target();if(!el)return false;el.textContent=text;el.style.fontSize="0.8rem";el.style.color="#FFFFFF";return true;}';
+	echo 'function fromIp(){if(typeof fetch!=="function"){paint(FALLBACK);return;}fetch("https://ipapi.co/json/",{credentials:"omit"}).then(function(r){return r.ok?r.json():null;}).then(function(d){if(d&&d.city&&d.region_code){var zip=d.postal||"";paint(d.city+", "+d.region_code+(zip?" "+zip:""));return;}paint(FALLBACK);}).catch(function(){paint(FALLBACK);});}';
+	echo 'function resolve(){var el=target();if(!el)return;var cur=(el.textContent||"").trim();if(cur&&cur!=="Loading..."&&cur!=="Loading…")return;if(typeof fetch!=="function"){fromIp();return;}fetch("/get-user-address",{credentials:"same-origin"}).then(function(r){return r.ok?r.json():null;}).then(function(d){if(d&&d.address){paint(d.address);return;}fromIp();}).catch(function(){fromIp();});}';
+	echo 'function run(){resolve();}document.addEventListener("DOMContentLoaded",run);window.addEventListener("load",function(){run();setTimeout(run,600);setTimeout(run,1800);});';
+	echo '})();';
+	echo '</script>';
+}
+add_action( 'wp_footer', 'wrrapd_output_header_location_script', 19 );
+
+/**
+ * My Account page: hero fallback + hide duplicate plugin “Account” headings.
+ */
+function wrrapd_output_account_page_polish_script() {
+	if ( is_admin() || ! is_page( array( 4621, 5284, 'my-account-2', 'account' ) ) ) {
+		return;
+	}
+	$orders_url = wp_json_encode( wrrapd_orders_page_url() );
+	echo '<script id="wrrapd-account-page-polish">';
+	echo '(function(){var U=' . $orders_url . ';function polishAccount(){if(!document.body.classList.contains("wrrapd-account-page"))return;var root=document.querySelector(".user-registration-MyAccount");if(!root)return;if(!document.querySelector(".wrrapd-account-hero")){var hero=document.createElement("div");hero.className="wrrapd-account-hero-injected";hero.innerHTML=\'<p class="wrrapd-page-eyebrow">Signed in</p><h1>Your profile</h1><p class="wrrapd-page-lede">Update your name and login details below. Use the menu for password and privacy settings—or jump to <a href="\'+U+\'">your orders</a> anytime.</p>\';var anchor=root.closest(".wrrapd-account-layout")||root.parentElement;if(anchor)anchor.insertBefore(hero,root);}document.querySelectorAll(".user-registration-MyAccount-content h1,.user-registration-MyAccount-content h2,.user-registration-MyAccount-content h3,.user-registration-MyAccount-content header,.user-registration-MyAccount-content .ur-form-title").forEach(function(h){var t=(h.textContent||"").replace(/\\s+/g," ").trim();if(/^account$/i.test(t))h.style.display="none";});document.querySelectorAll("h1.elementor-heading-title,h2.elementor-heading-title,.entry-title").forEach(function(h){if(/^Account\\s*$/i.test((h.textContent||"").trim()))h.style.display="none";});}document.addEventListener("DOMContentLoaded",polishAccount);window.addEventListener("load",polishAccount);})();';
+	echo '</script>';
+}
+add_action( 'wp_footer', 'wrrapd_output_account_page_polish_script', 21 );
+
+/**
+ * Whether the current request is the User Registration My Account page.
+ */
+function wrrapd_is_account_page() {
+	return ! is_admin() && is_page( array( 4621, 5284, 'my-account-2', 'account' ) );
+}
+
+/**
+ * My Account: critical CSS in footer (loads AFTER User Registration plugin styles).
+ */
+function wrrapd_output_account_page_critical_css() {
+	if ( ! wrrapd_is_account_page() ) {
+		return;
+	}
+	echo '<link rel="preconnect" href="https://fonts.googleapis.com" />';
+	echo '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />';
+	echo '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,560&amp;family=Source+Sans+3:wght@400;600;700;800&amp;display=swap" />';
+	$path = dirname( __FILE__ ) . '/wrrapd-account-critical.css';
+	$css  = is_readable( $path ) ? file_get_contents( $path ) : '';
+	if ( ! is_string( $css ) || $css === '' ) {
+		echo '<!-- wrrapd-account-critical.css MISSING — upload wordpress/wrrapd-account-critical.css to wp-content/mu-plugins/ -->';
+		echo '<!-- ' . esc_html( WRRAPD_MU_BUILD ) . ' -->';
+		return;
+	}
+	echo '<style id="wrrapd-account-critical-css">' . $css . '</style>';
+	echo '<!-- ' . esc_html( WRRAPD_MU_BUILD ) . ' -->';
+}
+add_action( 'wp_footer', 'wrrapd_output_account_page_critical_css', 9999 );
 
 /**
  * On-disk folder for circular retailer PNGs (`mu-plugins/logos/`).
@@ -204,6 +279,14 @@ function wrrapd_affiliate_go_allowed_slugs() {
 		'sephora',
 		'etsy',
 		'bestbuy',
+		'giftcards',
+		'booksamillion',
+		'russellstover',
+		'freshroastedcoffee',
+		'zchocolat',
+		'gearup',
+		'vyjewelry',
+		'peetscoffee',
 	);
 }
 
@@ -222,8 +305,16 @@ function wrrapd_affiliate_go_constant_for_slug( $slug ) {
 		'nordstrom' => 'WRRAPD_AFFILIATE_REDIRECT_NORDSTROM',
 		'kohls'     => 'WRRAPD_AFFILIATE_REDIRECT_KOHLS',
 		'sephora'   => 'WRRAPD_AFFILIATE_REDIRECT_SEPHORA',
-		'etsy'      => 'WRRAPD_AFFILIATE_REDIRECT_ETSY',
-		'bestbuy'   => 'WRRAPD_AFFILIATE_REDIRECT_BESTBUY',
+		'etsy'           => 'WRRAPD_AFFILIATE_REDIRECT_ETSY',
+		'bestbuy'        => 'WRRAPD_AFFILIATE_REDIRECT_BESTBUY',
+		'giftcards'      => 'WRRAPD_AFFILIATE_REDIRECT_GIFTCARDS',
+		'booksamillion'  => 'WRRAPD_AFFILIATE_REDIRECT_BOOKSAMILLION',
+		'russellstover'  => 'WRRAPD_AFFILIATE_REDIRECT_RUSSELLSTOVER',
+		'freshroastedcoffee' => 'WRRAPD_AFFILIATE_REDIRECT_FRESHROASTEDCOFFEE',
+		'zchocolat'      => 'WRRAPD_AFFILIATE_REDIRECT_ZCHOCOLAT',
+		'gearup'         => 'WRRAPD_AFFILIATE_REDIRECT_GEARUP',
+		'vyjewelry'      => 'WRRAPD_AFFILIATE_REDIRECT_VYJEWELRY',
+		'peetscoffee'    => 'WRRAPD_AFFILIATE_REDIRECT_PEETSCOFFEE',
 	);
 	$slug = strtolower( (string) $slug );
 	return isset( $map[ $slug ] ) ? $map[ $slug ] : null;
@@ -244,16 +335,854 @@ function wrrapd_affiliate_fallback_public_url( $slug ) {
 		'nordstrom' => 'https://www.nordstrom.com/browse/gifts',
 		'kohls'     => 'https://www.kohls.com/catalog/gift-ideas.jsp?CN=Feature:Gift%20Ideas',
 		'sephora'   => 'https://www.sephora.com/shop/gifts',
-		'etsy'      => 'https://www.etsy.com/c/gifts',
-		'bestbuy'   => 'https://www.bestbuy.com/site/electronics/gift-ideas/abcat0010000.c?id=abcat0010000',
+		'etsy'            => 'https://www.etsy.com/c/gifts',
+		'bestbuy'         => 'https://www.bestbuy.com/site/electronics/gift-ideas/abcat0010000.c?id=abcat0010000',
+		'giftcards'       => 'https://www.giftcards.com/',
+		'booksamillion'   => 'https://www.booksamillion.com/gifts',
+		'russellstover'   => 'https://www.russellstover.com/shop/gifts',
+		'freshroastedcoffee' => 'https://www.freshroastedcoffee.com/',
+		'zchocolat'       => 'https://www.zchocolat.com/',
+		'gearup'          => 'https://www.gearupbooster.com/',
+		'vyjewelry'       => 'https://vyjewelry.shop/',
+		'peetscoffee'     => 'https://www.peets.com/gifts',
 	);
 	$slug = strtolower( (string) $slug );
 	return isset( $map[ $slug ] ) ? $map[ $slug ] : home_url( '/' );
 }
 
 /**
+ * Hostname → /go/{slug}/ rules for sitewide affiliate link upgrades (JS + content filters).
+ *
+ * @return list<array{host:string,slug:string}>
+ */
+function wrrapd_affiliate_domain_slug_rules() {
+	$rules = array();
+	foreach ( wrrapd_home_retailer_wheel_brands() as $b ) {
+		$rules[] = array(
+			'host' => preg_replace( '#^www\.#', '', strtolower( (string) $b['domain'] ) ),
+			'slug' => (string) $b['slug'],
+		);
+	}
+	$extra = array(
+		array( 'host' => 'giftcards.com', 'slug' => 'giftcards' ),
+		array( 'host' => 'booksamillion.com', 'slug' => 'booksamillion' ),
+		array( 'host' => 'russellstover.com', 'slug' => 'russellstover' ),
+		array( 'host' => 'freshroastedcoffee.com', 'slug' => 'freshroastedcoffee' ),
+		array( 'host' => 'zchocolat.com', 'slug' => 'zchocolat' ),
+		array( 'host' => 'zchocolates.com', 'slug' => 'zchocolat' ),
+		array( 'host' => 'gearupbooster.com', 'slug' => 'gearup' ),
+		array( 'host' => 'vyjewelry.shop', 'slug' => 'vyjewelry' ),
+		array( 'host' => 'vyjewelry.com', 'slug' => 'vyjewelry' ),
+		array( 'host' => 'peets.com', 'slug' => 'peetscoffee' ),
+		array( 'host' => 'amzn.com', 'slug' => 'amazon' ),
+		array( 'host' => 'amzn.to', 'slug' => 'amazon' ),
+	);
+	foreach ( $extra as $row ) {
+		$seen = false;
+		foreach ( $rules as $r ) {
+			if ( $r['host'] === $row['host'] ) {
+				$seen = true;
+				break;
+			}
+		}
+		if ( ! $seen ) {
+			$rules[] = $row;
+		}
+	}
+	return $rules;
+}
+
+/**
+ * Resolve slug for a retailer hostname (etsy.com, www.target.com, …).
+ *
+ * @param string $hostname Lowercase hostname.
+ */
+function wrrapd_affiliate_slug_for_hostname( $hostname ) {
+	$hostname = strtolower( preg_replace( '#^www\.#', '', (string) $hostname ) );
+	if ( $hostname === '' ) {
+		return '';
+	}
+	foreach ( wrrapd_affiliate_domain_slug_rules() as $rule ) {
+		$host = (string) $rule['host'];
+		if ( $hostname === $host || substr( $hostname, - ( strlen( $host ) + 1 ) ) === '.' . $host ) {
+			return (string) $rule['slug'];
+		}
+	}
+	return '';
+}
+
+/**
+ * Build /go/{slug}/ hop URL (optional deep link via ?to=).
+ *
+ * @param string $slug Retailer slug.
+ * @param string $to   Optional destination URL.
+ */
+function wrrapd_affiliate_go_url( $slug, $to = '' ) {
+	$slug = preg_replace( '/[^a-z0-9-]/', '', strtolower( (string) $slug ) );
+	if ( $slug === '' ) {
+		return home_url( '/' );
+	}
+	$url = home_url( '/go/' . rawurlencode( $slug ) . '/' );
+	$to  = trim( (string) $to );
+	if ( $to !== '' && preg_match( '#^https://#i', $to ) ) {
+		$url = add_query_arg( 'to', $to, $url );
+	}
+	return $url;
+}
+
+/**
+ * Upgrade bare https://retailer.com/… hrefs in HTML to /go/{slug}/?to=… hops.
+ *
+ * @param string $html Raw HTML fragment.
+ */
+function wrrapd_affiliate_upgrade_html_hrefs( $html ) {
+	if ( ! is_string( $html ) || $html === '' || stripos( $html, 'href=' ) === false ) {
+		return $html;
+	}
+	$site_host = wp_parse_url( home_url( '/' ), PHP_URL_HOST );
+	$site_host = is_string( $site_host ) ? strtolower( $site_host ) : '';
+	return (string) preg_replace_callback(
+		'#href=(["\'])(https?://[^"\']+)\1#i',
+		static function ( $m ) use ( $site_host ) {
+			$quote = $m[1];
+			$href  = html_entity_decode( (string) $m[2], ENT_QUOTES, 'UTF-8' );
+			if ( stripos( $href, '/go/' ) !== false ) {
+				return $m[0];
+			}
+			$parts = wp_parse_url( $href );
+			if ( ! is_array( $parts ) || empty( $parts['host'] ) ) {
+				return $m[0];
+			}
+			$host = strtolower( (string) $parts['host'] );
+			if ( $site_host !== '' && ( $host === $site_host || $host === 'www.' . $site_host ) ) {
+				return $m[0];
+			}
+			$slug = wrrapd_affiliate_slug_for_hostname( $host );
+			if ( $slug === '' ) {
+				return $m[0];
+			}
+			$new = wrrapd_affiliate_go_url( $slug, $href );
+			return 'href=' . $quote . esc_url( $new ) . $quote;
+		},
+		$html
+	);
+}
+
+/**
+ * @param string $content Post / widget HTML.
+ */
+function wrrapd_affiliate_filter_content_links( $content ) {
+	if ( is_admin() || ! is_string( $content ) || $content === '' ) {
+		return $content;
+	}
+	return wrrapd_affiliate_upgrade_html_hrefs( $content );
+}
+
+add_filter( 'the_content', 'wrrapd_affiliate_filter_content_links', 25 );
+add_filter( 'widget_text', 'wrrapd_affiliate_filter_content_links', 25 );
+add_filter( 'widget_text_content', 'wrrapd_affiliate_filter_content_links', 25 );
+add_filter( 'elementor/widget/render_content', 'wrrapd_affiliate_filter_content_links', 25 );
+
+/**
+ * CJ advertiser id for /go/{slug}/ when wp-config has WRRAPD_CJ_PUBLISHER_SITE_ID.
+ *
+ * @param string $slug Lowercase slug.
+ */
+function wrrapd_affiliate_cj_advertiser_id_for_slug( $slug ) {
+	$map = array(
+		'booksamillion'      => '129899',
+		'russellstover'      => '5124217',
+		'freshroastedcoffee' => '5778639',
+		'zchocolat'          => '1124214',
+		'vyjewelry'          => '7455697',
+	);
+	$slug = strtolower( (string) $slug );
+	return isset( $map[ $slug ] ) ? $map[ $slug ] : '';
+}
+
+/**
+ * Read wp-config affiliate constant when set to a real HTTPS URL (skip placeholders).
+ *
+ * @param string $slug Retailer slug.
+ */
+function wrrapd_affiliate_go_constant_value( $slug ) {
+	$cname = wrrapd_affiliate_go_constant_for_slug( $slug );
+	if ( ! $cname || ! defined( $cname ) ) {
+		return '';
+	}
+	$dest = trim( (string) constant( $cname ) );
+	if ( $dest === '' || ! preg_match( '#^https://#i', $dest ) ) {
+		return '';
+	}
+	if ( preg_match( '/YOUR_WEBSITE_ID|YOUR[_-]?SITE[_-]?ID|XXXX|example\.com/i', $dest ) ) {
+		return '';
+	}
+	return $dest;
+}
+
+/**
+ * Rewrite legacy tkqlhce.com CJ URLs to WRRAPD_CJ_CLICK_DOMAIN.
+ * Leaves other CJ hosts untouched (e.g. jdoqocy.com for website 101807253 vs anrdoezrs.net for 100845347).
+ *
+ * @param string $url Affiliate hop URL.
+ */
+function wrrapd_affiliate_cj_normalize_click_url( $url ) {
+	if ( ! is_string( $url ) || $url === '' || ! wrrapd_affiliate_is_cj_click_url( $url ) ) {
+		return $url;
+	}
+	$host = wp_parse_url( $url, PHP_URL_HOST );
+	if ( ! is_string( $host ) || $host === '' || stripos( $host, 'tkqlhce.com' ) === false ) {
+		return $url;
+	}
+	$domain = wrrapd_affiliate_cj_click_domain();
+	return preg_replace(
+		'#^https://[^/]+(/click-[0-9]+-[0-9]+(?:[/?]|$))#i',
+		'https://' . $domain . '$1',
+		$url
+	);
+}
+
+/**
+ * CJ click domain from wp-config (falls back to tkqlhce.com).
+ */
+function wrrapd_affiliate_cj_click_domain() {
+	if ( defined( 'WRRAPD_CJ_CLICK_DOMAIN' ) ) {
+		$domain = preg_replace( '#^https?://#', '', trim( (string) constant( 'WRRAPD_CJ_CLICK_DOMAIN' ) ) );
+		$domain = untrailingslashit( $domain );
+		if ( $domain !== '' ) {
+			return $domain;
+		}
+	}
+	foreach ( wrrapd_affiliate_go_allowed_slugs() as $slug ) {
+		$dest = wrrapd_affiliate_go_constant_value( $slug );
+		if ( $dest !== '' && wrrapd_affiliate_is_cj_click_url( $dest ) ) {
+			$host = wp_parse_url( $dest, PHP_URL_HOST );
+			if ( is_string( $host ) && $host !== '' ) {
+				return $host;
+			}
+		}
+	}
+	return 'www.tkqlhce.com';
+}
+
+/**
+ * Append query args with rawurlencode (CJ deep links need encoded destination URLs).
+ *
+ * @param string $url  Base URL.
+ * @param array<string, string> $params Query params.
+ */
+function wrrapd_affiliate_url_with_params( $url, array $params ) {
+	foreach ( $params as $key => $value ) {
+		if ( $value === '' ) {
+			continue;
+		}
+		$sep  = ( strpos( $url, '?' ) !== false ) ? '&' : '?';
+		$url .= $sep . rawurlencode( (string) $key ) . '=' . rawurlencode( (string) $value );
+	}
+	return $url;
+}
+
+/**
+ * CJ website property id per slug (legacy partners vs newer Wrrapd property).
+ *
+ * @param string $slug Retailer slug.
+ */
+function wrrapd_affiliate_cj_publisher_site_id_for_slug( $slug ) {
+	$slug = strtolower( (string) $slug );
+	$const = 'WRRAPD_CJ_SITE_ID_' . strtoupper( str_replace( '-', '_', $slug ) );
+	if ( defined( $const ) ) {
+		$id = preg_replace( '/\D/', '', (string) constant( $const ) );
+		if ( $id !== '' ) {
+			return $id;
+		}
+	}
+	$legacy = array( 'booksamillion', 'russellstover', 'freshroastedcoffee', 'zchocolat', 'vyjewelry' );
+	if ( in_array( $slug, $legacy, true ) ) {
+		if ( defined( 'WRRAPD_CJ_PUBLISHER_SITE_ID' ) ) {
+			return preg_replace( '/\D/', '', (string) constant( 'WRRAPD_CJ_PUBLISHER_SITE_ID' ) );
+		}
+		return '101807253';
+	}
+	if ( defined( 'WRRAPD_CJ_PUBLISHER_SITE_ID' ) ) {
+		return preg_replace( '/\D/', '', (string) constant( 'WRRAPD_CJ_PUBLISHER_SITE_ID' ) );
+	}
+	return '';
+}
+
+/**
+ * CJ click host for a slug (must match website id in pasted Get link URLs).
+ *
+ * @param string $slug Retailer slug.
+ */
+function wrrapd_affiliate_cj_click_domain_for_slug( $slug ) {
+	$slug = strtolower( (string) $slug );
+	$const = wrrapd_affiliate_go_constant_value( $slug );
+	if ( $const !== '' && wrrapd_affiliate_is_cj_click_url( $const ) ) {
+		$host = wp_parse_url( $const, PHP_URL_HOST );
+		if ( is_string( $host ) && $host !== '' ) {
+			return $host;
+		}
+	}
+	$site = wrrapd_affiliate_cj_publisher_site_id_for_slug( $slug );
+	if ( $site === '101807253' ) {
+		return 'www.jdoqocy.com';
+	}
+	if ( $site === '100845347' ) {
+		return 'www.anrdoezrs.net';
+	}
+	return wrrapd_affiliate_cj_click_domain();
+}
+
+/**
+ * Skip redundant CJ ?url= when destination is the retailer homepage (breaks some CJ hops).
+ *
+ * @param string $slug Retailer slug.
+ * @param string $to   Requested deep-link destination.
+ */
+function wrrapd_affiliate_cj_effective_deep_link_to( $slug, $to ) {
+	$to = trim( (string) $to );
+	if ( $to === '' ) {
+		return '';
+	}
+	$fallback = wrrapd_affiliate_fallback_public_url( $slug );
+	if ( $fallback !== '' && untrailingslashit( strtolower( $to ) ) === untrailingslashit( strtolower( $fallback ) ) ) {
+		return '';
+	}
+	return $to;
+}
+
+/**
+ * Build a CJ click URL from publisher site id + advertiser id (Commission Junction).
+ *
+ * @param string $slug   Retailer slug (selects website id + click host).
+ * @param string $to     Optional destination for deep link.
+ * @param string $subid  Optional sid/subid for reporting.
+ */
+function wrrapd_affiliate_cj_build_click_url( $slug, $to = '', $subid = '' ) {
+	$slug = strtolower( (string) $slug );
+	$adv  = wrrapd_affiliate_cj_advertiser_id_for_slug( $slug );
+	$site = wrrapd_affiliate_cj_publisher_site_id_for_slug( $slug );
+	$adv  = preg_replace( '/\D/', '', (string) $adv );
+	if ( $site === '' || $adv === '' ) {
+		return '';
+	}
+	$url = sprintf(
+		'https://%s/click-%s-%s',
+		wrrapd_affiliate_cj_click_domain_for_slug( $slug ),
+		$site,
+		$adv
+	);
+	$to = wrrapd_affiliate_cj_effective_deep_link_to( $slug, $to );
+	if ( $to !== '' ) {
+		$url = wrrapd_affiliate_url_with_params( $url, array( 'url' => $to ) );
+	}
+	if ( $subid !== '' ) {
+		$url = wrrapd_affiliate_url_with_params( $url, array( 'sid' => $subid ) );
+	}
+	return $url;
+}
+
+/**
+ * @param string $url URL to test.
+ */
+function wrrapd_affiliate_is_cj_click_url( $url ) {
+	return is_string( $url ) && preg_match(
+		'#^https://(www\.)?(tkqlhce|jdoqocy|anrdoezrs|dpbolvw|emjcd|kjqlkc|kqzyfj)\.(com|net)/click-[0-9]+-[0-9]+#i',
+		$url
+	) === 1;
+}
+
+/**
+ * Append or replace deep-link destination on a CJ tracking URL.
+ *
+ * @param string $dest  CJ click URL from dashboard or builder.
+ * @param string $to    Retailer page URL.
+ * @param string $subid Optional sid.
+ */
+function wrrapd_affiliate_cj_apply_deep_link( $dest, $to, $subid = '' ) {
+	$dest = wrrapd_affiliate_cj_normalize_click_url( $dest );
+	if ( $to === '' ) {
+		if ( $subid !== '' ) {
+			return wrrapd_affiliate_url_with_params( $dest, array( 'sid' => $subid ) );
+		}
+		return $dest;
+	}
+	if ( preg_match( '/([?&]url=)[^&]*/', $dest ) ) {
+		$dest = preg_replace( '/([?&]url=)[^&]*/', '$1' . rawurlencode( $to ), $dest );
+	} else {
+		$dest = wrrapd_affiliate_url_with_params( $dest, array( 'url' => $to ) );
+	}
+	if ( $subid !== '' ) {
+		$dest = wrrapd_affiliate_url_with_params( $dest, array( 'sid' => $subid ) );
+	}
+	return $dest;
+}
+
+/**
+ * Peet's CJ banner hops (advertiser-level 2346375 404s — use Get link banner ids).
+ */
+function wrrapd_affiliate_cj_peets_shop_click_url() {
+	if ( defined( 'WRRAPD_AFFILIATE_REDIRECT_PEETSCOFFEE' ) ) {
+		$u = trim( (string) constant( 'WRRAPD_AFFILIATE_REDIRECT_PEETSCOFFEE' ) );
+		if ( preg_match( '#^https://#i', $u ) && ! preg_match( '/click-101807253-2346375(\?|$)/i', $u ) ) {
+			return $u;
+		}
+	}
+	return 'https://www.dpbolvw.net/click-101807253-13426123';
+}
+
+/**
+ * @return string Coffee-finder banner hop (CJ link id 13588852).
+ */
+function wrrapd_affiliate_cj_peets_finder_click_url() {
+	if ( defined( 'WRRAPD_AFFILIATE_REDIRECT_PEETSCOFFEE_FINDER' ) ) {
+		$u = trim( (string) constant( 'WRRAPD_AFFILIATE_REDIRECT_PEETSCOFFEE_FINDER' ) );
+		if ( preg_match( '#^https://#i', $u ) ) {
+			return $u;
+		}
+	}
+	return 'https://www.jdoqocy.com/click-101807253-13588852';
+}
+
+/**
+ * Fix known-bad CJ click URLs still present in older wp-config.php copies.
+ *
+ * @param string $url  CJ hop URL.
+ * @param string $slug Retailer slug.
+ */
+function wrrapd_affiliate_cj_repair_click_url( $url, $slug ) {
+	$url  = (string) $url;
+	$slug = strtolower( (string) $slug );
+	if ( $url === '' ) {
+		return $url;
+	}
+	if ( $slug === 'booksamillion' && preg_match( '/click-101807253-1298894(\?|$)/i', $url ) ) {
+		return preg_replace( '/click-101807253-1298894/i', 'click-101807253-129899', $url );
+	}
+	if ( $slug === 'peetscoffee' && preg_match( '/click-101807253-2346375(\?|$)/i', $url ) ) {
+		return wrrapd_affiliate_cj_peets_shop_click_url();
+	}
+	return $url;
+}
+
+/**
+ * Pick CJ hop base for ?to= deep links (Peet's finder vs shop banners).
+ *
+ * @param string $slug Retailer slug.
+ * @param string $to   Requested retailer destination.
+ */
+function wrrapd_affiliate_cj_click_base_for_to( $slug, $to ) {
+	$slug = strtolower( (string) $slug );
+	$to   = trim( (string) $to );
+	if ( $slug === 'peetscoffee' && $to !== '' && preg_match( '#/pages/coffee-finder#i', $to ) ) {
+		return wrrapd_affiliate_cj_peets_finder_click_url();
+	}
+	return '';
+}
+
+/**
+ * Correct legacy Rakuten publisher ids / offer ids from older wp-config snippets.
+ *
+ * @param string $url Linksynergy click URL.
+ */
+function wrrapd_affiliate_rakuten_repair_click_url( $url ) {
+	$url = (string) $url;
+	if ( $url === '' || stripos( $url, 'linksynergy.com' ) === false ) {
+		return $url;
+	}
+	$url = str_replace(
+		array( 'B%2fdH8Lik5M0', 'B/dH8Lik5M0' ),
+		array( 'b%2fdhBLlk5M0', 'b/dhBLlk5M0' ),
+		$url
+	);
+	if ( preg_match( '/offerid=2037571\.9995/i', $url ) ) {
+		$url = preg_replace( '/offerid=2037571\.9995/i', 'offerid=2037571.963', $url );
+	}
+	if ( preg_match( '/[?&]type=3(?=&|$)/i', $url ) && preg_match( '/offerid=2037571/i', $url ) ) {
+		$url = preg_replace( '/([?&])type=3(?=&|$)/i', '${1}type=4', $url );
+	}
+	return $url;
+}
+
+/**
+ * Resolve affiliate hop destination: wp-config constant, CJ builder, or public fallback.
+ *
+ * @param string $slug Retailer slug.
+ * @param string $to   Optional /go/{slug}/?to= destination (Peet's banner selection).
+ */
+function wrrapd_affiliate_go_base_dest( $slug, $to = '' ) {
+	$alt = wrrapd_affiliate_cj_click_base_for_to( $slug, $to );
+	if ( $alt !== '' ) {
+		return wrrapd_affiliate_cj_normalize_click_url( $alt );
+	}
+	$dest = wrrapd_affiliate_go_constant_value( $slug );
+	if ( $dest !== '' ) {
+		$dest = wrrapd_affiliate_rakuten_repair_click_url( $dest );
+		$dest = wrrapd_affiliate_cj_repair_click_url( $dest, $slug );
+		$dest = wrrapd_affiliate_cj_normalize_click_url( $dest );
+	}
+	if ( $dest === '' ) {
+		$adv = wrrapd_affiliate_cj_advertiser_id_for_slug( $slug );
+		if ( $adv !== '' ) {
+			$dest = wrrapd_affiliate_cj_build_click_url( $slug );
+		}
+	}
+	if ( $dest === '' || ! preg_match( '#^https://#i', $dest ) ) {
+		if ( $slug === 'peetscoffee' ) {
+			$dest = wrrapd_affiliate_cj_peets_shop_click_url();
+		} else {
+			$dest = wrrapd_affiliate_fallback_public_url( $slug );
+		}
+	}
+	return $dest;
+}
+
+/**
+ * Sub-id from /go/{slug}/?subid=… for affiliate network reporting (Rakuten u1/subid, etc.).
+ */
+function wrrapd_affiliate_go_subid_from_request() {
+	foreach ( array( 'subid', 'src', 'u1' ) as $key ) {
+		if ( ! isset( $_GET[ $key ] ) || ! is_string( $_GET[ $key ] ) ) {
+			continue;
+		}
+		$val = sanitize_key( wp_unslash( $_GET[ $key ] ) );
+		if ( $val !== '' ) {
+			return $val;
+		}
+	}
+	return '';
+}
+
+/**
+ * Parse Rakuten / Linksynergy click URL for publisher id + merchant id.
+ *
+ * @return array{id:string,mid:string}
+ */
+function wrrapd_affiliate_rakuten_parse_click_url( $url ) {
+	$out = array(
+		'id'  => '',
+		'mid' => '',
+	);
+	if ( ! is_string( $url ) || $url === '' ) {
+		return $out;
+	}
+	$query = wp_parse_url( $url, PHP_URL_QUERY );
+	if ( ! is_string( $query ) || $query === '' ) {
+		return $out;
+	}
+	$q = array();
+	parse_str( $query, $q );
+	if ( ! empty( $q['id'] ) && is_string( $q['id'] ) ) {
+		$out['id'] = rawurldecode( $q['id'] );
+	}
+	if ( ! empty( $q['mid'] ) && is_string( $q['mid'] ) ) {
+		$out['mid'] = preg_replace( '/\D/', '', $q['mid'] );
+	}
+	if ( defined( 'WRRAPD_AFFILIATE_RAKUTEN_ETSY_MID' ) ) {
+		$override = preg_replace( '/\D/', '', (string) constant( 'WRRAPD_AFFILIATE_RAKUTEN_ETSY_MID' ) );
+		if ( $override !== '' ) {
+			$out['mid'] = $override;
+		}
+	}
+	return $out;
+}
+
+/**
+ * Build Rakuten fs-bin deep link (type=10 + RD_PARM1) from a banner click URL.
+ *
+ * @param string $click_url Banner click URL from Rakuten (type=4).
+ * @param string $to        Etsy / retailer destination.
+ * @param string $subid     Optional placement id.
+ */
+function wrrapd_affiliate_rakuten_fsbin_deep_link( $click_url, $to, $subid = '' ) {
+	if ( ! is_string( $click_url ) || $click_url === '' || $to === '' ) {
+		return $click_url;
+	}
+	$query = wp_parse_url( $click_url, PHP_URL_QUERY );
+	if ( ! is_string( $query ) || $query === '' ) {
+		return $click_url;
+	}
+	$q = array();
+	parse_str( $query, $q );
+	if ( empty( $q['id'] ) || empty( $q['offerid'] ) ) {
+		return $click_url;
+	}
+	$args = array(
+		'id'       => rawurldecode( (string) $q['id'] ),
+		'offerid'  => (string) $q['offerid'],
+		'type'     => '10',
+		'subid'    => $subid !== '' ? $subid : ( isset( $q['subid'] ) ? (string) $q['subid'] : '0' ),
+		'RD_PARM1' => $to,
+	);
+	if ( ! empty( $q['tmpid'] ) ) {
+		$args['tmpid'] = (string) $q['tmpid'];
+	}
+	if ( $subid !== '' ) {
+		$args['u1'] = $subid;
+	}
+	return add_query_arg( $args, 'https://click.linksynergy.com/fs-bin/click' );
+}
+
+/**
+ * Rakuten merchant id for /deeplink (offerid from banners is not the mid).
+ *
+ * @param string $slug Retailer slug.
+ */
+function wrrapd_affiliate_rakuten_mid_for_slug( $slug ) {
+	$slug = strtolower( (string) $slug );
+	$map  = array(
+		'giftcards' => '44432',
+		'etsy'      => '54027',
+	);
+	if ( isset( $map[ $slug ] ) ) {
+		return $map[ $slug ];
+	}
+	$const = 'WRRAPD_AFFILIATE_RAKUTEN_' . strtoupper( str_replace( '-', '_', $slug ) ) . '_MID';
+	if ( defined( $const ) ) {
+		$mid = preg_replace( '/\D/', '', (string) constant( $const ) );
+		if ( $mid !== '' ) {
+			return $mid;
+		}
+	}
+	return '';
+}
+
+/**
+ * Build a Rakuten /deeplink URL (preferred for product deep links).
+ *
+ * @param string $affiliate_id Publisher id from Rakuten dashboard.
+ * @param string $mid          Advertiser merchant id.
+ * @param string $to           Final retailer URL.
+ * @param string $subid        Optional placement id.
+ */
+function wrrapd_affiliate_rakuten_build_deeplink( $affiliate_id, $mid, $to, $subid = '' ) {
+	if ( $affiliate_id === '' || $mid === '' || $to === '' ) {
+		return '';
+	}
+	$params = array(
+		'id'   => $affiliate_id,
+		'mid'  => $mid,
+		'murl' => $to,
+	);
+	if ( $subid !== '' ) {
+		$params['u1']    = $subid;
+		$params['subid'] = $subid;
+	}
+	return wrrapd_affiliate_url_with_params( 'https://click.linksynergy.com/deeplink', $params );
+}
+
+/**
+ * Build a Rakuten /deeplink URL (fallback when fs-bin offer id is unavailable).
+ *
+ * @param string $click_url Banner or deeplink base from Rakuten dashboard.
+ * @param string $to        Final retailer URL.
+ * @param string $subid     Optional placement id for Rakuten reports.
+ * @param string $slug      Optional retailer slug for mid lookup.
+ */
+function wrrapd_affiliate_rakuten_deep_link( $click_url, $to, $subid = '', $slug = '' ) {
+	$parts = wrrapd_affiliate_rakuten_parse_click_url( $click_url );
+	$mid   = $parts['mid'];
+	if ( $mid === '' && $slug !== '' ) {
+		$mid = wrrapd_affiliate_rakuten_mid_for_slug( $slug );
+	}
+	if ( $mid === '' && defined( 'WRRAPD_AFFILIATE_RAKUTEN_ETSY_MID' ) ) {
+		$mid = preg_replace( '/\D/', '', (string) constant( 'WRRAPD_AFFILIATE_RAKUTEN_ETSY_MID' ) );
+	}
+	if ( $mid === '' ) {
+		$mid = '54027';
+	}
+	if ( $parts['id'] === '' || $to === '' ) {
+		return $click_url;
+	}
+	return wrrapd_affiliate_rakuten_build_deeplink( $parts['id'], $mid, $to, $subid );
+}
+
+/**
+ * Allowed retailer destination patterns for /go/{slug}/?to=… validation.
+ *
+ * @return array<string, string>
+ */
+function wrrapd_affiliate_retailer_url_patterns() {
+	return array(
+		'etsy'               => '#^https://(www\.)?etsy\.com/#i',
+		'target'             => '#^https://(www\.)?target\.com/#i',
+		'amazon'             => '#^https://(www\.)?amazon\.com/#i',
+		'walmart'            => '#^https://(www\.)?walmart\.com/#i',
+		'nordstrom'          => '#^https://(www\.)?nordstrom\.com/#i',
+		'kohls'              => '#^https://(www\.)?kohls\.com/#i',
+		'sephora'            => '#^https://(www\.)?sephora\.com/#i',
+		'ulta'               => '#^https://(www\.)?ulta\.com/#i',
+		'lego'               => '#^https://(www\.)?lego\.com/#i',
+		'bestbuy'            => '#^https://(www\.)?bestbuy\.com/#i',
+		'giftcards'          => '#^https://(www\.)?giftcards\.com/#i',
+		'booksamillion'      => '#^https://(www\.)?booksamillion\.com/#i',
+		'russellstover'      => '#^https://(www\.)?russellstover\.com/#i',
+		'freshroastedcoffee' => '#^https://(www\.)?freshroastedcoffee\.com/#i',
+		'zchocolat'          => '#^https://(www\.)?(zchocolat|zchocolates)\.com/#i',
+		'gearup'             => '#^https://(www\.)?gearupbooster\.com/#i',
+		'vyjewelry'          => '#^https://(www\.)?(vyjewelry\.shop|vyjewelry\.com)/#i',
+		'peetscoffee'        => '#^https://(www\.)?peets\.com/#i',
+	);
+}
+
+/**
+ * @param string $slug Retailer slug.
+ * @param string $to   Destination URL.
+ */
+function wrrapd_affiliate_to_matches_slug( $slug, $to ) {
+	$slug     = strtolower( (string) $slug );
+	$patterns = wrrapd_affiliate_retailer_url_patterns();
+	if ( $to === '' || ! isset( $patterns[ $slug ] ) ) {
+		return false;
+	}
+	return preg_match( $patterns[ $slug ], $to ) === 1;
+}
+
+/**
+ * Parse ?to= from the request (handles nested ? in product URLs when not fully encoded).
+ */
+function wrrapd_affiliate_go_to_from_request() {
+	$raw = '';
+	if ( isset( $_GET['to'] ) && is_string( $_GET['to'] ) ) {
+		$raw = trim( wp_unslash( $_GET['to'] ) );
+	}
+	$qs = isset( $_SERVER['QUERY_STRING'] ) ? (string) wp_unslash( $_SERVER['QUERY_STRING'] ) : '';
+	if ( $qs !== '' && preg_match( '/(?:^|&)to=([^#&]*)/', $qs, $m ) ) {
+		$candidate = rawurldecode( $m[1] );
+		if ( strlen( $candidate ) > strlen( $raw ) ) {
+			$raw = $candidate;
+		}
+	}
+	if ( $raw === '' ) {
+		return '';
+	}
+	if ( preg_match( '#^//[^/]#', $raw ) ) {
+		$raw = 'https:' . $raw;
+	}
+	return esc_url_raw( $raw );
+}
+
+/**
+ * Optional deep link for /go/{slug}/?to=https://retailer.com/… (Etsy listing, etc.).
+ *
+ * @param string $slug Affiliate slug.
+ * @param string $dest Base redirect from wp-config or fallback.
+ */
+function wrrapd_affiliate_go_apply_deep_link( $slug, $dest ) {
+	$to    = wrrapd_affiliate_go_to_from_request();
+	$subid = wrrapd_affiliate_go_subid_from_request();
+	$dest  = wrrapd_affiliate_rakuten_repair_click_url( $dest );
+	$dest  = wrrapd_affiliate_cj_repair_click_url( $dest, $slug );
+	$alt   = wrrapd_affiliate_cj_click_base_for_to( $slug, $to );
+	if ( $alt !== '' ) {
+		$dest = $alt;
+	}
+	if ( preg_match( '#linksynergy\.com#i', $dest ) ) {
+		if ( $to !== '' ) {
+			if ( preg_match( '/([?&]murl=)[^&]*/', $dest ) ) {
+				return preg_replace( '/([?&]murl=)[^&]*/', '$1' . rawurlencode( $to ), $dest );
+			}
+			if ( preg_match( '/([?&]RD_PARM1=)[^&]*/', $dest ) ) {
+				return preg_replace( '/([?&]RD_PARM1=)[^&]*/', '$1' . rawurlencode( $to ), $dest );
+			}
+			$parts   = wrrapd_affiliate_rakuten_parse_click_url( $dest );
+			$mid     = wrrapd_affiliate_rakuten_mid_for_slug( $slug );
+			$fsbin_ok = ! in_array( $slug, array( 'giftcards' ), true );
+			if ( $mid !== '' && $parts['id'] !== '' ) {
+				$deeplink = wrrapd_affiliate_rakuten_build_deeplink( $parts['id'], $mid, $to, $subid );
+				if ( $deeplink !== '' ) {
+					return $deeplink;
+				}
+			}
+			if ( $fsbin_ok && preg_match( '/offerid=/i', $dest ) ) {
+				return wrrapd_affiliate_rakuten_fsbin_deep_link( $dest, $to, $subid );
+			}
+			return wrrapd_affiliate_rakuten_deep_link( $dest, $to, $subid, $slug );
+		}
+		if ( $subid !== '' ) {
+			return add_query_arg(
+				array(
+					'subid' => $subid,
+					'u1'    => $subid,
+				),
+				$dest
+			);
+		}
+		return $dest;
+	}
+	if ( wrrapd_affiliate_is_cj_click_url( $dest ) ) {
+		$to = wrrapd_affiliate_cj_effective_deep_link_to( $slug, $to );
+		if ( $slug === 'peetscoffee' && preg_match( '#/pages/coffee-finder#i', (string) wrrapd_affiliate_go_to_from_request() ) ) {
+			$to = '';
+		}
+		return wrrapd_affiliate_cj_apply_deep_link( $dest, $to, $subid );
+	}
+	if ( $to === '' ) {
+		return $dest;
+	}
+	$patterns = wrrapd_affiliate_retailer_url_patterns();
+	if ( ! isset( $patterns[ $slug ] ) || ! preg_match( $patterns[ $slug ], $to ) ) {
+		return $dest;
+	}
+	if ( preg_match( '/([?&]u=)[^&]*/', $dest ) ) {
+		return preg_replace( '/([?&]u=)[^&]*/', '$1' . rawurlencode( $to ), $dest );
+	}
+	if ( substr( $dest, -1 ) === '=' ) {
+		return $dest . rawurlencode( $to );
+	}
+	if ( preg_match( '#impactradius|7eer|sjv\.io|go\.redirectingat|awin1\.com#i', $dest ) ) {
+		return add_query_arg( 'u', $to, $dest );
+	}
+	return $to;
+}
+
+/**
+ * Optional server-side click log (no purchase data — Rakuten reports conversions).
+ *
+ * @param string $slug  Retailer slug.
+ * @param string $to    Deep-link destination when present.
+ * @param string $subid Placement sub-id when present.
+ * @param string $dest  Final redirect URL.
+ */
+function wrrapd_affiliate_go_log_click( $slug, $to, $subid, $dest ) {
+	do_action( 'wrrapd_affiliate_go_click', $slug, $to, $subid, $dest );
+	if ( ! defined( 'WRRAPD_AFFILIATE_LOG_CLICKS' ) || ! WRRAPD_AFFILIATE_LOG_CLICKS ) {
+		return;
+	}
+	error_log(
+		sprintf(
+			'[wrrapd-affiliate] slug=%s subid=%s to=%s dest=%s',
+			$slug,
+			$subid !== '' ? $subid : '-',
+			$to !== '' ? $to : '-',
+			$dest
+		)
+	);
+}
+
+/**
+ * 302 to an external affiliate / retailer URL.
+ * wp_safe_redirect() rejects off-site hosts and falls back to wp-admin — never use it here.
+ *
+ * @param string $url    Destination (https only).
+ * @param int    $status HTTP status code.
+ */
+function wrrapd_affiliate_redirect_out( $url, $status = 302 ) {
+	$url = esc_url_raw( (string) $url );
+	if ( $url === '' || ! preg_match( '#^https://#i', $url ) ) {
+		status_header( 404 );
+		nocache_headers();
+		echo esc_html__( 'Not found.', 'wrrapd' );
+		exit;
+	}
+	wp_redirect( $url, $status );
+	exit;
+}
+
+/**
  * 302 from /go/{slug}/ to Impact (or other) tracking URL from wp-config, else retailer homepage.
  * Affiliate credit is established by the network redirect + retailer cookie — not by setting cookies from wrrapd.com.
+ * Pass ?to=https://www.etsy.com/listing/… to deep-link a product while keeping the Impact hop.
  */
 function wrrapd_handle_go_affiliate_redirect() {
 	if ( is_admin() ) {
@@ -281,20 +1210,25 @@ function wrrapd_handle_go_affiliate_redirect() {
 		echo esc_html__( 'Not found.', 'wrrapd' );
 		exit;
 	}
-	$dest = '';
-	$cname = wrrapd_affiliate_go_constant_for_slug( $slug );
-	if ( $cname && defined( $cname ) ) {
-		$dest = trim( (string) constant( $cname ) );
+	if ( ! defined( 'DONOTCACHEPAGE' ) ) {
+		define( 'DONOTCACHEPAGE', true );
 	}
-	if ( $dest === '' || ! preg_match( '#^https://#i', $dest ) ) {
-		$dest = wrrapd_affiliate_fallback_public_url( $slug );
+	nocache_headers();
+	if ( ! headers_sent() ) {
+		header( 'Cache-Control: no-store, no-cache, must-revalidate, max-age=0' );
+		header( 'Pragma: no-cache' );
+		header( 'Vary: User-Agent', false );
 	}
+	$to    = wrrapd_affiliate_go_to_from_request();
+	$subid = wrrapd_affiliate_go_subid_from_request();
+	$dest  = wrrapd_affiliate_go_base_dest( $slug, $to );
+	$dest  = wrrapd_affiliate_go_apply_deep_link( $slug, $dest );
 	$dest = esc_url_raw( $dest );
 	if ( $dest === '' ) {
 		$dest = esc_url_raw( wrrapd_affiliate_fallback_public_url( $slug ) );
 	}
-	wp_redirect( $dest, 302 );
-	exit;
+	wrrapd_affiliate_go_log_click( $slug, $to, $subid, $dest );
+	wrrapd_affiliate_redirect_out( $dest, 302 );
 }
 
 add_action( 'template_redirect', 'wrrapd_handle_go_affiliate_redirect', 0 );
@@ -363,6 +1297,93 @@ function wrrapd_home_retailer_wheel_brands() {
 }
 
 /**
+ * Chrome Web Store — gift-wrap promo links here.
+ */
+function wrrapd_chrome_extension_install_url() {
+	return 'https://chromewebstore.google.com/detail/wrrapd/gapdndgnpolhcknconognpnjecfppddb';
+}
+
+/**
+ * Retailers where the Wrrapd Chrome extension adds gift-wrap at checkout (homepage wheel set).
+ *
+ * @return list<string>
+ */
+function wrrapd_extension_retailer_slugs() {
+	static $slugs = null;
+	if ( $slugs === null ) {
+		$slugs = array();
+		foreach ( wrrapd_home_retailer_wheel_brands() as $b ) {
+			$slugs[] = (string) $b['slug'];
+		}
+	}
+	return $slugs;
+}
+
+/**
+ * @return array<string, string> slug => display label
+ */
+function wrrapd_extension_retailer_label_map() {
+	$map = array();
+	foreach ( wrrapd_home_retailer_wheel_brands() as $b ) {
+		$map[ (string) $b['slug'] ] = (string) $b['label'];
+	}
+	return $map;
+}
+
+/**
+ * @param string $slug Retailer slug.
+ */
+function wrrapd_is_extension_retailer_slug( $slug ) {
+	return in_array( strtolower( (string) $slug ), wrrapd_extension_retailer_slugs(), true );
+}
+
+/**
+ * Extension feature bullets — right-side wrap promo (desktop) + mobile strip.
+ *
+ * @return list<string>
+ */
+function wrrapd_wrap_promo_feature_bullets() {
+	return array(
+		__( 'Customize wrapping designs', 'wrrapd' ),
+		__( 'Add flowers', 'wrrapd' ),
+		__( 'Multi-retailer gift-combo', 'wrrapd' ),
+		__( 'Seamless integration / Checkout', 'wrrapd' ),
+	);
+}
+
+/**
+ * Blinking gift-wrap callout beside Ulta (left) or Best Buy (right); arrow stays static.
+ *
+ * @param 'ulta'|'bestbuy' $side
+ */
+function wrrapd_render_retailer_wheel_wrap_promo( $side ) {
+	$side  = (string) $side;
+	$href  = esc_url( wrrapd_chrome_extension_install_url() );
+	$label = esc_attr__( 'Premium gift-wrapping — install the free Wrrapd Chrome extension', 'wrrapd' );
+	if ( $side === 'ulta' ) {
+		echo '<a class="wrrapd-wrap-promo wrrapd-wrap-promo--ulta" href="' . $href . '" target="_blank" rel="noopener noreferrer" aria-label="' . $label . '">';
+		echo '<div class="wrrapd-wrap-promo__copy wrrapd-wrap-promo__copy--right">';
+		echo '<span class="wrrapd-wrap-promo__line wrrapd-wrap-promo__line--blink wrrapd-wrap-promo__line--premium">' . esc_html__( 'Premium', 'wrrapd' ) . '</span>';
+		echo '<span class="wrrapd-wrap-promo__line wrrapd-wrap-promo__line--blink wrrapd-wrap-promo__line--mid">' . esc_html__( 'gift-wrapping', 'wrrapd' ) . '</span>';
+		echo '<span class="wrrapd-wrap-promo__line wrrapd-wrap-promo__line--blink wrrapd-wrap-promo__line--for">' . esc_html__( 'now available for:', 'wrrapd' ) . '</span>';
+		echo '</div>';
+		echo '<span class="wrrapd-wrap-promo__arrow wrrapd-wrap-promo__arrow--right" aria-hidden="true"></span>';
+		echo '</a>';
+		return;
+	}
+	if ( $side === 'bestbuy' ) {
+		echo '<a class="wrrapd-wrap-promo wrrapd-wrap-promo--bestbuy" href="' . $href . '" target="_blank" rel="noopener noreferrer" aria-label="' . esc_attr__( 'Wrrapd gift-wrapping features — install the Chrome extension', 'wrrapd' ) . '">';
+		echo '<div class="wrrapd-wrap-promo__copy wrrapd-wrap-promo__copy--left wrrapd-wrap-promo__copy--features">';
+		echo '<ul class="wrrapd-wrap-promo__bullets" aria-label="' . esc_attr__( 'Wrrapd extension features', 'wrrapd' ) . '">';
+		foreach ( wrrapd_wrap_promo_feature_bullets() as $bullet ) {
+			echo '<li class="wrrapd-wrap-promo__bullet">' . esc_html( $bullet ) . '</li>';
+		}
+		echo '</ul></div>';
+		echo '</a>';
+	}
+}
+
+/**
  * Home page: retailer wheels — each logo links to /go/{slug}/ (302 to Impact URL from wp-config when set).
  */
 function wrrapd_output_retailer_wheel_strip() {
@@ -377,10 +1398,25 @@ function wrrapd_output_retailer_wheel_strip() {
 		return;
 	}
 	$printed = true;
-	$brands = wrrapd_home_retailer_wheel_brands();
+	$brands  = wrrapd_home_retailer_wheel_brands();
+	$ext_url = esc_url( wrrapd_chrome_extension_install_url() );
+	echo '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Great+Vibes&amp;family=Pacifico&amp;display=swap" />';
 	echo '<style id="wrrapd-retailer-wheels-css">';
 	echo '@keyframes wrrapd-wheel-in{0%{transform:translateX(min(38vw,240px)) rotate(-540deg);opacity:0}100%{transform:translateX(0) rotate(0);opacity:1}}';
+	echo '@keyframes wrrapd-wrap-blink{0%,100%{opacity:1}45%{opacity:.22}55%{opacity:.22}}';
 	echo '#wrrapd-retailer-wheels-row{width:100%;box-sizing:border-box;background:linear-gradient(180deg,rgba(248,250,252,.97) 0%,rgba(241,245,249,.98) 100%);border-bottom:1px solid rgba(15,23,42,.08);}';
+	echo '.wrrapd-wrap-promo-mobile{display:none;width:100%;box-sizing:border-box;padding:.25rem clamp(.5rem,2vw,1rem) .1rem;text-align:center;text-decoration:none!important;color:inherit;}';
+	echo '.wrrapd-wheel-mobile-stack{display:contents;}';
+	echo '.wrrapd-wrap-promo-mobile__inner{display:inline-flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:.15rem .35rem;font-family:"Great Vibes",Pacifico,"Segoe Script","Brush Script MT",cursive;font-weight:400;font-size:clamp(1.15rem,3.2vw,1.65rem);line-height:1.1;}';
+	echo '.wrrapd-wrap-promo-mobile__blink{animation:wrrapd-wrap-blink 1.85s ease-in-out infinite;}';
+	echo '.wrrapd-wrap-promo-mobile__premium{color:#b22234;font-size:clamp(1.12rem,3vw,1.5rem);}';
+	echo '.wrrapd-wrap-promo-mobile__mid{color:#162a52;}';
+	echo '.wrrapd-wrap-promo-mobile__at{color:#0a3161;font-size:clamp(1rem,2.6vw,1.35rem);}';
+	echo '.wrrapd-wrap-promo-mobile__arrow{color:#c9a227;font-size:1.15em;line-height:1;}';
+	echo '.wrrapd-wrap-promo-mobile__features{display:block;width:100%;margin:.35rem 0 0;padding:0;list-style:none;text-align:center;}';
+	echo '.wrrapd-wrap-promo-mobile__features li{display:inline-block;margin:.12rem .28rem;font-family:"Great Vibes",Pacifico,"Segoe Script","Brush Script MT",cursive;font-size:clamp(.96rem,2.45vw,1.14rem);font-weight:700;color:#000;line-height:1.2;text-shadow:0 .5px 0 #000,0 1px 2px rgba(255,255,255,.92);-webkit-font-smoothing:antialiased;}';
+	echo '.wrrapd-wrap-promo-mobile__features li::before{content:"• ";color:#c9a227;font-weight:700;}';
+	echo '.wrrapd-wrap-promo-mobile:hover .wrrapd-wrap-promo-mobile__blink,.wrrapd-wrap-promo-mobile:focus-visible .wrrapd-wrap-promo-mobile__blink{animation-play-state:paused;opacity:1!important;}';
 	echo '#wrrapd-retailer-wheels-row .wrrapd-retailer-wheels{display:flex;flex-direction:row;flex-wrap:nowrap;justify-content:center;align-items:flex-start;gap:clamp(.4rem,1.4vw,.95rem);padding:.55rem clamp(.5rem,2vw,1.25rem) .75rem;max-width:100%;margin:0 auto;box-sizing:border-box;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:thin;}';
 	echo '.wrrapd-retailer-wheels__item{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:.28rem;max-width:4.85rem;text-decoration:none;color:#0f172a;outline-offset:4px;animation:wrrapd-wheel-in 1.15s cubic-bezier(.2,.85,.15,1) forwards;opacity:0;}';
 	echo '.wrrapd-retailer-wheels__item:focus-visible{outline:2px solid #f5c518;}';
@@ -390,13 +1426,50 @@ function wrrapd_output_retailer_wheel_strip() {
 	echo '.wrrapd-retailer-wheels__badge img{display:block;width:100%;height:100%;object-fit:cover;}';
 	echo '.wrrapd-retailer-wheels__title{font-size:.68rem;line-height:1.15;text-align:center;font-weight:600;color:#334155;letter-spacing:.01em;}';
 	echo '@media(min-width:640px){.wrrapd-retailer-wheels__title{font-size:.74rem}}';
+	echo '.wrrapd-wrap-promo{flex:0 0 auto;display:flex;align-items:center;gap:.45rem;max-width:min(11.5rem,28vw);padding:.1rem 0;text-decoration:none!important;color:inherit;cursor:pointer;}';
+	echo '.wrrapd-wrap-promo--bestbuy{max-width:min(14.5rem,34vw);align-items:flex-start;padding-top:.12rem;}';
+	echo '.wrrapd-wrap-promo--ulta{margin-right:.15rem;}';
+	echo '.wrrapd-wrap-promo--bestbuy{margin-left:.15rem;}';
+	echo '.wrrapd-wrap-promo:hover .wrrapd-wrap-promo__line--blink,.wrrapd-wrap-promo:focus-visible .wrrapd-wrap-promo__line--blink{animation-play-state:paused;opacity:1!important;}';
+	echo '.wrrapd-wrap-promo__copy{display:flex;flex-direction:column;gap:.02rem;}';
+	echo '.wrrapd-wrap-promo__copy--right{text-align:right;align-items:flex-end;}';
+	echo '.wrrapd-wrap-promo__copy--left{text-align:left;align-items:flex-start;}';
+	echo '.wrrapd-wrap-promo__line{display:block;font-family:"Great Vibes",Pacifico,"Segoe Script","Brush Script MT",cursive;font-weight:400;font-size:clamp(1.05rem,2.6vw,1.55rem);line-height:1.05;letter-spacing:.01em;white-space:nowrap;}';
+	echo '.wrrapd-wrap-promo__line--premium{font-size:clamp(1.25rem,3.1vw,1.85rem);color:#b22234;}';
+	echo '.wrrapd-wrap-promo__line--mid{color:#162a52;font-size:clamp(1.15rem,2.85vw,1.65rem);}';
+	echo '.wrrapd-wrap-promo__line--for{color:#0a3161;font-size:clamp(1rem,2.45vw,1.35rem);}';
+	echo '.wrrapd-wrap-promo__copy--features{padding-top:.05rem;}';
+	echo '.wrrapd-wrap-promo__bullets{margin:0;padding:0;list-style:none;}';
+	echo '.wrrapd-wrap-promo__bullet{font-family:"Great Vibes",Pacifico,"Segoe Script","Brush Script MT",cursive!important;font-size:clamp(.92rem,2.2vw,1.12rem)!important;font-weight:700!important;line-height:1.18!important;color:#000!important;white-space:normal;margin:.06rem 0;letter-spacing:.015em;text-shadow:0 .5px 0 #000,0 1px 2px rgba(255,255,255,.92)!important;-webkit-font-smoothing:antialiased!important;}';
+	echo '.wrrapd-wrap-promo__bullet::before{content:"• ";color:#c9a227;font-weight:700;}';
+	echo '.wrrapd-wrap-promo--bestbuy .wrrapd-wrap-promo__bullet{animation:none!important;opacity:1!important;}';
+	echo '.wrrapd-wrap-promo__line--blink{animation:wrrapd-wrap-blink 1.85s ease-in-out infinite;}';
+	echo '.wrrapd-wrap-promo__arrow{flex:0 0 auto;width:1.55rem;height:1.55rem;position:relative;}';
+	echo '.wrrapd-wrap-promo__arrow--right::before,.wrrapd-wrap-promo__arrow--left::before{content:"";position:absolute;top:50%;left:50%;width:100%;height:2.5px;background:linear-gradient(90deg,#c9a227,#162a52);border-radius:2px;transform:translate(-50%,-50%);}';
+	echo '.wrrapd-wrap-promo__arrow--right::after{content:"";position:absolute;top:50%;right:0;width:.5rem;height:.5rem;border-top:2.5px solid #162a52;border-right:2.5px solid #162a52;transform:translateY(-50%) rotate(45deg);}';
+	echo '.wrrapd-wrap-promo__arrow--left::before{background:linear-gradient(90deg,#162a52,#c9a227);}';
+	echo '.wrrapd-wrap-promo__arrow--left::after{content:"";position:absolute;top:50%;left:0;width:.5rem;height:.5rem;border-bottom:2.5px solid #162a52;border-left:2.5px solid #162a52;transform:translateY(-50%) rotate(45deg);}';
+	echo '@media(max-width:960px),(hover:none) and (pointer:coarse){.wrrapd-wrap-promo-mobile,.wrrapd-wrap-promo-mobile--tagline,.wrrapd-wrap-promo-mobile__features--stack{display:none!important;}.wrrapd-wheel-mobile-stack{display:block;width:100%;}.wrrapd-wrap-promo{display:flex!important;}.wrrapd-wrap-promo--ulta{flex:0 0 auto;max-width:min(5.5rem,22vw)!important;margin:0!important;align-items:center!important;}.wrrapd-wrap-promo--bestbuy{flex:0 0 auto;max-width:min(6.25rem,26vw)!important;margin:0!important;align-items:flex-start!important;}.wrrapd-wrap-promo__line{font-size:clamp(.52rem,2.4vw,.68rem)!important;white-space:normal!important;line-height:1.05!important;}.wrrapd-wrap-promo__line--premium{font-size:clamp(.58rem,2.6vw,.74rem)!important;}.wrrapd-wrap-promo__line--mid,.wrrapd-wrap-promo__line--for{font-size:clamp(.5rem,2.2vw,.64rem)!important;}.wrrapd-wrap-promo__arrow{width:.85rem!important;height:.85rem!important;flex-shrink:0!important;}.wrrapd-wrap-promo__bullet{font-size:clamp(.44rem,2vw,.54rem)!important;line-height:1.12!important;margin:.04rem 0!important;}.wrrapd-wrap-promo__copy--right{text-align:right!important;}#wrrapd-retailer-wheels-row .wrrapd-retailer-wheels{display:flex!important;flex-wrap:nowrap!important;align-items:flex-start!important;justify-content:space-between!important;overflow-x:hidden!important;gap:clamp(.06rem,.6vw,.18rem)!important;padding:.28rem clamp(.2rem,1.5vw,.45rem)!important;}.wrrapd-retailer-wheels__item{flex:1 1 0!important;min-width:0!important;max-width:none!important;}.wrrapd-retailer-wheels__badge{width:clamp(1.35rem,7.5vw,1.85rem)!important;height:clamp(1.35rem,7.5vw,1.85rem)!important;}.wrrapd-retailer-wheels__title{display:none!important;}}';
+	echo '@media(prefers-reduced-motion:reduce){.wrrapd-wrap-promo__line--blink,.wrrapd-wrap-promo-mobile__blink{animation:none!important;opacity:1!important;}.wrrapd-retailer-wheels__item{animation:none;opacity:1;}}';
 	echo '</style>';
 	echo '<div id="wrrapd-retailer-wheels-row" class="wrrapd-retailer-wheels-row">';
+	echo '<div class="wrrapd-wheel-mobile-stack">';
+	echo '<a class="wrrapd-wrap-promo-mobile wrrapd-wrap-promo-mobile--tagline" href="' . $ext_url . '" target="_blank" rel="noopener noreferrer" aria-label="' . esc_attr__( 'Premium gift-wrapping — install the free Wrrapd Chrome extension', 'wrrapd' ) . '">';
+	echo '<span class="wrrapd-wrap-promo-mobile__inner">';
+	echo '<span class="wrrapd-wrap-promo-mobile__blink wrrapd-wrap-promo-mobile__premium">' . esc_html__( 'Premium', 'wrrapd' ) . '</span>';
+	echo '<span class="wrrapd-wrap-promo-mobile__blink wrrapd-wrap-promo-mobile__mid">' . esc_html__( 'gift-wrapping', 'wrrapd' ) . '</span>';
+	echo '<span class="wrrapd-wrap-promo-mobile__blink wrrapd-wrap-promo-mobile__at">' . esc_html__( 'now available for:', 'wrrapd' ) . '</span>';
+	echo '<span class="wrrapd-wrap-promo-mobile__arrow" aria-hidden="true">→</span>';
+	echo '</span></a>';
 	echo '<div id="wrrapd-retailer-wheels-strip" class="wrrapd-retailer-wheels" role="region" aria-label="' . esc_attr__( 'Shop at partner stores', 'wrrapd' ) . '">';
-	$idx = 0;
+	$idx   = 0;
+	$total = count( $brands );
 	foreach ( $brands as $b ) {
+		if ( $idx === 0 ) {
+			wrrapd_render_retailer_wheel_wrap_promo( 'ulta' );
+		}
 		$delay = 0.06 + ( $idx * 0.11 );
-		$go    = esc_url( home_url( '/go/' . rawurlencode( $b['slug'] ) . '/' ) );
+		$go    = esc_url( wrrapd_affiliate_go_url( $b['slug'] ) );
 		$src   = esc_url( wrrapd_mu_logo_url_for_slug( $b['slug'], $b['domain'] ) );
 		$fb    = 'https://www.google.com/s2/favicons?domain=' . rawurlencode( $b['domain'] ) . '&sz=128';
 		$label = $b['label'];
@@ -406,9 +1479,17 @@ function wrrapd_output_retailer_wheel_strip() {
 		echo '</span>';
 		echo '<span class="wrrapd-retailer-wheels__title">' . esc_html( $label ) . '</span>';
 		echo '</a>';
+		if ( $idx === $total - 1 ) {
+			wrrapd_render_retailer_wheel_wrap_promo( 'bestbuy' );
+		}
 		++$idx;
 	}
-	echo '</div></div>';
+	echo '</div>';
+	echo '<ul class="wrrapd-wrap-promo-mobile__features wrrapd-wrap-promo-mobile__features--stack" aria-label="' . esc_attr__( 'Wrrapd extension features', 'wrrapd' ) . '">';
+	foreach ( wrrapd_wrap_promo_feature_bullets() as $bullet ) {
+		echo '<li>' . esc_html( $bullet ) . '</li>';
+	}
+	echo '</ul></div></div>';
 	echo '<script>';
 	echo 'document.addEventListener("DOMContentLoaded",function(){var row=document.getElementById("wrrapd-retailer-wheels-row");if(!row||!row.parentNode)return;var h=document.querySelector("[data-elementor-type=\\"header\\"]")||document.querySelector("body>header")||document.getElementById("masthead")||document.querySelector("header.site-header")||document.querySelector("header");if(h&&h.parentNode){h.insertAdjacentElement("afterend",row);}});';
 	echo '</script>';
@@ -426,13 +1507,162 @@ function wrrapd_output_external_retailer_links_new_tab_script() {
 		return;
 	}
 	echo '<script id="wrrapd-ext-links-new-tab">';
-	echo '(function(){var sel=[".wrrapd-retailer-wheels__item",".wrrapd-gift-guides__cta",".wrrapd-gift-guides__card-logo",".wrrapd-gift-guides a.wrrapd-ext-cta",".wrrapd-top-gifts__card-cta","a[href*=\\"chromewebstore.google.com\\"]"];';
-	echo 'function wrrapdApplyExtNewTab(){sel.forEach(function(s){document.querySelectorAll(s).forEach(function(a){a.target="_blank";var r=(a.getAttribute("rel")||"").split(/\\s+/).filter(Boolean);["noopener","noreferrer"].forEach(function(x){if(r.indexOf(x)<0)r.push(x);});if((a.getAttribute("href")||"").indexOf("/go/")>=0&&r.indexOf("sponsored")<0)r.unshift("sponsored");a.rel=r.join(" ");});});}';
+	echo '(function(){var sel=[".wrrapd-retailer-wheels__item",".wrrapd-wrap-promo",".wrrapd-wrap-promo-mobile",".wrrapd-gift-guides__cta",".wrrapd-gift-guides__card-logo",".wrrapd-gift-guides a.wrrapd-ext-cta",".wrrapd-top-gifts__card-cta",".wrrapd-hot-gifts-rail__card","a[href*=\\"chromewebstore.google.com\\"]"];';
+	echo 'function wrrapdApplyExtNewTab(){var mobile=window.matchMedia("(max-width:720px),(pointer:coarse)").matches;sel.forEach(function(s){document.querySelectorAll(s).forEach(function(a){var href=a.getAttribute("href")||"";var isGo=href.indexOf("/go/")>=0;a.target=(isGo&&mobile)?"_self":"_blank";var r=(a.getAttribute("rel")||"").split(/\\s+/).filter(Boolean);["noopener","noreferrer"].forEach(function(x){if(r.indexOf(x)<0)r.push(x);});if(isGo&&r.indexOf("sponsored")<0)r.unshift("sponsored");a.rel=r.join(" ");});});}';
 	echo 'document.addEventListener("DOMContentLoaded",wrrapdApplyExtNewTab);window.addEventListener("load",wrrapdApplyExtNewTab);})();';
 	echo '</script>';
 }
 
 add_action( 'wp_footer', 'wrrapd_output_external_retailer_links_new_tab_script', 25 );
+
+/**
+ * Probe for installed Wrrapd Chrome extension (requires 2.0.16+ ping handler).
+ * When detected: hide install CTAs sitewide. No install modal — absence cannot be
+ * distinguished from an older extension, so we never prompt non-responders.
+ */
+function wrrapd_output_extension_detection_script() {
+	if ( is_admin() ) {
+		return;
+	}
+	$cws             = wrrapd_chrome_extension_install_url();
+	$latest_version  = '2.0.16';
+
+	echo '<style id="wrrapd-ext-detected-css">';
+	echo 'html.wrrapd-ext-installed .elementor-element-7f1bdc1,html.wrrapd-ext-installed .elementor-element-eb0b235{display:none!important;}';
+	echo 'html.wrrapd-ext-installed .wrrapd-wrap-promo,html.wrrapd-ext-installed .wrrapd-wrap-promo-mobile,html.wrrapd-ext-installed .wrrapd-ext-cta{display:none!important;}';
+	echo 'html.wrrapd-ext-outdated .wrrapd-ext-update-nudge{display:flex!important;}';
+	echo '.wrrapd-ext-update-nudge{display:none;position:fixed;bottom:1rem;right:1rem;z-index:100040;max-width:min(100%,22rem);padding:.85rem 1rem;border-radius:.75rem;background:#fff8ed;border:1px solid rgba(178,34,52,.25);box-shadow:0 12px 32px rgba(12,18,34,.14);font-family:system-ui,sans-serif;font-size:.88rem;line-height:1.35;color:#0c1222;align-items:flex-start;gap:.65rem;}';
+	echo '.wrrapd-ext-update-nudge a{color:#b22234;font-weight:700;}';
+	echo '.wrrapd-ext-update-nudge__dismiss{margin-left:auto;padding:0;border:0;background:transparent;color:#64748b;cursor:pointer;font-size:1.1rem;line-height:1;}';
+	echo '</style>';
+
+	echo '<div id="wrrapd-ext-update-nudge" class="wrrapd-ext-update-nudge" hidden role="status" aria-live="polite">';
+	echo esc_html__( 'A newer Wrrapd extension is available.', 'wrrapd' );
+	echo ' <a href="' . esc_url( $cws ) . '" target="_blank" rel="noopener noreferrer">' . esc_html__( 'Update', 'wrrapd' ) . '</a>';
+	echo '<button type="button" class="wrrapd-ext-update-nudge__dismiss" id="wrrapd-ext-update-dismiss" aria-label="' . esc_attr__( 'Dismiss', 'wrrapd' ) . '">&times;</button>';
+	echo '</div>';
+
+	echo '<script id="wrrapd-ext-detect-js">';
+	echo '(function(){';
+	echo 'var EXT_ID="gapdndgnpolhcknconognpnjecfppddb",LATEST=' . wp_json_encode( $latest_version ) . ',cws=' . wp_json_encode( $cws ) . ',MARKER="wrrapd_ext_detected",OUTDATED="wrrapd_ext_outdated_dismissed";';
+	echo 'var extInstalled=false,extVersion="";';
+	echo 'function parseVersion(v){return(v||"").split(".").map(function(n){return parseInt(n,10)||0;});}';
+	echo 'function versionLt(a,b){var x=parseVersion(a),y=parseVersion(b),i;for(i=0;i<Math.max(x.length,y.length);i++){var d=(x[i]||0)-(y[i]||0);if(d!==0)return d<0;}return false;}';
+	echo 'function markInstalled(ver){extInstalled=true;extVersion=ver||"";document.documentElement.classList.add("wrrapd-ext-installed");try{sessionStorage.setItem(MARKER,"1");if(ver)sessionStorage.setItem("wrrapd_ext_version",ver);}catch(e){}}';
+	echo 'function hasMarker(){try{if(sessionStorage.getItem(MARKER)==="1")return true;}catch(e){}return !!(window.WRRAPD_EXTENSION_INSTALLED||document.documentElement.hasAttribute("data-wrrapd-extension-installed"));}';
+	echo 'function hideInstallCopy(){var re=/add\\s+your\\s+free\\s+chrome\\s+extension\\s+today/i;document.querySelectorAll("a,button,.elementor-button,.elementor-heading-title").forEach(function(el){var t=(el.textContent||"").replace(/\\s+/g," ").trim();if(!re.test(t))return;var wrap=el.closest(".elementor-element,section,div")||el;wrap.style.display="none";});}';
+	echo 'function showUpdateNudge(){if(!extVersion||!versionLt(extVersion,LATEST))return;try{if(sessionStorage.getItem(OUTDATED)==="1")return;}catch(e){}var n=document.getElementById("wrrapd-ext-update-nudge");if(!n)return;n.hidden=false;document.documentElement.classList.add("wrrapd-ext-outdated");}';
+	echo 'function onDetected(resp){var ver=resp&&resp.version?String(resp.version):"";markInstalled(ver);hideInstallCopy();showUpdateNudge();}';
+	echo 'function probe(){if(hasMarker()){document.documentElement.classList.add("wrrapd-ext-installed");hideInstallCopy();try{var sv=sessionStorage.getItem("wrrapd_ext_version");if(sv){extVersion=sv;showUpdateNudge();}}catch(e){}return;}try{if(window.chrome&&chrome.runtime&&chrome.runtime.sendMessage){chrome.runtime.sendMessage(EXT_ID,{type:"WRRAPD_PING"},function(resp){if(resp&&(resp.ok||resp.wrrapd))onDetected(resp);});}}catch(e){}}';
+	echo 'var dismiss=document.getElementById("wrrapd-ext-update-dismiss");if(dismiss){dismiss.addEventListener("click",function(){var n=document.getElementById("wrrapd-ext-update-nudge");if(n)n.hidden=true;document.documentElement.classList.remove("wrrapd-ext-outdated");try{sessionStorage.setItem(OUTDATED,"1");}catch(e){}});}';
+	echo 'window.wrrapdExtIsInstalled=function(){return extInstalled||hasMarker();};';
+	echo 'probe();window.addEventListener("pageshow",probe);document.addEventListener("DOMContentLoaded",hideInstallCopy);';
+	echo '})();';
+	echo '</script>';
+}
+add_action( 'wp_footer', 'wrrapd_output_extension_detection_script', 20 );
+
+/**
+ * Upgrade bare retailer URLs to /go/{slug}/?to=… hops (affiliate cookie on wrrapd.com).
+ */
+function wrrapd_output_affiliate_link_upgrader_script() {
+	if ( is_admin() ) {
+		return;
+	}
+	$hop   = esc_url( home_url( '/go/' ) );
+	$rules = array();
+	foreach ( wrrapd_affiliate_domain_slug_rules() as $rule ) {
+		$rules[] = array(
+			'h' => (string) $rule['host'],
+			's' => (string) $rule['slug'],
+		);
+	}
+	echo '<script id="wrrapd-affiliate-link-upgrader">';
+	echo '(function(){var hop=' . wp_json_encode( $hop ) . ',rules=' . wp_json_encode( $rules ) . ',siteHost=' . wp_json_encode( wp_parse_url( home_url( '/' ), PHP_URL_HOST ) ) . ';';
+	echo 'function slugForHost(h){h=(h||"").toLowerCase().replace(/^www\\./,"");for(var i=0;i<rules.length;i++){var x=rules[i].h;if(h===x||h.slice(-(x.length+1))==="."+x)return rules[i].s;}return"";}';
+	echo 'function hopUrl(href,slug){return hop+slug+"/?to="+encodeURIComponent(href);}';
+	echo 'function markAffiliate(a){var href=a.getAttribute("href")||"";var mobile=window.matchMedia("(max-width:720px),(pointer:coarse)").matches;var isGo=href.indexOf("/go/")>=0;a.target=(isGo&&mobile)?"_self":"_blank";var r=(a.getAttribute("rel")||"").split(/\\s+/).filter(Boolean);["noopener","noreferrer"].forEach(function(x){if(r.indexOf(x)<0)r.push(x);});if(isGo&&r.indexOf("sponsored")<0)r.unshift("sponsored");a.rel=r.join(" ");}';
+	echo 'function upgradeHref(href){if(!href||href.indexOf("/go/")>=0)return href;var u;try{u=new URL(href,window.location.href);}catch(e){return href;}';
+	echo 'if(u.protocol!=="http:"&&u.protocol!=="https:")return href;var sh=(siteHost||"").toLowerCase().replace(/^www\\./,"");var uh=u.hostname.toLowerCase().replace(/^www\\./,"");if(sh&&uh===sh)return href;';
+	echo 'var slug=slugForHost(u.hostname);return slug?hopUrl(u.href,slug):href;}';
+	echo 'function up(a){if(!a||!a.href)return;var next=upgradeHref(a.href);if(next!==a.href){a.href=next;markAffiliate(a);}}';
+	echo 'function run(root){(root||document).querySelectorAll("a[href]").forEach(up);}';
+	echo 'document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(!a)return;up(a);},true);';
+	echo 'document.addEventListener("DOMContentLoaded",function(){run(document);if(window.MutationObserver){var mo=new MutationObserver(function(m){m.forEach(function(x){x.addedNodes&&x.addedNodes.forEach(function(n){if(n.nodeType===1)run(n);});});});mo.observe(document.body,{childList:true,subtree:true});}});';
+	echo 'window.addEventListener("load",function(){run(document);});})();';
+	echo '</script>';
+}
+
+add_action( 'wp_footer', 'wrrapd_output_affiliate_link_upgrader_script', 26 );
+
+/**
+ * Homepage: tighter spacing + gift-guides eyebrow copy (Elementor HTML may lag behind MU plugin).
+ */
+function wrrapd_output_home_section_tighten_css() {
+	if ( is_admin() || is_paged() || ( ! is_front_page() && ! is_home() ) ) {
+		return;
+	}
+	echo '<style id="wrrapd-home-section-tighten">';
+	echo '.wrrapd-gift-guides{padding-block:clamp(0.85rem,2.5vmin,1.35rem)!important;}';
+	echo '.wrrapd-gift-guides__intro{margin-bottom:clamp(0.65rem,1.8vmin,0.95rem)!important;}';
+	echo '.wrrapd-gift-guides__eyebrow{font-size:clamp(0.68rem,1.6vw,0.78rem)!important;letter-spacing:0.14em!important;margin-bottom:0.45rem!important;}';
+	echo '.wrrapd-top-gifts--teaser,.wrrapd-top-gifts{padding-block:clamp(0.85rem,2.5vmin,1.35rem)!important;}';
+	echo '.wrrapd-top-gifts__eyebrow{margin-bottom:0.35rem!important;}';
+	echo '.elementor-widget-html:has(.wrrapd-top-gifts){margin-top:0!important;padding-top:0!important;}';
+	echo '.elementor-widget-html:has(.wrrapd-gift-guides){margin-top:0!important;}';
+	echo '.wrrapd-hot-gifts-rail--below-ticker{margin-top:0;padding-top:0.15rem;}';
+	echo '</style>';
+}
+
+add_action( 'wp_head', 'wrrapd_output_home_section_tighten_css', 99 );
+
+/**
+ * Sitewide mobile / touch layout (rem-based). See wrrapd-mobile-responsive.css in mu-plugins/.
+ */
+function wrrapd_output_mobile_responsive_css() {
+	if ( is_admin() ) {
+		return;
+	}
+	$path = dirname( __FILE__ ) . '/wrrapd-mobile-responsive.css';
+	if ( ! is_readable( $path ) ) {
+		return;
+	}
+	$css = file_get_contents( $path );
+	if ( ! is_string( $css ) || $css === '' ) {
+		return;
+	}
+	echo '<style id="wrrapd-mobile-responsive-css">' . $css . '</style>';
+}
+
+add_action( 'wp_head', 'wrrapd_output_mobile_responsive_css', 100 );
+
+/**
+ * Force homepage hero image + copy side-by-side on phones (Elementor column stack override).
+ */
+function wrrapd_output_hero_mobile_layout_script() {
+	if ( is_admin() || ( ! is_front_page() && ! is_home() ) ) {
+		return;
+	}
+	echo '<script id="wrrapd-hero-mobile-layout">';
+	echo '(function(){function run(){if(!window.matchMedia("(max-width:960px)").matches)return;var sec=document.querySelector(".elementor-element-df1501e");if(sec){var cont=sec.querySelector(".elementor-container");if(cont){cont.classList.add("wrrapd-hero-row-mobile");var imgCol=sec.querySelector(".elementor-element-efd024d");var copyCol=sec.querySelector(".elementor-element-2d48b08");if(imgCol)imgCol.classList.add("wrrapd-hero-photo-col");if(copyCol)copyCol.classList.add("wrrapd-hero-copy-col");return;}}var row=document.querySelector(".elementor-element-f68c5e7");if(!row)return;var imgCol=null,copyCol=null;row.querySelectorAll(":scope > .e-con").forEach(function(c){if(c.querySelector(".elementor-widget-image"))imgCol=c;if(c.querySelector(".elementor-element-6466f5b"))copyCol=c;});if(!imgCol||!copyCol)return;row.classList.add("wrrapd-hero-row-mobile");imgCol.classList.add("wrrapd-hero-photo-col");copyCol.classList.add("wrrapd-hero-copy-col");}document.addEventListener("DOMContentLoaded",run);window.addEventListener("load",function(){run();setTimeout(run,500);setTimeout(run,1500);});})();';
+	echo '</script>';
+}
+
+add_action( 'wp_footer', 'wrrapd_output_hero_mobile_layout_script', 24 );
+
+/**
+ * Tidio chat — smaller icon-only bubble on phones (plugin: tidio.co).
+ */
+function wrrapd_output_tidio_mobile_compact_script() {
+	if ( is_admin() ) {
+		return;
+	}
+	echo '<script id="wrrapd-tidio-mobile-compact">';
+	echo '(function(){function hideLabel(){var root=document.getElementById("tidio-chat");if(!root||!root.shadowRoot)return false;if(!root.shadowRoot.getElementById("wrrapd-tidio-mobile-shadow")){var st=document.createElement("style");st.id="wrrapd-tidio-mobile-shadow";st.textContent="button.widgetLabel{display:none !important;visibility:hidden !important;} #new-message{display:none !important;}";root.shadowRoot.appendChild(st);}return true;}function compact(){if(!window.matchMedia("(max-width:960px)").matches)return;var root=document.getElementById("tidio-chat");if(root){root.style.transform="scale(0.48)";root.style.transformOrigin="bottom right";}hideLabel();if(window.tidioChatApi&&typeof window.tidioChatApi.setButtonSize==="function"){try{window.tidioChatApi.setButtonSize("small");}catch(e){}}}function onReady(){compact();if(window.tidioChatApi){window.tidioChatApi.on("close",compact);}}document.addEventListener("tidioChat-ready",onReady);if(window.tidioChatApi)onReady();else{var n=0;var t=setInterval(function(){compact();if((window.tidioChatApi&&document.getElementById("tidio-chat"))||++n>60){clearInterval(t);onReady();}},500);}})();';
+	echo '</script>';
+}
+
+add_action( 'wp_footer', 'wrrapd_output_tidio_mobile_compact_script', 26 );
 
 /**
  * Home page: move Elementor gift-guides HTML widget below the hero (after Jacksonville + red divider).
@@ -481,8 +1711,9 @@ function wrrapd_output_home_gift_guides_reposition_script() {
 	echo 'if(!anchor||!anchor.el)return true;';
 	echo 'if(anchor.mode==="before")return move.nextElementSibling===anchor.el;';
 	echo 'return move.previousElementSibling===anchor.el;}';
+	echo 'function wrrapdPatchGiftGuidesEyebrow(){var el=document.querySelector(".wrrapd-gift-guides__eyebrow");if(el)el.textContent="SEAMLESS GIFT-WRAPPING & DELIVERY OPTIONS FOR:";}';
 	echo 'function wrrapdRepositionGiftGuides(){';
-	echo 'wrrapdRemoveDupGiftGuideLogos();';
+	echo 'wrrapdRemoveDupGiftGuideLogos();wrrapdPatchGiftGuidesEyebrow();';
 	echo 'var guides=document.querySelector(".wrrapd-gift-guides");';
 	echo 'if(!guides)return;';
 	echo 'var widget=guides.closest(".elementor-element");';
