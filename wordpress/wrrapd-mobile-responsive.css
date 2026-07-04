@@ -1,7 +1,7 @@
 /**
  * Wrrapd sitewide mobile / touch layout (rem-based).
  * Loaded by wrrapd-orders-bridge.php — upload with MU plugins.
- * Build: 2026-07-04-mobile-v6
+ * Build: 2026-07-04-mobile-v7
  */
 
 @media (max-width: 960px) {
@@ -530,6 +530,14 @@ html {
 	#tidio-chat {
 		transform-origin: bottom right !important;
 		z-index: 999990 !important;
+		width: auto !important;
+		height: auto !important;
+		inset: auto 0 0 auto !important;
+		pointer-events: none !important;
+	}
+
+	#tidio-chat #button {
+		pointer-events: auto !important;
 	}
 
 	.crisp-client .cc-1no03,
@@ -610,7 +618,9 @@ body.page-id-4857 #wrrapd-retailer-wheels-row {
 }
 
 /* =============================================================================
-   HOW IT WORKS — image left, copy right on phones (not stacked narrow column)
+   HOW IT WORKS — equal 50/50 columns + alternating flip (match Samsung/desktop)
+   Samsung uses ~980px layout viewport → desktop 1fr/1fr grid. iPhone at 393px
+   must get the SAME proportions, not a crushed 34/66 split.
    ============================================================================= */
 @media (max-width: 960px) {
 	.wrrapd-howto-flow {
@@ -622,13 +632,14 @@ body.page-id-4857 #wrrapd-retailer-wheels-row {
 	.wrrapd-howto-row,
 	.wrrapd-howto-row.is-flip {
 		display: grid !important;
-		grid-template-columns: minmax(0, 34%) minmax(0, 1fr) !important;
-		gap: 0.4rem !important;
-		padding: 0.4rem !important;
-		margin-bottom: 0.45rem !important;
+		grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+		gap: 0.65rem !important;
+		padding: 0.65rem !important;
+		margin-bottom: 0.65rem !important;
 		width: 100% !important;
 		max-width: 100% !important;
 		box-sizing: border-box !important;
+		align-items: center !important;
 	}
 
 	.wrrapd-howto-row.is-flip .wrrapd-howto-shot {
@@ -647,7 +658,11 @@ body.page-id-4857 #wrrapd-retailer-wheels-row {
 	}
 
 	.wrrapd-howto-shot img {
-		max-height: 4.25rem !important;
+		display: block !important;
+		width: 100% !important;
+		height: auto !important;
+		max-height: none !important;
+		min-height: 4.5rem !important;
 		object-fit: cover !important;
 	}
 
@@ -657,19 +672,19 @@ body.page-id-4857 #wrrapd-retailer-wheels-row {
 	}
 
 	.wrrapd-howto-kicker {
-		font-size: 0.48rem !important;
-		padding: 0.18rem 0.35rem !important;
-		margin-bottom: 0.25rem !important;
+		font-size: 0.55rem !important;
+		padding: 0.22rem 0.4rem !important;
+		margin-bottom: 0.3rem !important;
 	}
 
 	.wrrapd-howto-stepheading {
-		font-size: 0.68rem !important;
+		font-size: 0.72rem !important;
 		line-height: 1.15 !important;
-		margin-bottom: 0.25rem !important;
+		margin-bottom: 0.3rem !important;
 	}
 
 	.wrrapd-howto-copy p {
-		font-size: 0.58rem !important;
+		font-size: 0.62rem !important;
 		line-height: 1.32 !important;
 	}
 }
@@ -729,63 +744,42 @@ body.page-id-4857 #wrrapd-retailer-wheels-row {
 }
 
 /* =============================================================================
-   FOOTER — lives in the footer template (elementor-location-footer, post 6447),
-   NOT on page 4857. Compact: logo+address row, then 2-column links.
+   FOOTER — 4-column row like Samsung (Elementor flex at ~980px layout viewport).
+   Do NOT collapse to 2-col grid; replicate desktop flex with rem-scaled type.
    ============================================================================= */
 @media (max-width: 960px) {
 	.elementor-location-footer .elementor-element-7aa7d62 {
-		display: grid !important;
-		grid-template-columns: 1fr 1fr !important;
-		gap: 0.2rem 0.45rem !important;
-		padding: 0.5rem 0.55rem 0.6rem !important;
+		display: flex !important;
+		flex-direction: row !important;
+		flex-wrap: nowrap !important;
+		align-items: flex-start !important;
+		justify-content: space-between !important;
+		gap: 0.35rem !important;
+		padding: 0.5rem 0.45rem 0.55rem !important;
 		width: 100% !important;
 		max-width: 100% !important;
+		box-sizing: border-box !important;
 	}
 
-	.elementor-location-footer .elementor-element-9545954 {
-		grid-column: 1 / -1 !important;
+	.elementor-location-footer .elementor-element-9545954,
+	.elementor-location-footer .elementor-element-c9b773b,
+	.elementor-location-footer .elementor-element-18367d9,
+	.elementor-location-footer .elementor-element-321261a {
+		flex: 1 1 0 !important;
+		min-width: 0 !important;
+		max-width: none !important;
+		width: auto !important;
 		padding: 0 !important;
 	}
 
 	.elementor-location-footer .elementor-element-9545954 > .e-con-inner {
 		display: flex !important;
-		flex-direction: row !important;
+		flex-direction: column !important;
 		flex-wrap: nowrap !important;
-		align-items: center !important;
-		justify-content: center !important;
-		gap: 0.45rem !important;
+		align-items: flex-start !important;
+		justify-content: flex-start !important;
+		gap: 0.2rem !important;
 		padding: 0 !important;
-	}
-
-	.elementor-location-footer .elementor-element-1101871 {
-		width: auto !important;
-	}
-
-	.elementor-location-footer .elementor-element-1101871 img {
-		max-height: 2rem !important;
-		width: auto !important;
-		height: auto !important;
-	}
-
-	.elementor-location-footer .elementor-element-a75f890 pre,
-	.elementor-location-footer .elementor-element-a75f890 code {
-		font-family: "Source Sans 3", system-ui, sans-serif !important;
-		font-size: 0.55rem !important;
-		line-height: 1.25 !important;
-		white-space: normal !important;
-		margin: 0 !important;
-		padding: 0 !important;
-		background: transparent !important;
-		color: #fff300 !important;
-	}
-
-	.elementor-location-footer .elementor-element-c9b773b,
-	.elementor-location-footer .elementor-element-18367d9,
-	.elementor-location-footer .elementor-element-321261a {
-		width: 100% !important;
-		max-width: 100% !important;
-		padding: 0 !important;
-		min-height: 0 !important;
 	}
 
 	.elementor-location-footer .elementor-element-c9b773b > .e-con-inner,
@@ -794,27 +788,42 @@ body.page-id-4857 #wrrapd-retailer-wheels-row {
 		padding: 0 !important;
 	}
 
+	.elementor-location-footer .elementor-element-1101871 img {
+		max-height: 1.65rem !important;
+		width: auto !important;
+		height: auto !important;
+	}
+
+	.elementor-location-footer .elementor-element-a75f890 pre,
+	.elementor-location-footer .elementor-element-a75f890 code {
+		font-family: "Source Sans 3", system-ui, sans-serif !important;
+		font-size: 0.48rem !important;
+		line-height: 1.25 !important;
+		white-space: normal !important;
+		margin: 0 !important;
+		padding: 0 !important;
+		background: transparent !important;
+		color: #fff300 !important;
+	}
+
 	.elementor-location-footer .elementor-element-dd5e6ef .elementor-heading-title,
 	.elementor-location-footer .elementor-element-5a6824b .elementor-heading-title,
 	.elementor-location-footer .elementor-element-9e3340e .elementor-heading-title {
-		font-size: 0.72rem !important;
-		margin: 0 0 0.15rem !important;
+		font-size: 0.58rem !important;
+		margin: 0 0 0.12rem !important;
+		color: #fff300 !important;
 	}
 
 	.elementor-location-footer .elementor-element-90bbf99 p,
 	.elementor-location-footer .elementor-element-5d74f43 p,
 	.elementor-location-footer .elementor-element-fa0f949 {
-		font-size: 0.62rem !important;
-		line-height: 1.3 !important;
-		margin: 0 0 0.1rem !important;
-	}
-
-	.elementor-location-footer .elementor-element-321261a {
-		grid-column: 1 / -1 !important;
+		font-size: 0.52rem !important;
+		line-height: 1.28 !important;
+		margin: 0 0 0.08rem !important;
 	}
 
 	.elementor-location-footer .elementor-element-2ff401c .elementor-icon {
-		font-size: 0.85rem !important;
+		font-size: 0.75rem !important;
 	}
 
 	.elementor-location-footer .elementor-element-90bbf99,
