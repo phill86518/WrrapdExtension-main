@@ -236,9 +236,12 @@ a.wrrapd-ext-cta:focus-visible {
 		padding: 0.4rem;
 	}
 
-	.wrrapd-howto-row.is-flip .wrrapd-howto-shot,
+	.wrrapd-howto-row.is-flip .wrrapd-howto-shot {
+		order: 2;
+	}
+
 	.wrrapd-howto-row.is-flip .wrrapd-howto-copy {
-		order: unset;
+		order: 1;
 	}
 
 	.wrrapd-howto-shot img {
