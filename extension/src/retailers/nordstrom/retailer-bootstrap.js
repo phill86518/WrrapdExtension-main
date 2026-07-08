@@ -5,6 +5,7 @@ import {
 } from "../../content/retailer-common.js";
 import { initRetailerCartGiftOptIn } from "../../shared/cart-gift-optin.js";
 import { initWrrapdConflictGuard } from "../../shared/wrrapd-conflict-guard.js";
+import { detectItemFulfillment } from "../../shared/cart-fulfillment.js";
 import {
   NORDSTROM_CART_OPTIN_DATA_ATTR,
   NORDSTROM_CART_URL_HINTS,
@@ -62,7 +63,7 @@ export function extractNordstromCartSnapshot(root = document) {
     const key = itemId || title;
     if (seen.has(key)) continue;
     seen.add(key);
-    items.push({ title, itemId });
+    items.push({ title, itemId, fulfillment: detectItemFulfillment(li) });
   }
 
   return { itemCount: items.length, items };

@@ -1,5 +1,5 @@
 import { initRetailerCheckoutPayFlow } from "../../shared/retailer-checkout-pay-flow.js";
-import { WRRAPD_HUB_ADDRESS } from "../../shared/wrrapd-hub.js";
+import { WRRAPD_HUB_ADDRESS, lockHubShippingFields } from "../../shared/wrrapd-hub.js";
 import {
   SEPHORA_BASKET_URL_HINTS,
   SEPHORA_CHECKOUT_URL_HINTS,
@@ -96,11 +96,12 @@ function fillSephoraHubShippingFields() {
   const street = document.querySelector('[data-at="street_address_input"], #avs_input');
   const zip = document.querySelector('[data-at="zip_postal_code_input"], #postalCode');
 
-  if (first && !first.value.trim()) setNativeInputValue(first, h.recipientFirstName);
-  if (last && !last.value.trim()) setNativeInputValue(last, h.recipientLastName);
-  if (phone && !phone.value.trim()) setNativeInputValue(phone, HUB_PHONE);
-  if (street && !street.value.trim()) setNativeInputValue(street, h.addressLine1);
-  if (zip && !zip.value.trim()) setNativeInputValue(zip, zip5);
+  if (first) setNativeInputValue(first, h.recipientFirstName);
+  if (last) setNativeInputValue(last, h.recipientLastName);
+  if (phone) setNativeInputValue(phone, HUB_PHONE);
+  if (street) setNativeInputValue(street, h.addressLine1);
+  if (zip) setNativeInputValue(zip, zip5);
+  lockHubShippingFields();
 }
 
 export function initSephoraCheckoutPayFlow() {

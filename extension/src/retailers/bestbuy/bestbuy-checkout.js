@@ -1,5 +1,5 @@
 import { initRetailerCheckoutPayFlow } from "../../shared/retailer-checkout-pay-flow.js";
-import { fillHubShippingFieldsByAutocomplete } from "../../shared/wrrapd-hub.js";
+import { fillAndLockHubShippingFields } from "../../shared/wrrapd-hub.js";
 import {
   BESTBUY_CHECKOUT_URL_HINTS,
   BESTBUY_SESSION_PREFIX,
@@ -69,7 +69,7 @@ export function initBestbuyCheckoutPayFlow() {
     findGatedCheckoutButtons: findBestbuyCheckoutButtons,
     findSummaryMountAnchor: findBestbuySummaryMountAnchor,
     getCartSnapshot: () => getBestbuyCartSnapshotSafe(document),
-    fillHubShippingFields: fillHubShippingFieldsByAutocomplete,
+    fillHubShippingFields: fillAndLockHubShippingFields,
     paymentPendingHint: "Please complete payment to Wrrapd before proceeding to checkout.",
   });
 }

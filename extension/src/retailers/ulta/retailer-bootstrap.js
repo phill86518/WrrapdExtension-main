@@ -5,6 +5,7 @@ import {
 } from "../../content/retailer-common.js";
 import { initRetailerCartGiftOptIn } from "../../shared/cart-gift-optin.js";
 import { initWrrapdConflictGuard } from "../../shared/wrrapd-conflict-guard.js";
+import { detectItemFulfillment } from "../../shared/cart-fulfillment.js";
 import {
   ULTA_CART_OPTIN_DATA_ATTR,
   ULTA_CART_URL_HINTS,
@@ -64,7 +65,7 @@ export function extractUltaCartSnapshot(root = document) {
     const title = name || brand;
     if (!title || seen.has(title)) continue;
     seen.add(title);
-    items.push({ title, brand, itemId });
+    items.push({ title, brand, itemId, fulfillment: detectItemFulfillment(card) });
   }
 
   return { itemCount: items.length, items, isEmpty: items.length === 0 };

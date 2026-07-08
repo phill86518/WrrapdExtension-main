@@ -1,5 +1,5 @@
 import { initRetailerCheckoutPayFlow } from "../../shared/retailer-checkout-pay-flow.js";
-import { fillHubShippingFieldsByAutocomplete } from "../../shared/wrrapd-hub.js";
+import { fillAndLockHubShippingFields } from "../../shared/wrrapd-hub.js";
 import { ETSY_CHECKOUT_URL_HINTS, ETSY_SESSION_PREFIX } from "./constants.js";
 import { extractEtsyCartSnapshot } from "./retailer-bootstrap.js";
 
@@ -45,7 +45,7 @@ function findEtsyCheckoutButton() {
  * Etsy-specific selectors once we have the checkout shipping DOM.
  */
 function fillEtsyHubShippingFields() {
-  fillHubShippingFieldsByAutocomplete();
+  fillAndLockHubShippingFields({ overwrite: true });
 }
 
 export function initEtsyCheckoutPayFlow() {

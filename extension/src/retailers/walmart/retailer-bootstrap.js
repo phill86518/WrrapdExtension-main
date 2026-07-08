@@ -6,6 +6,7 @@ import {
 import { initRetailerCartGiftOptIn } from "../../shared/cart-gift-optin.js";
 import { initWrrapdConflictGuard } from "../../shared/wrrapd-conflict-guard.js";
 import { isExcludedScrapeRegion } from "../../shared/cart-scrape-region.js";
+import { detectItemFulfillment } from "../../shared/cart-fulfillment.js";
 import {
   WALMART_CART_OPTIN_DATA_ATTR,
   WALMART_CART_URL_HINTS,
@@ -52,7 +53,7 @@ export function extractWalmartCartSnapshot(root = document) {
     const key = itemId || title;
     if (seen.has(key)) continue;
     seen.add(key);
-    items.push({ title, itemId });
+    items.push({ title, itemId, fulfillment: detectItemFulfillment(scope) });
   }
 
   return { itemCount: items.length, items };

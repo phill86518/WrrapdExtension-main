@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Wrrapd",
-  "version": "2.0.15",
+  "version": "2.0.16",
   "description": "Gift wrapping, handwritten notes, and flowers for online orders — beautifully wrapped and shipped to your recipient.",
   "homepage_url": "https://www.wrrapd.com",
   "permissions": [

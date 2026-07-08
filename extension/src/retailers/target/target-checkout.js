@@ -1,5 +1,5 @@
 import { initRetailerCheckoutPayFlow } from "../../shared/retailer-checkout-pay-flow.js";
-import { fillHubShippingFieldsByAutocomplete } from "../../shared/wrrapd-hub.js";
+import { fillAndLockHubShippingFields } from "../../shared/wrrapd-hub.js";
 import {
   TARGET_CHECKOUT_URL_HINTS,
   TARGET_SESSION_PREFIX,
@@ -64,7 +64,7 @@ export function initTargetCheckoutPayFlow() {
     findGatedCheckoutButtons: findTargetCheckoutButtons,
     findSummaryMountAnchor: findTargetSummaryMountAnchor,
     getCartSnapshot: () => extractTargetCartSnapshot(document),
-    fillHubShippingFields: fillHubShippingFieldsByAutocomplete,
+    fillHubShippingFields: fillAndLockHubShippingFields,
     paymentPendingHint: "Please complete payment to Wrrapd before proceeding to checkout.",
   });
 }

@@ -30,6 +30,10 @@ import {
   writePaymentSuccess,
   WRRAPD_GIFT_RADIO_CHANGE_EVENT,
 } from "./cart-gift-session.js";
+import {
+  fillAndLockHubShippingFields,
+  unlockHubShippingFields,
+} from "./wrrapd-hub.js";
 
 const MODAL_ATTR = "data-wrrapd-conflict-modal";
 const PICKUP_LOCK_ATTR = "data-wrrapd-pickup-locked";
@@ -42,9 +46,15 @@ const DEFAULT_PICKUP_PATTERNS = [
   /\bin[-\s]?store\s*pickup\b/i,
   /\bpick\s*up\s*(in[-\s]?store|at\s*store|in\s*store|today|here)\b/i,
   /\bpick\s*up\s*at\b/i,
+  /\bpickup only\b/i,
+  /\bpick\s*up only\b/i,
+  /\bonly available for (store )?pick\s*up\b/i,
+  /\bonly available for pickup\b/i,
+  /\bin[-\s]?store only\b/i,
   /\bdrive\s*up\b/i,
   /\bcurbside\b/i,
   /\bship\s*to\s*store\b/i,
+  /\bget it today\b.*\bpick\s*up\b/i,
 ];
 
 const DEFAULT_ADDRESS_PATTERNS = [
@@ -213,6 +223,7 @@ function switchToNoThanks(config) {
   clearGiftServiceFlags(prefix);
   writePaymentSuccess(prefix, false);
   notifyGiftRadioChange(prefix);
+  unlockHubShippingFields();
 
   try {
     const yes = document.querySelector(`input[name="${prefix}-gift"][value="yes"]`);
@@ -234,10 +245,15 @@ function lockPickupControl(el) {
   if (!el || el.hasAttribute(PICKUP_LOCK_ATTR)) return;
   el.setAttribute(PICKUP_LOCK_ATTR, "1");
   el.dataset.wrrapdPrevCss = el.style.cssText || "";
+  el.dataset.wrrapdPrevHidden = el.hidden ? "1" : "0";
+  el.dataset.wrrapdPrevDisplay = el.style.display || "";
+  el.style.display = "none";
+  el.hidden = true;
   el.style.opacity = "0.45";
   el.style.pointerEvents = "none";
   el.style.cursor = "not-allowed";
   el.setAttribute("aria-disabled", "true");
+  el.setAttribute("aria-hidden", "true");
   el.title = "Unavailable while Wrrapd gift-wrapping is selected — items ship to the Wrrapd studio first.";
 
   try {
@@ -257,10 +273,31 @@ function unlockPickupControl(el) {
   if (!el) return;
   el.removeAttribute(PICKUP_LOCK_ATTR);
   el.style.cssText = el.dataset.wrrapdPrevCss || "";
+  el.style.display = el.dataset.wrrapdPrevDisplay || "";
+  el.hidden = el.dataset.wrrapdPrevHidden === "1";
   delete el.dataset.wrrapdPrevCss;
+  delete el.dataset.wrrapdPrevDisplay;
+  delete el.dataset.wrrapdPrevHidden;
   el.removeAttribute("aria-disabled");
+  el.removeAttribute("aria-hidden");
   el.removeAttribute("title");
   el.querySelectorAll?.(`[${PICKUP_BADGE_ATTR}]`).forEach((b) => b.remove());
+}
+
+function looksLikeCheckoutPage(config) {
+  if (typeof config.isCheckoutPage === "function") return config.isCheckoutPage();
+  const path = location.pathname.toLowerCase();
+  return /checkout|\/bag\/|\/basket\/|order-review|\/shipping/.test(path);
+}
+
+function applyShippingAddressLock(config) {
+  const selected = wrrapdSelected(config.sessionPrefix);
+  if (!selected) {
+    unlockHubShippingFields();
+    return;
+  }
+  if (!looksLikeCheckoutPage(config)) return;
+  fillAndLockHubShippingFields({ overwrite: true });
 }
 
 /** Find the outermost selectable pickup controls on the page. */
@@ -288,9 +325,11 @@ function applyPickupLock(config, pickupPatterns) {
   const selected = wrrapdSelected(config.sessionPrefix);
   if (!selected) {
     document.querySelectorAll(`[${PICKUP_LOCK_ATTR}]`).forEach(unlockPickupControl);
+    applyShippingAddressLock(config);
     return;
   }
   for (const el of findPickupControls(pickupPatterns)) lockPickupControl(el);
+  applyShippingAddressLock(config);
 }
 
 /**

@@ -6,6 +6,7 @@ import {
 import { initRetailerCartGiftOptIn } from "../../shared/cart-gift-optin.js";
 import { initWrrapdConflictGuard } from "../../shared/wrrapd-conflict-guard.js";
 import { isExcludedScrapeRegion } from "../../shared/cart-scrape-region.js";
+import { detectItemFulfillment } from "../../shared/cart-fulfillment.js";
 import {
   TARGET_CART_OPTIN_DATA_ATTR,
   TARGET_CART_URL_HINTS,
@@ -76,6 +77,7 @@ function extractTargetItems(root = document) {
         priceText,
         unitPrice: parseMoney(priceText),
         quantity: 1,
+        fulfillment: detectItemFulfillment(node),
       };
     })
     .filter(Boolean);

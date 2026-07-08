@@ -1,5 +1,5 @@
 import { initRetailerCheckoutPayFlow } from "../../shared/retailer-checkout-pay-flow.js";
-import { fillHubShippingFieldsByAutocomplete } from "../../shared/wrrapd-hub.js";
+import { fillAndLockHubShippingFields } from "../../shared/wrrapd-hub.js";
 import { KOHLS_CHECKOUT_URL_HINTS, KOHLS_SESSION_PREFIX } from "./constants.js";
 import { extractKohlsCartSnapshot } from "./retailer-bootstrap.js";
 
@@ -111,7 +111,7 @@ export function initKohlsCheckoutPayFlow() {
     // unreliable. Skip capture → confirmation email uses "Kohl's delivery date + 1 day" wording.
     captureDeliveryDate: false,
     getCartSnapshot: () => extractKohlsCartSnapshot(document),
-    fillHubShippingFields: fillHubShippingFieldsByAutocomplete,
+    fillHubShippingFields: fillAndLockHubShippingFields,
     paymentPendingHint: "Please complete payment to Wrrapd before proceeding to checkout.",
   });
 }

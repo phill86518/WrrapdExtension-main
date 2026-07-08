@@ -37,6 +37,12 @@ import {
 } from "./lego-session-state.js";
 import { loadAllowedZipCodes } from "../../content/lib/zip-codes.js";
 import { buildOccasionSelect, isValidOccasion } from "../../shared/occasions.js";
+import {
+  createUnitPricingState,
+  ensureUnitPrices,
+  formatUsd,
+  getActiveUnitPrices,
+} from "../../shared/wrrapd-unit-pricing.js";
 
 const FLOW_MODAL_ID = "wrrapd-lego-gift-service-modal";
 const LEGO_BAG_PAY_HINT_ATTR = "data-wrrapd-lego-bag-pay-hint";
@@ -614,6 +620,19 @@ export function openLegoGiftServiceModal() {
   btnRow.append(cancelBtn, backBtn, nextBtn);
   renderItem(0);
   document.body.appendChild(overlay);
+
+  const pricingState = createUnitPricingState();
+  const applyModalPrices = () => {
+    const prices = getActiveUnitPrices(pricingState);
+    flowersText.textContent = `Add Flowers – choose from below (15–20 stem bouquets) – ${formatUsd(prices.flowers)}`;
+  };
+  applyModalPrices();
+  void ensureUnitPrices(
+    pricingState,
+    gifteeZip5() ? { postalCode: gifteeZip5(), country: "US" } : { country: "US" },
+    "LEGO",
+  ).then(applyModalPrices);
+
   nextBtn.focus();
 }
 

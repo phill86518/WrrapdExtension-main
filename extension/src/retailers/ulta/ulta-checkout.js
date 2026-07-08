@@ -1,5 +1,5 @@
 import { initRetailerCheckoutPayFlow } from "../../shared/retailer-checkout-pay-flow.js";
-import { fillHubShippingFieldsByAutocomplete } from "../../shared/wrrapd-hub.js";
+import { fillAndLockHubShippingFields } from "../../shared/wrrapd-hub.js";
 import { ULTA_CHECKOUT_URL_HINTS, ULTA_SESSION_PREFIX } from "./constants.js";
 import { extractUltaCartSnapshot } from "./retailer-bootstrap.js";
 
@@ -68,7 +68,7 @@ export function initUltaCheckoutPayFlow() {
     findGatedCheckoutButtons: findUltaCheckoutButtons,
     findSummaryMountAnchor: findUltaSummaryMountAnchor,
     getCartSnapshot: () => extractUltaCartSnapshot(document),
-    fillHubShippingFields: fillHubShippingFieldsByAutocomplete,
+    fillHubShippingFields: fillAndLockHubShippingFields,
     paymentPendingHint: "Please complete payment to Wrrapd before proceeding to checkout.",
   });
 }

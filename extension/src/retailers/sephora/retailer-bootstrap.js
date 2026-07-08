@@ -6,6 +6,7 @@ import {
 import { initRetailerCartGiftOptIn } from "../../shared/cart-gift-optin.js";
 import { initWrrapdConflictGuard } from "../../shared/wrrapd-conflict-guard.js";
 import { isExcludedScrapeRegion } from "../../shared/cart-scrape-region.js";
+import { detectItemFulfillment } from "../../shared/cart-fulfillment.js";
 import {
   SEPHORA_BASKET_URL_HINTS,
   SEPHORA_CART_OPTIN_DATA_ATTR,
@@ -38,7 +39,12 @@ export function extractSephoraCartSnapshot(root = document) {
     const title = [brand, name].filter(Boolean).join(" ").trim() || name || brand;
     if (!title || seen.has(title)) continue;
     seen.add(title);
-    items.push({ title, brand, itemId: itemMatch ? itemMatch[1] : "" });
+    items.push({
+      title,
+      brand,
+      itemId: itemMatch ? itemMatch[1] : "",
+      fulfillment: detectItemFulfillment(node),
+    });
   }
 
   if (items.length > 0) return { itemCount: items.length, items };
@@ -49,7 +55,8 @@ export function extractSephoraCartSnapshot(root = document) {
     const title = normalizeWhitespace(img.getAttribute("alt") || "");
     if (!title || title.length < 3 || seen.has(title)) continue;
     seen.add(title);
-    items.push({ title });
+    const row = img.closest('[data-comp*="BasicSkuItem"], [data-at="product_refinement"]') || img.parentElement;
+    items.push({ title, fulfillment: detectItemFulfillment(row) });
   }
 
   return { itemCount: items.length, items };

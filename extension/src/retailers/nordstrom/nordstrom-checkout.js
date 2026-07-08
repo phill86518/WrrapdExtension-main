@@ -1,5 +1,5 @@
 import { initRetailerCheckoutPayFlow } from "../../shared/retailer-checkout-pay-flow.js";
-import { fillHubShippingFieldsByAutocomplete } from "../../shared/wrrapd-hub.js";
+import { fillAndLockHubShippingFields } from "../../shared/wrrapd-hub.js";
 import {
   NORDSTROM_CART_URL_HINTS,
   NORDSTROM_CHECKOUT_URL_HINTS,
@@ -99,7 +99,7 @@ export function initNordstromCheckoutPayFlow() {
     findGatedCheckoutButtons: findNordstromCheckoutButtons,
     findSummaryMountAnchor: findNordstromSummaryMountAnchor,
     getCartSnapshot: () => extractNordstromCartSnapshot(document),
-    fillHubShippingFields: fillHubShippingFieldsByAutocomplete,
+    fillHubShippingFields: fillAndLockHubShippingFields,
     paymentPendingHint: "Please complete payment to Wrrapd before proceeding to checkout.",
   });
 }

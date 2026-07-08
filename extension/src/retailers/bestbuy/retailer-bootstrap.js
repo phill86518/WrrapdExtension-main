@@ -7,6 +7,7 @@ import { readItemChoices } from "../../shared/cart-gift-session.js";
 import { initRetailerCartGiftOptIn } from "../../shared/cart-gift-optin.js";
 import { initWrrapdConflictGuard } from "../../shared/wrrapd-conflict-guard.js";
 import { isExcludedScrapeRegion } from "../../shared/cart-scrape-region.js";
+import { detectItemFulfillment } from "../../shared/cart-fulfillment.js";
 import {
   BESTBUY_CART_OPTIN_DATA_ATTR,
   BESTBUY_CART_URL_HINTS,
@@ -40,17 +41,7 @@ function getTextBySelectors(selectors, root = document) {
 
 
 function detectFulfillmentType(itemRoot) {
-  const text = normalizeWhitespace(itemRoot?.textContent || "").toLowerCase();
-  if (!text) return "unknown";
-  const hasPickup =
-    text.includes("pickup") || text.includes("store pickup") || text.includes("ready for pickup");
-  const hasShipping =
-    text.includes("ship it") || text.includes("shipping") || text.includes("ships by");
-  const hasDelivery = text.includes("delivery");
-  if (hasPickup && (hasShipping || hasDelivery)) return "mixed";
-  if (hasPickup) return "pickup";
-  if (hasShipping || hasDelivery) return "shipping";
-  return "unknown";
+  return detectItemFulfillment(itemRoot);
 }
 
 function isBestbuyProductHref(href) {
@@ -406,6 +397,7 @@ export function initBestbuyRetailerBootstrap() {
     sessionPrefix: BESTBUY_SESSION_PREFIX,
     retailerLabel: "Best Buy",
     savedBannerAttr: BESTBUY_SAVED_BANNER_ATTR,
+    isCheckoutPage: isBestbuyCheckoutPath,
   });
 
   exposeDebugGlobal("__WRRAPD_BESTBUY_DEBUG__", {

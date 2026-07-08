@@ -4,6 +4,7 @@ import {
   describeTierForUi,
 } from "../../content/retailer-common.js";
 import { initRetailerCartGiftOptIn } from "../../shared/cart-gift-optin.js";
+import { detectItemFulfillment } from "../../shared/cart-fulfillment.js";
 import {
   ETSY_CART_OPTIN_DATA_ATTR,
   ETSY_CART_URL_HINTS,
@@ -46,7 +47,7 @@ export function extractEtsyCartSnapshot(root = document) {
     const key = itemId || title;
     if (seen.has(key)) continue;
     seen.add(key);
-    items.push({ title, itemId });
+    items.push({ title, itemId, fulfillment: detectItemFulfillment(li) });
   }
 
   return { itemCount: items.length, items };

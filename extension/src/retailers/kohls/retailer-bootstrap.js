@@ -6,6 +6,7 @@ import {
 import { initRetailerCartGiftOptIn } from "../../shared/cart-gift-optin.js";
 import { initWrrapdConflictGuard } from "../../shared/wrrapd-conflict-guard.js";
 import { isExcludedScrapeRegion } from "../../shared/cart-scrape-region.js";
+import { detectItemFulfillment } from "../../shared/cart-fulfillment.js";
 import {
   KOHLS_CART_OPTIN_DATA_ATTR,
   KOHLS_CART_URL_HINTS,
@@ -56,23 +57,7 @@ function parseQuantity(node) {
 }
 
 function detectFulfillment(node) {
-  const text = normalizeWhitespace(node?.textContent || "").toLowerCase();
-  if (!text) return "unknown";
-  const hasPickup =
-    text.includes("pickup") ||
-    text.includes("store pickup") ||
-    text.includes("pick up") ||
-    text.includes("curbside");
-  const hasShipping =
-    text.includes("ship to") ||
-    text.includes("ships to") ||
-    text.includes("shipped") ||
-    text.includes("shipping") ||
-    text.includes("standard shipping");
-  if (hasPickup && hasShipping) return "mixed";
-  if (hasPickup) return "pickup";
-  if (hasShipping) return "shipping";
-  return "unknown";
+  return detectItemFulfillment(node);
 }
 
 function extractSummaryAmount(labelMatcher, root = document) {
@@ -340,6 +325,8 @@ export function initKohlsRetailerBootstrap() {
     sessionPrefix: KOHLS_SESSION_PREFIX,
     retailerLabel: "Kohl's",
     savedBannerAttr: KOHLS_SAVED_BANNER_ATTR,
+    isCheckoutPage: () =>
+      KOHLS_CHECKOUT_URL_HINTS.some((h) => location.pathname.toLowerCase().includes(h)),
   });
 
   exposeDebugGlobal("__WRRAPD_KOHLS_DEBUG__", {

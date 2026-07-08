@@ -22,6 +22,18 @@ import { buildOccasionSelect, isValidOccasion } from "./occasions.js";
 import { buildWrrapdTermsHtml } from "./wrrapd-terms.js";
 import { createWrrapdBrandLogo } from "./wrrapd-brand.js";
 import { generateWrrapdOrderNumber } from "./wrrapd-order-code.js";
+import {
+  analyzeCartFulfillment,
+  buildMixedFulfillmentNotice,
+  buildPickupOnlyNotice,
+} from "./cart-fulfillment.js";
+import {
+  createUnitPricingState,
+  ensureUnitPrices,
+  formatUsd,
+  getActiveUnitPrices,
+} from "./wrrapd-unit-pricing.js";
+import { unlockHubShippingFields } from "./wrrapd-hub.js";
 
 function normalizeWhitespace(value) {
   return String(value || "").replace(/\s+/g, " ").trim();
@@ -97,6 +109,22 @@ function findMountBeforeCheckout(config) {
 
 function existingOptIn(config) {
   return document.querySelector(`[${config.optInDataAttr}]`);
+}
+
+function existingFulfillmentNotice() {
+  return document.querySelector("[data-wrrapd-fulfillment-notice]");
+}
+
+function removeFulfillmentNotice() {
+  existingFulfillmentNotice()?.remove();
+}
+
+function mountFulfillmentNotice(config, anchor, noticeEl) {
+  removeFulfillmentNotice();
+  existingOptIn(config)?.remove();
+  if (!anchor?.parent || !noticeEl) return;
+  if (anchor.before) anchor.parent.insertBefore(noticeEl, anchor.before);
+  else anchor.parent.append(noticeEl);
 }
 
 function cartHasWrappableItems(cartSnapshot, config) {
@@ -386,7 +414,9 @@ function openGiftChoicesModal(config, cartSnapshot) {
   uploadRadio.type = "radio";
   uploadRadio.name = `${config.sessionPrefix}-wrap`;
   uploadRadio.value = "upload";
-  uploadRow.append(uploadRadio, document.createTextNode("Upload my own design"));
+  const uploadPriceNote = document.createElement("span");
+  uploadPriceNote.style.cssText = "margin-left:4px;font-weight:500;color:#64748b;font-size:13px;";
+  uploadRow.append(uploadRadio, document.createTextNode("Upload my own design"), uploadPriceNote);
 
   const uploadWrap = document.createElement("div");
   uploadWrap.style.cssText = "display:none;margin:0 0 10px 24px;padding:8px;border:1px solid #e2e8f0;border-radius:6px;";
@@ -423,7 +453,9 @@ function openGiftChoicesModal(config, cartSnapshot) {
   aiRadio.type = "radio";
   aiRadio.name = `${config.sessionPrefix}-wrap`;
   aiRadio.value = "ai";
-  aiRow.append(aiRadio, document.createTextNode("Generate a design with AI"));
+  const aiPriceNote = document.createElement("span");
+  aiPriceNote.style.cssText = "margin-left:4px;font-weight:500;color:#64748b;font-size:13px;";
+  aiRow.append(aiRadio, document.createTextNode("Generate a design with AI"), aiPriceNote);
 
   const aiWrap = document.createElement("div");
   aiWrap.style.cssText = "display:none;margin:0 0 4px 24px;padding:8px;border:1px solid #e2e8f0;border-radius:6px;";
@@ -606,7 +638,9 @@ function openGiftChoicesModal(config, cartSnapshot) {
     "display:flex;align-items:center;gap:8px;margin:0 0 6px;font-size:15px;font-weight:700;color:#0f172a;cursor:pointer;";
   const flowersCb = document.createElement("input");
   flowersCb.type = "checkbox";
-  flowersLabel.append(flowersCb, document.createTextNode("Add flowers — 15–20 stem bouquet"));
+  const flowersText = document.createElement("span");
+  flowersText.textContent = "Add flowers — choose from below (15–20 stem bouquets)";
+  flowersLabel.append(flowersCb, flowersText);
   const flowersGrid = document.createElement("div");
   flowersGrid.style.cssText =
     "display:none;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:4px 0 14px 24px;";
@@ -822,6 +856,27 @@ function openGiftChoicesModal(config, cartSnapshot) {
 
   renderItem(0);
   document.body.append(overlay);
+
+  const pricingState = createUnitPricingState();
+  const applyModalPrices = () => {
+    const prices = getActiveUnitPrices(pricingState);
+    uploadPriceNote.textContent = `(+${formatUsd(prices.customDesignUpload)})`;
+    aiPriceNote.textContent = `(+${formatUsd(prices.customDesignAi)})`;
+    flowersText.textContent = `Add flowers — choose from below (15–20 stem bouquets) — ${formatUsd(prices.flowers)}`;
+  };
+  applyModalPrices();
+  let estimateZip = "";
+  try {
+    estimateZip = sessionStorage.getItem(`${config.sessionPrefix}ValidatedEstimateZip`) || "";
+  } catch {
+    /* ignore */
+  }
+  void ensureUnitPrices(
+    pricingState,
+    estimateZip ? { postalCode: estimateZip, country: "US" } : { country: "US" },
+    config.retailerLabel || config.retailerName || "",
+  ).then(applyModalPrices);
+
   next.focus();
 }
 
@@ -830,9 +885,33 @@ function mountCartGiftOptIn(config, cartSnapshot) {
 
   if (!cartHasWrappableItems(cartSnapshot, config)) {
     existingOptIn(config)?.remove();
+    removeFulfillmentNotice();
     writeCartFingerprint(config.sessionPrefix, "");
     return;
   }
+
+  const fulfillment = analyzeCartFulfillment(cartSnapshot);
+  const anchor = findMountBeforeCheckout(config);
+
+  if (fulfillment.allPickupOnly) {
+    existingOptIn(config)?.remove();
+    writeCartFingerprint(config.sessionPrefix, "");
+    if (anchor?.parent) {
+      mountFulfillmentNotice(config, anchor, buildPickupOnlyNotice(config.retailerLabel));
+    }
+    return;
+  }
+
+  if (fulfillment.hasMixedPickupAndShip) {
+    existingOptIn(config)?.remove();
+    writeCartFingerprint(config.sessionPrefix, "");
+    if (anchor?.parent) {
+      mountFulfillmentNotice(config, anchor, buildMixedFulfillmentNotice(config.retailerLabel));
+    }
+    return;
+  }
+
+  removeFulfillmentNotice();
 
   const syncResult = runCartGiftSync(config, cartSnapshot);
   const uiSig = optInUiSignature(config, cartSnapshot, syncResult);
@@ -840,7 +919,6 @@ function mountCartGiftOptIn(config, cartSnapshot) {
   if (existing && existing.dataset.wrrapdUiSig === uiSig) return;
   if (existing) existing.remove();
 
-  const anchor = findMountBeforeCheckout(config);
   if (!anchor?.parent) return;
 
   const wrap = document.createElement("section");
@@ -924,6 +1002,7 @@ function mountCartGiftOptIn(config, cartSnapshot) {
         clearGiftServiceFlags(config.sessionPrefix);
         writePaymentSuccess(config.sessionPrefix, false);
         writeGiftRadio(config.sessionPrefix, "no");
+        unlockHubShippingFields();
         const saved = wrap.querySelector(`[${config.savedBannerAttr}]`);
         if (saved) saved.remove();
         const editBtn = wrap.querySelector("[data-wrrapd-edit]");

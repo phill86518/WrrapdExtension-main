@@ -744,6 +744,9 @@ export function initRetailerCheckoutPayFlow(config) {
       releaseCheckoutGate(config);
       return;
     }
+    if (readGiftRadio(config.sessionPrefix) === "yes") {
+      config.fillHubShippingFields?.();
+    }
     applyCheckoutGate(config, true, paid);
     void ensureSummaryUi();
   };
