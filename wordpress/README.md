@@ -4,6 +4,8 @@ This folder is **not** loaded by WordPress automatically. Copy **`wrrapd-orders-
 
 Also copy the **`logos/`** folder next to that file: **`wp-content/mu-plugins/logos/*.png`** (Ulta, LEGO, Target, Amazon wheel images). Without those PNGs, the site still works but uses favicon fallbacks.
 
+**My Account styling** also requires **`wrrapd-account-critical.css`** in the same **`mu-plugins/`** folder (loads in the page footer so it wins over User Registration plugin CSS). Without it, `/my-account-2/` stays on the default purple avatar / blue button look even if Additional CSS is pasted.
+
 **This monorepo workspace vs SiteGround:** Cursor/GitHub hold the **source** files under **`wordpress/`**. SiteGround is the **live** WordPress disk. Nothing updates there until you **upload** (File Manager), use **Git deploy** if SiteGround offers it, or copy by SSH. There is no automatic link unless you set one up.
 
 ## Deploy MU-plugin + logos to production (copy-paste)
@@ -15,7 +17,15 @@ Also copy the **`logos/`** folder next to that file: **`wp-content/mu-plugins/lo
 | On this machine (repo) | On the WordPress server |
 |--------------------------|-------------------------|
 | `wordpress/wrrapd-orders-bridge.php` | `wp-content/mu-plugins/wrrapd-orders-bridge.php` |
+| `wordpress/wrrapd-account-critical.css` | `wp-content/mu-plugins/wrrapd-account-critical.css` |
+| `wordpress/wrrapd-campaigns.json` | `wp-content/mu-plugins/wrrapd-campaigns.json` |
+| `wordpress/wrrapd-seasonal-campaigns.php` | `wp-content/mu-plugins/wrrapd-seasonal-campaigns.php` |
+| `wordpress/wrrapd-seasonal-campaigns.css` | `wp-content/mu-plugins/wrrapd-seasonal-campaigns.css` |
+| `wordpress/wrrapd-gift-wrap-popup.php` | `wp-content/mu-plugins/wrrapd-gift-wrap-popup.php` |
+| `wordpress/wrrapd-gift-wrap-popup.css` | `wp-content/mu-plugins/wrrapd-gift-wrap-popup.css` |
+| `wordpress/wrrapd-gift-wrap-popup.js` | `wp-content/mu-plugins/wrrapd-gift-wrap-popup.js` |
 | `wordpress/logos/amazon.png` (and `target.png`, `ulta.png`, `lego.png`) | `wp-content/mu-plugins/logos/` |
+| `wordpress/logos/amazon.svg` | `wp-content/mu-plugins/logos/` (Amazon wheel + banner — dark ink + orange smile) |
 
 **Step 1 — On the WordPress server**, set `WP_ROOT` to the directory that **contains** `wp-config.php` and the folder `wp-content/` (examples: `/var/www/html`, `/home/user/public_html`, `/sites/wrrapd.com` — use whatever your host documents).
 
@@ -27,13 +37,20 @@ export WP_ROOT=/PASTE/YOUR/WORDPRESS/ROOT/HERE
 
 mkdir -p "$WP_ROOT/wp-content/mu-plugins/logos"
 install -m 0644 "$REPO_ROOT/wordpress/wrrapd-orders-bridge.php" "$WP_ROOT/wp-content/mu-plugins/wrrapd-orders-bridge.php"
+install -m 0644 "$REPO_ROOT/wordpress/wrrapd-account-critical.css" "$WP_ROOT/wp-content/mu-plugins/wrrapd-account-critical.css"
+install -m 0644 "$REPO_ROOT/wordpress/wrrapd-campaigns.json" "$WP_ROOT/wp-content/mu-plugins/wrrapd-campaigns.json"
+install -m 0644 "$REPO_ROOT/wordpress/wrrapd-seasonal-campaigns.php" "$WP_ROOT/wp-content/mu-plugins/wrrapd-seasonal-campaigns.php"
+install -m 0644 "$REPO_ROOT/wordpress/wrrapd-seasonal-campaigns.css" "$WP_ROOT/wp-content/mu-plugins/wrrapd-seasonal-campaigns.css"
+install -m 0644 "$REPO_ROOT/wordpress/wrrapd-gift-wrap-popup.php" "$WP_ROOT/wp-content/mu-plugins/wrrapd-gift-wrap-popup.php"
+install -m 0644 "$REPO_ROOT/wordpress/wrrapd-gift-wrap-popup.css" "$WP_ROOT/wp-content/mu-plugins/wrrapd-gift-wrap-popup.css"
+install -m 0644 "$REPO_ROOT/wordpress/wrrapd-gift-wrap-popup.js" "$WP_ROOT/wp-content/mu-plugins/wrrapd-gift-wrap-popup.js"
 install -m 0644 "$REPO_ROOT/wordpress/logos/amazon.png" "$REPO_ROOT/wordpress/logos/target.png" "$REPO_ROOT/wordpress/logos/ulta.png" "$REPO_ROOT/wordpress/logos/lego.png" "$WP_ROOT/wp-content/mu-plugins/logos/"
 ```
 
 **Step 3 — SiteGround Site Tools → File Manager (no SSH):**
 
 1. **Get the five files onto your computer** (pick one way):
-   - **From GitHub in the browser:** open the repo **WrrapdExtension-main** → folder **`wordpress/`** → download **`wrrapd-orders-bridge.php`** (Raw → Save As). Open **`wordpress/logos/`** and download **`amazon.png`**, **`target.png`**, **`ulta.png`**, **`lego.png`** the same way.  
+   - **From GitHub in the browser:** open the repo **WrrapdExtension-main** → folder **`wordpress/`** → download **`wrrapd-orders-bridge.php`** and **`wrrapd-account-critical.css`** (Raw → Save As). Open **`wordpress/logos/`** and download **`amazon.png`**, **`target.png`**, **`ulta.png`**, **`lego.png`** the same way.  
    - **Or** Code / GitHub → **Download ZIP** → unzip → use the copies under **`wordpress/`** and **`wordpress/logos/`**.
 
 2. **SiteGround:** log in → **Site** for **wrrapd.com** → **Site Tools** → **Files** → **File Manager**.
@@ -45,16 +62,22 @@ install -m 0644 "$REPO_ROOT/wordpress/logos/amazon.png" "$REPO_ROOT/wordpress/lo
 5. Open **`mu-plugins`**. Create another folder: **`logos`**.
 
 6. **Upload** (File Manager’s **File Upload** or drag-and-drop):
-   - Upload **`wrrapd-orders-bridge.php`** into **`public_html/wp-content/mu-plugins/`** (not inside `logos`).
+   - Upload **`wrrapd-orders-bridge.php`** and **`wrrapd-account-critical.css`** into **`public_html/wp-content/mu-plugins/`** (not inside `logos`).
    - Upload the **four** `.png` files into **`public_html/wp-content/mu-plugins/logos/`**.
 
 7. After upload, confirm these paths exist:
    - `wp-content/mu-plugins/wrrapd-orders-bridge.php`
+   - `wp-content/mu-plugins/wrrapd-account-critical.css`
    - `wp-content/mu-plugins/logos/amazon.png` (and the other three PNGs)
 
-**Step 4 — Purge caches** so HTML and static files refresh (your stack uses **W3 Total Cache**): **WP Admin → Performance → Purge All Caches** (or equivalent). Then open the homepage in a **private window** or append `?v=1` to the URL.
+**Step 4 — Verify My Account deploy:** Log in → open **`/my-account-2/`** → **View page source** (Ctrl+U). Near the bottom you should see:
+   - `id="wrrapd-account-critical-css"`
+   - `<!-- 2026-06-20-account-ui-v2 -->`  
+   If you see `wrrapd-account-critical.css MISSING` instead, the CSS file was not uploaded.
 
-**Step 5 — Quick check** in a browser (replace domain if needed):
+**Step 5 — Purge caches** so HTML and static files refresh (your stack uses **W3 Total Cache**): **WP Admin → Performance → Purge All Caches** (or equivalent). Then open the homepage in a **private window** or append `?v=1` to the URL.
+
+**Step 6 — Quick check** in a browser (replace domain if needed):
 
 - `https://wrrapd.com/wp-content/mu-plugins/logos/amazon.png` should return **200** and an image (not 404).
 
@@ -70,6 +93,8 @@ define( 'WRRAPD_INTERNAL_API_KEY', 'paste-the-same-secret-as-WRRAPD_INTERNAL_CLA
 ```
 
 ### Affiliate hops — `/go/{slug}/` (homepage retailer wheel)
+
+**New retailer?** Use the step-by-step checklist: **[AFFILIATE-INTEGRATION-CHECKLIST.md](./AFFILIATE-INTEGRATION-CHECKLIST.md)** (CJ, Rakuten, homepage wheel, hot gifts, top-gifting-choices, wp-config, deploy & test).
 
 The MU plugin registers pretty links like **`https://wrrapd.com/go/etsy/`**. On each request, WordPress runs a **`template_redirect`** handler that:
 
@@ -88,9 +113,28 @@ define( 'WRRAPD_AFFILIATE_REDIRECT_WALMART', 'https://…' );
 define( 'WRRAPD_AFFILIATE_REDIRECT_NORDSTROM', 'https://…' );
 define( 'WRRAPD_AFFILIATE_REDIRECT_KOHLS', 'https://…' );
 define( 'WRRAPD_AFFILIATE_REDIRECT_SEPHORA', 'https://…' );
-define( 'WRRAPD_AFFILIATE_REDIRECT_ETSY', 'https://…' );
+define( 'WRRAPD_AFFILIATE_REDIRECT_ETSY', 'https://click.linksynergy.com/fs-bin/click?id=b%2fdhBLlk5M0&offerid=2023405.3&subid=0&type=4' );
+define( 'WRRAPD_AFFILIATE_REDIRECT_GIFTCARDS', 'https://click.linksynergy.com/fs-bin/click?id=B%2fdH8Lik5M0&offerid=2037571.9995&type=3&subid=0' );
+define( 'WRRAPD_CJ_CLICK_DOMAIN', 'www.anrdoezrs.net' );
+define( 'WRRAPD_CJ_PUBLISHER_SITE_ID', '100845347' );
+define( 'WRRAPD_AFFILIATE_REDIRECT_BOOKSAMILLION', 'https://www.dpbolvw.net/click-101807253-13986208' );
+define( 'WRRAPD_AFFILIATE_REDIRECT_RUSSELLSTOVER', 'https://www.anrdoezrs.net/click-100845347-5124217' );
+define( 'WRRAPD_AFFILIATE_REDIRECT_FRESHROASTEDCOFFEE', 'https://www.anrdoezrs.net/click-100845347-5778639' );
+define( 'WRRAPD_AFFILIATE_REDIRECT_ZCHOCOLAT', 'https://www.anrdoezrs.net/click-100845347-1124214' );
+define( 'WRRAPD_AFFILIATE_REDIRECT_GEARUP', 'https://www.jdoqocy.com/click-101807253-17235974' );
 define( 'WRRAPD_AFFILIATE_REDIRECT_BESTBUY', 'https://…' );
+define( 'WRRAPD_AFFILIATE_LOG_CLICKS', true ); // optional — logs outbound /go/ hops to PHP error_log
 ```
+
+**GiftCards.com (Rakuten):** paste the **text-link click URL** from your Rakuten dashboard (screenshot: `id=B/dH8Lik5M0`, `offerid=2037571.9995`, `type=3`). Product deep links use Rakuten **`/deeplink`** with merchant id **44432** (not fs-bin `type=10`). All **`/go/giftcards/`** and bare `giftcards.com` links on the site are upgraded to this hop.
+
+**Books-A-Million & Russell Stover (CJ):** paste full **Get link** URLs from CJ (copy the exact host). For BAM on website **101807253**, use link id **13986208** (`dpbolvw.net/click-101807253-13986208`) — advertiser ids **129899** / **1298894** are expired. Russell Stover **5124217**, Fresh Roasted Coffee **5778639**, zChocolat **1124214**.
+
+**Fresh Roasted Coffee “link isn’t currently active” (CJ):** Usually wrong **website id** / host in `WRRAPD_AFFILIATE_REDIRECT_FRESHROASTEDCOFFEE`, or a redundant `?url=` on the homepage hop. Legacy CJ partners (BAM, Russell, FRC, zChocolat) use website **`100845347`** + **`anrdoezrs.net`**; GearUP uses **`101807253`** + **`jdoqocy.com`**. In CJ → Fresh Roasted Coffee → **Get link** (Website = the property where you joined) → paste the full `href` into wp-config. Test **`https://wrrapd.com/go/freshroastedcoffee/`** in a private window (no `?to=`). Optional per-slug override: `define( 'WRRAPD_CJ_SITE_ID_FRESHROASTEDCOFFEE', '100845347' );`
+
+**Etsy (Rakuten Advertising):** paste the **click URL** from your Rakuten dashboard (banner or text link — not the `<img>` tag). Hot-gift and wheel links use **`https://wrrapd.com/go/etsy/?to=https://www.etsy.com/listing/…`**. The plugin converts that into a Rakuten **fs-bin deep link** (`type=10` + `RD_PARM1`) using your banner’s `id` and `offerid` — do **not** treat `offerid` as the merchant `mid`. Optional **`?subid=hot-gifts-july-fourth-toys`** is forwarded to Rakuten as **`u1` / `subid`**. If deep links still fail, set **`define( 'WRRAPD_AFFILIATE_RAKUTEN_ETSY_MID', '45701' );`** (confirm mid in Rakuten’s Deep Linking tool).
+
+**What you can and cannot track:** Rakuten reports **clicks** and **commissionable sales** in their dashboard (typically 24–72 hours after purchase). Wrrapd cannot silently see what someone bought on Etsy afterward — that is cross-site and handled by Rakuten’s cookie + Etsy’s order feed. Enable `WRRAPD_AFFILIATE_LOG_CLICKS` to log **outbound clicks only** (slug, subid, destination) in your server error log; purchases still appear only in Rakuten.
 
 The plugin does **not** set affiliate cookies on `wrrapd.com`; the redirect chain and the network’s URL do that. Reporting (clicks, sales, payouts) lives in your **affiliate network’s portal**, not in WordPress.
 
@@ -147,3 +191,17 @@ See **[../docs/wordpress-snippets/wrrapd-slower-cta-blink.css](../docs/wordpress
 
 - **VM:** `pm2 restart wrrapd-server` after pulling the commit that adds **`POST /api/internal/orders-for-wp-user`**.
 - **WP:** Upload the MU plugin + `wp-config.php` defines, then open the Review page while logged in.
+
+---
+
+## WrapStars portal (`apply.wrrapd.com` + `pros.wrrapd.com`)
+
+**Separate WordPress install** — not on `wrrapd.com`. Full copy-paste deploy: **[WRAPSTARS-DEPLOY.md](./WRAPSTARS-DEPLOY.md)**.
+
+| Repo file | SiteGround `mu-plugins/` |
+|-----------|--------------------------|
+| `wrrapd-wrapstars.php` | Yes |
+| `wrrapd-boldsign.php` | Yes |
+| `wrrapd-wrapstars.css` | Yes |
+
+Elementor page shortcodes: `docs/wordpress-snippets/wrrapd-wrapstars-elementor-pages.md`
