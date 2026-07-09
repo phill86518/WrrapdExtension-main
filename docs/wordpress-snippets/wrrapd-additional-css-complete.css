@@ -1819,6 +1819,85 @@ body.page-id-4857:not(.logged-in) .elementor-location-header .elementor-element-
 	align-items: center !important;
 }
 
+@media (max-width: 960px) {
+	/* Samsung parity — same flex ROW header as ~980px desktop, not a 2-row grid */
+	.elementor-location-header .elementor-element-6835e730 {
+		display: flex !important;
+		flex-direction: row !important;
+		flex-wrap: nowrap !important;
+		align-items: center !important;
+	}
+
+	.elementor-location-header .elementor-element-6835e730 > .e-con.elementor-element-6e478726,
+	.elementor-location-header .elementor-element-6e478726 {
+		flex: 0 0 24% !important;
+		max-width: 24% !important;
+		align-items: flex-start !important;
+		justify-content: flex-start !important;
+	}
+
+	.elementor-location-header .elementor-element-1913a20 {
+		flex: 0 0 19% !important;
+		max-width: 19% !important;
+		align-self: flex-end !important;
+		margin: 0 0 0 0.35rem !important;
+	}
+
+	.elementor-location-header .elementor-element-6835e730 > .e-con.elementor-element-693b4ea7,
+	.elementor-location-header .elementor-element-693b4ea7 {
+		flex: 1 1 52% !important;
+		max-width: 52% !important;
+		align-items: flex-end !important;
+	}
+
+	.elementor-6078 .elementor-element.elementor-element-68a38868 img {
+		height: 3.25rem !important;
+		width: auto !important;
+		object-fit: scale-down !important;
+	}
+
+	.elementor-6078 .elementor-element.elementor-element-1c0d63ad {
+		margin: -1rem 0 0 0.65rem !important;
+		padding: 0 !important;
+	}
+
+	.elementor-6078 .elementor-element.elementor-element-1c0d63ad img {
+		max-height: 1rem !important;
+		max-width: 5.5rem !important;
+	}
+
+	.elementor-6078 .elementor-element.elementor-element-1913a20 {
+		margin: 0 0 0 0.5rem !important;
+		align-self: flex-end !important;
+	}
+
+	.elementor-6078 .elementor-element.elementor-element-1112277b .elementor-nav-menu .elementor-item {
+		font-size: 0.48rem !important;
+		padding: 0 !important;
+	}
+
+	.elementor-6078 .elementor-element.elementor-element-69de726e,
+	.elementor-6078 .elementor-element.elementor-element-2ca99876 {
+		width: 82% !important;
+		max-width: 82% !important;
+		margin-left: auto !important;
+	}
+
+	.elementor-6078 .elementor-element.elementor-element-69de726e .elementor-button,
+	.elementor-6078 .elementor-element.elementor-element-2ca99876 .elementor-button {
+		font-size: 0.52rem !important;
+		padding: 0.1rem 0.28rem !important;
+		min-height: 0 !important;
+		height: auto !important;
+	}
+
+	.elementor-location-header #wrrapd-location,
+	.elementor-location-header #location-text,
+	.elementor-location-header #location-text strong {
+		font-size: clamp(0.48rem, 2.35vw, 0.62rem) !important;
+	}
+}
+
 /* === Logged-in member cluster (top right) === */
 body.logged-in .elementor-location-header [data-id="693b4ea7"] {
 	display: flex !important;
@@ -1945,54 +2024,113 @@ body.logged-in .elementor-location-header .greeting-text {
 		max-width: 5.25rem;
 	}
 
-	/* Guest homepage header — logo left (large), auth right (Samsung layout). */
+	/* Guest homepage header — Samsung parity flex row */
 	.elementor-location-header .elementor-element-6835e730 {
 		max-height: none !important;
 		overflow: visible !important;
+		display: flex !important;
+		flex-direction: row !important;
+		flex-wrap: nowrap !important;
+		align-items: center !important;
 	}
 
-	body.home:not(.logged-in) .elementor-location-header .elementor-element-68a38868 img,
-	body.page-id-4857:not(.logged-in) .elementor-location-header .elementor-element-68a38868 img {
-		max-height: clamp(3rem, 14vw, 3.85rem) !important;
-		max-width: min(12rem, 60vw) !important;
+	body.home:not(.logged-in) .elementor-6078 .elementor-element.elementor-element-68a38868 img,
+	body.page-id-4857:not(.logged-in) .elementor-6078 .elementor-element.elementor-element-68a38868 img {
+		height: 3.25rem !important;
+		width: auto !important;
+		object-fit: scale-down !important;
 	}
 
-	body.home:not(.logged-in) .elementor-location-header .elementor-element-1c0d63ad img,
-	body.page-id-4857:not(.logged-in) .elementor-location-header .elementor-element-1c0d63ad img {
-		max-height: clamp(1.05rem, 5vw, 1.4rem) !important;
-		max-width: min(9rem, 52vw) !important;
+	body.home:not(.logged-in) .elementor-6078 .elementor-element.elementor-element-1c0d63ad img,
+	body.page-id-4857:not(.logged-in) .elementor-6078 .elementor-element.elementor-element-1c0d63ad img {
+		max-height: 1rem !important;
+		max-width: 5.5rem !important;
+		height: auto !important;
 	}
 
 	.elementor-location-header [data-id="2b05a213"] {
-		max-width: min(11.5rem, 46vw) !important;
+		max-width: 100% !important;
+		width: 100% !important;
 	}
 
 	.elementor-location-header [data-id="69de726e"],
 	.elementor-location-header [data-id="2ca99876"] {
 		flex: 0 0 auto !important;
-		max-width: 100% !important;
-		width: 100% !important;
+		max-width: 82% !important;
+		width: 82% !important;
+		margin-left: auto !important;
 	}
 
-	/* Hero — legacy section df1501e: image left, copy right */
+	.elementor-location-header .elementor-button,
+	.elementor-location-header a.elementor-button {
+		font-size: 0.52rem !important;
+		padding: 0.1rem 0.28rem !important;
+		min-height: 0 !important;
+		height: auto !important;
+	}
+
+	/* Hero — same 45/55 split as Samsung desktop */
 	.elementor-4857 .elementor-element-df1501e > .elementor-container {
 		display: flex !important;
 		flex-direction: row !important;
 		flex-wrap: nowrap !important;
-		align-items: flex-start !important;
+		align-items: stretch !important;
 		gap: 0.35rem !important;
 	}
 
 	.elementor-4857 .elementor-element-efd024d {
-		flex: 0 0 34% !important;
-		max-width: 34% !important;
+		flex: 0 0 44.879% !important;
+		max-width: 44.879% !important;
 		width: auto !important;
+		align-self: stretch !important;
+		display: flex !important;
+	}
+
+	.elementor-4857 .elementor-element-efd024d > .elementor-element-populated,
+	.elementor-4857 .elementor-element-efd024d .elementor-widget-wrap {
+		height: 100% !important;
+		display: flex !important;
+	}
+
+	.elementor-4857 .elementor-element-efd024d .elementor-widget-image,
+	.elementor-4857 .elementor-element-efd024d .elementor-widget-image .elementor-widget-container {
+		height: 100% !important;
+		flex: 1 1 auto !important;
+		display: flex !important;
+	}
+
+	.elementor-4857 .elementor-element-efd024d .elementor-widget-image img {
+		width: 100% !important;
+		height: 100% !important;
+		min-height: 100% !important;
+		max-height: none !important;
+		object-fit: cover !important;
+		object-position: center top !important;
 	}
 
 	.elementor-4857 .elementor-element-2d48b08 {
-		flex: 1 1 66% !important;
-		max-width: 66% !important;
+		flex: 0 0 54.651% !important;
+		max-width: 54.651% !important;
 		width: auto !important;
+	}
+
+	.elementor-4857 .elementor-element.elementor-element-de3f6bb,
+	.elementor-4857 .elementor-element.elementor-element-de3f6bb p,
+	.elementor-4857 .elementor-element.elementor-element-de3f6bb em {
+		margin: 0.08rem 0 0 !important;
+		margin-left: clamp(0.25rem, 8vw, 1.75rem) !important;
+		font-size: clamp(0.38rem, 1.75vw, 0.48rem) !important;
+		line-height: 1.2 !important;
+		text-align: left !important;
+	}
+
+	.elementor-4857 .elementor-element.elementor-element-6466f5b,
+	.elementor-4857 .elementor-element.elementor-element-936189a,
+	.elementor-4857 .elementor-element.elementor-element-5f358ea,
+	.elementor-4857 .elementor-element.elementor-element-4b29ae5 {
+		margin-left: 0 !important;
+		width: 100% !important;
+		max-width: 100% !important;
 	}
 
 	.elementor-4857 .elementor-element.elementor-element-6466f5b.elementor-widget-text-editor h1,
@@ -2037,5 +2175,75 @@ body.logged-in .elementor-location-header .greeting-text {
 	.wrrapd-account-layout .user-registration-MyAccount,
 	body.wrrapd-account-page .user-registration-MyAccount {
 		grid-template-columns: 1fr;
+	}
+}
+
+/* ≤393px — majority of US iPhones (12–15, SE); iPhone 16 Pro = 402px */
+@media (max-width: 393px) {
+	body.logged-in .elementor-6078 .elementor-element.elementor-element-1c0d63ad {
+		display: none !important;
+	}
+
+	body.logged-in .elementor-6078 .elementor-element.elementor-element-68a38868 img {
+		height: 2rem !important;
+		max-height: 2rem !important;
+	}
+
+	body.logged-in .elementor-location-header .wrrapd-header-member-top .elementor-item,
+	body.logged-in .elementor-location-header .elementor-nav-menu--main .elementor-item {
+		font-size: 0.46rem !important;
+	}
+
+	body.logged-in .wrrapd-header-member-greet .greeting-text,
+	body.logged-in .elementor-location-header .greeting-text {
+		font-size: 0.44rem !important;
+	}
+
+	body.logged-in .wrrapd-header-user-actions .gift-ideas-button {
+		font-size: 0.4rem !important;
+		padding: 0.08rem 0.18rem !important;
+		max-width: 3.85rem !important;
+	}
+
+	body.logged-in .wrrapd-header-member {
+		max-width: 100% !important;
+	}
+
+	.wrrapd-top-gifts {
+		padding-block: 0.55rem !important;
+		padding-inline: 0.4rem !important;
+	}
+
+	.wrrapd-top-gifts__grid,
+	.wrrapd-top-gifts__grid--featured {
+		grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+		gap: 0.35rem !important;
+	}
+
+	.wrrapd-top-gifts__title,
+	.wrrapd-top-gifts h1 {
+		font-size: 1rem !important;
+	}
+
+	.wrrapd-top-gifts__chip-row a,
+	.wrrapd-top-gifts__pill {
+		font-size: 0.48rem !important;
+		padding: 0.18rem 0.38rem !important;
+	}
+
+	.wrrapd-top-gifts__card-title {
+		font-size: 0.58rem !important;
+	}
+
+	.wrrapd-top-gifts__card-copy {
+		font-size: 0.48rem !important;
+	}
+
+	.wrrapd-top-gifts__card-cta {
+		font-size: 0.46rem !important;
+	}
+
+	body.page-id-6936 {
+		overflow-x: hidden;
 	}
 }

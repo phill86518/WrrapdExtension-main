@@ -1,0 +1,629 @@
+/* Wrrapd seasonal campaigns — headline replaces Elementor 6466f5b; hot gifts below occasion ticker */
+
+/* === Injected seasonal hero (widget 6466f5b — h1 + body + tagline) === */
+.elementor-element-6466f5b.wrrapd-season-headline-injected h1,
+.elementor-element-6466f5b.wrrapd-season-headline-injected h1 strong,
+.elementor-4857 .elementor-element.elementor-element-6466f5b.wrrapd-season-headline-injected h1,
+.elementor-4857 .elementor-element.elementor-element-6466f5b.wrrapd-season-headline-injected h1 strong {
+	font-family: Fraunces, Georgia, serif !important;
+	font-weight: 560 !important;
+	font-size: clamp(1.65rem, 4.2vw, 2.35rem) !important;
+	line-height: 1.2 !important;
+	letter-spacing: -0.02em !important;
+	margin: 0 0 0.35rem !important;
+}
+
+.elementor-element-6466f5b.wrrapd-season-headline-injected .wrrapd-season-hero-body,
+.elementor-element-6466f5b.wrrapd-season-headline-injected .wrrapd-season-hero-body span {
+	font-family: Fraunces, Georgia, serif !important;
+	font-weight: 560 !important;
+	font-size: clamp(1.05rem, 2.6vw, 1.5rem) !important;
+	line-height: 1.35 !important;
+	letter-spacing: 0.02em !important;
+	margin: 0 0 0.45rem !important;
+	color: #162a52 !important;
+}
+
+.elementor-element-6466f5b.wrrapd-season-headline-injected .wrrapd-season-hero-tagline {
+	font-family: Fraunces, Georgia, serif !important;
+	font-weight: 560 !important;
+	font-size: clamp(0.95rem, 2.2vw, 1.15rem) !important;
+	line-height: 1.35 !important;
+	margin: 0 !important;
+	color: #334155 !important;
+}
+
+body.wrrapd-season-july-fourth .elementor-element-6466f5b.wrrapd-season-headline-injected h1,
+body.wrrapd-season-july-fourth .elementor-element-6466f5b.wrrapd-season-headline-injected h1 strong {
+	color: #b22234 !important;
+}
+
+body.wrrapd-season-july-fourth .elementor-element-6466f5b.wrrapd-season-headline-injected .wrrapd-season-hero-body,
+body.wrrapd-season-july-fourth .elementor-element-6466f5b.wrrapd-season-headline-injected .wrrapd-season-hero-body span {
+	color: #0a3161 !important;
+}
+
+body.wrrapd-season-july-fourth .elementor-element-6466f5b.wrrapd-season-headline-injected .wrrapd-season-hero-tagline {
+	color: #0a3161 !important;
+}
+
+body.wrrapd-season-fathers-day .elementor-element-6466f5b.wrrapd-season-headline-injected h1 strong {
+	color: #162a52 !important;
+}
+
+/* USA — ribbon stripes (legacy solid colors fallback) */
+.wrrapd-usa-letters {
+	display: inline;
+	vertical-align: baseline;
+	font-family: Fraunces, Georgia, serif !important;
+	font-weight: 700 !important;
+	font-size: inherit;
+	line-height: inherit;
+	letter-spacing: 0.02em;
+}
+
+.wrrapd-usa-u {
+	color: #b22234 !important;
+}
+
+.wrrapd-usa-s {
+	color: #0a3161 !important;
+}
+
+.wrrapd-usa-a {
+	color: #b22234 !important;
+}
+
+/* Patriotic ribbon — horizontal red / white / blue stripes (250 + USA) */
+.wrrapd-ribbon-numerals,
+.wrrapd-usa-letters--ribbon .wrrapd-ribbon-letter {
+	display: inline-block;
+	font-family: Fraunces, Georgia, serif !important;
+	font-weight: 800 !important;
+	line-height: 1;
+	padding: 0 0.05em;
+	vertical-align: baseline;
+	background: linear-gradient(
+		180deg,
+		#b22234 0%,
+		#b22234 33.33%,
+		#ffffff 33.33%,
+		#ffffff 66.66%,
+		#003087 66.66%,
+		#003087 100%
+	);
+	-webkit-background-clip: text;
+	background-clip: text;
+	color: transparent !important;
+	-webkit-text-fill-color: transparent;
+	filter: drop-shadow(0.5px 1px 0 rgba(0, 48, 135, 0.32))
+		drop-shadow(-0.5px 0.5px 0 rgba(178, 34, 52, 0.22));
+}
+
+.wrrapd-ribbon-numerals {
+	font-style: italic;
+	letter-spacing: -0.04em;
+	transform: skewX(-7deg) rotate(-1.5deg);
+	margin: 0 0.04em;
+}
+
+/* Uploaded ribbon PNG (hero_250_image_url in wrrapd-campaigns.json) */
+.wrrapd-ribbon-numerals-img {
+	display: inline-block;
+	height: 1.12em;
+	width: auto;
+	vertical-align: -0.14em;
+	margin: 0 0.06em;
+	transform: skewX(-6deg) rotate(-1.5deg);
+	filter: drop-shadow(0.5px 1px 0 rgba(0, 48, 135, 0.28))
+		drop-shadow(-0.5px 0.5px 0 rgba(178, 34, 52, 0.2));
+}
+
+.wrrapd-usa-letters--ribbon {
+	display: inline;
+	white-space: nowrap;
+}
+
+.wrrapd-usa-letters--ribbon .wrrapd-ribbon-letter {
+	font-style: normal;
+	font-weight: 800 !important;
+	letter-spacing: 0.01em;
+	margin: 0 0.015em;
+}
+
+.wrrapd-usa-letters--ribbon .wrrapd-usa-u,
+.wrrapd-usa-letters--ribbon .wrrapd-usa-s,
+.wrrapd-usa-letters--ribbon .wrrapd-usa-a {
+	color: transparent !important;
+}
+
+/* White stars scattered on the blue band of "S" */
+.wrrapd-usa-letters--ribbon .wrrapd-usa-s--stars {
+	background-image:
+		url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='22' viewBox='0 0 36 22'%3E%3Cg fill='%23ffffff' fill-opacity='0.95'%3E%3Cpolygon points='5,2 5.7,4.4 8.2,4.4 6.2,5.9 6.9,8.3 5,6.9 3.1,8.3 3.8,5.9 1.8,4.4 4.3,4.4'/%3E%3Cpolygon points='14,9 14.6,11 16.8,11 15.2,12.2 15.8,14.2 14,13 12.2,14.2 12.8,12.2 11.2,11 13.4,11'/%3E%3Cpolygon points='24,3 24.6,5 26.8,5 25.2,6.2 25.8,8.2 24,7 22.2,8.2 22.8,6.2 21.2,5 23.4,5'/%3E%3Cpolygon points='31,13 31.5,14.8 33.4,14.8 32,15.9 32.5,17.7 31,16.6 29.5,17.7 30,15.9 28.6,14.8 30.5,14.8'/%3E%3C/g%3E%3C/svg%3E"),
+		linear-gradient(
+			180deg,
+			#b22234 0%,
+			#b22234 33.33%,
+			#ffffff 33.33%,
+			#ffffff 66.66%,
+			#003087 66.66%,
+			#003087 100%
+		);
+	background-size: 0.68em 0.42em, 100% 100%;
+	background-repeat: repeat, no-repeat;
+}
+
+/* === My Orders compact hero only === */
+.wrrapd-season-hero {
+	max-width: min(56rem, 100%);
+	margin: 0 auto 0.75rem;
+	padding: 0.65rem 0.45rem;
+	box-sizing: border-box;
+}
+
+.wrrapd-season-hero .wrrapd-season-headline-injected h1 {
+	font-family: Fraunces, Georgia, serif !important;
+	font-weight: 560 !important;
+	font-size: clamp(1.25rem, 3.2vw, 1.65rem) !important;
+	line-height: 1.2 !important;
+	margin: 0 !important;
+}
+
+/* === Hot gifts grid (full width below occasion ticker) === */
+.wrrapd-hot-gifts-rail {
+	width: 100%;
+	max-width: 100%;
+	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
+	font-family: Fraunces, Georgia, serif !important;
+}
+
+.wrrapd-hot-gifts-rail--below-ticker {
+	max-width: none;
+	margin: 0;
+	padding: 0.35rem 0 0.2rem;
+	background: linear-gradient(180deg, rgba(248, 250, 252, 0.55) 0%, rgba(255, 255, 255, 0) 100%);
+}
+
+.wrrapd-hot-gifts-rail--in-ticker-shell {
+	margin: 0;
+	padding: 0.35rem 0 0.45rem;
+	background: transparent;
+	border-top: 0;
+}
+
+.wrrapd-hot-gifts-rail--below-ticker .wrrapd-hot-gifts-rail__head {
+	padding: 0 0.65rem 0.25rem;
+}
+
+.wrrapd-hot-gifts-rail--below-ticker .wrrapd-hot-gifts-rail__grid {
+	padding: 0 0.65rem;
+}
+
+.wrrapd-hot-gifts-rail__head {
+	display: flex;
+	flex-wrap: nowrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.5rem 0.75rem;
+	margin-bottom: 0.3rem;
+}
+
+.wrrapd-hot-gifts-rail__title {
+	display: flex;
+	align-items: center;
+	gap: 0.6rem;
+	margin: 0;
+	font-family: Fraunces, Georgia, serif !important;
+	font-size: clamp(0.95rem, 2.4vw, 1.15rem) !important;
+	font-weight: 560 !important;
+	line-height: 1.25 !important;
+	letter-spacing: -0.02em !important;
+	color: #0c1222 !important;
+	min-width: 0;
+	flex: 1 1 auto;
+}
+
+.wrrapd-hot-gifts-rail__title-wrap {
+	display: inline;
+	min-width: 0;
+}
+
+.wrrapd-hot-gifts-rail__title-main {
+	color: #b22234 !important;
+}
+
+.wrrapd-hot-gifts-rail__title-sep {
+	color: #94a3b8 !important;
+	font-weight: 560 !important;
+}
+
+.wrrapd-hot-gifts-rail__title-sub {
+	color: #0a3161 !important;
+	font-weight: 560 !important;
+}
+
+/* Mini US flag — stripes + canton (July 4 rail headline) */
+.wrrapd-hot-gifts-rail__flag {
+	flex: 0 0 auto;
+	display: block;
+	width: 2.15rem;
+	height: 1.4rem;
+	border-radius: 0.14rem;
+	overflow: hidden;
+	position: relative;
+	box-shadow:
+		0 1px 2px rgba(10, 49, 97, 0.22),
+		inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+	background: repeating-linear-gradient(
+		180deg,
+		#b22234 0,
+		#b22234 14.28%,
+		#ffffff 14.28%,
+		#ffffff 28.56%
+	);
+}
+
+.wrrapd-hot-gifts-rail__flag::before {
+	content: "";
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 46%;
+	height: 58%;
+	background: #0a3161;
+	box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+
+.wrrapd-hot-gifts-rail__flag::after {
+	content: "★";
+	position: absolute;
+	top: 0.06rem;
+	left: 0.1rem;
+	font-size: 0.38rem;
+	line-height: 1;
+	color: #ffffff;
+	text-shadow: 0 0 1px rgba(10, 49, 97, 0.5);
+	pointer-events: none;
+}
+
+@media (max-width: 540px) {
+	.wrrapd-hot-gifts-rail__title {
+		flex-wrap: wrap;
+		align-items: flex-start;
+	}
+
+	.wrrapd-hot-gifts-rail__title-sep {
+		display: none;
+	}
+
+	.wrrapd-hot-gifts-rail__title-sub {
+		display: block;
+		width: 100%;
+		padding-left: 2.3rem;
+		font-size: 0.92em;
+	}
+}
+
+.wrrapd-hot-gifts-rail__more {
+	flex: 0 0 auto;
+	align-self: center;
+	white-space: nowrap;
+	font-family: Fraunces, Georgia, serif !important;
+	font-size: clamp(0.88rem, 2.1vw, 0.98rem) !important;
+	font-weight: 560 !important;
+	color: #162a52 !important;
+	text-decoration: none !important;
+}
+
+.wrrapd-hot-gifts-rail__more:hover {
+	text-decoration: underline !important;
+}
+
+.wrrapd-hot-gifts-rail__grid {
+	display: grid;
+	grid-template-columns: repeat(8, minmax(0, 1fr));
+	align-items: stretch;
+	gap: 0.72rem;
+	width: 100%;
+	box-sizing: border-box;
+	overflow: visible;
+	padding-bottom: 0;
+}
+
+.wrrapd-hot-gifts-rail--below-ticker .wrrapd-hot-gifts-rail__grid {
+	overflow-x: auto;
+	-webkit-overflow-scrolling: touch;
+	scrollbar-width: thin;
+	padding: 0 0.65rem;
+}
+
+@media (max-width: 768px) {
+	.wrrapd-hot-gifts-rail__grid {
+		display: flex;
+		flex-wrap: nowrap;
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
+		gap: 0.65rem;
+		padding: 0 0.5rem 0.15rem;
+		scrollbar-width: thin;
+	}
+
+	.wrrapd-hot-gifts-rail__card {
+		flex: 0 0 3.15rem;
+		min-width: 3.15rem;
+		max-width: 3.15rem;
+	}
+}
+
+@media (max-width: 380px) {
+	.wrrapd-hot-gifts-rail__card {
+		flex: 0 0 2.85rem;
+		min-width: 2.85rem;
+		max-width: 2.85rem;
+	}
+}
+
+.wrrapd-hot-gifts-rail__card {
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+	min-width: 0;
+	width: 100%;
+	gap: 0;
+	padding: 0;
+	border-radius: 0.38rem;
+	border: 1.5px solid rgba(10, 49, 97, 0.22);
+	background: #fff;
+	box-shadow:
+		0 1px 6px rgba(12, 18, 34, 0.06),
+		inset 0 0 0 1px rgba(255, 255, 255, 0.95);
+	text-decoration: none !important;
+	color: inherit !important;
+	transition: transform 0.14s ease, box-shadow 0.14s ease, border-color 0.14s ease;
+	box-sizing: border-box;
+	overflow: hidden;
+}
+
+.wrrapd-hot-gifts-rail__card--product .wrrapd-hot-gifts-rail__card-body {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	text-align: center;
+	gap: 0.14rem;
+}
+
+.wrrapd-hot-gifts-rail__photo {
+	position: relative;
+	display: block;
+	width: 100%;
+	aspect-ratio: 1 / 1;
+	overflow: hidden;
+	background: linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
+}
+
+.wrrapd-hot-gifts-rail__photo img {
+	display: block;
+	width: 100%;
+	height: 100%;
+	object-fit: contain;
+	object-position: center center;
+	padding: 0.16rem;
+	box-sizing: border-box;
+}
+
+.wrrapd-hot-gifts-rail__card--product .wrrapd-hot-gifts-rail__card-overlay {
+	position: absolute;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	z-index: 2;
+	padding: 0.22rem 0.18rem 0.24rem;
+	background: rgba(255, 255, 255, 0.9);
+	border-top: 1px solid rgba(10, 49, 97, 0.12);
+	-webkit-backdrop-filter: blur(4px);
+	backdrop-filter: blur(4px);
+	box-shadow: 0 -3px 10px rgba(12, 18, 34, 0.05);
+}
+
+.wrrapd-hot-gifts-rail__shop-at {
+	display: block;
+	width: 100%;
+	margin: 0.06rem 0 0.12rem;
+	font-family: Fraunces, Georgia, serif !important;
+	font-size: clamp(0.48rem, 1.05vw, 0.58rem) !important;
+	font-weight: 700 !important;
+	line-height: 1.12 !important;
+	color: #0a3161 !important;
+	text-align: center;
+	white-space: normal;
+}
+
+.wrrapd-hot-gifts-rail__card--product .wrrapd-hot-gifts-rail__card-cta {
+	display: none !important;
+}
+
+.wrrapd-hot-gifts-rail__retailer-logo {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 1.28rem;
+	height: 1.28rem;
+	margin: 0 auto;
+	border-radius: 50%;
+	overflow: hidden;
+	background: #fff;
+	box-shadow: inset 0 0 0 1px rgba(12, 18, 34, 0.12);
+}
+
+.wrrapd-hot-gifts-rail__retailer-logo img {
+	display: block;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.wrrapd-hot-gifts-rail__retailer {
+	display: none !important;
+}
+
+.wrrapd-hot-gifts-rail__retailer-name {
+	display: none !important;
+}
+
+.wrrapd-hot-gifts-rail__card:hover {
+	transform: translateY(-1px);
+	border-color: rgba(178, 34, 52, 0.38);
+	box-shadow:
+		0 5px 16px rgba(12, 18, 34, 0.1),
+		inset 0 0 0 1px rgba(255, 255, 255, 1);
+}
+
+.wrrapd-hot-gifts-rail__card:not(.wrrapd-hot-gifts-rail__card--product) {
+	align-items: flex-start;
+	padding: 0.7rem 0.75rem;
+}
+
+
+.wrrapd-hot-gifts-rail__logo {
+	display: block;
+	width: 2.75rem;
+	height: 2.75rem;
+	border-radius: 50%;
+	overflow: hidden;
+	flex-shrink: 0;
+	background: #fff;
+	box-shadow: inset 0 0 0 1px rgba(12, 18, 34, 0.08);
+}
+
+.wrrapd-hot-gifts-rail__logo img {
+	display: block;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.wrrapd-hot-gifts-rail__card-title {
+	display: -webkit-box;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
+	overflow: hidden;
+	font-family: Fraunces, Georgia, serif !important;
+	font-size: clamp(0.48rem, 0.95vw, 0.56rem) !important;
+	font-weight: 560 !important;
+	line-height: 1.14 !important;
+	color: #0c1222 !important;
+}
+
+.wrrapd-hot-gifts-rail__card--product .wrrapd-hot-gifts-rail__card-title {
+	width: 100%;
+	min-height: 0;
+	-webkit-line-clamp: 2;
+}
+
+.wrrapd-hot-gifts-rail__card--product .wrrapd-hot-gifts-rail__card-copy {
+	display: none !important;
+}
+
+.wrrapd-hot-gifts-rail__card-copy {
+	display: block;
+	font-family: Fraunces, Georgia, serif !important;
+	font-size: clamp(0.74rem, 1.8vw, 0.82rem) !important;
+	font-weight: 560 !important;
+	line-height: 1.35 !important;
+	color: #475569 !important;
+}
+
+.wrrapd-hot-gifts-rail__card-cta {
+	display: inline-block;
+	margin-top: 0.15rem;
+	font-family: Fraunces, Georgia, serif !important;
+	font-size: clamp(0.76rem, 1.8vw, 0.86rem) !important;
+	font-weight: 560 !important;
+	color: #b22234 !important;
+	text-decoration: none !important;
+}
+
+body.wrrapd-season-july-fourth .wrrapd-hot-gifts-rail__card-cta {
+	color: #0a3161 !important;
+}
+
+.wrrapd-hot-gifts-rail__card-cta:hover {
+	text-decoration: underline !important;
+}
+
+/* July 4 accents */
+body.wrrapd-season-july-fourth .wrrapd-hot-gifts-rail__title-main {
+	color: #b22234 !important;
+}
+
+body.wrrapd-season-july-fourth .wrrapd-hot-gifts-rail__title-sub {
+	color: #0a3161 !important;
+}
+
+body.wrrapd-season-july-fourth .wrrapd-hot-gifts-rail--below-ticker:not(.wrrapd-hot-gifts-rail--in-ticker-shell) {
+	background: linear-gradient(
+		180deg,
+		rgba(178, 34, 52, 0.04) 0%,
+		rgba(10, 49, 97, 0.03) 48%,
+		rgba(255, 255, 255, 0) 100%
+	);
+	border-top: 1px solid rgba(10, 49, 97, 0.08);
+}
+
+body.wrrapd-season-july-fourth .wrrapd-hot-gifts-rail--in-ticker-shell {
+	background: transparent;
+	border-top: 0;
+}
+
+body.wrrapd-season-july-fourth .wrrapd-hot-gifts-rail__card {
+	border-color: rgba(10, 49, 97, 0.24);
+}
+
+body.wrrapd-season-july-fourth .wrrapd-hot-gifts-rail__card:hover {
+	border-color: rgba(178, 34, 52, 0.45);
+}
+
+body.wrrapd-season-july-fourth .wrrapd-hot-gifts-rail__card-title {
+	color: #0a3161 !important;
+}
+
+/* Compact — My Orders */
+.wrrapd-hot-gifts-rail--compact {
+	margin: 0 auto 0.75rem;
+	padding: 0 0.45rem;
+	max-width: min(960px, 100%);
+}
+
+.wrrapd-hot-gifts-rail--compact .wrrapd-hot-gifts-rail__grid {
+	flex-wrap: nowrap;
+}
+
+.wrrapd-hot-gifts-rail--compact .wrrapd-hot-gifts-rail__card-copy {
+	display: none;
+}
+
+.wrrapd-hot-gifts-rail--compact .wrrapd-hot-gifts-rail__photo {
+	aspect-ratio: 1 / 1;
+}
+
+.wrrapd-hot-gifts-rail--compact .wrrapd-hot-gifts-rail__card--product .wrrapd-hot-gifts-rail__card-overlay {
+	padding: 0.28rem 0.22rem 0.32rem;
+}
+
+.wrrapd-hot-gifts-rail--compact .wrrapd-hot-gifts-rail__retailer,
+.wrrapd-hot-gifts-rail--compact .wrrapd-hot-gifts-rail__shop-at,
+.wrrapd-hot-gifts-rail--compact .wrrapd-hot-gifts-rail__retailer-logo {
+	display: none;
+}
+
+.wrrapd-hot-gifts-rail--compact .wrrapd-hot-gifts-rail__logo {
+	width: 2.15rem;
+	height: 2.15rem;
+}
+
+#wrrapd-seasonal-campaign-root[hidden] {
+	display: none !important;
+}

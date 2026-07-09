@@ -8,6 +8,19 @@ WordPress + Elementor + Hello theme content mostly lives **in the production dat
 
 ## Recent changes
 
+### 2026-07 — WrapStars portal (apply.wrrapd.com + pros.wrrapd.com)
+
+- **New MU-plugins** (dedicated WordPress only — **not** `wrrapd.com`): `wordpress/wrrapd-wrapstars.php`, `wordpress/wrrapd-boldsign.php`, `wordpress/wrrapd-wrapstars.css`.
+- **apply.wrrapd.com:** landing, `[wrrapd_wrapstar_apply]`, `[wrrapd_wrapstar_status]` dashboard.
+- **pros.wrrapd.com:** gated onboarding — BoldSign IC + W-9, insurance COI, orientation quiz, PO Box, admin activation.
+- **Deploy:** `wordpress/WRAPSTARS-DEPLOY.md`. Elementor shortcode map: `docs/wordpress-snippets/wrrapd-wrapstars-elementor-pages.md`.
+- **Legal draft:** `docs/wordpress-snippets/wrrapd-wrapstar-ic-agreement.md` (counsel review before BoldSign upload).
+- **Elementor page IDs:** log here after creating pages on the WrapStars WP install.
+
+### 2026-07 — How it works intro removed
+
+- **Homepage widget `e7baa0c`:** Removed the intro line (**“Effortless gifting!”** / **“Make it Special!”**) above the step rows—it did not belong in this section. Step 1 no longer includes a fourth orange blinking install CTA (`wrrapd-ext-cta`); copy points readers to the existing header, hero, and gift-guides install links. Snippet: `docs/wordpress-snippets/wrrapd-how-it-works-section.html`.
+
 ### 2026-06 — Compact logged-in header + account page polish (CSS/MU)
 
 - **Header (logged in):** MU plugin stacks Account · Logout → Hello → Hot Gifts | Your orders; kills legacy width-matching JS and `margin-left: 8.75rem` offset. Smaller logo + location text via Additional CSS.

@@ -16,13 +16,17 @@ const BLOCKLIST = new Set([
 	'cobra.com',
 ]);
 
-/** Live tracked links — shown first with no public “partner” label */
+/** Live tracked /go/ partners — shown first in Featured (commission hops). */
 const FEATURED = [
-	{ title: 'GiftCards.com', domain: 'giftcards.com', copy: 'Digital and physical gift cards for dozens of brands—when you want them to choose.' },
-	{ title: 'zChocolates', domain: 'zchocolates.com', copy: 'Artisan chocolate gifts—boxes built for unwrapping.' },
-	{ title: 'Russell Stover', domain: 'russellstover.com', copy: 'Classic American chocolates—assortments for every name on the list.', href: 'https://www.russellstover.com/shop/gifts' },
-	{ title: 'Fresh Roasted Coffee', domain: 'freshroastedcoffee.com', copy: 'Roaster-direct beans—giftable bags with real aroma payoff.' },
-	{ title: 'Books-A-Million', domain: 'booksamillion.com', copy: 'Books, games, and collectibles—reader gifts.', href: 'https://www.booksamillion.com/gifts' },
+	{ title: 'GiftCards.com', domain: 'giftcards.com', copy: 'Digital and physical gift cards for dozens of brands—when you want them to choose.', href: 'https://wrrapd.com/go/giftcards/' },
+	{ title: 'Etsy', domain: 'etsy.com', copy: 'Handmade and one-of-a-kind gifts—unique finds with Wrrapd at checkout.', href: 'https://wrrapd.com/go/etsy/' },
+	{ title: 'GearUP', domain: 'gearupbooster.com', copy: 'Game network booster subscriptions—giftable for PC and console players.', href: 'https://wrrapd.com/go/gearup/' },
+	{ title: 'zChocolates', domain: 'zchocolates.com', copy: 'Artisan chocolate gifts—boxes built for unwrapping.', href: 'https://wrrapd.com/go/zchocolat/' },
+	{ title: 'Russell Stover', domain: 'russellstover.com', copy: 'Classic American chocolates—assortments for every name on the list.', href: 'https://wrrapd.com/go/russellstover/?to=https://www.russellstover.com/shop/gifts' },
+	{ title: 'Fresh Roasted Coffee', domain: 'freshroastedcoffee.com', copy: 'Roaster-direct beans—giftable bags with real aroma payoff.', href: 'https://wrrapd.com/go/freshroastedcoffee/' },
+	{ title: 'Books-A-Million', domain: 'booksamillion.com', copy: 'Books, games, and collectibles—reader gifts.', href: 'https://wrrapd.com/go/booksamillion/?to=https://www.booksamillion.com/gifts' },
+	{ title: 'VY Jewelry', domain: 'vyjewelry.shop', copy: 'Sterling silver bracelets and spinner rings—everyday luxe gifts.', href: 'https://wrrapd.com/go/vyjewelry/' },
+	{ title: "Peet's Coffee", domain: 'peets.com', copy: 'Bean gifts and subscriptions for the caffeine loyalist.', href: 'https://wrrapd.com/go/peetscoffee/?to=https://www.peets.com/gifts' },
 ];
 
 const FEATURED_DOMAINS = new Set(FEATURED.map((f) => f.domain));
@@ -43,12 +47,16 @@ const DEFAULT_GIFT_HREFS = {
 	'toddsnyder.com': 'https://www.toddsnyder.com/',
 	'yslbeauty.com': 'https://www.yslbeauty.com/',
 	'zchocolates.com': 'https://www.zchocolates.com/',
+	'gearupbooster.com': 'https://www.gearupbooster.com/',
+	'vyjewelry.shop': 'https://vyjewelry.shop/',
+	'peets.com': 'https://www.peets.com/gifts',
 };
 
 function card({ title, domain, copy, href }) {
 	const host = domain.replace(/^https?:\/\//, '').split('/')[0].replace(/^www\./, '');
-	if (EXTENSION_RETAILERS.has(host) || BLOCKLIST.has(host)) return '';
 	const url = href || DEFAULT_GIFT_HREFS[host] || `https://www.${host}/`;
+	const isTrackedHop = /^https:\/\/wrrapd\.com\/go\//.test(url);
+	if (!isTrackedHop && (EXTENSION_RETAILERS.has(host) || BLOCKLIST.has(host))) return '';
 	return `
 			<li class="wrrapd-top-gifts__card">
 				<div class="wrrapd-top-gifts__card-top">
@@ -65,7 +73,7 @@ const categories = [
 		id: 'chocolates-coffee',
 		label: 'Chocolates &amp; coffee',
 		items: [
-			{ title: 'Peet\u2019s Coffee', domain: 'peets.com', copy: 'Subscription and bean gifts for the caffeine loyalist.', href: 'https://www.peets.com/gifts' },
+			{ title: 'Peet\u2019s Coffee', domain: 'peets.com', copy: 'Subscription and bean gifts for the caffeine loyalist.', href: 'https://wrrapd.com/go/peetscoffee/?to=https://www.peets.com/gifts' },
 			{ title: 'Baked by Melissa', domain: 'bakedbymelissa.com', copy: 'Tiny cupcakes in gift tins—office-party hero.', href: 'https://www.bakedbymelissa.com/collections/gifts' },
 			{ title: 'Pressed Juicery', domain: 'pressedjuicery.com', copy: 'Juice and wellness drops—clean-ingredient care packages.' },
 			{ title: 'Ka\u2019Chava', domain: 'kachava.com', copy: 'Plant-based meal shakes—fitness-minded stocking stuffers.' },
@@ -108,6 +116,7 @@ const categories = [
 		id: 'electronics',
 		label: 'Electronics',
 		items: [
+			{ title: 'GearUP', domain: 'gearupbooster.com', copy: 'Game network booster subscriptions—giftable for PC and console players.', href: 'https://wrrapd.com/go/gearup/' },
 			{ title: 'HP', domain: 'hp.com', copy: 'Laptops and printers—graduation and WFH upgrades.', href: 'https://www.hp.com/us-en/shop/gifts.html' },
 			{ title: 'Acer', domain: 'acer.com', copy: 'Value-forward laptops and monitors—student gifting.', href: 'https://www.acer.com/us-en/' },
 			{ title: 'SanDisk', domain: 'sandisk.com', copy: 'Storage and memory—small box, high utility.', href: 'https://shop.sandisk.com/' },
@@ -162,7 +171,7 @@ const categories = [
 			{ title: 'Kay Jewelers', domain: 'kay.com', copy: 'Classic fine jewelry for milestones.', href: 'https://www.kay.com/jewelry/gifts' },
 			{ title: 'Zales', domain: 'zales.com', copy: 'Rings, chains, and sparkle across budgets.', href: 'https://www.zales.com/gifts' },
 			{ title: 'JTV Jewelry', domain: 'jtv.com', copy: 'Gemstone jewelry—sparkle across budgets online.' },
-			{ title: 'VY Jewelry', domain: 'vyjewelry.com', copy: 'Everyday pieces with gift-box appeal.' },
+			{ title: 'VY Jewelry', domain: 'vyjewelry.shop', copy: 'Sterling silver bracelets and spinner rings—gift-box appeal.', href: 'https://wrrapd.com/go/vyjewelry/' },
 			{ title: 'Friendly Diamonds', domain: 'friendlydiamonds.com', copy: 'Lab-grown diamonds for forever gifts.' },
 			{ title: 'GOODSTONE', domain: 'goodstone.com', copy: 'Modern fine jewelry with strong unbox moments.' },
 			{ title: 'Radley London', domain: 'radley.co.uk', copy: 'British bags and small leather goods—charm-heavy gifts.' },
@@ -261,6 +270,10 @@ const html = `<!--
 		<p class="wrrapd-top-gifts__lede wrrapd-top-gifts__lede--display">
 			Hand-picked brands by category—chocolates, beauty, electronics, fashion, and more.
 			For retailers where Wrrapd wraps at checkout, see our <a href="https://wrrapd.com/">homepage gift guides</a>.
+		</p>
+
+		<p class="wrrapd-top-gifts__affiliate-notice" role="note">
+			Our curated gift guides contain tracking URLs from affiliate networks. If you click a partner link and make a purchase, Wrrapd may earn a commission at no extra cost to you. See our full <a href="https://wrrapd.com/affiliate-disclosure/">Affiliate Disclosure</a> for details.
 		</p>
 
 		<nav class="wrrapd-top-gifts__nav" aria-label="Gift categories">

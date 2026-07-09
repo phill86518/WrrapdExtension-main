@@ -1,23 +1,86 @@
 <!--
   ELEMENTOR: Header template #6078 → HTML widget (data-id da02c22)
 
-  Replace the old greeting widget HTML (remove the inline <style>, width-matching
-  <script>, and margin-left hacks). The MU plugin reorganizes this into a tidy
-  logged-in cluster and injects “Your orders” beside Hot Gifts.
-
-  Keep the hidden inputs from wrrapd-member-header plugin — do not duplicate them here.
+  Elementor-local version: keeps toggle script + layout CSS in the widget.
+  Remove width-matching JS and margin-left hacks from the old 98-line block.
 -->
 
 <div class="greeting-container" id="greeting-message" style="display: none;">
 	<p class="greeting-text">
 		Hello, <span id="user-first-name">User</span>!
 	</p>
-	<a
-		href="https://www.amazon.com/gp/most-gifted"
-		target="_blank"
-		rel="noopener noreferrer"
-		class="gift-ideas-button"
-	>
-		Hot Gifts
-	</a>
+	<div class="wrrapd-header-user-actions">
+		<a href="https://www.amazon.com/gp/most-gifted" target="_blank" rel="noopener noreferrer" class="gift-ideas-button">
+			Hot Gifts
+		</a>
+		<a href="https://wrrapd.com/my-orders/" class="gift-ideas-button wrrapd-your-orders-button">
+			Your orders
+		</a>
+	</div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+	var loginStatusInput = document.getElementById('wrrapd-user-login-status');
+	var firstNameInput = document.getElementById('wrrapd-user-first-name');
+	if (!loginStatusInput || !firstNameInput) return;
+
+	var isLoggedIn = loginStatusInput.value === '1';
+	var firstName = firstNameInput.value || 'User';
+	var googleButton = document.querySelector('div[data-id="69de726e"]');
+	var amazonButton = document.querySelector('div[data-id="2ca99876"]');
+	var greetingMessage = document.getElementById('greeting-message');
+	var userFirstName = document.getElementById('user-first-name');
+
+	if (!greetingMessage) return;
+
+	if (isLoggedIn) {
+		if (googleButton) googleButton.style.display = 'none';
+		if (amazonButton) amazonButton.style.display = 'none';
+		greetingMessage.style.display = 'block';
+		if (userFirstName) userFirstName.textContent = firstName;
+	} else {
+		if (googleButton) googleButton.style.display = '';
+		if (amazonButton) amazonButton.style.display = '';
+		greetingMessage.style.display = 'none';
+	}
+});
+</script>
+
+<style>
+.greeting-container {
+	text-align: right;
+	margin: 0;
+	width: auto;
+}
+.greeting-text {
+	margin: 0 0 0.25rem;
+	font-family: "Source Sans 3", Roboto, sans-serif;
+	font-size: 0.9rem;
+	font-weight: 600;
+	color: #fff300;
+}
+.wrrapd-header-user-actions {
+	display: flex;
+	flex-direction: row;
+	flex-wrap: nowrap;
+	gap: 0.35rem;
+	justify-content: flex-end;
+}
+.gift-ideas-button {
+	display: inline-block;
+	font-family: Helvetica, Arial, sans-serif;
+	font-size: 0.75rem;
+	font-weight: bold;
+	color: #000;
+	background-color: #fff300;
+	border: 0.0625rem solid #000;
+	padding: 0.22rem 0.45rem;
+	border-radius: 1.25rem;
+	text-decoration: none;
+	white-space: nowrap;
+}
+.gift-ideas-button:hover {
+	background-color: #e6da00;
+}
+</style>

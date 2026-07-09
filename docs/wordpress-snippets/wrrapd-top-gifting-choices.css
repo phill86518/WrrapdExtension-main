@@ -30,6 +30,7 @@
 .elementor-widget-html .wrrapd-top-gifts a.wrrapd-top-gifts__pill,
 .elementor-widget-html .wrrapd-top-gifts .wrrapd-top-gifts__eyebrow,
 .elementor-widget-html .wrrapd-top-gifts .wrrapd-top-gifts__fine,
+.elementor-widget-html .wrrapd-top-gifts .wrrapd-top-gifts__affiliate-notice,
 .elementor-widget-html .wrrapd-top-gifts .wrrapd-top-gifts__disclaimer {
 	font-family: "Source Sans 3", system-ui, sans-serif !important;
 }
@@ -295,6 +296,36 @@
 	border-top: 1px solid var(--wtg-border);
 	max-width: 42rem;
 	text-wrap: pretty;
+}
+
+.wrrapd-top-gifts__lede--display sup a {
+	font-size: 0.72em;
+	vertical-align: super;
+	line-height: 0;
+	text-decoration: none;
+	color: var(--wtg-gold-deep);
+}
+
+.wrrapd-top-gifts__affiliate-notice {
+	font-family: "Source Sans 3", system-ui, sans-serif !important;
+	font-size: clamp(0.75rem, 1.7vw, 0.82rem) !important;
+	color: #64748b;
+	line-height: 1.5 !important;
+	margin: 0 0 clamp(1rem, 2.5vmin, 1.35rem);
+	padding-top: clamp(0.85rem, 2vmin, 1rem);
+	border-top: 1px solid var(--wtg-border);
+	max-width: 46rem;
+	text-wrap: pretty;
+}
+
+.wrrapd-top-gifts__affiliate-notice a {
+	color: var(--wtg-muted);
+	text-decoration: underline;
+	text-underline-offset: 0.12em;
+}
+
+.wrrapd-top-gifts__affiliate-notice a:hover {
+	color: var(--wtg-ink);
 }
 
 .wrrapd-top-gifts__nav {

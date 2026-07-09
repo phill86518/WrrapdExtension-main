@@ -1,0 +1,264 @@
+/* Wrrapd My Account — loads last via MU plugin (overrides User Registration plugin CSS) */
+
+body.wrrapd-account-page,
+body.wrrapd-account-page .elementor-page-4621,
+body.wrrapd-account-page .site-main,
+body.wrrapd-account-page #primary {
+	background: linear-gradient(165deg, #fdfcfa 0%, #f4f0e8 46%, #ebe4d8 100%) !important;
+}
+
+body.wrrapd-account-page .elementor-page-4621 .e-con,
+body.wrrapd-account-page .elementor-page-4621 .elementor-element,
+body.wrrapd-account-page .elementor-page-4621 .e-con-inner {
+	background: transparent !important;
+	background-color: transparent !important;
+}
+
+body.wrrapd-account-page #user-registration,
+body.wrrapd-account-page .user-registration {
+	background: transparent !important;
+	border: 0 !important;
+	box-shadow: none !important;
+	padding: 0 !important;
+	max-width: min(56rem, 100%) !important;
+	margin: 0 auto !important;
+}
+
+.wrrapd-account-hero-injected {
+	text-align: center;
+	margin: 0 auto clamp(1.25rem, 3vw, 1.75rem);
+	max-width: min(42rem, 100%);
+}
+
+.wrrapd-account-hero-injected .wrrapd-page-eyebrow {
+	margin: 0 0 0.65rem;
+	color: #9a7618;
+	font-size: 0.82rem;
+	font-weight: 800;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	font-family: "Source Sans 3", system-ui, sans-serif !important;
+}
+
+.wrrapd-account-hero-injected h1 {
+	margin: 0 0 0.75rem;
+	font-family: Fraunces, Georgia, serif !important;
+	font-size: clamp(2rem, 5vw, 2.75rem) !important;
+	font-weight: 560 !important;
+	line-height: 1.08 !important;
+	letter-spacing: -0.03em !important;
+	color: #0c1222 !important;
+}
+
+.wrrapd-account-hero-injected .wrrapd-page-lede {
+	max-width: 42rem;
+	margin: 0 auto;
+	color: #475569;
+	font-family: "Source Sans 3", system-ui, sans-serif !important;
+	font-size: clamp(1rem, 2.3vw, 1.1rem) !important;
+	line-height: 1.6 !important;
+}
+
+.wrrapd-account-hero-injected .wrrapd-page-lede a {
+	color: #162a52;
+	font-weight: 700;
+}
+
+body.wrrapd-account-page .user-registration-MyAccount {
+	display: grid !important;
+	grid-template-columns: minmax(0, 252px) minmax(0, 1fr) !important;
+	grid-template-rows: auto auto !important;
+	gap: 0 clamp(1rem, 3vw, 1.75rem) !important;
+	align-items: stretch !important;
+	max-width: min(56rem, 100%) !important;
+	margin: 0 auto !important;
+	padding: clamp(1rem, 3vw, 1.35rem) !important;
+	background: rgba(255, 255, 255, 0.78) !important;
+	border: 1px solid rgba(12, 18, 34, 0.09) !important;
+	border-radius: clamp(0.85rem, 2vmin, 1.1rem) !important;
+	box-shadow: 0 16px 44px rgba(12, 18, 34, 0.08) !important;
+	backdrop-filter: blur(8px);
+}
+
+body.wrrapd-account-page .user-registration-MyAccount-user {
+	grid-column: 1 !important;
+	grid-row: 1 !important;
+	background: linear-gradient(180deg, #162a52 0%, #1e3a5f 100%) !important;
+	border-radius: 0.75rem 0.75rem 0 0 !important;
+	padding: 1rem 0.75rem 0.65rem !important;
+	margin: 0 !important;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+	text-align: center !important;
+}
+
+body.wrrapd-account-page .user-registration-MyAccount-user strong,
+body.wrrapd-account-page .user-registration-MyAccount-user .user-registration-username {
+	display: block !important;
+	margin-top: 0.45rem !important;
+	color: #fff !important;
+	font-size: 0.95rem !important;
+	font-weight: 700 !important;
+	font-family: "Source Sans 3", system-ui, sans-serif !important;
+}
+
+body.wrrapd-account-page .user-registration-MyAccount-navigation {
+	grid-column: 1 !important;
+	grid-row: 2 !important;
+	background: linear-gradient(180deg, #1e3a5f 0%, #162a52 100%) !important;
+	border-radius: 0 0 0.75rem 0.75rem !important;
+	padding: 0.5rem 0.65rem 0.85rem !important;
+	border: 0 !important;
+	margin: 0 !important;
+}
+
+body.wrrapd-account-page .user-registration-MyAccount-content {
+	grid-column: 2 !important;
+	grid-row: 1 / span 2 !important;
+	align-self: start !important;
+	background: #fff !important;
+	border: 1px solid rgba(12, 18, 34, 0.08) !important;
+	border-radius: 0.75rem !important;
+	padding: clamp(1rem, 3vw, 1.35rem) !important;
+}
+
+body.wrrapd-account-page .user-registration-MyAccount-user img,
+body.wrrapd-account-page .user-registration-MyAccount-user .profile-photo,
+body.wrrapd-account-page .user-registration-MyAccount-user .user-registration-profile-header,
+body.wrrapd-account-page .user-registration-MyAccount-user figure,
+body.wrrapd-account-page .user-registration-MyAccount-user .profile-preview,
+body.wrrapd-account-page .user-registration-MyAccount-user [class*="avatar"],
+body.wrrapd-account-page .user-registration-MyAccount-user [class*="Avatar"],
+body.wrrapd-account-page .user-registration-MyAccount-user [class*="profile-img"],
+body.wrrapd-account-page .user-registration-MyAccount-user .ur-avatar {
+	background: linear-gradient(145deg, #f5e6a8, #c9a227) !important;
+	background-color: transparent !important;
+	color: #162a52 !important;
+	border-radius: 50% !important;
+	border: 2px solid rgba(245, 197, 24, 0.65) !important;
+	box-shadow: 0 4px 14px rgba(12, 18, 34, 0.18) !important;
+}
+
+body.wrrapd-account-page .user-registration-MyAccount-user a,
+body.wrrapd-account-page .user-registration-MyAccount-user .edit-profile,
+body.wrrapd-account-page .user-registration-MyAccount-user .user-registration-view-profile {
+	color: rgba(245, 197, 24, 0.95) !important;
+	text-decoration: none !important;
+	font-weight: 600 !important;
+	font-family: "Source Sans 3", system-ui, sans-serif !important;
+}
+
+body.wrrapd-account-page .user-registration-MyAccount-navigation ul {
+	list-style: none !important;
+	margin: 0 !important;
+	padding: 0 !important;
+}
+
+body.wrrapd-account-page .user-registration-MyAccount-navigation li {
+	margin: 0.15rem 0 !important;
+	background: transparent !important;
+	border: 0 !important;
+}
+
+body.wrrapd-account-page .user-registration-MyAccount-navigation a {
+	display: flex !important;
+	align-items: center !important;
+	justify-content: space-between !important;
+	gap: 0.5rem !important;
+	padding: 0.55rem 0.65rem !important;
+	border-radius: 0.55rem !important;
+	color: rgba(255, 255, 255, 0.9) !important;
+	background: transparent !important;
+	border: 0 !important;
+	text-decoration: none !important;
+	font-family: "Source Sans 3", system-ui, sans-serif !important;
+	font-size: 0.92rem !important;
+	font-weight: 600 !important;
+	box-shadow: none !important;
+}
+
+body.wrrapd-account-page .user-registration-MyAccount-navigation li.is-active a,
+body.wrrapd-account-page .user-registration-MyAccount-navigation li.active a,
+body.wrrapd-account-page .user-registration-MyAccount-navigation a:hover,
+body.wrrapd-account-page .user-registration-MyAccount-navigation a:focus-visible {
+	background: rgba(245, 197, 24, 0.2) !important;
+	color: #fff !important;
+	border-left: 3px solid #f5c518 !important;
+}
+
+body.wrrapd-account-page .user-registration-MyAccount-content > h1,
+body.wrrapd-account-page .user-registration-MyAccount-content > h2,
+body.wrrapd-account-page .user-registration-MyAccount-content > h3,
+body.wrrapd-account-page .user-registration-MyAccount-content .ur-form-title,
+body.wrrapd-account-page .user-registration-MyAccount-content header {
+	display: none !important;
+}
+
+body.wrrapd-account-page .user-registration-MyAccount-content label,
+body.wrrapd-account-page .user-registration-MyAccount-content .ur-label {
+	font-family: "Source Sans 3", system-ui, sans-serif !important;
+	font-size: 0.78rem !important;
+	font-weight: 700 !important;
+	letter-spacing: 0.04em !important;
+	text-transform: uppercase !important;
+	color: #475569 !important;
+}
+
+body.wrrapd-account-page .user-registration-MyAccount-content input[type="text"],
+body.wrrapd-account-page .user-registration-MyAccount-content input[type="email"],
+body.wrrapd-account-page .user-registration-MyAccount-content input[type="password"],
+body.wrrapd-account-page .user-registration-MyAccount-content select,
+body.wrrapd-account-page .user-registration-MyAccount-content textarea {
+	width: 100% !important;
+	border: 1px solid rgba(12, 18, 34, 0.14) !important;
+	border-radius: 0.6rem !important;
+	padding: 0.62rem 0.75rem !important;
+	font-family: "Source Sans 3", system-ui, sans-serif !important;
+	font-size: 0.98rem !important;
+	background: #fff !important;
+	color: #0f172a !important;
+	box-shadow: none !important;
+}
+
+body.wrrapd-account-page .user-registration-MyAccount-content .user-registration-Button,
+body.wrrapd-account-page .user-registration-MyAccount-content .ur-submit-button,
+body.wrrapd-account-page .user-registration-MyAccount-content button[type="submit"],
+body.wrrapd-account-page .user-registration-MyAccount-content input[type="submit"],
+body.wrrapd-account-page .user-registration-MyAccount-content .ur-button-container .ur-submit-button,
+body.wrrapd-account-page .user-registration-MyAccount-content .ur-button-container button {
+	display: inline-flex !important;
+	align-items: center !important;
+	justify-content: center !important;
+	margin-top: 0.75rem !important;
+	padding: 0.62rem 1.35rem !important;
+	border-radius: 999px !important;
+	border: 1px solid rgba(154, 118, 24, 0.35) !important;
+	background: linear-gradient(180deg, #f5e6a8, #c9a227) !important;
+	background-color: transparent !important;
+	color: #0c1222 !important;
+	font-family: "Source Sans 3", system-ui, sans-serif !important;
+	font-weight: 800 !important;
+	font-size: 0.92rem !important;
+	cursor: pointer !important;
+	box-shadow: 0 2px 0 rgba(154, 118, 24, 0.22) !important;
+	text-transform: none !important;
+	min-height: auto !important;
+	width: auto !important;
+}
+
+@media (max-width: 767px) {
+	body.wrrapd-account-page .user-registration-MyAccount {
+		grid-template-columns: 1fr !important;
+		grid-template-rows: auto auto auto !important;
+	}
+
+	body.wrrapd-account-page .user-registration-MyAccount-user,
+	body.wrrapd-account-page .user-registration-MyAccount-navigation,
+	body.wrrapd-account-page .user-registration-MyAccount-content {
+		grid-column: 1 !important;
+		grid-row: auto !important;
+	}
+
+	body.wrrapd-account-page .user-registration-MyAccount-navigation {
+		margin-bottom: 0.75rem !important;
+	}
+}
