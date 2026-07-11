@@ -1,22 +1,22 @@
 import type { Order } from "./types";
+import { orderWrapstarId, normalizeOrderStatus } from "./types";
 import { formatDateKeyNy } from "./ny-date";
 import { wrrapdScheduledInstantIsoForUi } from "./order-schedule-display";
-import { DEFAULT_DEPOT, approxCoordsForOrder } from "./zip-centroids-jax";
+import { DEFAULT_DEPOT, approxCoordsForOrder, haversineKm as haversineFromZip } from "./zip-centroids-jax";
 
 type LatLng = { lat: number; lng: number };
 
-const ROUTE_STATUSES = new Set<Order["status"]>(["scheduled", "assigned", "en_route"]);
+const ROUTE_STATUSES = new Set<string>([
+  "scheduled",
+  "assigned",
+  "accepted",
+  "in_progress",
+  "out_for_delivery",
+  "en_route",
+]);
 
 function haversineKm(a: LatLng, b: LatLng): number {
-  const R = 6371;
-  const dLat = ((b.lat - a.lat) * Math.PI) / 180;
-  const dLng = ((b.lng - a.lng) * Math.PI) / 180;
-  const lat1 = (a.lat * Math.PI) / 180;
-  const lat2 = (b.lat * Math.PI) / 180;
-  const h =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
-  return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
+  return haversineFromZip(a, b);
 }
 
 function openPathLength(depot: LatLng, route: Order[]): number {
@@ -92,9 +92,11 @@ function optimizeStopOrderForGroup(orders: Order[]): Order[] {
 export function assignStopSequences(orders: Order[]): Order[] {
   const byKey = new Map<string, Order[]>();
   for (const o of orders) {
-    if (!o.driverId || !ROUTE_STATUSES.has(o.status)) continue;
+    const wsId = orderWrapstarId(o);
+    const st = normalizeOrderStatus(o.status);
+    if (!wsId || !ROUTE_STATUSES.has(st)) continue;
     const day = formatDateKeyNy(wrrapdScheduledInstantIsoForUi(o));
-    const key = `${o.driverId}|${day}`;
+    const key = `${wsId}|${day}`;
     const list = byKey.get(key) ?? [];
     list.push(o);
     byKey.set(key, list);
@@ -119,14 +121,15 @@ export function assignStopSequences(orders: Order[]): Order[] {
 }
 
 /**
- * Max `stopSequence` per driver + Eastern calendar day (same key as routing).
- * Used for admin/driver UI as "Stop 2 of 5" when multiple stops share a route day.
+ * Max `stopSequence` per WrapStar + Eastern calendar day (same key as routing).
  */
 export function maxStopSequenceByRouteKey(orders: Order[]): Map<string, number> {
   const m = new Map<string, number>();
   for (const o of orders) {
-    if (!o.driverId || o.stopSequence == null || !ROUTE_STATUSES.has(o.status)) continue;
-    const key = `${o.driverId}|${formatDateKeyNy(wrrapdScheduledInstantIsoForUi(o))}`;
+    const wsId = orderWrapstarId(o);
+    const st = normalizeOrderStatus(o.status);
+    if (!wsId || o.stopSequence == null || !ROUTE_STATUSES.has(st)) continue;
+    const key = `${wsId}|${formatDateKeyNy(wrrapdScheduledInstantIsoForUi(o))}`;
     m.set(key, Math.max(m.get(key) ?? 0, o.stopSequence));
   }
   return m;

@@ -40,7 +40,11 @@ function recordForWeek(
   driverId: string,
   weekStartMonday: string,
 ): WeekAvailabilityRecord | undefined {
-  return records.find((r) => r.driverId === driverId && r.weekStartMonday === weekStartMonday);
+  return records.find(
+    (r) =>
+      (r.wrapstarId === driverId || r.driverId === driverId) &&
+      r.weekStartMonday === weekStartMonday,
+  );
 }
 
 /** Monday YYYY-MM-DD of the ISO week containing `date` (NY-local interpretation via calendar math on NY "now"). */

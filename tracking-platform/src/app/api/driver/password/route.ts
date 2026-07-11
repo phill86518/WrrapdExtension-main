@@ -3,7 +3,7 @@ import { getSession, updateDriverPassword, verifyDriverPassword } from "@/lib/au
 
 export async function POST(request: NextRequest) {
   const session = await getSession();
-  if (!session || session.role !== "driver") {
+  if (!session || (session.role !== "driver" && session.role !== "wrapstar")) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }
 

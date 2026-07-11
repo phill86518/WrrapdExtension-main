@@ -3,20 +3,36 @@ import { getFirestoreDb } from "./firebase-admin";
 
 /** Namespaced collections so this app can share a Firebase project safely. */
 export const TRACKING_COLLECTIONS = {
+  wrapstars: "tracking_wrapstars",
+  wrapstarProfiles: "tracking_wrapstar_profiles",
+  /** Legacy — still read during migration */
   drivers: "tracking_drivers",
   driverProfiles: "tracking_driver_profiles",
   weekAvailability: "tracking_week_availability",
   runtime: "tracking_runtime",
+  earnings: "tracking_earnings",
+  payouts: "tracking_payouts",
+  payoutConfig: "tracking_payout_config",
 } as const;
 
-export function trackingDriversCollection(): CollectionReference | null {
+export function trackingWrapstarsCollection(): CollectionReference | null {
   const db = getFirestoreDb();
-  return db ? db.collection(TRACKING_COLLECTIONS.drivers) : null;
+  return db ? db.collection(TRACKING_COLLECTIONS.wrapstars) : null;
 }
 
-export function trackingDriverProfilesCollection(): CollectionReference | null {
+export function trackingWrapstarProfilesCollection(): CollectionReference | null {
   const db = getFirestoreDb();
-  return db ? db.collection(TRACKING_COLLECTIONS.driverProfiles) : null;
+  return db ? db.collection(TRACKING_COLLECTIONS.wrapstarProfiles) : null;
+}
+
+/** @deprecated Use trackingWrapstarsCollection */
+export function trackingDriversCollection(): CollectionReference | null {
+  return trackingWrapstarsCollection();
+}
+
+/** @deprecated Use trackingWrapstarProfilesCollection */
+export function trackingDriverProfilesCollection(): CollectionReference | null {
+  return trackingWrapstarProfilesCollection();
 }
 
 export function trackingWeekAvailabilityCollection(): CollectionReference | null {
@@ -27,4 +43,19 @@ export function trackingWeekAvailabilityCollection(): CollectionReference | null
 export function trackingRuntimeDoc(): DocumentReference | null {
   const db = getFirestoreDb();
   return db ? db.collection(TRACKING_COLLECTIONS.runtime).doc("config") : null;
+}
+
+export function trackingEarningsCollection(): CollectionReference | null {
+  const db = getFirestoreDb();
+  return db ? db.collection(TRACKING_COLLECTIONS.earnings) : null;
+}
+
+export function trackingPayoutsCollection(): CollectionReference | null {
+  const db = getFirestoreDb();
+  return db ? db.collection(TRACKING_COLLECTIONS.payouts) : null;
+}
+
+export function trackingPayoutConfigDoc(): DocumentReference | null {
+  const db = getFirestoreDb();
+  return db ? db.collection(TRACKING_COLLECTIONS.payoutConfig).doc("default") : null;
 }

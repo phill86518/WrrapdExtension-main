@@ -1,8 +1,8 @@
 import {
-  assignDriver,
+  assignWrapstar,
   createOrder,
   deleteOrders,
-  listDrivers,
+  listWrapstars,
   listOrdersByStatus,
   reopenOrderAsAssigned,
   updateOrderStatus,
@@ -14,9 +14,11 @@ import { AdminCreateDeliverySection } from "@/components/admin-create-delivery-s
 import { PasswordField } from "@/components/password-field";
 import { SelectAllOrdersButton } from "@/components/select-all-orders-button";
 import { WrrapdLogo } from "@/components/wrrapd-logo";
+import { AdminNav } from "@/components/admin-nav";
 import { maxStopSequenceByRouteKey } from "@/lib/route-optimization";
 import { formatDateKeyNy, toInstantDate } from "@/lib/ny-date";
 import { wrrapdScheduledInstantIsoForUi } from "@/lib/order-schedule-display";
+import { orderWrapstarId, type OrderStatus } from "@/lib/types";
 import { formatInTimeZone } from "date-fns-tz";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -54,20 +56,19 @@ async function updateStatusAction(formData: FormData) {
   "use server";
   await updateOrderStatus(
     String(formData.get("orderId") || ""),
-    String(formData.get("status") || "assigned") as
-      | "scheduled"
-      | "assigned"
-      | "en_route"
-      | "delivered"
-      | "cancelled",
+    String(formData.get("status") || "assigned") as OrderStatus,
     "admin",
   );
   revalidatePath("/admin");
 }
 
-async function assignDriverAction(formData: FormData) {
+async function assignWrapstarAction(formData: FormData) {
   "use server";
-  await assignDriver(String(formData.get("orderId") || ""), String(formData.get("driverId") || ""), "admin");
+  await assignWrapstar(
+    String(formData.get("orderId") || ""),
+    String(formData.get("wrapstarId") || ""),
+    "admin",
+  );
   revalidatePath("/admin");
 }
 
@@ -89,9 +90,13 @@ async function deleteSelectedOrdersAction(formData: FormData) {
 }
 
 function orderRowClass(status: string) {
-  if (status === "en_route") return "border-l-4 border-l-sky-600 bg-sky-100/80 ring-1 ring-sky-200/80";
+  if (status === "en_route" || status === "in_progress" || status === "out_for_delivery") {
+    return "border-l-4 border-l-sky-600 bg-sky-100/80 ring-1 ring-sky-200/80";
+  }
   if (status === "delivered") return "border-l-4 border-l-amber-500 bg-amber-100/80 ring-1 ring-amber-200/90";
-  if (status === "cancelled") return "border-l-4 border-l-stone-500 bg-stone-200/60 ring-1 ring-stone-300/80";
+  if (status === "cancelled" || status === "refunded") {
+    return "border-l-4 border-l-stone-500 bg-stone-200/60 ring-1 ring-stone-300/80";
+  }
   return "bg-white ring-1 ring-[#1a2744]/12";
 }
 
@@ -115,12 +120,12 @@ export default async function AdminPage({
         {query.error === "1" && (
           <p className="mt-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
             Incorrect admin password. It must match <code className="rounded bg-red-100 px-1">APP_ADMIN_PASSWORD</code> on Cloud Run
-            (you may use the same value as the driver passcode if you set both env vars that way).
+            (you may use the same value as the WrapStar passcode if you set both env vars that way).
           </p>
         )}
         <p className="mt-3 text-sm text-slate-500">
           Sign in with the <strong>admin</strong> password from <code className="rounded bg-slate-100 px-1">APP_ADMIN_PASSWORD</code>{" "}
-          (default <code className="rounded bg-slate-100 px-1">admin123</code> if unset). Driver login uses{" "}
+          (default <code className="rounded bg-slate-100 px-1">admin123</code> if unset). WrapStar login uses{" "}
           <code className="rounded bg-slate-100 px-1">APP_DRIVER_PASSWORD</code> — the two can be identical.
         </p>
         <form action="/api/admin/login" method="post" className="mt-6 space-y-4 rounded-lg border p-6">
@@ -136,15 +141,15 @@ export default async function AdminPage({
   let active: Awaited<ReturnType<typeof listOrdersByStatus>>;
   let scheduled: Awaited<ReturnType<typeof listOrdersByStatus>>;
   let past: Awaited<ReturnType<typeof listOrdersByStatus>>;
-  let drivers: Awaited<ReturnType<typeof listDrivers>>;
+  let wrapstars: Awaited<ReturnType<typeof listWrapstars>>;
   try {
     const settled = await Promise.allSettled([
       listOrdersByStatus("active"),
       listOrdersByStatus("scheduled"),
       listOrdersByStatus("past"),
-      listDrivers(),
+      listWrapstars(),
     ]);
-    const labels = ["orders:active", "orders:scheduled", "orders:past", "drivers"] as const;
+    const labels = ["orders:active", "orders:scheduled", "orders:past", "wrapstars"] as const;
     settled.forEach((r, i) => {
       if (r.status === "rejected") {
         const reason = r.reason;
@@ -163,14 +168,14 @@ export default async function AdminPage({
     active = (settled[0] as PromiseFulfilledResult<typeof active>).value;
     scheduled = (settled[1] as PromiseFulfilledResult<typeof scheduled>).value;
     past = (settled[2] as PromiseFulfilledResult<typeof past>).value;
-    drivers = (settled[3] as PromiseFulfilledResult<typeof drivers>).value;
+    wrapstars = (settled[3] as PromiseFulfilledResult<typeof wrapstars>).value;
   } catch (err) {
     console.error("[admin] failed to load Firestore / orders", err);
     return (
       <main className="mx-auto max-w-2xl px-4 py-16">
         <h1 className="text-2xl font-semibold">Command center unavailable</h1>
         <p className="mt-3 text-slate-700">
-          Loading orders or drivers failed (often Firestore rules, network, or bad data). Check{" "}
+          Loading orders or WrapStars failed (often Firestore rules, network, or bad data). Check{" "}
           <strong>Cloud Run → Logs</strong> for lines starting with{" "}
           <code className="rounded bg-slate-100 px-1 text-sm">[admin] load failed</code> or{" "}
           <code className="rounded bg-slate-100 px-1 text-sm">[firebase-admin]</code>.
@@ -191,11 +196,12 @@ export default async function AdminPage({
     <main className="min-h-screen bg-gradient-to-br from-[#9aab9f] via-[#c5cfc9] to-[#a8b8ae]">
       <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
         <div className="mb-8 rounded-2xl border-2 border-[#1a2744]/40 bg-[#faf8f4] p-6 shadow-xl shadow-[#0f172a]/20 ring-1 ring-white/40">
+          <AdminNav current="/admin" />
           <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <WrrapdLogo className="h-10 w-auto max-w-[180px] object-contain object-left" />
-              <h1 className="mt-2 text-3xl font-bold tracking-tight text-[#0f172a]">Command Center</h1>
-              <p className="mt-1 text-sm font-medium text-[#2d4a38]">Scheduled deliveries and fleet oversight</p>
+              <h1 className="mt-2 text-3xl font-bold tracking-tight text-[#0f172a]">WrapStars Command Center</h1>
+              <p className="mt-1 text-sm font-medium text-[#2d4a38]">Orders, WrapStars, and fleet oversight</p>
             </div>
             <div className="flex flex-wrap items-center gap-3">
               <AdminCreateDeliverySection createOrderAction={createOrderAction} createError={query.createError} />
@@ -204,15 +210,41 @@ export default async function AdminPage({
           </div>
         </div>
 
-        <section className="mb-10 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+        <section className="mb-10 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
           <a
-            href="/admin/drivers"
+            href="/admin/orders"
             className="group relative overflow-hidden rounded-2xl border-2 border-[#1a2744]/35 bg-[#faf8f4] p-6 shadow-lg shadow-[#0f172a]/15 transition hover:border-[#c9a227] hover:shadow-xl"
           >
             <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-[#c9a227] via-amber-500 to-[#c9a227]" />
-            <h3 className="mt-2 font-bold text-[#0f172a]">Driver onboarding</h3>
+            <h3 className="mt-2 font-bold text-[#0f172a]">Orders calendar</h3>
             <p className="mt-2 text-sm leading-relaxed text-[#2d4a38]">
-              Approve or reject drivers and apply manual availability overrides.
+              Browse orders by day with status and WrapStar filters.
+            </p>
+            <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-[#1a2744] group-hover:text-amber-700">
+              Open →
+            </p>
+          </a>
+          <a
+            href="/admin/wrapstars"
+            className="group relative overflow-hidden rounded-2xl border-2 border-[#1a2744]/35 bg-[#faf8f4] p-6 shadow-lg shadow-[#0f172a]/15 transition hover:border-[#c9a227] hover:shadow-xl"
+          >
+            <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-[#c9a227] via-amber-500 to-[#c9a227]" />
+            <h3 className="mt-2 font-bold text-[#0f172a]">WrapStars</h3>
+            <p className="mt-2 text-sm leading-relaxed text-[#2d4a38]">
+              Directory, home ZIP, onboarding, and per-WrapStar order history.
+            </p>
+            <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-[#1a2744] group-hover:text-amber-700">
+              Open →
+            </p>
+          </a>
+          <a
+            href="/admin/finance"
+            className="group relative overflow-hidden rounded-2xl border-2 border-[#1a2744]/35 bg-[#faf8f4] p-6 shadow-lg shadow-[#0f172a]/15 transition hover:border-[#c9a227] hover:shadow-xl"
+          >
+            <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-[#c9a227] via-amber-500 to-[#c9a227]" />
+            <h3 className="mt-2 font-bold text-[#0f172a]">Finance & payouts</h3>
+            <p className="mt-2 text-sm leading-relaxed text-[#2d4a38]">
+              Earnings ledger, wallets, ACH CSV export, and pay rates.
             </p>
             <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-[#1a2744] group-hover:text-amber-700">
               Open →
@@ -226,19 +258,6 @@ export default async function AdminPage({
             <h3 className="mt-2 font-bold text-[#0f172a]">Delivery reports</h3>
             <p className="mt-2 text-sm leading-relaxed text-[#2d4a38]">
               View daily metrics and export CSV for operations.
-            </p>
-            <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-[#1a2744] group-hover:text-amber-700">
-              Open →
-            </p>
-          </a>
-          <a
-            href="/admin/pricing"
-            className="group relative overflow-hidden rounded-2xl border-2 border-[#1a2744]/35 bg-[#faf8f4] p-6 shadow-lg shadow-[#0f172a]/15 transition hover:border-[#c9a227] hover:shadow-xl"
-          >
-            <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-[#c9a227] via-amber-500 to-[#c9a227]" />
-            <h3 className="mt-2 font-bold text-[#0f172a]">Dynamic pricing</h3>
-            <p className="mt-2 text-sm leading-relaxed text-[#2d4a38]">
-              Set gift-wrap, AI/upload, and flowers prices per retailer.
             </p>
             <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-[#1a2744] group-hover:text-amber-700">
               Open →
@@ -306,9 +325,9 @@ export default async function AdminPage({
                       {order.stopSequence != null && (
                         <span className="rounded-lg bg-gradient-to-b from-[#1a2744] to-[#0f172a] px-2.5 py-1 text-xs font-bold text-white shadow-md">
                           Stop {order.stopSequence}
-                          {order.driverId
+                          {orderWrapstarId(order)
                             ? (() => {
-                                const key = `${order.driverId}|${formatDateKeyNy(displayScheduledIso)}`;
+                                const key = `${orderWrapstarId(order)}|${formatDateKeyNy(displayScheduledIso)}`;
                                 const total = routeStopTotals.get(key);
                                 const suffix =
                                   total != null && total > 1 ? ` of ${total}` : "";
@@ -350,14 +369,18 @@ export default async function AdminPage({
                     <input type="hidden" name="orderId" value={order.id} />
                     <select
                       name="status"
-                      defaultValue={order.status}
+                      defaultValue={order.status === "en_route" ? "in_progress" : order.status}
                       className="rounded-xl border-2 border-[#1a2744]/25 bg-white px-3 py-2 text-sm font-medium text-[#0f172a] shadow-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-400/50"
                     >
+                      <option value="pending">pending</option>
                       <option value="scheduled">scheduled</option>
                       <option value="assigned">assigned</option>
-                      <option value="en_route">en_route</option>
+                      <option value="accepted">accepted</option>
+                      <option value="in_progress">in_progress</option>
+                      <option value="out_for_delivery">out_for_delivery</option>
                       <option value="delivered">delivered</option>
                       <option value="cancelled">cancelled</option>
+                      <option value="refunded">refunded</option>
                     </select>
                     <button
                       className="rounded-xl bg-gradient-to-b from-amber-400 to-amber-600 px-5 py-2 text-sm font-bold text-[#1a1a1a] shadow-lg shadow-amber-900/25 ring-1 ring-white/40 transition hover:from-amber-300 hover:to-amber-500 active:scale-[0.98]"
@@ -367,7 +390,7 @@ export default async function AdminPage({
                     </button>
                   </form>
 
-                  {(order.status === "delivered" || order.status === "cancelled") && (
+                  {(order.status === "delivered" || order.status === "cancelled" || order.status === "refunded") && (
                     <form action={reopenAssignedAction} className="mt-2">
                       <input type="hidden" name="orderId" value={order.id} />
                       <button
@@ -379,15 +402,15 @@ export default async function AdminPage({
                     </form>
                   )}
 
-                  <form action={assignDriverAction} className="mt-2 flex flex-wrap gap-2">
+                  <form action={assignWrapstarAction} className="mt-2 flex flex-wrap gap-2">
                     <input type="hidden" name="orderId" value={order.id} />
                     <select
-                      name="driverId"
+                      name="wrapstarId"
                       className="min-w-0 flex-1 rounded-xl border-2 border-[#1a2744]/25 bg-white px-3 py-2 text-sm font-medium text-[#0f172a] shadow-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-400/50 sm:flex-none sm:min-w-[10rem]"
                     >
-                      {drivers.map((d) => (
-                        <option key={d.id} value={d.id}>
-                          {d.name}
+                      {wrapstars.map((w) => (
+                        <option key={w.id} value={w.id}>
+                          {w.name} ({w.id})
                         </option>
                       ))}
                     </select>
@@ -395,7 +418,7 @@ export default async function AdminPage({
                       className="rounded-xl bg-gradient-to-b from-[#c9a227] to-[#a88417] px-5 py-2 text-sm font-bold text-[#1a1a12] shadow-lg shadow-amber-900/25 ring-1 ring-white/40 transition hover:from-[#d4ad32] hover:to-[#b8921f] active:scale-[0.98]"
                       type="submit"
                     >
-                      Assign driver
+                      Assign WrapStar
                     </button>
                   </form>
                 </div>

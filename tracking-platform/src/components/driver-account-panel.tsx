@@ -2,7 +2,7 @@
 
 import { FormEvent, useState } from "react";
 
-export function DriverAccountPanel() {
+export function DriverAccountPanel({ wrapstarId }: { wrapstarId?: string }) {
   const [open, setOpen] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -36,7 +36,12 @@ export function DriverAccountPanel() {
   return (
     <section className="mt-4 rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold text-slate-800">Account</h3>
+        <div>
+          <h3 className="text-sm font-semibold text-slate-800">Account</h3>
+          {wrapstarId ? (
+            <p className="mt-0.5 font-mono text-xs text-slate-500">WrapStar ID {wrapstarId}</p>
+          ) : null}
+        </div>
         <button
           type="button"
           onClick={() => {

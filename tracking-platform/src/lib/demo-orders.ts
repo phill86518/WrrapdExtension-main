@@ -1,7 +1,9 @@
 import type { Order } from "./types";
 import { getNextThreeDemoScheduleInstants } from "./scheduling";
+import { wrapstarIdFromLegacy } from "./wrapstar-id";
 
 const nowIso = () => new Date().toISOString();
+const ROGER_ID = wrapstarIdFromLegacy("drv-1");
 
 /** Sample tracking link on the marketing home page */
 export const DEMO_CUSTOMER_TRACKING_TOKEN = "trk_demo_001";
@@ -39,7 +41,7 @@ const customers: Array<{
 
 /**
  * 20 demo stops split 5 / 7 / 8 across the next three NY-local demo evenings,
- * plus one historical delivered row for reporting. First demo order is en_route for the live board.
+ * plus one historical delivered row for reporting. First demo order is in_progress for the live board.
  */
 export function buildDemoSeedOrders(): Order[] {
   const [d1, d2, d3] = getNextThreeDemoScheduleInstants();
@@ -57,9 +59,12 @@ export function buildDemoSeedOrders(): Order[] {
       id,
       ...c,
       scheduledFor: slots[i],
-      driverId: "drv-1",
+      wrapstarId: ROGER_ID,
+      wrapstarName: "Roger",
+      driverId: ROGER_ID,
       driverName: "Roger",
-      status: isFirst ? "en_route" : "scheduled",
+      assignmentSource: "auto" as const,
+      status: isFirst ? "in_progress" : "scheduled",
       trackingToken: isFirst ? DEMO_CUSTOMER_TRACKING_TOKEN : `trk_demo_${String(n).padStart(3, "0")}`,
       etaMinutes: isFirst ? 42 : undefined,
       latestLocation: isFirst
@@ -82,8 +87,11 @@ export function buildDemoSeedOrders(): Order[] {
     postalCode: "32202",
     scheduledFor: new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString(),
     status: "delivered",
-    driverId: "drv-1",
+    wrapstarId: ROGER_ID,
+    wrapstarName: "Roger",
+    driverId: ROGER_ID,
     driverName: "Roger",
+    assignmentSource: "auto",
     trackingToken: "trk_0999",
     proofPhotoUrl: "https://storage.googleapis.com/generativeai-downloads/images/scones.jpg",
     createdAt: nowIso(),

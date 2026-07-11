@@ -8,7 +8,9 @@ import type {
   OrderLineItem,
   OrderRetailer,
   OrdersFilePayload,
+  OrderStatus,
 } from "@/lib/types";
+import { normalizeOrderStatus, orderWrapstarId, orderWrapstarName } from "@/lib/types";
 import { getFirestoreDb } from "@/lib/firebase-admin";
 import { buildDemoSeedOrders } from "@/lib/demo-orders";
 import { computeAssignmentsForOrders } from "@/lib/allocation";
@@ -17,12 +19,13 @@ import {
   validateScheduledInstant,
   wrrapdScheduledInstantFromAmazonDeliveryDateKey,
 } from "@/lib/scheduling";
-import { getDriverProfile } from "@/lib/driver-profiles";
+import { getWrapstarProfile } from "@/lib/wrapstar-profiles";
 import { assignStopSequences } from "@/lib/route-optimization";
 import { formatDateKeyNy, toInstantDate } from "@/lib/ny-date";
 import { wrrapdScheduledInstantIsoForUi } from "@/lib/order-schedule-display";
-import { findDriverById, listRegisteredDrivers } from "@/lib/driver-registry";
+import { findWrapstarById, listRegisteredWrapstars } from "@/lib/wrapstar-registry";
 import { uploadProofDataUrl } from "@/lib/proof-storage";
+import { createEarningsForDeliveredOrder } from "@/lib/finance";
 import type { CollectionReference } from "firebase-admin/firestore";
 const nowIso = () => new Date().toISOString();
 const TRACKING_MERGE_VERSION = "tracking-merge-v2026-04-21-pay-lock-source";
@@ -90,22 +93,53 @@ async function readFallbackOrders(): Promise<Order[]> {
 }
 
 export async function applyAutoAllocationToOrders(orders: Order[]): Promise<Order[]> {
-  const drivers = await listRegisteredDrivers();
-  const map = await computeAssignmentsForOrders({ orders, drivers });
+  const wrapstars = await listRegisteredWrapstars();
+  const map = await computeAssignmentsForOrders({ orders, wrapstars });
   const merged = orders.map((o) => {
-    if (o.status === "delivered" || o.status === "cancelled" || o.status === "en_route") {
-      return o;
+    const status = normalizeOrderStatus(o.status);
+    if (
+      status === "delivered" ||
+      status === "cancelled" ||
+      status === "refunded" ||
+      status === "in_progress" ||
+      status === "out_for_delivery" ||
+      status === "accepted"
+    ) {
+      return { ...o, status, wrapstarId: orderWrapstarId(o), wrapstarName: orderWrapstarName(o) };
+    }
+    if (o.assignmentSource === "manual" && orderWrapstarId(o)) {
+      return {
+        ...o,
+        status: status === "pending" || status === "scheduled" ? "assigned" : status,
+        wrapstarId: orderWrapstarId(o),
+        wrapstarName: orderWrapstarName(o),
+        driverId: orderWrapstarId(o),
+        driverName: orderWrapstarName(o),
+      };
     }
     const a = map.get(o.id);
-    if (!a) return o;
+    if (!a) {
+      return {
+        ...o,
+        status,
+        wrapstarId: orderWrapstarId(o),
+        wrapstarName: orderWrapstarName(o),
+      };
+    }
     const next: Order = {
       ...o,
-      driverId: a.driverId,
-      driverName: a.driverName,
+      wrapstarId: a.wrapstarId,
+      wrapstarName: a.wrapstarName,
+      driverId: a.wrapstarId,
+      driverName: a.wrapstarName,
+      assignmentSource: o.assignmentSource === "manual" ? "manual" : "auto",
       updatedAt: nowIso(),
       updatedBy: "allocator",
+      status:
+        status === "pending" || status === "scheduled" || status === "assigned"
+          ? "assigned"
+          : status,
     };
-    if (next.status === "scheduled") next.status = "assigned";
     return next;
   });
   return assignStopSequences(merged);
@@ -126,48 +160,52 @@ export async function runAutoAllocation(): Promise<void> {
 }
 
 export async function listDrivers() {
-  return listRegisteredDrivers();
+  return listRegisteredWrapstars();
 }
 
-export async function unassignDeletedDriverOrders(driverId: string): Promise<void> {
+export async function listWrapstars() {
+  return listRegisteredWrapstars();
+}
+
+export async function unassignDeletedWrapstarOrders(wrapstarId: string): Promise<void> {
+  const clear = (o: Order): Order => {
+    const match = orderWrapstarId(o) === wrapstarId;
+    if (!match) return o;
+    const st = normalizeOrderStatus(o.status);
+    return {
+      ...o,
+      wrapstarId: undefined,
+      wrapstarName: undefined,
+      driverId: undefined,
+      driverName: undefined,
+      assignmentSource: undefined,
+      stopSequence: undefined,
+      status:
+        st === "assigned" || st === "in_progress" || st === "accepted" || st === "out_for_delivery"
+          ? "scheduled"
+          : st,
+      updatedAt: nowIso(),
+      updatedBy: "admin-wrapstar-delete",
+    };
+  };
+
   const oc = getOrdersCollection();
   if (oc) {
     const snap = await oc.get();
     const orders = snap.docs.map((d) => d.data() as Order);
-    const updated = orders.map((o) =>
-      o.driverId === driverId
-        ? {
-            ...o,
-            driverId: undefined,
-            driverName: undefined,
-            stopSequence: undefined,
-            status: o.status === "assigned" || o.status === "en_route" ? "scheduled" : o.status,
-            updatedAt: nowIso(),
-            updatedBy: "admin-driver-delete",
-          }
-        : o,
-    );
-    const allocated = await applyAutoAllocationToOrders(updated);
+    const allocated = await applyAutoAllocationToOrders(orders.map(clear));
     await Promise.all(allocated.map((o) => oc.doc(o.id).set(o)));
     return;
   }
 
   const orders = await readFallbackOrders();
-  const updated = orders.map((o) =>
-    o.driverId === driverId
-      ? {
-          ...o,
-          driverId: undefined,
-          driverName: undefined,
-          stopSequence: undefined,
-          status: o.status === "assigned" || o.status === "en_route" ? "scheduled" : o.status,
-          updatedAt: nowIso(),
-          updatedBy: "admin-driver-delete",
-        }
-      : o,
-  );
-  const allocated = await applyAutoAllocationToOrders(updated);
+  const allocated = await applyAutoAllocationToOrders(orders.map(clear));
   await writeFallbackPayload(allocated);
+}
+
+/** @deprecated */
+export async function unassignDeletedDriverOrders(driverId: string): Promise<void> {
+  return unassignDeletedWrapstarOrders(driverId);
 }
 
 /**
@@ -196,13 +234,29 @@ function externalOrderIdsOverlap(a: string | undefined, b: string | undefined): 
   return externalOrderIdVariants(a).some((x) => setB.has(x));
 }
 
-const OPEN_INGEST_STATUSES = new Set<DeliveryStatus>(["scheduled", "assigned", "en_route"]);
+const OPEN_INGEST_STATUSES = new Set([
+  "pending",
+  "scheduled",
+  "assigned",
+  "accepted",
+  "en_route",
+  "in_progress",
+  "out_for_delivery",
+]);
 
-/** Sort comparator: best candidate first (en_route > assigned > scheduled, then freshest, stable id). */
+/** Sort comparator: best candidate first (in_progress > assigned > scheduled, then freshest, stable id). */
+function openIngestRank(s: string): number {
+  const st = s === "en_route" ? "in_progress" : s;
+  return st === "in_progress" || st === "out_for_delivery"
+    ? 3
+    : st === "assigned" || st === "accepted"
+      ? 2
+      : st === "scheduled" || st === "pending"
+        ? 1
+        : 0;
+}
 function compareMergePrimary(a: Order, b: Order): number {
-  const pri = (s: Order["status"]) =>
-    s === "en_route" ? 3 : s === "assigned" ? 2 : s === "scheduled" ? 1 : 0;
-  const dp = pri(b.status) - pri(a.status);
+  const dp = openIngestRank(String(b.status)) - openIngestRank(String(a.status));
   if (dp !== 0) return dp;
   const ta = new Date(a.updatedAt || a.createdAt).getTime();
   const tb = new Date(b.updatedAt || b.createdAt).getTime();
@@ -540,12 +594,26 @@ export async function listOrdersByStatus(status: "active" | "scheduled" | "past"
     : await readFallbackOrders();
   const orders = assignStopSequences(raw);
   if (status === "active") {
-    return orders.filter((o) => o.status === "assigned" || o.status === "en_route");
+    return orders.filter((o) => {
+      const st = normalizeOrderStatus(o.status);
+      return (
+        st === "assigned" ||
+        st === "accepted" ||
+        st === "in_progress" ||
+        st === "out_for_delivery"
+      );
+    });
   }
   if (status === "scheduled") {
-    return orders.filter((o) => o.status === "scheduled");
+    return orders.filter((o) => {
+      const st = normalizeOrderStatus(o.status);
+      return st === "scheduled" || st === "pending";
+    });
   }
-  return orders.filter((o) => o.status === "delivered" || o.status === "cancelled");
+  return orders.filter((o) => {
+    const st = normalizeOrderStatus(o.status);
+    return st === "delivered" || st === "cancelled" || st === "refunded";
+  });
 }
 
 export async function listAllOrders(): Promise<Order[]> {
@@ -557,8 +625,15 @@ export async function listAllOrders(): Promise<Order[]> {
   return readFallbackOrders();
 }
 
-export async function listDriverOrders(driverId: string) {
-  const profile = await getDriverProfile(driverId);
+export async function listOrdersForDateKey(dateKey: string): Promise<Order[]> {
+  const all = await listAllOrders();
+  return assignStopSequences(all).filter(
+    (o) => formatDateKeyNy(wrrapdScheduledInstantIsoForUi(o)) === dateKey,
+  );
+}
+
+export async function listWrapstarOrders(wrapstarId: string) {
+  const profile = await getWrapstarProfile(wrapstarId);
   if (profile.onboardingStatus !== "approved") {
     return [];
   }
@@ -567,11 +642,18 @@ export async function listDriverOrders(driverId: string) {
     ? ((await oc.get()).docs.map((doc) => doc.data() as Order) as Order[])
     : await readFallbackOrders();
   const orders = assignStopSequences(raw);
-  const mine = orders.filter(
-    (o) =>
-      o.driverId === driverId &&
-      (o.status === "assigned" || o.status === "en_route" || o.status === "scheduled"),
-  );
+  const mine = orders.filter((o) => {
+    const st = normalizeOrderStatus(o.status);
+    return (
+      orderWrapstarId(o) === wrapstarId &&
+      (st === "assigned" ||
+        st === "accepted" ||
+        st === "in_progress" ||
+        st === "out_for_delivery" ||
+        st === "scheduled" ||
+        st === "pending")
+    );
+  });
   return mine.sort((a, b) => {
     const da = formatDateKeyNy(wrrapdScheduledInstantIsoForUi(a));
     const db = formatDateKeyNy(wrrapdScheduledInstantIsoForUi(b));
@@ -583,9 +665,13 @@ export async function listDriverOrders(driverId: string) {
   });
 }
 
-/** Delivered / cancelled orders for this driver (most recent first). Same data model as admin. */
-export async function listDriverPastOrders(driverId: string, limit = 80): Promise<Order[]> {
-  const profile = await getDriverProfile(driverId);
+/** @deprecated */
+export async function listDriverOrders(driverId: string) {
+  return listWrapstarOrders(driverId);
+}
+
+export async function listWrapstarPastOrders(wrapstarId: string, limit = 80): Promise<Order[]> {
+  const profile = await getWrapstarProfile(wrapstarId);
   if (profile.onboardingStatus !== "approved") {
     return [];
   }
@@ -593,11 +679,13 @@ export async function listDriverPastOrders(driverId: string, limit = 80): Promis
   const orders = oc
     ? ((await oc.get()).docs.map((doc) => doc.data() as Order) as Order[])
     : await readFallbackOrders();
-  const mine = orders.filter(
-    (o) =>
-      o.driverId === driverId &&
-      (o.status === "delivered" || o.status === "cancelled"),
-  );
+  const mine = orders.filter((o) => {
+    const st = normalizeOrderStatus(o.status);
+    return (
+      orderWrapstarId(o) === wrapstarId &&
+      (st === "delivered" || st === "cancelled" || st === "refunded")
+    );
+  });
   mine.sort((a, b) => {
     const ta = toInstantDate(a.updatedAt || a.scheduledFor).getTime();
     const tb = toInstantDate(b.updatedAt || b.scheduledFor).getTime();
@@ -605,6 +693,18 @@ export async function listDriverPastOrders(driverId: string, limit = 80): Promis
     return b.id.localeCompare(a.id);
   });
   return mine.slice(0, limit);
+}
+
+/** @deprecated */
+export async function listDriverPastOrders(driverId: string, limit = 80): Promise<Order[]> {
+  return listWrapstarPastOrders(driverId, limit);
+}
+
+export async function listOrdersForWrapstar(wrapstarId: string): Promise<Order[]> {
+  const all = await listAllOrders();
+  return all
+    .filter((o) => orderWrapstarId(o) === wrapstarId)
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 }
 
 export async function getOrderById(id: string) {
@@ -717,32 +817,47 @@ export async function expireStaleDeliveryPreferences(): Promise<number> {
   return toClose.length;
 }
 
-export async function updateOrderStatus(id: string, status: DeliveryStatus, updatedBy: string) {
+export async function updateOrderStatus(
+  id: string,
+  status: DeliveryStatus | OrderStatus,
+  updatedBy: string,
+) {
   const current = await getOrderById(id);
   if (!current) return null;
-  const next = { ...current, status, updatedAt: nowIso(), updatedBy };
+  const normalized = normalizeOrderStatus(status);
+  const next = { ...current, status: normalized, updatedAt: nowIso(), updatedBy };
   const ocUp = getOrdersCollection();
   if (ocUp) {
     await ocUp.doc(id).set(next);
+    if (normalized === "delivered") {
+      await createEarningsForDeliveredOrder(next);
+    }
     await runAutoAllocation();
   } else {
     const orders = await readFallbackOrders();
     const updated = orders.map((o) => (o.id === id ? next : o));
     const allocated = await applyAutoAllocationToOrders(updated);
     await writeFallbackPayload(allocated);
+    if (normalized === "delivered") {
+      await createEarningsForDeliveredOrder(next);
+    }
   }
   return next;
 }
 
-export async function assignDriver(id: string, driverId: string, updatedBy: string) {
+export async function assignWrapstar(id: string, wrapstarId: string, updatedBy: string) {
   const current = await getOrderById(id);
-  const driver = await findDriverById(driverId);
-  if (!current || !driver) return null;
+  const wrapstar = await findWrapstarById(wrapstarId);
+  if (!current || !wrapstar) return null;
+  const st = normalizeOrderStatus(current.status);
   const next: Order = {
     ...current,
-    driverId,
-    driverName: driver.name,
-    status: current.status === "scheduled" ? "assigned" : current.status,
+    wrapstarId: wrapstar.id,
+    wrapstarName: wrapstar.name,
+    driverId: wrapstar.id,
+    driverName: wrapstar.name,
+    assignmentSource: "manual",
+    status: st === "scheduled" || st === "pending" ? "assigned" : st,
     updatedAt: nowIso(),
     updatedBy,
   };
@@ -761,6 +876,11 @@ export async function assignDriver(id: string, driverId: string, updatedBy: stri
   return (await getOrderById(id)) ?? null;
 }
 
+/** @deprecated */
+export async function assignDriver(id: string, driverId: string, updatedBy: string) {
+  return assignWrapstar(id, driverId, updatedBy);
+}
+
 export async function updateDriverLocation(
   id: string,
   lat: number,
@@ -770,9 +890,10 @@ export async function updateDriverLocation(
 ) {
   const current = await getOrderById(id);
   if (!current) return null;
+  const st = normalizeOrderStatus(current.status);
   const next: Order = {
     ...current,
-    status: current.status === "assigned" ? "en_route" : current.status,
+    status: st === "assigned" || st === "accepted" ? "in_progress" : st,
     latestLocation: { lat, lng, updatedAt: nowIso() },
     etaMinutes,
     updatedAt: nowIso(),
@@ -807,6 +928,7 @@ export async function saveProofPhoto(id: string, proofPhotoUrl: string, updatedB
   const ocProof = getOrdersCollection();
   if (ocProof) {
     await ocProof.doc(id).set(next);
+    await createEarningsForDeliveredOrder(next);
     const snap = await ocProof.get();
     const all = snap.docs.map((d) => d.data() as Order);
     const routed = assignStopSequences(all);
@@ -815,6 +937,7 @@ export async function saveProofPhoto(id: string, proofPhotoUrl: string, updatedB
     const orders = await readFallbackOrders();
     const updated = orders.map((o) => (o.id === id ? next : o));
     await writeFallbackPayload(assignStopSequences(updated));
+    await createEarningsForDeliveredOrder(next);
   }
   return next;
 }

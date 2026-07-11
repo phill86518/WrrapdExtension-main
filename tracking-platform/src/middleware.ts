@@ -8,7 +8,7 @@ import {
 } from "@/lib/session-constants";
 
 type SessionPayload = {
-  role: "admin" | "driver";
+  role: "admin" | "wrapstar" | "driver";
   userId: string;
   name: string;
 };
@@ -25,7 +25,17 @@ export async function middleware(request: NextRequest) {
   }
   if (pathname === "/Driver" || pathname.startsWith("/Driver/")) {
     const u = request.nextUrl.clone();
-    u.pathname = `/driver${pathname.slice("/Driver".length)}`;
+    u.pathname = `/wrapstar${pathname.slice("/Driver".length)}`;
+    return NextResponse.redirect(u);
+  }
+  if (pathname === "/driver" || pathname.startsWith("/driver/")) {
+    const u = request.nextUrl.clone();
+    u.pathname = `/wrapstar${pathname.slice("/driver".length)}`;
+    return NextResponse.redirect(u);
+  }
+  if (pathname === "/Wrapstar" || pathname.startsWith("/Wrapstar/")) {
+    const u = request.nextUrl.clone();
+    u.pathname = `/wrapstar${pathname.slice("/Wrapstar".length)}`;
     return NextResponse.redirect(u);
   }
 
@@ -55,5 +65,15 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/driver/:path*", "/Admin", "/Admin/:path*", "/Driver", "/Driver/:path*"],
+  matcher: [
+    "/admin/:path*",
+    "/driver/:path*",
+    "/wrapstar/:path*",
+    "/Admin",
+    "/Admin/:path*",
+    "/Driver",
+    "/Driver/:path*",
+    "/Wrapstar",
+    "/Wrapstar/:path*",
+  ],
 };

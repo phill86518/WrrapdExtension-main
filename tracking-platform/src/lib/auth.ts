@@ -10,7 +10,7 @@ import { SESSION_COOKIE_NAME, SESSION_MAX_AGE_SEC, getSessionSecretBytes } from 
 export { SESSION_COOKIE_NAME };
 
 type Session = {
-  role: "admin" | "driver";
+  role: "admin" | "wrapstar" | "driver";
   userId: string;
   name: string;
 };
@@ -85,8 +85,12 @@ export async function requireAdminSession() {
 
 export async function requireDriverSession() {
   const session = await getSession();
-  if (!session || session.role !== "driver") return null;
+  if (!session || (session.role !== "driver" && session.role !== "wrapstar")) return null;
   return session;
+}
+
+export async function requireWrapstarSession() {
+  return requireDriverSession();
 }
 
 async function ensureAuthFile() {
@@ -136,3 +140,6 @@ export async function updateDriverPassword(nextPassword: string) {
     "utf8",
   );
 }
+
+export const verifyWrapstarPassword = verifyDriverPassword;
+export const updateWrapstarPassword = updateDriverPassword;

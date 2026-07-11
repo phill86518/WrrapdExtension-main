@@ -2,10 +2,10 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Wrrapd Driver",
+    name: "Wrrapd WrapStar",
     short_name: "W",
-    description: "Simple delivery companion for Wrrapd drivers.",
-    start_url: "/driver",
+    description: "WrapStar companion for Wrrapd orders, GPS, and proof.",
+    start_url: "/wrapstar",
     display: "standalone",
     background_color: "#0f172a",
     theme_color: "#0f172a",

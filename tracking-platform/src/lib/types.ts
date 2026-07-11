@@ -1,11 +1,22 @@
-export type DeliveryStatus =
+export type OrderStatus =
+  | "pending"
   | "scheduled"
   | "assigned"
-  | "en_route"
+  | "accepted"
+  | "in_progress"
+  | "out_for_delivery"
   | "delivered"
-  | "cancelled";
+  | "cancelled"
+  | "refunded"
+  /** @deprecated Prefer in_progress — kept for legacy Firestore rows */
+  | "en_route";
+
+/** @deprecated Use OrderStatus */
+export type DeliveryStatus = OrderStatus;
 
 export type OnboardingStatus = "pending" | "approved" | "rejected";
+
+export type AssignmentSource = "auto" | "manual";
 
 /** Where the shopper placed the underlying gift order (multi-retailer ingest + ops). */
 export type OrderRetailer =
@@ -42,6 +53,8 @@ export type OrderLineItem = {
   giftMessage?: string;
   senderName?: string;
   occasion?: string;
+  /** Optional unit price in USD cents when known from checkout */
+  unitPriceCents?: number;
 };
 
 export type Order = {
@@ -59,9 +72,17 @@ export type Order = {
   state: string;
   postalCode: string;
   scheduledFor: string;
+  /** Assigned WrapStar (12-digit id). */
+  wrapstarId?: string;
+  wrapstarName?: string;
+  /**
+   * @deprecated Prefer wrapstarId — kept for legacy Firestore / route code during migration.
+   */
   driverId?: string;
+  /** @deprecated Prefer wrapstarName */
   driverName?: string;
-  status: DeliveryStatus;
+  assignmentSource?: AssignmentSource;
+  status: OrderStatus;
   trackingToken: string;
   etaMinutes?: number;
   latestLocation?: {
@@ -80,7 +101,7 @@ export type Order = {
    * UI should prefer this for labels when present; `id` remains the system key for APIs.
    */
   externalOrderId?: string;
-  /** Per driver + calendar day (ET): optimized stop order (1 = first after leaving depot) */
+  /** Per WrapStar + calendar day (ET): optimized stop order (1 = first after leaving depot) */
   stopSequence?: number;
   customerEmail?: string;
   /** Lowercase trimmed gifter email — join key for WordPress / future “my orders” (pay server Phase 1). */
@@ -107,25 +128,46 @@ export type Order = {
    * When present, customer notifications show this date + 1 day; when absent, safe wording is used.
    */
   retailerEstimatedDeliveryDate?: string;
+  /** Order merchandise / wrap value in USD cents when known from checkout ingest. */
+  orderValueCents?: number;
 };
 
-export type Driver = {
+export type WrapStar = {
+  /** 12-digit system identifier */
   id: string;
+  displayId: string;
   name: string;
-  /** Lower sort = higher priority for auto-allocation */
+  /** Home / base ZIP for proximity allocation */
+  homePostalCode: string;
+  servicePostalCodes?: string[];
+  /** Tie-breaker only (lower = preferred when distances equal) */
   allocationRank: number;
+  email?: string;
+  phone?: string;
+  /** Legacy drv-* id if migrated */
+  legacyDriverId?: string;
 };
 
-export type DriverProfile = {
-  driverId: string;
+/** @deprecated Use WrapStar */
+export type Driver = WrapStar;
+
+export type WrapStarProfile = {
+  wrapstarId: string;
+  /** @deprecated Prefer wrapstarId */
+  driverId?: string;
   onboardingStatus: OnboardingStatus;
   notes?: string;
-  /** Admin: force available on YYYY-MM-DD even if driver missed deadline */
+  /** Admin: force available on YYYY-MM-DD even if WrapStar missed deadline */
   forcedAvailableDates?: string[];
 };
 
+/** @deprecated Use WrapStarProfile */
+export type DriverProfile = WrapStarProfile;
+
 export type WeekAvailabilityRecord = {
-  driverId: string;
+  wrapstarId?: string;
+  /** @deprecated Prefer wrapstarId */
+  driverId?: string;
   /** ISO date YYYY-MM-DD of the Monday starting that work week */
   weekStartMonday: string;
   submittedAt: string;
@@ -142,3 +184,72 @@ export type OrdersFilePayload = {
   version: number;
   orders: Order[];
 };
+
+export type EarningsEntry = {
+  id: string;
+  orderId: string;
+  wrapstarId: string;
+  wrapstarName: string;
+  basePayCents: number;
+  peakBonusCents: number;
+  tipsCents: number;
+  feesCents: number;
+  netCents: number;
+  currency: "USD";
+  earnedAt: string;
+  payoutId?: string;
+  status: "unpaid" | "included_in_payout" | "paid";
+};
+
+export type PayoutBatch = {
+  id: string;
+  wrapstarId: string;
+  wrapstarName: string;
+  earningIds: string[];
+  grossCents: number;
+  netCents: number;
+  currency: "USD";
+  status: "pending" | "paid" | "failed";
+  method: "manual_ach_export" | "stripe_connect";
+  reference?: string;
+  createdAt: string;
+  paidAt?: string;
+  periodStart?: string;
+  periodEnd?: string;
+};
+
+export type PayoutConfig = {
+  basePayCents: number;
+  peakMultiplier: number;
+  tipPassthrough: boolean;
+  platformFeeCents: number;
+  updatedAt: string;
+};
+
+/** Normalize legacy en_route → in_progress for UI/logic. */
+export function normalizeOrderStatus(status: string | undefined): OrderStatus {
+  if (status === "en_route") return "in_progress";
+  const allowed: OrderStatus[] = [
+    "pending",
+    "scheduled",
+    "assigned",
+    "accepted",
+    "in_progress",
+    "out_for_delivery",
+    "delivered",
+    "cancelled",
+    "refunded",
+    "en_route",
+  ];
+  if (status && (allowed as string[]).includes(status)) return status as OrderStatus;
+  return "scheduled";
+}
+
+/** Prefer wrapstarId; fall back to legacy driverId. */
+export function orderWrapstarId(o: Pick<Order, "wrapstarId" | "driverId">): string | undefined {
+  return o.wrapstarId || o.driverId;
+}
+
+export function orderWrapstarName(o: Pick<Order, "wrapstarName" | "driverName">): string | undefined {
+  return o.wrapstarName || o.driverName;
+}
