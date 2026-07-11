@@ -17,6 +17,14 @@ WordPress + Elementor + Hello theme content mostly lives **in the production dat
 - **Legal draft:** `docs/wordpress-snippets/wrrapd-wrapstar-ic-agreement.md` (counsel review before BoldSign upload).
 - **Elementor page IDs:** log here after creating pages on the WrapStars WP install.
 
+### 2026-07 — Header install CTA hidden for all visitors (fix)
+
+- **MU plugin `wrrapd-orders-bridge.php`:** `hideInstallCopy()` was wired to `DOMContentLoaded` and ran for **every** visitor, hiding any Elementor widget containing “Add your FREE Chrome extension today!” — including the header orange button for brand-new customers. Removed that listener; `hideInstallCopy()` now runs only when the extension probe confirms install (`wrrapd-ext-installed`). CSS hide for header/hero install buttons restored for installed users only.
+
+### 2026-07 — Header FREE-extension blink restored
+
+- **MU plugin `wrrapd-orders-bridge.php`:** Stopped hiding Elementor header/hero install buttons (`7f1bdc1`, `eb0b235`) when the Chrome extension is detected—only wrap promos and inline `.wrrapd-ext-cta` links hide now. Header blink CSS unchanged; paste **`docs/wordpress-snippets/wrrapd-header-cta-blink.css`** if live Additional CSS lost the `@keyframes wrrapd-cta-blink` block. CWS URL is set in Elementor on widgets **`7f1bdc1`** (header **6078**) and **`eb0b235`** (homepage **4857**).
+
 ### 2026-07 — How it works intro removed
 
 - **Homepage widget `e7baa0c`:** Removed the intro line (**“Effortless gifting!”** / **“Make it Special!”**) above the step rows—it did not belong in this section. Step 1 no longer includes a fourth orange blinking install CTA (`wrrapd-ext-cta`); copy points readers to the existing header, hero, and gift-guides install links. Snippet: `docs/wordpress-snippets/wrrapd-how-it-works-section.html`.

@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /** Bump when account UI / header polish changes — view-source should contain this string. */
-define( 'WRRAPD_MU_BUILD', '2026-07-08-gift-wrap-banner-v4-amazon' );
+define( 'WRRAPD_MU_BUILD', '2026-07-10-header-install-cta-fix' );
 
 $wrrapd_seasonal = dirname( __FILE__ ) . '/wrrapd-seasonal-campaigns.php';
 if ( is_readable( $wrrapd_seasonal ) ) {
@@ -150,7 +150,7 @@ function wrrapd_output_header_member_css() {
 	}
 	echo '<style id="wrrapd-header-member-css">';
 	echo 'body.logged-in .elementor-location-header .greeting-container{margin:0!important;margin-left:0!important;text-align:right!important;width:auto!important;}';
-	echo 'body.logged-in .elementor-location-header [data-id="2b05a213"]{display:none!important;}';
+	echo 'body.logged-in .elementor-location-header [data-id="69de726e"],body.logged-in .elementor-location-header [data-id="2ca99876"]{display:none!important;}';
 	echo '.wrrapd-header-member{display:flex;flex-direction:column;align-items:flex-end;gap:.2rem;width:100%;max-width:11.75rem;margin-left:auto;}';
 	echo '.wrrapd-header-member-top{width:100%;}.wrrapd-header-member-top .elementor-nav-menu--main ul{display:flex!important;flex-direction:row!important;justify-content:flex-end!important;gap:.65rem!important;margin:0!important;padding:0!important;}';
 	echo '.wrrapd-header-member-top .elementor-item{font-size:clamp(.8rem,2vmin,.875rem)!important;font-weight:700!important;padding:0!important;line-height:1.25!important;}';
@@ -172,7 +172,7 @@ function wrrapd_output_header_member_polish_script() {
 	}
 	$url_json = wp_json_encode( wrrapd_orders_page_url() );
 	echo '<script id="wrrapd-header-member-polish">';
-	echo '(function(){var U=' . $url_json . ';function hideDupAccountTitles(){if(!document.body.classList.contains("wrrapd-account-page"))return;document.querySelectorAll("h1.elementor-heading-title,h2.elementor-heading-title,.entry-title").forEach(function(h){if(/^Account\\s*$/i.test((h.textContent||"").trim()))h.style.display="none";});}function firstName(){var i=document.getElementById("wrrapd-user-first-name");return i&&i.value?i.value:"User";}function polish(){hideDupAccountTitles();if(!document.body.classList.contains("logged-in"))return;var header=document.querySelector(".elementor-location-header");if(!header)return;var rightCol=header.querySelector(\'[data-id="693b4ea7"]\');var nav=header.querySelector(\'[data-id="1112277b"]\');var greeting=header.querySelector("#greeting-message")||header.querySelector(".greeting-container");if(!rightCol||!nav||!greeting)return;greeting.style.display="block";greeting.style.margin="0";greeting.style.marginLeft="0";greeting.style.textAlign="right";greeting.style.width="auto";var nameEl=document.getElementById("user-first-name");if(nameEl)nameEl.textContent=firstName();var panel=header.querySelector(".wrrapd-header-member");if(!panel){panel=document.createElement("div");panel.className="wrrapd-header-member";rightCol.insertBefore(panel,rightCol.firstChild);var top=document.createElement("div");top.className="wrrapd-header-member-top";top.appendChild(nav);panel.appendChild(top);var greetRow=document.createElement("div");greetRow.className="wrrapd-header-member-greet";var hello=greeting.querySelector(".greeting-text");if(hello)greetRow.appendChild(hello);panel.appendChild(greetRow);var pills=document.createElement("div");pills.className="wrrapd-header-user-actions";var hot=greeting.querySelector(".gift-ideas-button:not(.wrrapd-your-orders-button)");if(hot){hot.style.display="";hot.style.marginTop="0";hot.style.width="auto";pills.appendChild(hot);}panel.appendChild(pills);}var pillsRow=panel.querySelector(".wrrapd-header-user-actions");if(pillsRow){var hotBtn=pillsRow.querySelector(".gift-ideas-button:not(.wrrapd-your-orders-button)");if(hotBtn){hotBtn.style.width="auto";hotBtn.style.marginTop="0";}if(!panel.querySelector(".wrrapd-your-orders-button")){var a=document.createElement("a");a.href=U;a.className="gift-ideas-button wrrapd-your-orders-button";a.textContent="Your orders";pillsRow.appendChild(a);}}var loginStack=header.querySelector(\'[data-id="2b05a213"]\');if(loginStack)loginStack.style.display="none";header.dataset.wrrapdMemberPolished="1";}function run(){polish();}document.addEventListener("DOMContentLoaded",run);window.addEventListener("load",run);setTimeout(run,400);setTimeout(run,1200);})();';
+	echo '(function(){var U=' . $url_json . ';function hideDupAccountTitles(){if(!document.body.classList.contains("wrrapd-account-page"))return;document.querySelectorAll("h1.elementor-heading-title,h2.elementor-heading-title,.entry-title").forEach(function(h){if(/^Account\\s*$/i.test((h.textContent||"").trim()))h.style.display="none";});}function firstName(){var i=document.getElementById("wrrapd-user-first-name");return i&&i.value?i.value:"User";}function polish(){hideDupAccountTitles();if(!document.body.classList.contains("logged-in"))return;var header=document.querySelector(".elementor-location-header");if(!header)return;var rightCol=header.querySelector(\'[data-id="693b4ea7"]\');var nav=header.querySelector(\'[data-id="1112277b"]\');var greeting=header.querySelector("#greeting-message")||header.querySelector(".greeting-container");if(!rightCol||!nav||!greeting)return;greeting.style.display="block";greeting.style.margin="0";greeting.style.marginLeft="0";greeting.style.textAlign="right";greeting.style.width="auto";var nameEl=document.getElementById("user-first-name");if(nameEl)nameEl.textContent=firstName();var panel=header.querySelector(".wrrapd-header-member");if(!panel){panel=document.createElement("div");panel.className="wrrapd-header-member";rightCol.insertBefore(panel,rightCol.firstChild);var top=document.createElement("div");top.className="wrrapd-header-member-top";top.appendChild(nav);panel.appendChild(top);var greetRow=document.createElement("div");greetRow.className="wrrapd-header-member-greet";var hello=greeting.querySelector(".greeting-text");if(hello)greetRow.appendChild(hello);panel.appendChild(greetRow);var pills=document.createElement("div");pills.className="wrrapd-header-user-actions";var hot=greeting.querySelector(".gift-ideas-button:not(.wrrapd-your-orders-button)");if(hot){hot.style.display="";hot.style.marginTop="0";hot.style.width="auto";pills.appendChild(hot);}panel.appendChild(pills);}var pillsRow=panel.querySelector(".wrrapd-header-user-actions");if(pillsRow){var hotBtn=pillsRow.querySelector(".gift-ideas-button:not(.wrrapd-your-orders-button)");if(hotBtn){hotBtn.style.width="auto";hotBtn.style.marginTop="0";}if(!panel.querySelector(".wrrapd-your-orders-button")){var a=document.createElement("a");a.href=U;a.className="gift-ideas-button wrrapd-your-orders-button";a.textContent="Your orders";pillsRow.appendChild(a);}}var loginStack=header.querySelector(\'[data-id="2b05a213"]\');if(loginStack){loginStack.style.display="";var g=loginStack.querySelector(\'[data-id="69de726e"]\');var am=loginStack.querySelector(\'[data-id="2ca99876"]\');if(g)g.style.display="none";if(am)am.style.display="none";}header.dataset.wrrapdMemberPolished="1";}function run(){polish();}document.addEventListener("DOMContentLoaded",run);window.addEventListener("load",run);setTimeout(run,400);setTimeout(run,1200);})();';
 	echo '</script>';
 }
 add_action( 'wp_footer', 'wrrapd_output_header_member_polish_script', 22 );
@@ -262,13 +262,6 @@ function wrrapd_mu_logo_url_for_slug( $slug, $favicon_domain ) {
 		return '';
 	}
 	$dir = wrrapd_mu_logos_dir();
-	// Amazon: prefer bundled SVG (dark ink + orange smile). Old circular PNGs were often all-orange favicon crops.
-	if ( $slug === 'amazon' ) {
-		$svg = $dir . '/amazon.svg';
-		if ( is_readable( $svg ) ) {
-			return plugin_dir_url( __FILE__ ) . 'logos/amazon.svg';
-		}
-	}
 	$path = $dir . '/' . $slug . '.png';
 	if ( is_readable( $path ) ) {
 		return plugin_dir_url( __FILE__ ) . 'logos/' . $slug . '.png';
@@ -1449,10 +1442,10 @@ function wrrapd_output_retailer_wheel_strip() {
 	echo '#wrrapd-retailer-wheels-row .wrrapd-retailer-wheels{display:flex;flex-direction:row;flex-wrap:nowrap;justify-content:center;align-items:flex-start;gap:clamp(.4rem,1.4vw,.95rem);padding:.55rem clamp(.5rem,2vw,1.25rem) .75rem;max-width:100%;margin:0 auto;box-sizing:border-box;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:thin;}';
 	echo '.wrrapd-retailer-wheels__item{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:.28rem;max-width:4.85rem;text-decoration:none;color:#0f172a;outline-offset:4px;animation:wrrapd-wheel-in 1.15s cubic-bezier(.2,.85,.15,1) forwards;opacity:0;}';
 	echo '.wrrapd-retailer-wheels__item:focus-visible{outline:2px solid #f5c518;}';
-	echo '.wrrapd-retailer-wheels__badge{width:54px;height:54px;border-radius:50%;overflow:hidden;box-shadow:0 2px 10px rgba(15,23,42,.12),inset 0 0 0 2px rgba(255,255,255,.75);background:#fff;flex-shrink:0;}';
+	echo '.wrrapd-retailer-wheels__badge{width:54px;height:54px;border-radius:50%;overflow:hidden;box-shadow:0 2px 10px rgba(15,23,42,.12);background:transparent;flex-shrink:0;}';
 	echo '@media(min-width:640px){.wrrapd-retailer-wheels__badge{width:68px;height:68px}}';
 	echo '@media(min-width:900px){.wrrapd-retailer-wheels__badge{width:78px;height:78px}}';
-	echo '.wrrapd-retailer-wheels__badge img{display:block;width:100%;height:100%;object-fit:cover;}';
+	echo '.wrrapd-retailer-wheels__badge img{display:block;width:100%;height:100%;object-fit:cover;object-position:center;box-sizing:border-box;}';
 	echo '.wrrapd-retailer-wheels__title{font-size:.68rem;line-height:1.15;text-align:center;font-weight:600;color:#334155;letter-spacing:.01em;}';
 	echo '@media(min-width:640px){.wrrapd-retailer-wheels__title{font-size:.74rem}}';
 	echo '.wrrapd-wrap-promo{flex:0 0 auto;display:flex;align-items:center;gap:.45rem;max-width:min(11.5rem,28vw);padding:.1rem 0;text-decoration:none!important;color:inherit;cursor:pointer;}';
@@ -1504,7 +1497,7 @@ function wrrapd_output_retailer_wheel_strip() {
 		$label = $b['label'];
 		echo '<a class="wrrapd-retailer-wheels__item" href="' . $go . '" target="_blank" rel="sponsored noopener noreferrer" style="animation-delay:' . esc_attr( (string) $delay ) . 's">';
 		echo '<span class="wrrapd-retailer-wheels__badge">';
-		echo '<img src="' . $src . '" data-fallback="' . esc_url( $fb ) . '" width="78" height="78" alt="' . esc_attr( $label ) . '" loading="lazy" decoding="async" onerror="var u=this.dataset.fallback;if(u){this.onerror=null;this.src=u;}" />';
+		echo '<img src="' . $src . '" data-fallback="' . esc_url( $fb ) . '" width="156" height="156" alt="' . esc_attr( $label ) . '" loading="lazy" decoding="async" onerror="var u=this.dataset.fallback;if(u){this.onerror=null;this.src=u;}" />';
 		echo '</span>';
 		echo '<span class="wrrapd-retailer-wheels__title">' . esc_html( $label ) . '</span>';
 		echo '</a>';
@@ -1546,8 +1539,8 @@ add_action( 'wp_footer', 'wrrapd_output_external_retailer_links_new_tab_script',
 
 /**
  * Probe for installed Wrrapd Chrome extension (requires 2.0.16+ ping handler).
- * When detected: hide install CTAs sitewide. No install modal — absence cannot be
- * distinguished from an older extension, so we never prompt non-responders.
+ * When detected: hide install CTAs sitewide (CSS + hideInstallCopy). hideInstallCopy must
+ * NOT run on every page load — only after the extension probe confirms install.
  */
 function wrrapd_output_extension_detection_script() {
 	if ( is_admin() ) {
@@ -1557,7 +1550,7 @@ function wrrapd_output_extension_detection_script() {
 	$latest_version  = '2.0.16';
 
 	echo '<style id="wrrapd-ext-detected-css">';
-	echo 'html.wrrapd-ext-installed .elementor-element-7f1bdc1,html.wrrapd-ext-installed .elementor-element-eb0b235{display:none!important;}';
+	echo 'html.wrrapd-ext-installed .elementor-element-7f1bdc1,html.wrrapd-ext-installed .elementor-element-eb0b235,html.wrrapd-ext-installed .elementor-location-header a.elementor-button[href*="chromewebstore"]{display:none!important;}';
 	echo 'html.wrrapd-ext-installed .wrrapd-wrap-promo,html.wrrapd-ext-installed .wrrapd-wrap-promo-mobile,html.wrrapd-ext-installed .wrrapd-ext-cta{display:none!important;}';
 	echo 'html.wrrapd-ext-outdated .wrrapd-ext-update-nudge{display:flex!important;}';
 	echo '.wrrapd-ext-update-nudge{display:none;position:fixed;bottom:1rem;right:1rem;z-index:100040;max-width:min(100%,22rem);padding:.85rem 1rem;border-radius:.75rem;background:#fff8ed;border:1px solid rgba(178,34,52,.25);box-shadow:0 12px 32px rgba(12,18,34,.14);font-family:system-ui,sans-serif;font-size:.88rem;line-height:1.35;color:#0c1222;align-items:flex-start;gap:.65rem;}';
@@ -1579,13 +1572,13 @@ function wrrapd_output_extension_detection_script() {
 	echo 'function versionLt(a,b){var x=parseVersion(a),y=parseVersion(b),i;for(i=0;i<Math.max(x.length,y.length);i++){var d=(x[i]||0)-(y[i]||0);if(d!==0)return d<0;}return false;}';
 	echo 'function markInstalled(ver){extInstalled=true;extVersion=ver||"";document.documentElement.classList.add("wrrapd-ext-installed");try{sessionStorage.setItem(MARKER,"1");if(ver)sessionStorage.setItem("wrrapd_ext_version",ver);}catch(e){}}';
 	echo 'function hasMarker(){try{if(sessionStorage.getItem(MARKER)==="1")return true;}catch(e){}return !!(window.WRRAPD_EXTENSION_INSTALLED||document.documentElement.hasAttribute("data-wrrapd-extension-installed"));}';
-	echo 'function hideInstallCopy(){var re=/add\\s+your\\s+free\\s+chrome\\s+extension\\s+today/i;document.querySelectorAll("a,button,.elementor-button,.elementor-heading-title").forEach(function(el){var t=(el.textContent||"").replace(/\\s+/g," ").trim();if(!re.test(t))return;var wrap=el.closest(".elementor-element,section,div")||el;wrap.style.display="none";});}';
+	echo 'function hideInstallCopy(){if(!extInstalled&&!document.documentElement.classList.contains("wrrapd-ext-installed"))return;var re=/add\\s+your\\s+free\\s+chrome\\s+extension\\s+today/i;document.querySelectorAll("a,button,.elementor-button,.elementor-heading-title").forEach(function(el){var t=(el.textContent||"").replace(/\\s+/g," ").trim();if(!re.test(t))return;var wrap=el.closest(".elementor-element,section,div")||el;wrap.style.display="none";});}';
 	echo 'function showUpdateNudge(){if(!extVersion||!versionLt(extVersion,LATEST))return;try{if(sessionStorage.getItem(OUTDATED)==="1")return;}catch(e){}var n=document.getElementById("wrrapd-ext-update-nudge");if(!n)return;n.hidden=false;document.documentElement.classList.add("wrrapd-ext-outdated");}';
 	echo 'function onDetected(resp){var ver=resp&&resp.version?String(resp.version):"";markInstalled(ver);hideInstallCopy();showUpdateNudge();}';
 	echo 'function probe(){if(hasMarker()){document.documentElement.classList.add("wrrapd-ext-installed");hideInstallCopy();try{var sv=sessionStorage.getItem("wrrapd_ext_version");if(sv){extVersion=sv;showUpdateNudge();}}catch(e){}return;}try{if(window.chrome&&chrome.runtime&&chrome.runtime.sendMessage){chrome.runtime.sendMessage(EXT_ID,{type:"WRRAPD_PING"},function(resp){if(resp&&(resp.ok||resp.wrrapd))onDetected(resp);});}}catch(e){}}';
 	echo 'var dismiss=document.getElementById("wrrapd-ext-update-dismiss");if(dismiss){dismiss.addEventListener("click",function(){var n=document.getElementById("wrrapd-ext-update-nudge");if(n)n.hidden=true;document.documentElement.classList.remove("wrrapd-ext-outdated");try{sessionStorage.setItem(OUTDATED,"1");}catch(e){}});}';
 	echo 'window.wrrapdExtIsInstalled=function(){return extInstalled||hasMarker();};';
-	echo 'probe();window.addEventListener("pageshow",probe);document.addEventListener("DOMContentLoaded",hideInstallCopy);';
+	echo 'probe();window.addEventListener("pageshow",probe);';
 	echo '})();';
 	echo '</script>';
 }
@@ -1908,14 +1901,13 @@ function wrrapd_fetch_orders_for_user( WP_User $user ) {
 }
 
 /**
- * Slow the extension CTA blink globally and hide the CTA for signed-in users with orders.
+ * Hide the extension CTA only for signed-in users who already have Wrrapd orders.
+ * Orange blink animation lives in Customizer Additional CSS (wrrapd-cta-blink) — do not override here.
  */
 function wrrapd_inject_header_cta_rules() {
 	if ( is_admin() ) {
 		return;
 	}
-	echo '<style id="wrrapd-cta-slower-blink">@keyframes wrrapd-cta-blink-slow{0%,100%{filter:brightness(1);box-shadow:0 0 0 0 rgba(234,88,12,.45);}50%{filter:brightness(1.12);box-shadow:0 0 14px 3px rgba(234,88,12,.35);}}.elementor-element-7f1bdc1 .elementor-button,.elementor-element-eb0b235 .elementor-button,.elementor-element-7f1bdc1 a.elementor-button,.elementor-element-eb0b235 a.elementor-button{animation:wrrapd-cta-blink-slow 3.5s ease-in-out infinite!important;}</style>';
-
 	if ( ! is_user_logged_in() ) {
 		return;
 	}
