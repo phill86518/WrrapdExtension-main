@@ -1,0 +1,41 @@
+/* Wrrapd auth flow — Fraunces exclusively (login, register, password reset, welcome, etc.) */
+
+body.wrrapd-auth-page {
+	--e-global-typography-primary-font-family: Fraunces, Georgia, serif;
+	--e-global-typography-secondary-font-family: Fraunces, Georgia, serif;
+	--e-global-typography-text-font-family: Fraunces, Georgia, serif;
+	--e-global-typography-accent-font-family: Fraunces, Georgia, serif;
+	font-family: Fraunces, Georgia, serif !important;
+}
+
+body.wrrapd-auth-page *:not(i):not([class*="eicon"]):not(.fa):not(.fas):not(.fab):not(.far):not(.dashicons) {
+	font-family: Fraunces, Georgia, serif !important;
+}
+
+body.wrrapd-auth-page input,
+body.wrrapd-auth-page textarea,
+body.wrrapd-auth-page select,
+body.wrrapd-auth-page button,
+body.wrrapd-auth-page .um-form-field,
+body.wrrapd-auth-page .elementor-button,
+body.wrrapd-auth-page .um-button,
+body.wrrapd-auth-page .elementor-item,
+body.wrrapd-auth-page .gift-ideas-button {
+	font-weight: 500 !important;
+	letter-spacing: 0.01em !important;
+}
+
+body.wrrapd-auth-page .um-field-label label,
+body.wrrapd-auth-page .elementor-heading-title,
+body.wrrapd-auth-page h1,
+body.wrrapd-auth-page h2,
+body.wrrapd-auth-page h3 {
+	font-weight: 560 !important;
+}
+
+body.wrrapd-auth-page .elementor-location-header .elementor-item,
+body.wrrapd-auth-page .elementor-location-header .greeting-text,
+body.wrrapd-auth-page .elementor-location-header .gift-ideas-button,
+body.wrrapd-auth-page .elementor-location-header .elementor-button {
+	font-family: Fraunces, Georgia, serif !important;
+}

@@ -111,7 +111,7 @@
 			"hot_gifts_diverse_categories": true,
 			"hot_gifts_max_per_retailer": 2,
 			"hot_gifts_min_retailers": 4,
-			"hot_gifts_display_count": 8,
+			"hot_gifts_display_count": 10,
 			"hot_gifts": [
 				{
 					"product": "July 4th Wreath",
@@ -174,7 +174,7 @@
 					"title": "1776 Hardcover",
 					"category": "books",
 					"price_approx": 85,
-					"image": "https://covers.openlibrary.org/b/isbn/9780743226721-L.jpg",
+					"image": "https://covers.openlibrary.org/b/isbn/9780743226721-M.jpg",
 					"href": "https://wrrapd.com/go/booksamillion/?to=https://www.booksamillion.com/p/1776/David-McCullough/9780743226721",
 					"retailer": "Books-A-Million",
 					"domain": "booksamillion.com",
@@ -362,6 +362,9 @@
 			"hook": "Bridal showers, wedding weekends, and milestone years—shop anywhere, Wrrapd makes the unboxing unforgettable.",
 			"theme_class": "wrrapd-season-default",
 			"hot_gifts_title": "Hot gifts for weddings",
+			"hot_gifts_display_count": 10,
+			"hot_gifts_max_per_retailer": 2,
+			"hot_gifts_min_retailers": 6,
 			"hot_gifts": [
 				{ "title": "Nordstrom", "domain": "nordstrom.com", "copy": "Registry-worthy picks—wrap at checkout.", "href": "https://wrrapd.com/go/nordstrom/", "retailer_slug": "nordstrom" },
 				{ "title": "Target", "domain": "target.com", "copy": "Registry staples & shower gifts.", "href": "https://wrrapd.com/go/target/", "retailer_slug": "target" },

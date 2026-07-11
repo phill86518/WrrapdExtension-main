@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Amazon">
-  <circle cx="64" cy="64" r="64" fill="#131921"/>
-  <text x="64" y="76" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="54" font-weight="700" fill="#FF9900">a</text>
-  <path fill="none" stroke="#FF9900" stroke-width="7" stroke-linecap="round" d="M26 92 Q64 68 102 86"/>
-  <path fill="#FF9900" d="M102 86 L88 78 L92 94 Z"/>
-</svg>

@@ -1914,7 +1914,8 @@ body.logged-in .elementor-location-header .greeting-container {
 	width: auto !important;
 }
 
-body.logged-in .elementor-location-header [data-id="2b05a213"] {
+body.logged-in .elementor-location-header [data-id="69de726e"],
+body.logged-in .elementor-location-header [data-id="2ca99876"] {
 	display: none !important;
 }
 

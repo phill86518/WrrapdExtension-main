@@ -1,0 +1,45 @@
+/**
+ * Orange pulse on Theme Builder header FREE-extension button (7f1bdc1)
+ * and homepage hero duplicate (eb0b235).
+ *
+ * Paste into Appearance → Customize → Additional CSS (or append to post 6064).
+ * Set the button link URL in Elementor — not in this file.
+ *
+ * Widget IDs: header template 6078 → 7f1bdc1; homepage 4857 → eb0b235.
+ */
+
+@keyframes wrrapd-cta-blink {
+	0%, 100% {
+		opacity: 1;
+		filter: brightness(1);
+		box-shadow: 0 0 0 0 rgba(209, 73, 0, 0.65);
+		transform: translateZ(0) scale(1);
+	}
+	50% {
+		opacity: 0.55;
+		filter: brightness(1.25);
+		box-shadow: 0 0 0 14px rgba(209, 73, 0, 0);
+		transform: translateZ(0) scale(1.05);
+	}
+}
+
+.elementor-element-7f1bdc1.elementor-widget-button .elementor-button,
+.elementor-element-7f1bdc1.elementor-widget-button .elementor-button-wrapper .elementor-button,
+.elementor-element-7f1bdc1 a.elementor-button,
+.elementor-element-eb0b235.elementor-widget-button .elementor-button,
+.elementor-element-eb0b235.elementor-widget-button .elementor-button-wrapper .elementor-button,
+.elementor-element-eb0b235 a.elementor-button {
+	animation: wrrapd-cta-blink 1.05s ease-in-out infinite !important;
+	will-change: opacity, transform, filter, box-shadow;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.elementor-element-7f1bdc1.elementor-widget-button .elementor-button,
+	.elementor-element-7f1bdc1.elementor-widget-button .elementor-button-wrapper .elementor-button,
+	.elementor-element-7f1bdc1 a.elementor-button,
+	.elementor-element-eb0b235.elementor-widget-button .elementor-button,
+	.elementor-element-eb0b235.elementor-widget-button .elementor-button-wrapper .elementor-button,
+	.elementor-element-eb0b235 a.elementor-button {
+		animation: none !important;
+	}
+}

@@ -1,7 +1,7 @@
 /**
  * Wrrapd sitewide mobile / touch layout (rem-based).
  * Loaded by wrrapd-orders-bridge.php — upload with MU plugins.
- * Build: 2026-07-05-mobile-v11-393px
+ * Build: 2026-07-10-wrap-promo-dedupe-v2
  */
 
 /*
@@ -256,6 +256,10 @@ html {
 /* =============================================================================
    RETAILER WHEEL — left promo | logos | right bullets (Samsung layout)
    ============================================================================= */
+.wrrapd-wrap-promo-mobile__features.wrrapd-wrap-promo-mobile__features--stack {
+	display: none !important;
+}
+
 @media (max-width: 960px), (hover: none) and (pointer: coarse) {
 	.wrrapd-wrap-promo-mobile,
 	.wrrapd-wrap-promo-mobile--tagline,
@@ -583,23 +587,10 @@ html {
 /* =============================================================================
    HOT GIFTS + SECTIONS
    ============================================================================= */
+/* Hot gifts rail — layout lives in wrrapd-seasonal-campaigns.css (10-col full width). */
 @media (max-width: 768px) {
 	.wrrapd-hot-gifts-rail__title {
-		font-size: 0.75rem !important;
-	}
-
-	.wrrapd-hot-gifts-rail__grid {
-		gap: 0.35rem !important;
-	}
-
-	.wrrapd-hot-gifts-rail__card {
-		flex: 0 0 2.85rem !important;
-		min-width: 2.85rem !important;
-		max-width: 2.85rem !important;
-	}
-
-	.wrrapd-hot-gifts-rail__card-title {
-		font-size: 0.38rem !important;
+		font-size: 0.82rem !important;
 	}
 
 	.gift-wrap-row img {
@@ -1222,5 +1213,14 @@ body.page-id-4857 #wrrapd-retailer-wheels-row {
 	body.page-id-5576 .elementor-location-footer,
 	body.page-id-6276 .elementor-location-footer {
 		margin-top: auto !important;
+	}
+
+	/* Retailer wheel — bullets below logos only on narrowest iPhones */
+	.wrrapd-wrap-promo--bestbuy {
+		display: none !important;
+	}
+
+	.wrrapd-wrap-promo-mobile__features.wrrapd-wrap-promo-mobile__features--stack {
+		display: block !important;
 	}
 }

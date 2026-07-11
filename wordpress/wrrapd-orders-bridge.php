@@ -5,7 +5,7 @@
  * Author: Wrrapd
  *
  * Install: copy wrrapd-orders-bridge.php to wp-content/mu-plugins/ (required).
- * Also copy wrrapd-account-critical.css to the same mu-plugins/ folder (My Account styling).
+ * Also copy wrrapd-account-critical.css and wrrapd-auth-critical.css to the same mu-plugins/ folder.
  * Define WRRAPD_INTERNAL_API_KEY and optionally WRRAPD_API_BASE in wp-config.php — see wordpress/README.md in the monorepo.
  */
 
@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /** Bump when account UI / header polish changes — view-source should contain this string. */
-define( 'WRRAPD_MU_BUILD', '2026-07-10-header-install-cta-fix' );
+define( 'WRRAPD_MU_BUILD', '2026-07-11-auth-fraunces-fullpage' );
 
 $wrrapd_seasonal = dirname( __FILE__ ) . '/wrrapd-seasonal-campaigns.php';
 if ( is_readable( $wrrapd_seasonal ) ) {
@@ -54,13 +54,13 @@ add_action( 'login_init', 'wrrapd_redirect_stale_logout_to_fresh_nonce', 0 );
  * Strip a leading admin sort prefix from titles on the **front end** only
  * (WP admin and editor still show the full title).
  *
- * Matches: "07. My Orders", "07.My Orders", "7. My" — avoids "3.14 Pi" (no space after dot, single digit before dot).
+ * Matches: "07. My Orders", "07.My Orders", "7. My", "13b Register" — avoids "3.14 Pi" (no space after dot, single digit before dot).
  */
 function wrrapd_strip_leading_title_sort_prefix( $title ) {
 	if ( is_admin() || ! is_string( $title ) || $title === '' ) {
 		return $title;
 	}
-	$out = preg_replace( '/^(?:(?:\d{2,}\.)|(?:\d+\.\s+))\s*/u', '', $title );
+	$out = preg_replace( '/^(?:(?:\d{2,}\.)|(?:\d+\.\s+)|(?:\d+[a-zA-Z]\s+))\s*/u', '', $title );
 	return is_string( $out ) ? $out : $title;
 }
 
@@ -136,6 +136,9 @@ function wrrapd_body_class_site_pages( $classes ) {
 	}
 	if ( is_page( 'my-orders' ) ) {
 		$classes[] = 'wrrapd-orders-page';
+	}
+	if ( wrrapd_is_auth_page() ) {
+		$classes[] = 'wrrapd-auth-page';
 	}
 	return $classes;
 }
@@ -242,6 +245,51 @@ function wrrapd_output_account_page_critical_css() {
 	echo '<!-- ' . esc_html( WRRAPD_MU_BUILD ) . ' -->';
 }
 add_action( 'wp_footer', 'wrrapd_output_account_page_critical_css', 9999 );
+
+/**
+ * Login / register / password-reset / welcome / verification / SMS consent pages.
+ *
+ * @return array{ids:list<int>,slugs:list<string>}
+ */
+function wrrapd_auth_page_refs() {
+	return array(
+		'ids'   => array( 5280, 5281, 5285, 5234, 5576, 6202 ),
+		'slugs' => array( 'login', 'register', 'password-reset', '06-email_verification', 'welcome', 'sms-consent' ),
+	);
+}
+
+/**
+ * Whether the current request is a front-end auth/onboarding page (Fraunces typography).
+ */
+function wrrapd_is_auth_page() {
+	if ( is_admin() ) {
+		return false;
+	}
+	$refs = wrrapd_auth_page_refs();
+	return is_page( $refs['ids'] ) || is_page( $refs['slugs'] );
+}
+
+/**
+ * Auth flow pages: Fraunces typography (footer load wins over UM + Elementor defaults).
+ */
+function wrrapd_output_auth_page_critical_css() {
+	if ( ! wrrapd_is_auth_page() ) {
+		return;
+	}
+	echo '<link rel="preconnect" href="https://fonts.googleapis.com" />';
+	echo '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />';
+	echo '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,560;1,9..144,560&amp;display=swap" />';
+	$path = dirname( __FILE__ ) . '/wrrapd-auth-critical.css';
+	$css  = is_readable( $path ) ? file_get_contents( $path ) : '';
+	if ( ! is_string( $css ) || $css === '' ) {
+		echo '<!-- wrrapd-auth-critical.css MISSING — upload wordpress/wrrapd-auth-critical.css to wp-content/mu-plugins/ -->';
+		echo '<!-- ' . esc_html( WRRAPD_MU_BUILD ) . ' -->';
+		return;
+	}
+	echo '<style id="wrrapd-auth-critical-css">' . $css . '</style>';
+	echo '<!-- ' . esc_html( WRRAPD_MU_BUILD ) . ' -->';
+}
+add_action( 'wp_footer', 'wrrapd_output_auth_page_critical_css', 9999 );
 
 /**
  * On-disk folder for circular retailer PNGs (`mu-plugins/logos/`).
@@ -1435,9 +1483,10 @@ function wrrapd_output_retailer_wheel_strip() {
 	echo '.wrrapd-wrap-promo-mobile__mid{color:#162a52;}';
 	echo '.wrrapd-wrap-promo-mobile__at{color:#0a3161;font-size:clamp(1rem,2.6vw,1.35rem);}';
 	echo '.wrrapd-wrap-promo-mobile__arrow{color:#c9a227;font-size:1.15em;line-height:1;}';
-	echo '.wrrapd-wrap-promo-mobile__features{display:block;width:100%;margin:.35rem 0 0;padding:0;list-style:none;text-align:center;}';
+	echo '.wrrapd-wrap-promo-mobile__features{width:100%;margin:.35rem 0 0;padding:0 clamp(.5rem,2vw,1rem);list-style:none;text-align:center;}';
 	echo '.wrrapd-wrap-promo-mobile__features li{display:inline-block;margin:.12rem .28rem;font-family:"Great Vibes",Pacifico,"Segoe Script","Brush Script MT",cursive;font-size:clamp(.96rem,2.45vw,1.14rem);font-weight:700;color:#000;line-height:1.2;text-shadow:0 .5px 0 #000,0 1px 2px rgba(255,255,255,.92);-webkit-font-smoothing:antialiased;}';
 	echo '.wrrapd-wrap-promo-mobile__features li::before{content:"• ";color:#c9a227;font-weight:700;}';
+	echo '.wrrapd-wrap-promo-mobile__features.wrrapd-wrap-promo-mobile__features--stack{display:none!important;}';
 	echo '.wrrapd-wrap-promo-mobile:hover .wrrapd-wrap-promo-mobile__blink,.wrrapd-wrap-promo-mobile:focus-visible .wrrapd-wrap-promo-mobile__blink{animation-play-state:paused;opacity:1!important;}';
 	echo '#wrrapd-retailer-wheels-row .wrrapd-retailer-wheels{display:flex;flex-direction:row;flex-wrap:nowrap;justify-content:center;align-items:flex-start;gap:clamp(.4rem,1.4vw,.95rem);padding:.55rem clamp(.5rem,2vw,1.25rem) .75rem;max-width:100%;margin:0 auto;box-sizing:border-box;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:thin;}';
 	echo '.wrrapd-retailer-wheels__item{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:.28rem;max-width:4.85rem;text-decoration:none;color:#0f172a;outline-offset:4px;animation:wrrapd-wheel-in 1.15s cubic-bezier(.2,.85,.15,1) forwards;opacity:0;}';
@@ -1472,6 +1521,7 @@ function wrrapd_output_retailer_wheel_strip() {
 	echo '.wrrapd-wrap-promo__arrow--left::before{background:linear-gradient(90deg,#162a52,#c9a227);}';
 	echo '.wrrapd-wrap-promo__arrow--left::after{content:"";position:absolute;top:50%;left:0;width:.5rem;height:.5rem;border-bottom:2.5px solid #162a52;border-left:2.5px solid #162a52;transform:translateY(-50%) rotate(45deg);}';
 	echo '@media(max-width:960px),(hover:none) and (pointer:coarse){.wrrapd-wrap-promo-mobile,.wrrapd-wrap-promo-mobile--tagline,.wrrapd-wrap-promo-mobile__features--stack{display:none!important;}.wrrapd-wheel-mobile-stack{display:block;width:100%;}.wrrapd-wrap-promo{display:flex!important;}.wrrapd-wrap-promo--ulta{flex:0 0 auto;max-width:min(5.5rem,22vw)!important;margin:0!important;align-items:center!important;}.wrrapd-wrap-promo--bestbuy{flex:0 0 auto;max-width:min(6.25rem,26vw)!important;margin:0!important;align-items:flex-start!important;}.wrrapd-wrap-promo__line{font-size:clamp(.52rem,2.4vw,.68rem)!important;white-space:normal!important;line-height:1.05!important;}.wrrapd-wrap-promo__line--premium{font-size:clamp(.58rem,2.6vw,.74rem)!important;}.wrrapd-wrap-promo__line--mid,.wrrapd-wrap-promo__line--for{font-size:clamp(.5rem,2.2vw,.64rem)!important;}.wrrapd-wrap-promo__arrow{width:.85rem!important;height:.85rem!important;flex-shrink:0!important;}.wrrapd-wrap-promo__bullet{font-size:clamp(.44rem,2vw,.54rem)!important;line-height:1.12!important;margin:.04rem 0!important;}.wrrapd-wrap-promo__copy--right{text-align:right!important;}#wrrapd-retailer-wheels-row .wrrapd-retailer-wheels{display:flex!important;flex-wrap:nowrap!important;align-items:center!important;justify-content:space-between!important;overflow-x:hidden!important;gap:.1rem!important;padding:.35rem!important;}.wrrapd-retailer-wheels__item{flex:1 1 0!important;min-width:0!important;max-width:none!important;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:.06rem!important;}.wrrapd-retailer-wheels__badge{width:1.45rem!important;height:1.45rem!important;}.wrrapd-retailer-wheels__title{display:block!important;font-size:.42rem!important;line-height:1.1!important;text-align:center!important;font-weight:600!important;color:#334155!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;max-width:100%!important;}}';
+	echo '@media(max-width:393px){.wrrapd-wrap-promo--bestbuy{display:none!important;}.wrrapd-wrap-promo-mobile__features.wrrapd-wrap-promo-mobile__features--stack{display:block!important;}}';
 	echo '@media(prefers-reduced-motion:reduce){.wrrapd-wrap-promo__line--blink,.wrrapd-wrap-promo-mobile__blink{animation:none!important;opacity:1!important;}.wrrapd-retailer-wheels__item{animation:none;opacity:1;}}';
 	echo '</style>';
 	echo '<div id="wrrapd-retailer-wheels-row" class="wrrapd-retailer-wheels-row">';

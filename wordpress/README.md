@@ -18,14 +18,14 @@ Also copy the **`logos/`** folder next to that file: **`wp-content/mu-plugins/lo
 |--------------------------|-------------------------|
 | `wordpress/wrrapd-orders-bridge.php` | `wp-content/mu-plugins/wrrapd-orders-bridge.php` |
 | `wordpress/wrrapd-account-critical.css` | `wp-content/mu-plugins/wrrapd-account-critical.css` |
+| `wordpress/wrrapd-auth-critical.css` | `wp-content/mu-plugins/wrrapd-auth-critical.css` |
 | `wordpress/wrrapd-campaigns.json` | `wp-content/mu-plugins/wrrapd-campaigns.json` |
 | `wordpress/wrrapd-seasonal-campaigns.php` | `wp-content/mu-plugins/wrrapd-seasonal-campaigns.php` |
 | `wordpress/wrrapd-seasonal-campaigns.css` | `wp-content/mu-plugins/wrrapd-seasonal-campaigns.css` |
 | `wordpress/wrrapd-gift-wrap-popup.php` | `wp-content/mu-plugins/wrrapd-gift-wrap-popup.php` |
 | `wordpress/wrrapd-gift-wrap-popup.css` | `wp-content/mu-plugins/wrrapd-gift-wrap-popup.css` |
 | `wordpress/wrrapd-gift-wrap-popup.js` | `wp-content/mu-plugins/wrrapd-gift-wrap-popup.js` |
-| `wordpress/logos/amazon.png` (and `target.png`, `ulta.png`, `lego.png`) | `wp-content/mu-plugins/logos/` |
-| `wordpress/logos/amazon.svg` | `wp-content/mu-plugins/logos/` (Amazon wheel + banner — dark ink + orange smile) |
+| `wordpress/logos/*.png` (amazon, target, ulta, lego, …) | `wp-content/mu-plugins/logos/` |
 
 **Step 1 — On the WordPress server**, set `WP_ROOT` to the directory that **contains** `wp-config.php` and the folder `wp-content/` (examples: `/var/www/html`, `/home/user/public_html`, `/sites/wrrapd.com` — use whatever your host documents).
 
@@ -38,6 +38,7 @@ export WP_ROOT=/PASTE/YOUR/WORDPRESS/ROOT/HERE
 mkdir -p "$WP_ROOT/wp-content/mu-plugins/logos"
 install -m 0644 "$REPO_ROOT/wordpress/wrrapd-orders-bridge.php" "$WP_ROOT/wp-content/mu-plugins/wrrapd-orders-bridge.php"
 install -m 0644 "$REPO_ROOT/wordpress/wrrapd-account-critical.css" "$WP_ROOT/wp-content/mu-plugins/wrrapd-account-critical.css"
+install -m 0644 "$REPO_ROOT/wordpress/wrrapd-auth-critical.css" "$WP_ROOT/wp-content/mu-plugins/wrrapd-auth-critical.css"
 install -m 0644 "$REPO_ROOT/wordpress/wrrapd-campaigns.json" "$WP_ROOT/wp-content/mu-plugins/wrrapd-campaigns.json"
 install -m 0644 "$REPO_ROOT/wordpress/wrrapd-seasonal-campaigns.php" "$WP_ROOT/wp-content/mu-plugins/wrrapd-seasonal-campaigns.php"
 install -m 0644 "$REPO_ROOT/wordpress/wrrapd-seasonal-campaigns.css" "$WP_ROOT/wp-content/mu-plugins/wrrapd-seasonal-campaigns.css"
@@ -169,7 +170,12 @@ Hide or remove any old widget that still says **“No order files found”** (th
 
 ### Page titles like `07. Privacy Policy` (sort prefix)
 
-Keep the **full** title in **Pages → Edit** (with `07.` for ordering). On the **public site**, the MU plugin strips a leading **`digits + dot + spaces`** prefix from:
+Keep the **full** title in **Pages → Edit** (with `07.` or `13b` for ordering). On the **public site**, the MU plugin strips a leading admin sort prefix from:
+
+- `07. Privacy Policy`, `7. My Orders` (digits + dot + optional spaces),
+- `13b Register` (digits + letter + space),
+
+from:
 
 - headings/widgets that use `the_title`,
 - the **browser tab** title (`document_title_parts`),

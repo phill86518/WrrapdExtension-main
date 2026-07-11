@@ -9,6 +9,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+/** Max cards in the homepage hot-gifts product rail. */
+if ( ! defined( 'WRRAPD_HOT_GIFTS_RAIL_MAX' ) ) {
+	define( 'WRRAPD_HOT_GIFTS_RAIL_MAX', 10 );
+}
+
 /**
  * @return array<string, mixed>|null
  */
@@ -516,7 +521,7 @@ function wrrapd_campaign_hot_gift_passes_category( array $gift, array $categorie
  * @return list<array<string, mixed>>
  */
 function wrrapd_campaign_hot_gifts_pick_constrained( array $ordered, $count, $max_per_retailer, $min_retailers, $diverse_categories ) {
-	$count            = max( 1, min( 8, (int) $count ) );
+	$count            = max( 1, min( WRRAPD_HOT_GIFTS_RAIL_MAX, (int) $count ) );
 	$max_per_retailer = max( 1, (int) $max_per_retailer );
 	$min_retailers    = max( 1, min( $count, (int) $min_retailers ) );
 	$out              = array();
@@ -594,13 +599,13 @@ function wrrapd_campaign_hot_gifts_pick_constrained( array $ordered, $count, $ma
 }
 
 /**
- * How many hot-gift cards to show in the homepage rail (max 8).
+ * How many hot-gift cards to show in the homepage rail.
  *
  * @param array<string, mixed> $campaign
  */
-function wrrapd_campaign_hot_gifts_display_count( array $campaign, $default = 8 ) {
+function wrrapd_campaign_hot_gifts_display_count( array $campaign, $default = 10 ) {
 	$n = isset( $campaign['hot_gifts_display_count'] ) ? (int) $campaign['hot_gifts_display_count'] : $default;
-	return max( 1, min( 8, $n ) );
+	return max( 1, min( WRRAPD_HOT_GIFTS_RAIL_MAX, $n ) );
 }
 
 /**
@@ -610,7 +615,7 @@ function wrrapd_campaign_hot_gifts_display_count( array $campaign, $default = 8 
  * @return list<array<string, mixed>>
  */
 function wrrapd_campaign_hot_gifts_pick( array $campaign, $count = 6 ) {
-	$count = max( 1, min( 8, (int) $count ) );
+	$count = max( 1, min( WRRAPD_HOT_GIFTS_RAIL_MAX, (int) $count ) );
 	$pool  = array();
 	if ( ! empty( $campaign['hot_gifts'] ) && is_array( $campaign['hot_gifts'] ) ) {
 		foreach ( $campaign['hot_gifts'] as $g ) {
@@ -709,10 +714,31 @@ function wrrapd_campaign_hot_gifts_pick( array $campaign, $count = 6 ) {
  * @param array<string, mixed> $gift
  */
 function wrrapd_campaign_gift_image_url( array $gift ) {
-	if ( ! empty( $gift['image'] ) && is_string( $gift['image'] ) ) {
-		return esc_url( (string) $gift['image'] );
+	if ( empty( $gift['image'] ) || ! is_string( $gift['image'] ) ) {
+		if ( ! empty( $gift['retailer_slug'] ) ) {
+			$logo = wrrapd_campaign_gift_logo_url( $gift );
+			if ( $logo !== '' && strpos( $logo, 'favicons' ) === false ) {
+				return $logo;
+			}
+		}
+		return '';
 	}
-	return '';
+	$url = trim( (string) $gift['image'] );
+	if ( strpos( $url, 'google.com/s2/favicons' ) !== false ) {
+		$logo = wrrapd_campaign_gift_logo_url( $gift );
+		if ( $logo !== '' && strpos( $logo, 'favicons' ) === false ) {
+			return $logo;
+		}
+		if ( preg_match( '/[?&]sz=(\d+)/', $url, $m ) ) {
+			$url = preg_replace( '/([?&])sz=\d+/', '${1}sz=256', $url );
+		} else {
+			$url .= ( strpos( $url, '?' ) !== false ? '&' : '?' ) . 'sz=256';
+		}
+	}
+	if ( strpos( $url, 'covers.openlibrary.org' ) !== false ) {
+		$url = preg_replace( '/-L\.jpg$/', '-M.jpg', $url );
+	}
+	return esc_url( $url );
 }
 
 /**
@@ -747,7 +773,55 @@ function wrrapd_campaign_gift_logo_url( array $gift ) {
 	if ( $dom === '' ) {
 		return '';
 	}
-	return 'https://www.google.com/s2/favicons?domain=' . rawurlencode( $dom ) . '&sz=128';
+	return 'https://www.google.com/s2/favicons?domain=' . rawurlencode( $dom ) . '&sz=256';
+}
+
+/**
+ * @param array<string, mixed> $gift
+ * @return array{src: string, width: int, height: int, srcset: string, sizes: string}
+ */
+function wrrapd_campaign_gift_logo_img_meta( array $gift, $display_css_px = 32 ) {
+	$url = wrrapd_campaign_gift_logo_url( $gift );
+	if ( $url === '' ) {
+		return array(
+			'src'     => '',
+			'width'   => 0,
+			'height'  => 0,
+			'srcset'  => '',
+			'sizes'   => '',
+		);
+	}
+	$intrinsic = 256;
+	if ( strpos( $url, '/logos/' ) !== false || preg_match( '#mu-plugins/logos/#', $url ) ) {
+		$intrinsic = 512;
+	}
+	$render = max( 64, (int) round( $display_css_px * 2 ) );
+	return array(
+		'src'     => $url,
+		'width'   => $render,
+		'height'  => $render,
+		'srcset'  => $intrinsic > $render ? ( $url . ' ' . $intrinsic . 'w' ) : '',
+		'sizes'   => $display_css_px . 'px',
+	);
+}
+
+/**
+ * @param array<string, mixed> $gift
+ */
+function wrrapd_campaign_gift_product_img_meta( array $gift ) {
+	$url = wrrapd_campaign_gift_image_url( $gift );
+	if ( $url === '' ) {
+		return array(
+			'src'    => '',
+			'width'  => 0,
+			'height' => 0,
+		);
+	}
+	return array(
+		'src'    => $url,
+		'width'  => 480,
+		'height' => 480,
+	);
 }
 
 /**
@@ -987,6 +1061,8 @@ function wrrapd_render_hot_gifts_rail_html( array $campaign, array $gifts, $vari
 		}
 		$photo     = wrrapd_campaign_gift_image_url( $g );
 		$logo      = wrrapd_campaign_gift_logo_url( $g );
+		$logo_meta = wrrapd_campaign_gift_logo_img_meta( $g, 44 );
+		$prod_meta = wrrapd_campaign_gift_product_img_meta( $g );
 		$copy      = isset( $g['copy'] ) ? (string) $g['copy'] : '';
 		$retailer  = wrrapd_campaign_gift_retailer_name( $g );
 		$ret_line  = isset( $g['retailer_line'] ) ? trim( (string) $g['retailer_line'] ) : '';
@@ -996,25 +1072,31 @@ function wrrapd_render_hot_gifts_rail_html( array $campaign, array $gifts, $vari
 		echo '<a class="wrrapd-hot-gifts-rail__card' . ( $is_prod ? ' wrrapd-hot-gifts-rail__card--product' : '' ) . '" role="listitem" href="' . $href . '" rel="sponsored noopener noreferrer">';
 		if ( $is_prod ) {
 			echo '<span class="wrrapd-hot-gifts-rail__photo">';
-			if ( $photo !== '' ) {
-				$fb = $logo !== '' ? esc_url( $logo ) : '';
-				echo '<img src="' . $photo . '" width="320" height="240" alt="' . esc_attr( $prod_name ) . '" decoding="async" loading="lazy"' . ( $fb !== '' ? ' data-fallback="' . $fb . '" onerror="var u=this.dataset.fallback;if(u){this.onerror=null;this.src=u;}"' : '' ) . ' />';
-			} elseif ( $logo !== '' ) {
-				echo '<img src="' . esc_url( $logo ) . '" width="320" height="240" alt="" decoding="async" loading="lazy" />';
+			if ( $prod_meta['src'] !== '' ) {
+				$fb = $logo_meta['src'] !== '' ? esc_url( $logo_meta['src'] ) : '';
+				echo '<img src="' . esc_url( $prod_meta['src'] ) . '" width="' . (int) $prod_meta['width'] . '" height="' . (int) $prod_meta['height'] . '" alt="' . esc_attr( $prod_name ) . '" decoding="async" loading="lazy"' . ( $fb !== '' ? ' data-fallback="' . $fb . '" onerror="var u=this.dataset.fallback;if(u){this.onerror=null;this.src=u;}"' : '' ) . ' />';
+			} elseif ( $logo_meta['src'] !== '' ) {
+				$srcset = $logo_meta['srcset'] !== '' ? ' srcset="' . esc_attr( $logo_meta['srcset'] ) . '"' : '';
+				$sizes  = $logo_meta['sizes'] !== '' ? ' sizes="' . esc_attr( $logo_meta['sizes'] ) . '"' : '';
+				echo '<img src="' . esc_url( $logo_meta['src'] ) . '" width="' . (int) $logo_meta['width'] . '" height="' . (int) $logo_meta['height'] . '"' . $srcset . $sizes . ' alt="" decoding="async" loading="lazy" />';
 			}
 			echo '<span class="wrrapd-hot-gifts-rail__card-body wrrapd-hot-gifts-rail__card-overlay">';
 			echo '<span class="wrrapd-hot-gifts-rail__card-title">' . esc_html( $prod_name ) . '</span>';
 			if ( $variant !== 'compact' && $retailer !== '' ) {
 				echo '<span class="wrrapd-hot-gifts-rail__shop-at">' . esc_html( sprintf( __( 'Shop at %s -->', 'wrrapd' ), $retailer ) ) . '</span>';
-				if ( $logo !== '' ) {
-					echo '<span class="wrrapd-hot-gifts-rail__retailer-logo"><img src="' . esc_url( $logo ) . '" width="26" height="26" alt="' . esc_attr( $retailer ) . '" decoding="async" loading="lazy" /></span>';
+				if ( $logo_meta['src'] !== '' ) {
+					$srcset = $logo_meta['srcset'] !== '' ? ' srcset="' . esc_attr( $logo_meta['srcset'] ) . '"' : '';
+					$sizes  = $logo_meta['sizes'] !== '' ? ' sizes="' . esc_attr( $logo_meta['sizes'] ) . '"' : '';
+					echo '<span class="wrrapd-hot-gifts-rail__retailer-logo"><img src="' . esc_url( $logo_meta['src'] ) . '" width="' . (int) $logo_meta['width'] . '" height="' . (int) $logo_meta['height'] . '"' . $srcset . $sizes . ' alt="' . esc_attr( $retailer ) . '" decoding="async" loading="lazy" /></span>';
 				}
 			}
 			echo '</span>';
 			echo '</span>';
 		} else {
-			if ( $logo !== '' ) {
-				echo '<span class="wrrapd-hot-gifts-rail__logo"><img src="' . esc_url( $logo ) . '" width="48" height="48" alt="" decoding="async" loading="lazy" /></span>';
+			if ( $logo_meta['src'] !== '' ) {
+				$srcset = $logo_meta['srcset'] !== '' ? ' srcset="' . esc_attr( $logo_meta['srcset'] ) . '"' : '';
+				$sizes  = $logo_meta['sizes'] !== '' ? ' sizes="' . esc_attr( $logo_meta['sizes'] ) . '"' : '';
+				echo '<span class="wrrapd-hot-gifts-rail__logo"><img src="' . esc_url( $logo_meta['src'] ) . '" width="' . (int) $logo_meta['width'] . '" height="' . (int) $logo_meta['height'] . '"' . $srcset . $sizes . ' alt="" decoding="async" loading="lazy" /></span>';
 			}
 			echo '<span class="wrrapd-hot-gifts-rail__card-title">' . esc_html( (string) $g['title'] ) . '</span>';
 			if ( $copy !== '' && $variant !== 'compact' ) {
