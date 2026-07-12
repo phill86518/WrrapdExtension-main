@@ -1675,23 +1675,110 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
         }
     }
 
-    function wrrapdFindMainColumnSaveGiftButton() {
+    /**
+     * Visible / announce label blob for an Amazon CTA (input, button, or .a-button wrap).
+     * Used so sidebar AND main-column "Save gift options" duplicates share one matcher.
+     */
+    function wrrapdSaveGiftControlLabelBlob(el) {
+        if (!el) return '';
+        try {
+            const wrap =
+                (typeof el.closest === 'function' &&
+                    (el.closest('.a-button') ||
+                        el.closest('#orderSummaryPrimaryActionBtn') ||
+                        el.closest('[data-feature-id="order-summary-primary-action"]') ||
+                        el.closest('#checkout-secondary-continue-button-id') ||
+                        el.closest('#checkout-primary-continue-button-id'))) ||
+                el;
+            const ann = wrap.querySelector?.('[id$="-announce"], .a-button-text');
+            const annText = (ann && ann.textContent) || '';
+            const labelledBy = el.getAttribute?.('aria-labelledby') || '';
+            let labelledText = '';
+            if (labelledBy) {
+                labelledText = labelledBy
+                    .split(/\s+/)
+                    .map((id) => document.getElementById(id)?.textContent || '')
+                    .join(' ');
+            }
+            return `${el.value || ''} ${el.getAttribute?.('aria-label') || ''} ${annText} ${labelledText} ${el.textContent || ''} ${wrap.textContent || ''}`
+                .replace(/\s+/g, ' ')
+                .trim()
+                .toLowerCase();
+        } catch {
+            return '';
+        }
+    }
+
+    function wrrapdControlLooksLikeSaveGiftOptions(el) {
+        const blob = wrrapdSaveGiftControlLabelBlob(el);
+        if (!blob) return false;
+        if (blob.includes('place') && blob.includes('order')) return false;
+        return (blob.includes('save') && blob.includes('gift')) || /save\s+gift\s+options/i.test(blob);
+    }
+
+    /** Every on-page "Save gift options" control (sidebar + main column + Chewbacca secondary). */
+    function wrrapdFindAllSaveGiftOptionsButtons() {
+        /** @type {Array<HTMLElement>} */
+        const found = [];
+        const seen = new Set();
+        const push = (el) => {
+            if (!el || el.disabled || seen.has(el)) return;
+            if (typeof el.closest === 'function' && el.closest('.wrrapd-modal')) return;
+            seen.add(el);
+            found.push(el);
+        };
+
+        document
+            .querySelectorAll(
+                [
+                    '#checkout-secondary-continue-button-id input.a-button-input',
+                    'input[data-testid="secondary-continue-button"]',
+                    'input[data-csa-c-slot-id="checkout-secondary-continue-giftselect"]',
+                    '#checkout-primary-continue-button-id input.a-button-input',
+                    '#checkout-primary-continue-button-id input[type="submit"]',
+                    'input[aria-labelledby="checkout-primary-continue-button-id-announce"]',
+                    '#orderSummaryPrimaryActionBtn .a-button-input',
+                    '[data-feature-id="order-summary-primary-action"] .a-button-input',
+                ].join(', '),
+            )
+            .forEach((el) => {
+                if (wrrapdControlLooksLikeSaveGiftOptions(el)) push(el);
+            });
+
         const root =
             document.querySelector('#checkout-main') ||
             document.querySelector('[data-checkout-page]') ||
+            document.querySelector('#checkout-experience-container') ||
             document.body;
-        const inputs = root.querySelectorAll('input.a-button-input, input[type="submit"], button');
-        for (let i = 0; i < inputs.length; i++) {
-            const inp = inputs[i];
-            if (!inp || inp.disabled) continue;
-            const wrap = inp.closest?.('.a-button');
-            const ann = wrap?.querySelector?.('[id$="-announce"], .a-button-text');
-            const annText = (ann && ann.textContent) || '';
-            const blob = `${inp.value || ''} ${inp.getAttribute('aria-label') || ''} ${annText} ${inp.textContent || ''}`.toLowerCase();
-            if (blob.includes('place') && blob.includes('order')) continue;
-            if ((blob.includes('save') && blob.includes('gift')) || /save\s+gift\s+options/i.test(blob)) return inp;
-        }
-        return null;
+        root
+            .querySelectorAll('input.a-button-input, input[type="submit"], button.a-button-input, button')
+            .forEach((inp) => {
+                if (wrrapdControlLooksLikeSaveGiftOptions(inp)) push(inp);
+            });
+
+        // Also catch clicks on the yellow .a-button chrome when the real input is nested.
+        root.querySelectorAll('.a-button').forEach((wrap) => {
+            if (!wrrapdControlLooksLikeSaveGiftOptions(wrap)) return;
+            const inp = wrap.querySelector('input.a-button-input, input[type="submit"], button');
+            if (inp) push(inp);
+            else push(wrap);
+        });
+
+        return found;
+    }
+
+    function wrrapdFindMainColumnSaveGiftButton() {
+        const all = wrrapdFindAllSaveGiftOptionsButtons();
+        // Prefer a control outside the sticky order-summary column (the duplicate under the items).
+        const mainCol = all.find((el) => {
+            const inSummary =
+                el.closest?.('#orderSummaryPrimaryActionBtn') ||
+                el.closest?.('[data-feature-id="order-summary-primary-action"]') ||
+                el.closest?.('#checkout-experience-right-column') ||
+                el.closest?.('#spc-order-summary');
+            return !inSummary;
+        });
+        return mainCol || all[0] || null;
     }
 
     /**
@@ -2087,22 +2174,41 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
         };
         
         /**
-         * Terms modal must run ONLY for Amazon's "Save gift options" (not every primary button).
-         * Chewbacca uses #checkout-secondary-continue-button-id + input[data-testid="secondary-continue-button"].
+         * Terms modal must run for EVERY Amazon "Save gift options" CTA — sidebar,
+         * Chewbacca secondary, AND the duplicate under the last gift item.
+         * Match by known shells first, then by visible/announce label so new Amazon
+         * layouts with duplicate buttons stay covered.
          */
         function isDelegatedSaveGiftOptionsClick(target) {
             if (!target || typeof target.closest !== 'function') return false;
             if (target.closest('.wrrapd-modal')) return false;
 
             if (target.closest('#checkout-secondary-continue-button-id')) return true;
-            if (target.closest('input[data-testid="secondary-continue-button"]')) return true;
-
-            const primaryBar = target.closest('#orderSummaryPrimaryActionBtn');
-            if (primaryBar) {
-                const announce = primaryBar.querySelector('.a-button-text, [id$="-announce"]');
-                const label = (announce && announce.textContent) ? announce.textContent.toLowerCase() : '';
-                if (label.includes('save gift')) return true;
+            if (
+                target.closest('input[data-testid="secondary-continue-button"]') ||
+                (typeof target.matches === 'function' && target.matches('input[data-testid="secondary-continue-button"]'))
+            ) {
+                return true;
             }
+            if (
+                target.closest('input[data-csa-c-slot-id="checkout-secondary-continue-giftselect"]') ||
+                (typeof target.matches === 'function' &&
+                    target.matches('input[data-csa-c-slot-id="checkout-secondary-continue-giftselect"]'))
+            ) {
+                return true;
+            }
+
+            const primaryBar = target.closest(
+                '#orderSummaryPrimaryActionBtn, [data-feature-id="order-summary-primary-action"]',
+            );
+            if (primaryBar && wrrapdControlLooksLikeSaveGiftOptions(primaryBar)) return true;
+
+            // Main-column (and any other) duplicate: label says Save gift options.
+            const clickable = target.closest(
+                'input.a-button-input, input[type="submit"], button, .a-button, [role="button"], #checkout-primary-continue-button-id',
+            );
+            if (clickable && wrrapdControlLooksLikeSaveGiftOptions(clickable)) return true;
+
             return false;
         }
 
@@ -2209,69 +2315,47 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
         // Clear interval after 30 seconds
         setTimeout(() => clearInterval(urlCheckInterval), 30000);
 
-        // Find buttons using AI with fallback to original selectors
+        // Find ALL Save gift options buttons (sidebar + main column duplicates).
         const findButtons = async () => {
-            const buttons = [];
-            
-            // Chewbacca "Save gift options" (secondary continue — user-confirmed selector)
-            const secondarySave = document.querySelector(
-                '#checkout-secondary-continue-button-id input.a-button-input, input[data-testid="secondary-continue-button"]',
-            );
-            if (secondarySave && secondarySave.closest('.wrrapd-modal') === null) {
-                buttons.push(secondarySave);
-                console.log("[overrideSaveGiftOptionsButtons] Found checkout-secondary-continue (Save gift options) button");
+            const buttons = wrrapdFindAllSaveGiftOptionsButtons();
+            if (buttons.length) {
+                console.log(
+                    `[overrideSaveGiftOptionsButtons] Found ${buttons.length} Save gift options control(s)`,
+                    buttons,
+                );
+                return buttons;
             }
 
-            // Try original selectors first (fastest) — only when label is Save gift (avoid wrong page primary actions)
-            const orderSummaryButton = document.querySelector('#orderSummaryPrimaryActionBtn .a-button-input');
-            if (orderSummaryButton && orderSummaryButton.closest('.wrrapd-modal') === null) {
-                const bar = orderSummaryButton.closest('#orderSummaryPrimaryActionBtn');
-                const announce = bar && bar.querySelector('.a-button-text, [id$="-announce"]');
-                const label = (announce && announce.textContent) ? announce.textContent.toLowerCase() : '';
-                if (label.includes('save gift') && !buttons.includes(orderSummaryButton)) {
-                    buttons.push(orderSummaryButton);
-                    console.log("[overrideSaveGiftOptionsButtons] Found orderSummaryPrimaryActionBtn (Save gift options) button");
-                }
+            // Fallback: AI / legacy selectors when the page has not painted announce text yet
+            console.log("[overrideSaveGiftOptionsButtons] No labeled Save gift controls yet, using AI/legacy...");
+            const pageContext =
+                'This is the Amazon gift options page. Find EVERY "Save gift options" or "Continue" button that saves gift options — including the one in the order summary AND any duplicate under the gift items. NOT inside a modal.';
+
+            const aiButton = await findElementWithFallback(
+                'Save gift options or Continue button on Amazon gift options page (NOT in a modal)',
+                [
+                    '#orderSummaryPrimaryActionBtn .a-button-input',
+                    '[data-feature-id="order-summary-primary-action"] .a-button-input',
+                    '#checkout-secondary-continue-button-id input.a-button-input',
+                    '#checkout-primary-continue-button-id input.a-button-input',
+                    'input[data-testid="secondary-continue-button"]',
+                    'input[data-csa-c-slot-id="checkout-secondary-continue-giftselect"]',
+                    '#a-autoid-4 [data-testid=""]',
+                    '.a-button-inner > [data-testid=""]',
+                    '.a-button-primary input',
+                    '.a-button-primary button',
+                    'button[aria-label*="save"]',
+                    'button[aria-label*="continue"]',
+                ],
+                pageContext,
+                ['save gift options', 'continue'],
+            );
+
+            if (aiButton && aiButton.closest('.wrrapd-modal') === null) {
+                buttons.push(aiButton);
+                console.log("[overrideSaveGiftOptionsButtons] Found button via AI");
             }
-            
-            // Try second original selector
-            let buttonInner = document.querySelector('#a-autoid-4 [data-testid=""]');
-            if (!buttonInner) {
-                buttonInner = document.querySelector('.a-button-inner > [data-testid=""]');
-            }
-            if (buttonInner && buttonInner.closest('.wrrapd-modal') === null) {
-                buttons.push(buttonInner);
-                console.log("[overrideSaveGiftOptionsButtons] Found buttonInner");
-            }
-            
-            // If original selectors didn't work, use AI to find buttons
-            if (buttons.length === 0) {
-                console.log("[overrideSaveGiftOptionsButtons] Original selectors didn't work, using AI...");
-                const pageContext = 'This is the Amazon gift options page. Find the "Save gift options" or "Continue" button that saves gift options. This is the MAIN button on the page, NOT inside any modal.';
-                
-                const aiButton = await findElementWithFallback(
-                    'Save gift options or Continue button on Amazon gift options page (NOT in a modal)',
-                    [
-                        '#orderSummaryPrimaryActionBtn .a-button-input',
-                        '#orderSummaryPrimaryActionBtn button',
-                        '#orderSummaryPrimaryActionBtn input',
-                        '#a-autoid-4 [data-testid=""]',
-                        '.a-button-inner > [data-testid=""]',
-                        '.a-button-primary input',
-                        '.a-button-primary button',
-                        'button[aria-label*="save"]',
-                        'button[aria-label*="continue"]'
-                    ],
-                    pageContext,
-                    ['save gift options', 'continue']
-                );
-                
-                if (aiButton && aiButton.closest('.wrrapd-modal') === null) {
-                    buttons.push(aiButton);
-                    console.log("[overrideSaveGiftOptionsButtons] Found button via AI");
-                }
-            }
-            
+
             return buttons;
         };
 

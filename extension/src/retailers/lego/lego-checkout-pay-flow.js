@@ -39,32 +39,44 @@ let wrrapdCheckoutUnitPriceOverride = null;
 let legoPreviewTaxPercent = WRRAPD_DEFAULT_TAX_RATE_PERCENT;
 let legoPricingFetchComplete = false;
 
+function findCheckoutSecurelyButtons() {
+  /** @type {HTMLElement[]} */
+  const buttons = [];
+  const seen = new Set();
+  const add = (node) => {
+    if (!node || seen.has(node)) return;
+    seen.add(node);
+    buttons.push(node);
+  };
+  document
+    .querySelectorAll(
+      '[data-test="checkout-securely-button-desktop"], [data-test="checkout-securely-button-mobile"], [data-test="checkout-securely-button"]',
+    )
+    .forEach(add);
+  for (const b of document.querySelectorAll("button")) {
+    if (/checkout securely/i.test((b.textContent || "").trim())) add(b);
+  }
+  return buttons;
+}
+
 function findCheckoutSecurelyButton() {
-  return (
-    document.querySelector('[data-test="checkout-securely-button-desktop"]') ||
-    document.querySelector('[data-test="checkout-securely-button-mobile"]') ||
-    document.querySelector('[data-test="checkout-securely-button"]') ||
-    [...document.querySelectorAll("button")].find((b) =>
-      /checkout securely/i.test((b.textContent || "").trim()),
-    ) ||
-    null
-  );
+  return findCheckoutSecurelyButtons()[0] || null;
 }
 
 export function applyCheckoutSecurelyGate() {
-  const btn = findCheckoutSecurelyButton();
-  if (!btn) return;
   const radio = readGiftRadio();
   const ready = readGiftChoicesSaved() && readGiftLegalTermsAccepted();
   const needBlock = radio === "yes" && !ready;
-  if (needBlock) {
-    btn.disabled = true;
-    btn.setAttribute("aria-disabled", "true");
-    btn.setAttribute("data-wrrapd-lego-checkout-gated", "1");
-  } else if (btn.getAttribute("data-wrrapd-lego-checkout-gated") === "1") {
-    btn.disabled = false;
-    btn.removeAttribute("aria-disabled");
-    btn.removeAttribute("data-wrrapd-lego-checkout-gated");
+  for (const btn of findCheckoutSecurelyButtons()) {
+    if (needBlock) {
+      btn.disabled = true;
+      btn.setAttribute("aria-disabled", "true");
+      btn.setAttribute("data-wrrapd-lego-checkout-gated", "1");
+    } else if (btn.getAttribute("data-wrrapd-lego-checkout-gated") === "1") {
+      btn.disabled = false;
+      btn.removeAttribute("aria-disabled");
+      btn.removeAttribute("data-wrrapd-lego-checkout-gated");
+    }
   }
 }
 
