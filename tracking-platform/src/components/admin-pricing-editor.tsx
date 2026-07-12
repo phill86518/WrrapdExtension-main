@@ -2,16 +2,17 @@
 
 import { useCallback, useMemo, useState } from "react";
 import {
-  fetchZipCountyIndex,
   priceFieldKeys,
   priceFieldLabel,
   RETAILER_LABELS,
   type PricingConfig,
   type UnitPrices,
+  type ZipCountyIndex,
 } from "@/lib/wrrapd-pricing-admin";
 import { GeoPricingModal } from "@/components/geo-pricing-modal";
 
 type SaveResult = { ok: true; config: PricingConfig } | { ok: false; error: string };
+type IndexResult = { ok: true; index: ZipCountyIndex } | { ok: false; error: string };
 
 function cloneConfig(config: PricingConfig): PricingConfig {
   return JSON.parse(JSON.stringify(config)) as PricingConfig;
@@ -59,9 +60,11 @@ function PriceInputs({
 export function AdminPricingEditor({
   initialConfig,
   saveAction,
+  loadZipCountyIndexAction,
 }: {
   initialConfig: PricingConfig;
   saveAction: (config: PricingConfig) => Promise<SaveResult>;
+  loadZipCountyIndexAction: () => Promise<IndexResult>;
 }) {
   const [config, setConfig] = useState<PricingConfig>(() => cloneConfig(initialConfig));
   const [saving, setSaving] = useState(false);
@@ -73,7 +76,11 @@ export function AdminPricingEditor({
     [config.retailers],
   );
 
-  const loadIndex = useCallback(() => fetchZipCountyIndex(), []);
+  const loadIndex = useCallback(async () => {
+    const result = await loadZipCountyIndexAction();
+    if (!result.ok) throw new Error(result.error);
+    return result.index;
+  }, [loadZipCountyIndexAction]);
 
   const updateDefault = (key: keyof UnitPrices, value: number) => {
     setConfig((prev) => ({

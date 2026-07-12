@@ -4,8 +4,10 @@ import { WrrapdLogo } from "@/components/wrrapd-logo";
 import { getSession } from "@/lib/auth";
 import {
   fetchWrrapdPricingConfig,
+  fetchZipCountyIndex,
   saveWrrapdPricingConfig,
   type PricingConfig,
+  type ZipCountyIndex,
 } from "@/lib/wrrapd-pricing-admin";
 import { notFound } from "next/navigation";
 import { revalidatePath } from "next/cache";
@@ -27,6 +29,22 @@ async function savePricingAction(config: PricingConfig) {
       ok: false as const,
       error: e instanceof Error ? e.message : "Failed to save pricing",
     };
+  }
+}
+
+async function loadZipCountyIndexAction(): Promise<
+  { ok: true; index: ZipCountyIndex } | { ok: false; error: string }
+> {
+  "use server";
+  const session = await getSession();
+  if (!session || session.role !== "admin") {
+    return { ok: false, error: "Unauthorized" };
+  }
+  try {
+    const index = await fetchZipCountyIndex();
+    return { ok: true, index };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Failed to load counties" };
   }
 }
 
@@ -60,7 +78,13 @@ export default async function AdminPricingPage() {
         </p>
       )}
 
-      {config && <AdminPricingEditor initialConfig={config} saveAction={savePricingAction} />}
+      {config && (
+        <AdminPricingEditor
+          initialConfig={config}
+          saveAction={savePricingAction}
+          loadZipCountyIndexAction={loadZipCountyIndexAction}
+        />
+      )}
     </main>
   );
 }

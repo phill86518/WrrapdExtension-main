@@ -8,6 +8,7 @@ import {
   trackingPayoutConfigDoc,
   trackingPayoutsCollection,
 } from "./tracking-firestore";
+import { getWrapstarProfile } from "./wrapstar-profiles";
 
 const DATA_DIR = path.join(process.cwd(), ".data");
 const EARNINGS_FILE = path.join(DATA_DIR, "earnings.json");
@@ -110,8 +111,20 @@ export async function createEarningsForDeliveredOrder(order: Order): Promise<Ear
   const flowersRevenueCents = Math.max(0, Math.round(order.flowersRevenueCents || 0));
   const hasRevenueSplit = wrapRevenueCents > 0 || flowersRevenueCents > 0;
 
-  const wrapTakePct = Math.min(100, Math.max(0, Number(cfg.platformTakeWrapPercent ?? 28)));
-  const flowerTakePct = Math.min(100, Math.max(0, Number(cfg.platformTakeFlowersPercent ?? 15)));
+  // Per-WrapStar overrides (profile) beat global finance rates.
+  let wrapTakePct = Math.min(100, Math.max(0, Number(cfg.platformTakeWrapPercent ?? 28)));
+  let flowerTakePct = Math.min(100, Math.max(0, Number(cfg.platformTakeFlowersPercent ?? 15)));
+  try {
+    const profile = await getWrapstarProfile(wsId);
+    if (typeof profile.platformTakeWrapPercent === "number") {
+      wrapTakePct = Math.min(100, Math.max(0, profile.platformTakeWrapPercent));
+    }
+    if (typeof profile.platformTakeFlowersPercent === "number") {
+      flowerTakePct = Math.min(100, Math.max(0, profile.platformTakeFlowersPercent));
+    }
+  } catch {
+    // keep global defaults
+  }
 
   let platformWrapTakeCents = 0;
   let platformFlowersTakeCents = 0;

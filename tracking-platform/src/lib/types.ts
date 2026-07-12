@@ -163,6 +163,16 @@ export type WrapStarProfile = {
   notes?: string;
   /** Admin: force available on YYYY-MM-DD even if WrapStar missed deadline */
   forcedAvailableDates?: string[];
+  /**
+   * Optional per-WrapStar platform keep on gift-wrap gross (%).
+   * When set, overrides global PayoutConfig.platformTakeWrapPercent.
+   */
+  platformTakeWrapPercent?: number;
+  /**
+   * Optional per-WrapStar platform keep on flowers gross (%).
+   * When set, overrides global PayoutConfig.platformTakeFlowersPercent.
+   */
+  platformTakeFlowersPercent?: number;
 };
 
 /** @deprecated Use WrapStarProfile */

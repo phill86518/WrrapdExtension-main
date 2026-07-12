@@ -30,12 +30,23 @@ const defaultProfiles: Store = {
 };
 
 function normalizeProfile(id: string, raw: Partial<WrapStarProfile>): WrapStarProfile {
+  const wrapTake =
+    typeof raw.platformTakeWrapPercent === "number" && Number.isFinite(raw.platformTakeWrapPercent)
+      ? Math.min(100, Math.max(0, raw.platformTakeWrapPercent))
+      : undefined;
+  const flowerTake =
+    typeof raw.platformTakeFlowersPercent === "number" &&
+    Number.isFinite(raw.platformTakeFlowersPercent)
+      ? Math.min(100, Math.max(0, raw.platformTakeFlowersPercent))
+      : undefined;
   return {
     wrapstarId: raw.wrapstarId || raw.driverId || id,
     driverId: raw.driverId || raw.wrapstarId || id,
     onboardingStatus: raw.onboardingStatus || "pending",
     notes: raw.notes,
     forcedAvailableDates: raw.forcedAvailableDates,
+    ...(wrapTake !== undefined ? { platformTakeWrapPercent: wrapTake } : {}),
+    ...(flowerTake !== undefined ? { platformTakeFlowersPercent: flowerTake } : {}),
   };
 }
 
@@ -167,6 +178,45 @@ export async function setForcedAvailableDates(
     driverId: resolved,
     forcedAvailableDates: dates,
   };
+  if (col) {
+    await col.doc(resolved).set(next);
+    return next;
+  }
+  const all = await readWrapstarProfiles();
+  all[resolved] = next;
+  await writeAllFile(all);
+  return next;
+}
+
+export async function setWrapstarPayoutTakes(
+  wrapstarId: string,
+  takes: {
+    platformTakeWrapPercent?: number | null;
+    platformTakeFlowersPercent?: number | null;
+  },
+): Promise<WrapStarProfile> {
+  const resolved =
+    wrapstarId.startsWith("drv-") ? wrapstarIdFromLegacy(wrapstarId) : wrapstarId;
+  const col = trackingWrapstarProfilesCollection();
+  const prev = await getWrapstarProfile(resolved);
+  const next: WrapStarProfile = {
+    ...prev,
+    wrapstarId: resolved,
+    driverId: resolved,
+  };
+  if (takes.platformTakeWrapPercent === null) {
+    delete next.platformTakeWrapPercent;
+  } else if (typeof takes.platformTakeWrapPercent === "number") {
+    next.platformTakeWrapPercent = Math.min(100, Math.max(0, takes.platformTakeWrapPercent));
+  }
+  if (takes.platformTakeFlowersPercent === null) {
+    delete next.platformTakeFlowersPercent;
+  } else if (typeof takes.platformTakeFlowersPercent === "number") {
+    next.platformTakeFlowersPercent = Math.min(
+      100,
+      Math.max(0, takes.platformTakeFlowersPercent),
+    );
+  }
   if (col) {
     await col.doc(resolved).set(next);
     return next;
