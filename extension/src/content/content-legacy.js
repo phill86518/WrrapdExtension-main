@@ -31,6 +31,8 @@ import { ensureWrrapdSummaryAlignment } from './lib/summary-alignment.js';
 import { isZipCodeAllowed } from './lib/zip-codes.js';
 import { WRRAPD_RETAILER_AMAZON } from '../retailers/amazon/constants.js';
 import { occasionOptionsHtml, isValidOccasion } from '../shared/occasions.js';
+import { mountGifteeZipEstimateBar, readValidatedEstimateZip } from '../shared/giftee-zip-estimate.js';
+import { formatUsd } from '../shared/wrrapd-unit-pricing.js';
 
 (function () {
 
@@ -3333,6 +3335,47 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
 
                     // Now set up event listeners
                     const modal = document.getElementById(`wrrapd-modal-${i}`);
+                    const modalContent = modal?.querySelector('.wrrapd-modal-content');
+                    const modalHeading = modalContent?.querySelector('h2');
+                    const applyAmazonModalPrices = (prices) => {
+                        if (!modal || !prices) return;
+                        const uploadLabel = modal.querySelector(`input[name="wrapping-option-${i}"][value="upload"]`)
+                            ?.closest('label')
+                            ?.querySelector('div > div');
+                        const aiLabel = modal.querySelector(`input[name="wrapping-option-${i}"][value="ai"]`)
+                            ?.closest('label')
+                            ?.querySelector('div > div');
+                        const flowersLabel = modal.querySelector(`#combine-with-flowers-${i}`)
+                            ?.closest('label')
+                            ?.querySelector('div');
+                        if (uploadLabel) {
+                            uploadLabel.textContent = `Upload your own design (+${formatUsd(prices.customDesignUpload)})`;
+                        }
+                        if (aiLabel) {
+                            aiLabel.textContent = `Generate AI designs (+${formatUsd(prices.customDesignAi)})`;
+                        }
+                        if (flowersLabel) {
+                            flowersLabel.textContent = `Add Flowers - choose from below (15-20 stem bouquets) - ${formatUsd(prices.flowers)}`;
+                        }
+                    };
+                    // Prefill from Amazon line shipping ZIP when available.
+                    try {
+                        const lineZip = String(subItem?.shippingAddress?.postalCode || '')
+                            .replace(/\D/g, '')
+                            .slice(0, 5);
+                        if (lineZip.length === 5 && !readValidatedEstimateZip('wrrapdAmazon')) {
+                            sessionStorage.setItem('wrrapdAmazonValidatedEstimateZip', lineZip);
+                        }
+                    } catch { /* ignore */ }
+                    const amazonZipBar = modalContent
+                        ? mountGifteeZipEstimateBar({
+                              parent: modalContent,
+                              insertBefore: modalContent.querySelector(".modal-section"),
+                              sessionPrefix: "wrrapdAmazon",
+                              retailerLabel: "Amazon",
+                              onPricesReady: applyAmazonModalPrices,
+                          })
+                        : null;
                     const wrrapdCheckbox = document.getElementById(`wrrapd-checkbox-${i}`);
                     const closeBtn = modal?.querySelector('.modal-close');
                     const saveBtn = modal?.querySelector('.modal-save');
@@ -3476,6 +3519,10 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                         
                         // Mark this event so main handler can check it
                         e.wrrapdModalSave = true;
+
+                        if (amazonZipBar && !amazonZipBar.requireValidZip()) {
+                            return false;
+                        }
                         
                         // Save all current modal state
                         const occasionInput = document.getElementById(`occasion-input-${i}`);
@@ -11329,11 +11376,19 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                             country: addressObject.country || 'United States'
                         };
                     }
+                    // Prefer the ZIP confirmed in the gift modal for pricing + checkout lock.
+                    const modalZip = readValidatedEstimateZip('wrrapdAmazon');
+                    if (modalZip && modalZip.length === 5) {
+                        gifteeOriginalAddress = {
+                            ...gifteeOriginalAddress,
+                            postalCode: modalZip,
+                        };
+                    }
 
                     await refreshWrrapdCheckoutUnitPricesFromServer({
-                        postalCode: addressObject.postalCode,
-                        state: addressObject.state,
-                        country: addressObject.country,
+                        postalCode: modalZip || gifteeOriginalAddress.postalCode || addressObject.postalCode,
+                        state: gifteeOriginalAddress.state || addressObject.state,
+                        country: gifteeOriginalAddress.country || addressObject.country,
                     });
                     total = updateWrrapdSummary();
                     if (!total || total <= 0) {

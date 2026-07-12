@@ -27,12 +27,8 @@ import {
   buildMixedFulfillmentNotice,
   buildPickupOnlyNotice,
 } from "./cart-fulfillment.js";
-import {
-  createUnitPricingState,
-  ensureUnitPrices,
-  formatUsd,
-  getActiveUnitPrices,
-} from "./wrrapd-unit-pricing.js";
+import { formatUsd, getActiveUnitPrices, createUnitPricingState } from "./wrrapd-unit-pricing.js";
+import { mountGifteeZipEstimateBar } from "./giftee-zip-estimate.js";
 import { unlockHubShippingFields } from "./wrrapd-hub.js";
 
 function normalizeWhitespace(value) {
@@ -716,6 +712,22 @@ function openGiftChoicesModal(config, cartSnapshot) {
   );
   overlay.append(panel);
 
+  const applyModalPrices = (prices) => {
+    const p = prices || getActiveUnitPrices(createUnitPricingState());
+    uploadPriceNote.textContent = `(+${formatUsd(p.customDesignUpload)})`;
+    aiPriceNote.textContent = `(+${formatUsd(p.customDesignAi)})`;
+    flowersText.textContent = `Add flowers — choose from below (15–20 stem bouquets) — ${formatUsd(p.flowers)}`;
+  };
+
+  const zipBar = mountGifteeZipEstimateBar({
+    parent: panel,
+    insertBefore: intro,
+    sessionPrefix: config.sessionPrefix,
+    retailerLabel: config.retailerLabel || config.retailerName || "",
+    onPricesReady: applyModalPrices,
+    onZipCleared: () => applyModalPrices(getActiveUnitPrices(createUnitPricingState())),
+  });
+
   function renderItem(idx) {
     const line = lines[idx];
     const ch = allChoices[idx] || emptyChoice(line.title);
@@ -827,6 +839,7 @@ function openGiftChoicesModal(config, cartSnapshot) {
   });
 
   next.addEventListener("click", () => {
+    if (!zipBar.requireValidZip()) return;
     if (occasionMissing()) {
       occasionSelect.style.borderColor = "#dc2626";
       occasionSelect.focus();
@@ -841,8 +854,7 @@ function openGiftChoicesModal(config, cartSnapshot) {
       return;
     }
 
-    // Last item — require legal terms before saving. The giftee's full address
-    // is collected on pay.wrrapd.com, so no ZIP is needed here.
+    // Last item — require legal terms. Giftee ZIP was confirmed at the top of this modal.
     writeItemChoices(config.sessionPrefix, allChoices);
     writeGiftChoicesSaved(config.sessionPrefix, true);
     writeGiftRadio(config.sessionPrefix, "yes");
@@ -856,27 +868,6 @@ function openGiftChoicesModal(config, cartSnapshot) {
 
   renderItem(0);
   document.body.append(overlay);
-
-  const pricingState = createUnitPricingState();
-  const applyModalPrices = () => {
-    const prices = getActiveUnitPrices(pricingState);
-    uploadPriceNote.textContent = `(+${formatUsd(prices.customDesignUpload)})`;
-    aiPriceNote.textContent = `(+${formatUsd(prices.customDesignAi)})`;
-    flowersText.textContent = `Add flowers — choose from below (15–20 stem bouquets) — ${formatUsd(prices.flowers)}`;
-  };
-  applyModalPrices();
-  let estimateZip = "";
-  try {
-    estimateZip = sessionStorage.getItem(`${config.sessionPrefix}ValidatedEstimateZip`) || "";
-  } catch {
-    /* ignore */
-  }
-  void ensureUnitPrices(
-    pricingState,
-    estimateZip ? { postalCode: estimateZip, country: "US" } : { country: "US" },
-    config.retailerLabel || config.retailerName || "",
-  ).then(applyModalPrices);
-
   next.focus();
 }
 

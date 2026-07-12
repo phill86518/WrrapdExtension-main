@@ -35,14 +35,9 @@ import {
   writeLegoItemChoices,
   writeLegoPaymentSuccess,
 } from "./lego-session-state.js";
-import { loadAllowedZipCodes } from "../../content/lib/zip-codes.js";
 import { buildOccasionSelect, isValidOccasion } from "../../shared/occasions.js";
-import {
-  createUnitPricingState,
-  ensureUnitPrices,
-  formatUsd,
-  getActiveUnitPrices,
-} from "../../shared/wrrapd-unit-pricing.js";
+import { formatUsd, getActiveUnitPrices, createUnitPricingState } from "../../shared/wrrapd-unit-pricing.js";
+import { mountGifteeZipEstimateBar, writeValidatedEstimateZip } from "../../shared/giftee-zip-estimate.js";
 
 const FLOW_MODAL_ID = "wrrapd-lego-gift-service-modal";
 const LEGO_BAG_PAY_HINT_ATTR = "data-wrrapd-lego-bag-pay-hint";
@@ -455,6 +450,26 @@ export function openLegoGiftServiceModal() {
   );
   overlay.appendChild(panel);
 
+  // Prefer a previously validated ZIP; otherwise seed from LEGO's on-page tax ZIP if present.
+  const scrapedZip = readLegoEstimateZip();
+  if (scrapedZip && !gifteeZip5()) {
+    writeValidatedEstimateZip("wrrapdLego", scrapedZip);
+  }
+
+  const applyModalPrices = (prices) => {
+    const p = prices || getActiveUnitPrices(createUnitPricingState());
+    flowersText.textContent = `Add Flowers – choose from below (15–20 stem bouquets) – ${formatUsd(p.flowers)}`;
+  };
+
+  const zipBar = mountGifteeZipEstimateBar({
+    parent: panel,
+    insertBefore: notice,
+    sessionPrefix: "wrrapdLego",
+    retailerLabel: "LEGO",
+    onPricesReady: applyModalPrices,
+    onZipCleared: () => applyModalPrices(getActiveUnitPrices(createUnitPricingState())),
+  });
+
   // ── Render item at index ──
   function renderItem(idx) {
     const line = lines[idx];
@@ -570,6 +585,7 @@ export function openLegoGiftServiceModal() {
   });
 
   nextBtn.addEventListener("click", async () => {
+    if (!zipBar.requireValidZip()) return;
     // When letting Wrrapd choose the wrap, an occasion must be selected.
     if (currentWrapPref === "wrrapd" && !isValidOccasion(currentOccasion)) {
       occasionSelect.style.borderColor = "#dc2626";
@@ -585,29 +601,6 @@ export function openLegoGiftServiceModal() {
       return;
     }
 
-    // Last item — validate ZIP and save
-    const estimateZip = readLegoEstimateZip();
-    if (!estimateZip) {
-      alert("Please enter a ZIP code in LEGO's tax & delivery ZIP field first, then save your Wrrapd choices.");
-      return;
-    }
-    let allowed = [];
-    try { allowed = await loadAllowedZipCodes(); } catch { allowed = []; }
-    if (!(Array.isArray(allowed) && allowed.includes(estimateZip))) {
-      writeGiftRadio("no");
-      clearLegoGiftServiceFlags();
-      const y = document.querySelector('input[name="wrrapd-lego-gift"][value="yes"]');
-      const n = document.querySelector('input[name="wrrapd-lego-gift"][value="no"]');
-      if (y) y.checked = false;
-      if (n) n.checked = true;
-      alert("Sorry — we currently cannot deliver to that ZIP code yet. We are actively adding more ZIP codes, so please check back soon.");
-      tearDown();
-      applyCheckoutSecurelyGate();
-      return;
-    }
-
-    try { sessionStorage.setItem("wrrapdLegoValidatedEstimateZip", estimateZip); } catch { /* ignore */ }
-
     writeLegoItemChoices(allChoices);
     writeGiftChoicesSaved(true);
     tearDown();
@@ -620,19 +613,6 @@ export function openLegoGiftServiceModal() {
   btnRow.append(cancelBtn, backBtn, nextBtn);
   renderItem(0);
   document.body.appendChild(overlay);
-
-  const pricingState = createUnitPricingState();
-  const applyModalPrices = () => {
-    const prices = getActiveUnitPrices(pricingState);
-    flowersText.textContent = `Add Flowers – choose from below (15–20 stem bouquets) – ${formatUsd(prices.flowers)}`;
-  };
-  applyModalPrices();
-  void ensureUnitPrices(
-    pricingState,
-    gifteeZip5() ? { postalCode: gifteeZip5(), country: "US" } : { country: "US" },
-    "LEGO",
-  ).then(applyModalPrices);
-
   nextBtn.focus();
 }
 

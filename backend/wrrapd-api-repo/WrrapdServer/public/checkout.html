@@ -712,7 +712,7 @@
                 syncBillingFromDeliveryIfLinked();
             }
 
-            /** Do not pre-fill from Amazon payload (avoid real customer defaults in demos). Shopper enters giftee on this page. */
+            /** Prefill giftee name placeholders; lock ZIP when the extension already validated it. */
             const setDefaultAddress = () => {
                 if (gifteeUsesSplitName) {
                     document.getElementById('giftee-first-name').value = 'John';
@@ -723,10 +723,44 @@
                 }
                 document.getElementById('line1').value = '';
                 document.getElementById('line2').value = '';
-                document.getElementById('postal_code').value = '';
                 document.getElementById('country').value = 'US';
                 document.getElementById('city').value = '';
                 document.getElementById('state').value = '';
+
+                const lockedZip = String(
+                    (gifteeOriginalAddress && gifteeOriginalAddress.postalCode) ||
+                        (payload.gifteeOriginalAddress && payload.gifteeOriginalAddress.postalCode) ||
+                        '',
+                )
+                    .replace(/[^0-9]/g, '')
+                    .substring(0, 5);
+                const postalEl = document.getElementById('postal_code');
+                if (lockedZip.length === 5) {
+                    postalEl.value = lockedZip;
+                    postalEl.readOnly = true;
+                    postalEl.setAttribute('aria-readonly', 'true');
+                    postalEl.style.backgroundColor = '#f3f4f6';
+                    postalEl.style.pointerEvents = 'none';
+                    postalEl.title =
+                        'Locked to the giftee ZIP you confirmed earlier. To change it, cancel and start over from the retailer cart.';
+                    let lockNote = document.getElementById('wrrapd-zip-locked-note');
+                    if (!lockNote) {
+                        lockNote = document.createElement('div');
+                        lockNote.id = 'wrrapd-zip-locked-note';
+                        lockNote.style.cssText =
+                            'font-size:12px;color:#065f46;margin-top:4px;line-height:1.35;';
+                        postalEl.parentElement.appendChild(lockNote);
+                    }
+                    lockNote.textContent =
+                        'ZIP locked from your earlier gift-wrap estimate. Street/city/state still needed below. To use a different ZIP, close this window and re-enter ZIP in the Wrrapd gift modal.';
+                } else {
+                    postalEl.value = '';
+                    postalEl.readOnly = false;
+                    postalEl.removeAttribute('aria-readonly');
+                    postalEl.style.backgroundColor = '';
+                    postalEl.style.pointerEvents = '';
+                    postalEl.title = '';
+                }
             };
 
             const clearBillingAddressFields = () => {

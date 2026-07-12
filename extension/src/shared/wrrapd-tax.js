@@ -17,7 +17,11 @@ export function resolveTaxRatePercent(fetchedPercent) {
   return WRRAPD_DEFAULT_TAX_RATE_PERCENT;
 }
 
-/** Postal code sent to pricing-preview / pricingCart for tax (hub ZIP until giftee ZIP is known). */
-export function taxPostalForPricing(_gifteeZip) {
+/** Postal code sent to pricing-preview / pricingCart for tax (giftee ZIP when known). */
+export function taxPostalForPricing(gifteeZip) {
+  const z = String(gifteeZip || "")
+    .replace(/\D/g, "")
+    .slice(0, 5);
+  if (z.length === 5) return z;
   return WRRAPD_TAX_POSTAL_CODE;
 }

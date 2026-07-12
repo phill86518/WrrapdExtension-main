@@ -16,6 +16,7 @@ const https = require('https');
 const http = require('http');
 const wrrapdPricing = require(path.join(__dirname, 'lib', 'wrrapd-pricing'));
 const salesTaxZip = require(path.join(__dirname, 'lib', 'sales-tax-zip'));
+const allowedZipCodesLib = require(path.join(__dirname, 'lib', 'allowed-zip-codes'));
 
 // Initialize Google Cloud Storage
 let storageOptions = {
@@ -399,6 +400,139 @@ app.get('/api/admin/zip-county-lookup', (req, res) => {
     const zip = typeof req.query.postalCode === 'string' ? req.query.postalCode : '';
     const hit = wrrapdPricing.zipCounty.lookupZip(zip);
     res.status(200).json({ ok: true, result: hit });
+});
+
+/** Admin: read delivery allowlist. */
+app.get('/api/admin/allowed-zip-codes', (req, res) => {
+    if (!req.isApiDomain) {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
+    if (!requireWrrapdAdminKey(req, res)) return;
+    const data = allowedZipCodesLib.loadAllowedZipCodes({ force: true });
+    res.status(200).json({
+        ok: true,
+        allowedZipCodes: data.allowedZipCodes,
+        count: data.allowedZipCodes.length,
+        updatedAt: data.updatedAt,
+        notes: data.notes,
+    });
+});
+
+/** Admin: replace entire delivery allowlist. */
+app.put('/api/admin/allowed-zip-codes', express.json({ limit: '5mb' }), (req, res) => {
+    if (!req.isApiDomain) {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
+    if (!requireWrrapdAdminKey(req, res)) return;
+    try {
+        const body = req.body || {};
+        const list = Array.isArray(body.allowedZipCodes) ? body.allowedZipCodes : null;
+        if (!list) {
+            return res.status(400).json({ error: 'allowedZipCodes array required' });
+        }
+        const saved = allowedZipCodesLib.saveAllowedZipCodes(list, { notes: body.notes });
+        res.status(200).json({
+            ok: true,
+            allowedZipCodes: saved.allowedZipCodes,
+            count: saved.allowedZipCodes.length,
+            updatedAt: saved.updatedAt,
+            notes: saved.notes,
+        });
+    } catch (e) {
+        console.error('[admin/allowed-zip-codes] save failed', e);
+        res.status(500).json({ error: 'Failed to save allowed ZIP codes' });
+    }
+});
+
+/** Admin: add ZIPs to the allowlist (merge). */
+app.post('/api/admin/allowed-zip-codes/add', express.json({ limit: '2mb' }), (req, res) => {
+    if (!req.isApiDomain) {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
+    if (!requireWrrapdAdminKey(req, res)) return;
+    try {
+        const raw = req.body && (req.body.zipCodes || req.body.allowedZipCodes || req.body.zips);
+        const list = Array.isArray(raw)
+            ? raw
+            : String(raw || '')
+                  .split(/[\s,;]+/)
+                  .filter(Boolean);
+        const before = allowedZipCodesLib.loadAllowedZipCodes({ force: true }).allowedZipCodes.length;
+        const saved = allowedZipCodesLib.addZips(list);
+        res.status(200).json({
+            ok: true,
+            added: Math.max(0, saved.allowedZipCodes.length - before),
+            allowedZipCodes: saved.allowedZipCodes,
+            count: saved.allowedZipCodes.length,
+            updatedAt: saved.updatedAt,
+        });
+    } catch (e) {
+        console.error('[admin/allowed-zip-codes/add] failed', e);
+        res.status(500).json({ error: 'Failed to add ZIP codes' });
+    }
+});
+
+/** Admin: remove ZIPs from the allowlist. */
+app.post('/api/admin/allowed-zip-codes/remove', express.json({ limit: '2mb' }), (req, res) => {
+    if (!req.isApiDomain) {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
+    if (!requireWrrapdAdminKey(req, res)) return;
+    try {
+        const raw = req.body && (req.body.zipCodes || req.body.allowedZipCodes || req.body.zips);
+        const list = Array.isArray(raw)
+            ? raw
+            : String(raw || '')
+                  .split(/[\s,;]+/)
+                  .filter(Boolean);
+        const before = allowedZipCodesLib.loadAllowedZipCodes({ force: true }).allowedZipCodes.length;
+        const saved = allowedZipCodesLib.removeZips(list);
+        res.status(200).json({
+            ok: true,
+            removed: Math.max(0, before - saved.allowedZipCodes.length),
+            allowedZipCodes: saved.allowedZipCodes,
+            count: saved.allowedZipCodes.length,
+            updatedAt: saved.updatedAt,
+        });
+    } catch (e) {
+        console.error('[admin/allowed-zip-codes/remove] failed', e);
+        res.status(500).json({ error: 'Failed to remove ZIP codes' });
+    }
+});
+
+/** Admin: check whether a ZIP is currently allowed. */
+app.get('/api/admin/allowed-zip-codes/check', (req, res) => {
+    if (!req.isApiDomain) {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
+    if (!requireWrrapdAdminKey(req, res)) return;
+    const zip = typeof req.query.postalCode === 'string' ? req.query.postalCode : '';
+    res.status(200).json({ ok: true, result: allowedZipCodesLib.checkZip(zip) });
+});
+
+/** Admin: seed allowlist from zip-county index for given states (default FL,GA). */
+app.post('/api/admin/allowed-zip-codes/seed-states', express.json(), (req, res) => {
+    if (!req.isApiDomain) {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
+    if (!requireWrrapdAdminKey(req, res)) return;
+    try {
+        const states = Array.isArray(req.body?.states) && req.body.states.length
+            ? req.body.states
+            : ['FL', 'GA'];
+        const saved = allowedZipCodesLib.seedStates(states, { notes: req.body?.notes });
+        res.status(200).json({
+            ok: true,
+            states,
+            allowedZipCodes: saved.allowedZipCodes,
+            count: saved.allowedZipCodes.length,
+            updatedAt: saved.updatedAt,
+            notes: saved.notes,
+        });
+    } catch (e) {
+        console.error('[admin/allowed-zip-codes/seed-states] failed', e);
+        res.status(500).json({ error: 'Failed to seed ZIP codes' });
+    }
 });
 
 // Endpoint specific to api.wrrapd.com
@@ -3323,35 +3457,40 @@ app.post('/api/store-final-shipping-address', (req, res) => {
 
 // Endpoint to get allowed zip codes
 app.get('/api/allowed-zip-codes', (req, res) => {
-    // Allow CORS for this endpoint (needed for checkout.html)
+    // Allow CORS for this endpoint (needed for checkout.html + extension)
     res.header('Access-Control-Allow-Origin', '*');
     res.header('Access-Control-Allow-Methods', 'GET');
     res.header('Access-Control-Allow-Headers', 'Content-Type');
+    res.header('Cache-Control', 'no-store');
     res.header('Content-Type', 'application/json');
-    
-    const filePath = path.join(__dirname, 'data/allowed-zip-codes.json');
-    
-    // Check if file exists
-    if (!fs.existsSync(filePath)) {
-        console.error('[API] allowed-zip-codes.json not found at:', filePath);
-        return res.status(404).json({ error: 'Zip codes file not found' });
+    try {
+        const data = allowedZipCodesLib.loadAllowedZipCodes();
+        res.status(200).json({
+            allowedZipCodes: data.allowedZipCodes,
+            count: data.allowedZipCodes.length,
+            updatedAt: data.updatedAt,
+        });
+    } catch (e) {
+        console.error('[API] allowed-zip-codes failed', e);
+        res.status(500).json({ error: 'Failed to load zip codes' });
     }
-    
-    res.sendFile(filePath);
 });
 
 // Also serve it as a static file for direct access
 app.get('/data/allowed-zip-codes.json', (req, res) => {
     res.header('Access-Control-Allow-Origin', '*');
     res.header('Content-Type', 'application/json');
-    
-    const filePath = path.join(__dirname, 'data/allowed-zip-codes.json');
-    
-    if (!fs.existsSync(filePath)) {
-        return res.status(404).json({ error: 'Zip codes file not found' });
+    res.header('Cache-Control', 'no-store');
+    try {
+        const data = allowedZipCodesLib.loadAllowedZipCodes();
+        res.status(200).json({
+            allowedZipCodes: data.allowedZipCodes,
+            count: data.allowedZipCodes.length,
+            updatedAt: data.updatedAt,
+        });
+    } catch (e) {
+        res.status(500).json({ error: 'Failed to load zip codes' });
     }
-    
-    res.sendFile(filePath);
 });
 
 // Endpoint to get valid addresses for dropdown

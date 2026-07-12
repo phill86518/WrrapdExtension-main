@@ -5,22 +5,30 @@
 let allowedZipCodes = [];
 let zipCodesLoaded = false;
 
-export async function loadAllowedZipCodes() {
-  if (zipCodesLoaded) return allowedZipCodes;
+export function normalizePostal5(value) {
+  return String(value || "")
+    .replace(/\D/g, "")
+    .slice(0, 5);
+}
+
+export async function loadAllowedZipCodes({ force = false } = {}) {
+  if (zipCodesLoaded && !force) return allowedZipCodes;
 
   try {
-    const response = await fetch('https://api.wrrapd.com/api/allowed-zip-codes');
+    const response = await fetch("https://api.wrrapd.com/api/allowed-zip-codes", {
+      cache: "no-store",
+    });
     if (response.ok) {
       const data = await response.json();
-      allowedZipCodes = data.allowedZipCodes || [];
+      allowedZipCodes = Array.isArray(data.allowedZipCodes) ? data.allowedZipCodes : [];
       zipCodesLoaded = true;
     } else {
-      console.error('[Content] Failed to load zip codes from API. Response status:', response.status);
+      console.error("[Content] Failed to load zip codes from API. Response status:", response.status);
       allowedZipCodes = [];
       zipCodesLoaded = true;
     }
   } catch (error) {
-    console.error('[Content] Error loading zip codes:', error);
+    console.error("[Content] Error loading zip codes:", error);
     allowedZipCodes = [];
     zipCodesLoaded = true;
   }
@@ -28,21 +36,17 @@ export async function loadAllowedZipCodes() {
   return allowedZipCodes;
 }
 
+export async function isPostalCodeAllowed(postalCode) {
+  const zip = normalizePostal5(postalCode);
+  if (zip.length !== 5) return false;
+  if (!zipCodesLoaded) await loadAllowedZipCodes();
+  return allowedZipCodes.includes(zip);
+}
+
 export async function isZipCodeAllowed(subItem) {
-  console.log('[isZipCodeAllowed] Checking if zip code is allowed.');
-
   const zipCode = subItem?.shippingAddress?.postalCode;
-  if (!zipCode) {
-    console.log('[isZipCodeAllowed] No postalCode found, returning false.');
-    return false;
-  }
-
-  if (!zipCodesLoaded) {
-    await loadAllowedZipCodes();
-  }
-  const isAllowed = allowedZipCodes.includes(zipCode);
-  console.log(`[isZipCodeAllowed] Zip code "${zipCode}" allowed: ${isAllowed}`);
-  return isAllowed;
+  if (!zipCode) return false;
+  return isPostalCodeAllowed(zipCode);
 }
 
 void loadAllowedZipCodes();
