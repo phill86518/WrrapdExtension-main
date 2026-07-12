@@ -130,6 +130,10 @@ export type Order = {
   retailerEstimatedDeliveryDate?: string;
   /** Order merchandise / wrap value in USD cents when known from checkout ingest. */
   orderValueCents?: number;
+  /** Gift-wrap + AI + upload revenue (pre-tax) in cents from checkout. */
+  wrapRevenueCents?: number;
+  /** Flowers revenue (pre-tax) in cents from checkout. */
+  flowersRevenueCents?: number;
 };
 
 export type WrapStar = {
@@ -199,6 +203,14 @@ export type EarningsEntry = {
   earnedAt: string;
   payoutId?: string;
   status: "unpaid" | "included_in_payout" | "paid";
+  /** Gross wrap revenue used for % split (cents). */
+  wrapRevenueCents?: number;
+  /** Gross flowers revenue used for % split (cents). */
+  flowersRevenueCents?: number;
+  /** Platform keep on wrap (cents). */
+  platformWrapTakeCents?: number;
+  /** Platform keep on flowers (cents). */
+  platformFlowersTakeCents?: number;
 };
 
 export type PayoutBatch = {
@@ -219,10 +231,21 @@ export type PayoutBatch = {
 };
 
 export type PayoutConfig = {
+  /** Fallback flat WrapStar pay when order has no wrap/flower revenue breakdown. */
   basePayCents: number;
   peakMultiplier: number;
   tipPassthrough: boolean;
   platformFeeCents: number;
+  /**
+   * Platform keep on gift-wrap gross (base + AI + upload). WrapStar gets the rest.
+   * Default 28.
+   */
+  platformTakeWrapPercent: number;
+  /**
+   * Platform keep on flowers gross. WrapStar gets the rest.
+   * Default 15.
+   */
+  platformTakeFlowersPercent: number;
   updatedAt: string;
 };
 

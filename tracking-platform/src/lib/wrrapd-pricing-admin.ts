@@ -5,12 +5,35 @@ export type UnitPrices = {
   flowers: number;
 };
 
+export type PricingRuleWhen = {
+  states?: string[];
+  counties?: string[]; // "DUVAL,FL"
+  postalCodePrefixes?: string[];
+  countries?: string[];
+  dateRanges?: Array<{ start: string; end: string }>;
+};
+
+export type PricingRule = {
+  id: string;
+  label?: string;
+  when: PricingRuleWhen;
+  unitPrices?: UnitPrices;
+  multiplier?: number;
+};
+
 export type PricingConfig = {
   version: string;
   defaultUnitPrices: UnitPrices;
   globalMultiplier: number;
-  rules: unknown[];
+  rules: PricingRule[];
   retailers: Record<string, UnitPrices>;
+};
+
+export type ZipCountyIndex = {
+  version: string | null;
+  source: string | null;
+  zipCount: number;
+  countiesByState: Record<string, string[]>;
 };
 
 function apiBase(): string {
@@ -40,7 +63,9 @@ export async function fetchWrrapdPricingConfig(): Promise<PricingConfig> {
   if (!body.config || typeof body.config !== "object") {
     throw new Error("Invalid pricing config response");
   }
-  return body.config as PricingConfig;
+  const cfg = body.config as PricingConfig;
+  cfg.rules = Array.isArray(cfg.rules) ? (cfg.rules as PricingRule[]) : [];
+  return cfg;
 }
 
 export async function saveWrrapdPricingConfig(config: PricingConfig): Promise<PricingConfig> {
@@ -56,7 +81,21 @@ export async function saveWrrapdPricingConfig(config: PricingConfig): Promise<Pr
   if (!body.config || typeof body.config !== "object") {
     throw new Error("Invalid save response");
   }
-  return body.config as PricingConfig;
+  const cfg = body.config as PricingConfig;
+  cfg.rules = Array.isArray(cfg.rules) ? (cfg.rules as PricingRule[]) : [];
+  return cfg;
+}
+
+export async function fetchZipCountyIndex(): Promise<ZipCountyIndex> {
+  const r = await fetch(`${apiBase()}/api/admin/zip-county-index`, {
+    headers: adminHeaders(),
+    cache: "no-store",
+  });
+  const body = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    throw new Error(typeof body.error === "string" ? body.error : `HTTP ${r.status}`);
+  }
+  return body.index as ZipCountyIndex;
 }
 
 export const RETAILER_LABELS: Record<string, string> = {

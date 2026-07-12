@@ -15,6 +15,8 @@ async function saveAction(formData: FormData) {
     peakMultiplier: Number(formData.get("peakMultiplier") || 1.25),
     platformFeeCents: Math.round(Number(formData.get("platformFeeDollars") || 0) * 100),
     tipPassthrough: formData.get("tipPassthrough") === "on",
+    platformTakeWrapPercent: Number(formData.get("platformTakeWrapPercent") || 28),
+    platformTakeFlowersPercent: Number(formData.get("platformTakeFlowersPercent") || 15),
   });
   redirect("/admin/finance");
 }
@@ -32,11 +34,37 @@ export default async function AdminFinanceRatesPage() {
       </Link>
       <h1 className="mt-3 text-2xl font-semibold">Payout rates</h1>
       <p className="mt-1 text-sm text-slate-600">
-        Applied when an order is marked delivered (earnings ledger entry).
+        Wrrapd collects 100% of customer revenue. WrapStar pay = remainder after platform take on wrap
+        (default 28%) and flowers (default 15%). Flat base pay is only a fallback when an order has no
+        revenue breakdown.
       </p>
       <form action={saveAction} className="mt-6 space-y-4 rounded-xl border bg-white p-4 shadow-sm">
         <label className="block text-sm">
-          Base pay per delivered order ($)
+          Platform take — gift wrap incl. AI/upload (%)
+          <input
+            name="platformTakeWrapPercent"
+            type="number"
+            step="0.1"
+            min={0}
+            max={100}
+            defaultValue={config.platformTakeWrapPercent ?? 28}
+            className="mt-1 w-full rounded border px-3 py-2"
+          />
+        </label>
+        <label className="block text-sm">
+          Platform take — flowers (%)
+          <input
+            name="platformTakeFlowersPercent"
+            type="number"
+            step="0.1"
+            min={0}
+            max={100}
+            defaultValue={config.platformTakeFlowersPercent ?? 15}
+            className="mt-1 w-full rounded border px-3 py-2"
+          />
+        </label>
+        <label className="block text-sm">
+          Fallback base pay per delivered order ($)
           <input
             name="basePayDollars"
             type="number"
@@ -46,7 +74,7 @@ export default async function AdminFinanceRatesPage() {
           />
         </label>
         <label className="block text-sm">
-          Peak multiplier
+          Peak multiplier (reserved)
           <input
             name="peakMultiplier"
             type="number"
@@ -56,7 +84,7 @@ export default async function AdminFinanceRatesPage() {
           />
         </label>
         <label className="block text-sm">
-          Platform fee ($)
+          Extra platform fee ($)
           <input
             name="platformFeeDollars"
             type="number"

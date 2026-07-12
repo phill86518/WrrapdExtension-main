@@ -66,7 +66,7 @@ export default async function AdminReportsPage() {
               <th className="px-3 py-2 text-left">Total orders</th>
               <th className="px-3 py-2 text-left">Delivered</th>
               <th className="px-3 py-2 text-left">Open (assigned/en_route)</th>
-              <th className="px-3 py-2 text-left">Drivers used</th>
+              <th className="px-3 py-2 text-left">WrapStars used</th>
             </tr>
           </thead>
           <tbody>

@@ -129,8 +129,8 @@ export function TrackingLiveExperience({
         <h2 className="text-lg font-medium">Delivery Timeline</h2>
         <ol className="mt-3 list-decimal space-y-2 pl-5 text-slate-200">
           <li>Scheduled at {new Date(createdAtIso).toLocaleString()}</li>
-          <li>Assigned to driver {snap.driverName || "(pending assignment)"}</li>
-          <li>En route updates streamed from driver GPS</li>
+          <li>Assigned to WrapStar {snap.driverName || "(pending assignment)"}</li>
+          <li>En route updates streamed from WrapStar GPS</li>
           <li>Delivered with proof photo upload</li>
         </ol>
       </section>

@@ -64,6 +64,12 @@ export type IngestOrderPayload = {
   greetingFirstName?: unknown;
   skipCustomerNotifications?: unknown;
   lineItems?: unknown;
+  /** Gift-wrap + AI + upload revenue pre-tax (USD dollars or cents — see parse). */
+  wrapRevenueCents?: unknown;
+  wrapRevenue?: unknown;
+  flowersRevenueCents?: unknown;
+  flowersRevenue?: unknown;
+  orderValueCents?: unknown;
   /** Canonical: Amazon | Target (case-insensitive on ingest). */
   retailer?: unknown;
   /** Non-Amazon retailer's promised delivery date (YYYY-MM-DD); notifications show this + 1 day. */
@@ -132,6 +138,28 @@ function parseAmazonDateKeys(v: unknown): string[] | undefined {
     if (k && isValidYyyyMmDd(k)) out.push(k);
   }
   return out.length ? out : undefined;
+}
+
+function parseMoneyCents(v: unknown): number | undefined {
+  if (typeof v === "number" && Number.isFinite(v) && v >= 0) {
+    // Heuristic: values >= 1000 with no decimal likely already cents if from *Cents field;
+    // callers should prefer *Cents fields.
+    return Math.round(v);
+  }
+  if (typeof v === "string" && v.trim() !== "") {
+    const n = Number(v);
+    if (Number.isFinite(n) && n >= 0) return Math.round(n);
+  }
+  return undefined;
+}
+
+function parseDollarsToCents(v: unknown): number | undefined {
+  if (typeof v === "number" && Number.isFinite(v) && v >= 0) return Math.round(v * 100);
+  if (typeof v === "string" && v.trim() !== "") {
+    const n = Number(v);
+    if (Number.isFinite(n) && n >= 0) return Math.round(n * 100);
+  }
+  return undefined;
 }
 
 function parseLineItems(v: unknown, invalidFields: string[]): OrderLineItem[] | undefined {
@@ -328,6 +356,15 @@ export function parseIngestOrderPayload(body: unknown): IngestSuccess | IngestFa
   const externalOrderId = str(p.externalOrderId) || str(p.orderNumber);
   let sourceNote = str(p.sourceNote);
   const lineItems = parseLineItems(p.lineItems, invalidFields);
+  const wrapRevenueCents =
+    parseMoneyCents(p.wrapRevenueCents) ?? parseDollarsToCents(p.wrapRevenue);
+  const flowersRevenueCents =
+    parseMoneyCents(p.flowersRevenueCents) ?? parseDollarsToCents(p.flowersRevenue);
+  const orderValueCents =
+    parseMoneyCents(p.orderValueCents) ??
+    (wrapRevenueCents != null || flowersRevenueCents != null
+      ? (wrapRevenueCents || 0) + (flowersRevenueCents || 0)
+      : undefined);
   const skipCustomerNotifications = p.skipCustomerNotifications === true;
 
   const missingFields: string[] = [];
@@ -393,6 +430,9 @@ export function parseIngestOrderPayload(body: unknown): IngestSuccess | IngestFa
       ...(wrrapdCustomerId ? { wrrapdCustomerId } : {}),
       ...(customerGreetingName ? { customerGreetingName } : {}),
       ...(lineItems?.length ? { lineItems } : {}),
+      ...(wrapRevenueCents != null ? { wrapRevenueCents } : {}),
+      ...(flowersRevenueCents != null ? { flowersRevenueCents } : {}),
+      ...(orderValueCents != null ? { orderValueCents } : {}),
       ...(skipCustomerNotifications ? { skipCustomerNotifications: true } : {}),
       ...(deliveryPreferencePending
         ? {

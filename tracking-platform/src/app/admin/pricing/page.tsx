@@ -1,4 +1,5 @@
 import { AdminPricingEditor } from "@/components/admin-pricing-editor";
+import { AdminNav } from "@/components/admin-nav";
 import { WrrapdLogo } from "@/components/wrrapd-logo";
 import { getSession } from "@/lib/auth";
 import {
@@ -43,22 +44,19 @@ export default async function AdminPricingPage() {
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-8">
-      <a href="/admin" className="text-sm text-blue-700 underline">
-        Back to Command Center
-      </a>
-      <WrrapdLogo className="mt-4 h-10 w-auto max-w-[180px] object-contain object-left" />
-      <h1 className="mt-2 text-3xl font-semibold">Dynamic pricing</h1>
+      <AdminNav current="/admin/pricing" />
+      <WrrapdLogo className="mt-2 h-10 w-auto max-w-[180px] object-contain object-left" />
+      <h1 className="mt-2 text-3xl font-semibold">Checkout pricing</h1>
       <p className="mt-1 text-sm text-slate-600">
-        Adjust Wrrapd gift-wrap, AI/upload add-ons, and flowers pricing for each retailer. Changes apply to new
-        checkout sessions after save (extension caches prices for about five minutes).
+        Default and retailer prices, plus state/county rates that apply to every giftee ZIP in that area.
+        Changes apply to new checkout sessions after save (extension caches prices ~5 minutes).
       </p>
 
       {loadError && (
         <p className="mt-4 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
           Could not load pricing: {loadError}. Ensure{" "}
-          <code className="rounded bg-red-100 px-1">WRRAPD_ADMIN_API_KEY</code> matches on the tracking platform and
-          pay server, and that <code className="rounded bg-red-100 px-1">WRRAPD_ADMIN_API_KEY</code> is set on{" "}
-          <code className="rounded bg-red-100 px-1">wrrapd-server</code>.
+          <code className="rounded bg-red-100 px-1">WRRAPD_ADMIN_API_KEY</code> matches on the tracking
+          platform and pay server.
         </p>
       )}
 

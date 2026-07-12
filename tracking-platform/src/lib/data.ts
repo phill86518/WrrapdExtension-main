@@ -312,6 +312,9 @@ export type CreateOrderInput = {
   deliveryPreferencePending?: boolean;
   deliveryPreferenceRespondBy?: string;
   lineItems?: OrderLineItem[];
+  wrapRevenueCents?: number;
+  flowersRevenueCents?: number;
+  orderValueCents?: number;
   /** Admin / internal creates: set true to skip thank-you email & SMS */
   skipCustomerNotifications?: boolean;
   retailer?: OrderRetailer;
@@ -444,6 +447,15 @@ export async function createOrder(
     if (input.lineItems?.length) {
       merged.lineItems = [...input.lineItems];
     }
+    if (typeof input.wrapRevenueCents === "number") {
+      merged.wrapRevenueCents = input.wrapRevenueCents;
+    }
+    if (typeof input.flowersRevenueCents === "number") {
+      merged.flowersRevenueCents = input.flowersRevenueCents;
+    }
+    if (typeof input.orderValueCents === "number") {
+      merged.orderValueCents = input.orderValueCents;
+    }
     if (!preserveCheckoutAgainstStaging) {
       if (input.deliveryPreferencePending === true && prefToken) {
         merged.deliveryPreferencePending = true;
@@ -548,6 +560,11 @@ export async function createOrder(
         }
       : {}),
     ...(input.lineItems?.length ? { lineItems: [...input.lineItems] } : {}),
+    ...(typeof input.wrapRevenueCents === "number" ? { wrapRevenueCents: input.wrapRevenueCents } : {}),
+    ...(typeof input.flowersRevenueCents === "number"
+      ? { flowersRevenueCents: input.flowersRevenueCents }
+      : {}),
+    ...(typeof input.orderValueCents === "number" ? { orderValueCents: input.orderValueCents } : {}),
     ...(input.retailer ? { retailer: input.retailer } : {}),
     ...(input.retailerEstimatedDeliveryDate
       ? { retailerEstimatedDeliveryDate: input.retailerEstimatedDeliveryDate }

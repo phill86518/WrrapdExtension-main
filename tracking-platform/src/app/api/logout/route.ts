@@ -10,8 +10,8 @@ export async function POST() {
 
 /** Only allow same-origin relative paths (open-redirect safe). */
 function safeInternalPath(raw: string | null): string {
-  if (!raw) return "/driver";
-  if (!raw.startsWith("/") || raw.startsWith("//")) return "/driver";
+  if (!raw) return "/wrapstar";
+  if (!raw.startsWith("/") || raw.startsWith("//")) return "/wrapstar";
   return raw;
 }
 

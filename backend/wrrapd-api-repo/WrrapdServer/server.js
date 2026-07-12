@@ -272,6 +272,7 @@ app.get('/api/pricing-preview', (req, res) => {
         appliedRuleIds: r.appliedRuleIds,
         timeZone: r.timeZone,
         retailer: r.retailer,
+        geo: r.geo || null,
         ...(estimatedSalesTaxPercent !== null ? { estimatedSalesTaxPercent } : {}),
     });
 });
@@ -378,6 +379,26 @@ app.put('/api/admin/pricing-config', express.json(), (req, res) => {
         console.error('[admin/pricing-config] save failed', e);
         res.status(500).json({ error: 'Failed to save pricing config' });
     }
+});
+
+/** Admin: ZIP → county index for geo pricing UI. */
+app.get('/api/admin/zip-county-index', (req, res) => {
+    if (!req.isApiDomain) {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
+    if (!requireWrrapdAdminKey(req, res)) return;
+    res.status(200).json({ ok: true, index: wrrapdPricing.zipCounty.getAdminIndex() });
+});
+
+/** Admin: lookup county for a ZIP (preview). */
+app.get('/api/admin/zip-county-lookup', (req, res) => {
+    if (!req.isApiDomain) {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
+    if (!requireWrrapdAdminKey(req, res)) return;
+    const zip = typeof req.query.postalCode === 'string' ? req.query.postalCode : '';
+    const hit = wrrapdPricing.zipCounty.lookupZip(zip);
+    res.status(200).json({ ok: true, result: hit });
 });
 
 // Endpoint specific to api.wrrapd.com
@@ -789,6 +810,41 @@ function sanitizeCheckoutInvoiceForStorage(raw) {
     };
     if (complete) out.complete = complete;
     return out;
+}
+
+/** Pre-tax wrap (base+AI+upload) and flowers totals in cents from checkout invoice aggregates. */
+function revenueCentsFromCheckoutInvoice(checkoutInvoice) {
+    const complete =
+        sanitizeCheckoutInvoiceCompleteForStorage(checkoutInvoice) ||
+        (checkoutInvoice &&
+        checkoutInvoice.complete &&
+        sanitizeCheckoutInvoiceCompleteForStorage(checkoutInvoice.complete));
+    const lines = complete && Array.isArray(complete.aggregateLines) ? complete.aggregateLines : null;
+    if (!lines) {
+        return { wrapRevenueCents: null, flowersRevenueCents: null, orderValueCents: null };
+    }
+    let wrap = 0;
+    let flowers = 0;
+    for (const row of lines) {
+        const code = row && row.code;
+        const amount = typeof row.amount === 'number' ? row.amount : null;
+        if (amount == null || !Number.isFinite(amount)) continue;
+        const cents = Math.round(amount * 100);
+        if (
+            code === 'WRPD_GIFT_WRAP_BASE' ||
+            code === 'WRPD_CUSTOM_DESIGN_AI' ||
+            code === 'WRPD_CUSTOM_DESIGN_UPLOAD'
+        ) {
+            wrap += cents;
+        } else if (code === 'WRPD_FLOWERS') {
+            flowers += cents;
+        }
+    }
+    return {
+        wrapRevenueCents: wrap,
+        flowersRevenueCents: flowers,
+        orderValueCents: wrap + flowers,
+    };
 }
 
 /** Canonical sales channel for saved JSON + tracking ingest (`name_of_retailer` mirrors this string). */
@@ -2255,6 +2311,7 @@ app.post('/process-payment', async (req, res) => {
             const fallbackAmazonDay = inferAmazonDateKeyFromItems(wrappedOnly.length ? wrappedOnly : normalizedOrderData);
             const payEmailNorm = normalizeCustomerEmail(customerEmail);
             const payWrrapdCustomerId = getOrCreateWrrapdCustomerId(payEmailNorm);
+            const revenue = revenueCentsFromCheckoutInvoice(checkoutInvoice);
             const ingestCommon = {
                 customerName,
                 customerPhone,
@@ -2278,6 +2335,11 @@ app.post('/process-payment', async (req, res) => {
                 },
                 externalOrderId: canonicalTrackingExternalOrderId(orderNumber),
                 lineItems,
+                ...(revenue.wrapRevenueCents != null ? { wrapRevenueCents: revenue.wrapRevenueCents } : {}),
+                ...(revenue.flowersRevenueCents != null
+                    ? { flowersRevenueCents: revenue.flowersRevenueCents }
+                    : {}),
+                ...(revenue.orderValueCents != null ? { orderValueCents: revenue.orderValueCents } : {}),
             };
             let ingestPayload;
             if (payRetailer === 'Lego') {

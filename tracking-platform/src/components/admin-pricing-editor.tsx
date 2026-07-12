@@ -1,13 +1,15 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
+  fetchZipCountyIndex,
   priceFieldKeys,
   priceFieldLabel,
   RETAILER_LABELS,
   type PricingConfig,
   type UnitPrices,
 } from "@/lib/wrrapd-pricing-admin";
+import { GeoPricingModal } from "@/components/geo-pricing-modal";
 
 type SaveResult = { ok: true; config: PricingConfig } | { ok: false; error: string };
 
@@ -63,12 +65,15 @@ export function AdminPricingEditor({
 }) {
   const [config, setConfig] = useState<PricingConfig>(() => cloneConfig(initialConfig));
   const [saving, setSaving] = useState(false);
+  const [geoOpen, setGeoOpen] = useState(false);
   const [message, setMessage] = useState<{ type: "ok" | "err"; text: string } | null>(null);
 
   const retailerSlugs = useMemo(
     () => Object.keys(config.retailers || {}).sort((a, b) => a.localeCompare(b)),
     [config.retailers],
   );
+
+  const loadIndex = useCallback(() => fetchZipCountyIndex(), []);
 
   const updateDefault = (key: keyof UnitPrices, value: number) => {
     setConfig((prev) => ({
@@ -94,7 +99,10 @@ export function AdminPricingEditor({
       const result = await saveAction(config);
       if (result.ok) {
         setConfig(cloneConfig(result.config));
-        setMessage({ type: "ok", text: "Pricing saved. New prices apply on the next checkout pricing refresh." });
+        setMessage({
+          type: "ok",
+          text: "Pricing saved. New prices apply on the next checkout pricing refresh.",
+        });
       } else {
         setMessage({ type: "err", text: result.error });
       }
@@ -107,10 +115,36 @@ export function AdminPricingEditor({
 
   return (
     <div className="space-y-8">
+      <section className="rounded-xl border border-amber-200 bg-amber-50 p-5 shadow-sm">
+        <h2 className="text-lg font-semibold text-slate-900">State / county pricing</h2>
+        <p className="mt-1 text-sm text-slate-700">
+          Price gift-wrap (incl. AI/upload) and flowers by state or by county. Every giftee ZIP in that
+          county/state gets the rate you set.
+        </p>
+        <p className="mt-1 text-xs text-slate-600">
+          {(config.rules || []).length} active geo rule{(config.rules || []).length === 1 ? "" : "s"}
+        </p>
+        <button
+          type="button"
+          onClick={() => setGeoOpen(true)}
+          className="mt-3 rounded bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
+        >
+          Open state/county pricing console
+        </button>
+      </section>
+
+      <GeoPricingModal
+        open={geoOpen}
+        onClose={() => setGeoOpen(false)}
+        config={config}
+        onChange={setConfig}
+        fetchIndex={loadIndex}
+      />
+
       <section className="rounded-xl border bg-white p-5 shadow-sm">
         <h2 className="text-lg font-semibold text-slate-900">Default prices</h2>
         <p className="mt-1 text-sm text-slate-600">
-          Used when a retailer has no override, and as the fallback for new retailers.
+          Used when a retailer has no override and no matching state/county rule.
         </p>
         <div className="mt-4">
           <PriceInputs prefix="default" prices={config.defaultUnitPrices} onChange={updateDefault} />
@@ -138,7 +172,8 @@ export function AdminPricingEditor({
         <div>
           <h2 className="text-lg font-semibold text-slate-900">Per-retailer overrides</h2>
           <p className="mt-1 text-sm text-slate-600">
-            Each retailer can have its own gift-wrap, AI/upload add-ons, and flowers pricing.
+            Each retailer can have its own gift-wrap, AI/upload add-ons, and flowers pricing (before geo
+            rules).
           </p>
         </div>
         {retailerSlugs.map((slug) => {
@@ -169,7 +204,9 @@ export function AdminPricingEditor({
           {saving ? "Saving…" : "Save all pricing"}
         </button>
         {message && (
-          <p className={`text-sm ${message.type === "ok" ? "text-green-700" : "text-red-700"}`}>{message.text}</p>
+          <p className={`text-sm ${message.type === "ok" ? "text-green-700" : "text-red-700"}`}>
+            {message.text}
+          </p>
         )}
       </div>
     </div>

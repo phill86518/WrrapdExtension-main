@@ -33,10 +33,10 @@ export function DriverInstallCard() {
     <div className="rounded-lg border border-slate-300 bg-slate-50 p-4 text-sm">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="font-semibold text-slate-900">Install Driver App</p>
+          <p className="font-semibold text-slate-900">Install WrapStar App</p>
           {installEvent ? (
             <p className="mt-1 text-slate-700">
-              Install this app on the home screen for one-tap launch and a cleaner driver workflow.
+              Install this app on the home screen for one-tap launch and a cleaner WrapStar workflow.
             </p>
           ) : ios ? (
             <p className="mt-1 text-slate-700">

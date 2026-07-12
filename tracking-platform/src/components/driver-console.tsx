@@ -300,7 +300,7 @@ export function DriverConsole({
           <span className="text-amber-900">{calendarDayLabelNy(selectedDayKey)}</span> (Eastern)
         </p>
         <p className="mt-1 text-xs text-slate-400">
-          Wrrapd web driver UI · rev {DRIVER_QUEUE_UI_REV} · list is filtered by Eastern calendar date of each stop.
+          Wrrapd WrapStar UI · rev {DRIVER_QUEUE_UI_REV} · list is filtered by Eastern calendar date of each stop.
         </p>
       </div>
 

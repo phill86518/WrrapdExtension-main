@@ -27,6 +27,7 @@ let cachedConfig = null;
 let cachedConfigSignature = '';
 
 const salesTaxZip = require('./sales-tax-zip');
+const zipCounty = require('./zip-county');
 
 /** Wrrapd hub ZIP (Duval County FL) — default sales-tax jurisdiction for extension checkouts. */
 const HUB_TAX_ZIP5 = '32226';
@@ -62,11 +63,65 @@ function normalizeRetailersMap(raw) {
     return out;
 }
 
+function normalizePricingRule(raw) {
+    if (!raw || typeof raw !== 'object') return null;
+    const id =
+        typeof raw.id === 'string' && raw.id.trim()
+            ? raw.id.trim().slice(0, 64)
+            : `rule-${Date.now().toString(36)}`;
+    const whenIn = raw.when && typeof raw.when === 'object' ? raw.when : {};
+    const when = {};
+    if (Array.isArray(whenIn.states) && whenIn.states.length) {
+        when.states = whenIn.states.map((s) => normState(s)).filter(Boolean).slice(0, 64);
+    }
+    if (Array.isArray(whenIn.counties) && whenIn.counties.length) {
+        when.counties = whenIn.counties
+            .map((entry) => {
+                if (typeof entry === 'string') {
+                    const parts = entry.split(',').map((x) => x.trim());
+                    if (parts.length >= 2) {
+                        return `${zipCounty.normCounty(parts[0])},${normState(parts[1])}`;
+                    }
+                    return zipCounty.normCounty(parts[0]);
+                }
+                if (entry && typeof entry === 'object' && entry.county) {
+                    return `${zipCounty.normCounty(entry.county)},${normState(entry.state)}`;
+                }
+                return '';
+            })
+            .filter(Boolean)
+            .slice(0, 256);
+    }
+    if (Array.isArray(whenIn.postalCodePrefixes) && whenIn.postalCodePrefixes.length) {
+        when.postalCodePrefixes = whenIn.postalCodePrefixes
+            .map((p) => String(p || '').replace(/[^0-9]/g, ''))
+            .filter(Boolean)
+            .slice(0, 64);
+    }
+    if (Array.isArray(whenIn.countries) && whenIn.countries.length) {
+        when.countries = whenIn.countries.map((c) => normCountry(c)).filter(Boolean).slice(0, 16);
+    }
+    if (Array.isArray(whenIn.dateRanges) && whenIn.dateRanges.length) {
+        when.dateRanges = whenIn.dateRanges.slice(0, 16);
+    }
+    const rule = { id, when };
+    if (typeof raw.label === 'string' && raw.label.trim()) {
+        rule.label = raw.label.trim().slice(0, 120);
+    }
+    if (raw.multiplier != null) rule.multiplier = clampMult(raw.multiplier, 1);
+    if (raw.unitPrices && typeof raw.unitPrices === 'object') {
+        rule.unitPrices = normalizeUnitPricesObject(raw.unitPrices);
+    }
+    return rule;
+}
+
 function normalizePricingConfig(parsed) {
     const src = parsed && typeof parsed === 'object' ? parsed : {};
     const defaultUnitPrices = normalizeUnitPricesObject(src.defaultUnitPrices);
     const globalMultiplier = clampMult(src.globalMultiplier, 1);
-    const rules = Array.isArray(src.rules) ? src.rules.slice(0, 64) : [];
+    const rules = Array.isArray(src.rules)
+        ? src.rules.map(normalizePricingRule).filter(Boolean).slice(0, 256)
+        : [];
     const retailers = normalizeRetailersMap(src.retailers);
     return {
         version: typeof src.version === 'string' ? src.version.slice(0, 64) : 'custom',
@@ -204,6 +259,24 @@ function ruleMatchesWhen(when, ctx) {
         const set = new Set(when.states.map((x) => normState(x)).filter(Boolean));
         if (!st || !set.has(st)) return false;
     }
+    if (Array.isArray(when.counties) && when.counties.length) {
+        // Entries: "DUVAL,FL" or { state, county }
+        const want = new Set();
+        for (const entry of when.counties) {
+            if (typeof entry === 'string') {
+                const parts = entry.split(',').map((x) => x.trim());
+                if (parts.length >= 2) {
+                    want.add(zipCounty.countyKey(parts[1], parts[0]));
+                } else if (parts.length === 1 && st) {
+                    want.add(zipCounty.countyKey(st, parts[0]));
+                }
+            } else if (entry && typeof entry === 'object') {
+                want.add(zipCounty.countyKey(entry.state || st, entry.county));
+            }
+        }
+        const countyKey = ctx.countyKey;
+        if (!countyKey || !want.has(countyKey)) return false;
+    }
     if (Array.isArray(when.countries) && when.countries.length) {
         const set = new Set(when.countries.map((x) => normCountry(x)).filter(Boolean));
         if (!cc || !set.has(cc)) return false;
@@ -252,12 +325,19 @@ function resolveWrrapdUnitPrices(geo, retailer) {
     const cfg = loadPricingConfig();
     const timeZone = (process.env.WRRAPD_PRICING_TIMEZONE || 'America/New_York').trim() || 'America/New_York';
     const now = geo && geo.now instanceof Date ? geo.now : new Date();
+    const postalCodeNorm = normZip(geo && geo.postalCode);
+    const zipMeta = zipCounty.lookupZip(postalCodeNorm);
+    const stateNorm = normState((geo && geo.state) || (zipMeta && zipMeta.state));
+    const countyNorm = zipMeta ? zipMeta.county : '';
+    const countyKey = zipMeta ? zipCounty.countyKey(zipMeta.state, zipMeta.county) : '';
     const ctx = {
         now,
         timeZone,
-        postalCodeNorm: normZip(geo && geo.postalCode),
-        stateNorm: normState(geo && geo.state),
+        postalCodeNorm,
+        stateNorm,
         countryNorm: normCountry(geo && geo.country),
+        countyNorm,
+        countyKey,
     };
     let prices = { ...cfg.defaultUnitPrices };
     const retailerSlug = normalizeRetailerSlug(retailer);
@@ -265,7 +345,12 @@ function resolveWrrapdUnitPrices(geo, retailer) {
         prices = mergeOverrides(prices, cfg.retailers[retailerSlug]);
     }
     const appliedRuleIds = [];
-    for (const rule of cfg.rules) {
+    const rulesSorted = [...cfg.rules].sort((a, b) => {
+      const aCounty = a?.when && Array.isArray(a.when.counties) && a.when.counties.length ? 1 : 0;
+      const bCounty = b?.when && Array.isArray(b.when.counties) && b.when.counties.length ? 1 : 0;
+      return aCounty - bCounty; // state/general first, county last (wins)
+    });
+    for (const rule of rulesSorted) {
         if (!rule || typeof rule !== 'object') continue;
         const id = typeof rule.id === 'string' ? rule.id.slice(0, 64) : '';
         if (!ruleMatchesWhen(rule.when, ctx)) continue;
@@ -286,6 +371,11 @@ function resolveWrrapdUnitPrices(geo, retailer) {
         appliedRuleIds,
         timeZone,
         retailer: retailerSlug || null,
+        geo: {
+            postalCode: postalCodeNorm || null,
+            state: stateNorm || null,
+            county: countyNorm || null,
+        },
     };
 }
 
@@ -474,4 +564,5 @@ module.exports = {
     savePricingConfigFromAdmin,
     normalizeRetailerSlug,
     DEFAULT_UNIT,
+    zipCounty,
 };

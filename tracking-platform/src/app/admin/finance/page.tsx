@@ -47,6 +47,8 @@ async function saveRatesAction(formData: FormData) {
     peakMultiplier: Number(formData.get("peakMultiplier") || 1.25),
     platformFeeCents: Math.round(Number(formData.get("platformFeeDollars") || 0) * 100),
     tipPassthrough: formData.get("tipPassthrough") === "on",
+    platformTakeWrapPercent: Number(formData.get("platformTakeWrapPercent") || 28),
+    platformTakeFlowersPercent: Number(formData.get("platformTakeFlowersPercent") || 15),
   });
   revalidatePath("/admin/finance");
   revalidatePath("/admin/finance/rates");
@@ -91,8 +93,8 @@ export default async function AdminFinancePage({
       <AdminNav current="/admin/finance" />
       <h1 className="text-2xl font-semibold text-slate-900">Finance & payouts</h1>
       <p className="mt-1 text-sm text-slate-600">
-        Uber-style earnings ledger per delivered order. Payouts are batched for ACH export; Stripe Connect can
-        plug into the PaymentRail later.
+        Wrrapd collects all checkout revenue. WrapStar pay = 72% of gift-wrap gross (incl. AI/upload) and 85%
+        of flowers by default (platform keep 28% / 15%). Ledger + ACH export; Stripe Connect later.
       </p>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-3">
@@ -105,8 +107,10 @@ export default async function AdminFinancePage({
           <p className="mt-1 text-2xl font-semibold">{formatUsdCents(paidTotal)}</p>
         </div>
         <div className="rounded-xl border bg-white p-4 shadow-sm">
-          <p className="text-xs uppercase text-slate-500">Base pay rate</p>
-          <p className="mt-1 text-2xl font-semibold">{formatUsdCents(config.basePayCents)}</p>
+          <p className="text-xs uppercase text-slate-500">Platform keep</p>
+          <p className="mt-1 text-2xl font-semibold">
+            {config.platformTakeWrapPercent ?? 28}% wrap / {config.platformTakeFlowersPercent ?? 15}% flowers
+          </p>
           <Link href="/admin/finance/rates" className="text-xs text-blue-700 underline">
             Edit rates
           </Link>
@@ -255,9 +259,29 @@ export default async function AdminFinancePage({
       {/* rates form also embedded for convenience */}
       <section className="mt-8 rounded-xl border bg-white p-4 shadow-sm">
         <h2 className="font-semibold">Quick rate edit</h2>
-        <form action={saveRatesAction} className="mt-3 grid gap-3 md:grid-cols-4">
+        <form action={saveRatesAction} className="mt-3 grid gap-3 md:grid-cols-3">
           <label className="text-sm">
-            Base pay ($)
+            Wrap take (%)
+            <input
+              name="platformTakeWrapPercent"
+              type="number"
+              step="0.1"
+              defaultValue={config.platformTakeWrapPercent ?? 28}
+              className="mt-1 w-full rounded border px-3 py-2"
+            />
+          </label>
+          <label className="text-sm">
+            Flowers take (%)
+            <input
+              name="platformTakeFlowersPercent"
+              type="number"
+              step="0.1"
+              defaultValue={config.platformTakeFlowersPercent ?? 15}
+              className="mt-1 w-full rounded border px-3 py-2"
+            />
+          </label>
+          <label className="text-sm">
+            Fallback base pay ($)
             <input
               name="basePayDollars"
               type="number"
@@ -266,31 +290,17 @@ export default async function AdminFinancePage({
               className="mt-1 w-full rounded border px-3 py-2"
             />
           </label>
-          <label className="text-sm">
-            Peak multiplier
-            <input
-              name="peakMultiplier"
-              type="number"
-              step="0.01"
-              defaultValue={config.peakMultiplier}
-              className="mt-1 w-full rounded border px-3 py-2"
-            />
-          </label>
-          <label className="text-sm">
-            Platform fee ($)
-            <input
-              name="platformFeeDollars"
-              type="number"
-              step="0.01"
-              defaultValue={(config.platformFeeCents / 100).toFixed(2)}
-              className="mt-1 w-full rounded border px-3 py-2"
-            />
-          </label>
+          <input type="hidden" name="peakMultiplier" value={config.peakMultiplier} />
+          <input
+            type="hidden"
+            name="platformFeeDollars"
+            value={(config.platformFeeCents / 100).toFixed(2)}
+          />
           <label className="flex items-end gap-2 text-sm">
             <input name="tipPassthrough" type="checkbox" defaultChecked={config.tipPassthrough} />
             Tip passthrough
           </label>
-          <button type="submit" className="rounded bg-slate-900 px-3 py-2 text-sm text-white md:col-span-4 md:w-fit">
+          <button type="submit" className="rounded bg-slate-900 px-3 py-2 text-sm text-white md:col-span-3 md:w-fit">
             Save rates
           </button>
         </form>

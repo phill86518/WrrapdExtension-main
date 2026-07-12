@@ -19,6 +19,8 @@ const DEFAULT_CONFIG: PayoutConfig = {
   peakMultiplier: 1.25,
   tipPassthrough: true,
   platformFeeCents: 0,
+  platformTakeWrapPercent: 28,
+  platformTakeFlowersPercent: 15,
   updatedAt: new Date().toISOString(),
 };
 
@@ -103,9 +105,31 @@ export async function createEarningsForDeliveredOrder(order: Order): Promise<Ear
   const cfg = await getPayoutConfig();
   const tipsCents = 0;
   const peakBonusCents = 0;
-  const basePayCents = cfg.basePayCents;
-  const feesCents = cfg.platformFeeCents;
-  const netCents = basePayCents + peakBonusCents + (cfg.tipPassthrough ? tipsCents : 0) - feesCents;
+
+  const wrapRevenueCents = Math.max(0, Math.round(order.wrapRevenueCents || 0));
+  const flowersRevenueCents = Math.max(0, Math.round(order.flowersRevenueCents || 0));
+  const hasRevenueSplit = wrapRevenueCents > 0 || flowersRevenueCents > 0;
+
+  const wrapTakePct = Math.min(100, Math.max(0, Number(cfg.platformTakeWrapPercent ?? 28)));
+  const flowerTakePct = Math.min(100, Math.max(0, Number(cfg.platformTakeFlowersPercent ?? 15)));
+
+  let platformWrapTakeCents = 0;
+  let platformFlowersTakeCents = 0;
+  let basePayCents = cfg.basePayCents;
+  let feesCents = cfg.platformFeeCents;
+
+  if (hasRevenueSplit) {
+    // Wrrapd collects 100% of customer revenue; platform keep %; WrapStar gets the rest.
+    platformWrapTakeCents = Math.round((wrapRevenueCents * wrapTakePct) / 100);
+    platformFlowersTakeCents = Math.round((flowersRevenueCents * flowerTakePct) / 100);
+    const wrapstarWrap = wrapRevenueCents - platformWrapTakeCents;
+    const wrapstarFlowers = flowersRevenueCents - platformFlowersTakeCents;
+    basePayCents = Math.max(0, wrapstarWrap + wrapstarFlowers);
+    feesCents = platformWrapTakeCents + platformFlowersTakeCents + cfg.platformFeeCents;
+  }
+
+  const netCents =
+    basePayCents + peakBonusCents + (cfg.tipPassthrough ? tipsCents : 0) - (hasRevenueSplit ? 0 : feesCents);
 
   const entry: EarningsEntry = {
     id: `earn-${randomBytes(6).toString("hex")}`,
@@ -115,11 +139,21 @@ export async function createEarningsForDeliveredOrder(order: Order): Promise<Ear
     basePayCents,
     peakBonusCents,
     tipsCents,
-    feesCents,
-    netCents,
+    feesCents: hasRevenueSplit ? platformWrapTakeCents + platformFlowersTakeCents : feesCents,
+    netCents: hasRevenueSplit
+      ? basePayCents + peakBonusCents + (cfg.tipPassthrough ? tipsCents : 0)
+      : netCents,
     currency: "USD",
     earnedAt: order.updatedAt || new Date().toISOString(),
     status: "unpaid",
+    ...(hasRevenueSplit
+      ? {
+          wrapRevenueCents,
+          flowersRevenueCents,
+          platformWrapTakeCents,
+          platformFlowersTakeCents,
+        }
+      : {}),
   };
 
   const col = trackingEarningsCollection();

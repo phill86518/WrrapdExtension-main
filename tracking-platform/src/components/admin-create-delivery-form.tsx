@@ -40,7 +40,7 @@ export function AdminCreateDeliveryForm({
         className={`${field} md:col-span-2`}
       />
       <p className="text-xs font-medium leading-relaxed text-[#2d4a38] md:col-span-4">
-        Past dates are disabled. Production logic is Amazon date + 1 day. Auto-allocation minimizes driver usage and only spills to a second driver when a day exceeds 10 stops.
+        Past dates are disabled. Production logic is Amazon date + 1 day. Auto-allocation prefers the nearest WrapStar and only spills when a day exceeds 10 stops.
       </p>
       <button
         className="rounded-xl bg-gradient-to-b from-amber-400 to-amber-600 px-6 py-2.5 text-sm font-bold text-[#1a1a1a] shadow-lg shadow-amber-900/25 ring-1 ring-white/40 transition hover:from-amber-300 hover:to-amber-500 active:scale-[0.98] md:col-span-4 md:max-w-xs"
