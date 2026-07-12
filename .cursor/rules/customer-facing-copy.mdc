@@ -1,0 +1,12 @@
+---
+description: Keep customer-facing UI copy short; never expose internal rationale
+alwaysApply: true
+---
+
+# Customer-facing copy
+
+- Shopper-visible UI (extension modals, checkout.html, emails, WordPress snippets) must use short, plain labels and messages only.
+- Do **not** put implementation rationale, pricing mechanics, geo/allowlist explanations, or "why we need this" engineering notes into customer-facing strings.
+- Prefer labels like "Giftee / gift-recipient's zip code:" and brief lines like "This helps us with a faster checkout!" — not explanations about delivery areas, price refresh, or backend validation.
+- Status text should be minimal or empty on success; apologize politely when delivery is unavailable without naming internal systems.
+- Save long explanations for admin consoles, docs, and code comments — never for the shopper UI.

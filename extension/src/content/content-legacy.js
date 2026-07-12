@@ -3367,12 +3367,26 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                             sessionStorage.setItem('wrrapdAmazonValidatedEstimateZip', lineZip);
                         }
                     } catch { /* ignore */ }
+
+                    // Gate wrap/flowers/save until ZIP is confirmed.
+                    let amazonGatedBody = null;
+                    if (modalContent) {
+                        amazonGatedBody = document.createElement('div');
+                        amazonGatedBody.setAttribute('data-wrrapd-gift-body', '1');
+                        const toMove = [...modalContent.querySelectorAll('.modal-section')];
+                        const saveRow = modalContent.querySelector('.modal-save')?.parentElement;
+                        for (const node of toMove) amazonGatedBody.appendChild(node);
+                        if (saveRow) amazonGatedBody.appendChild(saveRow);
+                        modalContent.appendChild(amazonGatedBody);
+                    }
+
                     const amazonZipBar = modalContent
                         ? mountGifteeZipEstimateBar({
                               parent: modalContent,
-                              insertBefore: modalContent.querySelector(".modal-section"),
+                              insertBefore: amazonGatedBody,
                               sessionPrefix: "wrrapdAmazon",
                               retailerLabel: "Amazon",
+                              gatedContent: amazonGatedBody,
                               onPricesReady: applyAmazonModalPrices,
                           })
                         : null;

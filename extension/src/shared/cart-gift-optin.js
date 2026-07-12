@@ -698,8 +698,9 @@ function openGiftChoicesModal(config, cartSnapshot) {
     "padding:8px 14px;border:none;background:#111827;color:#fff;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;";
   actions.append(cancel, back, next);
 
-  panel.append(
-    title,
+  const gatedBody = document.createElement("div");
+  gatedBody.setAttribute("data-wrrapd-gift-body", "1");
+  gatedBody.append(
     intro,
     itemPreview,
     wrapLegend,
@@ -710,6 +711,7 @@ function openGiftChoicesModal(config, cartSnapshot) {
     msgInput,
     actions,
   );
+  panel.append(title, gatedBody);
   overlay.append(panel);
 
   const applyModalPrices = (prices) => {
@@ -721,11 +723,11 @@ function openGiftChoicesModal(config, cartSnapshot) {
 
   const zipBar = mountGifteeZipEstimateBar({
     parent: panel,
-    insertBefore: intro,
+    insertBefore: gatedBody,
     sessionPrefix: config.sessionPrefix,
     retailerLabel: config.retailerLabel || config.retailerName || "",
+    gatedContent: gatedBody,
     onPricesReady: applyModalPrices,
-    onZipCleared: () => applyModalPrices(getActiveUnitPrices(createUnitPricingState())),
   });
 
   function renderItem(idx) {

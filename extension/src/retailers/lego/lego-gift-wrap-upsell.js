@@ -435,8 +435,9 @@ export function openLegoGiftServiceModal() {
 
   // ── Assemble panel ──
   msgRow.append(msgLabel, msgInput);
-  panel.append(
-    titleEl,
+  const gatedBody = document.createElement("div");
+  gatedBody.setAttribute("data-wrrapd-gift-body", "1");
+  gatedBody.append(
     notice,
     itemPreview,
     wrapLegend,
@@ -448,6 +449,7 @@ export function openLegoGiftServiceModal() {
     msgRow,
     btnRow,
   );
+  panel.append(titleEl, gatedBody);
   overlay.appendChild(panel);
 
   // Prefer a previously validated ZIP; otherwise seed from LEGO's on-page tax ZIP if present.
@@ -463,11 +465,11 @@ export function openLegoGiftServiceModal() {
 
   const zipBar = mountGifteeZipEstimateBar({
     parent: panel,
-    insertBefore: notice,
+    insertBefore: gatedBody,
     sessionPrefix: "wrrapdLego",
     retailerLabel: "LEGO",
+    gatedContent: gatedBody,
     onPricesReady: applyModalPrices,
-    onZipCleared: () => applyModalPrices(getActiveUnitPrices(createUnitPricingState())),
   });
 
   // ── Render item at index ──
