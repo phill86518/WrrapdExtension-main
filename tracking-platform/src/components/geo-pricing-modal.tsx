@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   priceFieldKeys,
   priceFieldLabel,
@@ -9,6 +9,8 @@ import {
   type UnitPrices,
   type ZipCountyIndex,
 } from "@/lib/wrrapd-pricing-admin";
+
+const EMPTY_COUNTIES: string[] = [];
 
 function parsePrice(value: string, fallback: number): number {
   const n = parseFloat(value);
@@ -28,6 +30,11 @@ function ruleScopeLabel(rule: PricingRule): string {
   return "Custom rule";
 }
 
+function defaultCountyForState(list: string[], stateCode: string): string {
+  if (stateCode === "FL" && list.includes("DUVAL")) return "DUVAL";
+  return list[0] || "";
+}
+
 export function GeoPricingModal({
   open,
   onClose,
@@ -45,11 +52,22 @@ export function GeoPricingModal({
   const [loadError, setLoadError] = useState<string | null>(null);
   const [scope, setScope] = useState<"state" | "county">("county");
   const [state, setState] = useState("FL");
-  const [county, setCounty] = useState("");
+  const [county, setCounty] = useState("DUVAL");
   const [prices, setPrices] = useState<UnitPrices>(() => emptyPrices(config.defaultUnitPrices));
+  const loadedForOpenRef = useRef(false);
+  const seedPricesRef = useRef(config.defaultUnitPrices);
+
+  // Keep latest default prices for seeding without re-running the open loader.
+  seedPricesRef.current = config.defaultUnitPrices;
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      loadedForOpenRef.current = false;
+      return;
+    }
+    if (loadedForOpenRef.current) return;
+    loadedForOpenRef.current = true;
+
     let cancelled = false;
     (async () => {
       try {
@@ -59,28 +77,27 @@ export function GeoPricingModal({
         setLoadError(null);
         const states = Object.keys(idx.countiesByState || {}).sort();
         const st = states.includes("FL") ? "FL" : states[0] || "FL";
+        const list = idx.countiesByState[st] || [];
         setState(st);
-        const counties = idx.countiesByState[st] || [];
-        setCounty(counties.includes("DUVAL") ? "DUVAL" : counties[0] || "");
-        setPrices(emptyPrices(config.defaultUnitPrices));
+        setCounty(defaultCountyForState(list, st));
+        setPrices(emptyPrices(seedPricesRef.current));
       } catch (e) {
         if (!cancelled) setLoadError(e instanceof Error ? e.message : "Failed to load counties");
       }
     })();
+
     return () => {
       cancelled = true;
     };
-  }, [open, fetchIndex, config.defaultUnitPrices]);
+  }, [open, fetchIndex]);
 
-  const counties = useMemo(() => index?.countiesByState[state] || [], [index, state]);
+  const counties = (index && index.countiesByState[state]) || EMPTY_COUNTIES;
 
-  useEffect(() => {
-    if (!counties.length) {
-      setCounty("");
-      return;
-    }
-    if (!counties.includes(county)) setCounty(counties[0]!);
-  }, [counties, county]);
+  const onStateChange = (nextState: string) => {
+    setState(nextState);
+    const list = (index && index.countiesByState[nextState]) || EMPTY_COUNTIES;
+    setCounty((current) => (list.includes(current) ? current : defaultCountyForState(list, nextState)));
+  };
 
   if (!open) return null;
 
@@ -90,13 +107,9 @@ export function GeoPricingModal({
         ? `county-${state}-${county}`.toLowerCase().replace(/[^a-z0-9-]+/g, "-")
         : `state-${state}`.toLowerCase();
     const label =
-      scope === "county" && county
-        ? `${county} County, ${state}`
-        : `Entire state ${state}`;
+      scope === "county" && county ? `${county} County, ${state}` : `Entire state ${state}`;
     const when =
-      scope === "county" && county
-        ? { counties: [`${county},${state}`] }
-        : { states: [state] };
+      scope === "county" && county ? { counties: [`${county},${state}`] } : { states: [state] };
 
     const nextRules = [...(config.rules || [])].filter((r) => r.id !== id);
     nextRules.push({
@@ -168,7 +181,7 @@ export function GeoPricingModal({
             <select
               className="mt-1 w-full rounded border px-3 py-2"
               value={state}
-              onChange={(e) => setState(e.target.value)}
+              onChange={(e) => onStateChange(e.target.value)}
             >
               {Object.keys(index?.countiesByState || {})
                 .sort()
@@ -251,7 +264,8 @@ export function GeoPricingModal({
                     {rule.unitPrices ? (
                       <p className="mt-1 text-xs text-slate-600">
                         Wrap ${rule.unitPrices.giftWrapBase} · AI ${rule.unitPrices.customDesignAi} ·
-                        Upload ${rule.unitPrices.customDesignUpload} · Flowers ${rule.unitPrices.flowers}
+                        Upload ${rule.unitPrices.customDesignUpload} · Flowers $
+                        {rule.unitPrices.flowers}
                       </p>
                     ) : null}
                   </div>
