@@ -7,7 +7,23 @@
     "flowers": 17.99
   },
   "globalMultiplier": 1,
-  "rules": [],
+  "rules": [
+    {
+      "id": "county-fl-miami-dade",
+      "when": {
+        "counties": [
+          "MIAMI-DADE,FL"
+        ]
+      },
+      "label": "MIAMI-DADE County, FL",
+      "unitPrices": {
+        "giftWrapBase": 8.99,
+        "customDesignAi": 2.99,
+        "customDesignUpload": 1.99,
+        "flowers": 19.99
+      }
+    }
+  ],
   "retailers": {
     "amazon": {
       "giftWrapBase": 6.99,

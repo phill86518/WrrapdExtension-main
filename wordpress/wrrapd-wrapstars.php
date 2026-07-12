@@ -18,11 +18,19 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_WRAPSTARS_BUILD', '2026-07-09-wrapstars-landing-v8' );
+define( 'WRRAPD_WRAPSTARS_BUILD', '2026-07-11-wrapstars-apply-wizard-v24' );
 
 $wrrapd_boldsign = dirname( __FILE__ ) . '/wrrapd-boldsign.php';
 if ( is_readable( $wrrapd_boldsign ) ) {
 	require_once $wrrapd_boldsign;
+}
+$wrrapd_apply = dirname( __FILE__ ) . '/wrrapd-wrapstars-apply.php';
+if ( is_readable( $wrrapd_apply ) ) {
+	require_once $wrrapd_apply;
+}
+$wrrapd_profile = dirname( __FILE__ ) . '/wrrapd-wrapstars-profile.php';
+if ( is_readable( $wrrapd_profile ) ) {
+	require_once $wrrapd_profile;
 }
 
 /** @return string */
@@ -118,13 +126,14 @@ add_action( 'admin_init', 'wrrapd_wrapstars_block_wrapstar_wp_admin' );
 add_filter( 'login_redirect', 'wrrapd_wrapstars_login_redirect', 10, 3 );
 add_filter( 'body_class', 'wrrapd_wrapstars_body_class' );
 
+add_shortcode( 'wrrapd_wrapstar_landing', 'wrrapd_wrapstars_shortcode_landing' );
 add_shortcode( 'wrrapd_wrapstar_apply', 'wrrapd_wrapstars_shortcode_apply' );
 add_shortcode( 'wrrapd_wrapstar_thankyou', 'wrrapd_wrapstars_shortcode_thankyou' );
 add_shortcode( 'wrrapd_wrapstar_status', 'wrrapd_wrapstars_shortcode_status' );
 add_shortcode( 'wrrapd_wrapstar_login', 'wrrapd_wrapstars_shortcode_login' );
 add_shortcode( 'wrrapd_wrapstar_onboarding', 'wrrapd_wrapstars_shortcode_onboarding' );
 add_shortcode( 'wrrapd_wrapstar_sign', 'wrrapd_wrapstars_shortcode_sign' );
-add_shortcode( 'wrrapd_wrapstar_landing', 'wrrapd_wrapstars_shortcode_landing' );
+add_shortcode( 'wrrapd_wrapstar_profile', 'wrrapd_wrapstars_shortcode_profile' );
 
 // --- URLs ---
 
@@ -293,21 +302,51 @@ function wrrapd_wrapstars_meta_keys() {
 		'status'              => 'under_review',
 		'user_id'             => 0,
 		'full_name'           => '',
+		'first_name'          => '',
+		'middle_name'         => '',
+		'last_name'           => '',
 		'email'               => '',
 		'phone'               => '',
+		'phone_mobile'        => '',
+		'phone_work'          => '',
 		'address_line1'       => '',
+		'address_line2'       => '',
 		'city'                => '',
 		'state'               => '',
 		'postal_code'         => '',
 		'has_mailing_address' => '',
 		'comfortable_reship'  => '',
+		'wrrapd_po_daily_pickup' => '',
+		'dedicated_wrap_workspace' => '',
+		'comfortable_video_monitoring' => '',
+		'delivery_proof_ready' => '',
+		'has_vehicle'         => '',
+		'can_deliver'         => '',
+		'delivery_max_distance' => '',
+		'has_large_format_printer' => '',
+		'printer_size'        => '',
+		'clean_driving_record'  => '',
+		'gift_wrapping_experience' => '',
+		'gig_platforms'       => '',
+		'gig_platforms_other' => '',
+		'business_structure'  => '',
+		'business_structure_note' => '',
+		'bank_account_ready'  => '',
+		'ack_background_check' => '',
 		'gig_experience'      => '',
 		'why_wrapstar'        => '',
 		'id_file'             => '',
-		'ack_insurance'       => '',
 		'ack_video'           => '',
-		'ack_liability'       => '',
+		'ack_contact'         => '',
+		'ack_zoom_interview'  => '',
+		'fit_score'           => '',
+		'fit_score_breakdown' => '',
+		'experience_score_rationale' => '',
+		'commitment_score_rationale' => '',
 		'admin_notes'         => '',
+		'gcs_profile_path'    => '',
+		'profile_synced_at'   => '',
+		'profile_local_path'  => '',
 		'tier'                => 'new',
 		'suspended'           => '0',
 		'onboarding_step'     => 'welcome',
@@ -327,6 +366,7 @@ function wrrapd_wrapstars_meta_keys() {
 		'po_box_file'         => '',
 		'orientation_score'   => '',
 		'submitted_at'        => '',
+		'interview_at'        => '',
 		'approved_at'         => '',
 		'activated_at'        => '',
 		'rejected_at'         => '',
@@ -577,12 +617,193 @@ function wrrapd_wrapstars_body_class( $classes ) {
 	return $classes;
 }
 
+/** @return string */
+function wrrapd_wrapstars_google_places_api_key() {
+	if ( defined( 'WRRAPD_WRAPSTARS_GOOGLE_PLACES_API_KEY' ) && WRRAPD_WRAPSTARS_GOOGLE_PLACES_API_KEY !== '' ) {
+		return (string) WRRAPD_WRAPSTARS_GOOGLE_PLACES_API_KEY;
+	}
+	if ( defined( 'WRRAPD_GOOGLE_PLACES_API_KEY' ) && WRRAPD_GOOGLE_PLACES_API_KEY !== '' ) {
+		return (string) WRRAPD_GOOGLE_PLACES_API_KEY;
+	}
+	// Same key as checkout.html — browser calls use WP proxy; add https://apply.wrrapd.com/* for direct client use.
+	return 'AIzaSyDpZREUIh84APl6ivKxWxM6zENaVJZvmo4';
+}
+
+/** Referer sent on server-side Google Places/Address requests (key allows pay.wrrapd.com). */
+function wrrapd_wrapstars_google_places_proxy_referer() {
+	if ( defined( 'WRRAPD_WRAPSTARS_GOOGLE_PLACES_PROXY_REFERER' ) && WRRAPD_WRAPSTARS_GOOGLE_PLACES_PROXY_REFERER !== '' ) {
+		return (string) WRRAPD_WRAPSTARS_GOOGLE_PLACES_PROXY_REFERER;
+	}
+	return 'https://pay.wrrapd.com/';
+}
+
+/** @return array<string, string> */
+function wrrapd_wrapstars_google_places_request_headers() {
+	return array(
+		'Content-Type' => 'application/json',
+		'X-Goog-Api-Key' => wrrapd_wrapstars_google_places_api_key(),
+		'Referer'        => wrrapd_wrapstars_google_places_proxy_referer(),
+	);
+}
+
+function wrrapd_wrapstars_ajax_places_autocomplete() {
+	check_ajax_referer( 'wrrapd_ws_places', 'nonce' );
+	if ( ! wrrapd_wrapstars_is_apply_host() ) {
+		wp_send_json_error( array( 'message' => 'Forbidden' ), 403 );
+	}
+	$input = sanitize_text_field( wp_unslash( $_GET['input'] ?? '' ) );
+	if ( strlen( $input ) < 2 ) {
+		wp_send_json_success( array( 'predictions' => array() ) );
+	}
+	$response = wp_remote_post(
+		'https://places.googleapis.com/v1/places:autocomplete',
+		array(
+			'headers' => wrrapd_wrapstars_google_places_request_headers(),
+			'body'    => wp_json_encode(
+				array(
+					'input'                 => $input,
+					'includedRegionCodes'   => array( 'us' ),
+				)
+			),
+			'timeout' => 10,
+		)
+	);
+	if ( is_wp_error( $response ) ) {
+		wp_send_json_success( array( 'predictions' => array() ) );
+	}
+	$data = json_decode( (string) wp_remote_retrieve_body( $response ), true );
+	if ( ! is_array( $data ) || empty( $data['suggestions'] ) ) {
+		wp_send_json_success( array( 'predictions' => array() ) );
+	}
+	$predictions = array();
+	foreach ( $data['suggestions'] as $suggestion ) {
+		$prediction = $suggestion['placePrediction'] ?? array();
+		$place_id   = (string) ( $prediction['placeId'] ?? '' );
+		$text       = (string) ( $prediction['text']['text'] ?? '' );
+		if ( $place_id === '' || $text === '' ) {
+			continue;
+		}
+		$predictions[] = array(
+			'description' => $text,
+			'placeId'     => $place_id,
+		);
+	}
+	wp_send_json_success( array( 'predictions' => $predictions ) );
+}
+
+function wrrapd_wrapstars_ajax_places_details() {
+	check_ajax_referer( 'wrrapd_ws_places', 'nonce' );
+	if ( ! wrrapd_wrapstars_is_apply_host() ) {
+		wp_send_json_error( array( 'message' => 'Forbidden' ), 403 );
+	}
+	$place_id = sanitize_text_field( wp_unslash( $_GET['place_id'] ?? '' ) );
+	if ( $place_id === '' ) {
+		wp_send_json_error( array( 'message' => 'Missing place id' ), 400 );
+	}
+	$url      = 'https://places.googleapis.com/v1/places/' . rawurlencode( $place_id ) . '?fields=addressComponents';
+	$response = wp_remote_get(
+		$url,
+		array(
+			'headers' => wrrapd_wrapstars_google_places_request_headers(),
+			'timeout' => 10,
+		)
+	);
+	if ( is_wp_error( $response ) ) {
+		wp_send_json_error( array( 'message' => 'Details unavailable' ), 502 );
+	}
+	$data = json_decode( (string) wp_remote_retrieve_body( $response ), true );
+	if ( ! is_array( $data ) || empty( $data['addressComponents'] ) ) {
+		wp_send_json_error( array( 'message' => 'Details unavailable' ), 502 );
+	}
+	wp_send_json_success( array( 'addressComponents' => $data['addressComponents'] ) );
+}
+
+function wrrapd_wrapstars_ajax_validate_address() {
+	check_ajax_referer( 'wrrapd_ws_places', 'nonce' );
+	if ( ! wrrapd_wrapstars_is_apply_host() ) {
+		wp_send_json_error( array( 'message' => 'Forbidden' ), 403 );
+	}
+	$raw = file_get_contents( 'php://input' );
+	$body = is_string( $raw ) ? json_decode( $raw, true ) : null;
+	if ( ! is_array( $body ) ) {
+		wp_send_json_error( array( 'message' => 'Invalid request' ), 400 );
+	}
+	$line1 = sanitize_text_field( wp_unslash( (string) ( $body['line1'] ?? '' ) ) );
+	$line2 = sanitize_text_field( wp_unslash( (string) ( $body['line2'] ?? '' ) ) );
+	$city  = sanitize_text_field( wp_unslash( (string) ( $body['city'] ?? '' ) ) );
+	$state = strtoupper( sanitize_text_field( wp_unslash( (string) ( $body['state'] ?? '' ) ) ) );
+	$zip   = sanitize_text_field( wp_unslash( (string) ( $body['postal_code'] ?? '' ) ) );
+	$lines = array_values( array_filter( array( $line1, $line2 ) ) );
+	if ( ! $lines || $city === '' || $zip === '' ) {
+		wp_send_json_success( array( 'suggested' => null ) );
+	}
+	$key = wrrapd_wrapstars_google_places_api_key();
+	$url = 'https://addressvalidation.googleapis.com/v1:validateAddress?key=' . rawurlencode( $key );
+	$address_payload = array(
+		'addressLines'         => $lines,
+		'locality'             => $city,
+		'postalCode'           => $zip,
+		'regionCode'           => 'US',
+	);
+	if ( $state !== '' && $state !== 'OTHER' ) {
+		$address_payload['administrativeArea'] = $state;
+	}
+	$response = wp_remote_post(
+		$url,
+		array(
+			'headers' => wrrapd_wrapstars_google_places_request_headers(),
+			'body'    => wp_json_encode(
+				array(
+					'address' => $address_payload,
+				)
+			),
+			'timeout' => 12,
+		)
+	);
+	if ( is_wp_error( $response ) ) {
+		wp_send_json_success( array( 'suggested' => null ) );
+	}
+	$data = json_decode( (string) wp_remote_retrieve_body( $response ), true );
+	wp_send_json_success( array( 'result' => is_array( $data ) ? $data : null ) );
+}
+
+add_action( 'wp_ajax_nopriv_wrrapd_ws_places_autocomplete', 'wrrapd_wrapstars_ajax_places_autocomplete' );
+add_action( 'wp_ajax_wrrapd_ws_places_autocomplete', 'wrrapd_wrapstars_ajax_places_autocomplete' );
+add_action( 'wp_ajax_nopriv_wrrapd_ws_places_details', 'wrrapd_wrapstars_ajax_places_details' );
+add_action( 'wp_ajax_wrrapd_ws_places_details', 'wrrapd_wrapstars_ajax_places_details' );
+add_action( 'wp_ajax_nopriv_wrrapd_ws_validate_address', 'wrrapd_wrapstars_ajax_validate_address' );
+add_action( 'wp_ajax_wrrapd_ws_validate_address', 'wrrapd_wrapstars_ajax_validate_address' );
+
 function wrrapd_wrapstars_enqueue_assets() {
 	$css = dirname( __FILE__ ) . '/wrrapd-wrapstars.css';
 	if ( is_readable( $css ) ) {
 		wp_enqueue_style( 'wrrapd-wrapstars', content_url( 'mu-plugins/wrrapd-wrapstars.css' ), array(), WRRAPD_WRAPSTARS_BUILD );
 	}
 	wp_enqueue_style( 'wrrapd-wrapstars-fonts', 'https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,560&family=Roboto:wght@400;700&family=Source+Sans+3:wght@400;600;700;800&display=swap', array(), null );
+
+	if ( wrrapd_wrapstars_is_portal_host() ) {
+		$uri = isset( $_SERVER['REQUEST_URI'] ) ? (string) $_SERVER['REQUEST_URI'] : '';
+		if ( str_contains( $uri, '/apply' ) ) {
+			$js = dirname( __FILE__ ) . '/wrrapd-wrapstars-apply.js';
+			if ( is_readable( $js ) ) {
+				$apply_js_ver = WRRAPD_WRAPSTARS_BUILD . '-' . (string) filemtime( $js );
+				wp_enqueue_script( 'wrrapd-wrapstars-apply', content_url( 'mu-plugins/wrrapd-wrapstars-apply.js' ), array(), $apply_js_ver, true );
+				wp_add_inline_script(
+					'wrrapd-wrapstars-apply',
+					"(function(){function n(){document.querySelectorAll('.pac-container').forEach(function(e){e.remove();});}n();if(window.MutationObserver){new MutationObserver(n).observe(document.documentElement,{childList:!0,subtree:!0});}})();",
+					'before'
+				);
+				wp_localize_script(
+					'wrrapd-wrapstars-apply',
+					'wrrapdWrapstarApply',
+					array(
+						'ajaxUrl'     => admin_url( 'admin-ajax.php' ),
+						'placesNonce' => wp_create_nonce( 'wrrapd_ws_places' ),
+					)
+				);
+			}
+		}
+	}
 }
 
 /** @return string */
@@ -637,6 +858,10 @@ function wrrapd_wrapstars_output_portal_header() {
 	echo '</div>';
 	if ( is_user_logged_in() && wrrapd_wrapstars_is_onboarding_eligible_user( get_current_user_id() ) ) {
 		echo '<nav class="wrrapd-wrapstars-portal-util" aria-label="WrapStar portal">';
+		if ( wrrapd_wrapstars_is_pros_host() ) {
+			echo '<a href="' . esc_url( wrrapd_wrapstars_pros_url( '/profile/' ) ) . '">Profile</a>';
+			echo '<span aria-hidden="true">·</span>';
+		}
 		echo '<a href="' . esc_url( wrrapd_wrapstars_pros_url( '/onboarding/' ) ) . '">Onboarding</a>';
 		echo '<span aria-hidden="true">·</span>';
 		echo '<a href="' . esc_url( wp_logout_url( home_url( '/' ) ) ) . '">Log out</a>';
@@ -731,123 +956,9 @@ function wrrapd_wrapstars_maybe_handle_posts() {
 	if ( $action === 'orientation_quiz' ) {
 		wrrapd_wrapstars_process_orientation_quiz();
 	}
-}
-
-function wrrapd_wrapstars_allowed_states() {
-	return array( 'FL', 'GA' );
-}
-
-function wrrapd_wrapstars_process_application() {
-	if ( ! wrrapd_wrapstars_is_apply_host() ) {
-		return;
+	if ( $action === 'save_profile' ) {
+		wrrapd_wrapstars_process_profile_save();
 	}
-	if ( ! isset( $_POST['wrrapd_ws_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['wrrapd_ws_nonce'] ) ), 'wrrapd_ws_apply' ) ) {
-		return;
-	}
-
-	$full_name = sanitize_text_field( wp_unslash( $_POST['full_name'] ?? '' ) );
-	$email     = sanitize_email( wp_unslash( $_POST['email'] ?? '' ) );
-	$phone     = sanitize_text_field( wp_unslash( $_POST['phone'] ?? '' ) );
-	$address   = sanitize_text_field( wp_unslash( $_POST['address_line1'] ?? '' ) );
-	$city      = sanitize_text_field( wp_unslash( $_POST['city'] ?? '' ) );
-	$state     = strtoupper( sanitize_text_field( wp_unslash( $_POST['state'] ?? '' ) ) );
-	$zip       = sanitize_text_field( wp_unslash( $_POST['postal_code'] ?? '' ) );
-
-	$errors = array();
-	if ( $full_name === '' ) {
-		$errors[] = 'Full name is required.';
-	}
-	if ( ! is_email( $email ) ) {
-		$errors[] = 'Valid email is required.';
-	}
-	if ( $phone === '' ) {
-		$errors[] = 'Phone number is required.';
-	}
-	if ( $address === '' || $city === '' || $zip === '' ) {
-		$errors[] = 'Complete mailing address is required.';
-	}
-	if ( ! in_array( $state, wrrapd_wrapstars_allowed_states(), true ) ) {
-		$errors[] = 'We are only accepting applications in Florida and Georgia.';
-	}
-	if ( empty( $_POST['ack_insurance'] ) || empty( $_POST['ack_video'] ) || empty( $_POST['ack_liability'] ) ) {
-		$errors[] = 'You must agree to all WrapStar requirements.';
-	}
-
-	if ( $errors ) {
-		$GLOBALS['wrrapd_ws_form_errors'] = $errors;
-		return;
-	}
-
-	$existing = wrrapd_wrapstars_get_application_by_email( $email );
-	if ( $existing && wrrapd_wrapstars_get_meta( $existing->ID, 'status' ) !== 'rejected' ) {
-		$GLOBALS['wrrapd_ws_form_errors'] = array( 'An application already exists for this email. We will email you when there is an update.' );
-		return;
-	}
-
-	$post_id = wp_insert_post(
-		array(
-			'post_type'   => WRRAPD_WRAPSTARS_CPT,
-			'post_title'  => $full_name . ' — ' . $email,
-			'post_status' => 'publish',
-		)
-	);
-
-	if ( ! $post_id || is_wp_error( $post_id ) ) {
-		$GLOBALS['wrrapd_ws_form_errors'] = array( 'Could not save application.' );
-		return;
-	}
-
-	wrrapd_wrapstars_set_meta( $post_id, 'status', 'under_review' );
-	wrrapd_wrapstars_set_meta( $post_id, 'user_id', 0 );
-	wrrapd_wrapstars_set_meta( $post_id, 'full_name', $full_name );
-	wrrapd_wrapstars_set_meta( $post_id, 'email', strtolower( $email ) );
-	wrrapd_wrapstars_set_meta( $post_id, 'phone', $phone );
-	wrrapd_wrapstars_set_meta( $post_id, 'address_line1', $address );
-	wrrapd_wrapstars_set_meta( $post_id, 'city', $city );
-	wrrapd_wrapstars_set_meta( $post_id, 'state', $state );
-	wrrapd_wrapstars_set_meta( $post_id, 'postal_code', $zip );
-	wrrapd_wrapstars_set_meta( $post_id, 'has_mailing_address', sanitize_text_field( wp_unslash( $_POST['has_mailing_address'] ?? '' ) ) );
-	wrrapd_wrapstars_set_meta( $post_id, 'comfortable_reship', sanitize_text_field( wp_unslash( $_POST['comfortable_reship'] ?? '' ) ) );
-	wrrapd_wrapstars_set_meta( $post_id, 'gig_experience', sanitize_textarea_field( wp_unslash( $_POST['gig_experience'] ?? '' ) ) );
-	wrrapd_wrapstars_set_meta( $post_id, 'why_wrapstar', sanitize_textarea_field( wp_unslash( $_POST['why_wrapstar'] ?? '' ) ) );
-	wrrapd_wrapstars_set_meta( $post_id, 'ack_insurance', '1' );
-	wrrapd_wrapstars_set_meta( $post_id, 'ack_video', '1' );
-	wrrapd_wrapstars_set_meta( $post_id, 'ack_liability', '1' );
-	wrrapd_wrapstars_set_meta( $post_id, 'submitted_at', gmdate( 'c' ) );
-	wrrapd_wrapstars_set_meta( $post_id, 'tier', 'new' );
-
-	$upload = wrrapd_wrapstars_handle_upload( $post_id, 'gov_id' );
-	if ( ! $upload['ok'] ) {
-		wp_delete_post( $post_id, true );
-		$GLOBALS['wrrapd_ws_form_errors'] = array( $upload['error'] );
-		return;
-	}
-	wrrapd_wrapstars_set_meta( $post_id, 'id_file', $upload['path'] );
-
-	$candidate_body  = "Hi {$full_name},\n\n";
-	$candidate_body .= "Thank you for applying to become a WrapStar!\n\n";
-	$candidate_body .= "Your application is under review. Decisions are typically made within about 7 days. ";
-	$candidate_body .= "During that time we may reach out for a brief Zoom or phone interview.\n\n";
-	$candidate_body .= "If approved, you will receive a separate email from " . wrrapd_wrapstars_from_email_address() . " ";
-	$candidate_body .= "with your login credentials and a link to begin onboarding.\n\n";
-	$candidate_body .= "— WrapStars Team\n";
-	wrrapd_wrapstars_send_email( $email, 'Thank you — your WrapStar application is under review', $candidate_body );
-
-	$admin_body  = "New WrapStar application submitted.\n\n";
-	$admin_body .= "Name: {$full_name}\n";
-	$admin_body .= "Email: {$email}\n";
-	$admin_body .= "Phone: {$phone}\n";
-	$admin_body .= "Location: {$city}, {$state} {$zip}\n\n";
-	$admin_body .= "Review in Command Console → Applications (when live).\n";
-	$admin_body .= 'Interim WP queue: ' . admin_url( 'admin.php?page=wrrapd-wrapstars' ) . "\n";
-	wrrapd_wrapstars_send_email(
-		wrrapd_wrapstars_admin_notify_email(),
-		'New WrapStar application: ' . $full_name,
-		$admin_body
-	);
-
-	wp_safe_redirect( wrrapd_wrapstars_apply_url( '/thank-you/' ) );
-	exit;
 }
 
 function wrrapd_wrapstars_process_portal_login() {
@@ -1360,7 +1471,7 @@ function wrrapd_wrapstars_shortcode_landing() {
 						<span class="wrrapd-wrapstars-reqs-dd__num" aria-hidden="true">1</span>
 						<h3>Age</h3>
 						<p>WrapStars must be <strong>19 years or older</strong>.</p>
-						<p class="wrrapd-wrapstars-reqs-dd__note">We are currently accepting applications in <strong>Florida</strong> and <strong>Georgia</strong> only.</p>
+						<p class="wrrapd-wrapstars-reqs-dd__note">Launching in <strong>Florida</strong> and <strong>Georgia</strong> first — applicants in other states are welcome; service may be limited initially.</p>
 					</div>
 					<div class="wrrapd-wrapstars-reqs-dd__item">
 						<span class="wrrapd-wrapstars-reqs-dd__num" aria-hidden="true">2</span>
@@ -1370,7 +1481,7 @@ function wrrapd_wrapstars_shortcode_landing() {
 					<div class="wrrapd-wrapstars-reqs-dd__item">
 						<span class="wrrapd-wrapstars-reqs-dd__num" aria-hidden="true">3</span>
 						<h3>Documentation</h3>
-						<p>Driver's license or other government-issued photo ID at application. Liability and inland marine insurance before your first paid orders.</p>
+						<p>Government-issued photo ID at application. After approval, you'll complete onboarding — including liability and inland marine insurance — before your first paid orders.</p>
 					</div>
 				</div>
 			</section>
@@ -1383,11 +1494,11 @@ function wrrapd_wrapstars_shortcode_landing() {
 				</details>
 				<details class="wrrapd-wrapstars-faq-dd__item">
 					<summary>Where is WrapStars available?</summary>
-					<p>We are launching in <strong>Florida</strong> and <strong>Georgia</strong>. More regions will follow as the WrapStar network grows.</p>
+					<p>We are launching in <strong>Florida</strong> and <strong>Georgia</strong>. Applicants in other states are welcome — service may be limited at first as the network grows.</p>
 				</details>
 				<details class="wrrapd-wrapstars-faq-dd__item">
 					<summary>How long does it take to start?</summary>
-					<p>The application takes about five minutes. We review submissions within about seven days and may invite you to a brief interview. After approval, you will complete onboarding — agreements, insurance, orientation, and tax forms — before receiving your first orders.</p>
+					<p>The application takes about four minutes. We review submissions within about seven days and may invite you to a brief interview. After approval, you will complete onboarding — agreements, insurance, orientation, and tax forms — before receiving your first orders.</p>
 				</details>
 				<details class="wrrapd-wrapstars-faq-dd__item">
 					<summary>What materials do I need to be a WrapStar?</summary>
@@ -1422,79 +1533,6 @@ function wrrapd_wrapstars_shortcode_landing() {
 	return ob_get_clean();
 }
 
-function wrrapd_wrapstars_shortcode_apply() {
-	if ( ! wrrapd_wrapstars_is_apply_host() ) {
-		return '<p class="wrrapd-wrapstars-alert wrrapd-wrapstars-alert--info">Apply at <a href="' . esc_url( wrrapd_wrapstars_apply_url( '/apply/' ) ) . '">apply.wrrapd.com</a>.</p>';
-	}
-
-	$errors = $GLOBALS['wrrapd_ws_form_errors'] ?? array();
-	ob_start();
-	?>
-	<div class="wrrapd-wrapstars wrrapd-wrapstars-dasher">
-		<section class="wrrapd-wrapstars-dasher-apply-head">
-			<p class="wrrapd-wrapstars-dasher-kicker">WrapStar application</p>
-			<h1>Become a WrapStar today!</h1>
-			<p class="wrrapd-wrapstars-dasher-lead">Deliver smiles and get paid. Florida and Georgia only for now — have your government ID ready. Decisions within about seven days; we may invite you to a brief interview.</p>
-		</section>
-		<?php foreach ( $errors as $err ) : ?>
-			<div class="wrrapd-wrapstars-alert wrrapd-wrapstars-alert--err"><?php echo esc_html( $err ); ?></div>
-		<?php endforeach; ?>
-		<form class="wrrapd-wrapstars-form wrrapd-wrapstars-card wrrapd-wrapstars-dasher-form" method="post" enctype="multipart/form-data">
-			<?php wp_nonce_field( 'wrrapd_ws_apply', 'wrrapd_ws_nonce' ); ?>
-			<input type="hidden" name="wrrapd_ws_action" value="apply" />
-
-			<label>Full name <input type="text" name="full_name" required /></label>
-			<label>Email address <input type="email" name="email" required /></label>
-			<label>Phone number <input type="tel" name="phone" required /></label>
-
-			<label>Street address <input type="text" name="address_line1" required /></label>
-			<div class="ws-field-row">
-				<label>City <input type="text" name="city" required /></label>
-				<label>State
-					<select name="state" required>
-						<option value="">Select…</option>
-						<option value="FL">Florida</option>
-						<option value="GA">Georgia</option>
-					</select>
-				</label>
-			</div>
-			<label>ZIP code <input type="text" name="postal_code" required pattern="[0-9]{5}(-[0-9]{4})?" /></label>
-
-			<label>Do you have a reliable mailing address / PO Box you can use or set up?
-				<select name="has_mailing_address" required>
-					<option value="">Select…</option>
-					<option value="yes">Yes</option>
-					<option value="no">No, but I can set one up</option>
-				</select>
-			</label>
-			<label>Are you comfortable receiving packages and reshipping them?
-				<select name="comfortable_reship" required>
-					<option value="">Select…</option>
-					<option value="yes">Yes</option>
-					<option value="no">No</option>
-				</select>
-			</label>
-			<label>Current or past gig work experience? (DoorDash, Uber, Instacart, etc.)
-				<textarea name="gig_experience" rows="3"></textarea>
-			</label>
-			<label>Why do you want to become a WrapStar?
-				<textarea name="why_wrapstar" rows="3" required></textarea>
-			</label>
-			<label>Government ID (driver license or passport)
-				<input type="file" name="gov_id" accept=".jpg,.jpeg,.png,.pdf" required />
-			</label>
-
-			<div class="ws-check"><input type="checkbox" name="ack_insurance" value="1" required id="ack_ins" /><span><label for="ack_ins">I understand I must carry <strong>$1M+ general liability</strong> and <strong>inland marine / bailee</strong> insurance before activation.</label></span></div>
-			<div class="ws-check"><input type="checkbox" name="ack_video" value="1" required id="ack_vid" /><span><label for="ack_vid">I agree to record <strong>unboxing, wrapping, and outbound handoff video</strong> on every order.</label></span></div>
-			<div class="ws-check"><input type="checkbox" name="ack_liability" value="1" required id="ack_liab" /><span><label for="ack_liab">I understand I am <strong>personally liable</strong> for loss, theft, or damage per the Independent Contractor Agreement.</label></span></div>
-
-			<button type="submit" class="wrrapd-wrapstars-btn">Submit application</button>
-		</form>
-	</div>
-	<?php
-	return ob_get_clean();
-}
-
 function wrrapd_wrapstars_shortcode_thankyou() {
 	ob_start();
 	?>
@@ -1502,9 +1540,9 @@ function wrrapd_wrapstars_shortcode_thankyou() {
 		<section class="wrrapd-wrapstars-dasher-apply-head">
 			<p class="wrrapd-wrapstars-dasher-kicker">Application received</p>
 			<h1>Thank you for applying</h1>
-			<p class="wrrapd-wrapstars-dasher-lead">We've received your WrapStar application. Watch for an email from <strong>admin@wrrapd.com</strong>.</p>
+			<p class="wrrapd-wrapstars-dasher-lead">We've received your WrapStar application. We'll be in touch within about <strong>7 days</strong>. Watch for email from <strong>admin@wrrapd.com</strong>.</p>
 		</section>
-		<div class="wrrapd-wrapstars-card wrrapd-wrapstars-dasher-thanks">
+		<div class="wrrapd-wrapstars-card wrrapd-wrapstars-dasher-thanks wrrapd-wrapstars-dasher-thanks--celebrate">
 			<ul>
 				<li>Your application is <strong>under review</strong>.</li>
 				<li>Decisions are typically made within <strong>about 7 days</strong>.</li>
@@ -1842,6 +1880,20 @@ function wrrapd_wrapstars_admin_page() {
 			$email   = wrrapd_wrapstars_get_meta( $app_id, 'email' );
 			$name    = wrrapd_wrapstars_get_meta( $app_id, 'full_name' );
 
+			if ( $action === 'save_notes' ) {
+				wrrapd_wrapstars_set_meta( $app_id, 'admin_notes', sanitize_textarea_field( wp_unslash( $_POST['admin_notes'] ?? '' ) ) );
+			}
+			if ( $action === 'interview' ) {
+				wrrapd_wrapstars_set_meta( $app_id, 'status', 'interview' );
+				wrrapd_wrapstars_set_meta( $app_id, 'interview_at', gmdate( 'c' ) );
+				wrrapd_wrapstars_set_meta( $app_id, 'admin_notes', sanitize_textarea_field( wp_unslash( $_POST['admin_notes'] ?? '' ) ) );
+				$body  = "Hi {$name},\n\n";
+				$body .= "Thank you for applying to become a WrapStar!\n\n";
+				$body .= "We'd like to schedule a brief Zoom conversation as the next step in your application. ";
+				$body .= "The session may be recorded for our records. We will reach out by email and/or text message to find a time that works for you.\n\n";
+				$body .= "— WrapStars Team\n";
+				wrrapd_wrapstars_send_email( $email, 'WrapStar application — next step: Zoom interview', $body );
+			}
 			if ( $action === 'approve' ) {
 				wrrapd_wrapstars_set_meta( $app_id, 'status', 'approved' );
 				wrrapd_wrapstars_set_meta( $app_id, 'approved_at', gmdate( 'c' ) );
@@ -1849,6 +1901,7 @@ function wrrapd_wrapstars_admin_page() {
 				$provision = wrrapd_wrapstars_provision_approved_user( $app_id );
 				if ( ! is_wp_error( $provision ) ) {
 					wrrapd_wrapstars_send_approval_credentials_email( $app_id, $provision['password'] );
+					wrrapd_wrapstars_sync_profile_to_gcs( $app_id );
 				}
 			}
 			if ( $action === 'reject' ) {
@@ -1895,39 +1948,10 @@ function wrrapd_wrapstars_admin_page() {
 
 	echo '<div class="wrap"><h1>WrapStar Applications</h1>';
 	echo '<p>Portal: <strong>apply.wrrapd.com</strong> (applications) · <strong>pros.wrrapd.com</strong> (onboarding)</p>';
-	echo '<p>Filter: <a href="?page=wrrapd-wrapstars">All</a> | <a href="?page=wrrapd-wrapstars&status=under_review">Under review</a> | <a href="?page=wrrapd-wrapstars&status=approved">Approved</a> | <a href="?page=wrrapd-wrapstars&status=active">Active</a></p>';
+	echo '<p>Filter: <a href="?page=wrrapd-wrapstars">All</a> | <a href="?page=wrrapd-wrapstars&status=under_review">Under review</a> | <a href="?page=wrrapd-wrapstars&status=interview">Zoom interview</a> | <a href="?page=wrrapd-wrapstars&status=approved">Approved (onboarding)</a> | <a href="?page=wrrapd-wrapstars&status=active">Active</a></p>';
 
 	foreach ( $apps as $app ) {
-		$id     = $app->ID;
-		$status = wrrapd_wrapstars_get_meta( $id, 'status' );
-		echo '<div style="background:#fff;border:1px solid #ccc;padding:16px;margin:12px 0;max-width:900px;">';
-		echo '<h2>' . esc_html( wrrapd_wrapstars_get_meta( $id, 'full_name' ) ) . ' <small>(' . esc_html( $status ) . ')</small></h2>';
-		echo '<p><strong>Email:</strong> ' . esc_html( wrrapd_wrapstars_get_meta( $id, 'email' ) ) . ' · <strong>Phone:</strong> ' . esc_html( wrrapd_wrapstars_get_meta( $id, 'phone' ) ) . '</p>';
-		echo '<p><strong>Address:</strong> ' . esc_html( wrrapd_wrapstars_get_meta( $id, 'address_line1' ) ) . ', ' . esc_html( wrrapd_wrapstars_get_meta( $id, 'city' ) ) . ', ' . esc_html( wrrapd_wrapstars_get_meta( $id, 'state' ) ) . ' ' . esc_html( wrrapd_wrapstars_get_meta( $id, 'postal_code' ) ) . '</p>';
-		echo '<p><strong>Why:</strong> ' . esc_html( wrrapd_wrapstars_get_meta( $id, 'why_wrapstar' ) ) . '</p>';
-		echo '<p><strong>Gig exp:</strong> ' . esc_html( wrrapd_wrapstars_get_meta( $id, 'gig_experience' ) ) . '</p>';
-		echo '<p><strong>Onboarding:</strong> ' . esc_html( wrrapd_wrapstars_get_meta( $id, 'onboarding_step' ) ) . ' · Quiz: ' . esc_html( wrrapd_wrapstars_get_meta( $id, 'orientation_score' ) ) . '% · Tier: ' . esc_html( wrrapd_wrapstars_get_meta( $id, 'tier' ) ) . '</p>';
-
-		$id_file = wrrapd_wrapstars_get_meta( $id, 'id_file' );
-		if ( $id_file && file_exists( $id_file ) ) {
-			echo '<p><a href="' . esc_url( wrrapd_wrapstars_admin_file_url( $id, 'id_file' ) ) . '">Download ID</a></p>';
-		}
-
-		echo '<form method="post" style="margin-top:12px;">';
-		wp_nonce_field( 'wrrapd_ws_admin' );
-		echo '<input type="hidden" name="app_id" value="' . (int) $id . '" />';
-		if ( $status === 'under_review' ) {
-			echo '<button type="submit" name="wrrapd_ws_admin_action" value="approve" class="button button-primary">Approve</button> ';
-			echo '<textarea name="reject_reason" placeholder="Rejection reason" rows="2" style="width:100%;margin:8px 0;"></textarea>';
-			echo '<button type="submit" name="wrrapd_ws_admin_action" value="reject" class="button">Reject</button>';
-		}
-		if ( $status === 'approved' && wrrapd_wrapstars_step_complete( $id, 'w9' ) ) {
-			echo '<button type="submit" name="wrrapd_ws_admin_action" value="activate" class="button button-primary">Activate WrapStar</button>';
-		}
-		if ( $status === 'active' ) {
-			echo '<button type="submit" name="wrrapd_ws_admin_action" value="suspend" class="button">Suspend</button>';
-		}
-		echo '</form></div>';
+		wrrapd_wrapstars_render_admin_application_card( $app->ID );
 	}
 	echo '</div>';
 }
