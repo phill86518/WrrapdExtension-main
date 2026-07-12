@@ -716,6 +716,7 @@ function openGiftChoicesModal(config, cartSnapshot) {
 
   const applyModalPrices = (prices) => {
     const p = prices || getActiveUnitPrices(createUnitPricingState());
+    wrrapdText.textContent = `Allow Wrrapd to choose the wrapping — ${formatUsd(p.giftWrapBase)}`;
     uploadPriceNote.textContent = `(+${formatUsd(p.customDesignUpload)})`;
     aiPriceNote.textContent = `(+${formatUsd(p.customDesignAi)})`;
     flowersText.textContent = `Add flowers — choose from below (15–20 stem bouquets) — ${formatUsd(p.flowers)}`;

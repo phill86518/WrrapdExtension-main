@@ -237,6 +237,7 @@ export function openLegoGiftServiceModal() {
   wrrapdHintInput.addEventListener("input", () => { currentWrrapdHint = wrrapdHintInput.value; });
   wrrapdHintWrap.appendChild(wrrapdHintInput);
 
+  const wrapLabelSpans = {};
   const wrapRadios = wrapChoices.map(({ value, label }) => {
     const lbl = document.createElement("label");
     lbl.style.cssText = "display:flex;align-items:center;gap:6px;cursor:pointer;margin-bottom:4px;font-size:14px;color:#0f172a;";
@@ -248,7 +249,10 @@ export function openLegoGiftServiceModal() {
         refreshWrapSubs();
       }
     });
-    lbl.append(inp, document.createTextNode(label));
+    const textSpan = document.createElement("span");
+    textSpan.textContent = label;
+    wrapLabelSpans[value] = textSpan;
+    lbl.append(inp, textSpan);
     // The "Allow Wrrapd to choose" row carries the occasion dropdown on the right.
     if (value === "wrrapd") lbl.append(occasionSelect);
     wrapFieldset.appendChild(lbl);
@@ -460,6 +464,15 @@ export function openLegoGiftServiceModal() {
 
   const applyModalPrices = (prices) => {
     const p = prices || getActiveUnitPrices(createUnitPricingState());
+    if (wrapLabelSpans.wrrapd) {
+      wrapLabelSpans.wrrapd.textContent = `Allow Wrrapd to choose the design — ${formatUsd(p.giftWrapBase)}`;
+    }
+    if (wrapLabelSpans.upload) {
+      wrapLabelSpans.upload.textContent = `Upload my own design (+${formatUsd(p.customDesignUpload)})`;
+    }
+    if (wrapLabelSpans.ai) {
+      wrapLabelSpans.ai.textContent = `Generate a design with AI (+${formatUsd(p.customDesignAi)})`;
+    }
     flowersText.textContent = `Add Flowers – choose from below (15–20 stem bouquets) – ${formatUsd(p.flowers)}`;
   };
 

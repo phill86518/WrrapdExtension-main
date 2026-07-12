@@ -3339,15 +3339,21 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                     const modalHeading = modalContent?.querySelector('h2');
                     const applyAmazonModalPrices = (prices) => {
                         if (!modal || !prices) return;
-                        const uploadLabel = modal.querySelector(`input[name="wrapping-option-${i}"][value="upload"]`)
-                            ?.closest('label')
-                            ?.querySelector('div > div');
-                        const aiLabel = modal.querySelector(`input[name="wrapping-option-${i}"][value="ai"]`)
-                            ?.closest('label')
-                            ?.querySelector('div > div');
-                        const flowersLabel = modal.querySelector(`#combine-with-flowers-${i}`)
-                            ?.closest('label')
-                            ?.querySelector('div');
+                        const boldTitleIn = (value) =>
+                            modal
+                                .querySelector(`input[name="wrapping-option-${i}"][value="${value}"]`)
+                                ?.closest("label")
+                                ?.querySelector('div[style*="font-weight: bold"]');
+                        const wrrapdTitle = boldTitleIn("wrrapd");
+                        const uploadLabel = boldTitleIn("upload");
+                        const aiLabel = boldTitleIn("ai");
+                        const flowersLabel = modal
+                            .querySelector(`#combine-with-flowers-${i}`)
+                            ?.closest("label")
+                            ?.querySelector("div");
+                        if (wrrapdTitle) {
+                            wrrapdTitle.textContent = `Allow Wrrapd to choose the wrapping — ${formatUsd(prices.giftWrapBase)}`;
+                        }
                         if (uploadLabel) {
                             uploadLabel.textContent = `Upload your own design (+${formatUsd(prices.customDesignUpload)})`;
                         }

@@ -42,16 +42,7 @@ export function writeValidatedEstimateZip(sessionPrefix, zip) {
 
 /**
  * Mount the top-of-modal ZIP row.
- * @param {object} opts
- * @param {HTMLElement} opts.parent
- * @param {string} opts.sessionPrefix
- * @param {string} [opts.retailerLabel]
- * @param {HTMLElement|HTMLElement[]} [opts.gatedContent] - hidden until ZIP is allowed
- * @param {(prices: object, zip: string) => void} [opts.onPricesReady]
- * @param {() => void} [opts.onZipCleared]
- * @param {(zip: string) => void} [opts.onZipAllowed]
- * @param {() => void} [opts.onZipDenied]
- * @returns {{ root: HTMLElement, getZip: () => string, requireValidZip: () => boolean, isReady: () => boolean }}
+ * Step 1 is ZIP-only until the shopper clicks Submit and the ZIP is allowed.
  */
 export function mountGifteeZipEstimateBar(opts) {
   const {
@@ -67,7 +58,9 @@ export function mountGifteeZipEstimateBar(opts) {
   } = opts;
 
   const pricingState = createUnitPricingState();
-  let currentZip = readValidatedEstimateZip(sessionPrefix);
+  // Prefill the input only — never auto-expand; Submit is required.
+  const prefilledZip = readValidatedEstimateZip(sessionPrefix);
+  let currentZip = "";
   let ready = false;
 
   const gatedNodes = []
@@ -76,8 +69,15 @@ export function mountGifteeZipEstimateBar(opts) {
 
   const setGatedVisible = (visible) => {
     for (const node of gatedNodes) {
-      node.style.display = visible ? "" : "none";
-      node.setAttribute("aria-hidden", visible ? "false" : "true");
+      if (visible) {
+        node.style.removeProperty("display");
+        node.hidden = false;
+        node.setAttribute("aria-hidden", "false");
+      } else {
+        node.style.setProperty("display", "none", "important");
+        node.hidden = true;
+        node.setAttribute("aria-hidden", "true");
+      }
     }
   };
 
@@ -103,20 +103,20 @@ export function mountGifteeZipEstimateBar(opts) {
   input.autocomplete = "postal-code";
   input.maxLength = 10;
   input.placeholder = "e.g. 32226";
-  input.value = currentZip;
+  input.value = prefilledZip;
   input.style.cssText =
     "width:8rem;padding:8px 10px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;font-weight:600;";
 
   const btn = document.createElement("button");
   btn.type = "button";
-  btn.textContent = "Get prices";
+  btn.textContent = "Submit";
   btn.style.cssText =
     "padding:8px 14px;border:none;border-radius:8px;background:#ff8e14;color:#fff;font-size:13px;font-weight:700;cursor:pointer;";
 
   const status = document.createElement("div");
   status.style.cssText = "margin-top:8px;font-size:13px;line-height:1.45;color:#b91c1c;display:none;";
 
-  const setStatus = (text, kind = "err") => {
+  const setStatus = (text) => {
     if (!text) {
       status.textContent = "";
       status.style.display = "none";
@@ -124,13 +124,12 @@ export function mountGifteeZipEstimateBar(opts) {
     }
     status.textContent = text;
     status.style.display = "block";
-    status.style.color = kind === "err" ? "#b91c1c" : "#475569";
+    status.style.color = "#b91c1c";
   };
 
   const clearReady = () => {
     ready = false;
     currentZip = "";
-    writeValidatedEstimateZip(sessionPrefix, "");
     setGatedVisible(false);
     onZipCleared?.();
     onZipDenied?.();
@@ -151,6 +150,7 @@ export function mountGifteeZipEstimateBar(opts) {
     input.value = zip;
     if (zip.length !== 5) {
       clearReady();
+      writeValidatedEstimateZip(sessionPrefix, "");
       setStatus("Please enter a valid 5-digit ZIP code.");
       input.style.borderColor = "#dc2626";
       return false;
@@ -163,6 +163,7 @@ export function mountGifteeZipEstimateBar(opts) {
       const allowed = await isPostalCodeAllowed(zip);
       if (!allowed) {
         clearReady();
+        writeValidatedEstimateZip(sessionPrefix, "");
         setStatus(OUT_OF_AREA_MSG);
         input.style.borderColor = "#dc2626";
         return false;
@@ -177,14 +178,13 @@ export function mountGifteeZipEstimateBar(opts) {
       return false;
     } finally {
       btn.disabled = false;
-      btn.textContent = "Get prices";
+      btn.textContent = "Submit";
     }
   };
 
   input.addEventListener("input", () => {
     input.style.borderColor = "#cbd5e1";
-    const next = normalizePostal5(input.value);
-    if (next !== currentZip && ready) {
+    if (ready) {
       clearReady();
       setStatus("");
     }
@@ -206,29 +206,16 @@ export function mountGifteeZipEstimateBar(opts) {
     parent.insertBefore(root, parent.firstChild);
   }
 
+  // Always start on ZIP-only step.
   setGatedVisible(false);
-
-  if (currentZip.length === 5) {
-    void (async () => {
-      await loadAllowedZipCodes();
-      if (await isPostalCodeAllowed(currentZip)) {
-        input.style.borderColor = "#6ee7b7";
-        await applyPrices(currentZip);
-      } else {
-        clearReady();
-        input.value = "";
-        setStatus(OUT_OF_AREA_MSG);
-      }
-    })();
-  }
 
   return {
     root,
-    getZip: () => currentZip || readValidatedEstimateZip(sessionPrefix),
-    isReady: () => ready && (currentZip || readValidatedEstimateZip(sessionPrefix)).length === 5,
+    getZip: () => currentZip || (ready ? readValidatedEstimateZip(sessionPrefix) : ""),
+    isReady: () => ready && currentZip.length === 5,
     requireValidZip: () => {
-      if (ready && (currentZip || readValidatedEstimateZip(sessionPrefix)).length === 5) return true;
-      setStatus("Please enter the giftee ZIP and click Get prices.");
+      if (ready && currentZip.length === 5) return true;
+      setStatus("Please enter the giftee ZIP and click Submit.");
       input.focus();
       input.style.borderColor = "#dc2626";
       setGatedVisible(false);
