@@ -12,6 +12,7 @@ import {
   createUnitPricingState,
   ensureUnitPrices,
   getActiveUnitPrices,
+  writePersistedUnitPrices,
 } from "./wrrapd-unit-pricing.js";
 
 const OUT_OF_AREA_MSG =
@@ -136,8 +137,14 @@ export function mountGifteeZipEstimateBar(opts) {
   };
 
   const applyPrices = async (zip) => {
-    await ensureUnitPrices(pricingState, { postalCode: zip, country: "US" }, retailerLabel);
+    await ensureUnitPrices(
+      pricingState,
+      { postalCode: zip, country: "US" },
+      retailerLabel,
+      { sessionPrefix },
+    );
     const prices = getActiveUnitPrices(pricingState);
+    writePersistedUnitPrices(sessionPrefix, prices, zip);
     onPricesReady?.(prices, zip);
     setStatus("");
     ready = true;

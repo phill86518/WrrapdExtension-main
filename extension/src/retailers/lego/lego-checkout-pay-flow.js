@@ -21,6 +21,10 @@ import { buildWrrapdTermsHtml } from "../../shared/wrrapd-terms.js";
 import { buildGiftWrapInvoiceRows } from "../../shared/wrrapd-invoice-lines.js";
 import { generateWrrapdOrderNumber } from "../../shared/wrrapd-order-code.js";
 import { resolveTaxRatePercent, taxPostalForPricing, WRRAPD_DEFAULT_TAX_RATE_PERCENT } from "../../shared/wrrapd-tax.js";
+import {
+  hydrateUnitPricesFromSession,
+  writePersistedUnitPrices,
+} from "../../shared/wrrapd-unit-pricing.js";
 
 const TERMS_MODAL_ID = "wrrapd-lego-terms-modal";
 const HUB_MODAL_ID = "wrrapd-lego-hub-modal";
@@ -85,6 +89,13 @@ function getActiveCheckoutUnitPrices() {
 }
 
 async function refreshCheckoutUnitPricesFromServer(geo) {
+  const zip = String(geo?.postalCode || "")
+    .replace(/\D/g, "")
+    .slice(0, 5);
+  const hydrated = { unitPriceOverride: null };
+  if (hydrateUnitPricesFromSession(hydrated, "wrrapdLego", zip)) {
+    wrrapdCheckoutUnitPriceOverride = hydrated.unitPriceOverride;
+  }
   let pricesOk = false;
   try {
     const u = new URL("https://api.wrrapd.com/api/pricing-preview");
@@ -93,7 +104,7 @@ async function refreshCheckoutUnitPricesFromServer(geo) {
     if (geo && geo.country) u.searchParams.set("country", String(geo.country).trim().slice(0, 8));
     u.searchParams.set("retailer", "lego");
     const r = await fetch(u.toString(), { credentials: "omit" });
-    if (!r.ok) return false;
+    if (!r.ok) return Boolean(wrrapdCheckoutUnitPriceOverride);
     const j = await r.json();
     let gotTax = false;
     if (typeof j.estimatedSalesTaxPercent === "number" && Number.isFinite(j.estimatedSalesTaxPercent)) {
@@ -103,7 +114,7 @@ async function refreshCheckoutUnitPricesFromServer(geo) {
       legoPreviewTaxPercent = WRRAPD_DEFAULT_TAX_RATE_PERCENT;
     }
     const up = j && j.unitPrices && typeof j.unitPrices === "object" ? j.unitPrices : null;
-    if (!up) return gotTax;
+    if (!up) return gotTax || Boolean(wrrapdCheckoutUnitPriceOverride);
     const next = {
       giftWrapBase: Number(up.giftWrapBase),
       customDesignAi: Number(up.customDesignAi),
@@ -116,15 +127,16 @@ async function refreshCheckoutUnitPricesFromServer(geo) {
       )
     ) {
       wrrapdCheckoutUnitPriceOverride = next;
+      writePersistedUnitPrices("wrrapdLego", next, zip);
       pricesOk = true;
     }
-    return pricesOk || gotTax;
+    return pricesOk || gotTax || Boolean(wrrapdCheckoutUnitPriceOverride);
   } catch (e) {
     console.warn("[LEGO pay] pricing-preview", e);
+    return Boolean(wrrapdCheckoutUnitPriceOverride);
   } finally {
     legoPricingFetchComplete = true;
   }
-  return false;
 }
 
 function hubPostalForPricing() {

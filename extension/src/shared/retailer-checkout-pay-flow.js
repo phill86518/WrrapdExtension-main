@@ -41,6 +41,12 @@ import {
   taxPostalForPricing,
   WRRAPD_DEFAULT_TAX_RATE_PERCENT,
 } from "./wrrapd-tax.js";
+import {
+  createUnitPricingState,
+  getActiveUnitPrices,
+  hydrateUnitPricesFromSession,
+  writePersistedUnitPrices,
+} from "./wrrapd-unit-pricing.js";
 
 const PAY_ORIGIN = "https://pay.wrrapd.com";
 const SUMMARY_HOST_ATTR = "data-wrrapd-pay-summary-host";
@@ -52,13 +58,6 @@ const DEFAULT_PAY_COPY = Object.freeze({
   pendingHint: "Please complete payment to Wrrapd before continuing.",
   successHint: "Thank you! Your payment was received — you may continue checkout.",
   paidButton: "Thank you — you may continue",
-});
-
-const UNIT_PRICES_FALLBACK = Object.freeze({
-  giftWrapBase: 6.99,
-  customDesignAi: 2.99,
-  customDesignUpload: 1.99,
-  flowers: 17.99,
 });
 
 function orderNumberKey(prefix) {
@@ -94,18 +93,12 @@ function readSession(key) {
 // ─── Pricing ────────────────────────────────────────────────────────────────
 
 function createPricingState() {
-  return {
-    unitPriceOverride: null,
-    taxPercent: WRRAPD_DEFAULT_TAX_RATE_PERCENT,
-    pricingFetchComplete: false,
-  };
+  const state = createUnitPricingState();
+  state.taxPercent = WRRAPD_DEFAULT_TAX_RATE_PERCENT;
+  state.pricingFetchComplete = false;
+  state.priceFetchPromise = null;
+  return state;
 }
-
-function getActiveUnitPrices(state) {
-  return state.unitPriceOverride || UNIT_PRICES_FALLBACK;
-}
-
-const PRICE_REFRESH_TTL_MS = 5 * 60 * 1000;
 
 async function refreshUnitPricesFromServer(state, geo, retailer) {
   try {
@@ -138,23 +131,35 @@ async function refreshUnitPricesFromServer(state, geo, retailer) {
 }
 
 /**
- * Memoized price refresh: at most one in-flight request, re-fetched only after
- * the TTL expires. The summary UI re-renders on every DOM mutation on SPA-style
- * checkouts (Etsy, Sephora), so the raw fetch must never run per-render.
+ * Always price against the giftee ZIP from the gift modal. Hydrate from the
+ * prices the shopper already saw, then refresh (geo-keyed — never reuse hub ZIP).
  */
-function ensureUnitPrices(state, geo, retailer) {
+async function ensureUnitPrices(state, geo, retailer, sessionPrefix) {
+  const zip = String(geo?.postalCode || "").replace(/\D/g, "").slice(0, 5);
+  hydrateUnitPricesFromSession(state, sessionPrefix, zip);
+  const geoKey = `${zip}|${geo?.state || ""}|${geo?.country || ""}|${retailer || ""}`;
   const now = Date.now();
-  if (state.lastPriceFetchAt && now - state.lastPriceFetchAt < PRICE_REFRESH_TTL_MS) {
-    return Promise.resolve();
+  if (
+    state.lastPriceFetchAt &&
+    state.lastGeoKey === geoKey &&
+    now - state.lastPriceFetchAt < 5 * 60 * 1000 &&
+    state.unitPriceOverride
+  ) {
+    state.pricingFetchComplete = true;
+    return;
   }
   if (!state.priceFetchPromise) {
     state.priceFetchPromise = refreshUnitPricesFromServer(state, geo, retailer).finally(() => {
       state.priceFetchPromise = null;
       state.lastPriceFetchAt = Date.now();
+      state.lastGeoKey = geoKey;
       state.pricingFetchComplete = true;
+      if (state.unitPriceOverride && sessionPrefix) {
+        writePersistedUnitPrices(sessionPrefix, state.unitPriceOverride, zip);
+      }
     });
   }
-  return state.priceFetchPromise;
+  await state.priceFetchPromise;
 }
 
 function computeServiceSubtotalCents(state, prefix) {
@@ -462,6 +467,7 @@ async function openPaymentPopup(config, state) {
       country: "US",
     },
     config.payRoute,
+    config.sessionPrefix,
   );
   if (!state.pricingFetchComplete) {
     try {
@@ -620,6 +626,7 @@ export function initRetailerCheckoutPayFlow(config) {
         country: "US",
       },
       config.payRoute,
+      config.sessionPrefix,
     );
     const paid = readPaymentSuccess(config.sessionPrefix);
     const payReady = state.pricingFetchComplete === true;
@@ -770,6 +777,7 @@ export function initRetailerCheckoutPayFlow(config) {
   window.addEventListener(WRRAPD_CART_SYNC_EVENT, (event) => {
     if (event?.detail?.prefix !== config.sessionPrefix) return;
     state.lastPriceFetchAt = 0;
+    state.lastGeoKey = "";
     state.unitPriceOverride = null;
     state.pricingFetchComplete = false;
     schedule();

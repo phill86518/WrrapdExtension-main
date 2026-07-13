@@ -32,6 +32,11 @@ import { isZipCodeAllowed } from './lib/zip-codes.js';
 import { WRRAPD_RETAILER_AMAZON } from '../retailers/amazon/constants.js';
 import { occasionOptionsHtml, isValidOccasion } from '../shared/occasions.js';
 import { mountGifteeZipEstimateBar, readValidatedEstimateZip } from '../shared/giftee-zip-estimate.js';
+import {
+    hydrateUnitPricesFromSession,
+    readPersistedUnitPrices,
+    writePersistedUnitPrices,
+} from '../shared/wrrapd-unit-pricing.js';
 import { formatUsd } from '../shared/wrrapd-unit-pricing.js';
 
 (function () {
@@ -65,9 +70,65 @@ import { formatUsd } from '../shared/wrrapd-unit-pricing.js';
 
     /** Last successful `/api/pricing-preview` unit prices (geo + surge rules). */
     let wrrapdCheckoutUnitPriceOverride = null;
+    let wrrapdCheckoutUnitPriceGeoKey = '';
+    let wrrapdCheckoutUnitPriceFetchPromise = null;
 
     function getActiveCheckoutUnitPrices() {
         return wrrapdCheckoutUnitPriceOverride || WRRAPD_CHECKOUT_UNIT_PRICES_FALLBACK;
+    }
+
+    function amazonGifteeZipForPricing() {
+        return readValidatedEstimateZip('wrrapdAmazon') || '';
+    }
+
+    /**
+     * Hydrate from modal-persisted prices, then refresh pricing-preview for the giftee ZIP.
+     * Payment summary must never show Duval $6.99 when the shopper confirmed Miami-Dade (etc.).
+     */
+    async function ensureAmazonCheckoutUnitPricesForSummary() {
+        const zip = amazonGifteeZipForPricing();
+        const geo = {
+            postalCode: zip.length === 5 ? zip : undefined,
+            country: 'US',
+        };
+        const geoKey = `${zip}|US`;
+
+        const hydrated = { unitPriceOverride: null };
+        if (hydrateUnitPricesFromSession(hydrated, 'wrrapdAmazon', zip)) {
+            wrrapdCheckoutUnitPriceOverride = hydrated.unitPriceOverride;
+        } else {
+            const persisted = readPersistedUnitPrices('wrrapdAmazon');
+            if (persisted?.unitPrices && (!zip || !persisted.postalCode || persisted.postalCode === zip)) {
+                wrrapdCheckoutUnitPriceOverride = persisted.unitPrices;
+            }
+        }
+
+        if (
+            wrrapdCheckoutUnitPriceOverride &&
+            wrrapdCheckoutUnitPriceGeoKey === geoKey &&
+            zip.length === 5
+        ) {
+            // Still refresh in background if we only have hydrate — but if geo matches a
+            // prior successful fetch, skip duplicate network.
+            return true;
+        }
+
+        if (!wrrapdCheckoutUnitPriceFetchPromise) {
+            wrrapdCheckoutUnitPriceFetchPromise = refreshWrrapdCheckoutUnitPricesFromServer(geo)
+                .then((ok) => {
+                    if (ok) {
+                        wrrapdCheckoutUnitPriceGeoKey = geoKey;
+                        if (wrrapdCheckoutUnitPriceOverride && zip.length === 5) {
+                            writePersistedUnitPrices('wrrapdAmazon', wrrapdCheckoutUnitPriceOverride, zip);
+                        }
+                    }
+                    return ok;
+                })
+                .finally(() => {
+                    wrrapdCheckoutUnitPriceFetchPromise = null;
+                });
+        }
+        return wrrapdCheckoutUnitPriceFetchPromise;
     }
 
     /**
@@ -11246,7 +11307,15 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
         }
     
         console.log("[createWrrapdSummary] Creating new Wrrapd summary section.");
-    
+
+        // Immediately apply prices the shopper saw after giftee ZIP Submit (before async refresh).
+        {
+            const zip = amazonGifteeZipForPricing();
+            const hydrated = { unitPriceOverride: null };
+            if (hydrateUnitPricesFromSession(hydrated, 'wrrapdAmazon', zip)) {
+                wrrapdCheckoutUnitPriceOverride = hydrated.unitPriceOverride;
+            }
+        }    
         // Match Amazon's order summary container structure exactly
         // Find Amazon's inner summary container to match its exact structure
         let amazonInnerContainer = orderSummary.querySelector('.a-box, .a-box-inner, [class*="a-box"]');
@@ -11368,10 +11437,15 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             console.log("[createWrrapdSummary] ✓ Wrrapd summary appended to right column");
         }
         
-        total = updateWrrapdSummary();
-        
-        // CRITICAL: Ensure summary alignment matches Amazon (common function)
-        ensureWrrapdSummaryAlignment();
+        // Paint once with hydrated/persisted modal prices, then refresh from API for the giftee ZIP.
+        const paintSummary = () => {
+            total = updateWrrapdSummary();
+            ensureWrrapdSummaryAlignment();
+        };
+        paintSummary();
+        void ensureAmazonCheckoutUnitPricesForSummary().then(() => {
+            if (document.querySelector('#wrrapd-summary')) paintSummary();
+        });
 
         wrrapdClearManualAddressTapsRequirement();
         
@@ -11494,6 +11568,13 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                         state: gifteeOriginalAddress.state || addressObject.state,
                         country: gifteeOriginalAddress.country || addressObject.country,
                     });
+                    if (wrrapdCheckoutUnitPriceOverride) {
+                        writePersistedUnitPrices(
+                            'wrrapdAmazon',
+                            wrrapdCheckoutUnitPriceOverride,
+                            modalZip || gifteeOriginalAddress.postalCode || addressObject.postalCode,
+                        );
+                    }
                     total = updateWrrapdSummary();
                     if (!total || total <= 0) {
                         payBtn.dataset.wrrapdPayInFlight = '0';
