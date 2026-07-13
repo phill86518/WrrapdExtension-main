@@ -2,23 +2,18 @@
  * Wrrapd conflict guard.
  *
  * Retailers with physical stores (Target, Walmart, Best Buy, Nordstrom,
- * Kohl's, Sephora, Ulta) let the shopper pick *store pickup* or set a
- * different shipping address. Either choice conflicts with Wrrapd: the item
- * must physically arrive at the Wrrapd hub to be gift-wrapped, so it can be
- * neither picked up in-store nor shipped to another address.
+ * Kohl's, Sephora, Ulta) let the shopper pick *store pickup*, same-day
+ * delivery, or a different shipping address. Those conflict with Wrrapd:
+ * items must ship to the Wrrapd hub to be gift-wrapped.
  *
- * When the shopper has chosen Wrrapd (radio === "yes") and then clicks a
- * pickup control — or a "ship to a different / new address" control — we
- * intercept that genuine click (capture phase + `e.isTrusted`), warn them,
- * and:
- *   • Confirm  → switch the Wrrapd radio to "No thanks, …" and re-fire their
- *                original click so the retailer flow proceeds.
- *   • Cancel   → keep Wrrapd selected; the original click never happens.
+ * When the shopper chooses Wrrapd (radio === "yes"):
+ *   • Hide pickup / same-day / drive-up / curbside fulfillment controls
+ *   • Prefer standard shipping when a shipping radio exists
+ *   • Intercept trusted clicks on conflicting controls with a confirm modal
  *
- * Using `e.isTrusted` means our own programmatic hub-address autofill (which
- * produces untrusted synthetic clicks) is never blocked by this guard.
+ * When they switch to "No thanks…", restore those retailer options.
  *
- * Not used for Amazon or Etsy — neither has in-store pickup.
+ * Not used for Amazon or Etsy — neither has in-store pickup on our cart UI.
  */
 
 import { createWrrapdBrandLogo } from "./wrrapd-brand.js";
@@ -39,6 +34,7 @@ const MODAL_ATTR = "data-wrrapd-conflict-modal";
 const PICKUP_LOCK_ATTR = "data-wrrapd-pickup-locked";
 const PICKUP_BADGE_ATTR = "data-wrrapd-pickup-badge";
 
+/** Non-shipping fulfillment the shopper must not use while Wrrapd is selected. */
 const DEFAULT_PICKUP_PATTERNS = [
   /\border\s*pickup\b/i,
   /\bstore\s*pickup\b/i,
@@ -54,7 +50,11 @@ const DEFAULT_PICKUP_PATTERNS = [
   /\bdrive\s*up\b/i,
   /\bcurbside\b/i,
   /\bship\s*to\s*store\b/i,
-  /\bget it today\b.*\bpick\s*up\b/i,
+  /\bsame\s*day\s*delivery\b/i,
+  /\bsameday\s*delivery\b/i,
+  /\bget it (as soon as|today|tomorrow)\b/i,
+  /\bready (today|tomorrow|in\s*\d)\b/i,
+  /\bchange store\b/i,
 ];
 
 const DEFAULT_ADDRESS_PATTERNS = [
@@ -66,6 +66,29 @@ const DEFAULT_ADDRESS_PATTERNS = [
   /\benter\s*a?\s*(new|different)\s*address\b/i,
   /\bchange\s*(the\s*)?shipping\s*address\b/i,
   /\bedit\s*(the\s*)?shipping\s*address\b/i,
+];
+
+/** Default CSS selectors for non-shipping fulfillment blocks (Target + common). */
+const DEFAULT_HIDE_SELECTORS = [
+  '[data-test="InStoreFulfillment"]',
+  '[data-test="sameDayDeliveryRadioInput"]',
+  '[data-test="changeStoreLink"]',
+  '[data-testid*="pickup" i]',
+  '[data-testid*="Pickup" i]',
+  '[data-test*="pickup" i]',
+  '[data-test*="Pickup" i]',
+  '[data-test*="sameDay" i]',
+  '[data-test*="SameDay" i]',
+  '[data-testid*="sameDay" i]',
+  '[data-testid*="SameDay" i]',
+];
+
+const DEFAULT_PREFER_SHIPPING_SELECTORS = [
+  '[data-test="ShippingFulfillment"] input[type="radio"]',
+  'input[type="radio"][value="STANDARD"]',
+  'input[type="radio"][value="shipping" i]',
+  'input[type="radio"][value*="SHIP" i]',
+  'input[type="radio"][id*="shipping" i]',
 ];
 
 /** Whether the shopper has actively chosen Wrrapd for this order. */
@@ -84,7 +107,7 @@ function closestControl(node) {
     if (
       typeof el.matches === "function" &&
       el.matches(
-        'button, a[href], [role="radio"], [role="button"], [role="tab"], [role="option"], label, input[type="radio"], [data-test*="fulfillment" i], [data-test*="pickup" i]',
+        'button, a[href], [role="radio"], [role="button"], [role="tab"], [role="option"], label, input[type="radio"], [data-test*="fulfillment" i], [data-test*="pickup" i], [data-test*="sameDay" i]',
       )
     ) {
       return el;
@@ -94,41 +117,55 @@ function closestControl(node) {
   return null;
 }
 
-/** Gather the user-visible text/labels associated with a control. */
+/** Compact label blob for matching (prefer short attrs over huge subtree text). */
 function controlText(el) {
   if (!el) return "";
   const parts = [
     el.getAttribute?.("aria-label"),
     el.getAttribute?.("data-test"),
+    el.getAttribute?.("data-testid"),
     el.getAttribute?.("value"),
     el.getAttribute?.("title"),
-    el.textContent,
   ];
   if (el.tagName === "INPUT") {
     const id = el.getAttribute("id");
     if (id) {
       try {
         const lab = document.querySelector(`label[for="${CSS.escape(id)}"]`);
-        if (lab) parts.push(lab.textContent);
+        if (lab) {
+          parts.push(lab.getAttribute("aria-label"));
+          // First line / short slice only — full label trees are huge on Target.
+          parts.push(normText(lab.textContent).slice(0, 120));
+        }
       } catch {
         /* ignore */
       }
     }
     const wrapLabel = el.closest("label");
-    if (wrapLabel) parts.push(wrapLabel.textContent);
+    if (wrapLabel) parts.push(normText(wrapLabel.textContent).slice(0, 120));
+  } else {
+    parts.push(normText(el.textContent).slice(0, 120));
   }
   return normText(parts.filter(Boolean).join(" "));
 }
 
 function matchesAny(text, patterns) {
-  if (!text || text.length > 160) return false;
+  if (!text) return false;
   return patterns.some((re) => re.test(text));
+}
+
+function looksLikeShippingOnly(text) {
+  if (!text) return false;
+  if (/\bsame\s*day\b/i.test(text)) return false;
+  if (/\bpick\s*up\b|\bpickup\b|\bdrive\s*up\b|\bcurbside\b/i.test(text)) return false;
+  return /\bshipping\b|\bship\b|\bdeliver(y|ed)?\b|\barriving\b|\bstandard\b/i.test(text);
 }
 
 /** @returns {"pickup"|"address"|null} */
 function classifyConflict(el, pickupPatterns, addressPatterns) {
   const text = controlText(el);
   if (!text) return null;
+  if (looksLikeShippingOnly(text) && !matchesAny(text, pickupPatterns)) return null;
   if (matchesAny(text, pickupPatterns)) return "pickup";
   if (matchesAny(text, addressPatterns)) return "address";
   return null;
@@ -161,11 +198,11 @@ function buildModal(config, kind, onConfirm, onCancel) {
   body.style.cssText = "margin:0 0 18px;font-size:14px;line-height:1.55;color:#374151;";
 
   if (kind === "pickup") {
-    heading.textContent = "Pickup isn't available with Wrrapd";
+    heading.textContent = "Pickup & same-day aren't available with Wrrapd";
     body.innerHTML =
       "You've chosen <strong>Wrrapd gift-wrapping</strong> for this order. " +
-      `Your items must ship to the Wrrapd studio to be wrapped, so they can't be picked up at a ${retailer} store. ` +
-      "Switching to pickup will <strong>remove your Wrrapd gift-wrapping</strong> and set this order to ship unwrapped. Continue?";
+      `Your items must ship to the Wrrapd studio to be wrapped, so they can't use store pickup or same-day delivery at ${retailer}. ` +
+      "Switching will <strong>remove your Wrrapd gift-wrapping</strong> and set this order to ship unwrapped. Continue?";
   } else {
     heading.textContent = "Shipping address is locked to Wrrapd";
     body.innerHTML =
@@ -185,7 +222,7 @@ function buildModal(config, kind, onConfirm, onCancel) {
 
   const switchBtn = document.createElement("button");
   switchBtn.type = "button";
-  switchBtn.textContent = kind === "pickup" ? "Switch to store pickup" : "Use a different address";
+  switchBtn.textContent = kind === "pickup" ? "Switch away from Wrrapd" : "Use a different address";
   switchBtn.style.cssText =
     "flex:0 0 auto;padding:11px 14px;border:1px solid #cbd5e1;border-radius:9px;cursor:pointer;" +
     "background:#fff;color:#374151;font-size:14px;font-weight:600;";
@@ -240,33 +277,26 @@ function switchToNoThanks(config) {
   }
 }
 
-/** Visually disable a detected pickup control while Wrrapd is selected. */
+/** Hide a fulfillment control entirely while Wrrapd is selected. */
 function lockPickupControl(el) {
   if (!el || el.hasAttribute(PICKUP_LOCK_ATTR)) return;
-  el.setAttribute(PICKUP_LOCK_ATTR, "1");
-  el.dataset.wrrapdPrevCss = el.style.cssText || "";
-  el.dataset.wrrapdPrevHidden = el.hidden ? "1" : "0";
-  el.dataset.wrrapdPrevDisplay = el.style.display || "";
-  el.style.display = "none";
-  el.hidden = true;
-  el.style.opacity = "0.45";
-  el.style.pointerEvents = "none";
-  el.style.cursor = "not-allowed";
-  el.setAttribute("aria-disabled", "true");
-  el.setAttribute("aria-hidden", "true");
-  el.title = "Unavailable while Wrrapd gift-wrapping is selected — items ship to the Wrrapd studio first.";
+  // Prefer the option row / radio wrapper so the whole choice disappears.
+  const lockEl =
+    el.closest?.(
+      '[data-test="InStoreFulfillment"], [data-test="sameDayDeliveryRadioInput"], [data-test*="pickup" i], [data-test*="Pickup" i], [data-test*="sameDay" i], [data-testid*="pickup" i], [data-testid*="sameDay" i], .styles_ndsRadio__vxxVc, [class*="fulfillment"]',
+    ) || el;
+  if (lockEl.hasAttribute?.(PICKUP_LOCK_ATTR)) return;
 
-  try {
-    const badge = document.createElement("span");
-    badge.setAttribute(PICKUP_BADGE_ATTR, "1");
-    badge.textContent = "Unavailable with Wrrapd";
-    badge.style.cssText =
-      "display:inline-block;margin-left:8px;padding:1px 7px;border-radius:9px;background:#fff3e0;" +
-      "color:#b45309;font-size:11px;font-weight:700;border:1px solid #fcd34d;vertical-align:middle;";
-    el.appendChild(badge);
-  } catch {
-    /* ignore */
-  }
+  lockEl.setAttribute(PICKUP_LOCK_ATTR, "1");
+  lockEl.dataset.wrrapdPrevCss = lockEl.style.cssText || "";
+  lockEl.dataset.wrrapdPrevHidden = lockEl.hidden ? "1" : "0";
+  lockEl.dataset.wrrapdPrevDisplay = lockEl.style.display || "";
+  lockEl.style.setProperty("display", "none", "important");
+  lockEl.hidden = true;
+  lockEl.setAttribute("aria-hidden", "true");
+  lockEl.setAttribute("aria-disabled", "true");
+  lockEl.title =
+    "Unavailable while Wrrapd gift-wrapping is selected — items ship to the Wrrapd studio first.";
 }
 
 function unlockPickupControl(el) {
@@ -300,35 +330,115 @@ function applyShippingAddressLock(config) {
   fillAndLockHubShippingFields({ overwrite: true });
 }
 
-/** Find the outermost selectable pickup controls on the page. */
-function findPickupControls(pickupPatterns) {
+/**
+ * Find non-shipping fulfillment UI to hide (pickup, same-day, drive-up, etc.).
+ * Never hides standard shipping controls.
+ */
+function findPickupControls(pickupPatterns, hideSelectors) {
   const out = [];
   const seen = new Set();
+  const push = (el) => {
+    if (!el || seen.has(el)) return;
+    if (el.closest(`[${MODAL_ATTR}]`)) return;
+    if (el.closest(`[data-wrrapd-target-cart-gift-optin], [data-wrrapd-pay-summary-host]`)) return;
+    // Never hide shipping-only rows.
+    const text = controlText(el);
+    if (looksLikeShippingOnly(text) && !matchesAny(text, pickupPatterns)) return;
+    if (el.matches?.('[data-test="ShippingFulfillment"], [data-test*="ShippingFulfillment"]')) return;
+    seen.add(el);
+    out.push(el);
+  };
+
+  for (const sel of hideSelectors || []) {
+    try {
+      document.querySelectorAll(sel).forEach(push);
+    } catch {
+      /* ignore bad selector */
+    }
+  }
+
   const candidates = document.querySelectorAll(
-    'button, label, a[role="button"], [role="radio"], [role="tab"], [role="option"], [data-test*="pickup" i], [data-testid*="pickup" i]',
+    [
+      "button",
+      "label",
+      'a[role="button"]',
+      '[role="radio"]',
+      '[role="tab"]',
+      '[role="option"]',
+      'input[type="radio"]',
+      '[data-test*="fulfillment" i]',
+      '[data-test*="pickup" i]',
+      '[data-test*="Pickup" i]',
+      '[data-test*="sameDay" i]',
+      '[data-test*="SameDay" i]',
+      '[data-testid*="pickup" i]',
+      '[data-testid*="sameDay" i]',
+    ].join(", "),
   );
   for (const el of candidates) {
     if (seen.has(el)) continue;
     if (el.closest(`[${MODAL_ATTR}]`)) continue;
     const text = controlText(el);
     if (!matchesAny(text, pickupPatterns)) continue;
-    // Skip if an ancestor we'll also lock already matches (lock the outer one only).
-    const outer = el.closest(`[${PICKUP_LOCK_ATTR}]`);
-    if (outer && outer !== el) continue;
-    seen.add(el);
-    out.push(el);
+    if (looksLikeShippingOnly(text)) continue;
+    push(el);
   }
   return out;
 }
 
-function applyPickupLock(config, pickupPatterns) {
+/** When Wrrapd is on, switch the cart to standard shipping if pickup/same-day is selected. */
+let lastShipPreferAt = 0;
+function preferShippingFulfillment(config) {
+  const now = Date.now();
+  if (now - lastShipPreferAt < 2000) return;
+
+  const nonShipChecked = document.querySelector(
+    [
+      '[data-test="InStoreFulfillment"] input[type="radio"]:checked',
+      '[data-test="sameDayDeliveryRadioInput"] input[type="radio"]:checked',
+      'input[type="radio"][value="STORE_PICKUP"]:checked',
+      'input[type="radio"][value="Same Day Delivery"]:checked',
+      'input[type="radio"][id*="instore"]:checked',
+      'input[type="radio"][id*="same-day"]:checked',
+      'input[type="radio"][id*="pickup"]:checked',
+    ].join(", "),
+  );
+  // If nothing non-shipping is selected, don't spam shipping clicks.
+  if (!nonShipChecked) {
+    const shippingAlready = document.querySelector(
+      '[data-test="ShippingFulfillment"] input[type="radio"]:checked, input[type="radio"][value="STANDARD"]:checked',
+    );
+    if (shippingAlready) return;
+  }
+
+  const selectors = config.preferShippingSelectors || DEFAULT_PREFER_SHIPPING_SELECTORS;
+  for (const sel of selectors) {
+    try {
+      const input = document.querySelector(sel);
+      if (!(input instanceof HTMLInputElement)) continue;
+      if (input.disabled) continue;
+      if (input.checked) return;
+      lastShipPreferAt = now;
+      // Untrusted click — conflict guard ignores non-trusted events.
+      input.click();
+      return;
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
+function applyPickupLock(config, pickupPatterns, hideSelectors) {
   const selected = wrrapdSelected(config.sessionPrefix);
   if (!selected) {
     document.querySelectorAll(`[${PICKUP_LOCK_ATTR}]`).forEach(unlockPickupControl);
     applyShippingAddressLock(config);
     return;
   }
-  for (const el of findPickupControls(pickupPatterns)) lockPickupControl(el);
+  for (const el of findPickupControls(pickupPatterns, hideSelectors)) {
+    lockPickupControl(el);
+  }
+  preferShippingFulfillment(config);
   applyShippingAddressLock(config);
 }
 
@@ -339,21 +449,22 @@ function applyPickupLock(config, pickupPatterns) {
  * @param {string} [config.savedBannerAttr]
  * @param {RegExp[]} [config.pickupPatterns]
  * @param {RegExp[]} [config.addressPatterns]
+ * @param {string[]} [config.hideSelectors]  CSS selectors to hide when Wrrapd is yes
+ * @param {string[]} [config.preferShippingSelectors]
  */
 export function initWrrapdConflictGuard(config) {
   if (!config?.sessionPrefix) return;
 
   const pickupPatterns = config.pickupPatterns || DEFAULT_PICKUP_PATTERNS;
   const addressPatterns = config.addressPatterns || DEFAULT_ADDRESS_PATTERNS;
+  const hideSelectors = config.hideSelectors || DEFAULT_HIDE_SELECTORS;
 
-  // Visually disable pickup options whenever Wrrapd is selected, re-applying as the
-  // retailer's SPA re-renders. The click guard below remains a backstop.
   let scheduled = 0;
   const scheduleLock = () => {
     if (scheduled) cancelAnimationFrame(scheduled);
     scheduled = requestAnimationFrame(() => {
       scheduled = 0;
-      applyPickupLock(config, pickupPatterns);
+      applyPickupLock(config, pickupPatterns, hideSelectors);
     });
   };
   scheduleLock();
@@ -368,14 +479,13 @@ export function initWrrapdConflictGuard(config) {
   window.addEventListener(WRRAPD_GIFT_RADIO_CHANGE_EVENT, scheduleLock);
 
   const onClick = (e) => {
-    // Only genuine user clicks. Our own autofill fires untrusted clicks.
     if (!e.isTrusted) return;
     if (!wrrapdSelected(config.sessionPrefix)) return;
 
     const target = e.target;
     if (!(target instanceof Element)) return;
-    if (target.closest(`[${MODAL_ATTR}]`)) return; // ignore clicks inside our modal
-    if (document.querySelector(`[${MODAL_ATTR}]`)) return; // a modal is already open
+    if (target.closest(`[${MODAL_ATTR}]`)) return;
+    if (document.querySelector(`[${MODAL_ATTR}]`)) return;
 
     const control = closestControl(target);
     if (!control) return;
@@ -383,7 +493,6 @@ export function initWrrapdConflictGuard(config) {
     const kind = classifyConflict(control, pickupPatterns, addressPatterns);
     if (!kind) return;
 
-    // A control already in the selected/active state shouldn't re-warn.
     const ariaState =
       control.getAttribute?.("aria-checked") === "true" ||
       control.getAttribute?.("aria-selected") === "true" ||
@@ -398,7 +507,6 @@ export function initWrrapdConflictGuard(config) {
       config,
       kind,
       () => {
-        // Confirmed: drop Wrrapd, then re-fire the original (untrusted → allowed).
         switchToNoThanks(config);
         setTimeout(() => {
           try {
@@ -409,7 +517,7 @@ export function initWrrapdConflictGuard(config) {
         }, 0);
       },
       () => {
-        /* Cancelled: keep Wrrapd, original action never happened. */
+        /* keep Wrrapd */
       },
     );
   };

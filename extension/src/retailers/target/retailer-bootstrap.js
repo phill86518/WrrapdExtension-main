@@ -135,6 +135,21 @@ export function initTargetRetailerBootstrap() {
     sessionPrefix: TARGET_SESSION_PREFIX,
     retailerLabel: "Target",
     savedBannerAttr: TARGET_SAVED_BANNER_ATTR,
+    hideSelectors: [
+      '[data-test="InStoreFulfillment"]',
+      '[data-test="sameDayDeliveryRadioInput"]',
+      '[data-test="changeStoreLink"]',
+      // Cart-level "Order Pickup / Ready tomorrow" chrome while Wrrapd is on
+      // (shipping radio click re-groups the cart; until then hide pickup chrome).
+      '[data-test="fulfillment-icon"]',
+      '[data-test="grouped-cart-fulfillment-heading"]',
+      '[data-test="pickupStoreName"]',
+    ],
+    preferShippingSelectors: [
+      '[data-test="ShippingFulfillment"] input[type="radio"]',
+      'input[type="radio"][value="STANDARD"]',
+      'input[type="radio"][id*="-shipping"]',
+    ],
   });
 
   exposeDebugGlobal("__WRRAPD_TARGET_DEBUG__", {
