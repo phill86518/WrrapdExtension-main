@@ -1762,3 +1762,57 @@ body.wrrapd-wrapstars-portal .wp-site-blocks {
 		opacity: 1;
 	}
 }
+
+/* Onboarding portal v2 — placeholders + checklist */
+.wrrapd-wrapstars-pill {
+	display: inline-block;
+	margin-left: 0.4rem;
+	padding: 0.15rem 0.55rem;
+	border-radius: 999px;
+	font-size: 0.72rem;
+	font-weight: 700;
+	letter-spacing: 0.02em;
+	vertical-align: middle;
+	background: #e8eef8;
+	color: #1a2744;
+}
+
+.wrrapd-wrapstars-pill--placeholder {
+	background: #fff7ed;
+	color: #9a3412;
+	border: 1px solid #fdba74;
+}
+
+.wrrapd-wrapstars-welcome-checklist,
+.wrrapd-wrapstars-activation-checklist {
+	margin: 1rem 0 1.25rem;
+	padding-left: 1.2rem;
+	line-height: 1.55;
+}
+
+.wrrapd-wrapstars-welcome-checklist li,
+.wrrapd-wrapstars-activation-checklist li {
+	margin: 0.45rem 0;
+}
+
+.wrrapd-wrapstars-activation-checklist .is-done {
+	color: #047857;
+	font-weight: 600;
+}
+
+.wrrapd-wrapstars-activation-checklist .is-open {
+	color: #64748b;
+}
+
+.wrrapd-wrapstars-onboarding-main .ws-check {
+	display: flex;
+	align-items: flex-start;
+	gap: 0.55rem;
+	margin: 1rem 0;
+	line-height: 1.45;
+}
+
+.wrrapd-wrapstars-onboarding-main .ws-check input {
+	margin-top: 0.25rem;
+	flex: 0 0 auto;
+}

@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_WRAPSTARS_BUILD', '2026-07-14-ops-api-applications-v1' );
+define( 'WRRAPD_WRAPSTARS_BUILD', '2026-07-14-onboarding-portal-v2' );
 
 $wrrapd_boldsign = dirname( __FILE__ ) . '/wrrapd-boldsign.php';
 if ( is_readable( $wrrapd_boldsign ) ) {
@@ -100,17 +100,36 @@ if ( ! wrrapd_wrapstars_is_portal_host() ) {
 /** CPT slug. */
 define( 'WRRAPD_WRAPSTARS_CPT', 'wrrapd_wrapstar_app' );
 
-/** Onboarding step keys in order. */
+/**
+ * Onboarding step keys in order (pros.wrrapd.com).
+ * BoldSign-backed: agreement (IC), w9. All other new steps are placeholders until
+ * you supply final PDFs / vendor accounts (banking, 1099, background, etc.).
+ */
 function wrrapd_wrapstars_onboarding_steps() {
 	return array(
 		'welcome'     => 'Welcome & Overview',
 		'agreement'   => 'Independent Contractor Agreement',
-		'insurance'   => 'Proof of Insurance',
+		'policies'    => 'Policies & Handbook',
 		'orientation' => 'Orientation & Quiz',
+		'background'  => 'Background Check',
+		'insurance'   => 'Proof of Insurance',
+		'identity'    => 'Identity Verification',
 		'po_box'      => 'PO Box / Mailing Address',
 		'w9'          => 'W-9 Tax Form',
+		'tax_1099'    => '1099 & Tax Acknowledgments',
+		'bank_payout' => 'Connect Bank / Payouts',
 		'activation'  => 'Final Review',
 	);
+}
+
+/** Next step key after $step (or activation if last). */
+function wrrapd_wrapstars_next_onboarding_step( $step ) {
+	$steps = array_keys( wrrapd_wrapstars_onboarding_steps() );
+	$idx   = array_search( $step, $steps, true );
+	if ( $idx === false || ! isset( $steps[ $idx + 1 ] ) ) {
+		return 'activation';
+	}
+	return $steps[ $idx + 1 ];
 }
 
 // --- Bootstrap ---
@@ -247,10 +266,15 @@ function wrrapd_wrapstars_onboarding_step_url( $step ) {
 	$paths = array(
 		'welcome'     => '/onboarding/',
 		'agreement'   => '/onboarding/agreement/',
-		'insurance'   => '/onboarding/insurance/',
+		'policies'    => '/onboarding/policies/',
 		'orientation' => '/onboarding/orientation/',
+		'background'  => '/onboarding/background/',
+		'insurance'   => '/onboarding/insurance/',
+		'identity'    => '/onboarding/identity/',
 		'po_box'      => '/onboarding/po-box/',
 		'w9'          => '/onboarding/w-9/',
+		'tax_1099'    => '/onboarding/tax-1099/',
+		'bank_payout' => '/onboarding/bank-payout/',
 		'activation'  => '/onboarding/activation/',
 	);
 	$path = $paths[ $step ] ?? '/onboarding/';
@@ -1024,7 +1048,26 @@ function wrrapd_wrapstars_process_onboarding_step() {
 
 	if ( $step === 'welcome' ) {
 		wrrapd_wrapstars_mark_step_complete( $app->ID, 'welcome' );
-		wp_safe_redirect( wrrapd_wrapstars_pros_url( '/onboarding/agreement/' ) );
+		wp_safe_redirect( wrrapd_wrapstars_onboarding_step_url( wrrapd_wrapstars_next_onboarding_step( 'welcome' ) ) );
+		exit;
+	}
+
+	// Placeholder acknowledgment steps (documents / vendors TBD).
+	$placeholder_steps = array( 'policies', 'background', 'identity', 'tax_1099', 'bank_payout' );
+	if ( in_array( $step, $placeholder_steps, true ) ) {
+		$ack = isset( $_POST['placeholder_ack'] ) ? (string) wp_unslash( $_POST['placeholder_ack'] ) : '';
+		if ( $ack !== '1' ) {
+			$GLOBALS['wrrapd_ws_onboarding_error'] = 'Please confirm you understand this step before continuing.';
+			return;
+		}
+		wrrapd_wrapstars_set_meta( $app->ID, $step . '_placeholder_ack', '1' );
+		wrrapd_wrapstars_set_meta( $app->ID, $step . '_placeholder_ack_at', gmdate( 'c' ) );
+		$notes = sanitize_textarea_field( wp_unslash( $_POST['placeholder_notes'] ?? '' ) );
+		if ( $notes !== '' ) {
+			wrrapd_wrapstars_set_meta( $app->ID, $step . '_placeholder_notes', $notes );
+		}
+		wrrapd_wrapstars_mark_step_complete( $app->ID, $step );
+		wp_safe_redirect( wrrapd_wrapstars_onboarding_step_url( wrrapd_wrapstars_next_onboarding_step( $step ) ) );
 		exit;
 	}
 
@@ -1036,7 +1079,7 @@ function wrrapd_wrapstars_process_onboarding_step() {
 		}
 		wrrapd_wrapstars_set_meta( $app->ID, 'insurance_file', $upload['path'] );
 		wrrapd_wrapstars_mark_step_complete( $app->ID, 'insurance' );
-		wp_safe_redirect( wrrapd_wrapstars_pros_url( '/onboarding/orientation/' ) );
+		wp_safe_redirect( wrrapd_wrapstars_onboarding_step_url( wrrapd_wrapstars_next_onboarding_step( 'insurance' ) ) );
 		exit;
 	}
 
@@ -1054,7 +1097,7 @@ function wrrapd_wrapstars_process_onboarding_step() {
 		wrrapd_wrapstars_set_meta( $app->ID, 'po_box_address', $po );
 		wrrapd_wrapstars_set_meta( $app->ID, 'po_box_file', $upload['path'] );
 		wrrapd_wrapstars_mark_step_complete( $app->ID, 'po_box' );
-		wp_safe_redirect( wrrapd_wrapstars_pros_url( '/onboarding/w-9/' ) );
+		wp_safe_redirect( wrrapd_wrapstars_onboarding_step_url( wrrapd_wrapstars_next_onboarding_step( 'po_box' ) ) );
 		exit;
 	}
 }
@@ -1139,7 +1182,7 @@ function wrrapd_wrapstars_process_orientation_quiz() {
 	}
 
 	wrrapd_wrapstars_mark_step_complete( $app->ID, 'orientation' );
-	wp_safe_redirect( wrrapd_wrapstars_pros_url( '/onboarding/po-box/' ) );
+	wp_safe_redirect( wrrapd_wrapstars_onboarding_step_url( wrrapd_wrapstars_next_onboarding_step( 'orientation' ) ) );
 	exit;
 }
 
@@ -1615,7 +1658,7 @@ function wrrapd_wrapstars_shortcode_onboarding( $atts ) {
 
 	if ( ! wrrapd_wrapstars_can_access_step( $app->ID, $step ) ) {
 		$current = wrrapd_wrapstars_get_meta( $app->ID, 'onboarding_step', 'welcome' );
-		return '<div class="wrrapd-wrapstars-alert wrrapd-wrapstars-alert--info">Complete prior steps first. <a href="' . esc_url( wrrapd_wrapstars_pros_url( '/onboarding/' . $current . '/' ) ) . '">Continue onboarding</a></div>';
+		return '<div class="wrrapd-wrapstars-alert wrrapd-wrapstars-alert--info">Complete prior steps first. <a href="' . esc_url( wrrapd_wrapstars_onboarding_step_url( $current ) ) . '">Continue onboarding</a></div>';
 	}
 
 	$steps = wrrapd_wrapstars_onboarding_steps();
@@ -1655,6 +1698,13 @@ function wrrapd_wrapstars_shortcode_onboarding( $atts ) {
 		case 'agreement':
 			echo do_shortcode( '[wrrapd_wrapstar_sign doc="ic_agreement"]' );
 			break;
+		case 'policies':
+		case 'background':
+		case 'identity':
+		case 'tax_1099':
+		case 'bank_payout':
+			wrrapd_wrapstars_render_step_placeholder( $app->ID, $step );
+			break;
 		case 'insurance':
 			wrrapd_wrapstars_render_step_insurance( $app->ID );
 			break;
@@ -1679,46 +1729,153 @@ function wrrapd_wrapstars_shortcode_onboarding( $atts ) {
 
 function wrrapd_wrapstars_detect_onboarding_step_from_uri() {
 	$uri = isset( $_SERVER['REQUEST_URI'] ) ? (string) $_SERVER['REQUEST_URI'] : '';
-	if ( preg_match( '#/onboarding/agreement#', $uri ) ) {
-		return 'agreement';
-	}
-	if ( preg_match( '#/onboarding/insurance#', $uri ) ) {
-		return 'insurance';
-	}
-	if ( preg_match( '#/onboarding/orientation#', $uri ) ) {
-		return 'orientation';
-	}
-	if ( preg_match( '#/onboarding/po-box#', $uri ) ) {
-		return 'po_box';
-	}
-	if ( preg_match( '#/onboarding/w-9#', $uri ) ) {
-		return 'w9';
-	}
-	if ( preg_match( '#/onboarding/activation#', $uri ) ) {
-		return 'activation';
+	$map = array(
+		'#/onboarding/agreement#'   => 'agreement',
+		'#/onboarding/policies#'    => 'policies',
+		'#/onboarding/orientation#' => 'orientation',
+		'#/onboarding/background#'  => 'background',
+		'#/onboarding/insurance#'   => 'insurance',
+		'#/onboarding/identity#'    => 'identity',
+		'#/onboarding/po-box#'      => 'po_box',
+		'#/onboarding/w-9#'         => 'w9',
+		'#/onboarding/tax-1099#'    => 'tax_1099',
+		'#/onboarding/bank-payout#' => 'bank_payout',
+		'#/onboarding/activation#'  => 'activation',
+	);
+	foreach ( $map as $re => $key ) {
+		if ( preg_match( $re, $uri ) ) {
+			return $key;
+		}
 	}
 	return 'welcome';
 }
 
 function wrrapd_wrapstars_render_step_welcome( $app_id ) {
+	$steps = wrrapd_wrapstars_onboarding_steps();
 	?>
 	<div class="wrrapd-wrapstars-card">
 		<h2>Welcome, WrapStar!</h2>
-		<p>You're joining the WrapStar network of independent gift-wrappers. Here's what to expect:</p>
-		<ul>
-			<li>Sign the Independent Contractor Agreement (BoldSign)</li>
-			<li>Upload proof of insurance ($1M GL + inland marine)</li>
-			<li>Complete orientation and pass a short quiz</li>
-			<li>Set up your PO Box / mailing address</li>
-			<li>Sign your W-9</li>
-			<li>Final admin activation</li>
-		</ul>
+		<p>You're joining the WrapStar network of independent gift-wrappers. Complete every step below — some are live today; others show <em>placeholder</em> until Wrrapd finishes legal / banking / vendor setup.</p>
+		<ol class="wrrapd-wrapstars-welcome-checklist">
+			<?php foreach ( $steps as $key => $label ) : ?>
+				<?php if ( $key === 'welcome' ) { continue; } ?>
+				<li>
+					<strong><?php echo esc_html( $label ); ?></strong>
+					<?php if ( in_array( $key, array( 'policies', 'background', 'identity', 'tax_1099', 'bank_payout' ), true ) ) : ?>
+						<span class="wrrapd-wrapstars-pill wrrapd-wrapstars-pill--placeholder">Document / vendor placeholder</span>
+					<?php elseif ( in_array( $key, array( 'agreement', 'w9' ), true ) ) : ?>
+						<span class="wrrapd-wrapstars-pill">BoldSign</span>
+					<?php endif; ?>
+				</li>
+			<?php endforeach; ?>
+		</ol>
 		<p><strong>Every order requires video proof:</strong> unboxing, wrapping, and outbound carrier handoff.</p>
 		<form method="post">
 			<?php wp_nonce_field( 'wrrapd_ws_onboarding', 'wrrapd_ws_nonce' ); ?>
 			<input type="hidden" name="wrrapd_ws_action" value="onboarding_step" />
 			<input type="hidden" name="step" value="welcome" />
 			<button type="submit" class="wrrapd-wrapstars-btn">Continue</button>
+		</form>
+	</div>
+	<?php
+}
+
+/**
+ * Config for placeholder onboarding steps — swap copy/docs when you supply finals.
+ *
+ * @return array{title:string,lead:string,needs:string[],vendor:string,ack:string}|null
+ */
+function wrrapd_wrapstars_placeholder_step_config( $step ) {
+	$all = array(
+		'policies'    => array(
+			'title'  => 'Policies & handbook',
+			'lead'   => 'Acknowledge WrapStar operating policies, safety standards, and the independent-contractor handbook. Final PDFs will be uploaded here when counsel delivers them.',
+			'needs'  => array(
+				'WrapStar Handbook / Operations Manual (PDF TBD)',
+				'Gift-handling & video-proof policy (PDF TBD)',
+				'Code of conduct / brand standards (PDF TBD)',
+			),
+			'vendor' => 'In-app PDF viewer + checkbox acknowledgments (no BoldSign required unless counsel prefers e-sign).',
+			'ack'    => 'I understand this step is a placeholder and I will re-acknowledge when final policy documents are published.',
+		),
+		'background'  => array(
+			'title'  => 'Background check',
+			'lead'   => 'Authorized at apply time. This step will launch our screening vendor (e.g. Checkr) after approval. Until then, confirm you remain willing to complete a background check.',
+			'needs'  => array(
+				'Background-check authorization form (if separate from apply)',
+				'Vendor invite / disclosure packet (TBD)',
+			),
+			'vendor' => 'Placeholder for Checkr (or similar) hosted flow + webhook status back to Wrrapd.',
+			'ack'    => 'I authorize Wrrapd to run a background check when the vendor integration is enabled, and I understand activation may wait on a clear result.',
+		),
+		'identity'    => array(
+			'title'  => 'Identity verification',
+			'lead'   => 'Confirm government ID on file and complete any additional identity checks. A selfie / liveness vendor can plug in here later.',
+			'needs'  => array(
+				'Government ID re-upload (optional if apply ID already verified)',
+				'Selfie / liveness capture (vendor TBD)',
+			),
+			'vendor' => 'Placeholder for Persona / Stripe Identity / similar.',
+			'ack'    => 'I confirm the government ID I submitted at application is accurate, and I will complete any additional identity verification Wrrapd requests.',
+		),
+		'tax_1099'    => array(
+			'title'  => '1099 & tax acknowledgments',
+			'lead'   => 'After your W-9, acknowledge independent-contractor tax treatment and 1099 reporting. Final tax packet / counsel language will replace this placeholder.',
+			'needs'  => array(
+				'1099-NEC acknowledgment / IC tax notice (PDF TBD)',
+				'Optional state tax notices (TBD by jurisdiction)',
+			),
+			'vendor' => 'Checkbox attestation now; optional second BoldSign template later if required.',
+			'ack'    => 'I understand I am an independent contractor responsible for my own taxes, and that Wrrapd may issue a Form 1099 when required by law.',
+		),
+		'bank_payout' => array(
+			'title'  => 'Connect bank / payouts',
+			'lead'   => 'Connect the account where WrapStar earnings will be paid. Stripe Connect (or Plaid + ACH export) will live here. Until then, confirm you have a US bank account ready.',
+			'needs'  => array(
+				'Stripe Connect onboarding link (or Plaid Link)',
+				'ACH / payout schedule disclosure (PDF TBD)',
+				'Voided check / account ownership proof if required (TBD)',
+			),
+			'vendor' => 'Placeholder for Stripe Connect Express / Custom. Ops ACH CSV already exists in Command Center Finance.',
+			'ack'    => 'I confirm I have a US bank account ready for WrapStar payouts and will complete the bank connection when Wrrapd enables it.',
+		),
+	);
+	return $all[ $step ] ?? null;
+}
+
+function wrrapd_wrapstars_render_step_placeholder( $app_id, $step ) {
+	$cfg = wrrapd_wrapstars_placeholder_step_config( $step );
+	if ( ! $cfg ) {
+		echo '<div class="wrrapd-wrapstars-alert wrrapd-wrapstars-alert--err">Unknown onboarding step.</div>';
+		return;
+	}
+	?>
+	<div class="wrrapd-wrapstars-card">
+		<p class="wrrapd-wrapstars-pill wrrapd-wrapstars-pill--placeholder">Placeholder — awaiting your documents / vendor setup</p>
+		<h2><?php echo esc_html( $cfg['title'] ); ?></h2>
+		<p><?php echo esc_html( $cfg['lead'] ); ?></p>
+		<h3>Documents &amp; assets needed from Wrrapd</h3>
+		<ul>
+			<?php foreach ( $cfg['needs'] as $need ) : ?>
+				<li><?php echo esc_html( $need ); ?></li>
+			<?php endforeach; ?>
+		</ul>
+		<p><strong>Integration plan:</strong> <?php echo esc_html( $cfg['vendor'] ); ?></p>
+		<div class="wrrapd-wrapstars-alert wrrapd-wrapstars-alert--info">
+			You can continue testing onboarding now. When final PDFs and vendor keys arrive, this screen will be replaced with the real upload / e-sign / connect flow — without changing step order.
+		</div>
+		<form method="post">
+			<?php wp_nonce_field( 'wrrapd_ws_onboarding', 'wrrapd_ws_nonce' ); ?>
+			<input type="hidden" name="wrrapd_ws_action" value="onboarding_step" />
+			<input type="hidden" name="step" value="<?php echo esc_attr( $step ); ?>" />
+			<label class="ws-check">
+				<input type="checkbox" name="placeholder_ack" value="1" required />
+				<span><?php echo esc_html( $cfg['ack'] ); ?></span>
+			</label>
+			<label>Optional notes for Wrrapd ops
+				<textarea name="placeholder_notes" rows="2" placeholder="Questions or details for our team…"></textarea>
+			</label>
+			<button type="submit" class="wrrapd-wrapstars-btn">Acknowledge &amp; continue</button>
 		</form>
 	</div>
 	<?php
@@ -1793,12 +1950,32 @@ function wrrapd_wrapstars_render_step_po_box( $app_id ) {
 }
 
 function wrrapd_wrapstars_render_step_activation( $app_id ) {
-	$done = wrrapd_wrapstars_step_complete( $app_id, 'w9' );
+	$steps   = wrrapd_wrapstars_onboarding_steps();
+	$all_done = true;
+	foreach ( array_keys( $steps ) as $key ) {
+		if ( $key === 'activation' ) {
+			continue;
+		}
+		if ( ! wrrapd_wrapstars_step_complete( $app_id, $key ) ) {
+			$all_done = false;
+			break;
+		}
+	}
 	?>
 	<div class="wrrapd-wrapstars-card">
 		<h2>Final review</h2>
-		<?php if ( $done ) : ?>
-			<p>All onboarding steps are complete. Our team will review your documents and activate your account. You'll receive an email when you're live.</p>
+		<p>Ops checklist before Command Center <strong>Activate</strong>:</p>
+		<ul class="wrrapd-wrapstars-activation-checklist">
+			<?php foreach ( $steps as $key => $label ) : ?>
+				<?php if ( $key === 'activation' ) { continue; } ?>
+				<li class="<?php echo wrrapd_wrapstars_step_complete( $app_id, $key ) ? 'is-done' : 'is-open'; ?>">
+					<?php echo wrrapd_wrapstars_step_complete( $app_id, $key ) ? '✓' : '○'; ?>
+					<?php echo esc_html( $label ); ?>
+				</li>
+			<?php endforeach; ?>
+		</ul>
+		<?php if ( $all_done ) : ?>
+			<p>All applicant-facing steps are complete (including placeholders). Our team will verify documents, insurance, background, and payout readiness, then activate you in Command Center. You'll receive an email when you're live.</p>
 			<p>Status: <strong>Pending activation</strong></p>
 		<?php else : ?>
 			<p>Complete all prior steps before final activation.</p>
@@ -1826,8 +2003,8 @@ function wrrapd_wrapstars_shortcode_sign( $atts ) {
 
 	$signed_key = $doc === 'w9' ? 'boldsign_w9_signed' : 'boldsign_ic_signed';
 	if ( wrrapd_wrapstars_get_meta( $app->ID, $signed_key ) === '1' ) {
-		$next = $doc === 'w9' ? '/onboarding/activation/' : '/onboarding/insurance/';
-		return '<div class="wrrapd-wrapstars-card"><div class="wrrapd-wrapstars-alert wrrapd-wrapstars-alert--ok">Document signed. <a class="wrrapd-wrapstars-btn" href="' . esc_url( wrrapd_wrapstars_pros_url( $next ) ) . '">Continue</a></div></div>';
+		$next_url = wrrapd_wrapstars_onboarding_step_url( wrrapd_wrapstars_next_onboarding_step( $step ) );
+		return '<div class="wrrapd-wrapstars-card"><div class="wrrapd-wrapstars-alert wrrapd-wrapstars-alert--ok">Document signed. <a class="wrrapd-wrapstars-btn" href="' . esc_url( $next_url ) . '">Continue</a></div></div>';
 	}
 
 	$prep = wrrapd_wrapstars_boldsign_prepare( $app->ID, $doc === 'w9' ? 'w9' : 'ic_agreement' );

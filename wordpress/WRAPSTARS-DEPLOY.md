@@ -159,11 +159,18 @@ Create the same pages (same WP database) — URLs work on both hosts; host routi
 |------|------|-----------|
 | Onboarding hub | `onboarding` | `[wrrapd_wrapstar_onboarding step="welcome"]` |
 | Agreement | `onboarding/agreement` | `[wrrapd_wrapstar_onboarding step="agreement"]` |
-| Insurance | `onboarding/insurance` | `[wrrapd_wrapstar_onboarding step="insurance"]` |
+| Policies | `onboarding/policies` | `[wrrapd_wrapstar_onboarding step="policies"]` |
 | Orientation | `onboarding/orientation` | `[wrrapd_wrapstar_onboarding step="orientation"]` |
+| Background | `onboarding/background` | `[wrrapd_wrapstar_onboarding step="background"]` |
+| Insurance | `onboarding/insurance` | `[wrrapd_wrapstar_onboarding step="insurance"]` |
+| Identity | `onboarding/identity` | `[wrrapd_wrapstar_onboarding step="identity"]` |
 | PO Box | `onboarding/po-box` | `[wrrapd_wrapstar_onboarding step="po_box"]` |
 | W-9 | `onboarding/w-9` | `[wrrapd_wrapstar_onboarding step="w9"]` |
+| Tax 1099 | `onboarding/tax-1099` | `[wrrapd_wrapstar_onboarding step="tax_1099"]` |
+| Bank / payout | `onboarding/bank-payout` | `[wrrapd_wrapstar_onboarding step="bank_payout"]` |
 | Activation | `onboarding/activation` | `[wrrapd_wrapstar_onboarding step="activation"]` |
+
+Full portal map + document handoff list: **[../docs/WRAPSTAR-ONBOARDING-PORTAL.md](../docs/WRAPSTAR-ONBOARDING-PORTAL.md)**.
 
 Use **parent page** `onboarding` for child slugs in WordPress (Pages → Attributes → Parent).
 
