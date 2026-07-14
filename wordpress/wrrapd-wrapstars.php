@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_WRAPSTARS_BUILD', '2026-07-14-reinvite-declined' );
+define( 'WRRAPD_WRAPSTARS_BUILD', '2026-07-14-welcome-email-v2' );
 
 $wrrapd_boldsign = dirname( __FILE__ ) . '/wrrapd-boldsign.php';
 if ( is_readable( $wrrapd_boldsign ) ) {
@@ -175,9 +175,23 @@ function wrrapd_wrapstars_pros_url( $path = '/' ) {
 function wrrapd_wrapstars_portal_login_url( $redirect = '' ) {
 	$url = wrrapd_wrapstars_apply_url( '/wrapstar-login/' );
 	if ( $redirect !== '' ) {
-		$url = add_query_arg( 'redirect_to', rawurlencode( $redirect ), $url );
+		// add_query_arg encodes — do not rawurlencode twice.
+		$url = add_query_arg( 'redirect_to', $redirect, $url );
 	}
 	return $url;
+}
+
+/** Preferred greeting: nickname, else first name, else "there". */
+function wrrapd_wrapstars_greeting_name( $app_id ) {
+	$nick = trim( (string) wrrapd_wrapstars_get_meta( $app_id, 'nickname' ) );
+	if ( $nick !== '' ) {
+		return $nick;
+	}
+	$first = trim( (string) wrrapd_wrapstars_get_meta( $app_id, 'first_name' ) );
+	if ( $first !== '' ) {
+		return $first;
+	}
+	return 'there';
 }
 
 /** @return bool */
@@ -376,6 +390,7 @@ function wrrapd_wrapstars_meta_keys() {
 		'user_id'             => 0,
 		'full_name'           => '',
 		'first_name'          => '',
+		'nickname'            => '',
 		'middle_name'         => '',
 		'last_name'           => '',
 		'email'               => '',
@@ -1406,10 +1421,18 @@ add_action( 'template_redirect', 'wrrapd_wrapstars_maybe_poll_boldsign', 20 );
 
 // --- Email ---
 
-function wrrapd_wrapstars_send_email( $to, $subject, $body ) {
-	$headers = array( 'Content-Type: text/plain; charset=UTF-8' );
-	$from    = wrrapd_wrapstars_from_email_address();
-	$headers[] = 'From: WrapStars <' . $from . '>';
+/**
+ * @param string       $to      Recipient.
+ * @param string       $subject Subject.
+ * @param string       $body    Plain or HTML body.
+ * @param bool         $is_html HTML content-type when true.
+ */
+function wrrapd_wrapstars_send_email( $to, $subject, $body, $is_html = false ) {
+	$headers   = array(
+		$is_html ? 'Content-Type: text/html; charset=UTF-8' : 'Content-Type: text/plain; charset=UTF-8',
+	);
+	$from      = wrrapd_wrapstars_from_email_address();
+	$headers[] = 'From: Wrrapd <' . $from . '>';
 	$headers[] = 'Reply-To: ' . $from;
 	wp_mail( $to, $subject, $body, $headers );
 }
@@ -1519,52 +1542,119 @@ function wrrapd_wrapstars_decline_offer_url( $app_id, $token ) {
 }
 
 /**
- * Welcome / re-invite / resend credentials email.
+ * Welcome / re-invite / resend credentials email (HTML).
  *
  * @param int    $app_id   Application ID.
  * @param string $password Temporary password.
  * @param string $context  approve|reinvite|resend.
  */
 function wrrapd_wrapstars_send_approval_credentials_email( $app_id, $password, $context = 'approve' ) {
-	$email = wrrapd_wrapstars_get_meta( $app_id, 'email' );
-	$name  = wrrapd_wrapstars_get_meta( $app_id, 'full_name' );
-	$login = wrrapd_wrapstars_portal_login_url( wrrapd_wrapstars_pros_url( '/onboarding/' ) );
-	$token = (string) wrrapd_wrapstars_get_meta( $app_id, 'decline_token' );
+	$email   = wrrapd_wrapstars_get_meta( $app_id, 'email' );
+	$greet   = wrrapd_wrapstars_greeting_name( $app_id );
+	$login   = wrrapd_wrapstars_portal_login_url( wrrapd_wrapstars_pros_url( '/onboarding/' ) );
+	$token   = (string) wrrapd_wrapstars_get_meta( $app_id, 'decline_token' );
 	$decline = $token !== '' ? wrrapd_wrapstars_decline_offer_url( $app_id, $token ) : wrrapd_wrapstars_apply_url( '/decline-offer/' );
 	$context = in_array( $context, array( 'approve', 'reinvite', 'resend' ), true ) ? $context : 'approve';
+	$logo    = wrrapd_wrapstars_brand_logo_url();
+	$from    = wrrapd_wrapstars_from_email_address();
 
-	$body = "Hi {$name},\n\n";
 	if ( $context === 'reinvite' ) {
-		$subject = 'Welcome back — your WrapStar invitation is open again';
-		$body   .= "Good news — your WrapStar invitation is open again.\n\n";
-		$body   .= "We've resolved the earlier hold-up and would love to have you join the network. Use the fresh login credentials below (previous ones no longer work).\n\n";
+		$subject = 'Welcome back to the Wrrapd family of WrapStars';
+		$lead    = 'We are delighted to reopen your WrapStar invitation and would be honored to welcome you into the Wrrapd family.';
 	} elseif ( $context === 'resend' ) {
-		$subject = 'WrapStars — your login credentials (resent)';
-		$body   .= "Here are fresh WrapStar portal credentials (any older temporary password from a previous email no longer works).\n\n";
+		$subject = 'Your Wrrapd WrapStar login details';
+		$lead    = 'With our compliments, here are fresh portal credentials. Any temporary password from an earlier message will no longer work.';
 	} else {
-		$subject = 'Welcome to WrapStars — your login & next steps';
-		$body   .= "Congratulations — you've been approved to join the WrapStar network!\n\n";
-		$body   .= "We're excited to welcome you. Log in with the credentials below to start onboarding on the WrapStar portal.\n\n";
+		$subject = 'Congratulations — welcome to the Wrrapd family of WrapStars';
+		$lead    = 'We are thrilled to welcome you into the Wrrapd family of WrapStars.';
 	}
 
-	$body .= "━━━━━━━━━━━━━━━━━━━━\n";
-	$body .= "YOUR LOGIN\n";
-	$body .= "━━━━━━━━━━━━━━━━━━━━\n";
-	$body .= "Portal login: {$login}\n";
-	$body .= "Username (email): {$email}\n";
-	$body .= "Temporary password: {$password}\n\n";
-	$body .= "Important: the first thing you'll do after logging in is choose a new password. Onboarding unlocks only after that.\n\n";
-	$body .= "You'll complete agreements, policies, orientation, insurance, tax forms, bank/payout setup, and more.\n\n";
-	$body .= "━━━━━━━━━━━━━━━━━━━━\n";
-	$body .= "DECLINE THIS OFFER\n";
-	$body .= "━━━━━━━━━━━━━━━━━━━━\n";
-	$body .= "If you've decided not to join Wrrapd as a WrapStar, decline here (no login required):\n";
-	$body .= "{$decline}\n\n";
-	$body .= "Declining closes this invitation and disables the temporary login above.\n\n";
-	$body .= "Questions? Reply to this email or write " . wrrapd_wrapstars_from_email_address() . ".\n\n";
-	$body .= "— The WrapStars Team\n";
+	$e_greet   = esc_html( $greet );
+	$e_email   = esc_html( $email );
+	$e_pass    = esc_html( $password );
+	$e_login   = esc_url( $login );
+	$e_decline = esc_url( $decline );
+	$e_logo    = esc_url( $logo );
+	$e_from    = esc_html( $from );
+	$e_lead    = esc_html( $lead );
 
-	wrrapd_wrapstars_send_email( $email, $subject, $body );
+	$html = '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>'
+		. '<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap" rel="stylesheet"/>'
+		. '<title>' . esc_html( $subject ) . '</title></head>'
+		. '<body style="margin:0;padding:0;background:#e8eee8;">'
+		. '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:linear-gradient(145deg,#9aab9f,#c5cfc9,#a8b8ae);padding:28px 12px;">'
+		. '<tr><td align="center">'
+		. '<table role="presentation" width="600" cellspacing="0" cellpadding="0" style="max-width:600px;width:100%;background:#fffefb;border-radius:16px;overflow:hidden;border:1px solid rgba(26,39,68,0.12);box-shadow:0 16px 40px rgba(15,23,42,0.14);">'
+		// Header / logo top-right
+		. '<tr><td style="padding:22px 28px 8px;background:#faf8f4;border-bottom:1px solid rgba(26,39,68,0.08);">'
+		. '<table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr>'
+		. '<td style="font-family:Fraunces,Georgia,serif;font-size:13px;letter-spacing:0.12em;text-transform:uppercase;color:#475569;font-weight:600;">WrapStar invitation</td>'
+		. '<td align="right"><a href="https://wrrapd.com/" style="text-decoration:none;"><img src="' . $e_logo . '" width="140" height="80" alt="Wrrapd" style="display:block;width:140px;height:auto;border:0;"/></a></td>'
+		. '</tr></table></td></tr>'
+		// Body
+		. '<tr><td style="padding:28px 32px 12px;font-family:Fraunces,Georgia,\'Times New Roman\',serif;color:#0f172a;">'
+		. '<p style="margin:0 0 18px;font-size:18px;line-height:1.45;color:#1e293b;">Hi ' . $e_greet . ',</p>'
+		. '<p style="margin:0 0 10px;font-size:42px;line-height:1.1;font-weight:700;color:#c9a227;letter-spacing:-0.02em;">Congratulations!</p>'
+		. '<p style="margin:0 0 18px;font-size:22px;line-height:1.35;font-weight:600;color:#0f172a;">Welcome to the Wrrapd family of WrapStars!</p>'
+		. '<p style="margin:0 0 18px;font-size:16px;line-height:1.6;color:#334155;">' . $e_lead . '</p>'
+		. '<p style="margin:0 0 22px;font-size:16px;line-height:1.6;color:#334155;">Please log in with the details below to begin your onboarding. For your security, the first thing you will do after signing in is choose a new password.</p>'
+		. '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:0 0 22px;background:#f4f7f4;border-radius:12px;border:1px solid rgba(26,39,68,0.1);">'
+		. '<tr><td style="padding:18px 20px;font-family:Fraunces,Georgia,serif;font-size:15px;line-height:1.7;color:#0f172a;">'
+		. '<p style="margin:0 0 8px;"><a href="' . $e_login . '" style="color:#a88417;font-weight:700;text-decoration:underline;">Please log in to the WrapStar portal</a></p>'
+		. '<p style="margin:0;">Username: <strong>' . $e_email . '</strong><br/>Temporary password: <strong style="letter-spacing:0.02em;">' . $e_pass . '</strong></p>'
+		. '</td></tr></table>'
+		. '<p style="margin:0 0 18px;font-size:15px;line-height:1.6;color:#475569;">During onboarding you will complete agreements, policies, orientation, insurance, tax forms, and bank / payout setup — we will guide you each step of the way.</p>'
+		. '<p style="margin:0 0 8px;font-size:14px;line-height:1.55;color:#64748b;">If you have decided not to join us as a WrapStar, you may politely decline this invitation here (no login required):<br/>'
+		. '<a href="' . $e_decline . '" style="color:#9a3412;">Decline this offer</a></p>'
+		. '<p style="margin:22px 0 0;font-size:16px;line-height:1.6;color:#0f172a;">Once again — welcome. We are so glad you are here. Please reach out with any questions you might have; we are happy to help.</p>'
+		. '<p style="margin:22px 0 0;font-size:16px;line-height:1.5;color:#0f172a;">Warmly,<br/><strong>Team Wrrapd</strong><br/>'
+		. '<a href="mailto:' . $e_from . '" style="color:#a88417;">' . $e_from . '</a></p>'
+		. '</td></tr>'
+		. '<tr><td style="padding:14px 32px 22px;font-family:Fraunces,Georgia,serif;font-size:12px;color:#94a3b8;border-top:1px solid rgba(26,39,68,0.08);">© Wrrapd Inc. · Wrapping Happiness</td></tr>'
+		. '</table></td></tr></table></body></html>';
+
+	wrrapd_wrapstars_send_email( $email, $subject, $html, true );
+}
+
+/**
+ * Return an approved/declined app to under_review for re-testing hire flow.
+ *
+ * @return array{ok:bool,error?:string}
+ */
+function wrrapd_wrapstars_reset_application_to_under_review( $app_id ) {
+	$app_id = (int) $app_id;
+	$app    = get_post( $app_id );
+	if ( ! $app || $app->post_type !== WRRAPD_WRAPSTARS_CPT ) {
+		return array( 'ok' => false, 'error' => 'Application not found.' );
+	}
+	$status = (string) wrrapd_wrapstars_get_meta( $app_id, 'status' );
+	if ( ! in_array( $status, array( 'approved', 'declined', 'interview', 'rejected' ), true ) ) {
+		return array( 'ok' => false, 'error' => 'Reset is only available from approved, declined, interview, or rejected.' );
+	}
+
+	wrrapd_wrapstars_set_meta( $app_id, 'status', 'under_review' );
+	wrrapd_wrapstars_set_meta( $app_id, 'approved_at', '' );
+	wrrapd_wrapstars_set_meta( $app_id, 'activated_at', '' );
+	wrrapd_wrapstars_set_meta( $app_id, 'interview_at', '' );
+	wrrapd_wrapstars_set_meta( $app_id, 'declined_at', '' );
+	wrrapd_wrapstars_set_meta( $app_id, 'decline_token', '' );
+	wrrapd_wrapstars_set_meta( $app_id, 'rejected_at', '' );
+	wrrapd_wrapstars_set_meta( $app_id, 'must_change_password', '' );
+	wrrapd_wrapstars_set_meta( $app_id, 'onboarding_step', 'welcome' );
+	wrrapd_wrapstars_set_meta( $app_id, 'suspended', '0' );
+
+	foreach ( array_keys( wrrapd_wrapstars_onboarding_steps() ) as $step ) {
+		wrrapd_wrapstars_set_meta( $app_id, 'step_' . $step, '' );
+	}
+
+	$user_id = (int) wrrapd_wrapstars_get_meta( $app_id, 'user_id' );
+	if ( $user_id && get_userdata( $user_id ) ) {
+		wrrapd_wrapstars_set_user_role( $user_id, 'wrapstar_applicant' );
+		delete_user_meta( $user_id, '_wrrapd_ws_must_change_password' );
+		wp_set_password( wp_generate_password( 32, true, true ), $user_id );
+	}
+
+	return array( 'ok' => true, 'status' => 'under_review' );
 }
 
 /**

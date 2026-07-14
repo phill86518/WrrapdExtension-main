@@ -221,6 +221,19 @@ export function ApplicationReviewActions({
               {pending === "unsuspend" ? "Updating…" : "Unsuspend"}
             </button>
           ) : null}
+
+          {["approved", "declined", "interview", "rejected"].includes(status) ? (
+            <button
+              type="submit"
+              name="action"
+              value="reset_to_review"
+              disabled={busy}
+              className={`${BTN} border border-slate-400 bg-slate-50 text-slate-800 hover:bg-slate-100`}
+              title="Testing: return this application to Under review so Approve can be tried again"
+            >
+              {pending === "reset_to_review" ? "Resetting…" : "Reset to under review (test)"}
+            </button>
+          ) : null}
         </div>
       </form>
       <p className="mt-3 text-xs text-slate-500">

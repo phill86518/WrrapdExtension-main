@@ -49,7 +49,7 @@ function wrrapd_wrapstars_ops_api_permission( $request ) {
 
 /**
  * Run interview / approve / reject / activate / suspend / unsuspend /
- * mark_declined / reinvite / resend_invite / save_notes.
+ * mark_declined / reinvite / resend_invite / reset_to_review / save_notes.
  *
  * @param int                  $app_id Application post ID.
  * @param string               $action Action slug.
@@ -65,7 +65,7 @@ function wrrapd_wrapstars_run_admin_action( $app_id, $action, $opts = array() ) 
 
 	$user_id = (int) wrrapd_wrapstars_get_meta( $app_id, 'user_id' );
 	$email   = wrrapd_wrapstars_get_meta( $app_id, 'email' );
-	$name    = wrrapd_wrapstars_get_meta( $app_id, 'full_name' );
+	$name    = wrrapd_wrapstars_greeting_name( $app_id );
 	$action  = sanitize_text_field( (string) $action );
 	$notes   = array_key_exists( 'admin_notes', $opts )
 		? sanitize_textarea_field( (string) $opts['admin_notes'] )
@@ -215,6 +215,17 @@ function wrrapd_wrapstars_run_admin_action( $app_id, $action, $opts = array() ) 
 		return array( 'ok' => true, 'status' => 'approved', 'passwordIssued' => true, 'resent' => true );
 	}
 
+	if ( $action === 'reset_to_review' ) {
+		$result = wrrapd_wrapstars_reset_application_to_under_review( $app_id );
+		if ( empty( $result['ok'] ) ) {
+			return array( 'ok' => false, 'error' => $result['error'] ?? 'Could not reset.' );
+		}
+		if ( $notes !== null ) {
+			wrrapd_wrapstars_set_meta( $app_id, 'admin_notes', $notes );
+		}
+		return array( 'ok' => true, 'status' => 'under_review' );
+	}
+
 	return array( 'ok' => false, 'error' => 'Unknown action.' );
 }
 
@@ -248,7 +259,9 @@ function wrrapd_wrapstars_ops_serialize_application( $id ) {
 		'suspended'                  => wrrapd_wrapstars_get_meta( $id, 'suspended' ) === '1',
 		'fullName'                   => wrrapd_wrapstars_get_meta( $id, 'full_name' ),
 		'firstName'                  => wrrapd_wrapstars_get_meta( $id, 'first_name' ),
+		'nickname'                   => wrrapd_wrapstars_get_meta( $id, 'nickname' ),
 		'lastName'                   => wrrapd_wrapstars_get_meta( $id, 'last_name' ),
+		'greetingName'               => wrrapd_wrapstars_greeting_name( $id ),
 		'email'                      => wrrapd_wrapstars_get_meta( $id, 'email' ),
 		'phoneMobile'                => wrrapd_wrapstars_get_meta( $id, 'phone_mobile', wrrapd_wrapstars_get_meta( $id, 'phone' ) ),
 		'phoneWork'                  => wrrapd_wrapstars_get_meta( $id, 'phone_work' ),

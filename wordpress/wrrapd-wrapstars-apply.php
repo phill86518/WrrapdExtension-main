@@ -402,6 +402,7 @@ function wrrapd_wrapstars_process_application() {
 	}
 
 	$first_name   = sanitize_text_field( wp_unslash( $_POST['first_name'] ?? '' ) );
+	$nickname     = sanitize_text_field( wp_unslash( $_POST['nickname'] ?? '' ) );
 	$middle_name  = sanitize_text_field( wp_unslash( $_POST['middle_name'] ?? '' ) );
 	$last_name    = sanitize_text_field( wp_unslash( $_POST['last_name'] ?? '' ) );
 	$full_name    = wrrapd_wrapstars_build_full_name( $first_name, $middle_name, $last_name );
@@ -584,6 +585,7 @@ function wrrapd_wrapstars_process_application() {
 	wrrapd_wrapstars_set_meta( $post_id, 'user_id', 0 );
 	wrrapd_wrapstars_set_meta( $post_id, 'full_name', $full_name );
 	wrrapd_wrapstars_set_meta( $post_id, 'first_name', $first_name );
+	wrrapd_wrapstars_set_meta( $post_id, 'nickname', $nickname );
 	wrrapd_wrapstars_set_meta( $post_id, 'middle_name', $middle_name );
 	wrrapd_wrapstars_set_meta( $post_id, 'last_name', $last_name );
 	wrrapd_wrapstars_set_meta( $post_id, 'email', strtolower( $email ) );
@@ -631,12 +633,16 @@ function wrrapd_wrapstars_process_application() {
 	}
 	wrrapd_wrapstars_set_meta( $post_id, 'id_file', $upload['path'] );
 
-	$candidate_body  = "Hi {$full_name},\n\n";
+	$greet = $nickname !== '' ? $nickname : $first_name;
+	if ( $greet === '' ) {
+		$greet = 'there';
+	}
+	$candidate_body  = "Hi {$greet},\n\n";
 	$candidate_body .= "Thank you for applying to become a WrapStar!\n\n";
 	$candidate_body .= "Your application is under review. We'll be in touch within about 7 days. ";
 	$candidate_body .= "If your application advances, we may contact you by email or text to schedule a brief recorded Zoom interview.\n\n";
 	$candidate_body .= "If approved, you will receive login credentials from " . wrrapd_wrapstars_from_email_address() . ".\n\n";
-	$candidate_body .= "— WrapStars Team\n";
+	$candidate_body .= "Team Wrrapd\n";
 	wrrapd_wrapstars_send_email( $email, 'Thank you — your WrapStar application is under review', $candidate_body );
 
 	$admin_body  = "New WrapStar application (fit score {$fit['total']}/100).\n\n";
@@ -696,6 +702,11 @@ function wrrapd_wrapstars_shortcode_apply() {
 								<label for="ws-last-name">Last name<?php echo wrrapd_wrapstars_apply_required_mark(); ?></label>
 								<input type="text" id="ws-last-name" name="last_name" autocomplete="family-name" required />
 							</div>
+						</div>
+
+						<div class="ws-field">
+							<label for="ws-nickname">Nickname <span class="ws-optional">(optional — how we should greet you)</span></label>
+							<input type="text" id="ws-nickname" name="nickname" autocomplete="nickname" placeholder="e.g. Penny" maxlength="60" />
 						</div>
 
 						<div class="ws-field">

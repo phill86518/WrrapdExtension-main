@@ -13,6 +13,8 @@ export type WrapstarApplication = {
   suspended: boolean;
   fullName: string;
   firstName?: string;
+  nickname?: string;
+  greetingName?: string;
   lastName?: string;
   email: string;
   phoneMobile: string;
@@ -155,6 +157,7 @@ export type ApplicationAction =
   | "mark_declined"
   | "reinvite"
   | "resend_invite"
+  | "reset_to_review"
   | "save_notes";
 
 export async function runWrapstarApplicationAction(

@@ -37,6 +37,12 @@ async function actionForm(formData: FormData) {
   if (action === "activate" && st !== "approved") {
     redirect(`/admin/applications/${id}?ok=already_active`);
   }
+  if (
+    action === "reset_to_review" &&
+    !["approved", "declined", "interview", "rejected"].includes(st)
+  ) {
+    redirect(`/admin/applications/${id}?ok=reset_skipped`);
+  }
 
   const result = await runWrapstarApplicationAction(id, action, {
     adminNotes,
@@ -88,6 +94,8 @@ export default async function AdminApplicationDetailPage({
         #{app.id} · <span className="font-medium">{app.status}</span>
         {app.suspended ? " · SUSPENDED" : ""}
         {app.fitScore ? ` · Fit ${app.fitScore}/100` : ""}
+        {app.greetingName ? ` · Greets as “${app.greetingName}”` : ""}
+        {app.nickname ? ` · Nickname: ${app.nickname}` : ""}
       </p>
 
       {okFlash ? (
@@ -116,6 +124,9 @@ export default async function AdminApplicationDetailPage({
             : null}
           {okFlash === "already_rejected" ? " — application already closed." : null}
           {okFlash === "already_active" ? " — already activated." : null}
+          {okFlash === "reset_to_review"
+            ? " — returned to Under review for re-testing Approve / welcome email."
+            : null}
         </p>
       ) : null}
 
