@@ -314,18 +314,30 @@ const CHECKOUT_GATED_ATTR = "data-wrrapd-checkout-gated";
 function setCheckoutControlGated(node, gated) {
   if (!node) return;
   if (gated) {
+    if (node.getAttribute(CHECKOUT_GATED_ATTR) !== "1") {
+      node.dataset.wrrapdPrevDisplay = node.style.display || "";
+      node.dataset.wrrapdPrevVisibility = node.style.visibility || "";
+    }
     node.setAttribute(CHECKOUT_GATED_ATTR, "1");
     node.setAttribute("aria-disabled", "true");
+    node.setAttribute("aria-hidden", "true");
     if ("disabled" in node) node.disabled = true;
-    node.style.opacity = "0.55";
+    node.style.setProperty("display", "none", "important");
+    node.style.opacity = "0";
     node.style.pointerEvents = "none";
     node.style.cursor = "not-allowed";
+    node.style.visibility = "hidden";
     if (node.tagName === "A") node.tabIndex = -1;
   } else if (node.getAttribute(CHECKOUT_GATED_ATTR) === "1") {
     node.removeAttribute(CHECKOUT_GATED_ATTR);
     node.removeAttribute("aria-disabled");
+    node.removeAttribute("aria-hidden");
     if ("disabled" in node) node.disabled = false;
     node.removeAttribute("disabled");
+    node.style.display = node.dataset.wrrapdPrevDisplay || "";
+    node.style.visibility = node.dataset.wrrapdPrevVisibility || "";
+    delete node.dataset.wrrapdPrevDisplay;
+    delete node.dataset.wrrapdPrevVisibility;
     node.style.opacity = "";
     node.style.pointerEvents = "";
     node.style.cursor = "";
@@ -333,9 +345,12 @@ function setCheckoutControlGated(node, gated) {
   }
 }
 
-/** Visually disable retailer checkout controls until Wrrapd payment succeeds. */
-function applyCheckoutGate(config, giftReady, paid) {
-  const shouldBlock = giftReady && !paid;
+/**
+ * Hide/disable retailer checkout while Wrrapd Yes is selected and unpaid.
+ * `wrrapdYes` is enough — do not wait for modal completion.
+ */
+function applyCheckoutGate(config, wrrapdYes, paid) {
+  const shouldBlock = wrrapdYes && !paid;
   for (const btn of getGatedCheckoutButtons(config)) {
     setCheckoutControlGated(btn, shouldBlock);
   }
@@ -585,6 +600,9 @@ export function initRetailerCheckoutPayFlow(config) {
   ]);
   let payPopupRef = null;
 
+  const wrrapdYesSelected = () => readGiftRadio(config.sessionPrefix) === "yes";
+
+  /** Full gift flow complete — required for Pay Wrrapd panel, not for hiding retailer Checkout. */
   const giftFlowReady = () => {
     const snap = config.getCartSnapshot?.();
     const count =
@@ -599,7 +617,7 @@ export function initRetailerCheckoutPayFlow(config) {
     const choices = readItemChoices(config.sessionPrefix);
     if (choices.length !== count) return false;
     return (
-      readGiftRadio(config.sessionPrefix) === "yes" &&
+      wrrapdYesSelected() &&
       readGiftChoicesSaved(config.sessionPrefix) &&
       readGiftLegalTermsAccepted(config.sessionPrefix)
     );
@@ -705,9 +723,9 @@ export function initRetailerCheckoutPayFlow(config) {
   const blockCheckoutNavigation = (e) => {
     const gated = getGatedCheckoutButtons(config);
     if (!gated.length || !e.target) return;
-    const btn = gated.find((b) => b.contains(e.target));
+    const btn = gated.find((b) => b.contains(e.target) || e.target === b);
     if (!btn) return;
-    if (!giftFlowReady()) return;
+    if (!wrrapdYesSelected()) return;
     if (e.target.closest(`[${SUMMARY_HOST_ATTR}]`)) return;
     if (readPaymentSuccess(config.sessionPrefix)) {
       config.fillHubShippingFields?.();
@@ -716,15 +734,19 @@ export function initRetailerCheckoutPayFlow(config) {
     e.preventDefault();
     e.stopPropagation();
     e.stopImmediatePropagation?.();
-    void ensureSummaryUi().then(() => {
-      document.querySelector(`[${SUMMARY_HOST_ATTR}]`)?.scrollIntoView({ block: "nearest", behavior: "smooth" });
-    });
+    if (giftFlowReady()) {
+      void ensureSummaryUi().then(() => {
+        document
+          .querySelector(`[${SUMMARY_HOST_ATTR}]`)
+          ?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      });
+    }
   };
 
   // Intercept the retailer checkout/place-order button until Wrrapd is paid.
   document.addEventListener("click", blockCheckoutNavigation, true);
   document.addEventListener("submit", (e) => {
-    if (!giftFlowReady() || readPaymentSuccess(config.sessionPrefix)) return;
+    if (!wrrapdYesSelected() || readPaymentSuccess(config.sessionPrefix)) return;
     const gated = getGatedCheckoutButtons(config);
     if (!gated.length) return;
     const form = e.target;
@@ -736,6 +758,7 @@ export function initRetailerCheckoutPayFlow(config) {
     if (!config.isCheckoutPage?.()) return;
     const wasPaid = readPaymentSuccess(config.sessionPrefix);
     if (!wasPaid) syncCartGiftState();
+    const yes = wrrapdYesSelected();
     const ready = giftFlowReady();
     const paid = readPaymentSuccess(config.sessionPrefix);
     if (paid) {
@@ -746,16 +769,19 @@ export function initRetailerCheckoutPayFlow(config) {
       }
       return;
     }
-    if (!ready) {
+    if (!yes) {
       removeSummary();
       releaseCheckoutGate(config);
       return;
     }
-    if (readGiftRadio(config.sessionPrefix) === "yes") {
-      config.fillHubShippingFields?.();
-    }
+    // Wrrapd Yes: always hide retailer Checkout (even mid-modal).
     applyCheckoutGate(config, true, paid);
-    void ensureSummaryUi();
+    if (ready) {
+      config.fillHubShippingFields?.();
+      void ensureSummaryUi();
+    } else {
+      removeSummary();
+    }
   };
 
   let raf = 0;

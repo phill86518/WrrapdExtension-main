@@ -687,6 +687,77 @@
 
             await loadAllowedZipCodes();
 
+            function lockReadonlyField(el, title) {
+                if (!el) return;
+                el.readOnly = true;
+                el.setAttribute('aria-readonly', 'true');
+                el.style.backgroundColor = '#f3f4f6';
+                el.style.pointerEvents = 'none';
+                if (title) el.title = title;
+            }
+
+            function unlockReadonlyField(el) {
+                if (!el) return;
+                el.readOnly = false;
+                el.removeAttribute('aria-readonly');
+                el.style.backgroundColor = '';
+                el.style.pointerEvents = '';
+                el.title = '';
+            }
+
+            function getLockedGifteeZip5() {
+                return String(document.getElementById('postal_code')?.value || '')
+                    .replace(/[^0-9]/g, '')
+                    .substring(0, 5);
+            }
+
+            function isGifteeCityStateZipLocked() {
+                const postal = document.getElementById('postal_code');
+                return Boolean(postal && postal.readOnly && getLockedGifteeZip5().length === 5);
+            }
+
+            function lockGifteeCityStateZipFields() {
+                const lockTitle =
+                    'Locked to the giftee City / State / ZIP from your gift estimate. To change them, close this window and start again from the retailer cart.';
+                lockReadonlyField(document.getElementById('postal_code'), lockTitle);
+                lockReadonlyField(document.getElementById('city'), lockTitle);
+                lockReadonlyField(document.getElementById('state'), lockTitle);
+                let lockNote = document.getElementById('wrrapd-zip-locked-note');
+                const postalEl = document.getElementById('postal_code');
+                if (postalEl && postalEl.parentElement) {
+                    if (!lockNote) {
+                        lockNote = document.createElement('div');
+                        lockNote.id = 'wrrapd-zip-locked-note';
+                        lockNote.style.cssText =
+                            'font-size:12px;color:#065f46;margin-top:4px;line-height:1.35;';
+                        postalEl.parentElement.appendChild(lockNote);
+                    }
+                    lockNote.textContent =
+                        'City, State, and ZIP are locked from your earlier gift-wrap estimate. Enter the street that matches this ZIP. To use a different area, close this window and re-enter ZIP in the Wrrapd gift modal.';
+                }
+            }
+
+            function showAutosuggestZipMismatch(message) {
+                let el = document.getElementById('wrrapd-autosuggest-zip-mismatch');
+                if (!el) {
+                    el = document.createElement('div');
+                    el.id = 'wrrapd-autosuggest-zip-mismatch';
+                    el.setAttribute('role', 'status');
+                    el.setAttribute('aria-live', 'polite');
+                    el.style.cssText =
+                        'font-size:13px;color:#9f1239;background:#fff1f2;border:1px solid #fda4af;border-radius:8px;padding:10px 12px;margin:8px 0 0;line-height:1.4;';
+                    const wrap = document.querySelector('.address-autocomplete-wrap') || document.getElementById('line1')?.parentElement;
+                    if (wrap) wrap.appendChild(el);
+                }
+                el.textContent = message;
+                el.style.display = 'block';
+            }
+
+            function hideAutosuggestZipMismatch() {
+                const el = document.getElementById('wrrapd-autosuggest-zip-mismatch');
+                if (el) el.style.display = 'none';
+            }
+
             async function syncGifteeCityStateFromZip() {
                 const zipInput = document.getElementById('postal_code');
                 const zip = zipInput.value.replace(/[^0-9]/g, '').substring(0, 5);
@@ -708,6 +779,9 @@
                     }
                 } catch (e) {
                     /* ignore zippopotam lookup failures */
+                }
+                if (zipInput.readOnly || isGifteeCityStateZipLocked()) {
+                    lockGifteeCityStateZipFields();
                 }
                 syncBillingFromDeliveryIfLinked();
             }
@@ -737,29 +811,18 @@
                 const postalEl = document.getElementById('postal_code');
                 if (lockedZip.length === 5) {
                     postalEl.value = lockedZip;
-                    postalEl.readOnly = true;
-                    postalEl.setAttribute('aria-readonly', 'true');
-                    postalEl.style.backgroundColor = '#f3f4f6';
-                    postalEl.style.pointerEvents = 'none';
-                    postalEl.title =
-                        'Locked to the giftee ZIP you confirmed earlier. To change it, cancel and start over from the retailer cart.';
-                    let lockNote = document.getElementById('wrrapd-zip-locked-note');
-                    if (!lockNote) {
-                        lockNote = document.createElement('div');
-                        lockNote.id = 'wrrapd-zip-locked-note';
-                        lockNote.style.cssText =
-                            'font-size:12px;color:#065f46;margin-top:4px;line-height:1.35;';
-                        postalEl.parentElement.appendChild(lockNote);
-                    }
-                    lockNote.textContent =
-                        'ZIP locked from your earlier gift-wrap estimate. Street/city/state still needed below. To use a different ZIP, close this window and re-enter ZIP in the Wrrapd gift modal.';
+                    lockGifteeCityStateZipFields();
+                    syncGifteeCityStateFromZip().then(function () {
+                        lockGifteeCityStateZipFields();
+                        updateGifteeZipOutsideDeliveryMessage();
+                    });
                 } else {
                     postalEl.value = '';
-                    postalEl.readOnly = false;
-                    postalEl.removeAttribute('aria-readonly');
-                    postalEl.style.backgroundColor = '';
-                    postalEl.style.pointerEvents = '';
-                    postalEl.title = '';
+                    unlockReadonlyField(postalEl);
+                    unlockReadonlyField(document.getElementById('city'));
+                    unlockReadonlyField(document.getElementById('state'));
+                    const lockNote = document.getElementById('wrrapd-zip-locked-note');
+                    if (lockNote) lockNote.remove();
                 }
             };
 
@@ -1676,14 +1739,37 @@
                         if (types.indexOf('postal_code') !== -1) postal = c.long_name || '';
                     });
                     const line = [streetNumber, route].filter(Boolean).join(' ').trim();
+                    const placeZip5 = String(postal || '').replace(/[^0-9]/g, '').substring(0, 5);
 
                     if (mode === 'giftee') {
+                        const lockedZip = getLockedGifteeZip5();
+                        if (lockedZip.length === 5 && placeZip5 && placeZip5 !== lockedZip) {
+                            showAutosuggestZipMismatch(
+                                'That address is in ZIP ' +
+                                    placeZip5 +
+                                    ', which does not match your locked giftee ZIP (' +
+                                    lockedZip +
+                                    '). City, State, and ZIP cannot be changed here. Please close this window and start again from the retailer cart with the correct ZIP, or choose a street address in ' +
+                                    lockedZip +
+                                    '.',
+                            );
+                            return;
+                        }
+                        hideAutosuggestZipMismatch();
                         if (line) line1.value = line;
-                        if (city) document.getElementById('city').value = city;
-                        if (state) document.getElementById('state').value = state;
-                        if (postal) document.getElementById('postal_code').value = postal.replace(/[^0-9-]/g, '').substring(0, 10);
+                        // Never overwrite locked City / State / ZIP from autosuggest.
+                        if (!isGifteeCityStateZipLocked()) {
+                            if (city) document.getElementById('city').value = city;
+                            if (state) document.getElementById('state').value = state;
+                            if (postal) {
+                                document.getElementById('postal_code').value = postal
+                                    .replace(/[^0-9-]/g, '')
+                                    .substring(0, 10);
+                            }
+                        }
                         syncBillingFromDeliveryIfLinked();
                         syncGifteeCityStateFromZip().then(function () {
+                            if (isGifteeCityStateZipLocked()) lockGifteeCityStateZipFields();
                             updateGifteeZipOutsideDeliveryMessage();
                             if (typeof scheduleGifteeAddressValidation === 'function') scheduleGifteeAddressValidation();
                         });

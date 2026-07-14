@@ -85,10 +85,13 @@ export function initNordstromRetailerBootstrap() {
     savedBannerAttr: NORDSTROM_SAVED_BANNER_ATTR,
     modalId: NORDSTROM_GIFT_MODAL_ID,
     shippingTierHint,
-    checkoutButtonPatterns: [/^check ?out$/i, /^place order$/i],
+    checkoutButtonPatterns: [/^check\s*out$/i, /^checkout$/i, /^place order$/i],
+    checkoutButtonSelector: "a[href*='/checkout'], a[href*='checkout']",
     findMountAnchor: () => {
       // Right-hand order summary rail; place above the "Check Out" button.
-      const checkoutBtn = document.querySelector("a[href='/checkout']");
+      const checkoutBtn =
+        document.querySelector("a[href*='/checkout']") ||
+        document.querySelector("a[href*='checkout']");
       if (checkoutBtn) {
         const block = checkoutBtn.closest("div");
         if (block?.parentElement) {
@@ -115,6 +118,41 @@ export function initNordstromRetailerBootstrap() {
     sessionPrefix: NORDSTROM_SESSION_PREFIX,
     retailerLabel: "Nordstrom",
     savedBannerAttr: NORDSTROM_SAVED_BANNER_ATTR,
+    pickupPatterns: [
+      /\bpick[\s-]*up\b/i,
+      /\bpickup\b/i,
+      /\bfree\s+pick[\s-]*up\b/i,
+      /\bin[-\s]?store\b/i,
+      /\bsame[\s-]*day\b/i,
+      /\bcurbside\b/i,
+      /\bdrive[\s-]*up\b/i,
+      /\border\s*pickup\b/i,
+      /\bstore\s*pickup\b/i,
+      /\bready\s+(today|tomorrow)\b/i,
+      /\bget\s+it\s+(today|tomorrow)\b/i,
+      /\bchange\s+store\b/i,
+    ],
+    hideSelectors: [
+      '[data-testid*="pickup" i]',
+      '[data-testid*="Pickup" i]',
+      '[data-testid*="sameDay" i]',
+      '[data-testid*="SameDay" i]',
+      '[aria-label*="pick up" i]',
+      '[aria-label*="pickup" i]',
+      '[aria-label*="same day" i]',
+      'button[aria-label*="Pick Up" i]',
+      'label[aria-label*="Pick Up" i]',
+      '[role="radio"][aria-label*="Pick" i]',
+    ],
+    preferShippingSelectors: [
+      'input[type="radio"][value*="SHIP" i]',
+      'input[type="radio"][value*="ship" i]',
+      'input[type="radio"][id*="shipping" i]',
+      'input[type="radio"][aria-label*="Ship" i]',
+      'input[type="radio"][aria-label*="Deliver" i]',
+      '[role="radio"][aria-label*="Ship" i]',
+      '[role="radio"][aria-label*="Deliver" i]',
+    ],
   });
 
   exposeDebugGlobal("__WRRAPD_NORDSTROM_DEBUG__", {

@@ -11,6 +11,17 @@ function normalizeWhitespace(value) {
   return String(value || "").replace(/\s+/g, " ").trim();
 }
 
+function hrefLooksLikeNordstromCheckout(href) {
+  const h = String(href || "").toLowerCase();
+  if (!h) return false;
+  if (h.startsWith("javascript:") || h === "#" || h.startsWith("#")) return false;
+  return (
+    h.includes("/checkout") ||
+    h.includes("checkout") ||
+    /\/c\/checkout/i.test(h)
+  );
+}
+
 /** Shopping bag + checkout: gate "Check Out" on the bag page and place-order on checkout. */
 function isNordstromPayGatePage() {
   const path = location.pathname.toLowerCase();
@@ -32,16 +43,35 @@ function findNordstromCheckoutButtons() {
   };
 
   for (const sel of [
-    "a[href='/checkout']",
+    "a[href*='/checkout']",
+    "a[href*='checkout']",
     "button[type='submit'][data-testid='place-order-button']",
     "button[data-testid='checkout-submit-button']",
+    "button[data-testid*='checkout' i]",
+    "button[data-testid*='place-order' i]",
+    "[data-element='checkout-button']",
+    "[data-testid='checkout-button']",
   ]) {
-    document.querySelectorAll(sel).forEach(add);
+    try {
+      document.querySelectorAll(sel).forEach(add);
+    } catch {
+      /* ignore bad selector */
+    }
   }
 
-  for (const node of document.querySelectorAll("button, a[role='button'], input[type='submit'], a[href='/checkout']")) {
-    const text = normalizeWhitespace(node.textContent || node.value || "");
-    if (/^(check out|checkout|place order|submit order|review order)$/i.test(text)) add(node);
+  for (const node of document.querySelectorAll(
+    "button, a[role='button'], a[href], input[type='submit'], [role='link']",
+  )) {
+    const href = node.getAttribute?.("href") || "";
+    if (hrefLooksLikeNordstromCheckout(href)) add(node);
+    const text = normalizeWhitespace(node.textContent || node.value || node.getAttribute?.("aria-label") || "");
+    if (
+      /^(check\s*out|checkout|place order|submit order|review order|continue to checkout)$/i.test(
+        text,
+      )
+    ) {
+      add(node);
+    }
   }
 
   return buttons;
@@ -58,7 +88,10 @@ const NORDSTROM_PAY_SLOT_ID = "wrrapd-nordstrom-checkout-pay-slot";
  * so customers pay Wrrapd before Nordstrom payment / Review Order.
  */
 function findNordstromSummaryMountAnchor() {
-  const checkoutLink = document.querySelector("a[href='/checkout']");
+  const checkoutLink =
+    document.querySelector("a[href*='/checkout']") ||
+    document.querySelector("a[href*='checkout']") ||
+    findNordstromCheckoutButton();
   if (checkoutLink) {
     const block = checkoutLink.closest("div");
     if (block?.parentElement) {

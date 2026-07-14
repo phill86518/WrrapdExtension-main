@@ -139,8 +139,8 @@ export function AdminOrdersBoard({
         })}
         <p className="w-full text-xs font-medium text-[#2d4a38] sm:ml-auto sm:w-auto">
           {focus
-            ? "Wide view — click All boards to return to the 4-up overview."
-            : "Click a category to open it wide across the page."}
+            ? "Detail view — click All boards to return to the overview."
+            : "Click a category to show its order details."}
         </p>
       </div>
 
@@ -195,7 +195,7 @@ export function AdminOrdersBoard({
               </div>
               <p className="mt-3 text-sm leading-relaxed text-[#2d4a38]">{group.blurb}</p>
               <p className="mt-4 text-xs font-bold uppercase tracking-wide text-[#1a2744] group-hover:text-amber-700">
-                Open wide →
+                Show details →
               </p>
             </button>
           ))}

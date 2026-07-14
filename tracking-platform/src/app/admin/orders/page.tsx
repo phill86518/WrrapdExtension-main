@@ -98,8 +98,8 @@ export default async function AdminOrdersPage({
             <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#c9a227]">Operations</p>
             <h1 className="mt-1 text-3xl font-bold tracking-tight text-[#0f172a]">Orders</h1>
             <p className="mt-1 max-w-2xl text-sm font-medium text-[#2d4a38]">
-              Click a category to open it wide across the page. Delinquent = past schedule day still
-              incomplete. Past = delivered / cancelled / refunded.
+              Click a category to show details. Delinquent = past schedule day still incomplete. Past =
+              delivered / cancelled / refunded.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">

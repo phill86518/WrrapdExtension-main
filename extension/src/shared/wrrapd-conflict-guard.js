@@ -39,11 +39,14 @@ const DEFAULT_PICKUP_PATTERNS = [
   /\border\s*pickup\b/i,
   /\bstore\s*pickup\b/i,
   /\bfree\s*store\s*pickup\b/i,
+  /\bfree\s+pick[\s-]*up\b/i,
   /\bin[-\s]?store\s*pickup\b/i,
   /\bpick\s*up\s*(in[-\s]?store|at\s*store|in\s*store|today|here)\b/i,
   /\bpick\s*up\s*at\b/i,
   /\bpickup only\b/i,
   /\bpick\s*up only\b/i,
+  /^\s*pick[\s-]*up\s*$/i,
+  /\bpick[\s-]*up\s*[·•|:—-]/i,
   /\bonly available for (store )?pick\s*up\b/i,
   /\bonly available for pickup\b/i,
   /\bin[-\s]?store only\b/i,
@@ -52,6 +55,7 @@ const DEFAULT_PICKUP_PATTERNS = [
   /\bship\s*to\s*store\b/i,
   /\bsame\s*day\s*delivery\b/i,
   /\bsameday\s*delivery\b/i,
+  /\bsame[\s-]*day\b/i,
   /\bget it (as soon as|today|tomorrow)\b/i,
   /\bready (today|tomorrow|in\s*\d)\b/i,
   /\bchange store\b/i,
@@ -81,6 +85,9 @@ const DEFAULT_HIDE_SELECTORS = [
   '[data-test*="SameDay" i]',
   '[data-testid*="sameDay" i]',
   '[data-testid*="SameDay" i]',
+  '[aria-label*="pick up" i]',
+  '[aria-label*="pickup" i]',
+  '[aria-label*="same day" i]',
 ];
 
 const DEFAULT_PREFER_SHIPPING_SELECTORS = [
