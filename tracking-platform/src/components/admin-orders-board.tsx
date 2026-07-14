@@ -306,23 +306,23 @@ function BoardColumn({
                   isDelinquentCol,
                 )}`}
               >
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
+                <div className="space-y-2">
+                  <div className="flex min-w-0 items-center gap-2">
                     <input
                       type="checkbox"
                       name="orderIds"
                       value={order.id}
                       form={deleteFormId}
-                      className="h-4 w-4 rounded border-[#1a2744]/40 text-amber-600 focus:ring-2 focus:ring-amber-500"
+                      className="h-4 w-4 shrink-0 rounded border-[#1a2744]/40 text-amber-600 focus:ring-2 focus:ring-amber-500"
                       title={`Select ${order.id} for deletion`}
                     />
-                    <p className="font-semibold leading-tight text-[#0f172a]">
+                    <p className="min-w-0 flex-1 whitespace-nowrap font-semibold leading-none tracking-tight text-[#0f172a]">
                       {order.externalOrderId?.trim() || order.id}
                     </p>
                   </div>
-                  <div className="flex flex-wrap items-center justify-end gap-2">
+                  <div className="flex flex-wrap items-center gap-2 pl-6">
                     {order.stopSequence != null && (
-                      <span className="rounded-lg bg-gradient-to-b from-[#1a2744] to-[#0f172a] px-2.5 py-1 text-xs font-bold text-white shadow-md">
+                      <span className="shrink-0 rounded-lg bg-gradient-to-b from-[#1a2744] to-[#0f172a] px-2.5 py-1 text-xs font-bold text-white shadow-md">
                         Stop {order.stopSequence}
                         {orderWrapstarId(order)
                           ? (() => {
