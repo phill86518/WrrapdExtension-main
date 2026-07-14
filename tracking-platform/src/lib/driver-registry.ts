@@ -4,13 +4,12 @@ import { randomBytes } from "crypto";
 import type { DeliveryDriver, MetroId, OnboardingStatus } from "./types";
 import { trackingDeliveryDriversCollection } from "./tracking-firestore";
 import { metroForPostalCode, getMetro } from "./metros";
+import { DEMO_DRIVER_ATL_ID, DEMO_DRIVER_JAX_ID } from "./demo-ids";
 
 const DATA_DIR = path.join(process.cwd(), ".data");
 const FILE = path.join(DATA_DIR, "delivery-drivers.json");
 
-/** Stable demo Drivers for launch metros (Jacksonville + Atlanta). */
-export const DEMO_DRIVER_JAX_ID = "dd-demo-jax";
-export const DEMO_DRIVER_ATL_ID = "dd-demo-atl";
+export { DEMO_DRIVER_JAX_ID, DEMO_DRIVER_ATL_ID };
 
 const DEFAULT_DELIVERY_DRIVERS: DeliveryDriver[] = [
   {
