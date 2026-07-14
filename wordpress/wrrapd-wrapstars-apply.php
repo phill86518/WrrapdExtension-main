@@ -545,7 +545,10 @@ function wrrapd_wrapstars_process_application() {
 
 	$existing = wrrapd_wrapstars_get_application_by_email( $email );
 	if ( $existing && wrrapd_wrapstars_get_meta( $existing->ID, 'status' ) !== 'rejected' ) {
-		$GLOBALS['wrrapd_ws_form_errors'] = array( 'An application already exists for this email. We will email you when there is an update.' );
+		$st = (string) wrrapd_wrapstars_get_meta( $existing->ID, 'status', 'under_review' );
+		$GLOBALS['wrrapd_ws_form_errors'] = array(
+			'An application already exists for this email (status: ' . $st . '). Our team reviews it in Command Center → Applications. Email ' . wrrapd_wrapstars_from_email_address() . ' if you need an update — do not submit a second application.',
+		);
 		return;
 	}
 

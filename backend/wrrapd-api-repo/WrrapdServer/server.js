@@ -1766,6 +1766,55 @@ async function ingestOrderIntoTracking(orderPayload) {
 }
 
 /**
+ * WrapStars ops bridge — Cloud Run Applications → this VM → SiteGround apply.wrrapd.com.
+ *
+ * SiteGround often blocks Cloud Run egress; the VM IP can reach WordPress. Set tracking
+ * WRRAPD_WRAPSTARS_WP_BASE_URL=https://api.wrrapd.com/api/wrapstars-wp-bridge
+ *
+ * Forwards /api/wrapstars-wp-bridge/wp-json/wrrapd/v1/... to
+ * https://apply.wrrapd.com/wp-json/wrrapd/v1/... (preserves ops API key header).
+ */
+app.use('/api/wrapstars-wp-bridge', async (req, res) => {
+    if (!req.isApiDomain) {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
+    if (req.method === 'OPTIONS') {
+        return res.status(204).end();
+    }
+
+    const origin = (process.env.WRRAPD_WRAPSTARS_WP_ORIGIN || 'https://apply.wrrapd.com').replace(/\/$/, '');
+    const targetUrl = origin + (req.url || '/');
+    if (!targetUrl.startsWith(origin + '/wp-json/wrrapd/v1/')) {
+        return res.status(400).json({ error: 'Only wrrapd/v1 WrapStars ops routes may be bridged.' });
+    }
+
+    const headers = { Accept: 'application/json' };
+    const opsKey = req.get('x-wrrapd-wrapstars-ops-key');
+    if (opsKey) headers['X-Wrrapd-Wrapstars-Ops-Key'] = opsKey;
+    const auth = req.get('authorization');
+    if (auth) headers.Authorization = auth;
+
+    const init = { method: req.method, headers };
+    if (req.method !== 'GET' && req.method !== 'HEAD') {
+        headers['Content-Type'] = 'application/json';
+        init.body = JSON.stringify(req.body && typeof req.body === 'object' ? req.body : {});
+    }
+
+    try {
+        const upstream = await fetch(targetUrl, init);
+        const text = await upstream.text();
+        const ct = upstream.headers.get('content-type') || 'application/json';
+        res.status(upstream.status).set('Content-Type', ct).send(text);
+    } catch (err) {
+        console.error('[wrapstars-wp-bridge]', err?.message || err);
+        res.status(502).json({
+            error: 'WrapStars WordPress bridge failed',
+            detail: err?.message || String(err),
+        });
+    }
+});
+
+/**
  * Chrome extension (Amazon checkout): forwards order payloads to tracking ingest using server-side INGEST_API_KEY.
  * No secret in the browser — same env as process-payment.
  */

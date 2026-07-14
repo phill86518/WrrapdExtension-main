@@ -75,6 +75,7 @@ async function forceDatesAction(formData: FormData) {
 export default async function AdminWrapstarsPage() {
   const session = await getSession();
   if (!session || session.role !== "admin") notFound();
+  // Note: hire applicants live under /admin/applications — this page is the live ops roster only.
 
   const [wrapstars, profiles, allEarnings] = await Promise.all([
     listWrapstars(),
@@ -104,7 +105,11 @@ export default async function AdminWrapstarsPage() {
     <div className="mx-auto max-w-6xl">
       <h1 className="text-2xl font-semibold text-slate-900">WrapStars</h1>
       <p className="mt-1 text-sm text-slate-600">
-        Directory of WrapStars with order counts and wallet balances. Click an ID for full detail.
+        Live ops roster (assignable WrapStars). New apply.wrrapd.com applicants are under{" "}
+        <Link href="/admin/applications?status=all" className="font-medium text-blue-700 underline">
+          Applications
+        </Link>
+        — not this page.
       </p>
 
       <form action={addAction} className="mt-6 grid gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-5">

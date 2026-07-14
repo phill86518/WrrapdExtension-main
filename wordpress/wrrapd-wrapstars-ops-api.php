@@ -309,11 +309,19 @@ add_action( 'rest_api_init', 'wrrapd_wrapstars_ops_register_rest_routes' );
  */
 function wrrapd_wrapstars_ops_list_applications( $request ) {
 	$status = sanitize_text_field( (string) $request->get_param( 'status' ) );
+	$email  = strtolower( trim( sanitize_email( (string) $request->get_param( 'email' ) ) ) );
+	$q      = strtolower( trim( sanitize_text_field( (string) $request->get_param( 'q' ) ) ) );
 	$meta_query = array();
 	if ( $status !== '' && $status !== 'all' ) {
 		$meta_query[] = array(
 			'key'   => '_wrrapd_ws_status',
 			'value' => $status,
+		);
+	}
+	if ( $email !== '' && is_email( $email ) ) {
+		$meta_query[] = array(
+			'key'   => '_wrrapd_ws_email',
+			'value' => $email,
 		);
 	}
 
@@ -331,9 +339,21 @@ function wrrapd_wrapstars_ops_list_applications( $request ) {
 	$apps = array();
 	foreach ( $posts as $p ) {
 		$row = wrrapd_wrapstars_ops_serialize_application( $p->ID );
-		if ( $row ) {
-			$apps[] = $row;
+		if ( ! $row ) {
+			continue;
 		}
+		if ( $q !== '' ) {
+			$hay = strtolower(
+				(string) ( $row['fullName'] ?? '' ) . ' ' .
+				(string) ( $row['email'] ?? '' ) . ' ' .
+				(string) ( $row['phoneMobile'] ?? '' ) . ' ' .
+				(string) ( $row['city'] ?? '' )
+			);
+			if ( strpos( $hay, $q ) === false ) {
+				continue;
+			}
+		}
+		$apps[] = $row;
 	}
 
 	return new WP_REST_Response(

@@ -42,12 +42,13 @@ export default async function AdminApplicationsPage({
   if (!session || session.role !== "admin") notFound();
 
   const sp = await searchParams;
-  const status = pick(sp.status) || "under_review";
+  const status = pick(sp.status) || "all";
+  const q = (pick(sp.q) || "").trim();
 
   let apps: Awaited<ReturnType<typeof listWrapstarApplications>> = [];
   let error: string | null = null;
   try {
-    apps = await listWrapstarApplications(status === "all" ? undefined : status);
+    apps = await listWrapstarApplications(status === "all" ? undefined : status, q || undefined);
   } catch (e) {
     error = e instanceof Error ? e.message : String(e);
   }
@@ -56,15 +57,43 @@ export default async function AdminApplicationsPage({
     <div className="mx-auto max-w-6xl">
       <h1 className="text-2xl font-semibold text-slate-900">Applications</h1>
       <p className="mt-1 text-sm text-slate-600">
-        Review WrapStar applications from apply.wrrapd.com. Approve here to email login credentials for
-        pros.wrrapd.com onboarding — not WordPress Admin.
+        Hire pipeline from apply.wrrapd.com (not the WrapStars ops roster). Approve here to email login
+        credentials for pros.wrrapd.com onboarding.
       </p>
+
+      <form className="mt-4 flex flex-wrap items-end gap-2" method="get">
+        <input type="hidden" name="status" value={status} />
+        <label className="block text-sm">
+          Search name / email / phone
+          <input
+            name="q"
+            defaultValue={q}
+            placeholder="e.g. pphill86518@gmail.com"
+            className="mt-1 block w-72 max-w-full rounded border px-3 py-2"
+          />
+        </label>
+        <button type="submit" className="rounded bg-slate-900 px-3 py-2 text-sm text-white">
+          Search
+        </button>
+        {q ? (
+          <Link
+            href={`/admin/applications?status=${status}`}
+            className="rounded border border-slate-300 bg-white px-3 py-2 text-sm"
+          >
+            Clear
+          </Link>
+        ) : null}
+      </form>
 
       <div className="mt-4 flex flex-wrap gap-2">
         {FILTERS.map((f) => (
           <Link
             key={f.id}
-            href={`/admin/applications?status=${f.id}`}
+            href={
+              q
+                ? `/admin/applications?status=${f.id}&q=${encodeURIComponent(q)}`
+                : `/admin/applications?status=${f.id}`
+            }
             className={
               status === f.id
                 ? "rounded-full bg-slate-900 px-3 py-1.5 text-sm text-white"
@@ -76,27 +105,35 @@ export default async function AdminApplicationsPage({
         ))}
       </div>
 
+      {!error ? (
+        <p className="mt-3 text-sm text-slate-600">
+          Showing <strong>{apps.length}</strong> application{apps.length === 1 ? "" : "s"}
+          {status !== "all" ? ` · filter: ${status}` : ""}
+          {q ? ` · search: “${q}”` : ""}
+        </p>
+      ) : null}
+
       {error ? (
         <div className="mt-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-900">
           <p className="font-semibold">Could not load applications from WordPress</p>
           <p className="mt-1">{error}</p>
           <p className="mt-2 text-xs">
-            Set <code className="rounded bg-red-100 px-1">WRRAPD_WRAPSTARS_OPS_API_KEY</code> on Cloud
-            Run and the same key as{" "}
-            <code className="rounded bg-red-100 px-1">WRRAPD_WRAPSTARS_OPS_API_KEY</code> in apply/pros{" "}
-            <code className="rounded bg-red-100 px-1">wp-config.php</code>. Upload{" "}
-            <code className="rounded bg-red-100 px-1">wrrapd-wrapstars-ops-api.php</code> to SiteGround
-            mu-plugins. Base URL:{" "}
-            <code className="rounded bg-red-100 px-1">WRRAPD_WRAPSTARS_WP_BASE_URL</code> (default
-            https://apply.wrrapd.com).
+            Cloud Run should use the VM bridge:{" "}
+            <code className="rounded bg-red-100 px-1">
+              WRRAPD_WRAPSTARS_WP_BASE_URL=https://api.wrrapd.com/api/wrapstars-wp-bridge
+            </code>{" "}
+            plus the same{" "}
+            <code className="rounded bg-red-100 px-1">WRRAPD_WRAPSTARS_OPS_API_KEY</code> as apply/pros{" "}
+            <code className="rounded bg-red-100 px-1">wp-config.php</code>. Restart{" "}
+            <code className="rounded bg-red-100 px-1">wrrapd-server</code> after bridge deploys.
           </p>
         </div>
       ) : (
-        <div className="mt-6 overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div className="mt-4 overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
           <table className="min-w-full text-left text-sm">
             <thead className="bg-slate-50 text-xs uppercase text-slate-500">
               <tr>
-                <th className="px-3 py-2">Name</th>
+                <th className="px-3 py-2">Name / email</th>
                 <th className="px-3 py-2">Location</th>
                 <th className="px-3 py-2">Deliver?</th>
                 <th className="px-3 py-2">Fit</th>
@@ -108,7 +145,8 @@ export default async function AdminApplicationsPage({
               {apps.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-3 py-8 text-center text-slate-500">
-                    No applications in this filter.
+                    No applications in this view. Try <strong>All</strong>, clear search, or confirm
+                    you are on Applications (hire pipeline) — not WrapStars (live ops roster).
                   </td>
                 </tr>
               ) : (
@@ -122,6 +160,7 @@ export default async function AdminApplicationsPage({
                         {a.fullName || a.email}
                       </Link>
                       <div className="text-xs text-slate-500">{a.email}</div>
+                      <div className="text-xs text-slate-400">#{a.id}</div>
                     </td>
                     <td className="px-3 py-3">
                       {a.city}, {a.state} {a.postalCode}

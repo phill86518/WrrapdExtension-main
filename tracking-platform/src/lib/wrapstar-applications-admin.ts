@@ -60,11 +60,15 @@ export type WrapstarApplication = {
   createdAt: string;
 };
 
+/**
+ * WordPress ops base. Prefer the api.wrrapd.com bridge (VM) — SiteGround often blocks
+ * direct Cloud Run → apply.wrrapd.com calls, which made Applications look empty.
+ */
 function wpBase(): string {
   return (
     process.env.WRRAPD_WRAPSTARS_WP_BASE_URL ||
     process.env.WRRAPD_WRAPSTARS_APPLY_URL ||
-    "https://apply.wrrapd.com"
+    "https://api.wrrapd.com/api/wrapstars-wp-bridge"
   ).replace(/\/$/, "");
 }
 
@@ -101,15 +105,32 @@ async function parseJson(r: Response): Promise<Record<string, unknown>> {
 
 export async function listWrapstarApplications(
   status?: string,
+  search?: string,
 ): Promise<WrapstarApplication[]> {
-  const q = status && status !== "all" ? `?status=${encodeURIComponent(status)}` : "";
-  const r = await fetch(`${wpBase()}/wp-json/wrrapd/v1/applications${q}`, {
+  const params = new URLSearchParams();
+  if (status && status !== "all") params.set("status", status);
+  if (search && search.trim()) params.set("q", search.trim());
+  const qs = params.toString();
+  const r = await fetch(`${wpBase()}/wp-json/wrrapd/v1/applications${qs ? `?${qs}` : ""}`, {
     headers: opsHeaders(),
     cache: "no-store",
   });
   const body = await parseJson(r);
-  const apps = body.applications;
-  return Array.isArray(apps) ? (apps as WrapstarApplication[]) : [];
+  let apps = Array.isArray(body.applications)
+    ? (body.applications as WrapstarApplication[])
+    : [];
+  // Client-side filter too (works even before SiteGround ops-api search is updated).
+  if (search && search.trim()) {
+    const needle = search.trim().toLowerCase();
+    apps = apps.filter((a) => {
+      const hay = [a.fullName, a.email, a.phoneMobile, a.city, String(a.id)]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return hay.includes(needle);
+    });
+  }
+  return apps;
 }
 
 export async function getWrapstarApplication(id: number): Promise<WrapstarApplication> {
