@@ -78,6 +78,14 @@ function wrrapd_wrapstars_run_admin_action( $app_id, $action, $opts = array() ) 
 	}
 
 	if ( $action === 'interview' ) {
+		$current_status = (string) wrrapd_wrapstars_get_meta( $app_id, 'status' );
+		if ( $current_status !== 'under_review' ) {
+			return array(
+				'ok'    => false,
+				'error' => 'Interview can only be requested from under_review (current: “' . $current_status . '”).',
+				'status'=> $current_status,
+			);
+		}
 		wrrapd_wrapstars_set_meta( $app_id, 'status', 'interview' );
 		wrrapd_wrapstars_set_meta( $app_id, 'interview_at', gmdate( 'c' ) );
 		if ( $notes !== null ) {
@@ -93,6 +101,14 @@ function wrrapd_wrapstars_run_admin_action( $app_id, $action, $opts = array() ) 
 	}
 
 	if ( $action === 'approve' ) {
+		$current_status = (string) wrrapd_wrapstars_get_meta( $app_id, 'status' );
+		if ( ! in_array( $current_status, array( 'under_review', 'interview' ), true ) ) {
+			return array(
+				'ok'    => false,
+				'error' => 'Already approved or closed — approve cannot run again from status “' . $current_status . '”.',
+				'status'=> $current_status,
+			);
+		}
 		wrrapd_wrapstars_set_meta( $app_id, 'status', 'approved' );
 		wrrapd_wrapstars_set_meta( $app_id, 'approved_at', gmdate( 'c' ) );
 		wrrapd_wrapstars_set_meta( $app_id, 'onboarding_step', 'welcome' );
@@ -127,6 +143,14 @@ function wrrapd_wrapstars_run_admin_action( $app_id, $action, $opts = array() ) 
 	}
 
 	if ( $action === 'activate' ) {
+		$current_status = (string) wrrapd_wrapstars_get_meta( $app_id, 'status' );
+		if ( $current_status !== 'approved' ) {
+			return array(
+				'ok'    => false,
+				'error' => 'Activate requires approved status (current: “' . $current_status . '”).',
+				'status'=> $current_status,
+			);
+		}
 		wrrapd_wrapstars_set_meta( $app_id, 'status', 'active' );
 		wrrapd_wrapstars_set_meta( $app_id, 'activated_at', gmdate( 'c' ) );
 		wrrapd_wrapstars_mark_step_complete( $app_id, 'activation' );

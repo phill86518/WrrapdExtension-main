@@ -24,3 +24,22 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Admin / interactive affordance — hand cursor on real controls */
+button:not(:disabled),
+[type="submit"]:not(:disabled),
+[type="button"]:not(:disabled),
+a[href],
+summary,
+label[for],
+select:not(:disabled),
+input[type="checkbox"]:not(:disabled),
+input[type="radio"]:not(:disabled) {
+  cursor: pointer;
+}
+
+button:disabled,
+[type="submit"]:disabled,
+[type="button"]:disabled {
+  cursor: not-allowed;
+}

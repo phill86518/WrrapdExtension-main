@@ -8,6 +8,7 @@ import {
   type ApplicationAction,
 } from "@/lib/wrapstar-applications-admin";
 import { syncActivatedApplicationToOpsRoster } from "@/lib/sync-activated-wrapstar";
+import { ApplicationReviewActions } from "@/components/application-review-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +21,22 @@ async function actionForm(formData: FormData) {
   const adminNotes = String(formData.get("adminNotes") || "");
   const rejectReason = String(formData.get("rejectReason") || "");
   if (!id || !action) return;
+
+  // Block one-shot actions that were already completed (double-click / stale UI).
+  const current = await getWrapstarApplication(id);
+  const st = current.status;
+  if (action === "approve" && !["under_review", "interview"].includes(st)) {
+    redirect(`/admin/applications/${id}?ok=already_approved`);
+  }
+  if (action === "interview" && st !== "under_review") {
+    redirect(`/admin/applications/${id}?ok=already_interview`);
+  }
+  if (action === "reject" && !["under_review", "interview"].includes(st)) {
+    redirect(`/admin/applications/${id}?ok=already_rejected`);
+  }
+  if (action === "activate" && st !== "approved") {
+    redirect(`/admin/applications/${id}?ok=already_active`);
+  }
 
   const result = await runWrapstarApplicationAction(id, action, {
     adminNotes,
@@ -91,6 +108,14 @@ export default async function AdminApplicationDetailPage({
           {okFlash === "resend_invite"
             ? " — welcome email resent with a new temporary password."
             : null}
+          {okFlash === "already_approved"
+            ? " — already approved; approve cannot run twice."
+            : null}
+          {okFlash === "already_interview"
+            ? " — interview already requested."
+            : null}
+          {okFlash === "already_rejected" ? " — application already closed." : null}
+          {okFlash === "already_active" ? " — already activated." : null}
         </p>
       ) : null}
 
@@ -196,157 +221,14 @@ export default async function AdminApplicationDetailPage({
         </section>
       ) : null}
 
-      <section className="mt-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-        <h2 className="font-semibold">Review actions</h2>
-        <form action={actionForm} className="mt-3 space-y-3">
-          <input type="hidden" name="appId" value={app.id} />
-          <label className="block text-sm">
-            Reviewer notes
-            <textarea
-              name="adminNotes"
-              rows={3}
-              defaultValue={app.adminNotes || ""}
-              className="mt-1 w-full rounded border px-3 py-2"
-            />
-          </label>
-          {(app.status === "under_review" || app.status === "interview") && (
-            <label className="block text-sm">
-              Reject reason (required for Reject)
-              <textarea
-                name="rejectReason"
-                rows={2}
-                defaultValue={app.rejectReason || ""}
-                className="mt-1 w-full rounded border px-3 py-2"
-                placeholder="Shown in the rejection email"
-              />
-            </label>
-          )}
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="submit"
-              name="action"
-              value="save_notes"
-              className="rounded border border-slate-300 bg-white px-3 py-2 text-sm"
-            >
-              Save notes
-            </button>
-            {app.status === "under_review" ? (
-              <>
-                <button
-                  type="submit"
-                  name="action"
-                  value="interview"
-                  className="rounded bg-sky-700 px-3 py-2 text-sm text-white"
-                >
-                  Request Zoom interview
-                </button>
-                <button
-                  type="submit"
-                  name="action"
-                  value="approve"
-                  className="rounded bg-indigo-700 px-3 py-2 text-sm font-semibold text-white"
-                >
-                  Approve for onboarding
-                </button>
-                <button
-                  type="submit"
-                  name="action"
-                  value="reject"
-                  className="rounded bg-rose-700 px-3 py-2 text-sm text-white"
-                >
-                  Reject
-                </button>
-              </>
-            ) : null}
-            {app.status === "interview" ? (
-              <>
-                <button
-                  type="submit"
-                  name="action"
-                  value="approve"
-                  className="rounded bg-indigo-700 px-3 py-2 text-sm font-semibold text-white"
-                >
-                  Passed interview — approve
-                </button>
-                <button
-                  type="submit"
-                  name="action"
-                  value="reject"
-                  className="rounded bg-rose-700 px-3 py-2 text-sm text-white"
-                >
-                  Reject
-                </button>
-              </>
-            ) : null}
-            {app.status === "declined" ? (
-              <button
-                type="submit"
-                name="action"
-                value="reinvite"
-                className="rounded bg-indigo-700 px-3 py-2 text-sm font-semibold text-white"
-              >
-                Re-open invitation &amp; resend welcome email
-              </button>
-            ) : null}
-            {app.status === "approved" ? (
-              <>
-                <button
-                  type="submit"
-                  name="action"
-                  value="activate"
-                  className="rounded bg-emerald-700 px-3 py-2 text-sm font-semibold text-white"
-                >
-                  Activate WrapStar (live)
-                </button>
-                <button
-                  type="submit"
-                  name="action"
-                  value="resend_invite"
-                  className="rounded bg-sky-700 px-3 py-2 text-sm text-white"
-                >
-                  Resend welcome email
-                </button>
-                <button
-                  type="submit"
-                  name="action"
-                  value="mark_declined"
-                  className="rounded bg-orange-700 px-3 py-2 text-sm text-white"
-                >
-                  Mark as declined offer
-                </button>
-              </>
-            ) : null}
-            {app.status === "active" && !app.suspended ? (
-              <button
-                type="submit"
-                name="action"
-                value="suspend"
-                className="rounded bg-amber-700 px-3 py-2 text-sm text-white"
-              >
-                Suspend
-              </button>
-            ) : null}
-            {app.suspended ? (
-              <button
-                type="submit"
-                name="action"
-                value="unsuspend"
-                className="rounded bg-slate-800 px-3 py-2 text-sm text-white"
-              >
-                Unsuspend
-              </button>
-            ) : null}
-          </div>
-        </form>
-        <p className="mt-3 text-xs text-slate-500">
-          Approve / re-invite emails username (email), a fresh temporary password, login link, and a
-          Decline link. First login forces a password change. Declined offers live under{" "}
-          <Link className="underline" href="/admin/applications?status=declined">
-            Declined offer
-          </Link>
-          ; re-open from that detail page when you want them back in onboarding.
-        </p>
-      </section>
+      <ApplicationReviewActions
+        appId={app.id}
+        status={app.status}
+        suspended={app.suspended}
+        adminNotes={app.adminNotes || ""}
+        rejectReason={app.rejectReason || ""}
+        action={actionForm}
+      />
     </div>
   );
 }
