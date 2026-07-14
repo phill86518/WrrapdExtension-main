@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_WRAPSTARS_BUILD', '2026-07-14-welcome-email-v2' );
+define( 'WRRAPD_WRAPSTARS_BUILD', '2026-07-14-onboarding-welcome-v5' );
 
 $wrrapd_boldsign = dirname( __FILE__ ) . '/wrrapd-boldsign.php';
 if ( is_readable( $wrrapd_boldsign ) ) {
@@ -148,6 +148,7 @@ add_action( 'init', 'wrrapd_wrapstars_block_wp_login_on_portal', 1 );
 add_action( 'admin_init', 'wrrapd_wrapstars_block_wrapstar_wp_admin' );
 add_filter( 'login_redirect', 'wrrapd_wrapstars_login_redirect', 10, 3 );
 add_filter( 'body_class', 'wrrapd_wrapstars_body_class' );
+add_filter( 'show_admin_bar', 'wrrapd_wrapstars_hide_admin_bar' );
 
 add_shortcode( 'wrrapd_wrapstar_landing', 'wrrapd_wrapstars_shortcode_landing' );
 add_shortcode( 'wrrapd_wrapstar_apply', 'wrrapd_wrapstars_shortcode_apply' );
@@ -172,13 +173,25 @@ function wrrapd_wrapstars_pros_url( $path = '/' ) {
 }
 
 /** Front-end WrapStar login (approved only — not wp-login.php). */
-function wrrapd_wrapstars_portal_login_url( $redirect = '' ) {
+function wrrapd_wrapstars_portal_login_url( $redirect = '', $greet = '' ) {
 	$url = wrrapd_wrapstars_apply_url( '/wrapstar-login/' );
 	if ( $redirect !== '' ) {
 		// add_query_arg encodes — do not rawurlencode twice.
 		$url = add_query_arg( 'redirect_to', $redirect, $url );
 	}
+	$greet = trim( (string) $greet );
+	if ( $greet !== '' && strcasecmp( $greet, 'there' ) !== 0 ) {
+		$url = add_query_arg( 'greet', $greet, $url );
+	}
 	return $url;
+}
+
+/** Never show the WordPress admin bar on apply/pros portals. */
+function wrrapd_wrapstars_hide_admin_bar( $show ) {
+	if ( wrrapd_wrapstars_is_portal_host() ) {
+		return false;
+	}
+	return $show;
 }
 
 /** Preferred greeting: nickname, else first name, else "there". */
@@ -879,7 +892,12 @@ function wrrapd_wrapstars_enqueue_assets() {
 	if ( is_readable( $css ) ) {
 		wp_enqueue_style( 'wrrapd-wrapstars', content_url( 'mu-plugins/wrrapd-wrapstars.css' ), array(), WRRAPD_WRAPSTARS_BUILD );
 	}
-	wp_enqueue_style( 'wrrapd-wrapstars-fonts', 'https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,560&family=Roboto:wght@400;700&family=Source+Sans+3:wght@400;600;700;800&display=swap', array(), null );
+	wp_enqueue_style(
+		'wrrapd-wrapstars-fonts',
+		'https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,560;9..144,600;9..144,700&display=swap',
+		array(),
+		null
+	);
 
 	if ( wrrapd_wrapstars_is_portal_host() ) {
 		$uri = isset( $_SERVER['REQUEST_URI'] ) ? (string) $_SERVER['REQUEST_URI'] : '';
@@ -1551,7 +1569,10 @@ function wrrapd_wrapstars_decline_offer_url( $app_id, $token ) {
 function wrrapd_wrapstars_send_approval_credentials_email( $app_id, $password, $context = 'approve' ) {
 	$email   = wrrapd_wrapstars_get_meta( $app_id, 'email' );
 	$greet   = wrrapd_wrapstars_greeting_name( $app_id );
-	$login   = wrrapd_wrapstars_portal_login_url( wrrapd_wrapstars_pros_url( '/onboarding/' ) );
+	$login   = wrrapd_wrapstars_portal_login_url(
+		wrrapd_wrapstars_pros_url( '/onboarding/' ),
+		wrrapd_wrapstars_greeting_name( $app_id )
+	);
 	$token   = (string) wrrapd_wrapstars_get_meta( $app_id, 'decline_token' );
 	$decline = $token !== '' ? wrrapd_wrapstars_decline_offer_url( $app_id, $token ) : wrrapd_wrapstars_apply_url( '/decline-offer/' );
 	$context = in_array( $context, array( 'approve', 'reinvite', 'resend' ), true ) ? $context : 'approve';
@@ -1839,30 +1860,43 @@ function wrrapd_wrapstars_process_change_password() {
 
 function wrrapd_wrapstars_render_change_password_gate() {
 	$error = $GLOBALS['wrrapd_ws_pw_error'] ?? '';
+	$user  = wp_get_current_user();
+	$greet = 'WrapStar';
+	if ( $user && $user->ID ) {
+		$app = wrrapd_wrapstars_get_application_by_user( (int) $user->ID );
+		if ( $app ) {
+			$greet = wrrapd_wrapstars_greeting_name( $app->ID );
+			if ( $greet === 'there' ) {
+				$greet = 'WrapStar';
+			}
+		}
+	}
 	ob_start();
 	?>
 	<div class="wrrapd-wrapstars wrrapd-wrapstars-onboarding-shell">
 		<div class="wrrapd-wrapstars-ob-stage" style="max-width:28rem;margin:2rem auto;padding:0 1rem;">
 			<div class="wrrapd-wrapstars-card wrrapd-wrapstars-card--hero">
-				<p class="wrrapd-wrapstars-ob-stage__kicker">First login</p>
-				<h1 class="wrrapd-wrapstars-ob-stage__title">Choose your password</h1>
-				<p class="wrrapd-wrapstars-ob-lead">For security, you must replace the temporary password from your approval email before onboarding starts.</p>
+				<p class="wrrapd-wrapstars-ob-stage__kicker">A quick first step</p>
+				<h1 class="wrrapd-wrapstars-ob-stage__title">Choose your password, <?php echo esc_html( $greet ); ?></h1>
+				<p class="wrrapd-wrapstars-ob-lead">Please replace the temporary password from your invitation with one you will remember. After that, onboarding begins.</p>
 				<?php if ( $error ) : ?>
 					<div class="wrrapd-wrapstars-alert wrrapd-wrapstars-alert--err"><?php echo esc_html( $error ); ?></div>
 				<?php endif; ?>
 				<form method="post" class="wrrapd-wrapstars-form wrrapd-wrapstars-ob-actions">
 					<?php wp_nonce_field( 'wrrapd_ws_change_password', 'wrrapd_ws_nonce' ); ?>
 					<input type="hidden" name="wrrapd_ws_action" value="change_password" />
-					<label>Temporary password (from email)
+					<label>Current password
 						<input type="password" name="current_password" required autocomplete="current-password" />
 					</label>
-					<label>New password (min. 10 characters)
+					<label>New password (at least 10 characters)
 						<input type="password" name="new_password" required minlength="10" autocomplete="new-password" />
 					</label>
 					<label>Confirm new password
 						<input type="password" name="confirm_password" required minlength="10" autocomplete="new-password" />
 					</label>
-					<button type="submit" class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--lg">Save password &amp; continue</button>
+					<div class="wrrapd-wrapstars-login__actions">
+						<button type="submit" class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--lg">Save &amp; continue</button>
+					</div>
 				</form>
 			</div>
 		</div>
@@ -1935,6 +1969,11 @@ function wrrapd_wrapstars_output_theme_cleanup_css() {
 		return;
 	}
 	echo '<style id="wrrapd-wrapstars-theme-cleanup">';
+	/* Never reveal WordPress chrome on apply/pros portals */
+	echo 'html.wrrapd-wrapstars-portal,html.wrrapd-wrapstars-portal.admin-bar,body.wrrapd-wrapstars-portal.admin-bar{margin-top:0!important;padding-top:0!important;}';
+	echo '#wpadminbar,body.wrrapd-wrapstars-portal #wpadminbar{display:none!important;visibility:hidden!important;height:0!important;}';
+	echo 'body.wrrapd-wrapstars-portal .edit-link,body.wrrapd-wrapstars-portal .post-edit-link,body.wrrapd-wrapstars-portal .wp-block-post-edit-link{display:none!important;}';
+	echo 'body.wrrapd-wrapstars-portal,body.wrrapd-wrapstars-portal button,body.wrrapd-wrapstars-portal input,body.wrrapd-wrapstars-portal select,body.wrrapd-wrapstars-portal textarea,body.wrrapd-wrapstars-portal label,body.wrrapd-wrapstars-portal a,body.wrrapd-wrapstars-portal p,body.wrrapd-wrapstars-portal li,body.wrrapd-wrapstars-portal h1,body.wrrapd-wrapstars-portal h2,body.wrrapd-wrapstars-portal h3{font-family:Fraunces,Georgia,serif!important;}';
 	echo 'body.wrrapd-wrapstars-portal header.wp-block-template-part,body.wrrapd-wrapstars-portal footer.wp-block-template-part{display:none!important;height:0!important;overflow:hidden!important;margin:0!important;padding:0!important;}';
 	echo 'body.wrrapd-wrapstars-portal .wp-block-site-title,body.wrrapd-wrapstars-portal nav.wp-block-navigation,body.wrrapd-wrapstars-portal .wp-block-post-title,body.wrrapd-wrapstars-portal .entry-header,body.wrrapd-wrapstars-portal h1.wp-block-post-title{display:none!important;height:0!important;margin:0!important;padding:0!important;}';
 	echo 'body.wrrapd-wrapstars-portal,body.wrrapd-wrapstars-portal .wp-site-blocks,body.wrrapd-wrapstars-portal article,body.wrrapd-wrapstars-portal .type-page{padding:0!important;margin:0!important;}';
@@ -2118,30 +2157,48 @@ function wrrapd_wrapstars_shortcode_status() {
 function wrrapd_wrapstars_shortcode_login() {
 	$redirect = isset( $_GET['redirect_to'] ) ? esc_url_raw( wp_unslash( $_GET['redirect_to'] ) ) : '';
 	$error    = $GLOBALS['wrrapd_ws_login_error'] ?? '';
+	$greet    = isset( $_GET['greet'] ) ? sanitize_text_field( wp_unslash( $_GET['greet'] ) ) : '';
+	if ( $greet === '' && ! empty( $_POST['greet'] ) ) {
+		$greet = sanitize_text_field( wp_unslash( $_POST['greet'] ) );
+	}
+	if ( $greet === '' && ! empty( $_POST['email'] ) ) {
+		$app = wrrapd_wrapstars_get_application_by_email( sanitize_email( wp_unslash( $_POST['email'] ) ) );
+		if ( $app ) {
+			$greet = wrrapd_wrapstars_greeting_name( $app->ID );
+		}
+	}
+	$welcome = $greet !== '' && strcasecmp( $greet, 'there' ) !== 0
+		? 'Welcome to your onboarding, ' . $greet . '!'
+		: 'Welcome to your onboarding!';
 
 	ob_start();
 	?>
-	<div class="wrrapd-wrapstars wrrapd-wrapstars-dasher">
-		<section class="wrrapd-wrapstars-dasher-apply-head">
-			<p class="wrrapd-wrapstars-dasher-kicker">Approved WrapStars only</p>
-			<h1>Log in to onboarding</h1>
-			<p class="wrrapd-wrapstars-dasher-lead">Use the email and temporary password from your approval email. After you log in, you'll set a new password before onboarding begins. This page is not for applicants still under review.</p>
+	<div class="wrrapd-wrapstars wrrapd-wrapstars-login">
+		<section class="wrrapd-wrapstars-login__head">
+			<p class="wrrapd-wrapstars-login__eyebrow">WrapStar onboarding</p>
+			<h1><?php echo esc_html( $welcome ); ?></h1>
+			<p class="wrrapd-wrapstars-login__lead">We are honored you are here. Please sign in to continue — you will choose your own password before onboarding begins.</p>
 		</section>
 		<?php if ( $error ) : ?>
 			<div class="wrrapd-wrapstars-alert wrrapd-wrapstars-alert--err"><?php echo esc_html( $error ); ?></div>
 		<?php endif; ?>
-		<form class="wrrapd-wrapstars-form wrrapd-wrapstars-card" method="post" action="">
+		<form class="wrrapd-wrapstars-form wrrapd-wrapstars-card wrrapd-wrapstars-login__form" method="post" action="">
 			<?php wp_nonce_field( 'wrrapd_ws_login', 'wrrapd_ws_nonce' ); ?>
 			<input type="hidden" name="wrrapd_ws_action" value="portal_login" />
 			<?php if ( $redirect !== '' ) : ?>
 				<input type="hidden" name="redirect_to" value="<?php echo esc_attr( $redirect ); ?>" />
 			<?php endif; ?>
+			<?php if ( $greet !== '' ) : ?>
+				<input type="hidden" name="greet" value="<?php echo esc_attr( $greet ); ?>" />
+			<?php endif; ?>
 			<label>Email address <input type="email" name="email" required autocomplete="username" /></label>
 			<label>Password <input type="password" name="password" required autocomplete="current-password" /></label>
-			<label class="ws-check"><input type="checkbox" name="remember" value="1" /> <span>Keep me logged in</span></label>
-			<button type="submit" class="wrrapd-wrapstars-btn">Log in</button>
+			<label class="ws-check"><input type="checkbox" name="remember" value="1" /> <span>Keep me signed in</span></label>
+			<div class="wrrapd-wrapstars-login__actions">
+				<button type="submit" class="wrrapd-wrapstars-btn">Log in</button>
+			</div>
 		</form>
-		<p class="wrrapd-wrapstars-form-foot">Not approved yet? <a href="<?php echo esc_url( wrrapd_wrapstars_apply_url( '/apply/' ) ); ?>">Apply to become a WrapStar</a></p>
+		<p class="wrrapd-wrapstars-form-foot">Not yet approved? <a href="<?php echo esc_url( wrrapd_wrapstars_apply_url( '/apply/' ) ); ?>">Apply to become a WrapStar</a></p>
 	</div>
 	<?php
 	return ob_get_clean();
@@ -2196,8 +2253,10 @@ function wrrapd_wrapstars_shortcode_onboarding( $atts ) {
 	}
 	$trackable   = max( 1, $step_total - 1 );
 	$progress_pct = (int) min( 100, round( ( $done_count / $trackable ) * 100 ) );
-	$first_name  = trim( (string) wrrapd_wrapstars_get_meta( $app->ID, 'first_name' ) );
-	$display     = $first_name !== '' ? $first_name : 'WrapStar';
+	$display       = wrrapd_wrapstars_greeting_name( $app->ID );
+	if ( $display === 'there' ) {
+		$display = 'WrapStar';
+	}
 	$current_label = $steps[ $step ] ?? 'Onboarding';
 
 	ob_start();
@@ -2335,48 +2394,20 @@ function wrrapd_wrapstars_detect_onboarding_step_from_uri() {
 }
 
 function wrrapd_wrapstars_render_step_welcome( $app_id ) {
-	$steps = wrrapd_wrapstars_onboarding_steps();
-	$n     = 0;
+	$greet = wrrapd_wrapstars_greeting_name( $app_id );
 	?>
-	<div class="wrrapd-wrapstars-card wrrapd-wrapstars-card--hero">
-		<p class="wrrapd-wrapstars-ob-lead">You're joining the WrapStar network of independent gift-wrappers. Work through each step at your pace — the left rail always shows where you are and what is next.</p>
-		<div class="wrrapd-wrapstars-ob-callout">
-			<strong>Video proof on every order</strong>
-			<span>Unboxing → wrapping → outbound carrier handoff. Missing video can pause payouts.</span>
-		</div>
-		<ul class="wrrapd-wrapstars-welcome-grid">
-			<?php foreach ( $steps as $key => $label ) : ?>
-				<?php
-				if ( $key === 'welcome' ) {
-					continue;
-				}
-				$n++;
-				$done = wrrapd_wrapstars_step_complete( $app_id, $key );
-				$kind = 'live';
-				if ( in_array( $key, array( 'policies', 'background', 'identity', 'tax_1099', 'bank_payout' ), true ) ) {
-					$kind = 'placeholder';
-				} elseif ( in_array( $key, array( 'agreement', 'w9' ), true ) ) {
-					$kind = 'sign';
-				}
-				?>
-				<li class="wrrapd-wrapstars-welcome-tile <?php echo $done ? 'is-done' : ''; ?>">
-					<span class="wrrapd-wrapstars-welcome-tile__num" aria-hidden="true"><?php echo $done ? '✓' : esc_html( (string) $n ); ?></span>
-					<span class="wrrapd-wrapstars-welcome-tile__label"><?php echo esc_html( $label ); ?></span>
-					<?php if ( $kind === 'placeholder' ) : ?>
-						<span class="wrrapd-wrapstars-pill wrrapd-wrapstars-pill--placeholder">Placeholder</span>
-					<?php elseif ( $kind === 'sign' ) : ?>
-						<span class="wrrapd-wrapstars-pill">E-sign</span>
-					<?php else : ?>
-						<span class="wrrapd-wrapstars-pill wrrapd-wrapstars-pill--live">Live</span>
-					<?php endif; ?>
-				</li>
-			<?php endforeach; ?>
-		</ul>
-		<form method="post" class="wrrapd-wrapstars-ob-actions">
+	<div class="wrrapd-wrapstars-card wrrapd-wrapstars-card--hero wrrapd-wrapstars-welcome">
+		<p class="wrrapd-wrapstars-welcome__hello">Dear <?php echo esc_html( $greet === 'there' ? 'WrapStar' : $greet ); ?>,</p>
+		<p class="wrrapd-wrapstars-ob-lead">Welcome to Wrrapd. We are delighted you have accepted the invitation to join our family of WrapStars, and we look forward to working with you.</p>
+		<p class="wrrapd-wrapstars-ob-lead">This brief onboarding confirms the agreements, credentials, and practical details we need before you may receive orders. Please complete it promptly so we can activate your account without delay — customers are counting on us, and timely onboarding helps us place you in the network as soon as possible.</p>
+		<p class="wrrapd-wrapstars-ob-lead">Along the way you will review and e-sign contracts and tax documents, provide insurance and mailing details, and complete a short orientation. Where a final document or vendor connection is still being prepared, you will see a clear placeholder; those screens will be replaced as soon as the materials are ready, without changing the overall sequence.</p>
+		<p class="wrrapd-wrapstars-ob-lead">The steps on the left guide you from start to finish. When you are ready, please continue below.</p>
+		<p class="wrrapd-wrapstars-welcome__close">With warm regards,<br /><strong>Team Wrrapd</strong></p>
+		<form method="post" class="wrrapd-wrapstars-ob-actions wrrapd-wrapstars-login__actions">
 			<?php wp_nonce_field( 'wrrapd_ws_onboarding', 'wrrapd_ws_nonce' ); ?>
 			<input type="hidden" name="wrrapd_ws_action" value="onboarding_step" />
 			<input type="hidden" name="step" value="welcome" />
-			<button type="submit" class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--lg">Begin onboarding</button>
+			<button type="submit" class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--lg">Continue</button>
 		</form>
 	</div>
 	<?php

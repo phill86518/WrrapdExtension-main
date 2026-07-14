@@ -38,7 +38,7 @@
 .wrrapd-wrapstars-btn,
 .wrrapd-wrapstars .wrrapd-wrapstars-cinema-hero__kicker,
 .wrrapd-wrapstars .wrrapd-wrapstars-dasher-kicker {
-	font-family: "Source Sans 3", Helvetica, Arial, sans-serif;
+	font-family: Fraunces, Georgia, serif;
 }
 
 .wrrapd-wrapstars h1,
@@ -447,7 +447,7 @@
 
 .wrrapd-wrapstars-onboarding-nav__title {
 	margin: 0.7rem 0 0.15rem;
-	font-family: "Source Sans 3", Helvetica, Arial, sans-serif;
+	font-family: Fraunces, Georgia, serif;
 	font-size: 0.68rem;
 	font-weight: 800;
 	letter-spacing: 0.16em;
@@ -471,7 +471,7 @@
 .wrrapd-wrapstars-ob-progress__meta {
 	display: flex;
 	justify-content: space-between;
-	font-family: "Source Sans 3", Helvetica, Arial, sans-serif;
+	font-family: Fraunces, Georgia, serif;
 	font-size: 0.72rem;
 	font-weight: 700;
 	letter-spacing: 0.06em;
@@ -497,7 +497,7 @@
 
 .wrrapd-wrapstars-ob-progress__hint {
 	margin: 0.45rem 0 0;
-	font-family: "Source Sans 3", Helvetica, Arial, sans-serif;
+	font-family: Fraunces, Georgia, serif;
 	font-size: 0.78rem;
 	color: #cbd5e1;
 }
@@ -534,7 +534,7 @@
 	border-radius: 0.75rem;
 	text-decoration: none;
 	color: #cbd5e1;
-	font-family: "Source Sans 3", Helvetica, Arial, sans-serif;
+	font-family: Fraunces, Georgia, serif;
 	font-size: 0.86rem;
 	font-weight: 500;
 	line-height: 1.3;
@@ -598,7 +598,7 @@
 	gap: 1rem;
 	padding: 1rem 1.15rem 1.25rem;
 	border-top: 1px solid rgba(255, 255, 255, 0.1);
-	font-family: "Source Sans 3", Helvetica, Arial, sans-serif;
+	font-family: Fraunces, Georgia, serif;
 	font-size: 0.82rem;
 	font-weight: 600;
 }
@@ -641,7 +641,7 @@
 
 .wrrapd-wrapstars-ob-stage__kicker {
 	margin: 0 0 0.35rem;
-	font-family: "Source Sans 3", Helvetica, Arial, sans-serif;
+	font-family: Fraunces, Georgia, serif;
 	font-size: 0.72rem;
 	font-weight: 800;
 	letter-spacing: 0.14em;
@@ -711,7 +711,7 @@
 
 	.wrrapd-wrapstars-ob-menu-btn,
 	.wrrapd-wrapstars-ob-topbar__logout {
-		font-family: "Source Sans 3", Helvetica, Arial, sans-serif;
+		font-family: Fraunces, Georgia, serif;
 		font-size: 0.82rem;
 		font-weight: 700;
 		color: #fff;
@@ -730,7 +730,7 @@
 
 	.wrrapd-wrapstars-ob-topbar__eyebrow {
 		display: block;
-		font-family: "Source Sans 3", Helvetica, Arial, sans-serif;
+		font-family: Fraunces, Georgia, serif;
 		font-size: 0.62rem;
 		font-weight: 800;
 		letter-spacing: 0.12em;
@@ -854,6 +854,100 @@
 body.wrrapd-wrapstars-portal {
 	background: var(--ws-bg);
 	overflow-x: hidden;
+	font-family: Fraunces, Georgia, serif !important;
+}
+
+/* Hide WordPress chrome — never show admin bar / edit affordances on portals */
+body.wrrapd-wrapstars-portal #wpadminbar,
+html.wrrapd-wrapstars-portal #wpadminbar,
+body.wrrapd-wrapstars-portal .edit-link,
+body.wrrapd-wrapstars-portal .post-edit-link,
+body.wrrapd-wrapstars-portal .wp-block-post-edit-link,
+body.wrrapd-wrapstars-portal .woocommerce-store-notice,
+body.wrrapd-wrapstars-onboarding-host #wpadminbar {
+	display: none !important;
+	visibility: hidden !important;
+	height: 0 !important;
+}
+
+html.wrrapd-wrapstars-portal,
+html.wrrapd-wrapstars-portal body,
+body.wrrapd-wrapstars-portal.admin-bar,
+body.admin-bar.wrrapd-wrapstars-portal {
+	margin-top: 0 !important;
+	padding-top: 0 !important;
+}
+
+html.wrrapd-wrapstars-portal.admin-bar {
+	margin-top: 0 !important;
+}
+
+body.wrrapd-wrapstars-portal,
+body.wrrapd-wrapstars-portal button,
+body.wrrapd-wrapstars-portal input,
+body.wrrapd-wrapstars-portal select,
+body.wrrapd-wrapstars-portal textarea,
+body.wrrapd-wrapstars-portal label,
+body.wrrapd-wrapstars-portal a,
+body.wrrapd-wrapstars-portal p,
+body.wrrapd-wrapstars-portal li,
+body.wrrapd-wrapstars-portal h1,
+body.wrrapd-wrapstars-portal h2,
+body.wrrapd-wrapstars-portal h3,
+body.wrrapd-wrapstars-portal h4,
+body.wrrapd-wrapstars-portal span,
+body.wrrapd-wrapstars-portal .wrrapd-wrapstars,
+body.wrrapd-wrapstars-portal .wrrapd-wrapstars * {
+	font-family: Fraunces, Georgia, serif !important;
+}
+
+/* Login */
+.wrrapd-wrapstars-login {
+	max-width: 32rem;
+	margin: 0 auto;
+	padding: 0.5rem 0 2rem;
+}
+
+.wrrapd-wrapstars-login__eyebrow {
+	margin: 0 0 0.45rem;
+	font-size: 0.72rem;
+	font-weight: 700;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	color: var(--ws-orange-dark);
+}
+
+.wrrapd-wrapstars-login__head h1 {
+	margin: 0 0 0.75rem;
+	font-size: clamp(1.65rem, 3.5vw, 2.15rem);
+	line-height: 1.2;
+	font-weight: 560;
+}
+
+.wrrapd-wrapstars-login__lead {
+	margin: 0 0 1.25rem;
+	color: var(--ws-muted);
+	font-size: 1.05rem;
+	line-height: 1.55;
+}
+
+.wrrapd-wrapstars-login__actions {
+	display: flex;
+	justify-content: flex-end;
+	margin-top: 0.35rem;
+}
+
+.wrrapd-wrapstars-welcome__hello {
+	margin: 0 0 1rem !important;
+	font-size: 1.2rem !important;
+	color: #0f172a !important;
+}
+
+.wrrapd-wrapstars-welcome__close {
+	margin: 1.35rem 0 0.25rem !important;
+	font-size: 1.05rem !important;
+	color: #0f172a !important;
+	line-height: 1.55 !important;
 }
 
 body.wrrapd-wrapstars-portal .wrrapd-wrapstars-site-header {
@@ -926,7 +1020,7 @@ body.wrrapd-wrapstars-portal .wrrapd-wrapstars-portal-util {
 	padding: 0.35rem clamp(0.75rem, 2vw, 1.25rem);
 	background: #14065f;
 	border-top: 1px solid rgba(255, 243, 0, 0.18);
-	font-family: Roboto, "Source Sans 3", Helvetica, Arial, sans-serif;
+	font-family: Fraunces, Georgia, serif;
 	font-size: clamp(0.72rem, 1.8vmin, 0.82rem);
 	font-weight: 700;
 }
@@ -1180,7 +1274,7 @@ body.wrrapd-wrapstars-portal .wrrapd-wrapstars-portal-util span[aria-hidden="tru
 .wrrapd-wrapstars-section-title {
 	margin: 0 0 1.25rem;
 	text-align: center;
-	font-family: "Source Sans 3", Helvetica, Arial, sans-serif;
+	font-family: Fraunces, Georgia, serif;
 	font-size: clamp(1.35rem, 3vw, 1.85rem);
 	font-weight: 800;
 	letter-spacing: 0.06em;
@@ -1216,7 +1310,7 @@ body.wrrapd-wrapstars-portal .wrrapd-wrapstars-portal-util span[aria-hidden="tru
 	border: none;
 	border-radius: 999px;
 	padding: 0.7rem 1.65rem;
-	font-family: "Source Sans 3", Helvetica, Arial, sans-serif;
+	font-family: Fraunces, Georgia, serif;
 	font-size: 0.95rem;
 	font-weight: 700;
 	cursor: pointer;
@@ -1310,7 +1404,7 @@ body.wrrapd-wrapstars-portal .wrrapd-wrapstars-portal-util span[aria-hidden="tru
 	border-radius: 50%;
 	background: var(--ws-orange);
 	color: #fff;
-	font-family: "Source Sans 3", Helvetica, Arial, sans-serif;
+	font-family: Fraunces, Georgia, serif;
 	font-weight: 800;
 	font-size: 1.05rem;
 	margin-bottom: 1rem;
@@ -1318,7 +1412,7 @@ body.wrrapd-wrapstars-portal .wrrapd-wrapstars-portal-util span[aria-hidden="tru
 
 .wrrapd-wrapstars-reqs-dd__item h3 {
 	margin: 0 0 0.65rem;
-	font-family: "Source Sans 3", Helvetica, Arial, sans-serif;
+	font-family: Fraunces, Georgia, serif;
 	font-size: 0.82rem;
 	font-weight: 800;
 	letter-spacing: 0.1em;
@@ -1588,7 +1682,7 @@ body.wrrapd-wrapstars-portal .wp-site-blocks {
 
 .wrrapd-wrapstars-site-footer__address {
 	margin: 0 0 0.5rem;
-	font-family: Roboto, "Source Sans 3", Helvetica, Arial, sans-serif;
+	font-family: Fraunces, Georgia, serif;
 	font-size: 1rem;
 	font-weight: 800;
 	line-height: 1.45;
@@ -1601,7 +1695,7 @@ body.wrrapd-wrapstars-portal .wp-site-blocks {
 
 .wrrapd-wrapstars-site-footer__copy {
 	margin: 0.75rem 0 0 !important;
-	font-family: Roboto, "Source Sans 3", Helvetica, Arial, sans-serif;
+	font-family: Fraunces, Georgia, serif;
 	font-size: 0.7rem !important;
 	font-weight: 600;
 	color: #fff !important;
@@ -2139,7 +2233,7 @@ body.wrrapd-wrapstars-onboarding-host .entry-title {
 	margin-left: 0.35rem;
 	padding: 0.12rem 0.5rem;
 	border-radius: 999px;
-	font-family: "Source Sans 3", Helvetica, Arial, sans-serif;
+	font-family: Fraunces, Georgia, serif;
 	font-size: 0.68rem;
 	font-weight: 800;
 	letter-spacing: 0.04em;
@@ -2181,7 +2275,7 @@ body.wrrapd-wrapstars-onboarding-host .entry-title {
 }
 
 .wrrapd-wrapstars-ob-callout strong {
-	font-family: "Source Sans 3", Helvetica, Arial, sans-serif;
+	font-family: Fraunces, Georgia, serif;
 	font-size: 0.82rem;
 	letter-spacing: 0.06em;
 	text-transform: uppercase;
@@ -2244,7 +2338,7 @@ body.wrrapd-wrapstars-onboarding-host .entry-title {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	font-family: "Source Sans 3", Helvetica, Arial, sans-serif;
+	font-family: Fraunces, Georgia, serif;
 	font-size: 0.78rem;
 	font-weight: 800;
 	background: #0f172a;
@@ -2349,7 +2443,7 @@ body.wrrapd-wrapstars-onboarding-host .entry-title {
 	border-radius: 0.7rem;
 	background: #f8fafc;
 	border: 1px solid rgba(26, 39, 68, 0.1);
-	font-family: "Source Sans 3", Helvetica, Arial, sans-serif;
+	font-family: Fraunces, Georgia, serif;
 	font-size: 0.92rem;
 }
 
