@@ -77,10 +77,13 @@ export default async function AdminApplicationDetailPage({
         <p className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
           Action completed: <strong>{okFlash}</strong>
           {okFlash === "approve"
-            ? " — login credentials emailed for pros.wrrapd.com onboarding."
+            ? " — welcome email sent with username, temporary password, and a Decline link."
             : null}
           {okFlash === "activate"
             ? " — added/updated on WrapStars ops roster for Command Center assignment."
+            : null}
+          {okFlash === "mark_declined"
+            ? " — invitation closed; candidate listed under Declined offer."
             : null}
         </p>
       ) : null}
@@ -133,9 +136,31 @@ export default async function AdminApplicationDetailPage({
         ) : null}
       </section>
 
+      {app.status === "declined" ? (
+        <section className="mt-4 rounded-xl border border-orange-200 bg-orange-50 p-4 shadow-sm">
+          <h2 className="font-semibold text-orange-950">Declined invitation</h2>
+          <p className="mt-2 text-sm text-orange-950">
+            Approved on {(app.approvedAt || "").slice(0, 10) || "—"} · Declined{" "}
+            {(app.declinedAt || "").slice(0, 10) || "—"}
+          </p>
+          <p className="mt-2 text-sm text-orange-900">
+            <strong>Candidate note:</strong> {app.declineNote || "—"}
+          </p>
+          <p className="mt-2 text-xs text-orange-800">
+            Portal credentials were invalidated. They remain in Applications → Declined offer for hiring
+            history.
+          </p>
+        </section>
+      ) : null}
+
       {app.status === "approved" || app.status === "active" ? (
         <section className="mt-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
           <h2 className="font-semibold">Onboarding progress (pros.wrrapd.com)</h2>
+          {app.mustChangePassword ? (
+            <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+              Waiting on first-login password change (required before onboarding steps).
+            </p>
+          ) : null}
           <ul className="mt-2 grid gap-1 text-sm sm:grid-cols-2">
             {steps.map(([step, done]) => (
               <li key={step} className={done ? "text-emerald-800" : "text-slate-500"}>
@@ -230,14 +255,24 @@ export default async function AdminApplicationDetailPage({
               </>
             ) : null}
             {app.status === "approved" ? (
-              <button
-                type="submit"
-                name="action"
-                value="activate"
-                className="rounded bg-emerald-700 px-3 py-2 text-sm font-semibold text-white"
-              >
-                Activate WrapStar (live)
-              </button>
+              <>
+                <button
+                  type="submit"
+                  name="action"
+                  value="activate"
+                  className="rounded bg-emerald-700 px-3 py-2 text-sm font-semibold text-white"
+                >
+                  Activate WrapStar (live)
+                </button>
+                <button
+                  type="submit"
+                  name="action"
+                  value="mark_declined"
+                  className="rounded bg-orange-700 px-3 py-2 text-sm text-white"
+                >
+                  Mark as declined offer
+                </button>
+              </>
             ) : null}
             {app.status === "active" && !app.suspended ? (
               <button
@@ -262,11 +297,13 @@ export default async function AdminApplicationDetailPage({
           </div>
         </form>
         <p className="mt-3 text-xs text-slate-500">
-          Approve emails temporary password + link to{" "}
-          <a className="underline" href="https://apply.wrrapd.com/wrapstar-login/">
-            wrapstar-login
-          </a>{" "}
-          → onboarding on pros.wrrapd.com. Activate after they finish onboarding steps.
+          Approve emails a welcome message with username (email), readable temporary password, login
+          link, and a Decline link. First login forces a password change, then onboarding on
+          pros.wrrapd.com. Declined invitations appear under{" "}
+          <Link className="underline" href="/admin/applications?status=declined">
+            Declined offer
+          </Link>
+          .
         </p>
       </section>
     </div>

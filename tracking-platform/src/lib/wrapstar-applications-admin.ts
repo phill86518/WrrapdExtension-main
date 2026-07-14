@@ -2,6 +2,7 @@ export type WrapstarApplicationStatus =
   | "under_review"
   | "interview"
   | "approved"
+  | "declined"
   | "rejected"
   | "active"
   | string;
@@ -42,6 +43,9 @@ export type WrapstarApplication = {
   commitmentRationale: string;
   adminNotes: string;
   rejectReason: string;
+  declineNote?: string;
+  declinedAt?: string;
+  mustChangePassword?: boolean;
   onboardingStep: string;
   onboardingStepsComplete: Record<string, boolean>;
   hasIdFile: boolean;
@@ -124,6 +128,7 @@ export type ApplicationAction =
   | "activate"
   | "suspend"
   | "unsuspend"
+  | "mark_declined"
   | "save_notes";
 
 export async function runWrapstarApplicationAction(

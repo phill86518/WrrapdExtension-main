@@ -48,7 +48,7 @@ function wrrapd_wrapstars_ops_api_permission( $request ) {
 }
 
 /**
- * Run interview / approve / reject / activate / suspend / save_notes.
+ * Run interview / approve / reject / activate / suspend / unsuspend / mark_declined / save_notes.
  *
  * @param int                  $app_id Application post ID.
  * @param string               $action Action slug.
@@ -158,6 +158,18 @@ function wrrapd_wrapstars_run_admin_action( $app_id, $action, $opts = array() ) 
 		return array( 'ok' => true, 'status' => wrrapd_wrapstars_get_meta( $app_id, 'status' ) );
 	}
 
+	if ( $action === 'mark_declined' ) {
+		$note = $reason !== '' ? $reason : ( $notes !== null ? $notes : '' );
+		$result = wrrapd_wrapstars_mark_offer_declined( $app_id, $note );
+		if ( empty( $result['ok'] ) ) {
+			return array( 'ok' => false, 'error' => $result['error'] ?? 'Could not mark declined.' );
+		}
+		if ( $notes !== null ) {
+			wrrapd_wrapstars_set_meta( $app_id, 'admin_notes', $notes );
+		}
+		return array( 'ok' => true, 'status' => 'declined' );
+	}
+
 	return array( 'ok' => false, 'error' => 'Unknown action.' );
 }
 
@@ -221,6 +233,9 @@ function wrrapd_wrapstars_ops_serialize_application( $id ) {
 		'commitmentRationale'        => wrrapd_wrapstars_get_meta( $id, 'commitment_score_rationale' ),
 		'adminNotes'                 => wrrapd_wrapstars_get_meta( $id, 'admin_notes' ),
 		'rejectReason'               => wrrapd_wrapstars_get_meta( $id, 'reject_reason' ),
+		'declineNote'                => wrrapd_wrapstars_get_meta( $id, 'decline_note' ),
+		'declinedAt'                 => wrrapd_wrapstars_get_meta( $id, 'declined_at' ),
+		'mustChangePassword'         => wrrapd_wrapstars_get_meta( $id, 'must_change_password' ) === '1',
 		'onboardingStep'             => wrrapd_wrapstars_get_meta( $id, 'onboarding_step' ),
 		'onboardingStepsComplete'    => $steps_done,
 		'hasIdFile'                  => (bool) wrrapd_wrapstars_get_meta( $id, 'id_file' ),

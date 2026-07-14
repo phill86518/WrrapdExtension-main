@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_WRAPSTARS_BUILD', '2026-07-14-onboarding-ui-v3' );
+define( 'WRRAPD_WRAPSTARS_BUILD', '2026-07-14-approve-decline-pw' );
 
 $wrrapd_boldsign = dirname( __FILE__ ) . '/wrrapd-boldsign.php';
 if ( is_readable( $wrrapd_boldsign ) ) {
@@ -157,6 +157,7 @@ add_shortcode( 'wrrapd_wrapstar_login', 'wrrapd_wrapstars_shortcode_login' );
 add_shortcode( 'wrrapd_wrapstar_onboarding', 'wrrapd_wrapstars_shortcode_onboarding' );
 add_shortcode( 'wrrapd_wrapstar_sign', 'wrrapd_wrapstars_shortcode_sign' );
 add_shortcode( 'wrrapd_wrapstar_profile', 'wrrapd_wrapstars_shortcode_profile' );
+add_shortcode( 'wrrapd_wrapstar_decline', 'wrrapd_wrapstars_shortcode_decline' );
 
 // --- URLs ---
 
@@ -229,6 +230,44 @@ function wrrapd_wrapstars_portal_redirect_for_user( $user_id ) {
 	return wrrapd_wrapstars_apply_url( '/' );
 }
 
+/** @return bool */
+function wrrapd_wrapstars_user_must_change_password( $user_id ) {
+	$user_id = (int) $user_id;
+	if ( ! $user_id ) {
+		return false;
+	}
+	if ( get_user_meta( $user_id, '_wrrapd_ws_must_change_password', true ) === '1' ) {
+		return true;
+	}
+	$app = wrrapd_wrapstars_get_application_by_user( $user_id );
+	if ( ! $app ) {
+		return false;
+	}
+	return wrrapd_wrapstars_get_meta( $app->ID, 'must_change_password' ) === '1';
+}
+
+function wrrapd_wrapstars_set_must_change_password( $user_id, $app_id, $required ) {
+	$flag = $required ? '1' : '';
+	if ( $user_id ) {
+		if ( $required ) {
+			update_user_meta( (int) $user_id, '_wrrapd_ws_must_change_password', '1' );
+		} else {
+			delete_user_meta( (int) $user_id, '_wrrapd_ws_must_change_password' );
+		}
+	}
+	if ( $app_id ) {
+		wrrapd_wrapstars_set_meta( (int) $app_id, 'must_change_password', $flag );
+	}
+}
+
+/**
+ * Readable temporary password for approval emails (must be changed on first login).
+ * Example: Wrap4827K!
+ */
+function wrrapd_wrapstars_generate_temp_password() {
+	return 'Wrap' . (string) wp_rand( 1000, 9999 ) . chr( wp_rand( 65, 90 ) ) . '!';
+}
+
 function wrrapd_wrapstars_admin_notify_email() {
 	if ( defined( 'WRRAPD_WRAPSTARS_ADMIN_EMAIL' ) && WRRAPD_WRAPSTARS_ADMIN_EMAIL !== '' ) {
 		return (string) WRRAPD_WRAPSTARS_ADMIN_EMAIL;
@@ -284,12 +323,18 @@ function wrrapd_wrapstars_onboarding_step_url( $step ) {
 // --- Roles ---
 
 function wrrapd_wrapstars_register_roles() {
-	if ( get_role( 'wrapstar_applicant' ) ) {
-		return;
+	if ( ! get_role( 'wrapstar_applicant' ) ) {
+		add_role( 'wrapstar_applicant', 'WrapStar Applicant', array( 'read' => true ) );
 	}
-	add_role( 'wrapstar_applicant', 'WrapStar Applicant', array( 'read' => true ) );
-	add_role( 'wrapstar_approved', 'WrapStar Approved', array( 'read' => true ) );
-	add_role( 'wrapstar_active', 'WrapStar Active', array( 'read' => true ) );
+	if ( ! get_role( 'wrapstar_approved' ) ) {
+		add_role( 'wrapstar_approved', 'WrapStar Approved', array( 'read' => true ) );
+	}
+	if ( ! get_role( 'wrapstar_declined' ) ) {
+		add_role( 'wrapstar_declined', 'WrapStar Declined Offer', array( 'read' => true ) );
+	}
+	if ( ! get_role( 'wrapstar_active' ) ) {
+		add_role( 'wrapstar_active', 'WrapStar Active', array( 'read' => true ) );
+	}
 }
 
 function wrrapd_wrapstars_user_has_role( $user_id, $role ) {
@@ -399,6 +444,11 @@ function wrrapd_wrapstars_meta_keys() {
 		'activated_at'        => '',
 		'rejected_at'         => '',
 		'reject_reason'       => '',
+		'declined_at'         => '',
+		'decline_token'       => '',
+		'decline_note'        => '',
+		'must_change_password'=> '',
+		'portal_password_issued_at' => '',
 	);
 }
 
@@ -617,7 +667,7 @@ function wrrapd_wrapstars_host_routing() {
 	}
 
 	if ( wrrapd_wrapstars_is_pros_host() ) {
-		if ( preg_match( '#^/(apply|dashboard|thank-you)(/|$)#', $path ) ) {
+		if ( preg_match( '#^/(apply|dashboard|thank-you|decline-offer)(/|$)#', $path ) ) {
 			wp_safe_redirect( wrrapd_wrapstars_apply_url( $path ) );
 			exit;
 		}
@@ -1012,6 +1062,12 @@ function wrrapd_wrapstars_maybe_handle_posts() {
 	if ( $action === 'save_profile' ) {
 		wrrapd_wrapstars_process_profile_save();
 	}
+	if ( $action === 'change_password' ) {
+		wrrapd_wrapstars_process_change_password();
+	}
+	if ( $action === 'decline_offer' ) {
+		wrrapd_wrapstars_process_decline_offer();
+	}
 }
 
 function wrrapd_wrapstars_process_portal_login() {
@@ -1042,17 +1098,23 @@ function wrrapd_wrapstars_process_portal_login() {
 		return;
 	}
 
+	$app = wrrapd_wrapstars_get_application_by_user( $user->ID );
+	if ( ! $app ) {
+		$app = wrrapd_wrapstars_get_application_by_email( $email );
+	}
+	$status = $app ? (string) wrrapd_wrapstars_get_meta( $app->ID, 'status' ) : '';
+	if ( $status === 'declined' ) {
+		wp_logout();
+		$GLOBALS['wrrapd_ws_login_error'] = 'This invitation was declined. Contact admin@wrrapd.com if that was a mistake.';
+		return;
+	}
 	if ( ! wrrapd_wrapstars_is_onboarding_eligible_user( $user->ID ) ) {
 		wp_logout();
 		$GLOBALS['wrrapd_ws_login_error'] = 'Login is only available after your application is approved. Check your email for next steps.';
 		return;
 	}
 
-	if ( $redirect !== '' && strpos( $redirect, wrrapd_wrapstars_apply_host() ) !== false ) {
-		wp_safe_redirect( $redirect );
-		exit;
-	}
-
+	// First login after approval always starts with password change (then onboarding).
 	wp_safe_redirect( wrrapd_wrapstars_portal_redirect_for_user( $user->ID ) );
 	exit;
 }
@@ -1391,7 +1453,7 @@ function wrrapd_wrapstars_hero_video_url() {
 /**
  * Create or reset portal credentials when a candidate is approved.
  *
- * @return array{user_id:int,password:string}|WP_Error
+ * @return array{user_id:int,password:string,decline_token:string}|WP_Error
  */
 function wrrapd_wrapstars_provision_approved_user( $app_id ) {
 	$email = strtolower( (string) wrrapd_wrapstars_get_meta( $app_id, 'email' ) );
@@ -1400,7 +1462,7 @@ function wrrapd_wrapstars_provision_approved_user( $app_id ) {
 		return new WP_Error( 'invalid_email', 'Application email missing.' );
 	}
 
-	$password = wp_generate_password( 14, true, false );
+	$password = wrrapd_wrapstars_generate_temp_password();
 	$user_id  = (int) wrrapd_wrapstars_get_meta( $app_id, 'user_id' );
 
 	if ( $user_id && get_userdata( $user_id ) ) {
@@ -1415,20 +1477,42 @@ function wrrapd_wrapstars_provision_approved_user( $app_id ) {
 		}
 	}
 
+	$first = (string) wrrapd_wrapstars_get_meta( $app_id, 'first_name' );
+	if ( $first === '' ) {
+		$first = (string) strtok( $name, ' ' );
+	}
 	wp_update_user(
 		array(
 			'ID'           => $user_id,
 			'display_name' => $name,
-			'first_name'   => strtok( $name, ' ' ),
+			'first_name'   => $first,
 		)
 	);
 	wrrapd_wrapstars_set_meta( $app_id, 'user_id', $user_id );
 	wrrapd_wrapstars_set_user_role( $user_id, 'wrapstar_approved' );
 	wrrapd_wrapstars_set_meta( $app_id, 'portal_password_issued_at', gmdate( 'c' ) );
+	wrrapd_wrapstars_set_must_change_password( $user_id, $app_id, true );
+	// Clear any prior decline so re-approval works.
+	wrrapd_wrapstars_set_meta( $app_id, 'declined_at', '' );
+	wrrapd_wrapstars_set_meta( $app_id, 'decline_note', '' );
+
+	$decline_token = wp_generate_password( 40, false, false );
+	wrrapd_wrapstars_set_meta( $app_id, 'decline_token', $decline_token );
 
 	return array(
-		'user_id'  => $user_id,
-		'password' => $password,
+		'user_id'       => $user_id,
+		'password'      => $password,
+		'decline_token' => $decline_token,
+	);
+}
+
+function wrrapd_wrapstars_decline_offer_url( $app_id, $token ) {
+	return add_query_arg(
+		array(
+			'app'   => (int) $app_id,
+			'token' => rawurlencode( (string) $token ),
+		),
+		wrrapd_wrapstars_apply_url( '/decline-offer/' )
 	);
 }
 
@@ -1436,16 +1520,237 @@ function wrrapd_wrapstars_send_approval_credentials_email( $app_id, $password ) 
 	$email = wrrapd_wrapstars_get_meta( $app_id, 'email' );
 	$name  = wrrapd_wrapstars_get_meta( $app_id, 'full_name' );
 	$login = wrrapd_wrapstars_portal_login_url( wrrapd_wrapstars_pros_url( '/onboarding/' ) );
+	$token = (string) wrrapd_wrapstars_get_meta( $app_id, 'decline_token' );
+	$decline = $token !== '' ? wrrapd_wrapstars_decline_offer_url( $app_id, $token ) : wrrapd_wrapstars_apply_url( '/decline-offer/' );
 
 	$body  = "Hi {$name},\n\n";
-	$body .= "Congratulations — you've been approved as a WrapStar!\n\n";
-	$body .= "Log in to begin onboarding:\n{$login}\n\n";
-	$body .= "Username: {$email}\n";
+	$body .= "Congratulations — you've been approved to join the WrapStar network!\n\n";
+	$body .= "We're excited to welcome you. Log in with the credentials below to start onboarding on the WrapStar portal.\n\n";
+	$body .= "━━━━━━━━━━━━━━━━━━━━\n";
+	$body .= "YOUR LOGIN\n";
+	$body .= "━━━━━━━━━━━━━━━━━━━━\n";
+	$body .= "Portal login: {$login}\n";
+	$body .= "Username (email): {$email}\n";
 	$body .= "Temporary password: {$password}\n\n";
-	$body .= "You'll complete agreements, insurance, orientation, PO Box setup, W-9, and more.\n\n";
-	$body .= "— WrapStars Team\n";
+	$body .= "Important: the first thing you'll do after logging in is choose a new password. Onboarding unlocks only after that.\n\n";
+	$body .= "You'll complete agreements, policies, orientation, insurance, tax forms, bank/payout setup, and more.\n\n";
+	$body .= "━━━━━━━━━━━━━━━━━━━━\n";
+	$body .= "DECLINE THIS OFFER\n";
+	$body .= "━━━━━━━━━━━━━━━━━━━━\n";
+	$body .= "If you've decided not to join Wrrapd as a WrapStar, decline here (no login required):\n";
+	$body .= "{$decline}\n\n";
+	$body .= "Declining closes this invitation and disables the temporary login above. You'll appear in our admin records as “declined” so we can keep an accurate hiring history.\n\n";
+	$body .= "Questions? Reply to this email or write " . wrrapd_wrapstars_from_email_address() . ".\n\n";
+	$body .= "— The WrapStars Team\n";
 
-	wrrapd_wrapstars_send_email( $email, 'Approved — your WrapStar login credentials', $body );
+	wrrapd_wrapstars_send_email( $email, 'Welcome to WrapStars — your login & next steps', $body );
+}
+
+/**
+ * Mark an approved invitation as declined (candidate chose not to join).
+ *
+ * @return array{ok:bool,error?:string}
+ */
+function wrrapd_wrapstars_mark_offer_declined( $app_id, $note = '' ) {
+	$app_id = (int) $app_id;
+	$app    = get_post( $app_id );
+	if ( ! $app || $app->post_type !== WRRAPD_WRAPSTARS_CPT ) {
+		return array( 'ok' => false, 'error' => 'Application not found.' );
+	}
+	$status = (string) wrrapd_wrapstars_get_meta( $app_id, 'status' );
+	if ( $status === 'declined' ) {
+		return array( 'ok' => true );
+	}
+	if ( $status !== 'approved' ) {
+		return array( 'ok' => false, 'error' => 'Only approved invitations can be declined.' );
+	}
+
+	wrrapd_wrapstars_set_meta( $app_id, 'status', 'declined' );
+	wrrapd_wrapstars_set_meta( $app_id, 'declined_at', gmdate( 'c' ) );
+	wrrapd_wrapstars_set_meta( $app_id, 'decline_token', '' );
+	if ( $note !== '' ) {
+		wrrapd_wrapstars_set_meta( $app_id, 'decline_note', $note );
+	}
+
+	$user_id = (int) wrrapd_wrapstars_get_meta( $app_id, 'user_id' );
+	if ( $user_id && get_userdata( $user_id ) ) {
+		wrrapd_wrapstars_set_user_role( $user_id, 'wrapstar_declined' );
+		wrrapd_wrapstars_set_must_change_password( $user_id, $app_id, false );
+		// Invalidate temp credentials.
+		wp_set_password( wp_generate_password( 32, true, true ), $user_id );
+	}
+
+	$name  = wrrapd_wrapstars_get_meta( $app_id, 'full_name' );
+	$email = wrrapd_wrapstars_get_meta( $app_id, 'email' );
+	$admin = wrrapd_wrapstars_admin_notify_email();
+	$admin_body  = "A WrapStar invitation was declined.\n\n";
+	$admin_body .= "Name: {$name}\nEmail: {$email}\nApp ID: {$app_id}\n";
+	if ( $note !== '' ) {
+		$admin_body .= "Note: {$note}\n";
+	}
+	wrrapd_wrapstars_send_email( $admin, 'WrapStar declined invitation — ' . $name, $admin_body );
+
+	return array( 'ok' => true );
+}
+
+function wrrapd_wrapstars_process_decline_offer() {
+	if ( ! isset( $_POST['wrrapd_ws_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['wrrapd_ws_nonce'] ) ), 'wrrapd_ws_decline' ) ) {
+		$GLOBALS['wrrapd_ws_decline_error'] = 'Security check failed. Please try again.';
+		return;
+	}
+	$app_id = (int) ( $_POST['app_id'] ?? 0 );
+	$token  = sanitize_text_field( wp_unslash( $_POST['token'] ?? '' ) );
+	$note   = sanitize_textarea_field( wp_unslash( $_POST['decline_note'] ?? '' ) );
+	$stored = (string) wrrapd_wrapstars_get_meta( $app_id, 'decline_token' );
+	if ( ! $app_id || $token === '' || $stored === '' || ! hash_equals( $stored, $token ) ) {
+		$GLOBALS['wrrapd_ws_decline_error'] = 'This decline link is invalid or has already been used.';
+		return;
+	}
+	$result = wrrapd_wrapstars_mark_offer_declined( $app_id, $note );
+	if ( empty( $result['ok'] ) ) {
+		$GLOBALS['wrrapd_ws_decline_error'] = $result['error'] ?? 'Could not decline.';
+		return;
+	}
+	$GLOBALS['wrrapd_ws_decline_done'] = true;
+}
+
+function wrrapd_wrapstars_process_change_password() {
+	if ( ! is_user_logged_in() ) {
+		return;
+	}
+	if ( ! isset( $_POST['wrrapd_ws_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['wrrapd_ws_nonce'] ) ), 'wrrapd_ws_change_password' ) ) {
+		$GLOBALS['wrrapd_ws_pw_error'] = 'Security check failed. Please try again.';
+		return;
+	}
+	$user_id = get_current_user_id();
+	if ( ! wrrapd_wrapstars_user_must_change_password( $user_id ) ) {
+		wp_safe_redirect( wrrapd_wrapstars_pros_url( '/onboarding/' ) );
+		exit;
+	}
+	$current = isset( $_POST['current_password'] ) ? (string) wp_unslash( $_POST['current_password'] ) : '';
+	$new     = isset( $_POST['new_password'] ) ? (string) wp_unslash( $_POST['new_password'] ) : '';
+	$confirm = isset( $_POST['confirm_password'] ) ? (string) wp_unslash( $_POST['confirm_password'] ) : '';
+	$user    = get_userdata( $user_id );
+	if ( ! $user || ! wp_check_password( $current, $user->user_pass, $user_id ) ) {
+		$GLOBALS['wrrapd_ws_pw_error'] = 'Current (temporary) password is incorrect.';
+		return;
+	}
+	if ( strlen( $new ) < 10 ) {
+		$GLOBALS['wrrapd_ws_pw_error'] = 'Choose a new password with at least 10 characters.';
+		return;
+	}
+	if ( $new !== $confirm ) {
+		$GLOBALS['wrrapd_ws_pw_error'] = 'New password and confirmation do not match.';
+		return;
+	}
+	if ( $new === $current ) {
+		$GLOBALS['wrrapd_ws_pw_error'] = 'Pick a different password than the temporary one from your email.';
+		return;
+	}
+	wp_set_password( $new, $user_id );
+	$app = wrrapd_wrapstars_get_application_by_user( $user_id );
+	wrrapd_wrapstars_set_must_change_password( $user_id, $app ? (int) $app->ID : 0, false );
+	if ( $app ) {
+		wrrapd_wrapstars_set_meta( $app->ID, 'password_changed_at', gmdate( 'c' ) );
+	}
+	// Re-authenticate after password reset (wp_set_password clears cookies).
+	wp_set_current_user( $user_id );
+	wp_set_auth_cookie( $user_id, true );
+	wp_safe_redirect( wrrapd_wrapstars_pros_url( '/onboarding/' ) );
+	exit;
+}
+
+function wrrapd_wrapstars_render_change_password_gate() {
+	$error = $GLOBALS['wrrapd_ws_pw_error'] ?? '';
+	ob_start();
+	?>
+	<div class="wrrapd-wrapstars wrrapd-wrapstars-onboarding-shell">
+		<div class="wrrapd-wrapstars-ob-stage" style="max-width:28rem;margin:2rem auto;padding:0 1rem;">
+			<div class="wrrapd-wrapstars-card wrrapd-wrapstars-card--hero">
+				<p class="wrrapd-wrapstars-ob-stage__kicker">First login</p>
+				<h1 class="wrrapd-wrapstars-ob-stage__title">Choose your password</h1>
+				<p class="wrrapd-wrapstars-ob-lead">For security, you must replace the temporary password from your approval email before onboarding starts.</p>
+				<?php if ( $error ) : ?>
+					<div class="wrrapd-wrapstars-alert wrrapd-wrapstars-alert--err"><?php echo esc_html( $error ); ?></div>
+				<?php endif; ?>
+				<form method="post" class="wrrapd-wrapstars-form wrrapd-wrapstars-ob-actions">
+					<?php wp_nonce_field( 'wrrapd_ws_change_password', 'wrrapd_ws_nonce' ); ?>
+					<input type="hidden" name="wrrapd_ws_action" value="change_password" />
+					<label>Temporary password (from email)
+						<input type="password" name="current_password" required autocomplete="current-password" />
+					</label>
+					<label>New password (min. 10 characters)
+						<input type="password" name="new_password" required minlength="10" autocomplete="new-password" />
+					</label>
+					<label>Confirm new password
+						<input type="password" name="confirm_password" required minlength="10" autocomplete="new-password" />
+					</label>
+					<button type="submit" class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--lg">Save password &amp; continue</button>
+				</form>
+			</div>
+		</div>
+	</div>
+	<?php
+	return ob_get_clean();
+}
+
+function wrrapd_wrapstars_shortcode_decline() {
+	$done  = ! empty( $GLOBALS['wrrapd_ws_decline_done'] );
+	$error = $GLOBALS['wrrapd_ws_decline_error'] ?? '';
+	$app_id = isset( $_GET['app'] ) ? (int) $_GET['app'] : (int) ( $_POST['app_id'] ?? 0 );
+	$token  = isset( $_GET['token'] ) ? sanitize_text_field( wp_unslash( $_GET['token'] ) ) : sanitize_text_field( wp_unslash( $_POST['token'] ?? '' ) );
+
+	ob_start();
+	echo '<div class="wrrapd-wrapstars wrrapd-wrapstars-dasher">';
+	echo '<section class="wrrapd-wrapstars-dasher-apply-head">';
+	echo '<p class="wrrapd-wrapstars-dasher-kicker">WrapStar invitation</p>';
+	echo '<h1>Decline offer</h1>';
+	echo '</section>';
+
+	if ( $done ) {
+		echo '<div class="wrrapd-wrapstars-card"><div class="wrrapd-wrapstars-alert wrrapd-wrapstars-alert--ok">Your WrapStar invitation has been declined. We\'ve closed portal access for this offer. Thank you for letting us know.</div>';
+		echo '<p class="wrrapd-wrapstars-form-foot"><a href="' . esc_url( wrrapd_wrapstars_apply_url( '/' ) ) . '">Back to WrapStars</a></p></div>';
+		echo '</div>';
+		return ob_get_clean();
+	}
+
+	$stored = $app_id ? (string) wrrapd_wrapstars_get_meta( $app_id, 'decline_token' ) : '';
+	$status = $app_id ? (string) wrrapd_wrapstars_get_meta( $app_id, 'status' ) : '';
+	if ( $status === 'declined' ) {
+		echo '<div class="wrrapd-wrapstars-alert wrrapd-wrapstars-alert--info">This invitation was already declined.</div></div>';
+		return ob_get_clean();
+	}
+	if ( ! $app_id || $token === '' || $stored === '' || ! hash_equals( $stored, $token ) ) {
+		echo '<div class="wrrapd-wrapstars-alert wrrapd-wrapstars-alert--err">This decline link is invalid or expired. If you need help, email ' . esc_html( wrrapd_wrapstars_from_email_address() ) . '.</div></div>';
+		return ob_get_clean();
+	}
+	if ( $status !== 'approved' ) {
+		echo '<div class="wrrapd-wrapstars-alert wrrapd-wrapstars-alert--err">This invitation can no longer be declined online.</div></div>';
+		return ob_get_clean();
+	}
+
+	$name = wrrapd_wrapstars_get_meta( $app_id, 'full_name' );
+	if ( $error ) {
+		echo '<div class="wrrapd-wrapstars-alert wrrapd-wrapstars-alert--err">' . esc_html( $error ) . '</div>';
+	}
+	?>
+	<div class="wrrapd-wrapstars-card">
+		<p>Hi <?php echo esc_html( $name !== '' ? $name : 'there' ); ?>, you're about to decline your WrapStar invitation. Portal login credentials from your approval email will stop working.</p>
+		<form method="post" class="wrrapd-wrapstars-form">
+			<?php wp_nonce_field( 'wrrapd_ws_decline', 'wrrapd_ws_nonce' ); ?>
+			<input type="hidden" name="wrrapd_ws_action" value="decline_offer" />
+			<input type="hidden" name="app_id" value="<?php echo esc_attr( (string) $app_id ); ?>" />
+			<input type="hidden" name="token" value="<?php echo esc_attr( $token ); ?>" />
+			<label>Optional note for our team
+				<textarea name="decline_note" rows="3" placeholder="Reason or timing (optional)"></textarea>
+			</label>
+			<button type="submit" class="wrrapd-wrapstars-btn" style="background:#b91c1c;">Confirm decline</button>
+		</form>
+		<p class="wrrapd-wrapstars-form-foot">Changed your mind? <a href="<?php echo esc_url( wrrapd_wrapstars_portal_login_url( wrrapd_wrapstars_pros_url( '/onboarding/' ) ) ); ?>">Log in to onboarding</a></p>
+	</div>
+	</div>
+	<?php
+	return ob_get_clean();
 }
 
 function wrrapd_wrapstars_output_theme_cleanup_css() {
@@ -1643,7 +1948,7 @@ function wrrapd_wrapstars_shortcode_login() {
 		<section class="wrrapd-wrapstars-dasher-apply-head">
 			<p class="wrrapd-wrapstars-dasher-kicker">Approved WrapStars only</p>
 			<h1>Log in to onboarding</h1>
-			<p class="wrrapd-wrapstars-dasher-lead">Use the email and temporary password from your approval email. This page is not for applicants still under review.</p>
+			<p class="wrrapd-wrapstars-dasher-lead">Use the email and temporary password from your approval email. After you log in, you'll set a new password before onboarding begins. This page is not for applicants still under review.</p>
 		</section>
 		<?php if ( $error ) : ?>
 			<div class="wrrapd-wrapstars-alert wrrapd-wrapstars-alert--err"><?php echo esc_html( $error ); ?></div>
@@ -1673,11 +1978,20 @@ function wrrapd_wrapstars_shortcode_onboarding( $atts ) {
 		return '<p>Please <a href="' . esc_url( wrrapd_wrapstars_portal_login_url( wrrapd_wrapstars_pros_url( '/onboarding/' ) ) ) . '">log in</a>.</p>';
 	}
 
+	$user_id = get_current_user_id();
+	if ( wrrapd_wrapstars_user_must_change_password( $user_id ) ) {
+		return wrrapd_wrapstars_render_change_password_gate();
+	}
+
 	$atts = shortcode_atts( array( 'step' => '' ), $atts, 'wrrapd_wrapstar_onboarding' );
 	$step = $atts['step'] !== '' ? $atts['step'] : wrrapd_wrapstars_detect_onboarding_step_from_uri();
 
-	$app = wrrapd_wrapstars_get_application_by_user( get_current_user_id() );
-	if ( ! $app || wrrapd_wrapstars_get_meta( $app->ID, 'status' ) !== 'approved' ) {
+	$app = wrrapd_wrapstars_get_application_by_user( $user_id );
+	$status = $app ? (string) wrrapd_wrapstars_get_meta( $app->ID, 'status' ) : '';
+	if ( $status === 'declined' ) {
+		return '<div class="wrrapd-wrapstars-alert wrrapd-wrapstars-alert--info">This WrapStar invitation was declined. Contact ' . esc_html( wrrapd_wrapstars_from_email_address() ) . ' if that was a mistake.</div>';
+	}
+	if ( ! $app || $status !== 'approved' ) {
 		return '<div class="wrrapd-wrapstars-alert wrrapd-wrapstars-alert--info">Onboarding is available after approval. Check your email for login credentials.</div>';
 	}
 
@@ -2205,7 +2519,7 @@ function wrrapd_wrapstars_admin_page() {
 	echo '<div class="wrap"><h1>WrapStar Applications</h1>';
 	echo '<p><strong>Preferred:</strong> review applications in the tracking <em>Command Center → Applications</em>. This WP screen is a fallback.</p>';
 	echo '<p>Portal: <strong>apply.wrrapd.com</strong> (applications) · <strong>pros.wrrapd.com</strong> (onboarding)</p>';
-	echo '<p>Filter: <a href="?page=wrrapd-wrapstars">All</a> | <a href="?page=wrrapd-wrapstars&status=under_review">Under review</a> | <a href="?page=wrrapd-wrapstars&status=interview">Zoom interview</a> | <a href="?page=wrrapd-wrapstars&status=approved">Approved (onboarding)</a> | <a href="?page=wrrapd-wrapstars&status=active">Active</a></p>';
+	echo '<p>Filter: <a href="?page=wrrapd-wrapstars">All</a> | <a href="?page=wrrapd-wrapstars&status=under_review">Under review</a> | <a href="?page=wrrapd-wrapstars&status=interview">Zoom interview</a> | <a href="?page=wrrapd-wrapstars&status=approved">Approved (onboarding)</a> | <a href="?page=wrrapd-wrapstars&status=declined">Declined offer</a> | <a href="?page=wrrapd-wrapstars&status=active">Active</a> | <a href="?page=wrrapd-wrapstars&status=rejected">Rejected</a></p>';
 
 	foreach ( $apps as $app ) {
 		wrrapd_wrapstars_render_admin_application_card( $app->ID );

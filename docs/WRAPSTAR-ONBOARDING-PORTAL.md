@@ -4,6 +4,18 @@ Host: **pros.wrrapd.com** (post-approval). Apply stays on **apply.wrrapd.com**.
 
 BoldSign stays wired for **IC Agreement** and **W-9**. Everything marked *placeholder* accepts an acknowledgment today so you can test the full path; swap in real PDFs / vendors when you supply them.
 
+## Approval email → first login
+
+Command Center **Approve** emails from `admin@wrrapd.com`:
+
+- Welcome / congratulations copy
+- **Username** = application email
+- **Temporary password** = readable form like `Wrap4827K!` (must change on first login)
+- Login link → `apply.wrrapd.com/wrapstar-login/` → pros onboarding
+- **Decline this offer** link → `apply.wrrapd.com/decline-offer/?app=…&token=…` (no login)
+
+First login always shows **Choose your password** before any onboarding step. Declined invitations become status `declined` in **Applications → Declined offer** (credentials invalidated).
+
 ## Step order
 
 | # | Key | Live vs placeholder | What you will provide |

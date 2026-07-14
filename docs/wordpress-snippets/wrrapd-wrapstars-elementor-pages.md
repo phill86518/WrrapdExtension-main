@@ -12,6 +12,7 @@
   | /apply/     | Apply              | [wrrapd_wrapstar_apply]      |
   | /dashboard/ | My Application     | [wrrapd_wrapstar_status]     |
   | /wrapstar-login/ | WrapStar Login | [wrrapd_wrapstar_login]   |
+  | /decline-offer/ | Decline invitation | [wrrapd_wrapstar_decline] |
 
   === pros.wrrapd.com pages (parent: onboarding) ===
 

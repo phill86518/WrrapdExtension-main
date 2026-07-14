@@ -148,6 +148,8 @@ See **[../docs/wordpress-snippets/wrrapd-wrapstars-elementor-pages.md](../docs/w
 | Home | `/` | `[wrrapd_wrapstar_landing]` |
 | Apply | `apply` | `[wrrapd_wrapstar_apply]` |
 | Dashboard | `dashboard` | `[wrrapd_wrapstar_status]` |
+| WrapStar login | `wrapstar-login` | `[wrrapd_wrapstar_login]` |
+| Decline offer | `decline-offer` | `[wrrapd_wrapstar_decline]` |
 
 Set **Settings → Reading → Homepage** to the landing page.
 
