@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { getSession } from "@/lib/auth";
-import { listAllOrders, listWrapstars } from "@/lib/data";
+import { listAllOrders, listWrapstars, listCourierDrivers } from "@/lib/data";
 import { formatDateKeyNy } from "@/lib/ny-date";
 import { wrrapdScheduledInstantIsoForUi } from "@/lib/order-schedule-display";
 import { normalizeOrderStatus, orderWrapstarId, orderWrapstarName } from "@/lib/types";
+import { ensureDemoStaffing } from "@/lib/demo-staffing";
 import { AdminNav } from "@/components/admin-nav";
 import { notFound } from "next/navigation";
 import { formatInTimeZone } from "date-fns-tz";
@@ -41,6 +42,8 @@ export default async function AdminOrdersCalendarPage({
   const session = await getSession();
   if (!session || session.role !== "admin") notFound();
 
+  await ensureDemoStaffing();
+
   const sp = await searchParams;
   const todayKey = formatInTimeZone(new Date(), "America/New_York", "yyyy-MM-dd");
   const dateKey = pick(sp.date) || todayKey;
@@ -49,7 +52,11 @@ export default async function AdminOrdersCalendarPage({
   const year = Number(yStr) || Number(todayKey.slice(0, 4));
   const month0 = (Number(mStr) || Number(todayKey.slice(5, 7))) - 1;
 
-  const [orders, wrapstars] = await Promise.all([listAllOrders(), listWrapstars()]);
+  const [orders, wrapstars, drivers] = await Promise.all([
+    listAllOrders(),
+    listWrapstars(),
+    listCourierDrivers(),
+  ]);
   const counts = new Map<string, number>();
   for (const o of orders) {
     const k = formatDateKeyNy(wrrapdScheduledInstantIsoForUi(o));
@@ -66,6 +73,7 @@ export default async function AdminOrdersCalendarPage({
   const monthLabel = formatInTimeZone(new Date(Date.UTC(year, month0, 15)), "UTC", "MMMM yyyy");
 
   const wrapstarName = (id?: string) => wrapstars.find((w) => w.id === id)?.name;
+  const driverName = (id?: string) => drivers.find((d) => d.id === id)?.name;
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-8">
@@ -132,12 +140,13 @@ export default async function AdminOrdersCalendarPage({
                 <th className="px-3 py-2">Retailer</th>
                 <th className="px-3 py-2">Status</th>
                 <th className="px-3 py-2">WrapStar</th>
+                <th className="px-3 py-2">Driver</th>
               </tr>
             </thead>
             <tbody>
               {dayOrders.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-3 py-8 text-center text-slate-500">
+                  <td colSpan={7} className="px-3 py-8 text-center text-slate-500">
                     No orders on this date.
                   </td>
                 </tr>
@@ -168,7 +177,18 @@ export default async function AdminOrdersCalendarPage({
                         {wsId ? (
                           <Link href={`/admin/wrapstars/${wsId}`} className="text-blue-700 underline">
                             {orderWrapstarName(o) || wrapstarName(wsId) || wsId}
-                            <div className="font-mono text-[10px] text-slate-500">{wsId}</div>
+                          </Link>
+                        ) : (
+                          "Unassigned"
+                        )}
+                      </td>
+                      <td className="px-3 py-2">
+                        {o.courierDriverId ? (
+                          <Link
+                            href={`/admin/drivers/${o.courierDriverId}`}
+                            className="text-blue-700 underline"
+                          >
+                            {o.courierDriverName || driverName(o.courierDriverId) || o.courierDriverId}
                           </Link>
                         ) : (
                           "Unassigned"

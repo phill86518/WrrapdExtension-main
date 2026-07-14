@@ -1,7 +1,7 @@
 (function () {
-	/* wrrapd-wrapstars-apply.js v22 — address suggestions via WordPress proxy (no Maps JS). */
+	/* wrrapd-wrapstars-apply.js v23 — deliver-first conditionals; custom-print wording. */
 	var TIDBITS = [
-		'A 24-inch large-format printer can produce custom wrap in a single continuous sheet — no seams — for gifts most retail paper rolls cannot cleanly cover.',
+		'Being able to print custom wrapping paper means you can match a design to the occasion — not just the nearest roll at the store.',
 		'Professional wrappers often use the "hospital corner" fold — borrowed from bed-making — to get crisp, seamless edges on box corners without extra tape.',
 		'This step covers authorization and logistics — no trivia here, just the important details.',
 		'The record for fastest gift wrap is under 30 seconds for a shoebox-sized present — most professionals average 2–3 minutes for something that clean.',
@@ -402,7 +402,7 @@
 		var rows = [
 			['first_name', 0], ['last_name', 0], ['email', 0], ['phone_mobile', 0],
 			['address_line1', 0], ['address_line2', 0], ['city', 0], ['state', 0], ['postal_code', 0],
-			['has_vehicle', 1], ['can_deliver', 1], ['delivery_max_distance', 1], ['clean_driving_record', 1], ['has_large_format_printer', 1], ['printer_size', 1],
+			['can_deliver', 1], ['has_vehicle', 1], ['clean_driving_record', 1], ['delivery_max_distance', 1], ['has_large_format_printer', 1], ['printer_size', 1],
 			['gift_wrapping_experience', 2], ['business_structure', 2],
 			['bank_account_ready', 3], ['wrrapd_po_daily_pickup', 3], ['dedicated_wrap_workspace', 3], ['comfortable_video_monitoring', 3], ['delivery_proof_ready', 3], ['gov_id', 3],
 			['why_wrapstar', 4]
@@ -441,6 +441,37 @@
 		}
 		sel.addEventListener('change', sync);
 		sync();
+	}
+
+	function setFieldRequired(el, on) {
+		if (!el) return;
+		el.required = !!on;
+		if (!on) el.value = '';
+	}
+
+	function syncDeliverBranch() {
+		var deliverSel = document.getElementById('wrrapd-ws-can-deliver');
+		var branch = document.getElementById('wrrapd-ws-deliver-branch');
+		var vehicle = document.getElementById('ws-has-vehicle');
+		var driving = document.getElementById('ws-driving-record');
+		var distance = document.getElementById('wrrapd-ws-delivery-distance');
+		if (!deliverSel || !branch) return;
+		var on = deliverSel.value === 'yes';
+		branch.hidden = !on;
+		setFieldRequired(vehicle, on);
+		setFieldRequired(driving, on);
+		setFieldRequired(distance, on);
+		syncPoPickupBranch();
+	}
+
+	function syncPoPickupBranch() {
+		var vehicle = document.getElementById('ws-has-vehicle');
+		var wrap = document.getElementById('wrrapd-ws-po-pickup-wrap');
+		var field = document.getElementById('ws-po-pickup');
+		if (!wrap) return;
+		var on = !!(vehicle && vehicle.value === 'yes');
+		wrap.hidden = !on;
+		setFieldRequired(field, on);
 	}
 
 	function mapStateToSelect(abbr) {
@@ -583,9 +614,20 @@
 		line1.addEventListener('keydown', function (e) { if (e.key === 'Escape') hideList(); });
 	}
 
-	bindConditional('wrrapd-ws-can-deliver', 'wrrapd-ws-delivery-distance-wrap', 'wrrapd-ws-delivery-distance', 'yes');
 	bindConditional('wrrapd-ws-has-printer', 'wrrapd-ws-printer-size-wrap', 'wrrapd-ws-printer-size', 'yes');
 	bindConditional('wrrapd-ws-business-structure', 'wrrapd-ws-business-note-wrap', 'wrrapd-ws-business-note', 'other');
+
+	(function bindDeliverAndPoConditionals() {
+		var deliverSel = document.getElementById('wrrapd-ws-can-deliver');
+		var vehicle = document.getElementById('ws-has-vehicle');
+		if (deliverSel) {
+			deliverSel.addEventListener('change', syncDeliverBranch);
+		}
+		if (vehicle) {
+			vehicle.addEventListener('change', syncPoPickupBranch);
+		}
+		syncDeliverBranch();
+	})();
 
 	bindPhoneMask('ws-phone-mobile');
 	bindPhoneMask('ws-phone-work');

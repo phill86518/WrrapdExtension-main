@@ -1,8 +1,10 @@
 import {
   assignWrapstar,
+  assignCourierDriver,
   createOrder,
   deleteOrders,
   listWrapstars,
+  listCourierDrivers,
   listOrdersByStatus,
   reopenOrderAsAssigned,
   updateOrderStatus,
@@ -19,6 +21,11 @@ import { maxStopSequenceByRouteKey } from "@/lib/route-optimization";
 import { formatDateKeyNy, toInstantDate } from "@/lib/ny-date";
 import { wrrapdScheduledInstantIsoForUi } from "@/lib/order-schedule-display";
 import { orderWrapstarId, type OrderStatus } from "@/lib/types";
+import {
+  defaultDemoDriverIdForPostal,
+  defaultDemoWrapstarId,
+  ensureDemoStaffing,
+} from "@/lib/demo-staffing";
 import { formatInTimeZone } from "date-fns-tz";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -62,13 +69,15 @@ async function updateStatusAction(formData: FormData) {
   revalidatePath("/admin");
 }
 
-async function assignWrapstarAction(formData: FormData) {
+async function assignStaffAction(formData: FormData) {
   "use server";
-  await assignWrapstar(
-    String(formData.get("orderId") || ""),
-    String(formData.get("wrapstarId") || ""),
-    "admin",
-  );
+  const orderId = String(formData.get("orderId") || "");
+  const wrapstarId = String(formData.get("wrapstarId") || "").trim() || defaultDemoWrapstarId();
+  const courierDriverId =
+    String(formData.get("courierDriverId") || "").trim() ||
+    defaultDemoDriverIdForPostal(String(formData.get("postalCode") || ""));
+  await assignWrapstar(orderId, wrapstarId, "admin");
+  await assignCourierDriver(orderId, courierDriverId, "admin");
   revalidatePath("/admin");
 }
 
@@ -142,14 +151,17 @@ export default async function AdminPage({
   let scheduled: Awaited<ReturnType<typeof listOrdersByStatus>>;
   let past: Awaited<ReturnType<typeof listOrdersByStatus>>;
   let wrapstars: Awaited<ReturnType<typeof listWrapstars>>;
+  let drivers: Awaited<ReturnType<typeof listCourierDrivers>>;
   try {
+    await ensureDemoStaffing();
     const settled = await Promise.allSettled([
       listOrdersByStatus("active"),
       listOrdersByStatus("scheduled"),
       listOrdersByStatus("past"),
       listWrapstars(),
+      listCourierDrivers(),
     ]);
-    const labels = ["orders:active", "orders:scheduled", "orders:past", "wrapstars"] as const;
+    const labels = ["orders:active", "orders:scheduled", "orders:past", "wrapstars", "drivers"] as const;
     settled.forEach((r, i) => {
       if (r.status === "rejected") {
         const reason = r.reason;
@@ -169,6 +181,7 @@ export default async function AdminPage({
     scheduled = (settled[1] as PromiseFulfilledResult<typeof scheduled>).value;
     past = (settled[2] as PromiseFulfilledResult<typeof past>).value;
     wrapstars = (settled[3] as PromiseFulfilledResult<typeof wrapstars>).value;
+    drivers = (settled[4] as PromiseFulfilledResult<typeof drivers>).value;
   } catch (err) {
     console.error("[admin] failed to load Firestore / orders", err);
     return (
@@ -191,6 +204,9 @@ export default async function AdminPage({
   }
 
   const routeStopTotals = maxStopSequenceByRouteKey([...active, ...scheduled]);
+  const taylorId = defaultDemoWrapstarId();
+  const approvedDrivers = drivers.filter((d) => d.status === "approved");
+  const driverOptions = approvedDrivers.length > 0 ? approvedDrivers : drivers;
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-[#9aab9f] via-[#c5cfc9] to-[#a8b8ae]">
@@ -201,7 +217,9 @@ export default async function AdminPage({
             <div>
               <WrrapdLogo className="h-10 w-auto max-w-[180px] object-contain object-left" />
               <h1 className="mt-2 text-3xl font-bold tracking-tight text-[#0f172a]">WrapStars Command Center</h1>
-              <p className="mt-1 text-sm font-medium text-[#2d4a38]">Orders, WrapStars, and fleet oversight</p>
+              <p className="mt-1 text-sm font-medium text-[#2d4a38]">
+                Orders with WrapStar (gift-wrapper) + Driver assignment
+              </p>
             </div>
             <div className="flex flex-wrap items-center gap-3">
               <AdminCreateDeliverySection createOrderAction={createOrderAction} createError={query.createError} />
@@ -210,7 +228,7 @@ export default async function AdminPage({
           </div>
         </div>
 
-        <section className="mb-10 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
+        <section className="mb-10 grid gap-5 md:grid-cols-2 lg:grid-cols-5">
           <a
             href="/admin/orders"
             className="group relative overflow-hidden rounded-2xl border-2 border-[#1a2744]/35 bg-[#faf8f4] p-6 shadow-lg shadow-[#0f172a]/15 transition hover:border-[#c9a227] hover:shadow-xl"
@@ -218,7 +236,7 @@ export default async function AdminPage({
             <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-[#c9a227] via-amber-500 to-[#c9a227]" />
             <h3 className="mt-2 font-bold text-[#0f172a]">Orders calendar</h3>
             <p className="mt-2 text-sm leading-relaxed text-[#2d4a38]">
-              Browse orders by day with status and WrapStar filters.
+              Browse all orders by day — WrapStar and Driver on each row.
             </p>
             <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-[#1a2744] group-hover:text-amber-700">
               Open →
@@ -231,7 +249,20 @@ export default async function AdminPage({
             <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-[#c9a227] via-amber-500 to-[#c9a227]" />
             <h3 className="mt-2 font-bold text-[#0f172a]">WrapStars</h3>
             <p className="mt-2 text-sm leading-relaxed text-[#2d4a38]">
-              Directory, home ZIP, onboarding, and per-WrapStar order history.
+              Gift-wrappers (hybrid or wrap-only). Demo: Taylor (Jacksonville).
+            </p>
+            <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-[#1a2744] group-hover:text-amber-700">
+              Open →
+            </p>
+          </a>
+          <a
+            href="/admin/drivers"
+            className="group relative overflow-hidden rounded-2xl border-2 border-[#1a2744]/35 bg-[#faf8f4] p-6 shadow-lg shadow-[#0f172a]/15 transition hover:border-[#c9a227] hover:shadow-xl"
+          >
+            <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-[#c9a227] via-amber-500 to-[#c9a227]" />
+            <h3 className="mt-2 font-bold text-[#0f172a]">Drivers</h3>
+            <p className="mt-2 text-sm leading-relaxed text-[#2d4a38]">
+              Couriers for final mile. Demo: Devon Blake (Jax), Morgan Ellis (Atlanta).
             </p>
             <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-[#1a2744] group-hover:text-amber-700">
               Open →
@@ -302,6 +333,17 @@ export default async function AdminPage({
             <div className="mt-4 space-y-3">
               {group.items.map((order) => {
                 const displayScheduledIso = wrrapdScheduledInstantIsoForUi(order);
+                const wsSelected = orderWrapstarId(order) || taylorId;
+                const driverSelected =
+                  order.courierDriverId || defaultDemoDriverIdForPostal(order.postalCode);
+                const wsName =
+                  wrapstars.find((w) => w.id === orderWrapstarId(order))?.name ||
+                  order.wrapstarName ||
+                  "—";
+                const driverName =
+                  drivers.find((d) => d.id === order.courierDriverId)?.name ||
+                  order.courierDriverName ||
+                  "—";
                 return (
                 <div
                   key={order.id}
@@ -358,6 +400,11 @@ export default async function AdminPage({
                       "M/d/yyyy, h:mm:ss a zzz",
                     )}
                   </p>
+                  <p className="mt-2 text-xs text-[#2d4a38]">
+                    <span className="font-semibold text-[#0f172a]">WrapStar:</span> {wsName}
+                    <span className="mx-2 text-slate-400">·</span>
+                    <span className="font-semibold text-[#0f172a]">Driver:</span> {driverName}
+                  </p>
                   <a
                     href={`/admin/orders/${order.id}`}
                     className="mt-3 inline-flex items-center justify-center rounded-xl border-2 border-[#1a2744]/50 bg-white px-4 py-2 text-sm font-bold text-[#0f172a] no-underline shadow-md transition hover:border-[#c9a227] hover:bg-[#fffef8] hover:shadow-lg"
@@ -402,23 +449,56 @@ export default async function AdminPage({
                     </form>
                   )}
 
-                  <form action={assignWrapstarAction} className="mt-2 flex flex-wrap gap-2">
+                  <form action={assignStaffAction} className="mt-2 space-y-2">
                     <input type="hidden" name="orderId" value={order.id} />
-                    <select
-                      name="wrapstarId"
-                      className="min-w-0 flex-1 rounded-xl border-2 border-[#1a2744]/25 bg-white px-3 py-2 text-sm font-medium text-[#0f172a] shadow-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-400/50 sm:flex-none sm:min-w-[10rem]"
-                    >
-                      {wrapstars.map((w) => (
-                        <option key={w.id} value={w.id}>
-                          {w.name} ({w.id})
-                        </option>
-                      ))}
-                    </select>
+                    <input type="hidden" name="postalCode" value={order.postalCode} />
+                    <label className="block text-xs font-semibold uppercase tracking-wide text-[#1a2744]">
+                      WrapStar (gift-wrapper)
+                      <select
+                        name="wrapstarId"
+                        required
+                        defaultValue={wsSelected}
+                        className="mt-1 w-full rounded-xl border-2 border-[#1a2744]/25 bg-white px-3 py-2 text-sm font-medium text-[#0f172a] shadow-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-400/50"
+                      >
+                        {wrapstars.map((w) => (
+                          <option key={w.id} value={w.id}>
+                            {w.name}
+                            {w.id === taylorId ? " (demo)" : ""} ·{" "}
+                            {w.wrapOnly || w.canDeliver === false ? "wrap-only" : "hybrid"} · ZIP{" "}
+                            {w.homePostalCode}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="block text-xs font-semibold uppercase tracking-wide text-[#1a2744]">
+                      Driver (courier)
+                      <select
+                        name="courierDriverId"
+                        required
+                        defaultValue={
+                          driverOptions.some((d) => d.id === driverSelected)
+                            ? driverSelected
+                            : driverOptions[0]?.id || ""
+                        }
+                        className="mt-1 w-full rounded-xl border-2 border-[#1a2744]/25 bg-white px-3 py-2 text-sm font-medium text-[#0f172a] shadow-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-400/50"
+                      >
+                        {driverOptions.map((d) => (
+                          <option key={d.id} value={d.id}>
+                            {d.name} ·{" "}
+                            {d.metroId === "jacksonville"
+                              ? "Jacksonville"
+                              : d.metroId === "atlanta"
+                                ? "Atlanta"
+                                : d.metroId}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
                     <button
-                      className="rounded-xl bg-gradient-to-b from-[#c9a227] to-[#a88417] px-5 py-2 text-sm font-bold text-[#1a1a12] shadow-lg shadow-amber-900/25 ring-1 ring-white/40 transition hover:from-[#d4ad32] hover:to-[#b8921f] active:scale-[0.98]"
+                      className="w-full rounded-xl bg-gradient-to-b from-[#c9a227] to-[#a88417] px-5 py-2 text-sm font-bold text-[#1a1a12] shadow-lg shadow-amber-900/25 ring-1 ring-white/40 transition hover:from-[#d4ad32] hover:to-[#b8921f] active:scale-[0.98]"
                       type="submit"
                     >
-                      Assign WrapStar
+                      Save WrapStar + Driver
                     </button>
                   </form>
                 </div>

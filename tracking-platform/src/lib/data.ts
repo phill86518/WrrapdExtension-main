@@ -24,6 +24,10 @@ import { assignStopSequences } from "@/lib/route-optimization";
 import { formatDateKeyNy, toInstantDate } from "@/lib/ny-date";
 import { wrrapdScheduledInstantIsoForUi } from "@/lib/order-schedule-display";
 import { findWrapstarById, listRegisteredWrapstars } from "@/lib/wrapstar-registry";
+import {
+  findDeliveryDriverById,
+  listDeliveryDrivers,
+} from "@/lib/driver-registry";
 import { uploadProofDataUrl } from "@/lib/proof-storage";
 import { createEarningsForDeliveredOrder } from "@/lib/finance";
 import type { CollectionReference } from "firebase-admin/firestore";
@@ -94,7 +98,8 @@ async function readFallbackOrders(): Promise<Order[]> {
 
 export async function applyAutoAllocationToOrders(orders: Order[]): Promise<Order[]> {
   const wrapstars = await listRegisteredWrapstars();
-  const map = await computeAssignmentsForOrders({ orders, wrapstars });
+  const deliveryDrivers = await listDeliveryDrivers();
+  const map = await computeAssignmentsForOrders({ orders, wrapstars, deliveryDrivers });
   const merged = orders.map((o) => {
     const status = normalizeOrderStatus(o.status);
     if (
@@ -108,6 +113,7 @@ export async function applyAutoAllocationToOrders(orders: Order[]): Promise<Orde
       return { ...o, status, wrapstarId: orderWrapstarId(o), wrapstarName: orderWrapstarName(o) };
     }
     if (o.assignmentSource === "manual" && orderWrapstarId(o)) {
+      const a = map.get(o.id);
       return {
         ...o,
         status: status === "pending" || status === "scheduled" ? "assigned" : status,
@@ -115,6 +121,9 @@ export async function applyAutoAllocationToOrders(orders: Order[]): Promise<Orde
         wrapstarName: orderWrapstarName(o),
         driverId: orderWrapstarId(o),
         driverName: orderWrapstarName(o),
+        fulfillmentMode: a?.fulfillmentMode || o.fulfillmentMode,
+        courierDriverId: a?.courierDriverId ?? o.courierDriverId,
+        courierDriverName: a?.courierDriverName ?? o.courierDriverName,
       };
     }
     const a = map.get(o.id);
@@ -132,6 +141,9 @@ export async function applyAutoAllocationToOrders(orders: Order[]): Promise<Orde
       wrapstarName: a.wrapstarName,
       driverId: a.wrapstarId,
       driverName: a.wrapstarName,
+      fulfillmentMode: a.fulfillmentMode,
+      courierDriverId: a.courierDriverId,
+      courierDriverName: a.courierDriverName,
       assignmentSource: o.assignmentSource === "manual" ? "manual" : "auto",
       updatedAt: nowIso(),
       updatedBy: "allocator",
@@ -165,6 +177,10 @@ export async function listDrivers() {
 
 export async function listWrapstars() {
   return listRegisteredWrapstars();
+}
+
+export async function listCourierDrivers() {
+  return listDeliveryDrivers();
 }
 
 export async function unassignDeletedWrapstarOrders(wrapstarId: string): Promise<void> {
@@ -867,12 +883,17 @@ export async function assignWrapstar(id: string, wrapstarId: string, updatedBy: 
   const wrapstar = await findWrapstarById(wrapstarId);
   if (!current || !wrapstar) return null;
   const st = normalizeOrderStatus(current.status);
+  const wrapOnly = wrapstar.wrapOnly === true || wrapstar.canDeliver === false;
   const next: Order = {
     ...current,
     wrapstarId: wrapstar.id,
     wrapstarName: wrapstar.name,
     driverId: wrapstar.id,
     driverName: wrapstar.name,
+    fulfillmentMode: wrapOnly ? "driver_final_mile" : "self_delivery",
+    ...(wrapOnly
+      ? {}
+      : { courierDriverId: undefined, courierDriverName: undefined }),
     assignmentSource: "manual",
     status: st === "scheduled" || st === "pending" ? "assigned" : st,
     updatedAt: nowIso(),
@@ -893,9 +914,87 @@ export async function assignWrapstar(id: string, wrapstarId: string, updatedBy: 
   return (await getOrderById(id)) ?? null;
 }
 
-/** @deprecated */
+/** @deprecated Prefer assignWrapstar — this still assigns a WrapStar, not a courier. */
 export async function assignDriver(id: string, driverId: string, updatedBy: string) {
   return assignWrapstar(id, driverId, updatedBy);
+}
+
+/** Assign (or clear) the courier DeliveryDriver for final-mile. */
+export async function assignCourierDriver(
+  id: string,
+  courierDriverId: string | "",
+  updatedBy: string,
+) {
+  const current = await getOrderById(id);
+  if (!current) return null;
+
+  let courierDriverIdNext: string | undefined;
+  let courierDriverNameNext: string | undefined;
+  let fulfillmentMode = current.fulfillmentMode;
+
+  if (courierDriverId) {
+    const driver = await findDeliveryDriverById(courierDriverId);
+    if (!driver) return null;
+    courierDriverIdNext = driver.id;
+    courierDriverNameNext = driver.name;
+    fulfillmentMode = "driver_final_mile";
+  } else {
+    courierDriverIdNext = undefined;
+    courierDriverNameNext = undefined;
+    const ws = orderWrapstarId(current)
+      ? await findWrapstarById(orderWrapstarId(current)!)
+      : undefined;
+    fulfillmentMode =
+      ws && (ws.wrapOnly || ws.canDeliver === false) ? "driver_final_mile" : "self_delivery";
+  }
+
+  const next: Order = {
+    ...current,
+    courierDriverId: courierDriverIdNext,
+    courierDriverName: courierDriverNameNext,
+    fulfillmentMode,
+    updatedAt: nowIso(),
+    updatedBy,
+  };
+
+  const ocAs = getOrdersCollection();
+  if (ocAs) {
+    await ocAs.doc(id).set(next);
+  } else {
+    const orders = await readFallbackOrders();
+    const updated = orders.map((o) => (o.id === id ? next : o));
+    await writeFallbackPayload(updated);
+  }
+  return (await getOrderById(id)) ?? null;
+}
+
+export async function unassignDeletedCourierDriverOrders(courierDriverId: string): Promise<void> {
+  const clear = (o: Order): Order => {
+    if (o.courierDriverId !== courierDriverId) return o;
+    return {
+      ...o,
+      courierDriverId: undefined,
+      courierDriverName: undefined,
+      fulfillmentMode: "self_delivery",
+      updatedAt: nowIso(),
+      updatedBy: "system",
+    };
+  };
+  const oc = getOrdersCollection();
+  if (oc) {
+    const snap = await oc.get();
+    const batchWrites = snap.docs
+      .map((d) => {
+        const o = d.data() as Order;
+        const next = clear(o);
+        return next === o ? null : { id: d.id, next };
+      })
+      .filter(Boolean) as Array<{ id: string; next: Order }>;
+    await Promise.all(batchWrites.map(({ id, next }) => oc.doc(id).set(next)));
+    return;
+  }
+  const orders = await readFallbackOrders();
+  await writeFallbackPayload(orders.map(clear));
 }
 
 export async function updateDriverLocation(

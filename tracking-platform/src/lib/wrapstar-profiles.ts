@@ -24,8 +24,8 @@ const defaultProfiles: Store = {
   [TAYLOR_ID]: {
     wrapstarId: TAYLOR_ID,
     driverId: TAYLOR_ID,
-    onboardingStatus: "pending",
-    notes: "Taylor — pending onboarding",
+    onboardingStatus: "approved",
+    notes: "Demo WrapStar — Taylor (Jacksonville)",
   },
 };
 
@@ -162,6 +162,18 @@ export async function setOnboardingStatus(
   all[resolved] = next;
   await writeAllFile(all);
   return next;
+}
+
+/** Idempotent: Taylor is always approved for Command Center demos. */
+export async function ensureDemoWrapstarApprovals(): Promise<void> {
+  const taylor = await getWrapstarProfile(TAYLOR_ID);
+  if (taylor.onboardingStatus !== "approved") {
+    await setOnboardingStatus(TAYLOR_ID, "approved", "Demo WrapStar — Taylor (Jacksonville)");
+  }
+  const roger = await getWrapstarProfile(ROGER_ID);
+  if (roger.onboardingStatus !== "approved") {
+    await setOnboardingStatus(ROGER_ID, "approved", "Founder — Roger");
+  }
 }
 
 export async function setForcedAvailableDates(

@@ -23,14 +23,22 @@ async function updateProfileAction(formData: FormData) {
   const session = await getSession();
   if (!session || session.role !== "admin") return;
   const id = String(formData.get("wrapstarId") || "");
+  const canDeliver = String(formData.get("canDeliver") || "") === "yes";
+  const vehicleRaw = String(formData.get("hasVehicle") || "");
   await updateWrapstar(id, {
     name: String(formData.get("name") || ""),
     homePostalCode: String(formData.get("homePostalCode") || ""),
     email: String(formData.get("email") || ""),
     phone: String(formData.get("phone") || ""),
+    canDeliver,
+    wrapOnly: !canDeliver,
+    ...(vehicleRaw === "yes" || vehicleRaw === "no" ? { hasVehicle: vehicleRaw === "yes" } : {}),
+    deliveryMaxDistance: String(formData.get("deliveryMaxDistance") || "") || undefined,
+    assignedDriverId: String(formData.get("assignedDriverId") || "") || undefined,
   });
   revalidatePath(`/admin/wrapstars/${id}`);
   revalidatePath("/admin/wrapstars");
+  revalidatePath("/admin/drivers");
 }
 
 async function payoutAction(formData: FormData) {
@@ -150,6 +158,47 @@ export default async function AdminWrapstarDetailPage({
           <label className="text-sm">
             Phone
             <input name="phone" defaultValue={wrapstar.phone || ""} className="mt-1 w-full rounded border px-3 py-2" />
+          </label>
+          <label className="text-sm">
+            Can deliver wrapped gifts?
+            <select
+              name="canDeliver"
+              defaultValue={wrapstar.wrapOnly || wrapstar.canDeliver === false ? "no" : "yes"}
+              className="mt-1 w-full rounded border px-3 py-2"
+            >
+              <option value="yes">Yes (hybrid — self-delivery)</option>
+              <option value="no">No (wrap-only — needs Driver)</option>
+            </select>
+          </label>
+          <label className="text-sm">
+            Has vehicle?
+            <select
+              name="hasVehicle"
+              defaultValue={wrapstar.hasVehicle === true ? "yes" : wrapstar.hasVehicle === false ? "no" : ""}
+              className="mt-1 w-full rounded border px-3 py-2"
+            >
+              <option value="">Unknown</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+            </select>
+          </label>
+          <label className="text-sm">
+            Max delivery distance
+            <input
+              name="deliveryMaxDistance"
+              defaultValue={wrapstar.deliveryMaxDistance || ""}
+              placeholder="e.g. 15-30"
+              className="mt-1 w-full rounded border px-3 py-2"
+            />
+          </label>
+          <label className="text-sm">
+            Assigned Driver ID (optional)
+            <input
+              name="assignedDriverId"
+              defaultValue={wrapstar.assignedDriverId || ""}
+              placeholder="dd-…"
+              className="mt-1 w-full rounded border px-3 py-2 font-mono text-xs"
+            />
           </label>
           <button type="submit" className="rounded bg-slate-900 px-3 py-2 text-sm text-white md:col-span-2 md:w-fit">
             Save profile

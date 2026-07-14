@@ -335,8 +335,11 @@ function wrrapd_wrapstars_compute_fit_score( $app ) {
 		$delivery_pts = $map[ (string) ( $app['delivery_max_distance'] ?? '' ) ] ?? 5;
 	}
 
-	$driving_map = array( 'yes' => 10, 'discuss' => 6, 'no' => 2 );
-	$driving_pts = $driving_map[ (string) ( $app['clean_driving_record'] ?? '' ) ] ?? 0;
+	$driving_pts = 5; // Neutral when delivery branch not applicable.
+	if ( ( $app['can_deliver'] ?? '' ) === 'yes' ) {
+		$driving_map = array( 'yes' => 10, 'discuss' => 6, 'no' => 2 );
+		$driving_pts = $driving_map[ (string) ( $app['clean_driving_record'] ?? '' ) ] ?? 0;
+	}
 
 	$gig_pts = 5;
 	$platforms = $app['gig_platforms'] ?? array();
@@ -455,23 +458,26 @@ function wrrapd_wrapstars_process_application() {
 	if ( $state === '' || ! isset( $state_options[ $state ] ) ) {
 		$errors[] = 'Please select your state.';
 	}
-	if ( ! in_array( $has_vehicle, array( 'yes', 'no' ), true ) ) {
-		$errors[] = 'Please indicate whether you have a vehicle.';
-	}
 	if ( ! in_array( $can_deliver, array( 'yes', 'no' ), true ) ) {
-		$errors[] = 'Please indicate whether you are able to deliver.';
+		$errors[] = 'Please indicate whether you are able to deliver wrapped gifts.';
 	}
-	if ( $can_deliver === 'yes' && ( $delivery_max_distance === '' || ! isset( $distance_options[ $delivery_max_distance ] ) ) ) {
-		$errors[] = 'Please select your maximum delivery distance.';
-	}
-	if ( $can_deliver === 'no' ) {
+	if ( $can_deliver === 'yes' ) {
+		if ( ! in_array( $has_vehicle, array( 'yes', 'no' ), true ) ) {
+			$errors[] = 'Please indicate whether you have a vehicle.';
+		}
+		if ( ! in_array( $clean_driving_record, array( 'yes', 'no', 'discuss' ), true ) ) {
+			$errors[] = 'Please answer the driving record question.';
+		}
+		if ( $delivery_max_distance === '' || ! isset( $distance_options[ $delivery_max_distance ] ) ) {
+			$errors[] = 'Please select your maximum delivery distance.';
+		}
+	} else {
+		$has_vehicle           = '';
+		$clean_driving_record  = '';
 		$delivery_max_distance = '';
 	}
-	if ( ! in_array( $clean_driving_record, array( 'yes', 'no', 'discuss' ), true ) ) {
-		$errors[] = 'Please answer the driving record question.';
-	}
 	if ( ! in_array( $has_large_format_printer, array( 'yes', 'no' ), true ) ) {
-		$errors[] = 'Please indicate whether you have a large-format color printer.';
+		$errors[] = 'Please indicate whether you are able to print wrapping paper for custom designs.';
 	}
 	if ( $has_large_format_printer === 'yes' && ( $printer_size === '' || ! isset( $printer_options[ $printer_size ] ) ) ) {
 		$errors[] = 'Please select your printer size.';
@@ -503,8 +509,12 @@ function wrrapd_wrapstars_process_application() {
 	$video_options     = wrrapd_wrapstars_video_monitoring_options();
 	$proof_options     = wrrapd_wrapstars_delivery_proof_options();
 
-	if ( ! isset( $po_pickup_options[ $wrrapd_po_daily_pickup ] ) || $wrrapd_po_daily_pickup === '' ) {
-		$errors[] = 'Please answer the Wrrapd PO pickup question.';
+	if ( $has_vehicle === 'yes' ) {
+		if ( ! isset( $po_pickup_options[ $wrrapd_po_daily_pickup ] ) || $wrrapd_po_daily_pickup === '' ) {
+			$errors[] = 'Please answer the Wrrapd PO pickup question.';
+		}
+	} else {
+		$wrrapd_po_daily_pickup = '';
 	}
 	if ( ! isset( $workspace_options[ $dedicated_wrap_workspace ] ) || $dedicated_wrap_workspace === '' ) {
 		$errors[] = 'Please answer the dedicated workspace question.';
@@ -746,31 +756,33 @@ function wrrapd_wrapstars_shortcode_apply() {
 					<section class="wrrapd-apply-screen" data-screen="1" data-step-label="Step 1 of 5">
 						<h2>Your setup</h2>
 						<div class="ws-field">
-							<label for="ws-has-vehicle">Do you have a vehicle?</label>
-							<select name="has_vehicle" id="ws-has-vehicle" required><option value="">Select…</option><option value="yes">Yes</option><option value="no">No</option></select>
-						</div>
-						<div class="ws-field">
-							<label for="wrrapd-ws-can-deliver">Are you able to deliver wrapped gifts?</label>
+							<label for="wrrapd-ws-can-deliver">Are you able to deliver wrapped gifts?<?php echo wrrapd_wrapstars_apply_required_mark(); ?></label>
 							<select name="can_deliver" id="wrrapd-ws-can-deliver" required><option value="">Select…</option><option value="yes">Yes</option><option value="no">No</option></select>
 						</div>
-						<div class="ws-field wrrapd-wrapstars-conditional" id="wrrapd-ws-delivery-distance-wrap" hidden>
-							<label for="wrrapd-ws-delivery-distance">Maximum delivery distance</label>
-							<select name="delivery_max_distance" id="wrrapd-ws-delivery-distance">
-								<?php foreach ( wrrapd_wrapstars_delivery_distance_options() as $value => $label ) : ?>
-									<option value="<?php echo esc_attr( $value ); ?>"><?php echo esc_html( $label ); ?></option>
-								<?php endforeach; ?>
-							</select>
+						<div class="wrrapd-wrapstars-conditional" id="wrrapd-ws-deliver-branch" hidden>
+							<div class="ws-field">
+								<label for="ws-has-vehicle">Do you have a vehicle?<?php echo wrrapd_wrapstars_apply_required_mark(); ?></label>
+								<select name="has_vehicle" id="ws-has-vehicle"><option value="">Select…</option><option value="yes">Yes</option><option value="no">No</option></select>
+							</div>
+							<div class="ws-field">
+								<label for="ws-driving-record">Do you have a clean driving record?<?php echo wrrapd_wrapstars_apply_required_mark(); ?></label>
+								<select name="clean_driving_record" id="ws-driving-record">
+									<?php foreach ( wrrapd_wrapstars_driving_record_options() as $value => $label ) : ?>
+										<option value="<?php echo esc_attr( $value ); ?>"><?php echo esc_html( $label ); ?></option>
+									<?php endforeach; ?>
+								</select>
+							</div>
+							<div class="ws-field">
+								<label for="wrrapd-ws-delivery-distance">Maximum delivery distance<?php echo wrrapd_wrapstars_apply_required_mark(); ?></label>
+								<select name="delivery_max_distance" id="wrrapd-ws-delivery-distance">
+									<?php foreach ( wrrapd_wrapstars_delivery_distance_options() as $value => $label ) : ?>
+										<option value="<?php echo esc_attr( $value ); ?>"><?php echo esc_html( $label ); ?></option>
+									<?php endforeach; ?>
+								</select>
+							</div>
 						</div>
 						<div class="ws-field">
-							<label for="ws-driving-record">Do you have a clean driving record?</label>
-							<select name="clean_driving_record" id="ws-driving-record" required>
-								<?php foreach ( wrrapd_wrapstars_driving_record_options() as $value => $label ) : ?>
-									<option value="<?php echo esc_attr( $value ); ?>"><?php echo esc_html( $label ); ?></option>
-								<?php endforeach; ?>
-							</select>
-						</div>
-						<div class="ws-field">
-							<label for="wrrapd-ws-has-printer">Do you have any large-format color printers?</label>
+							<label for="wrrapd-ws-has-printer">Are you able to print wrapping paper for custom designs?<?php echo wrrapd_wrapstars_apply_required_mark(); ?></label>
 							<select name="has_large_format_printer" id="wrrapd-ws-has-printer" required><option value="">Select…</option><option value="yes">Yes</option><option value="no">No</option></select>
 						</div>
 						<div class="ws-field wrrapd-wrapstars-conditional" id="wrrapd-ws-printer-size-wrap" hidden>
@@ -827,10 +839,10 @@ function wrrapd_wrapstars_shortcode_apply() {
 						<div class="wrrapd-apply-standards-block">
 							<h3>Your workspace &amp; WrapStar standards</h3>
 							<p class="wrrapd-apply-standards-intro">WrapStars take pride in their craft. Every order is someone's special occasion — we ask that you uphold our wrapping standards and treat each gift with care, so the unwrapping moment feels truly memorable.</p>
-							<p class="wrrapd-apply-standards-note">Approved WrapStars may serve as a <strong>designee</strong> for a local <strong>Wrrapd PO box</strong> in their area. We also maintain chain of custody for items being gift-wrapped through thoughtful video monitoring — a simple way to protect you and the customer, not to catch anyone off guard.</p>
-							<div class="ws-field">
+							<p class="wrrapd-apply-standards-note">Approved WrapStars with a vehicle may serve as a <strong>designee</strong> for a local <strong>Wrrapd PO box</strong> in their area. We also maintain chain of custody for items being gift-wrapped through thoughtful video monitoring — a simple way to protect you and the customer, not to catch anyone off guard.</p>
+							<div class="ws-field wrrapd-wrapstars-conditional" id="wrrapd-ws-po-pickup-wrap" hidden>
 								<label for="ws-po-pickup">If assigned as a designee, could you retrieve gift-wrap items from your local Wrrapd PO box on a regular basis?<?php echo wrrapd_wrapstars_apply_required_mark(); ?></label>
-								<select name="wrrapd_po_daily_pickup" id="ws-po-pickup" required>
+								<select name="wrrapd_po_daily_pickup" id="ws-po-pickup">
 									<?php foreach ( wrrapd_wrapstars_po_pickup_options() as $value => $label ) : ?>
 										<option value="<?php echo esc_attr( $value ); ?>"><?php echo esc_html( $label ); ?></option>
 									<?php endforeach; ?>
@@ -947,14 +959,16 @@ function wrrapd_wrapstars_render_admin_application_card( $id ) {
 	$st = wrrapd_wrapstars_get_meta( $id, 'state' );
 	echo esc_html( $state_labels[ $st ] ?? $st ) . ' ' . esc_html( wrrapd_wrapstars_get_meta( $id, 'postal_code' ) ) . '</p>';
 
-	echo '<h3>Setup</h3><p>Vehicle: ' . esc_html( wrrapd_wrapstars_get_meta( $id, 'has_vehicle' ) );
-	echo ' · Deliver: ' . esc_html( wrrapd_wrapstars_get_meta( $id, 'can_deliver' ) );
+	echo '<h3>Setup</h3><p>Deliver: ' . esc_html( wrrapd_wrapstars_get_meta( $id, 'can_deliver' ) ?: '—' );
+	$veh = wrrapd_wrapstars_get_meta( $id, 'has_vehicle' );
+	echo ' · Vehicle: ' . esc_html( $veh !== '' ? $veh : 'n/a' );
 	$dist = wrrapd_wrapstars_get_meta( $id, 'delivery_max_distance' );
 	if ( $dist !== '' ) {
 		echo ' · Max distance: ' . esc_html( $distance_labels[ $dist ] ?? $dist );
 	}
-	echo ' · Driving record: ' . esc_html( wrrapd_wrapstars_get_meta( $id, 'clean_driving_record' ) );
-	echo ' · Printer: ' . esc_html( wrrapd_wrapstars_get_meta( $id, 'has_large_format_printer' ) );
+	$drv = wrrapd_wrapstars_get_meta( $id, 'clean_driving_record' );
+	echo ' · Driving record: ' . esc_html( $drv !== '' ? $drv : 'n/a' );
+	echo ' · Custom print: ' . esc_html( wrrapd_wrapstars_get_meta( $id, 'has_large_format_printer' ) );
 	$psz = wrrapd_wrapstars_get_meta( $id, 'printer_size' );
 	if ( $psz !== '' ) {
 		echo ' (' . esc_html( $printer_labels[ $psz ] ?? $psz ) . ')';
@@ -976,7 +990,8 @@ function wrrapd_wrapstars_render_admin_application_card( $id ) {
 	echo '</p>';
 
 	echo '<h3>Workspace &amp; standards</h3><p>';
-	echo 'Wrrapd PO pickup: ' . esc_html( wrrapd_wrapstars_apply_option_label( wrrapd_wrapstars_po_pickup_options(), wrrapd_wrapstars_get_meta( $id, 'wrrapd_po_daily_pickup' ) ) );
+	$po_meta = wrrapd_wrapstars_get_meta( $id, 'wrrapd_po_daily_pickup' );
+	echo 'Wrrapd PO pickup: ' . esc_html( $po_meta !== '' ? wrrapd_wrapstars_apply_option_label( wrrapd_wrapstars_po_pickup_options(), $po_meta ) : 'n/a (no vehicle)' );
 	echo '<br/>Workspace: ' . esc_html( wrrapd_wrapstars_apply_option_label( wrrapd_wrapstars_wrap_workspace_options(), wrrapd_wrapstars_get_meta( $id, 'dedicated_wrap_workspace' ) ) );
 	echo '<br/>Video monitoring: ' . esc_html( wrrapd_wrapstars_apply_option_label( wrrapd_wrapstars_video_monitoring_options(), wrrapd_wrapstars_get_meta( $id, 'comfortable_video_monitoring' ) ) );
 	echo '<br/>Proof of delivery: ' . esc_html( wrrapd_wrapstars_apply_option_label( wrrapd_wrapstars_delivery_proof_options(), wrrapd_wrapstars_get_meta( $id, 'delivery_proof_ready' ) ) );

@@ -132,6 +132,7 @@ export default async function AdminWrapstarsPage() {
               <th className="px-3 py-2">ID</th>
               <th className="px-3 py-2">Name</th>
               <th className="px-3 py-2">Home ZIP</th>
+              <th className="px-3 py-2">Mode</th>
               <th className="px-3 py-2">Status</th>
               <th className="px-3 py-2">Open orders</th>
               <th className="px-3 py-2">Lifetime</th>
@@ -149,6 +150,13 @@ export default async function AdminWrapstarsPage() {
                 </td>
                 <td className="px-3 py-3 font-medium">{w.name}</td>
                 <td className="px-3 py-3">{w.homePostalCode}</td>
+                <td className="px-3 py-3 text-xs">
+                  {w.wrapOnly || w.canDeliver === false ? (
+                    <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-indigo-900">wrap-only</span>
+                  ) : (
+                    <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-emerald-900">hybrid</span>
+                  )}
+                </td>
                 <td className="px-3 py-3">
                   <form action={statusAction} className="space-y-1">
                     <input type="hidden" name="wrapstarId" value={w.id} />

@@ -3,9 +3,10 @@ import { getFirestoreDb } from "./firebase-admin";
 
 /** Namespaced collections so this app can share a Firebase project safely. */
 export const TRACKING_COLLECTIONS = {
+  deliveryDrivers: "tracking_delivery_drivers",
   wrapstars: "tracking_wrapstars",
   wrapstarProfiles: "tracking_wrapstar_profiles",
-  /** Legacy — still read during migration */
+  /** Legacy — still read during WrapStar migration */
   drivers: "tracking_drivers",
   driverProfiles: "tracking_driver_profiles",
   weekAvailability: "tracking_week_availability",
@@ -25,7 +26,13 @@ export function trackingWrapstarProfilesCollection(): CollectionReference | null
   return db ? db.collection(TRACKING_COLLECTIONS.wrapstarProfiles) : null;
 }
 
-/** @deprecated Use trackingWrapstarsCollection */
+/** Real courier / final-mile Drivers (not WrapStars). */
+export function trackingDeliveryDriversCollection(): CollectionReference | null {
+  const db = getFirestoreDb();
+  return db ? db.collection(TRACKING_COLLECTIONS.deliveryDrivers) : null;
+}
+
+/** @deprecated Use trackingWrapstarsCollection — legacy alias */
 export function trackingDriversCollection(): CollectionReference | null {
   return trackingWrapstarsCollection();
 }

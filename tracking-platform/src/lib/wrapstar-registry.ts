@@ -21,6 +21,10 @@ const DEFAULT_WRAPSTARS: WrapStar[] = [
     homePostalCode: "32218",
     allocationRank: 0,
     legacyDriverId: "drv-1",
+    canDeliver: true,
+    hasVehicle: true,
+    wrapOnly: false,
+    metroId: "jacksonville",
   },
   {
     id: TAYLOR_ID,
@@ -29,6 +33,10 @@ const DEFAULT_WRAPSTARS: WrapStar[] = [
     homePostalCode: "32256",
     allocationRank: 1,
     legacyDriverId: "drv-2",
+    canDeliver: true,
+    hasVehicle: true,
+    wrapOnly: false,
+    metroId: "jacksonville",
   },
 ];
 
@@ -36,6 +44,8 @@ function normalizeWrapStar(raw: Partial<WrapStar> & { id?: string; name?: string
   if (!raw?.id || !raw?.name) return null;
   const id = String(raw.id);
   const homePostalCode = String(raw.homePostalCode || "32218").replace(/\D/g, "").slice(0, 5) || "32218";
+  const canDeliver = raw.canDeliver !== false;
+  const wrapOnly = raw.wrapOnly === true || canDeliver === false;
   return {
     id,
     displayId: String(raw.displayId || id),
@@ -46,6 +56,12 @@ function normalizeWrapStar(raw: Partial<WrapStar> & { id?: string; name?: string
     email: raw.email,
     phone: raw.phone,
     legacyDriverId: raw.legacyDriverId,
+    canDeliver: wrapOnly ? false : canDeliver,
+    hasVehicle: raw.hasVehicle,
+    deliveryMaxDistance: raw.deliveryMaxDistance,
+    wrapOnly,
+    assignedDriverId: raw.assignedDriverId,
+    metroId: raw.metroId,
   };
 }
 
@@ -209,12 +225,34 @@ export async function addWrapstar(input: {
 
 export async function updateWrapstar(
   wrapstarId: string,
-  patch: Partial<Pick<WrapStar, "name" | "homePostalCode" | "email" | "phone" | "servicePostalCodes">>,
+  patch: Partial<
+    Pick<
+      WrapStar,
+      | "name"
+      | "homePostalCode"
+      | "email"
+      | "phone"
+      | "servicePostalCodes"
+      | "canDeliver"
+      | "hasVehicle"
+      | "deliveryMaxDistance"
+      | "wrapOnly"
+      | "assignedDriverId"
+      | "metroId"
+    >
+  >,
 ): Promise<{ ok: true; wrapstar: WrapStar } | { ok: false; error: string }> {
   const all = await listRegisteredWrapstars();
   const idx = all.findIndex((d) => d.id === wrapstarId);
   if (idx < 0) return { ok: false, error: "WrapStar not found." };
   const prev = all[idx]!;
+  const canDeliver =
+    patch.canDeliver !== undefined
+      ? patch.canDeliver
+      : patch.wrapOnly !== undefined
+        ? !patch.wrapOnly
+        : prev.canDeliver !== false;
+  const wrapOnly = patch.wrapOnly !== undefined ? patch.wrapOnly : !canDeliver;
   const nextWs: WrapStar = {
     ...prev,
     ...(patch.name !== undefined ? { name: patch.name.trim() } : {}),
@@ -224,6 +262,16 @@ export async function updateWrapstar(
     ...(patch.email !== undefined ? { email: patch.email.trim() || undefined } : {}),
     ...(patch.phone !== undefined ? { phone: patch.phone.trim() || undefined } : {}),
     ...(patch.servicePostalCodes !== undefined ? { servicePostalCodes: patch.servicePostalCodes } : {}),
+    canDeliver: wrapOnly ? false : canDeliver,
+    wrapOnly,
+    ...(patch.hasVehicle !== undefined ? { hasVehicle: patch.hasVehicle } : {}),
+    ...(patch.deliveryMaxDistance !== undefined
+      ? { deliveryMaxDistance: patch.deliveryMaxDistance || undefined }
+      : {}),
+    ...(patch.assignedDriverId !== undefined
+      ? { assignedDriverId: patch.assignedDriverId || undefined }
+      : {}),
+    ...(patch.metroId !== undefined ? { metroId: patch.metroId } : {}),
   };
   if (!nextWs.homePostalCode || nextWs.homePostalCode.length !== 5) {
     return { ok: false, error: "A valid 5-digit home ZIP is required." };
@@ -271,6 +319,11 @@ export async function deleteWrapstar(wrapstarId: string): Promise<{ ok: true } |
 /** Founder WrapStar id (Roger) — for UI protection. */
 export function founderWrapstarId(): string {
   return ROGER_ID;
+}
+
+/** Demo WrapStar (Taylor / Jacksonville) — default assignment pick. */
+export function demoTaylorWrapstarId(): string {
+  return TAYLOR_ID;
 }
 
 // ---- Compatibility shims (Driver naming) ----

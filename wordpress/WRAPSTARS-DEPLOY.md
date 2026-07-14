@@ -81,6 +81,8 @@ Never commit real API keys to Git.
 | Repo file | Server path |
 |-----------|-------------|
 | `wordpress/wrrapd-wrapstars.php` | `mu-plugins/wrrapd-wrapstars.php` |
+| `wordpress/wrrapd-wrapstars-apply.php` | `mu-plugins/wrrapd-wrapstars-apply.php` |
+| `wordpress/wrrapd-wrapstars-apply.js` | `mu-plugins/wrrapd-wrapstars-apply.js` |
 | `wordpress/wrrapd-boldsign.php` | `mu-plugins/wrrapd-boldsign.php` |
 | `wordpress/wrrapd-wrapstars.css` | `mu-plugins/wrrapd-wrapstars.css` |
 
@@ -92,6 +94,8 @@ export WP_ROOT=/home/USER/public_html/wrapstars
 
 mkdir -p "$WP_ROOT/wp-content/mu-plugins"
 install -m 0644 "$REPO_ROOT/wordpress/wrrapd-wrapstars.php" "$WP_ROOT/wp-content/mu-plugins/"
+install -m 0644 "$REPO_ROOT/wordpress/wrrapd-wrapstars-apply.php" "$WP_ROOT/wp-content/mu-plugins/"
+install -m 0644 "$REPO_ROOT/wordpress/wrrapd-wrapstars-apply.js" "$WP_ROOT/wp-content/mu-plugins/"
 install -m 0644 "$REPO_ROOT/wordpress/wrrapd-boldsign.php" "$WP_ROOT/wp-content/mu-plugins/"
 install -m 0644 "$REPO_ROOT/wordpress/wrrapd-wrapstars.css" "$WP_ROOT/wp-content/mu-plugins/"
 ```

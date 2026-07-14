@@ -18,6 +18,8 @@ export type OnboardingStatus = "pending" | "approved" | "rejected";
 
 export type AssignmentSource = "auto" | "manual";
 
+export type FulfillmentMode = "self_delivery" | "driver_final_mile";
+
 /** Where the shopper placed the underlying gift order (multi-retailer ingest + ops). */
 export type OrderRetailer =
   | "Amazon"
@@ -134,6 +136,32 @@ export type Order = {
   wrapRevenueCents?: number;
   /** Flowers revenue (pre-tax) in cents from checkout. */
   flowersRevenueCents?: number;
+  /**
+   * How final mile is staffed.
+   * - self_delivery: WrapStar wraps and delivers
+   * - driver_final_mile: WrapStar wraps; separate DeliveryDriver does final mile
+   */
+  fulfillmentMode?: FulfillmentMode;
+  /** Assigned courier Driver (separate from WrapStar). Not the legacy driverId alias. */
+  courierDriverId?: string;
+  courierDriverName?: string;
+};
+
+export type MetroId =
+  | "jacksonville"
+  | "orlando"
+  | "tampa"
+  | "miami"
+  | "fort_lauderdale"
+  | "atlanta"
+  | "savannah";
+
+export type Metro = {
+  id: MetroId;
+  name: string;
+  /** ZIP prefixes (3-digit) that map into this metro */
+  zipPrefixes: string[];
+  driverUnlockMinWrapOnlyCount: number;
 };
 
 export type WrapStar = {
@@ -150,9 +178,38 @@ export type WrapStar = {
   phone?: string;
   /** Legacy drv-* id if migrated */
   legacyDriverId?: string;
+  /** Able to deliver wrapped gifts (hybrid). Default true for seeded founders. */
+  canDeliver?: boolean;
+  hasVehicle?: boolean;
+  /** Max delivery distance band from apply form, e.g. "15-30" */
+  deliveryMaxDistance?: string;
+  /** Derived: !canDeliver */
+  wrapOnly?: boolean;
+  /** Optional assigned courier for wrap-only WrapStars */
+  assignedDriverId?: string;
+  metroId?: MetroId;
 };
 
-/** @deprecated Use WrapStar */
+/**
+ * Courier / final-mile Driver — separate from WrapStar.
+ * Do not confuse with legacy Order.driverId (which mirrored wrapstarId).
+ */
+export type DeliveryDriver = {
+  id: string;
+  displayId: string;
+  name: string;
+  homePostalCode: string;
+  servicePostalCodes?: string[];
+  metroId: MetroId;
+  status: OnboardingStatus;
+  email?: string;
+  phone?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+/** @deprecated Use WrapStar — legacy alias, not DeliveryDriver */
 export type Driver = WrapStar;
 
 export type WrapStarProfile = {
@@ -285,4 +342,20 @@ export function orderWrapstarId(o: Pick<Order, "wrapstarId" | "driverId">): stri
 
 export function orderWrapstarName(o: Pick<Order, "wrapstarName" | "driverName">): string | undefined {
   return o.wrapstarName || o.driverName;
+}
+
+export function orderCourierDriverId(o: Pick<Order, "courierDriverId">): string | undefined {
+  return o.courierDriverId || undefined;
+}
+
+export function resolveFulfillmentMode(
+  o: Pick<Order, "fulfillmentMode" | "courierDriverId">,
+  wrapstar?: Pick<WrapStar, "canDeliver" | "wrapOnly"> | null,
+): FulfillmentMode {
+  if (o.fulfillmentMode === "self_delivery" || o.fulfillmentMode === "driver_final_mile") {
+    return o.fulfillmentMode;
+  }
+  if (o.courierDriverId) return "driver_final_mile";
+  if (wrapstar?.wrapOnly === true || wrapstar?.canDeliver === false) return "driver_final_mile";
+  return "self_delivery";
 }

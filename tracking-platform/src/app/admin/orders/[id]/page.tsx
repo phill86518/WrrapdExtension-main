@@ -2,16 +2,23 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { getOrderById, listWrapstars, assignWrapstar, updateOrderStatus } from "@/lib/data";
+import { getOrderById, listWrapstars, listCourierDrivers, assignWrapstar, assignCourierDriver, updateOrderStatus } from "@/lib/data";
 import { getSession } from "@/lib/auth";
 import {
   normalizeOrderStatus,
   orderWrapstarId,
   orderWrapstarName,
+  resolveFulfillmentMode,
   type OrderStatus,
 } from "@/lib/types";
 import { AdminNav } from "@/components/admin-nav";
 import { findWrapstarById } from "@/lib/wrapstar-registry";
+import { findDeliveryDriverById } from "@/lib/driver-registry";
+import {
+  countWrapOnlyInMetro,
+  isDriverNetworkUnlocked,
+  metroForPostalCode,
+} from "@/lib/metros";
 import { formatUsdCents } from "@/lib/finance";
 
 export const dynamic = "force-dynamic";
@@ -53,6 +60,19 @@ async function reassignAction(formData: FormData) {
   redirect(`/admin/orders/${id}`);
 }
 
+async function assignCourierAction(formData: FormData) {
+  "use server";
+  const session = await getSession();
+  if (!session || session.role !== "admin") return;
+  const id = String(formData.get("orderId") || "");
+  const courierDriverId = String(formData.get("courierDriverId") || "");
+  await assignCourierDriver(id, courierDriverId, "admin");
+  revalidatePath(`/admin/orders/${id}`);
+  revalidatePath("/admin/orders");
+  revalidatePath("/admin/drivers");
+  redirect(`/admin/orders/${id}`);
+}
+
 export default async function AdminOrderDetailPage({
   params,
 }: {
@@ -65,10 +85,16 @@ export default async function AdminOrderDetailPage({
   const { id } = await params;
   const order = await getOrderById(id);
   if (!order) notFound();
-  const wrapstars = await listWrapstars();
+  const [wrapstars, drivers] = await Promise.all([listWrapstars(), listCourierDrivers()]);
   const wsId = orderWrapstarId(order);
   const ws = wsId ? await findWrapstarById(wsId) : undefined;
   const status = normalizeOrderStatus(order.status);
+  const mode = resolveFulfillmentMode(order, ws);
+  const metro = metroForPostalCode(order.postalCode);
+  const wrapOnlyCount = metro ? countWrapOnlyInMetro(metro.id, wrapstars) : 0;
+  const unlocked = metro ? isDriverNetworkUnlocked(metro.id, wrapOnlyCount) : false;
+  const courier =
+    order.courierDriverId ? await findDeliveryDriverById(order.courierDriverId) : undefined;
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-8">
@@ -114,6 +140,26 @@ export default async function AdminOrderDetailPage({
         <section className="space-y-2 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
           <h2 className="font-semibold text-slate-900">Fulfillment</h2>
           <p>
+            <span className="font-medium">Mode:</span>{" "}
+            <span
+              className={
+                mode === "self_delivery"
+                  ? "rounded-full bg-emerald-100 px-2 py-0.5 text-sm text-emerald-900"
+                  : "rounded-full bg-indigo-100 px-2 py-0.5 text-sm text-indigo-900"
+              }
+            >
+              {mode === "self_delivery" ? "Self-delivery" : "Driver final-mile"}
+            </span>
+          </p>
+          {metro ? (
+            <p className="text-xs text-slate-500">
+              Metro {metro.name} · wrap-only {wrapOnlyCount}/{metro.driverUnlockMinWrapOnlyCount} ·{" "}
+              {unlocked ? "driver network unlocked" : "driver network locked"}
+            </p>
+          ) : (
+            <p className="text-xs text-slate-500">ZIP outside mapped launch metros</p>
+          )}
+          <p>
             <span className="font-medium">Status:</span>{" "}
             <span className="rounded-full bg-slate-100 px-2 py-0.5 text-sm">{status}</span>
           </p>
@@ -129,6 +175,11 @@ export default async function AdminOrderDetailPage({
             ) : (
               "Unassigned"
             )}
+            {ws ? (
+              <span className="ml-2 text-xs text-slate-500">
+                ({ws.wrapOnly || ws.canDeliver === false ? "wrap-only" : "hybrid"})
+              </span>
+            ) : null}
           </p>
           {wsId ? (
             <p className="font-mono text-xs text-slate-500">
@@ -137,6 +188,21 @@ export default async function AdminOrderDetailPage({
               {order.assignmentSource ? ` · ${order.assignmentSource}` : ""}
             </p>
           ) : null}
+          <p>
+            <span className="font-medium">Driver:</span>{" "}
+            {order.courierDriverId ? (
+              <Link
+                href={`/admin/drivers/${order.courierDriverId}`}
+                className="text-blue-700 underline"
+              >
+                {order.courierDriverName || courier?.name || order.courierDriverId}
+              </Link>
+            ) : mode === "self_delivery" ? (
+              "—"
+            ) : (
+              "Unassigned"
+            )}
+          </p>
           {order.stopSequence != null ? (
             <p>
               <span className="font-medium">Route stop:</span> {order.stopSequence}
@@ -195,13 +261,40 @@ export default async function AdminOrderDetailPage({
                 </option>
                 {wrapstars.map((w) => (
                   <option key={w.id} value={w.id}>
-                    {w.name} ({w.id}) · ZIP {w.homePostalCode}
+                    {w.name} ({w.wrapOnly || w.canDeliver === false ? "wrap-only" : "hybrid"}) · ZIP{" "}
+                    {w.homePostalCode}
                   </option>
                 ))}
               </select>
             </label>
             <button type="submit" className="rounded bg-indigo-700 px-3 py-1.5 text-sm text-white">
-              Save assignment
+              Save WrapStar
+            </button>
+          </form>
+          <form action={assignCourierAction} className="flex items-end gap-2">
+            <input type="hidden" name="orderId" value={order.id} />
+            <label className="text-sm">
+              Assign Driver
+              <select
+                name="courierDriverId"
+                required
+                defaultValue={
+                  order.courierDriverId ||
+                  drivers.find((d) => d.status === "approved")?.id ||
+                  drivers[0]?.id ||
+                  ""
+                }
+                className="ml-2 rounded border px-2 py-1.5"
+              >
+                {drivers.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name} · {d.metroId} · {d.status}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button type="submit" className="rounded bg-indigo-700 px-3 py-1.5 text-sm text-white">
+              Save Driver
             </button>
           </form>
         </div>
