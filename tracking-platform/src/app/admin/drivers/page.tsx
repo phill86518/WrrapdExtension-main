@@ -15,7 +15,6 @@ import {
   metroForPostalCode,
 } from "@/lib/metros";
 import type { MetroId, OnboardingStatus } from "@/lib/types";
-import { AdminNav } from "@/components/admin-nav";
 
 export const dynamic = "force-dynamic";
 
@@ -76,8 +75,7 @@ export default async function AdminDriversPage() {
   });
 
   return (
-    <main className="mx-auto max-w-6xl px-4 py-8">
-      <AdminNav current="/admin/drivers" />
+    <div className="mx-auto max-w-6xl">
       <h1 className="text-2xl font-semibold text-slate-900">Drivers</h1>
       <p className="mt-1 text-sm text-slate-600">
         Courier Drivers for PO pickup and final mile. Separate from WrapStars who wrap (and may
@@ -223,6 +221,6 @@ export default async function AdminDriversPage() {
           </tbody>
         </table>
       </div>
-    </main>
+    </div>
   );
 }

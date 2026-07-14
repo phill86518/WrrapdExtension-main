@@ -21,7 +21,7 @@ import {
 } from "@/lib/scheduling";
 import { getWrapstarProfile } from "@/lib/wrapstar-profiles";
 import { assignStopSequences } from "@/lib/route-optimization";
-import { formatDateKeyNy, toInstantDate } from "@/lib/ny-date";
+import { formatDateKeyNy, isPastCalendarDayNy, toInstantDate } from "@/lib/ny-date";
 import { wrrapdScheduledInstantIsoForUi } from "@/lib/order-schedule-display";
 import { findWrapstarById, listRegisteredWrapstars } from "@/lib/wrapstar-registry";
 import {
@@ -620,14 +620,31 @@ export async function createOrder(
   return { ok: true, order: finalOrder, ...(notify ? { notify } : {}) };
 }
 
-export async function listOrdersByStatus(status: "active" | "scheduled" | "past") {
+export type OrderBoardBucket = "active" | "scheduled" | "past" | "delinquent";
+
+/** Incomplete order whose Eastern schedule day is already past. */
+export function isOrderDelinquent(order: Order, now: Date = new Date()): boolean {
+  const st = normalizeOrderStatus(order.status);
+  if (st === "delivered" || st === "cancelled" || st === "refunded") return false;
+  const dateKey = formatDateKeyNy(wrrapdScheduledInstantIsoForUi(order));
+  if (!dateKey) return false;
+  return isPastCalendarDayNy(dateKey, now);
+}
+
+export async function listOrdersByStatus(status: OrderBoardBucket) {
   const oc = getOrdersCollection();
   const raw = oc
     ? ((await oc.get()).docs.map((doc) => doc.data() as Order) as Order[])
     : await readFallbackOrders();
   const orders = assignStopSequences(raw);
+  const now = new Date();
+
+  if (status === "delinquent") {
+    return orders.filter((o) => isOrderDelinquent(o, now));
+  }
   if (status === "active") {
     return orders.filter((o) => {
+      if (isOrderDelinquent(o, now)) return false;
       const st = normalizeOrderStatus(o.status);
       return (
         st === "assigned" ||
@@ -639,6 +656,7 @@ export async function listOrdersByStatus(status: "active" | "scheduled" | "past"
   }
   if (status === "scheduled") {
     return orders.filter((o) => {
+      if (isOrderDelinquent(o, now)) return false;
       const st = normalizeOrderStatus(o.status);
       return st === "scheduled" || st === "pending";
     });

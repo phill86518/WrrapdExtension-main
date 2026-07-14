@@ -5,7 +5,6 @@ import { getSession } from "@/lib/auth";
 import { findDeliveryDriverById, updateDeliveryDriver } from "@/lib/driver-registry";
 import { listMetros } from "@/lib/metros";
 import type { MetroId, OnboardingStatus } from "@/lib/types";
-import { AdminNav } from "@/components/admin-nav";
 
 export const dynamic = "force-dynamic";
 
@@ -47,8 +46,7 @@ export default async function AdminDriverDetailPage({
   const metros = listMetros();
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-8">
-      <AdminNav current="/admin/drivers" />
+    <div className="mx-auto max-w-3xl">
       <Link href="/admin/drivers" className="text-sm text-blue-700 underline">
         Back to Drivers
       </Link>
@@ -141,6 +139,6 @@ export default async function AdminDriverDetailPage({
           Save Driver
         </button>
       </form>
-    </main>
+    </div>
   );
 }

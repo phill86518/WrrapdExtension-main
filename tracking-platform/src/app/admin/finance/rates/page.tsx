@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
-import { AdminNav } from "@/components/admin-nav";
 import { getPayoutConfig, savePayoutConfig } from "@/lib/finance";
 
 export const dynamic = "force-dynamic";
@@ -27,8 +26,7 @@ export default async function AdminFinanceRatesPage() {
   const config = await getPayoutConfig();
 
   return (
-    <main className="mx-auto max-w-xl px-4 py-8">
-      <AdminNav current="/admin/finance" />
+    <div className="mx-auto max-w-xl">
       <Link href="/admin/finance" className="text-sm text-blue-700 underline">
         Back to finance
       </Link>
@@ -101,6 +99,6 @@ export default async function AdminFinanceRatesPage() {
           Save
         </button>
       </form>
-    </main>
+    </div>
   );
 }

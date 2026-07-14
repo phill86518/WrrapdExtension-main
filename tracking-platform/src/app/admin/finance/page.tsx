@@ -3,7 +3,6 @@ import { notFound, redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/auth";
 import { listWrapstars } from "@/lib/data";
-import { AdminNav } from "@/components/admin-nav";
 import {
   createPayoutBatch,
   formatUsdCents,
@@ -89,8 +88,7 @@ export default async function AdminFinancePage({
   const paidTotal = wallets.reduce((s, x) => s + x.wallet.paidCents, 0);
 
   return (
-    <main className="mx-auto max-w-6xl px-4 py-8">
-      <AdminNav current="/admin/finance" />
+    <div className="mx-auto max-w-6xl">
       <h1 className="text-2xl font-semibold text-slate-900">Finance & payouts</h1>
       <p className="mt-1 text-sm text-slate-600">
         Wrrapd collects all checkout revenue. WrapStar pay = 72% of gift-wrap gross (incl. AI/upload) and 85%
@@ -305,6 +303,6 @@ export default async function AdminFinancePage({
           </button>
         </form>
       </section>
-    </main>
+    </div>
   );
 }

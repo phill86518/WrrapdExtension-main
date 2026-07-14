@@ -2,7 +2,6 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/auth";
-import { AdminNav } from "@/components/admin-nav";
 import {
   getWrapstarApplication,
   runWrapstarApplicationAction,
@@ -63,8 +62,7 @@ export default async function AdminApplicationDetailPage({
   const steps = Object.entries(app.onboardingStepsComplete || {});
 
   return (
-    <main className="mx-auto max-w-4xl px-4 py-8">
-      <AdminNav current="/admin/applications" />
+    <div className="mx-auto max-w-4xl">
       <Link href="/admin/applications" className="text-sm text-blue-700 underline">
         Back to Applications
       </Link>
@@ -271,6 +269,6 @@ export default async function AdminApplicationDetailPage({
           → onboarding on pros.wrrapd.com. Activate after they finish onboarding steps.
         </p>
       </section>
-    </main>
+    </div>
   );
 }

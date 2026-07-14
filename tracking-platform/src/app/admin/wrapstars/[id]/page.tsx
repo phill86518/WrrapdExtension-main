@@ -6,7 +6,6 @@ import { listOrdersForWrapstar } from "@/lib/data";
 import { findWrapstarById, updateWrapstar } from "@/lib/wrapstar-registry";
 import { getWrapstarProfile, setWrapstarPayoutTakes } from "@/lib/wrapstar-profiles";
 import { normalizeOrderStatus } from "@/lib/types";
-import { AdminNav } from "@/components/admin-nav";
 import {
   createPayoutBatch,
   formatUsdCents,
@@ -100,8 +99,7 @@ export default async function AdminWrapstarDetailPage({
     profile.platformTakeFlowersPercent ?? globalRates.platformTakeFlowersPercent ?? 15;
 
   return (
-    <main className="mx-auto max-w-5xl px-4 py-8">
-      <AdminNav current="/admin/wrapstars" />
+    <div className="mx-auto max-w-5xl">
       <Link href="/admin/wrapstars" className="text-sm text-blue-700 underline">
         Back to WrapStars
       </Link>
@@ -350,6 +348,6 @@ export default async function AdminWrapstarDetailPage({
           </tbody>
         </table>
       </section>
-    </main>
+    </div>
   );
 }

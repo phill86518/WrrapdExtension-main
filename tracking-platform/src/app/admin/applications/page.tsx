@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getSession } from "@/lib/auth";
-import { AdminNav } from "@/components/admin-nav";
 import { listWrapstarApplications } from "@/lib/wrapstar-applications-admin";
 
 export const dynamic = "force-dynamic";
@@ -52,8 +51,7 @@ export default async function AdminApplicationsPage({
   }
 
   return (
-    <main className="mx-auto max-w-6xl px-4 py-8">
-      <AdminNav current="/admin/applications" />
+    <div className="mx-auto max-w-6xl">
       <h1 className="text-2xl font-semibold text-slate-900">Applications</h1>
       <p className="mt-1 text-sm text-slate-600">
         Review WrapStar applications from apply.wrrapd.com. Approve here to email login credentials for
@@ -153,6 +151,6 @@ export default async function AdminApplicationsPage({
           </table>
         </div>
       )}
-    </main>
+    </div>
   );
 }

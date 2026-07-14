@@ -11,7 +11,6 @@ import {
   resolveFulfillmentMode,
   type OrderStatus,
 } from "@/lib/types";
-import { AdminNav } from "@/components/admin-nav";
 import { findWrapstarById } from "@/lib/wrapstar-registry";
 import { findDeliveryDriverById } from "@/lib/driver-registry";
 import {
@@ -97,8 +96,7 @@ export default async function AdminOrderDetailPage({
     order.courierDriverId ? await findDeliveryDriverById(order.courierDriverId) : undefined;
 
   return (
-    <main className="mx-auto max-w-4xl px-4 py-8">
-      <AdminNav current="/admin/orders" />
+    <div className="mx-auto max-w-4xl">
       <Link href="/admin/orders" className="text-sm text-blue-700 underline">
         Back to orders calendar
       </Link>
@@ -339,6 +337,6 @@ export default async function AdminOrderDetailPage({
           />
         </section>
       ) : null}
-    </main>
+    </div>
   );
 }

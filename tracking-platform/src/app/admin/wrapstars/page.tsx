@@ -19,7 +19,6 @@ import {
 } from "@/lib/wrapstar-profiles";
 import type { OnboardingStatus } from "@/lib/types";
 import { normalizeOrderStatus } from "@/lib/types";
-import { AdminNav } from "@/components/admin-nav";
 import { formatUsdCents, listEarnings, walletForWrapstar } from "@/lib/finance";
 
 export const dynamic = "force-dynamic";
@@ -102,8 +101,7 @@ export default async function AdminWrapstarsPage() {
   void allEarnings;
 
   return (
-    <main className="mx-auto max-w-6xl px-4 py-8">
-      <AdminNav current="/admin/wrapstars" />
+    <div className="mx-auto max-w-6xl">
       <h1 className="text-2xl font-semibold text-slate-900">WrapStars</h1>
       <p className="mt-1 text-sm text-slate-600">
         Directory of WrapStars with order counts and wallet balances. Click an ID for full detail.
@@ -212,6 +210,6 @@ export default async function AdminWrapstarsPage() {
           </tbody>
         </table>
       </div>
-    </main>
+    </div>
   );
 }

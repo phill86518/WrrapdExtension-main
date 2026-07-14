@@ -43,11 +43,8 @@ export default async function AdminReportsPage() {
   const rows = summarize(orders);
 
   return (
-    <main className="mx-auto max-w-5xl px-4 py-8">
-      <a href="/admin" className="text-sm text-blue-700 underline">
-        Back to dashboard
-      </a>
-      <h1 className="mt-3 text-3xl font-semibold">Delivery Reports</h1>
+    <div className="mx-auto max-w-5xl">
+      <h1 className="text-3xl font-semibold">Delivery Reports</h1>
       <p className="mt-1 text-sm text-slate-600">
         Daily summary for planning and load balancing.
       </p>
@@ -89,6 +86,6 @@ export default async function AdminReportsPage() {
           </tbody>
         </table>
       </div>
-    </main>
+    </div>
   );
 }
