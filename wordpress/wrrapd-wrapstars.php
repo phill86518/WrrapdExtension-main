@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_WRAPSTARS_BUILD', '2026-07-11-wrapstars-apply-wizard-v24' );
+define( 'WRRAPD_WRAPSTARS_BUILD', '2026-07-14-ops-api-applications-v1' );
 
 $wrrapd_boldsign = dirname( __FILE__ ) . '/wrrapd-boldsign.php';
 if ( is_readable( $wrrapd_boldsign ) ) {
@@ -31,6 +31,10 @@ if ( is_readable( $wrrapd_apply ) ) {
 $wrrapd_profile = dirname( __FILE__ ) . '/wrrapd-wrapstars-profile.php';
 if ( is_readable( $wrrapd_profile ) ) {
 	require_once $wrrapd_profile;
+}
+$wrrapd_ops_api = dirname( __FILE__ ) . '/wrrapd-wrapstars-ops-api.php';
+if ( is_readable( $wrrapd_ops_api ) ) {
+	require_once $wrrapd_ops_api;
 }
 
 /** @return string */
@@ -1874,55 +1878,15 @@ function wrrapd_wrapstars_admin_page() {
 	if ( isset( $_POST['wrrapd_ws_admin_action'] ) && check_admin_referer( 'wrrapd_ws_admin' ) ) {
 		$app_id = (int) ( $_POST['app_id'] ?? 0 );
 		$action = sanitize_text_field( wp_unslash( $_POST['wrrapd_ws_admin_action'] ) );
-		$app    = get_post( $app_id );
-		if ( $app && $app->post_type === WRRAPD_WRAPSTARS_CPT ) {
-			$user_id = (int) wrrapd_wrapstars_get_meta( $app_id, 'user_id' );
-			$email   = wrrapd_wrapstars_get_meta( $app_id, 'email' );
-			$name    = wrrapd_wrapstars_get_meta( $app_id, 'full_name' );
-
-			if ( $action === 'save_notes' ) {
-				wrrapd_wrapstars_set_meta( $app_id, 'admin_notes', sanitize_textarea_field( wp_unslash( $_POST['admin_notes'] ?? '' ) ) );
-			}
-			if ( $action === 'interview' ) {
-				wrrapd_wrapstars_set_meta( $app_id, 'status', 'interview' );
-				wrrapd_wrapstars_set_meta( $app_id, 'interview_at', gmdate( 'c' ) );
-				wrrapd_wrapstars_set_meta( $app_id, 'admin_notes', sanitize_textarea_field( wp_unslash( $_POST['admin_notes'] ?? '' ) ) );
-				$body  = "Hi {$name},\n\n";
-				$body .= "Thank you for applying to become a WrapStar!\n\n";
-				$body .= "We'd like to schedule a brief Zoom conversation as the next step in your application. ";
-				$body .= "The session may be recorded for our records. We will reach out by email and/or text message to find a time that works for you.\n\n";
-				$body .= "— WrapStars Team\n";
-				wrrapd_wrapstars_send_email( $email, 'WrapStar application — next step: Zoom interview', $body );
-			}
-			if ( $action === 'approve' ) {
-				wrrapd_wrapstars_set_meta( $app_id, 'status', 'approved' );
-				wrrapd_wrapstars_set_meta( $app_id, 'approved_at', gmdate( 'c' ) );
-				wrrapd_wrapstars_set_meta( $app_id, 'onboarding_step', 'welcome' );
-				$provision = wrrapd_wrapstars_provision_approved_user( $app_id );
-				if ( ! is_wp_error( $provision ) ) {
-					wrrapd_wrapstars_send_approval_credentials_email( $app_id, $provision['password'] );
-					wrrapd_wrapstars_sync_profile_to_gcs( $app_id );
-				}
-			}
-			if ( $action === 'reject' ) {
-				$reason = sanitize_textarea_field( wp_unslash( $_POST['reject_reason'] ?? '' ) );
-				wrrapd_wrapstars_set_meta( $app_id, 'status', 'rejected' );
-				wrrapd_wrapstars_set_meta( $app_id, 'rejected_at', gmdate( 'c' ) );
-				wrrapd_wrapstars_set_meta( $app_id, 'reject_reason', $reason );
-				wrrapd_wrapstars_send_email( $email, 'Update on your WrapStar application', "Hi {$name},\n\n{$reason}\n" );
-			}
-			if ( $action === 'activate' ) {
-				wrrapd_wrapstars_set_meta( $app_id, 'status', 'active' );
-				wrrapd_wrapstars_set_meta( $app_id, 'activated_at', gmdate( 'c' ) );
-				wrrapd_wrapstars_mark_step_complete( $app_id, 'activation' );
-				if ( $user_id ) {
-					wrrapd_wrapstars_set_user_role( $user_id, 'wrapstar_active' );
-				}
-				wrrapd_wrapstars_send_email( $email, "You're live as a WrapStar", "Hi {$name},\n\nYour account is activated. You'll start with lower-value orders. Remember: video proof on every order.\n" );
-			}
-			if ( $action === 'suspend' ) {
-				wrrapd_wrapstars_set_meta( $app_id, 'suspended', '1' );
-			}
+		if ( function_exists( 'wrrapd_wrapstars_run_admin_action' ) ) {
+			wrrapd_wrapstars_run_admin_action(
+				$app_id,
+				$action,
+				array(
+					'admin_notes'   => (string) wp_unslash( $_POST['admin_notes'] ?? '' ),
+					'reject_reason' => (string) wp_unslash( $_POST['reject_reason'] ?? '' ),
+				)
+			);
 		}
 	}
 
@@ -1947,6 +1911,7 @@ function wrrapd_wrapstars_admin_page() {
 	);
 
 	echo '<div class="wrap"><h1>WrapStar Applications</h1>';
+	echo '<p><strong>Preferred:</strong> review applications in the tracking <em>Command Center → Applications</em>. This WP screen is a fallback.</p>';
 	echo '<p>Portal: <strong>apply.wrrapd.com</strong> (applications) · <strong>pros.wrrapd.com</strong> (onboarding)</p>';
 	echo '<p>Filter: <a href="?page=wrrapd-wrapstars">All</a> | <a href="?page=wrrapd-wrapstars&status=under_review">Under review</a> | <a href="?page=wrrapd-wrapstars&status=interview">Zoom interview</a> | <a href="?page=wrrapd-wrapstars&status=approved">Approved (onboarding)</a> | <a href="?page=wrrapd-wrapstars&status=active">Active</a></p>';
 

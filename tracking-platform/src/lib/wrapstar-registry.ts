@@ -183,11 +183,23 @@ export async function findWrapstarByName(inputName: string): Promise<WrapStar | 
   return all.find((d) => d.name.trim().toLowerCase() === n);
 }
 
+export async function findWrapstarByEmail(email: string): Promise<WrapStar | undefined> {
+  const n = email.trim().toLowerCase();
+  if (!n) return undefined;
+  const all = await listRegisteredWrapstars();
+  return all.find((d) => (d.email || "").trim().toLowerCase() === n);
+}
+
 export async function addWrapstar(input: {
   name: string;
   homePostalCode: string;
   email?: string;
   phone?: string;
+  canDeliver?: boolean;
+  hasVehicle?: boolean;
+  deliveryMaxDistance?: string;
+  wrapOnly?: boolean;
+  metroId?: WrapStar["metroId"];
 }): Promise<{ ok: true; wrapstar: WrapStar } | { ok: false; error: string }> {
   const clean = input.name.trim();
   if (!clean) return { ok: false, error: "WrapStar name is required." };
@@ -198,10 +210,18 @@ export async function addWrapstar(input: {
   if (all.some((d) => d.name.trim().toLowerCase() === clean.toLowerCase())) {
     return { ok: false, error: "A WrapStar with this name already exists." };
   }
+  if (input.email?.trim()) {
+    const em = input.email.trim().toLowerCase();
+    if (all.some((d) => (d.email || "").trim().toLowerCase() === em)) {
+      return { ok: false, error: "A WrapStar with this email already exists." };
+    }
+  }
   const maxRank = all.reduce((m, d) => Math.max(m, d.allocationRank), -1);
   let id = generateWrapstarId();
   while (all.some((d) => d.id === id)) id = generateWrapstarId();
 
+  const canDeliver = input.canDeliver !== false && input.wrapOnly !== true;
+  const wrapOnly = input.wrapOnly === true || !canDeliver;
   const wrapstar: WrapStar = {
     id,
     displayId: id,
@@ -210,6 +230,11 @@ export async function addWrapstar(input: {
     allocationRank: maxRank + 1,
     email: input.email?.trim() || undefined,
     phone: input.phone?.trim() || undefined,
+    canDeliver: wrapOnly ? false : true,
+    wrapOnly,
+    hasVehicle: input.hasVehicle,
+    deliveryMaxDistance: input.deliveryMaxDistance,
+    metroId: input.metroId,
   };
 
   const col = trackingWrapstarsCollection();

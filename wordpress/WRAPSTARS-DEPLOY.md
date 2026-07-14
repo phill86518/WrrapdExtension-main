@@ -83,6 +83,7 @@ Never commit real API keys to Git.
 | `wordpress/wrrapd-wrapstars.php` | `mu-plugins/wrrapd-wrapstars.php` |
 | `wordpress/wrrapd-wrapstars-apply.php` | `mu-plugins/wrrapd-wrapstars-apply.php` |
 | `wordpress/wrrapd-wrapstars-apply.js` | `mu-plugins/wrrapd-wrapstars-apply.js` |
+| `wordpress/wrrapd-wrapstars-ops-api.php` | `mu-plugins/wrrapd-wrapstars-ops-api.php` |
 | `wordpress/wrrapd-boldsign.php` | `mu-plugins/wrrapd-boldsign.php` |
 | `wordpress/wrrapd-wrapstars.css` | `mu-plugins/wrrapd-wrapstars.css` |
 
@@ -96,9 +97,25 @@ mkdir -p "$WP_ROOT/wp-content/mu-plugins"
 install -m 0644 "$REPO_ROOT/wordpress/wrrapd-wrapstars.php" "$WP_ROOT/wp-content/mu-plugins/"
 install -m 0644 "$REPO_ROOT/wordpress/wrrapd-wrapstars-apply.php" "$WP_ROOT/wp-content/mu-plugins/"
 install -m 0644 "$REPO_ROOT/wordpress/wrrapd-wrapstars-apply.js" "$WP_ROOT/wp-content/mu-plugins/"
+install -m 0644 "$REPO_ROOT/wordpress/wrrapd-wrapstars-ops-api.php" "$WP_ROOT/wp-content/mu-plugins/"
 install -m 0644 "$REPO_ROOT/wordpress/wrrapd-boldsign.php" "$WP_ROOT/wp-content/mu-plugins/"
 install -m 0644 "$REPO_ROOT/wordpress/wrrapd-wrapstars.css" "$WP_ROOT/wp-content/mu-plugins/"
 ```
+
+### Command Center Applications (ops API)
+
+In **apply/pros `wp-config.php`** (above “stop editing”):
+
+```php
+define( 'WRRAPD_WRAPSTARS_OPS_API_KEY', 'generate-a-long-random-secret' );
+```
+
+On **tracking Cloud Run**, set the same secret:
+
+- `WRRAPD_WRAPSTARS_OPS_API_KEY` = same value
+- `WRRAPD_WRAPSTARS_WP_BASE_URL` = `https://apply.wrrapd.com` (optional; this is the default)
+
+Then open Command Center → **Applications** to interview / approve / reject / activate. Do not use WP Admin for day-to-day hiring.
 
 ### Verify MU-plugin loaded
 
