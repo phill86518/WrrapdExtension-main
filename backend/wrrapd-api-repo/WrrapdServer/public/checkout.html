@@ -9,16 +9,32 @@
     <link rel="apple-touch-icon" href="/img/wrrapd-logo-1-small.png">
     <meta name="msapplication-TileImage" content="/img/wrrapd-logo-1-small.png">
     <meta name="theme-color" content="#111827">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400;1,9..144,600&display=swap">
     <script src="https://js.stripe.com/v3/"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@18.2.1/build/css/intlTelInput.css">
     <script src="https://cdn.jsdelivr.net/npm/intl-tel-input@18.2.1/build/js/intlTelInput.min.js"></script>
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: Fraunces, Georgia, "Times New Roman", serif;
+            font-optical-sizing: auto;
             margin: 20px;
-            font-size: 12px; /* Reduce base font size */
-            line-height: 1.4; /* Adjust line spacing */
+            font-size: 13px;
+            line-height: 1.45;
             background-color: #f9f9f9;
+            color: #111827;
+            -webkit-font-smoothing: antialiased;
+        }
+        button,
+        input,
+        select,
+        textarea,
+        label,
+        #payment-form,
+        #submit,
+        .iti {
+            font-family: inherit;
         }
         #payment-form {
             max-width: 520px;
@@ -569,7 +585,14 @@
                 }
 
                 clientSecret = responseData.clientSecret;
-                elements = stripe.elements();
+                elements = stripe.elements({
+                    fonts: [
+                        {
+                            cssSrc:
+                                'https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&display=swap',
+                        },
+                    ],
+                });
 
                 cardElementContainer.innerHTML = '';
 
@@ -577,11 +600,11 @@
                     hidePostalCode: true,
                     style: {
                         base: {
-                            fontSize: '12px',
-                            color: '#32325d',
-                            fontFamily: 'Arial, Helvetica, sans-serif',
-                            lineHeight: '18px',
-                            '::placeholder': { color: '#aab7c4' },
+                            fontSize: '14px',
+                            color: '#111827',
+                            fontFamily: 'Fraunces, Georgia, serif',
+                            lineHeight: '20px',
+                            '::placeholder': { color: '#9ca3af' },
                         },
                         invalid: { color: '#df1b41', iconColor: '#df1b41' },
                     },
