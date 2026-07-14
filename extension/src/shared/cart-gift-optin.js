@@ -143,6 +143,53 @@ function giftFlowComplete(config) {
   return readGiftChoicesSaved(config.sessionPrefix) && readGiftLegalTermsAccepted(config.sessionPrefix);
 }
 
+/** Gift-choices or legal-terms modal currently open. */
+function giftWizardOpen(config) {
+  try {
+    return Boolean(
+      document.getElementById(config.modalId) ||
+        document.getElementById(`${config.modalId}-terms`),
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Default is always No. Keep Yes only while the wizard is open or the flow is fully complete.
+ * Stale Yes (abandoned modal) must clear so retailer pickup/shipping options stay visible.
+ */
+function ensureDefaultNoWrrapd(config) {
+  const prefix = config.sessionPrefix;
+  const radio = readGiftRadio(prefix);
+  if (radio === "yes" && (giftFlowComplete(config) || giftWizardOpen(config))) {
+    return "yes";
+  }
+  if (radio === "no") return "no";
+
+  if (radio === "yes") {
+    clearGiftServiceFlags(prefix);
+    writePaymentSuccess(prefix, false);
+    unlockHubShippingFields();
+  }
+  writeGiftRadio(prefix, "no");
+  notifyGiftRadioChange(prefix);
+  return "no";
+}
+
+/** Cancel / dismiss Yes without finishing — restore retailer fulfillment UI. */
+function abandonIncompleteWrrapdYes(config, cartSnapshot) {
+  if (giftFlowComplete(config)) return;
+  clearGiftServiceFlags(config.sessionPrefix);
+  writePaymentSuccess(config.sessionPrefix, false);
+  writeGiftRadio(config.sessionPrefix, "no");
+  unlockHubShippingFields();
+  notifyGiftRadioChange(config.sessionPrefix);
+  existingOptIn(config)?.remove();
+  if (cartSnapshot) mountCartGiftOptIn(config, cartSnapshot);
+  else mountCartGiftOptIn(config, config.getCartSnapshot?.());
+}
+
 function summarizeChoice(ch) {
   const bits = [];
   if (ch.wrapPref === "upload") bits.push("your uploaded design");
@@ -251,7 +298,12 @@ function openGenericTermsModal(config, onAccepted) {
   closeBtn.textContent = "×";
   closeBtn.style.cssText =
     "position:absolute;top:6px;right:12px;border:none;background:none;font-size:28px;color:#64748b;cursor:pointer;line-height:1;z-index:2;";
-  closeBtn.addEventListener("click", () => modal.remove());
+  const dismissTermsWithoutAccept = () => {
+    modal.remove();
+    // Choices may already be saved from the prior step — without accept, treat as abandoned Yes.
+    abandonIncompleteWrrapdYes(config, config.getCartSnapshot?.());
+  };
+  closeBtn.addEventListener("click", dismissTermsWithoutAccept);
 
   const scrollable = document.createElement("div");
   scrollable.style.cssText =
@@ -292,7 +344,7 @@ function openGenericTermsModal(config, onAccepted) {
   content.append(closeBtn, scrollable, agreement);
   modal.appendChild(content);
   modal.addEventListener("click", (e) => {
-    if (e.target === modal) modal.remove();
+    if (e.target === modal) dismissTermsWithoutAccept();
   });
   document.body.appendChild(modal);
 }
@@ -824,9 +876,13 @@ function openGiftChoicesModal(config, cartSnapshot) {
 
   cancel.addEventListener("click", () => {
     overlay.remove();
+    abandonIncompleteWrrapdYes(config, cartSnapshot);
   });
   overlay.addEventListener("click", (e) => {
-    if (e.target === overlay) overlay.remove();
+    if (e.target === overlay) {
+      overlay.remove();
+      abandonIncompleteWrrapdYes(config, cartSnapshot);
+    }
   });
 
   back.addEventListener("click", () => {
@@ -908,6 +964,8 @@ function mountCartGiftOptIn(config, cartSnapshot) {
   removeFulfillmentNotice();
 
   const syncResult = runCartGiftSync(config, cartSnapshot);
+  // Always start (and recover) as No unless Yes is fully complete or the wizard is open.
+  ensureDefaultNoWrrapd(config);
   const uiSig = optInUiSignature(config, cartSnapshot, syncResult);
   const existing = existingOptIn(config);
   if (existing && existing.dataset.wrrapdUiSig === uiSig) return;
@@ -965,16 +1023,11 @@ function mountCartGiftOptIn(config, cartSnapshot) {
   const fieldset = document.createElement("fieldset");
   fieldset.style.cssText = "border:none;padding:0;margin:0;";
 
-  let storedRadio = readGiftRadio(config.sessionPrefix);
-  if (!storedRadio) {
-    writeGiftRadio(config.sessionPrefix, "no");
-    storedRadio = "no";
-  }
-
-  // "Yes" is only the selected default once the customer has fully completed the Wrrapd
-  // wizard (choices + legal terms). In every other state — including a partially-started or
-  // abandoned flow — the default selection stays on "No thanks" so intent is always explicit.
-  const yesChecked = storedRadio === "yes" && giftFlowComplete(config);
+  // Session is already normalized by ensureDefaultNoWrrapd. Keep Yes selected while the
+  // wizard is open; otherwise only a fully completed flow stays on Yes.
+  const storedRadio = readGiftRadio(config.sessionPrefix) || "no";
+  const yesChecked =
+    storedRadio === "yes" && (giftFlowComplete(config) || giftWizardOpen(config));
 
   const mkRow = (value, labelText) => {
     const lab = document.createElement("label");
@@ -989,8 +1042,9 @@ function mountCartGiftOptIn(config, cartSnapshot) {
       inp.checked = true;
     }
     inp.addEventListener("click", () => {
-      writeGiftRadio(config.sessionPrefix, value);
       if (value === "yes") {
+        writeGiftRadio(config.sessionPrefix, "yes");
+        notifyGiftRadioChange(config.sessionPrefix);
         openGiftChoicesModal(config, cartSnapshot);
       } else {
         clearGiftServiceFlags(config.sessionPrefix);
@@ -1001,8 +1055,8 @@ function mountCartGiftOptIn(config, cartSnapshot) {
         if (saved) saved.remove();
         const editBtn = wrap.querySelector("[data-wrrapd-edit]");
         if (editBtn) editBtn.hidden = true;
+        notifyGiftRadioChange(config.sessionPrefix);
       }
-      notifyGiftRadioChange(config.sessionPrefix);
     });
     const text = document.createElement("span");
     text.textContent = labelText;

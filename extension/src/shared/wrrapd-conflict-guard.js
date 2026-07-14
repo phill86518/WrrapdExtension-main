@@ -98,9 +98,12 @@ const DEFAULT_PREFER_SHIPPING_SELECTORS = [
   'input[type="radio"][id*="shipping" i]',
 ];
 
-/** Whether the shopper has actively chosen Wrrapd for this order. */
+/**
+ * Whether the shopper has actively chosen Wrrapd for this order.
+ * Empty / missing / "no" must never hide retailer pickup or shipping options.
+ */
 function wrrapdSelected(prefix) {
-  return readGiftRadio(prefix) === "yes";
+  return String(readGiftRadio(prefix) || "").trim().toLowerCase() === "yes";
 }
 
 function normText(value) {
