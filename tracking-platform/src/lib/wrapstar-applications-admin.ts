@@ -45,6 +45,9 @@ export type WrapstarApplication = {
   rejectReason: string;
   declineNote?: string;
   declinedAt?: string;
+  previousDeclinedAt?: string;
+  reinvitedAt?: string;
+  reinviteCount?: number;
   mustChangePassword?: boolean;
   onboardingStep: string;
   onboardingStepsComplete: Record<string, boolean>;
@@ -129,6 +132,8 @@ export type ApplicationAction =
   | "suspend"
   | "unsuspend"
   | "mark_declined"
+  | "reinvite"
+  | "resend_invite"
   | "save_notes";
 
 export async function runWrapstarApplicationAction(

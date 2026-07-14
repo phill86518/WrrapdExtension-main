@@ -16,6 +16,16 @@ Command Center **Approve** emails from `admin@wrrapd.com`:
 
 First login always shows **Choose your password** before any onboarding step. Declined invitations become status `declined` in **Applications → Declined offer** (credentials invalidated).
 
+### Re-open after decline
+
+If someone declines and you later resolve the issue:
+
+1. Command Center → **Applications → Declined offer** → open the application  
+2. Optionally update reviewer notes  
+3. Click **Re-open invitation & resend welcome email**  
+
+That sets status back to **Approved (onboarding)**, issues a new temporary password + Decline link, and sends a “welcome back” email. Prior decline date/note stay on the record. While they are approved, **Resend welcome email** reissues credentials without changing status.
+
 ## Step order
 
 | # | Key | Live vs placeholder | What you will provide |

@@ -85,6 +85,12 @@ export default async function AdminApplicationDetailPage({
           {okFlash === "mark_declined"
             ? " — invitation closed; candidate listed under Declined offer."
             : null}
+          {okFlash === "reinvite"
+            ? " — status set back to Approved; welcome email resent with fresh credentials."
+            : null}
+          {okFlash === "resend_invite"
+            ? " — welcome email resent with a new temporary password."
+            : null}
         </p>
       ) : null}
 
@@ -140,16 +146,34 @@ export default async function AdminApplicationDetailPage({
         <section className="mt-4 rounded-xl border border-orange-200 bg-orange-50 p-4 shadow-sm">
           <h2 className="font-semibold text-orange-950">Declined invitation</h2>
           <p className="mt-2 text-sm text-orange-950">
-            Approved on {(app.approvedAt || "").slice(0, 10) || "—"} · Declined{" "}
+            Last approved {(app.approvedAt || "").slice(0, 10) || "—"} · Declined{" "}
             {(app.declinedAt || "").slice(0, 10) || "—"}
+            {app.reinviteCount ? ` · Prior re-invites: ${app.reinviteCount}` : ""}
           </p>
           <p className="mt-2 text-sm text-orange-900">
             <strong>Candidate note:</strong> {app.declineNote || "—"}
           </p>
           <p className="mt-2 text-xs text-orange-800">
-            Portal credentials were invalidated. They remain in Applications → Declined offer for hiring
-            history.
+            Portal credentials are invalid. If the blocker is resolved, use{" "}
+            <strong>Re-open invitation &amp; resend welcome email</strong> below — status returns to
+            Approved (onboarding) and they get a fresh login + Decline link.
           </p>
+        </section>
+      ) : null}
+
+      {app.status === "approved" && (app.previousDeclinedAt || app.reinvitedAt) ? (
+        <section className="mt-4 rounded-xl border border-indigo-200 bg-indigo-50 p-4 shadow-sm">
+          <h2 className="font-semibold text-indigo-950">Re-opened after decline</h2>
+          <p className="mt-2 text-sm text-indigo-950">
+            Previously declined {(app.previousDeclinedAt || "").slice(0, 10) || "—"}
+            {app.reinvitedAt ? ` · Re-invited ${(app.reinvitedAt || "").slice(0, 10)}` : ""}
+            {app.reinviteCount ? ` · Times re-invited: ${app.reinviteCount}` : ""}
+          </p>
+          {app.declineNote ? (
+            <p className="mt-2 text-sm text-indigo-900">
+              <strong>Original decline note:</strong> {app.declineNote}
+            </p>
+          ) : null}
         </section>
       ) : null}
 
@@ -254,6 +278,16 @@ export default async function AdminApplicationDetailPage({
                 </button>
               </>
             ) : null}
+            {app.status === "declined" ? (
+              <button
+                type="submit"
+                name="action"
+                value="reinvite"
+                className="rounded bg-indigo-700 px-3 py-2 text-sm font-semibold text-white"
+              >
+                Re-open invitation &amp; resend welcome email
+              </button>
+            ) : null}
             {app.status === "approved" ? (
               <>
                 <button
@@ -263,6 +297,14 @@ export default async function AdminApplicationDetailPage({
                   className="rounded bg-emerald-700 px-3 py-2 text-sm font-semibold text-white"
                 >
                   Activate WrapStar (live)
+                </button>
+                <button
+                  type="submit"
+                  name="action"
+                  value="resend_invite"
+                  className="rounded bg-sky-700 px-3 py-2 text-sm text-white"
+                >
+                  Resend welcome email
                 </button>
                 <button
                   type="submit"
@@ -297,13 +339,12 @@ export default async function AdminApplicationDetailPage({
           </div>
         </form>
         <p className="mt-3 text-xs text-slate-500">
-          Approve emails a welcome message with username (email), readable temporary password, login
-          link, and a Decline link. First login forces a password change, then onboarding on
-          pros.wrrapd.com. Declined invitations appear under{" "}
+          Approve / re-invite emails username (email), a fresh temporary password, login link, and a
+          Decline link. First login forces a password change. Declined offers live under{" "}
           <Link className="underline" href="/admin/applications?status=declined">
             Declined offer
           </Link>
-          .
+          ; re-open from that detail page when you want them back in onboarding.
         </p>
       </section>
     </div>

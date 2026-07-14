@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_WRAPSTARS_BUILD', '2026-07-14-approve-decline-pw' );
+define( 'WRRAPD_WRAPSTARS_BUILD', '2026-07-14-reinvite-declined' );
 
 $wrrapd_boldsign = dirname( __FILE__ ) . '/wrrapd-boldsign.php';
 if ( is_readable( $wrrapd_boldsign ) ) {
@@ -447,6 +447,9 @@ function wrrapd_wrapstars_meta_keys() {
 		'declined_at'         => '',
 		'decline_token'       => '',
 		'decline_note'        => '',
+		'previous_declined_at'=> '',
+		'reinvited_at'        => '',
+		'reinvite_count'      => '0',
 		'must_change_password'=> '',
 		'portal_password_issued_at' => '',
 	);
@@ -1492,9 +1495,8 @@ function wrrapd_wrapstars_provision_approved_user( $app_id ) {
 	wrrapd_wrapstars_set_user_role( $user_id, 'wrapstar_approved' );
 	wrrapd_wrapstars_set_meta( $app_id, 'portal_password_issued_at', gmdate( 'c' ) );
 	wrrapd_wrapstars_set_must_change_password( $user_id, $app_id, true );
-	// Clear any prior decline so re-approval works.
+	// Clear active decline timestamp so re-approval / re-invite works (keep decline_note for history).
 	wrrapd_wrapstars_set_meta( $app_id, 'declined_at', '' );
-	wrrapd_wrapstars_set_meta( $app_id, 'decline_note', '' );
 
 	$decline_token = wp_generate_password( 40, false, false );
 	wrrapd_wrapstars_set_meta( $app_id, 'decline_token', $decline_token );
@@ -1516,16 +1518,35 @@ function wrrapd_wrapstars_decline_offer_url( $app_id, $token ) {
 	);
 }
 
-function wrrapd_wrapstars_send_approval_credentials_email( $app_id, $password ) {
+/**
+ * Welcome / re-invite / resend credentials email.
+ *
+ * @param int    $app_id   Application ID.
+ * @param string $password Temporary password.
+ * @param string $context  approve|reinvite|resend.
+ */
+function wrrapd_wrapstars_send_approval_credentials_email( $app_id, $password, $context = 'approve' ) {
 	$email = wrrapd_wrapstars_get_meta( $app_id, 'email' );
 	$name  = wrrapd_wrapstars_get_meta( $app_id, 'full_name' );
 	$login = wrrapd_wrapstars_portal_login_url( wrrapd_wrapstars_pros_url( '/onboarding/' ) );
 	$token = (string) wrrapd_wrapstars_get_meta( $app_id, 'decline_token' );
 	$decline = $token !== '' ? wrrapd_wrapstars_decline_offer_url( $app_id, $token ) : wrrapd_wrapstars_apply_url( '/decline-offer/' );
+	$context = in_array( $context, array( 'approve', 'reinvite', 'resend' ), true ) ? $context : 'approve';
 
-	$body  = "Hi {$name},\n\n";
-	$body .= "Congratulations — you've been approved to join the WrapStar network!\n\n";
-	$body .= "We're excited to welcome you. Log in with the credentials below to start onboarding on the WrapStar portal.\n\n";
+	$body = "Hi {$name},\n\n";
+	if ( $context === 'reinvite' ) {
+		$subject = 'Welcome back — your WrapStar invitation is open again';
+		$body   .= "Good news — your WrapStar invitation is open again.\n\n";
+		$body   .= "We've resolved the earlier hold-up and would love to have you join the network. Use the fresh login credentials below (previous ones no longer work).\n\n";
+	} elseif ( $context === 'resend' ) {
+		$subject = 'WrapStars — your login credentials (resent)';
+		$body   .= "Here are fresh WrapStar portal credentials (any older temporary password from a previous email no longer works).\n\n";
+	} else {
+		$subject = 'Welcome to WrapStars — your login & next steps';
+		$body   .= "Congratulations — you've been approved to join the WrapStar network!\n\n";
+		$body   .= "We're excited to welcome you. Log in with the credentials below to start onboarding on the WrapStar portal.\n\n";
+	}
+
 	$body .= "━━━━━━━━━━━━━━━━━━━━\n";
 	$body .= "YOUR LOGIN\n";
 	$body .= "━━━━━━━━━━━━━━━━━━━━\n";
@@ -1539,11 +1560,77 @@ function wrrapd_wrapstars_send_approval_credentials_email( $app_id, $password ) 
 	$body .= "━━━━━━━━━━━━━━━━━━━━\n";
 	$body .= "If you've decided not to join Wrrapd as a WrapStar, decline here (no login required):\n";
 	$body .= "{$decline}\n\n";
-	$body .= "Declining closes this invitation and disables the temporary login above. You'll appear in our admin records as “declined” so we can keep an accurate hiring history.\n\n";
+	$body .= "Declining closes this invitation and disables the temporary login above.\n\n";
 	$body .= "Questions? Reply to this email or write " . wrrapd_wrapstars_from_email_address() . ".\n\n";
 	$body .= "— The WrapStars Team\n";
 
-	wrrapd_wrapstars_send_email( $email, 'Welcome to WrapStars — your login & next steps', $body );
+	wrrapd_wrapstars_send_email( $email, $subject, $body );
+}
+
+/**
+ * Re-open a declined invitation: status → approved, new credentials, welcome email.
+ *
+ * @return array{ok:bool,error?:string,password?:string}
+ */
+function wrrapd_wrapstars_reinvite_declined_offer( $app_id, $admin_note = '' ) {
+	$app_id = (int) $app_id;
+	$app    = get_post( $app_id );
+	if ( ! $app || $app->post_type !== WRRAPD_WRAPSTARS_CPT ) {
+		return array( 'ok' => false, 'error' => 'Application not found.' );
+	}
+	$status = (string) wrrapd_wrapstars_get_meta( $app_id, 'status' );
+	if ( $status !== 'declined' ) {
+		return array( 'ok' => false, 'error' => 'Only declined invitations can be re-opened.' );
+	}
+
+	$prev_declined = (string) wrrapd_wrapstars_get_meta( $app_id, 'declined_at' );
+	if ( $prev_declined !== '' ) {
+		wrrapd_wrapstars_set_meta( $app_id, 'previous_declined_at', $prev_declined );
+	}
+	$count = (int) wrrapd_wrapstars_get_meta( $app_id, 'reinvite_count', '0' );
+	wrrapd_wrapstars_set_meta( $app_id, 'reinvite_count', (string) ( $count + 1 ) );
+	wrrapd_wrapstars_set_meta( $app_id, 'reinvited_at', gmdate( 'c' ) );
+	wrrapd_wrapstars_set_meta( $app_id, 'status', 'approved' );
+	wrrapd_wrapstars_set_meta( $app_id, 'approved_at', gmdate( 'c' ) );
+	wrrapd_wrapstars_set_meta( $app_id, 'declined_at', '' );
+	// Keep decline_note for history; ops can clear via notes if desired.
+	if ( wrrapd_wrapstars_get_meta( $app_id, 'onboarding_step' ) === '' ) {
+		wrrapd_wrapstars_set_meta( $app_id, 'onboarding_step', 'welcome' );
+	}
+	if ( $admin_note !== '' ) {
+		wrrapd_wrapstars_set_meta( $app_id, 'admin_notes', $admin_note );
+	}
+
+	$provision = wrrapd_wrapstars_provision_approved_user( $app_id );
+	if ( is_wp_error( $provision ) ) {
+		return array( 'ok' => false, 'error' => $provision->get_error_message() );
+	}
+	wrrapd_wrapstars_send_approval_credentials_email( $app_id, $provision['password'], 'reinvite' );
+	wrrapd_wrapstars_sync_profile_to_gcs( $app_id );
+
+	return array( 'ok' => true, 'password' => $provision['password'] );
+}
+
+/**
+ * Resend welcome credentials while status remains approved (lost email, etc.).
+ *
+ * @return array{ok:bool,error?:string,password?:string}
+ */
+function wrrapd_wrapstars_resend_approval_invite( $app_id ) {
+	$app_id = (int) $app_id;
+	$app    = get_post( $app_id );
+	if ( ! $app || $app->post_type !== WRRAPD_WRAPSTARS_CPT ) {
+		return array( 'ok' => false, 'error' => 'Application not found.' );
+	}
+	if ( (string) wrrapd_wrapstars_get_meta( $app_id, 'status' ) !== 'approved' ) {
+		return array( 'ok' => false, 'error' => 'Resend is only available for approved (onboarding) invitations.' );
+	}
+	$provision = wrrapd_wrapstars_provision_approved_user( $app_id );
+	if ( is_wp_error( $provision ) ) {
+		return array( 'ok' => false, 'error' => $provision->get_error_message() );
+	}
+	wrrapd_wrapstars_send_approval_credentials_email( $app_id, $provision['password'], 'resend' );
+	return array( 'ok' => true, 'password' => $provision['password'] );
 }
 
 /**

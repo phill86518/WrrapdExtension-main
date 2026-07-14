@@ -48,7 +48,8 @@ function wrrapd_wrapstars_ops_api_permission( $request ) {
 }
 
 /**
- * Run interview / approve / reject / activate / suspend / unsuspend / mark_declined / save_notes.
+ * Run interview / approve / reject / activate / suspend / unsuspend /
+ * mark_declined / reinvite / resend_invite / save_notes.
  *
  * @param int                  $app_id Application post ID.
  * @param string               $action Action slug.
@@ -170,6 +171,26 @@ function wrrapd_wrapstars_run_admin_action( $app_id, $action, $opts = array() ) 
 		return array( 'ok' => true, 'status' => 'declined' );
 	}
 
+	if ( $action === 'reinvite' ) {
+		$note = $notes !== null ? $notes : '';
+		$result = wrrapd_wrapstars_reinvite_declined_offer( $app_id, $note );
+		if ( empty( $result['ok'] ) ) {
+			return array( 'ok' => false, 'error' => $result['error'] ?? 'Could not re-invite.' );
+		}
+		return array( 'ok' => true, 'status' => 'approved', 'passwordIssued' => true, 'reinvited' => true );
+	}
+
+	if ( $action === 'resend_invite' ) {
+		$result = wrrapd_wrapstars_resend_approval_invite( $app_id );
+		if ( empty( $result['ok'] ) ) {
+			return array( 'ok' => false, 'error' => $result['error'] ?? 'Could not resend invite.' );
+		}
+		if ( $notes !== null ) {
+			wrrapd_wrapstars_set_meta( $app_id, 'admin_notes', $notes );
+		}
+		return array( 'ok' => true, 'status' => 'approved', 'passwordIssued' => true, 'resent' => true );
+	}
+
 	return array( 'ok' => false, 'error' => 'Unknown action.' );
 }
 
@@ -235,6 +256,9 @@ function wrrapd_wrapstars_ops_serialize_application( $id ) {
 		'rejectReason'               => wrrapd_wrapstars_get_meta( $id, 'reject_reason' ),
 		'declineNote'                => wrrapd_wrapstars_get_meta( $id, 'decline_note' ),
 		'declinedAt'                 => wrrapd_wrapstars_get_meta( $id, 'declined_at' ),
+		'previousDeclinedAt'         => wrrapd_wrapstars_get_meta( $id, 'previous_declined_at' ),
+		'reinvitedAt'                => wrrapd_wrapstars_get_meta( $id, 'reinvited_at' ),
+		'reinviteCount'              => (int) wrrapd_wrapstars_get_meta( $id, 'reinvite_count', '0' ),
 		'mustChangePassword'         => wrrapd_wrapstars_get_meta( $id, 'must_change_password' ) === '1',
 		'onboardingStep'             => wrrapd_wrapstars_get_meta( $id, 'onboarding_step' ),
 		'onboardingStepsComplete'    => $steps_done,
