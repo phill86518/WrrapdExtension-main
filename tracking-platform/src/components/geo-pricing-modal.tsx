@@ -57,8 +57,9 @@ export function GeoPricingModal({
   const loadedForOpenRef = useRef(false);
   const seedPricesRef = useRef(config.defaultUnitPrices);
 
-  // Keep latest default prices for seeding without re-running the open loader.
-  seedPricesRef.current = config.defaultUnitPrices;
+  useEffect(() => {
+    seedPricesRef.current = config.defaultUnitPrices;
+  }, [config.defaultUnitPrices]);
 
   useEffect(() => {
     if (!open) {

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ADMIN_NAV_LINKS, isAdminNavActive } from "@/components/admin-nav";
 import { LogoutButton } from "@/components/logout-button";
 import { WrrapdLogo } from "@/components/wrrapd-logo";
@@ -10,10 +10,7 @@ import { WrrapdLogo } from "@/components/wrrapd-logo";
 export function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() || "/admin";
   const [open, setOpen] = useState(false);
-
-  useEffect(() => {
-    setOpen(false);
-  }, [pathname]);
+  const closeNav = () => setOpen(false);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#9aab9f] via-[#c5cfc9] to-[#a8b8ae]">
@@ -46,7 +43,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           }`}
         >
           <div className="border-b border-white/10 bg-[#faf8f4] px-5 py-5">
-            <Link href="/admin" className="block" onClick={() => setOpen(false)}>
+            <Link href="/admin" className="block" onClick={closeNav}>
               <WrrapdLogo className="h-9 w-auto max-w-[160px] object-contain object-left" />
               <p className="mt-2 text-[11px] font-bold uppercase tracking-[0.16em] text-[#1a2744]">
                 Command Center
@@ -61,7 +58,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                 <Link
                   key={link.href}
                   href={link.href}
-                  onClick={() => setOpen(false)}
+                  onClick={closeNav}
                   className={
                     active
                       ? "block rounded-xl bg-gradient-to-r from-[#c9a227] to-[#a88417] px-3 py-2.5 text-sm font-bold text-[#1a1a12] shadow-md"
