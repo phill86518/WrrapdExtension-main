@@ -31,6 +31,7 @@ export default async function AdminOrdersPage({
 
   const raw = searchParams ? await searchParams : {};
   const createError = pickSearchParam(raw.createError);
+  const assignError = pickSearchParam(raw.assignError);
 
   let active: Awaited<ReturnType<typeof listOrdersByStatus>>;
   let scheduled: Awaited<ReturnType<typeof listOrdersByStatus>>;
@@ -112,6 +113,11 @@ export default async function AdminOrdersPage({
             <AdminCreateDeliverySection createOrderAction={createOrderAction} createError={createError} />
           </div>
         </div>
+        {assignError ? (
+          <p className="mt-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-950">
+            {assignError}
+          </p>
+        ) : null}
         {delinquent.length > 0 ? (
           <p className="mt-4 rounded-xl border border-rose-300 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-900">
             {delinquent.length} delinquent order{delinquent.length === 1 ? "" : "s"} — schedule day has

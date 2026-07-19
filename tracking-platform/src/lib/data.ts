@@ -336,6 +336,10 @@ export type CreateOrderInput = {
   retailer?: OrderRetailer;
   /** Non-Amazon retailer's promised delivery date (YYYY-MM-DD, Eastern); notifications show this + 1 day. */
   retailerEstimatedDeliveryDate?: string;
+  deliveryInstructions?: string;
+  floristOrderNumber?: string;
+  deliverBy?: string;
+  pickupFlowers?: boolean;
 };
 
 export async function createOrder(
@@ -585,6 +589,14 @@ export async function createOrder(
     ...(input.retailerEstimatedDeliveryDate
       ? { retailerEstimatedDeliveryDate: input.retailerEstimatedDeliveryDate }
       : {}),
+    ...(input.deliveryInstructions?.trim()
+      ? { deliveryInstructions: input.deliveryInstructions.trim() }
+      : {}),
+    ...(input.floristOrderNumber?.trim()
+      ? { floristOrderNumber: input.floristOrderNumber.trim() }
+      : {}),
+    ...(input.deliverBy?.trim() ? { deliverBy: input.deliverBy.trim() } : {}),
+    ...(input.pickupFlowers ? { pickupFlowers: true } : {}),
   };
   const ocCreate = getOrdersCollection();
   if (ocCreate) {
@@ -896,6 +908,34 @@ export async function updateOrderStatus(
   return next;
 }
 
+/** Patch arbitrary order fields (wrap workflow, labels, instructions) without reallocating. */
+export async function patchOrderFields(
+  id: string,
+  patch: Partial<Order>,
+  updatedBy: string,
+): Promise<Order | null> {
+  const current = await getOrderById(id);
+  if (!current) return null;
+  const next: Order = {
+    ...current,
+    ...patch,
+    id: current.id,
+    updatedAt: nowIso(),
+    updatedBy,
+  };
+  if (patch.status) {
+    next.status = normalizeOrderStatus(patch.status);
+  }
+  const oc = getOrdersCollection();
+  if (oc) {
+    await oc.doc(id).set(next);
+  } else {
+    const orders = await readFallbackOrders();
+    await writeFallbackPayload(orders.map((o) => (o.id === id ? next : o)));
+  }
+  return next;
+}
+
 export async function assignWrapstar(id: string, wrapstarId: string, updatedBy: string) {
   const current = await getOrderById(id);
   const wrapstar = await findWrapstarById(wrapstarId);
@@ -909,14 +949,16 @@ export async function assignWrapstar(id: string, wrapstarId: string, updatedBy: 
     driverId: wrapstar.id,
     driverName: wrapstar.name,
     fulfillmentMode: wrapOnly ? "driver_final_mile" : "self_delivery",
-    ...(wrapOnly
-      ? {}
-      : { courierDriverId: undefined, courierDriverName: undefined }),
     assignmentSource: "manual",
     status: st === "scheduled" || st === "pending" ? "assigned" : st,
     updatedAt: nowIso(),
     updatedBy,
   };
+  // Hybrid self-delivery: clear courier so Admin does not show a stale Driver.
+  if (!wrapOnly) {
+    delete next.courierDriverId;
+    delete next.courierDriverName;
+  }
   const ocAs = getOrdersCollection();
   if (ocAs) {
     await ocAs.doc(id).set(next);
@@ -968,12 +1010,17 @@ export async function assignCourierDriver(
 
   const next: Order = {
     ...current,
-    courierDriverId: courierDriverIdNext,
-    courierDriverName: courierDriverNameNext,
     fulfillmentMode,
     updatedAt: nowIso(),
     updatedBy,
   };
+  if (courierDriverIdNext) {
+    next.courierDriverId = courierDriverIdNext;
+    next.courierDriverName = courierDriverNameNext;
+  } else {
+    delete next.courierDriverId;
+    delete next.courierDriverName;
+  }
 
   const ocAs = getOrdersCollection();
   if (ocAs) {
@@ -989,11 +1036,12 @@ export async function assignCourierDriver(
 export async function unassignDeletedCourierDriverOrders(courierDriverId: string): Promise<void> {
   const clear = (o: Order): Order => {
     if (o.courierDriverId !== courierDriverId) return o;
+    // Keep wrap-only / final-mile mode so Admin still shows "needs courier".
     return {
       ...o,
       courierDriverId: undefined,
       courierDriverName: undefined,
-      fulfillmentMode: "self_delivery",
+      fulfillmentMode: "driver_final_mile",
       updatedAt: nowIso(),
       updatedBy: "system",
     };

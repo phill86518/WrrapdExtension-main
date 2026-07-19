@@ -194,7 +194,7 @@ export default async function AdminWrapstarDetailPage({
             <input
               name="assignedDriverId"
               defaultValue={wrapstar.assignedDriverId || ""}
-              placeholder="dd-…"
+              placeholder="e.g. 7260981201"
               className="mt-1 w-full rounded border px-3 py-2 font-mono text-xs"
             />
           </label>

@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireDriverSession } from "@/lib/auth";
+import { requireWrapstarSession } from "@/lib/auth";
 import { submitWeekAvailability } from "@/lib/availability-store";
 import type { DayShiftAvailability } from "@/lib/types";
 
 export async function POST(request: NextRequest) {
-  const session = await requireDriverSession();
+  const session = await requireWrapstarSession();
   if (!session) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }

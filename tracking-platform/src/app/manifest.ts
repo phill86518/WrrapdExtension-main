@@ -4,7 +4,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Wrrapd WrapStar",
     short_name: "W",
-    description: "WrapStar companion for Wrrapd orders, GPS, and proof.",
+    description: "WrapStar App for wrap jobs, shift video proof, and handoff.",
     start_url: "/wrapstar",
     display: "standalone",
     background_color: "#0f172a",

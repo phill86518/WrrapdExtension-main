@@ -1,25 +1,29 @@
-import { createHash, randomInt } from "crypto";
+import { allocateEmployeeId, DEMO_EMPLOYEE_IDS, isEmployeeIdFormat } from "./employee-id";
 
-/** Generate a 12-digit WrapStar id (numeric, never starts with 0). */
-export function generateWrapstarId(): string {
-  let id = "";
-  id += String(randomInt(1, 10));
-  for (let i = 0; i < 11; i++) {
-    id += String(randomInt(0, 10));
-  }
-  return id;
+/** Generate a 10-digit WrapStar id (role 8 + year + state + zipRev + serial). */
+export function generateWrapstarId(
+  postalCode: string,
+  existingIds: string[],
+  createdAt: Date = new Date(),
+): { ok: true; id: string } | { ok: false; error: string } {
+  return allocateEmployeeId("8", postalCode, existingIds, createdAt);
 }
 
-/** Stable 12-digit id derived from a legacy drv-* id (migration). */
+export function isWrapstarIdFormat(id: string): boolean {
+  return isEmployeeIdFormat(id, "8");
+}
+
+/**
+ * Map legacy drv-* seeds to the new structured 10-digit WrapStar IDs.
+ * Unknown legacy ids return Taylor's demo id only if hashing was previously used —
+ * prefer explicit mapping for known seeds.
+ */
 export function wrapstarIdFromLegacy(legacyDriverId: string): string {
-  const hash = createHash("sha256").update(`wrrapd-ws:${legacyDriverId}`).digest("hex");
-  let digits = "";
-  for (const ch of hash) {
-    if (digits.length >= 12) break;
-    const n = Number.parseInt(ch, 16);
-    if (Number.isFinite(n)) digits += String(n % 10);
-  }
-  while (digits.length < 12) digits += "0";
-  if (digits[0] === "0") digits = "4" + digits.slice(1);
-  return digits.slice(0, 12);
+  if (legacyDriverId === "drv-1") return DEMO_EMPLOYEE_IDS.wrapstarRoger;
+  if (legacyDriverId === "drv-2") return DEMO_EMPLOYEE_IDS.wrapstarTaylor;
+  // Stable fallback for any other legacy key → Roger's ZIP serial space is not used;
+  // return Taylor so callers always get a valid 10-digit WrapStar-shaped id.
+  return DEMO_EMPLOYEE_IDS.wrapstarTaylor;
 }
+
+export { DEMO_EMPLOYEE_IDS };

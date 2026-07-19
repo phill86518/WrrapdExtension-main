@@ -3,7 +3,8 @@ import { getSession } from "@/lib/auth";
 import { listAllOrders, listWrapstars, listCourierDrivers } from "@/lib/data";
 import { formatDateKeyNy } from "@/lib/ny-date";
 import { wrrapdScheduledInstantIsoForUi } from "@/lib/order-schedule-display";
-import { normalizeOrderStatus, orderWrapstarId, orderWrapstarName } from "@/lib/types";
+import { normalizeOrderStatus, orderWrapstarId, orderWrapstarName, resolveFulfillmentMode } from "@/lib/types";
+import { wrapPhaseLabel } from "@/lib/wrap-status-display";
 import { ensureDemoStaffing } from "@/lib/demo-staffing";
 import { notFound } from "next/navigation";
 import { formatInTimeZone } from "date-fns-tz";
@@ -160,6 +161,7 @@ export default async function AdminOrdersCalendarPage({
                 <th className="px-3 py-2">ZIP</th>
                 <th className="px-3 py-2">Retailer</th>
                 <th className="px-3 py-2">Status</th>
+                <th className="px-3 py-2">Wrap</th>
                 <th className="px-3 py-2">WrapStar</th>
                 <th className="px-3 py-2">Driver</th>
               </tr>
@@ -167,13 +169,15 @@ export default async function AdminOrdersCalendarPage({
             <tbody>
               {dayOrders.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-3 py-8 text-center text-slate-500">
+                  <td colSpan={8} className="px-3 py-8 text-center text-slate-500">
                     No orders on this date.
                   </td>
                 </tr>
               ) : (
                 dayOrders.map((o) => {
                   const wsId = orderWrapstarId(o);
+                  const ws = wrapstars.find((w) => w.id === wsId);
+                  const mode = resolveFulfillmentMode(o, ws);
                   return (
                     <tr key={o.id} className="border-t border-[#1a2744]/10 hover:bg-white/70">
                       <td className="px-3 py-2">
@@ -194,6 +198,12 @@ export default async function AdminOrdersCalendarPage({
                           {normalizeOrderStatus(o.status)}
                         </span>
                       </td>
+                      <td className="px-3 py-2 text-xs font-medium">
+                        {wrapPhaseLabel(o.wrapPhase)}
+                        {o.readyForCourierAt ? (
+                          <div className="text-[10px] text-sky-800">Courier-ready</div>
+                        ) : null}
+                      </td>
                       <td className="px-3 py-2">
                         {wsId ? (
                           <Link href={`/admin/wrapstars/${wsId}`} className="text-blue-700 underline">
@@ -202,6 +212,9 @@ export default async function AdminOrdersCalendarPage({
                         ) : (
                           "Unassigned"
                         )}
+                        {wsId ? (
+                          <div className="font-mono text-[10px] text-slate-500">{wsId}</div>
+                        ) : null}
                       </td>
                       <td className="px-3 py-2">
                         {o.courierDriverId ? (
@@ -211,9 +224,14 @@ export default async function AdminOrdersCalendarPage({
                           >
                             {o.courierDriverName || driverName(o.courierDriverId) || o.courierDriverId}
                           </Link>
+                        ) : mode === "self_delivery" ? (
+                          <span className="text-slate-600">Self-delivery</span>
                         ) : (
                           "Unassigned"
                         )}
+                        {o.courierDriverId ? (
+                          <div className="font-mono text-[10px] text-slate-500">{o.courierDriverId}</div>
+                        ) : null}
                       </td>
                     </tr>
                   );

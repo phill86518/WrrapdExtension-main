@@ -1,6 +1,8 @@
-# Wrrapd WrapStar Independent Contractor Agreement (DRAFT)
+# Wrrapd WrapStar Independent Contractor Agreement (DRAFT — SUPERSEDED)
 
-**Status:** Draft for legal counsel review before uploading to BoldSign as `wrapstar-ic-agreement` template.
+**Status:** **Superseded** by the production suite in [`docs/legal/wrapstar-agreements/`](../legal/wrapstar-agreements/). Use `01_WrapStar_Technology_Services_Agreement.md` and Companion Documents there for BoldSign. This file is retained only for historical reference.
+
+**Prior status:** Draft for legal counsel review before uploading to BoldSign as `wrapstar-ic-agreement` template.
 
 **BoldSign text tags:** Place `{{sign|1|*|Signer|signature}}` and `{{date|1|*|Signer|date}}` where indicated.
 

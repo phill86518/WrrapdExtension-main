@@ -14,6 +14,9 @@ export const TRACKING_COLLECTIONS = {
   earnings: "tracking_earnings",
   payouts: "tracking_payouts",
   payoutConfig: "tracking_payout_config",
+  wrapstarShifts: "tracking_wrapstar_shifts",
+  wrapstarShiftGifts: "tracking_wrapstar_shift_gifts",
+  wrapstarShiftVideos: "tracking_wrapstar_shift_videos",
 } as const;
 
 export function trackingWrapstarsCollection(): CollectionReference | null {
@@ -65,4 +68,19 @@ export function trackingPayoutsCollection(): CollectionReference | null {
 export function trackingPayoutConfigDoc(): DocumentReference | null {
   const db = getFirestoreDb();
   return db ? db.collection(TRACKING_COLLECTIONS.payoutConfig).doc("default") : null;
+}
+
+export function trackingWrapstarShiftsCollection(): CollectionReference | null {
+  const db = getFirestoreDb();
+  return db ? db.collection(TRACKING_COLLECTIONS.wrapstarShifts) : null;
+}
+
+export function trackingWrapstarShiftGiftsCollection(): CollectionReference | null {
+  const db = getFirestoreDb();
+  return db ? db.collection(TRACKING_COLLECTIONS.wrapstarShiftGifts) : null;
+}
+
+export function trackingWrapstarShiftVideosCollection(): CollectionReference | null {
+  const db = getFirestoreDb();
+  return db ? db.collection(TRACKING_COLLECTIONS.wrapstarShiftVideos) : null;
 }

@@ -33,6 +33,13 @@ export type OrderRetailer =
   | "Best Buy"
   | "Etsy";
 
+/** Per-order wrap workflow inside a WrapStar shift. */
+export type WrapOrderPhase =
+  | "queued"
+  | "recording"
+  | "label_ready"
+  | "complete";
+
 export type OrderLineItem = {
   asin?: string;
   title?: string;
@@ -74,7 +81,7 @@ export type Order = {
   state: string;
   postalCode: string;
   scheduledFor: string;
-  /** Assigned WrapStar (12-digit id). */
+  /** Assigned WrapStar (10-digit employee id, prefix 8). */
   wrapstarId?: string;
   wrapstarName?: string;
   /**
@@ -145,6 +152,31 @@ export type Order = {
   /** Assigned courier Driver (separate from WrapStar). Not the legacy driverId alias. */
   courierDriverId?: string;
   courierDriverName?: string;
+  /** Special delivery instructions for the courier (from checkout when ingested). */
+  deliveryInstructions?: string;
+  /** When true (or flowers on line items), driver should pick up flowers. */
+  pickupFlowers?: boolean;
+  /** Florist shop order / ticket number when flowers were placed. */
+  floristOrderNumber?: string;
+  /** ISO deliver-by deadline for the giftee drop-off. */
+  deliverBy?: string;
+  /** WrapStar shift that owns today's wrap job for this order. */
+  wrapShiftId?: string;
+  /** Wrap workflow phase for Admin + WrapStar App. */
+  wrapPhase?: WrapOrderPhase;
+  wrapVideoStartedAt?: string;
+  wrapFinishedAt?: string;
+  wrapVideoEndedAt?: string;
+  wrapVideoUrl?: string;
+  /** Driver-only label QR (PNG) after Finished wrapping. */
+  driverLabelQrUrl?: string;
+  /** Opaque token for /api/driver/scan/[token] — designated Drivers only. */
+  driverLabelToken?: string;
+  /**
+   * Set when WrapStar ends video and wrap is complete — courier may pick up.
+   * Admin board uses this with wrapPhase === "complete".
+   */
+  readyForCourierAt?: string;
 };
 
 export type MetroId =
@@ -165,7 +197,7 @@ export type Metro = {
 };
 
 export type WrapStar = {
-  /** 12-digit system identifier */
+  /** 10-digit employee id: 8 + YY + state + zipRev + serial */
   id: string;
   displayId: string;
   name: string;
@@ -195,6 +227,7 @@ export type WrapStar = {
  * Do not confuse with legacy Order.driverId (which mirrored wrapstarId).
  */
 export type DeliveryDriver = {
+  /** 10-digit employee id: 7 + YY + state + zipRev + serial */
   id: string;
   displayId: string;
   name: string;
@@ -249,6 +282,42 @@ export type WeekAvailabilityRecord = {
 export type DayShiftAvailability = {
   morning: boolean; // 7:00 AM - 1:00 PM
   afternoon: boolean; // 1:00 PM - 7:00 PM
+};
+
+export type WrapStarShiftStatus = "active" | "handed_off" | "cancelled";
+
+export type WrapStarShift = {
+  id: string;
+  wrapstarId: string;
+  /** Eastern calendar date YYYY-MM-DD */
+  dateKey: string;
+  startedAt: string;
+  status: WrapStarShiftStatus;
+  /** Ordered list of order ids for this shift (stopSequence). */
+  orderIds: string[];
+  /** WrapStar confirmed custom/AI wrap paper printed for the day. */
+  printsConfirmedAt?: string;
+  handedOffAt?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+/** Live video chunk metadata while wrapping a single order. */
+export type WrapStarShiftVideo = {
+  id: string;
+  shiftId: string;
+  orderId: string;
+  wrapstarId: string;
+  segmentIndex: number;
+  startedAt: string;
+  endedAt: string;
+  durationSec: number;
+  storagePath?: string;
+  downloadUrl?: string;
+  contentType: string;
+  byteSize?: number;
+  kind?: "live_chunk" | "final";
+  createdAt: string;
 };
 
 export type OrdersFilePayload = {

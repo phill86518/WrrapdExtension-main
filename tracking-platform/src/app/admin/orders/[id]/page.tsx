@@ -259,7 +259,8 @@ export default async function AdminOrderDetailPage({
                 </option>
                 {wrapstars.map((w) => (
                   <option key={w.id} value={w.id}>
-                    {w.name} ({w.wrapOnly || w.canDeliver === false ? "wrap-only" : "hybrid"}) · ZIP{" "}
+                    {w.name} · {w.displayId || w.id} (
+                    {w.wrapOnly || w.canDeliver === false ? "wrap-only" : "hybrid"}) · ZIP{" "}
                     {w.homePostalCode}
                   </option>
                 ))}
@@ -272,21 +273,16 @@ export default async function AdminOrderDetailPage({
           <form action={assignCourierAction} className="flex items-end gap-2">
             <input type="hidden" name="orderId" value={order.id} />
             <label className="text-sm">
-              Assign Driver
+              Assign Driver (courier)
               <select
                 name="courierDriverId"
-                required
-                defaultValue={
-                  order.courierDriverId ||
-                  drivers.find((d) => d.status === "approved")?.id ||
-                  drivers[0]?.id ||
-                  ""
-                }
+                defaultValue={order.courierDriverId || ""}
                 className="ml-2 rounded border px-2 py-1.5"
               >
+                <option value="">— None / self-delivery —</option>
                 {drivers.map((d) => (
                   <option key={d.id} value={d.id}>
-                    {d.name} · {d.metroId} · {d.status}
+                    {d.name} · {d.displayId || d.id} · {d.metroId} · {d.status}
                   </option>
                 ))}
               </select>
@@ -324,6 +320,87 @@ export default async function AdminOrderDetailPage({
           </ul>
         </section>
       ) : null}
+
+      <section className="mt-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <h2 className="font-semibold text-slate-900">WrapStar wrap status</h2>
+        <div className="mt-2 grid gap-1 text-sm text-slate-700 sm:grid-cols-2">
+          <p>
+            <span className="font-medium">Phase:</span> {order.wrapPhase || "not started"}
+          </p>
+          <p>
+            <span className="font-medium">Fulfillment:</span>{" "}
+            {order.fulfillmentMode === "self_delivery"
+              ? "Hybrid self-delivery"
+              : order.fulfillmentMode === "driver_final_mile"
+                ? "Driver final-mile"
+                : "—"}
+          </p>
+          <p>
+            <span className="font-medium">Shift:</span> {order.wrapShiftId || "—"}
+          </p>
+          <p>
+            <span className="font-medium">Ready for courier:</span>{" "}
+            {order.readyForCourierAt
+              ? new Date(order.readyForCourierAt).toLocaleString()
+              : "—"}
+          </p>
+          <p>
+            <span className="font-medium">Video started:</span>{" "}
+            {order.wrapVideoStartedAt
+              ? new Date(order.wrapVideoStartedAt).toLocaleString()
+              : "—"}
+          </p>
+          <p>
+            <span className="font-medium">Finished wrapping / barcode:</span>{" "}
+            {order.wrapFinishedAt ? new Date(order.wrapFinishedAt).toLocaleString() : "—"}
+          </p>
+          <p>
+            <span className="font-medium">Video ended:</span>{" "}
+            {order.wrapVideoEndedAt ? new Date(order.wrapVideoEndedAt).toLocaleString() : "—"}
+          </p>
+        </div>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          {order.driverLabelQrUrl || order.driverLabelToken ? (
+            <div className="rounded-lg border border-slate-100 p-3">
+              <p className="text-sm font-semibold text-slate-900">Driver label QR</p>
+              {order.driverLabelQrUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={order.driverLabelQrUrl}
+                  alt="Driver label QR"
+                  className="mx-auto mt-2 w-full max-w-[200px]"
+                />
+              ) : null}
+              {order.driverLabelToken ? (
+                <a
+                  className="mt-2 block text-xs text-blue-700 underline"
+                  href={`/api/driver/scan/${order.driverLabelToken}`}
+                >
+                  Preview scan payload (Admin)
+                </a>
+              ) : null}
+            </div>
+          ) : null}
+          {order.wrapVideoUrl ? (
+            <div className="rounded-lg border border-slate-100 p-3">
+              <p className="text-sm font-semibold text-slate-900">Wrap video</p>
+              <video
+                src={order.wrapVideoUrl}
+                controls
+                className="mt-2 aspect-video w-full rounded bg-black"
+              />
+              <a
+                className="mt-2 block text-xs text-blue-700 underline"
+                href={order.wrapVideoUrl}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Open in new tab
+              </a>
+            </div>
+          ) : null}
+        </div>
+      </section>
 
       {order.proofPhotoUrl ? (
         <section className="mt-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">

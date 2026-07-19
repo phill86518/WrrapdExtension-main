@@ -8,7 +8,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <>
-      <AutoRefresh intervalMs={600_000} />
+      {/* Ops need wrap-phase updates promptly (WrapStar start/finish/end video). */}
+      <AutoRefresh intervalMs={20_000} />
       {signedIn ? <AdminShell>{children}</AdminShell> : children}
     </>
   );

@@ -51,7 +51,15 @@ export default async function AdminDriverDetailPage({
         Back to Drivers
       </Link>
       <h1 className="mt-3 text-2xl font-semibold text-slate-900">{driver.name}</h1>
-      <p className="font-mono text-sm text-slate-600">{driver.id}</p>
+      <p className="font-mono text-sm text-slate-600">
+        {driver.displayId || driver.id}
+        {driver.displayId && driver.displayId !== driver.id ? (
+          <span className="ml-2 text-xs text-slate-400">({driver.id})</span>
+        ) : null}
+      </p>
+      <p className="mt-1 text-xs text-slate-500">
+        Courier Driver (final-mile) — separate from WrapStars. App: /courier
+      </p>
 
       <form action={updateAction} className="mt-6 space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
         <input type="hidden" name="driverId" value={driver.id} />

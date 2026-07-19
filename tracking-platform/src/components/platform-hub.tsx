@@ -15,14 +15,18 @@ export function PlatformHub() {
         <p className="mt-3 max-w-3xl text-slate-300">
           Admin command center, WrapStar console, and customer tracking — same Next.js app as the public site.
         </p>
-        <div className="mt-10 grid gap-4 md:grid-cols-3">
+        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Link href="/admin" className="rounded-xl border border-slate-700 bg-slate-900 p-5 hover:bg-slate-800">
             <h2 className="text-xl font-medium">Command center</h2>
             <p className="mt-2 text-sm text-slate-300">Manage active, scheduled, and past deliveries.</p>
           </Link>
           <Link href="/wrapstar" className="rounded-xl border border-slate-700 bg-slate-900 p-5 hover:bg-slate-800">
-            <h2 className="text-xl font-medium">WrapStar Console</h2>
-            <p className="mt-2 text-sm text-slate-300">Orders, calendar, GPS, and proof photos.</p>
+            <h2 className="text-xl font-medium">WrapStar App</h2>
+            <p className="mt-2 text-sm text-slate-300">Gift-wrapping jobs, shifts, video proof, labels.</p>
+          </Link>
+          <Link href="/courier" className="rounded-xl border border-slate-700 bg-slate-900 p-5 hover:bg-slate-800">
+            <h2 className="text-xl font-medium">Driver App</h2>
+            <p className="mt-2 text-sm text-slate-300">Courier pickup of wrap-complete gifts and scan labels.</p>
           </Link>
           <Link
             href={`/track/${DEMO_CUSTOMER_TRACKING_TOKEN}`}

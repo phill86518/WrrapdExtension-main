@@ -1,36 +1,49 @@
 import { promises as fs } from "fs";
 import path from "path";
-import { randomBytes } from "crypto";
 import type { DeliveryDriver, MetroId, OnboardingStatus } from "./types";
 import { trackingDeliveryDriversCollection } from "./tracking-firestore";
 import { metroForPostalCode, getMetro } from "./metros";
 import { DEMO_DRIVER_ATL_ID, DEMO_DRIVER_JAX_ID } from "./demo-ids";
+import { allocateEmployeeId, DEMO_EMPLOYEE_IDS } from "./employee-id";
 
 const DATA_DIR = path.join(process.cwd(), ".data");
 const FILE = path.join(DATA_DIR, "delivery-drivers.json");
 
 export { DEMO_DRIVER_JAX_ID, DEMO_DRIVER_ATL_ID };
 
+const RILEY_ID = DEMO_EMPLOYEE_IDS.driverRiley;
+
 const DEFAULT_DELIVERY_DRIVERS: DeliveryDriver[] = [
   {
-    id: DEMO_DRIVER_JAX_ID,
-    displayId: DEMO_DRIVER_JAX_ID,
+    id: DEMO_EMPLOYEE_IDS.driverDevon,
+    displayId: DEMO_EMPLOYEE_IDS.driverDevon,
     name: "Devon Blake",
     homePostalCode: "32218",
     metroId: "jacksonville",
     status: "approved",
-    notes: "Demo Driver — Jacksonville",
+    notes: "Demo Driver — Jacksonville (7260981201)",
     createdAt: "2026-01-01T00:00:00.000Z",
     updatedAt: "2026-01-01T00:00:00.000Z",
   },
   {
-    id: DEMO_DRIVER_ATL_ID,
-    displayId: DEMO_DRIVER_ATL_ID,
+    id: DEMO_EMPLOYEE_IDS.driverMorgan,
+    displayId: DEMO_EMPLOYEE_IDS.driverMorgan,
     name: "Morgan Ellis",
     homePostalCode: "30309",
     metroId: "atlanta",
     status: "approved",
-    notes: "Demo Driver — Atlanta",
+    notes: "Demo Driver — Atlanta (7261090301)",
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+  },
+  {
+    id: RILEY_ID,
+    displayId: RILEY_ID,
+    name: "Riley Quinn",
+    homePostalCode: "32256",
+    metroId: "jacksonville",
+    status: "approved",
+    notes: "Demo Driver — Jacksonville Southside (7260965201)",
     createdAt: "2026-01-01T00:00:00.000Z",
     updatedAt: "2026-01-01T00:00:00.000Z",
   },
@@ -38,10 +51,6 @@ const DEFAULT_DELIVERY_DRIVERS: DeliveryDriver[] = [
 
 function nowIso() {
   return new Date().toISOString();
-}
-
-function generateDeliveryDriverId(): string {
-  return `dd-${randomBytes(6).toString("hex")}`;
 }
 
 function normalizeDeliveryDriver(raw: Partial<DeliveryDriver> & { id?: string; name?: string }): DeliveryDriver | null {
@@ -89,7 +98,7 @@ async function readLocal(): Promise<DeliveryDriver[]> {
   }
 }
 
-/** Ensure Jacksonville + Atlanta demo Drivers exist (idempotent). */
+/** Ensure demo Drivers exist (idempotent). */
 export async function ensureDemoDeliveryDrivers(): Promise<DeliveryDriver[]> {
   const existing = await listDeliveryDriversRaw();
   const byId = new Map(existing.map((d) => [d.id, d]));
@@ -165,8 +174,13 @@ export async function addDeliveryDriver(input: {
     return { ok: false, error: "A Driver with this name already exists." };
   }
 
-  let id = generateDeliveryDriverId();
-  while (all.some((d) => d.id === id)) id = generateDeliveryDriverId();
+  const idResult = allocateEmployeeId(
+    "7",
+    zip,
+    all.map((d) => d.id),
+  );
+  if (!idResult.ok) return { ok: false, error: idResult.error };
+  const id = idResult.id;
   const ts = nowIso();
   const driver: DeliveryDriver = {
     id,
@@ -188,71 +202,68 @@ export async function addDeliveryDriver(input: {
     await col.doc(driver.id).set(driver);
     return { ok: true, driver };
   }
-  await writeFile([...all, driver]);
+  await writeFile([...all, driver].sort((a, b) => a.name.localeCompare(b.name)));
   return { ok: true, driver };
 }
 
 export async function updateDeliveryDriver(
-  id: string,
+  driverId: string,
   patch: Partial<
     Pick<
       DeliveryDriver,
-      | "name"
-      | "homePostalCode"
-      | "metroId"
-      | "status"
-      | "email"
-      | "phone"
-      | "notes"
-      | "servicePostalCodes"
+      "name" | "homePostalCode" | "email" | "phone" | "notes" | "status" | "servicePostalCodes" | "metroId"
     >
   >,
 ): Promise<{ ok: true; driver: DeliveryDriver } | { ok: false; error: string }> {
   const all = await listDeliveryDrivers();
-  const idx = all.findIndex((d) => d.id === id);
+  const idx = all.findIndex((d) => d.id === driverId);
   if (idx < 0) return { ok: false, error: "Driver not found." };
   const prev = all[idx]!;
-  const homePostalCode =
-    patch.homePostalCode !== undefined
-      ? patch.homePostalCode.replace(/\D/g, "").slice(0, 5)
-      : prev.homePostalCode;
-  if (homePostalCode.length !== 5) return { ok: false, error: "A valid 5-digit home ZIP is required." };
-  const metroId =
-    patch.metroId ||
-    (patch.homePostalCode !== undefined ? metroForPostalCode(homePostalCode)?.id : undefined) ||
-    prev.metroId;
+  const zip = patch.homePostalCode
+    ? patch.homePostalCode.replace(/\D/g, "").slice(0, 5)
+    : prev.homePostalCode;
+  if (zip.length !== 5) return { ok: false, error: "A valid 5-digit home ZIP is required." };
+  const metroId = patch.metroId || metroForPostalCode(zip)?.id || prev.metroId;
   if (!getMetro(metroId)) return { ok: false, error: "Invalid metro." };
 
   const next: DeliveryDriver = {
     ...prev,
-    ...(patch.name !== undefined ? { name: patch.name.trim() } : {}),
-    homePostalCode,
+    ...patch,
+    homePostalCode: zip,
     metroId,
-    ...(patch.status !== undefined ? { status: patch.status } : {}),
-    ...(patch.email !== undefined ? { email: patch.email.trim() || undefined } : {}),
-    ...(patch.phone !== undefined ? { phone: patch.phone.trim() || undefined } : {}),
-    ...(patch.notes !== undefined ? { notes: patch.notes.trim() || undefined } : {}),
-    ...(patch.servicePostalCodes !== undefined ? { servicePostalCodes: patch.servicePostalCodes } : {}),
+    name: patch.name?.trim() || prev.name,
+    email: patch.email !== undefined ? patch.email.trim() || undefined : prev.email,
+    phone: patch.phone !== undefined ? patch.phone.trim() || undefined : prev.phone,
+    notes: patch.notes !== undefined ? patch.notes.trim() || undefined : prev.notes,
     updatedAt: nowIso(),
   };
 
   const col = trackingDeliveryDriversCollection();
   if (col) {
-    await col.doc(id).set(next);
+    await col.doc(next.id).set(next);
     return { ok: true, driver: next };
   }
-  all[idx] = next;
-  await writeFile(all);
+  const list = [...all];
+  list[idx] = next;
+  await writeFile(list.sort((a, b) => a.name.localeCompare(b.name)));
   return { ok: true, driver: next };
 }
 
-export async function deleteDeliveryDriver(id: string): Promise<{ ok: true } | { ok: false; error: string }> {
+export async function deleteDeliveryDriver(
+  driverId: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (
+    driverId === DEMO_EMPLOYEE_IDS.driverDevon ||
+    driverId === DEMO_EMPLOYEE_IDS.driverMorgan
+  ) {
+    return { ok: false, error: "Demo Drivers cannot be deleted." };
+  }
   const all = await listDeliveryDrivers();
-  if (!all.some((d) => d.id === id)) return { ok: false, error: "Driver not found." };
-  const next = all.filter((d) => d.id !== id);
+  if (!all.some((d) => d.id === driverId)) return { ok: false, error: "Driver not found." };
+  const next = all.filter((d) => d.id !== driverId);
   const col = trackingDeliveryDriversCollection();
   if (col) {
-    await col.doc(id).delete();
+    await col.doc(driverId).delete();
     return { ok: true };
   }
   await writeFile(next);

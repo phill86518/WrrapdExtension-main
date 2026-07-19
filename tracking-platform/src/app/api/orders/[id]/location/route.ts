@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { updateDriverLocation } from "@/lib/data";
+import { loadOrderIfMutable } from "@/lib/order-access";
 
 export async function POST(
   request: NextRequest,
@@ -11,6 +12,11 @@ export async function POST(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const { id } = await params;
+  const allowed = await loadOrderIfMutable(session, id);
+  if (!allowed) {
+    return NextResponse.json({ error: "Forbidden or not found" }, { status: 403 });
+  }
+
   const body = (await request.json()) as {
     lat?: number;
     lng?: number;

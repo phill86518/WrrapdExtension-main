@@ -25,12 +25,12 @@ export async function middleware(request: NextRequest) {
   }
   if (pathname === "/Driver" || pathname.startsWith("/Driver/")) {
     const u = request.nextUrl.clone();
-    u.pathname = `/wrapstar${pathname.slice("/Driver".length)}`;
+    u.pathname = `/courier${pathname.slice("/Driver".length)}`;
     return NextResponse.redirect(u);
   }
   if (pathname === "/driver" || pathname.startsWith("/driver/")) {
     const u = request.nextUrl.clone();
-    u.pathname = `/wrapstar${pathname.slice("/driver".length)}`;
+    u.pathname = `/courier${pathname.slice("/driver".length)}`;
     return NextResponse.redirect(u);
   }
   if (pathname === "/Wrapstar" || pathname.startsWith("/Wrapstar/")) {
@@ -68,6 +68,7 @@ export const config = {
   matcher: [
     "/admin/:path*",
     "/driver/:path*",
+    "/courier/:path*",
     "/wrapstar/:path*",
     "/Admin",
     "/Admin/:path*",

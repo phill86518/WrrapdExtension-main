@@ -34,12 +34,12 @@ const MODULES = [
   {
     href: "/admin/wrapstars",
     title: "WrapStars",
-    body: "Gift-wrappers (hybrid or wrap-only). Demo: Taylor (Jacksonville).",
+    body: "Gift-wrappers (IDs start with 8). Demo: Roger 8260981201, Taylor 8260965201.",
   },
   {
     href: "/admin/drivers",
     title: "Drivers",
-    body: "Couriers for final mile. Demo: Devon Blake (Jax), Morgan Ellis (Atlanta).",
+    body: "Couriers (IDs start with 7). Demo: Devon 7260981201, Morgan 7261090301. App: /courier",
   },
   {
     href: "/admin/finance",

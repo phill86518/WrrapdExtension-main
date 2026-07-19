@@ -8,10 +8,8 @@ import {
   reopenOrderAsAssigned,
   updateOrderStatus,
 } from "@/lib/data";
-import {
-  defaultDemoDriverIdForPostal,
-  defaultDemoWrapstarId,
-} from "@/lib/demo-staffing";
+import { findWrapstarById } from "@/lib/wrapstar-registry";
+import { defaultDemoWrapstarId } from "@/lib/demo-staffing";
 import type { OrderStatus } from "@/lib/types";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -50,14 +48,35 @@ export async function updateStatusAction(formData: FormData) {
   revalidateOrders();
 }
 
+/**
+ * Assign WrapStar + optional courier Driver.
+ * Hybrid (can deliver): empty courier → self_delivery.
+ * Wrap-only: courier required server-side.
+ */
 export async function assignStaffAction(formData: FormData) {
   const orderId = String(formData.get("orderId") || "");
   const wrapstarId = String(formData.get("wrapstarId") || "").trim() || defaultDemoWrapstarId();
-  const courierDriverId =
-    String(formData.get("courierDriverId") || "").trim() ||
-    defaultDemoDriverIdForPostal(String(formData.get("postalCode") || ""));
+  const courierRaw = String(formData.get("courierDriverId") || "").trim();
+
+  const wrapstar = await findWrapstarById(wrapstarId);
+  const wrapOnly = Boolean(wrapstar?.wrapOnly || wrapstar?.canDeliver === false);
+
+  if (wrapOnly && !courierRaw) {
+    redirect(
+      `/admin/orders?assignError=${encodeURIComponent(
+        "Wrap-only WrapStars need a courier Driver assigned.",
+      )}`,
+    );
+  }
+
   await assignWrapstar(orderId, wrapstarId, "admin");
-  await assignCourierDriver(orderId, courierDriverId, "admin");
+
+  if (courierRaw) {
+    await assignCourierDriver(orderId, courierRaw, "admin");
+  } else {
+    // Hybrid: no courier → self-delivery
+    await assignCourierDriver(orderId, "", "admin");
+  }
   revalidateOrders();
 }
 

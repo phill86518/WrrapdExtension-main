@@ -3,6 +3,7 @@ import type { CollectionReference } from "firebase-admin/firestore";
 import path from "path";
 import type { OnboardingStatus, WrapStarProfile } from "./types";
 import { trackingWrapstarProfilesCollection } from "./tracking-firestore";
+import { DEMO_EMPLOYEE_IDS } from "./employee-id";
 import { wrapstarIdFromLegacy } from "./wrapstar-id";
 
 const DATA_DIR = path.join(process.cwd(), ".data");
@@ -11,21 +12,35 @@ const LEGACY_FILE = path.join(DATA_DIR, "driver-profiles.json");
 
 type Store = Record<string, WrapStarProfile>;
 
-const ROGER_ID = wrapstarIdFromLegacy("drv-1");
-const TAYLOR_ID = wrapstarIdFromLegacy("drv-2");
+const ROGER_ID = DEMO_EMPLOYEE_IDS.wrapstarRoger;
+const TAYLOR_ID = DEMO_EMPLOYEE_IDS.wrapstarTaylor;
+const JORDAN_ID = DEMO_EMPLOYEE_IDS.wrapstarJordan;
+const CASEY_ID = DEMO_EMPLOYEE_IDS.wrapstarCasey;
 
 const defaultProfiles: Store = {
   [ROGER_ID]: {
     wrapstarId: ROGER_ID,
     driverId: ROGER_ID,
     onboardingStatus: "approved",
-    notes: "Founder — Roger",
+    notes: "Founder — Roger (8260981201 · FL 32218)",
   },
   [TAYLOR_ID]: {
     wrapstarId: TAYLOR_ID,
     driverId: TAYLOR_ID,
     onboardingStatus: "approved",
-    notes: "Demo WrapStar — Taylor (Jacksonville)",
+    notes: "Demo WrapStar — Taylor (8260965201 · FL 32256)",
+  },
+  [JORDAN_ID]: {
+    wrapstarId: JORDAN_ID,
+    driverId: JORDAN_ID,
+    onboardingStatus: "approved",
+    notes: "Demo WrapStar — Jordan Lee (8260981202 · FL 32218 #02)",
+  },
+  [CASEY_ID]: {
+    wrapstarId: CASEY_ID,
+    driverId: CASEY_ID,
+    onboardingStatus: "approved",
+    notes: "Demo WrapStar — Casey Nguyen (8261090301 · GA 30309)",
   },
 };
 

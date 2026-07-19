@@ -5,13 +5,16 @@ import type { WrapStar } from "./types";
 import { getFirestoreDb } from "./firebase-admin";
 import { trackingWrapstarsCollection, trackingDriversCollection } from "./tracking-firestore";
 import { generateWrapstarId, wrapstarIdFromLegacy } from "./wrapstar-id";
+import { DEMO_EMPLOYEE_IDS } from "./employee-id";
 
 const DATA_DIR = path.join(process.cwd(), ".data");
 const FILE = path.join(DATA_DIR, "wrapstars.json");
 const LEGACY_FILE = path.join(DATA_DIR, "drivers.json");
 
-const ROGER_ID = wrapstarIdFromLegacy("drv-1");
-const TAYLOR_ID = wrapstarIdFromLegacy("drv-2");
+const ROGER_ID = DEMO_EMPLOYEE_IDS.wrapstarRoger;
+const TAYLOR_ID = DEMO_EMPLOYEE_IDS.wrapstarTaylor;
+const JORDAN_ID = DEMO_EMPLOYEE_IDS.wrapstarJordan;
+const CASEY_ID = DEMO_EMPLOYEE_IDS.wrapstarCasey;
 
 const DEFAULT_WRAPSTARS: WrapStar[] = [
   {
@@ -37,6 +40,28 @@ const DEFAULT_WRAPSTARS: WrapStar[] = [
     hasVehicle: true,
     wrapOnly: false,
     metroId: "jacksonville",
+  },
+  {
+    id: JORDAN_ID,
+    displayId: JORDAN_ID,
+    name: "Jordan Lee",
+    homePostalCode: "32218",
+    allocationRank: 2,
+    canDeliver: false,
+    hasVehicle: false,
+    wrapOnly: true,
+    metroId: "jacksonville",
+  },
+  {
+    id: CASEY_ID,
+    displayId: CASEY_ID,
+    name: "Casey Nguyen",
+    homePostalCode: "30309",
+    allocationRank: 3,
+    canDeliver: false,
+    hasVehicle: false,
+    wrapOnly: true,
+    metroId: "atlanta",
   },
 ];
 
@@ -134,6 +159,35 @@ async function seedFirestoreWrapstarsIfEmpty(col: CollectionReference) {
   await batch.commit();
 }
 
+/** Upsert structured 10-digit demo WrapStars if missing (does not remove legacy rows). */
+async function ensureDemoWrapstars(existing: WrapStar[]): Promise<WrapStar[]> {
+  const byId = new Map(existing.map((d) => [d.id, d]));
+  let changed = false;
+  for (const demo of DEFAULT_WRAPSTARS) {
+    if (!byId.has(demo.id)) {
+      byId.set(demo.id, demo);
+      changed = true;
+    }
+  }
+  if (!changed) return existing;
+
+  const next = [...byId.values()].sort((a, b) => a.allocationRank - b.allocationRank);
+  const col = trackingWrapstarsCollection();
+  if (col) {
+    for (const demo of DEFAULT_WRAPSTARS) {
+      const doc = await col.doc(demo.id).get();
+      if (!doc.exists) await col.doc(demo.id).set(demo);
+    }
+    const snap = await col.get();
+    return snap.docs
+      .map((doc) => normalizeWrapStar(doc.data() as WrapStar))
+      .filter((x): x is WrapStar => !!x)
+      .sort((a, b) => a.allocationRank - b.allocationRank);
+  }
+  await writeWrapstarsFile(next);
+  return next;
+}
+
 export async function listRegisteredWrapstars(): Promise<WrapStar[]> {
   const col = trackingWrapstarsCollection();
   if (col) {
@@ -143,7 +197,7 @@ export async function listRegisteredWrapstars(): Promise<WrapStar[]> {
       .map((doc) => normalizeWrapStar(doc.data() as WrapStar))
       .filter((x): x is WrapStar => !!x);
     if (list.length === 0) return [...DEFAULT_WRAPSTARS];
-    return list.sort((a, b) => a.allocationRank - b.allocationRank);
+    return ensureDemoWrapstars(list);
   }
 
   try {
@@ -156,16 +210,16 @@ export async function listRegisteredWrapstars(): Promise<WrapStar[]> {
       const migrated = await migrateLegacyDriversFile();
       if (migrated?.length) {
         await writeWrapstarsFile(migrated);
-        return migrated.sort((a, b) => a.allocationRank - b.allocationRank);
+        return ensureDemoWrapstars(migrated);
       }
       return [...DEFAULT_WRAPSTARS];
     }
-    return list.sort((a, b) => a.allocationRank - b.allocationRank);
+    return ensureDemoWrapstars(list);
   } catch {
     const migrated = await migrateLegacyDriversFile();
     if (migrated?.length) {
       await writeWrapstarsFile(migrated);
-      return migrated.sort((a, b) => a.allocationRank - b.allocationRank);
+      return ensureDemoWrapstars(migrated);
     }
     await writeWrapstarsFile(DEFAULT_WRAPSTARS);
     return [...DEFAULT_WRAPSTARS];
@@ -217,8 +271,12 @@ export async function addWrapstar(input: {
     }
   }
   const maxRank = all.reduce((m, d) => Math.max(m, d.allocationRank), -1);
-  let id = generateWrapstarId();
-  while (all.some((d) => d.id === id)) id = generateWrapstarId();
+  const idResult = generateWrapstarId(
+    zip,
+    all.map((d) => d.id),
+  );
+  if (!idResult.ok) return { ok: false, error: idResult.error };
+  const id = idResult.id;
 
   const canDeliver = input.canDeliver !== false && input.wrapOnly !== true;
   const wrapOnly = input.wrapOnly === true || !canDeliver;

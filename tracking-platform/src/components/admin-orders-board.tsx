@@ -8,12 +8,13 @@ import {
   reopenAssignedAction,
   updateStatusAction,
 } from "@/app/admin/orders/actions";
-import { defaultDemoDriverIdForPostal, defaultDemoWrapstarId } from "@/lib/demo-ids";
+import { defaultDemoWrapstarId } from "@/lib/demo-ids";
 import { formatDateKeyNy, toInstantDate } from "@/lib/ny-date";
 import { wrrapdScheduledInstantIsoForUi } from "@/lib/order-schedule-display";
 import { maxStopSequenceByRouteKey } from "@/lib/route-optimization";
 import type { DeliveryDriver, Order, WrapStar } from "@/lib/types";
-import { orderWrapstarId } from "@/lib/types";
+import { orderWrapstarId, resolveFulfillmentMode } from "@/lib/types";
+import { wrapPhaseBadgeClass, wrapPhaseLabel } from "@/lib/wrap-status-display";
 import { formatInTimeZone } from "date-fns-tz";
 
 type BoardKey = "active" | "scheduled" | "delinquent" | "past";
@@ -287,17 +288,19 @@ function BoardColumn({
           {group.items.map((order) => {
             const displayScheduledIso = wrrapdScheduledInstantIsoForUi(order);
             const wsSelected = orderWrapstarId(order) || taylorId;
-            const driverSelected =
-              order.courierDriverId || defaultDemoDriverIdForPostal(order.postalCode);
-            const wsName =
-              wrapstars.find((w) => w.id === orderWrapstarId(order))?.name ||
-              order.wrapstarName ||
-              "—";
+            const assignedWs = wrapstars.find((w) => w.id === orderWrapstarId(order));
+            const fulfillmentMode = resolveFulfillmentMode(order, assignedWs);
+            const needsCourier = fulfillmentMode === "driver_final_mile";
+            const driverSelected = order.courierDriverId || "";
+            const wsName = assignedWs?.name || order.wrapstarName || "—";
+            const wsIdLabel = orderWrapstarId(order) || assignedWs?.displayId || "";
             const driverName =
               drivers.find((d) => d.id === order.courierDriverId)?.name ||
               order.courierDriverName ||
-              "—";
-            const unassigned = !orderWrapstarId(order) || !order.courierDriverId;
+              (needsCourier ? "Unassigned" : "Self-delivery");
+            const missingWs = !orderWrapstarId(order);
+            const missingCourier = needsCourier && !order.courierDriverId;
+            const unassigned = missingWs || missingCourier;
             return (
               <div
                 key={order.id}
@@ -339,14 +342,42 @@ function BoardColumn({
                           : ""}
                       </span>
                     )}
+                    <span
+                      className={`shrink-0 rounded-lg px-2 py-1 text-[10px] font-bold uppercase tracking-wide ${wrapPhaseBadgeClass(order.wrapPhase)}`}
+                    >
+                      Wrap: {wrapPhaseLabel(order.wrapPhase)}
+                    </span>
+                    {order.wrapPhase === "complete" || order.readyForCourierAt ? (
+                      <span className="shrink-0 rounded-lg bg-sky-100 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-sky-950">
+                        Ready for courier
+                      </span>
+                    ) : null}
+                    {order.driverLabelToken ? (
+                      <span className="shrink-0 rounded-lg bg-violet-100 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-violet-950">
+                        Label QR
+                      </span>
+                    ) : null}
+                    {order.wrapVideoUrl ? (
+                      <span className="shrink-0 rounded-lg bg-indigo-100 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-indigo-950">
+                        Video
+                      </span>
+                    ) : null}
                     <p className="text-xs font-bold uppercase tracking-wide text-[#1e3a5f]">
                       {order.status}
+                    </p>
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                      {fulfillmentMode === "self_delivery" ? "Hybrid self-delivery" : "Driver final-mile"}
                     </p>
                   </div>
                 </div>
                 {isDelinquentCol && unassigned ? (
                   <p className="mt-2 rounded-lg bg-rose-100 px-2 py-1 text-xs font-bold text-rose-900">
-                    Needs staffing — WrapStar and/or Driver missing
+                    Needs staffing —{" "}
+                    {missingWs && missingCourier
+                      ? "WrapStar and Driver missing"
+                      : missingWs
+                        ? "WrapStar missing"
+                        : "Driver (courier) missing"}
                   </p>
                 ) : null}
                 <p className="mt-2 text-sm font-medium text-[#0f172a]">{order.recipientName}</p>
@@ -361,10 +392,23 @@ function BoardColumn({
                     "M/d/yyyy, h:mm:ss a zzz",
                   )}
                 </p>
+                {order.wrapFinishedAt ? (
+                  <p className="mt-1 text-xs font-medium text-emerald-800">
+                    Wrap finished: {new Date(order.wrapFinishedAt).toLocaleString()}
+                  </p>
+                ) : null}
                 <p className="mt-2 text-xs text-[#2d4a38]">
                   <span className="font-semibold text-[#0f172a]">WrapStar:</span> {wsName}
+                  {wsIdLabel ? (
+                    <span className="ml-1 font-mono text-[10px] text-slate-500">{wsIdLabel}</span>
+                  ) : null}
                   <span className="mx-2 text-slate-400">·</span>
                   <span className="font-semibold text-[#0f172a]">Driver:</span> {driverName}
+                  {order.courierDriverId ? (
+                    <span className="ml-1 font-mono text-[10px] text-slate-500">
+                      {order.courierDriverId}
+                    </span>
+                  ) : null}
                 </p>
                 <a
                   href={`/admin/orders/${order.id}`}
@@ -430,27 +474,32 @@ function BoardColumn({
                         <option key={w.id} value={w.id}>
                           {w.name}
                           {w.id === taylorId ? " (demo)" : ""} ·{" "}
-                          {w.wrapOnly || w.canDeliver === false ? "wrap-only" : "hybrid"} · ZIP{" "}
-                          {w.homePostalCode}
+                          {w.wrapOnly || w.canDeliver === false ? "wrap-only" : "hybrid"} ·{" "}
+                          {w.displayId || w.id} · ZIP {w.homePostalCode}
                         </option>
                       ))}
                     </select>
                   </label>
                   <label className="block text-xs font-semibold uppercase tracking-wide text-[#1a2744]">
-                    Driver (courier)
+                    {needsCourier
+                      ? "Driver (courier) — required for wrap-only"
+                      : "Driver (courier) — optional for hybrid"}
                     <select
                       name="courierDriverId"
-                      required
+                      required={needsCourier}
                       defaultValue={
-                        driverOptions.some((d) => d.id === driverSelected)
-                          ? driverSelected
-                          : driverOptions[0]?.id || ""
+                        driverOptions.some((d) => d.id === driverSelected) ? driverSelected : ""
                       }
                       className="mt-1 w-full rounded-xl border-2 border-[#1a2744]/25 bg-white px-3 py-2 text-sm font-medium text-[#0f172a] shadow-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-400/50"
                     >
+                      <option value="">
+                        {needsCourier
+                          ? "— Select courier (required for wrap-only) —"
+                          : "— Self-delivery (no courier) —"}
+                      </option>
                       {driverOptions.map((d) => (
                         <option key={d.id} value={d.id}>
-                          {d.name} ·{" "}
+                          {d.name} · {d.displayId || d.id} ·{" "}
                           {d.metroId === "jacksonville"
                             ? "Jacksonville"
                             : d.metroId === "atlanta"
@@ -465,7 +514,7 @@ function BoardColumn({
                       className="w-full rounded-xl bg-gradient-to-b from-[#c9a227] to-[#a88417] px-5 py-2 text-sm font-bold text-[#1a1a12] shadow-lg shadow-amber-900/25 ring-1 ring-white/40 transition hover:from-[#d4ad32] hover:to-[#b8921f] active:scale-[0.98]"
                       type="submit"
                     >
-                      Save WrapStar + Driver
+                      Save staffing
                     </button>
                   </div>
                 </form>

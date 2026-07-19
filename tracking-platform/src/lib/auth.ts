@@ -9,7 +9,7 @@ import { SESSION_COOKIE_NAME, SESSION_MAX_AGE_SEC, getSessionSecretBytes } from 
 
 export { SESSION_COOKIE_NAME };
 
-type Session = {
+export type Session = {
   role: "admin" | "wrapstar" | "driver";
   userId: string;
   name: string;
@@ -83,14 +83,25 @@ export async function requireAdminSession() {
   return session;
 }
 
+/** @deprecated Prefer requireWrapstarSession or requireCourierSession. */
 export async function requireDriverSession() {
   const session = await getSession();
   if (!session || (session.role !== "driver" && session.role !== "wrapstar")) return null;
   return session;
 }
 
+/** WrapStar App only (role wrapstar). */
 export async function requireWrapstarSession() {
-  return requireDriverSession();
+  const session = await getSession();
+  if (!session || session.role !== "wrapstar") return null;
+  return session;
+}
+
+/** Courier Driver App only (role driver). */
+export async function requireCourierSession() {
+  const session = await getSession();
+  if (!session || session.role !== "driver") return null;
+  return session;
 }
 
 async function ensureAuthFile() {

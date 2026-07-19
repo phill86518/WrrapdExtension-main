@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { updateOrderStatus } from "@/lib/data";
+import { loadOrderIfMutable } from "@/lib/order-access";
 
 export async function POST(
   request: NextRequest,
@@ -10,6 +11,11 @@ export async function POST(
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
+  const allowed = await loadOrderIfMutable(session, id);
+  if (!allowed) {
+    return NextResponse.json({ error: "Forbidden or not found" }, { status: 403 });
+  }
+
   let status = "assigned";
 
   const contentType = request.headers.get("content-type") || "";

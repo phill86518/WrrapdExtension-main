@@ -12,7 +12,14 @@ export async function GET() {
   const orders = await listAllOrders();
   const map = new Map<
     string,
-    { total: number; delivered: number; open: number; wrapstars: Set<string> }
+    {
+      total: number;
+      delivered: number;
+      open: number;
+      wrapstars: Set<string>;
+      couriers: Set<string>;
+      wrapsComplete: number;
+    }
   >();
 
   for (const o of orders) {
@@ -23,6 +30,8 @@ export async function GET() {
       delivered: 0,
       open: 0,
       wrapstars: new Set<string>(),
+      couriers: new Set<string>(),
+      wrapsComplete: 0,
     };
     cur.total += 1;
     if (st === "delivered") cur.delivered += 1;
@@ -36,14 +45,19 @@ export async function GET() {
     }
     const ws = orderWrapstarId(o);
     if (ws) cur.wrapstars.add(ws);
+    if (o.courierDriverId) cur.couriers.add(o.courierDriverId);
+    if (o.wrapPhase === "complete" || o.readyForCourierAt) cur.wrapsComplete += 1;
     map.set(date, cur);
   }
 
   const lines = [
-    "date_et,total_orders,delivered,open_assigned_or_in_progress,wrapstars_used",
+    "date_et,total_orders,delivered,open_assigned_or_in_progress,wrapstars_used,drivers_used,wraps_complete",
     ...[...map.entries()]
       .sort((a, b) => a[0].localeCompare(b[0]))
-      .map(([d, v]) => `${d},${v.total},${v.delivered},${v.open},${v.wrapstars.size}`),
+      .map(
+        ([d, v]) =>
+          `${d},${v.total},${v.delivered},${v.open},${v.wrapstars.size},${v.couriers.size},${v.wrapsComplete}`,
+      ),
   ];
   const csv = `${lines.join("\n")}\n`;
   return new NextResponse(csv, {

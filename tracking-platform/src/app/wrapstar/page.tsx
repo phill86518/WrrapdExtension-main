@@ -4,27 +4,31 @@ import { DriverConsole } from "@/components/driver-console";
 import { DriverInstallCard } from "@/components/driver-install-card";
 import { DriverLoginForm } from "@/components/driver-login-form";
 import { DriverAccountPanel } from "@/components/driver-account-panel";
-import { LogoutButton } from "@/components/logout-button";
 import { getWrapstarProfile } from "@/lib/wrapstar-profiles";
 import {
   availabilityDeadlineForWeekMonday,
   getWeekAvailability,
   upcomingWeekFromToday,
 } from "@/lib/availability-store";
-import { DriverTopModals } from "@/components/driver-top-modals";
 import { WrrapdLogo } from "@/components/wrrapd-logo";
 import { formatInTimeZone } from "date-fns-tz";
 import { formatDateKeyNy, initialDriverDayKeyNy } from "@/lib/ny-date";
 import { wrrapdScheduledInstantIsoForUi } from "@/lib/order-schedule-display";
 import type { DayShiftAvailability } from "@/lib/types";
 import { founderWrapstarId } from "@/lib/wrapstar-registry";
+import { WrapstarAppShell } from "@/components/wrapstar/wrapstar-app-shell";
+import { ShiftModule } from "@/components/wrapstar/shift-module";
+import { WrapstarEarningsPanel } from "@/components/wrapstar/wrapstar-earnings-panel";
+import { WrapstarHelpPanel } from "@/components/wrapstar/wrapstar-help-panel";
+import { WrapstarAvailabilitySection } from "@/components/wrapstar/wrapstar-availability-section";
+import { listEarningsForWrapstar, walletForWrapstar } from "@/lib/finance";
 
 export const dynamic = "force-dynamic";
 
-const QUEUE_HELP = "Tap Today, a date, or the calendar to see stops for that day.";
+const QUEUE_HELP = "Tap Today, a date, or the calendar to see wrap jobs for that day.";
 
 function isWrapstarSession(role: string | undefined) {
-  return role === "wrapstar" || role === "driver";
+  return role === "wrapstar";
 }
 
 export default async function WrapstarPage() {
@@ -33,8 +37,8 @@ export default async function WrapstarPage() {
     return (
       <main className="mx-auto min-h-screen max-w-xl px-4 py-10">
         <WrrapdLogo className="h-14 w-auto max-w-[220px]" />
-        <h1 className="mt-3 text-3xl font-semibold">WrapStar Console Login</h1>
-        <p className="mt-2 text-sm text-slate-600">Sign in to access your order queue.</p>
+        <h1 className="mt-3 text-3xl font-semibold">WrapStar App Login</h1>
+        <p className="mt-2 text-sm text-slate-600">Sign in to access your wrap queue and shifts.</p>
         <DriverLoginForm />
       </main>
     );
@@ -73,7 +77,6 @@ export default async function WrapstarPage() {
     }),
   ) as Record<string, DayShiftAvailability>;
 
-  // Founder WrapStar: always fully available for the upcoming week so routing can assign.
   if (session.userId === founderWrapstarId() || session.userId === "drv-1") {
     initialDays = Object.fromEntries(
       week.days.map((d) => [d, { morning: true, afternoon: true } as DayShiftAvailability]),
@@ -96,83 +99,101 @@ export default async function WrapstarPage() {
     };
   });
 
+  const wallet = await walletForWrapstar(session.userId);
+  const earnings = await listEarningsForWrapstar(session.userId);
   if (profile.onboardingStatus !== "approved") {
     return (
-      <main className="mx-auto max-w-xl px-4 py-8">
-        <WrrapdLogo className="h-14 w-auto max-w-[220px]" />
-        <h1 className="mt-3 text-3xl font-semibold">WrapStar Console</h1>
-        <p className="mt-1 font-mono text-xs text-slate-500">ID {session.userId}</p>
-        <p className="mt-2 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-          Your onboarding status is <strong>{profile.onboardingStatus}</strong>. You cannot receive
-          deliveries until approved by admin.
-        </p>
-        <DriverTopModals
-          weekStartMonday={week.weekStartMonday}
-          days={week.days}
-          initialDays={initialDays}
-          deadlineLabel={deadlineLabel}
-          pastOrders={pastOrdersForModal}
-        />
-        <div className="mt-4">
-          <DriverAccountPanel wrapstarId={session.userId} />
-        </div>
-      </main>
+      <WrapstarAppShell
+        wrapstarName={session.name}
+        wrapstarId={session.userId}
+        initialSection="account"
+        installCard={null}
+        today={
+          <p className="rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            Your onboarding status is <strong>{profile.onboardingStatus}</strong>. You cannot receive
+            wrap jobs until approved by admin.
+          </p>
+        }
+        shift={
+          <p className="rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            Shift tools unlock after admin approval.
+          </p>
+        }
+        availability={
+          <WrapstarAvailabilitySection
+            weekStartMonday={week.weekStartMonday}
+            days={week.days}
+            initialDays={initialDays}
+            deadlineLabel={deadlineLabel}
+            pastOrders={pastOrdersForModal}
+          />
+        }
+        earnings={
+          <WrapstarEarningsPanel
+            unpaidCents={wallet.unpaidCents}
+            paidCents={wallet.paidCents}
+            lifetimeCents={wallet.lifetimeCents}
+            unpaidCount={wallet.unpaidCount}
+            recent={earnings.map((e) => ({
+              id: e.id,
+              orderId: e.orderId,
+              netCents: e.netCents,
+              earnedAt: e.earnedAt,
+              status: e.status,
+            }))}
+          />
+        }
+        account={<DriverAccountPanel wrapstarId={session.userId} />}
+        help={<WrapstarHelpPanel />}
+      />
     );
   }
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-6">
-      <div className="mb-5 flex items-center justify-between gap-3">
-        <div>
-          <WrrapdLogo className="h-14 w-auto max-w-[220px]" />
-          <h1 className="mt-2 text-3xl font-semibold">WrapStar Console</h1>
-          <p className="text-sm text-slate-600">Welcome, {session.name}</p>
-          <p className="font-mono text-xs text-slate-500">WrapStar ID {session.userId}</p>
-        </div>
-        <LogoutButton redirectPath="/wrapstar" />
-      </div>
-      <nav className="mb-4 flex flex-wrap gap-2 text-sm">
-        <a href="#orders" className="rounded-full bg-slate-900 px-3 py-1.5 text-white">
-          Orders
-        </a>
-        <a href="#calendar" className="rounded-full bg-slate-100 px-3 py-1.5 text-slate-700">
-          Calendar
-        </a>
-        <a href="#availability" className="rounded-full bg-slate-100 px-3 py-1.5 text-slate-700">
-          Availability
-        </a>
-        <a href="#account" className="rounded-full bg-slate-100 px-3 py-1.5 text-slate-700">
-          Account
-        </a>
-      </nav>
-      <div id="availability">
-        <DriverTopModals
-          weekStartMonday={week.weekStartMonday}
-          days={week.days}
-          initialDays={initialDays}
-          deadlineLabel={deadlineLabel}
-          pastOrders={pastOrdersForModal}
-        />
-      </div>
-      <div className="mb-4">
-        <DriverInstallCard />
-      </div>
-      <div id="account">
-        <DriverAccountPanel wrapstarId={session.userId} />
-      </div>
-      <p className="mb-2 text-center text-[11px] text-slate-400" data-wrrapd-wrapstar-build="queue-v1">
-        <span className="font-mono text-slate-500">{process.env.K_REVISION ?? "local"}</span>
-      </p>
-      <section id="orders" className="mb-8 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div id="calendar">
+    <WrapstarAppShell
+      wrapstarName={session.name}
+      wrapstarId={session.userId}
+      installCard={<DriverInstallCard />}
+      today={
+        <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <p className="mb-2 text-center text-[11px] text-slate-400">
+            <span className="font-mono text-slate-500">{process.env.K_REVISION ?? "local"}</span>
+          </p>
           <DriverConsole
             todayNyKey={todayNyKey}
             initialSelectedDayKey={initialDriverDayKey}
             description={QUEUE_HELP}
             orders={ordersForConsole}
           />
-        </div>
-      </section>
-    </main>
+        </section>
+      }
+      shift={<ShiftModule />}
+      availability={
+        <WrapstarAvailabilitySection
+          weekStartMonday={week.weekStartMonday}
+          days={week.days}
+          initialDays={initialDays}
+          deadlineLabel={deadlineLabel}
+          pastOrders={pastOrdersForModal}
+        />
+      }
+      earnings={
+        <WrapstarEarningsPanel
+          unpaidCents={wallet.unpaidCents}
+          paidCents={wallet.paidCents}
+          lifetimeCents={wallet.lifetimeCents}
+          unpaidCount={wallet.unpaidCount}
+          recent={earnings.map((e) => ({
+            id: e.id,
+            orderId: e.orderId,
+            netCents: e.netCents,
+            earnedAt: e.earnedAt,
+            status: e.status,
+          }))}
+        />
+      }
+      account={<DriverAccountPanel wrapstarId={session.userId} />}
+      help={<WrapstarHelpPanel />}
+    />
   );
 }

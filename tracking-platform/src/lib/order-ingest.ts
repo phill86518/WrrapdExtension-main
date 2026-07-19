@@ -367,6 +367,21 @@ export function parseIngestOrderPayload(body: unknown): IngestSuccess | IngestFa
       : undefined);
   const skipCustomerNotifications = p.skipCustomerNotifications === true;
 
+  const deliveryInstructions =
+    str((p as { deliveryInstructions?: unknown }).deliveryInstructions) ||
+    str((p as { specialInstructions?: unknown }).specialInstructions) ||
+    str((p as { specialDeliveryInstructions?: unknown }).specialDeliveryInstructions);
+  const floristOrderNumber = str((p as { floristOrderNumber?: unknown }).floristOrderNumber);
+  const deliverBy =
+    str((p as { deliverBy?: unknown }).deliverBy) ||
+    str((p as { deliverByDeadline?: unknown }).deliverByDeadline);
+  const pickupFlowersRaw = (p as { pickupFlowers?: unknown }).pickupFlowers;
+  const pickupFlowers =
+    pickupFlowersRaw === true ||
+    pickupFlowersRaw === "true" ||
+    (flowersRevenueCents != null && flowersRevenueCents > 0) ||
+    Boolean(lineItems?.some((li) => li.flowers === true));
+
   const missingFields: string[] = [];
   if (!customerName) missingFields.push("customerName");
   if (!customerPhone) missingFields.push("customerPhone");
@@ -445,6 +460,10 @@ export function parseIngestOrderPayload(body: unknown): IngestSuccess | IngestFa
         : {}),
       ...(retailer ? { retailer } : {}),
       ...(retailerEstimatedDeliveryDate ? { retailerEstimatedDeliveryDate } : {}),
+      ...(deliveryInstructions ? { deliveryInstructions } : {}),
+      ...(floristOrderNumber ? { floristOrderNumber } : {}),
+      ...(deliverBy ? { deliverBy } : {}),
+      ...(pickupFlowers ? { pickupFlowers: true } : {}),
     },
   };
 }

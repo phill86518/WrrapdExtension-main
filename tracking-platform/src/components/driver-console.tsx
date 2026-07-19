@@ -30,7 +30,7 @@ type DriverOrder = {
 const NY = "America/New_York";
 
 /** Bumped when driver queue UI changes — if you do not see this under the title, you are not on the latest deploy. */
-export const DRIVER_QUEUE_UI_REV = "2026-04-26-email-aligned-schedule-display";
+export const DRIVER_QUEUE_UI_REV = "2026-07-18-wrapstar-queue-copy";
 
 function monthTitleYm(ym: string): string {
   const d = toDate(`${ym}-01T12:00:00`, { timeZone: NY });
@@ -103,8 +103,8 @@ export function DriverConsole({
 
   const headingTitle =
     selectedDayKey === todayNyKey
-      ? "Today's deliveries (Eastern)"
-      : `Deliveries for ${calendarDayLabelNy(selectedDayKey)}`;
+      ? "Today's wraps (Eastern)"
+      : `Wraps for ${calendarDayLabelNy(selectedDayKey)}`;
 
   const [busyOrder, setBusyOrder] = useState<string | null>(null);
   const [offlineQueuedCount, setOfflineQueuedCount] = useState(0);
@@ -205,7 +205,7 @@ export function DriverConsole({
           const queue = getQueue();
           queue.push(payload);
           setQueue(queue);
-          alert("Offline or weak signal detected. GPS update queued and will retry automatically.");
+          alert("Offline or weak signal detected. Location update queued and will retry automatically.");
         }
         setBusyOrder(null);
         if (!autoGpsEnabled[orderId]) {
@@ -238,7 +238,7 @@ export function DriverConsole({
       alert("Please pick a photo first.");
       return;
     }
-    const confirmed = window.confirm("Are you sure you want to complete this delivery?");
+    const confirmed = window.confirm("Mark this wrap complete and upload proof?");
     if (!confirmed) return;
     setBusyOrder(orderId);
     const formData = new FormData();
@@ -272,7 +272,7 @@ export function DriverConsole({
   }
 
   async function startDelivery(orderId: string) {
-    const confirmed = window.confirm("Start delivery now? (You can change this later from the admin dashboard.)");
+    const confirmed = window.confirm("Start wrapping this order now?");
     if (!confirmed) return;
     setBusyOrder(orderId);
     try {
@@ -281,9 +281,9 @@ export function DriverConsole({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "en_route" }),
       });
-      if (!response.ok) throw new Error("Unable to start delivery");
+      if (!response.ok) throw new Error("Unable to start wrap");
     } catch {
-      alert("Could not start delivery right now. Please retry.");
+      alert("Could not start wrap right now. Please retry.");
     } finally {
       setBusyOrder(null);
       location.reload();
@@ -296,11 +296,11 @@ export function DriverConsole({
         <h2 className="text-xl font-semibold text-slate-900">{headingTitle}</h2>
         <p className="mt-1 text-sm text-slate-600">{description}</p>
         <p className="mt-1 text-sm font-medium text-slate-800">
-          {filteredOrders.length} stop{filteredOrders.length === 1 ? "" : "s"} for{" "}
+          {filteredOrders.length} wrap{filteredOrders.length === 1 ? "" : "s"} for{" "}
           <span className="text-amber-900">{calendarDayLabelNy(selectedDayKey)}</span> (Eastern)
         </p>
         <p className="mt-1 text-xs text-slate-400">
-          Wrrapd WrapStar UI · rev {DRIVER_QUEUE_UI_REV} · list is filtered by Eastern calendar date of each stop.
+          Wrrapd WrapStar UI · rev {DRIVER_QUEUE_UI_REV} · filtered by Eastern calendar date.
         </p>
       </div>
 
@@ -308,7 +308,7 @@ export function DriverConsole({
         <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">Select day (Eastern)</p>
         <p className="mt-1 text-xs text-slate-600">
           Tap <strong>Today</strong>, a <strong>date chip</strong> below, or a <strong>day in the calendar</strong> to
-          show only deliveries scheduled on that Eastern date.
+          show only wraps scheduled on that Eastern date.
         </p>
         <div className="mt-2 flex flex-wrap gap-2">
           <button
@@ -431,7 +431,7 @@ export function DriverConsole({
                 <span>{Number(cellKey.slice(8, 10))}</span>
                 {count > 0 ? (
                   <span className={`text-[10px] font-normal ${isSelected ? "text-slate-200" : "text-amber-900"}`}>
-                    {count} stop{count === 1 ? "" : "s"}
+                    {count} wrap{count === 1 ? "" : "s"}
                   </span>
                 ) : null}
               </button>
@@ -442,7 +442,7 @@ export function DriverConsole({
 
       {offlineQueuedCount > 0 && (
         <div className="rounded border border-amber-500 bg-amber-50 p-3 text-sm text-amber-900">
-          {offlineQueuedCount} GPS update(s) queued offline. They will auto-sync when connectivity returns.
+          {offlineQueuedCount} location update(s) queued offline. They will auto-sync when connectivity returns.
         </div>
       )}
       {filteredOrders.map((order) => (
@@ -456,7 +456,7 @@ export function DriverConsole({
             </div>
             {order.stopSequence != null && (
               <span className="rounded bg-slate-900 px-2 py-0.5 text-xs font-semibold text-white">
-                Stop {order.stopSequence}
+                Job {order.stopSequence}
                 {(() => {
                   const dayKey = formatDateKeyNy(order.scheduledFor);
                   const dayShort = formatInTimeZone(
@@ -474,12 +474,15 @@ export function DriverConsole({
           <p className="text-sm font-medium text-slate-800">
             Wrrapd day (ET):{" "}
             {formatInTimeZone(toInstantDate(order.scheduledFor), "America/New_York", "EEEE, MMM d, yyyy")}
-            <span className="font-normal text-slate-600"> · 1:00–7:00 PM route window</span>
+            <span className="font-normal text-slate-600"> · afternoon wrap window</span>
           </p>
           <p className="text-sm">
             {order.recipientName} - {order.addressLine1}, {order.city}, {order.state} {order.postalCode}
           </p>
           <p className="mt-2 text-xs uppercase tracking-wide text-slate-600">{order.status}</p>
+          <p className="mt-2 text-xs text-slate-500">
+            For chain-of-custody video and handoff barcode, use <strong>Start Shift</strong> in the menu.
+          </p>
 
           <div className="mt-3 grid gap-2">
             <button
@@ -488,7 +491,7 @@ export function DriverConsole({
               onClick={() => startDelivery(order.id)}
               disabled={busyOrder === order.id}
             >
-              {busyOrder === order.id ? "Starting..." : "Start Delivery"}
+              {busyOrder === order.id ? "Starting..." : "Start wrap"}
             </button>
 
             <button
@@ -497,7 +500,7 @@ export function DriverConsole({
               onClick={() => postLocation(order.id)}
               disabled={busyOrder === order.id}
             >
-              {busyOrder === order.id ? "Broadcasting..." : "Broadcast GPS"}
+              {busyOrder === order.id ? "Updating..." : "Update workspace location"}
             </button>
 
             <button
@@ -512,7 +515,7 @@ export function DriverConsole({
                 }))
               }
             >
-              {autoGpsEnabled[order.id] ? "Auto GPS: ON (30s)" : "Auto GPS: OFF"}
+              {autoGpsEnabled[order.id] ? "Auto location: ON (30s)" : "Auto location: OFF"}
             </button>
 
             <input
@@ -534,21 +537,21 @@ export function DriverConsole({
               onClick={() => uploadProof(order.id)}
               disabled={busyOrder === order.id}
             >
-              {busyOrder === order.id ? "Uploading..." : "Complete Delivery + Upload Proof"}
+              {busyOrder === order.id ? "Uploading..." : "Complete wrap + photo proof"}
             </button>
           </div>
         </div>
       ))}
       {orders.length === 0 && (
         <p className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm text-slate-600">
-          No stops assigned to you yet. When admin assigns orders to your name, they will list here with Start
-          delivery, GPS, and proof photo.
+          No wrap jobs assigned yet. When admin assigns orders to you, they will list here. Use Start Shift for
+          video chain of custody and handoff.
         </p>
       )}
       {orders.length > 0 && filteredOrders.length === 0 && (
         <p className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm text-slate-600">
-          No assigned stops for {calendarDayLabelNy(selectedDayKey)}. Use the calendar or quick day buttons to
-          switch to a day with deliveries.
+          No assigned wraps for {calendarDayLabelNy(selectedDayKey)}. Use the calendar or quick day buttons to
+          switch to a day with jobs.
         </p>
       )}
     </div>
