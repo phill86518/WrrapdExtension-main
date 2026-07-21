@@ -56,6 +56,8 @@ export type WrapstarApplication = {
   hasIdFile: boolean;
   submittedAt: string;
   approvedAt: string;
+  inviteExpiresAt?: string;
+  inviteExpiredAt?: string;
   activatedAt: string;
   interviewAt: string;
   userId: number;

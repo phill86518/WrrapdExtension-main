@@ -13,6 +13,7 @@ Command Center **Approve** emails from `admin@wrrapd.com`:
 - **Temporary password** = readable form like `Wrap4827K!` (must change on first login)
 - Login link → `apply.wrrapd.com/wrapstar-login/` → pros onboarding
 - **Decline this offer** link → `apply.wrrapd.com/decline-offer/?app=…&token=…` (no login)
+- **15-day expiry:** login link, temporary password, and Decline link expire 15 days after credentials are issued (Approve / Resend / Re-invite). After expiry, portal access is blocked until ops **Resend welcome email** or **Re-open invitation**. Activated WrapStars are not affected.
 
 First login always shows **Choose your password** before any onboarding step. Declined invitations become status `declined` in **Applications → Declined offer** (credentials invalidated).
 

@@ -18,7 +18,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_WRAPSTARS_BUILD', '2026-07-14-onboarding-welcome-v5' );
+define( 'WRRAPD_WRAPSTARS_BUILD', '2026-07-21-invite-expiry-15d' );
+/** Approval / re-invite onboarding credentials remain valid this many days. */
+define( 'WRRAPD_WRAPSTARS_INVITE_TTL_DAYS', 15 );
 
 $wrrapd_boldsign = dirname( __FILE__ ) . '/wrrapd-boldsign.php';
 if ( is_readable( $wrrapd_boldsign ) ) {
@@ -480,7 +482,112 @@ function wrrapd_wrapstars_meta_keys() {
 		'reinvite_count'      => '0',
 		'must_change_password'=> '',
 		'portal_password_issued_at' => '',
+		'invite_expires_at'   => '',
+		'invite_expired_at'   => '',
 	);
+}
+
+/**
+ * Seconds the approval onboarding link / temp password remain valid.
+ *
+ * @return int
+ */
+function wrrapd_wrapstars_invite_ttl_seconds() {
+	$days = defined( 'WRRAPD_WRAPSTARS_INVITE_TTL_DAYS' ) ? (int) WRRAPD_WRAPSTARS_INVITE_TTL_DAYS : 15;
+	if ( $days < 1 ) {
+		$days = 15;
+	}
+	return $days * DAY_IN_SECONDS;
+}
+
+/**
+ * ISO expiry for an approved invitation (explicit meta, else issued/approved + TTL).
+ *
+ * @param int $app_id Application post ID.
+ * @return string Empty when unknown.
+ */
+function wrrapd_wrapstars_get_invite_expires_at( $app_id ) {
+	$app_id   = (int) $app_id;
+	$explicit = (string) wrrapd_wrapstars_get_meta( $app_id, 'invite_expires_at' );
+	if ( $explicit !== '' ) {
+		return $explicit;
+	}
+	$issued = (string) wrrapd_wrapstars_get_meta( $app_id, 'portal_password_issued_at' );
+	if ( $issued === '' ) {
+		$issued = (string) wrrapd_wrapstars_get_meta( $app_id, 'approved_at' );
+	}
+	if ( $issued === '' ) {
+		return '';
+	}
+	$ts = strtotime( $issued );
+	if ( ! $ts ) {
+		return '';
+	}
+	return gmdate( 'c', $ts + wrrapd_wrapstars_invite_ttl_seconds() );
+}
+
+/**
+ * True when status is approved (onboarding) and the invite window has passed.
+ * Activated WrapStars are never blocked by invite expiry.
+ *
+ * @param int $app_id Application post ID.
+ * @return bool
+ */
+function wrrapd_wrapstars_invite_is_expired( $app_id ) {
+	$app_id = (int) $app_id;
+	if ( ! $app_id ) {
+		return false;
+	}
+	$status = (string) wrrapd_wrapstars_get_meta( $app_id, 'status' );
+	if ( $status !== 'approved' ) {
+		return false;
+	}
+	$expires = wrrapd_wrapstars_get_invite_expires_at( $app_id );
+	if ( $expires === '' ) {
+		return false;
+	}
+	$ts = strtotime( $expires );
+	return $ts && time() > $ts;
+}
+
+/**
+ * Invalidate an expired invitation: clear decline token and scramble portal password.
+ *
+ * @param int $app_id Application post ID.
+ */
+function wrrapd_wrapstars_invalidate_expired_invite( $app_id ) {
+	$app_id = (int) $app_id;
+	if ( ! $app_id || (string) wrrapd_wrapstars_get_meta( $app_id, 'status' ) !== 'approved' ) {
+		return;
+	}
+	if ( (string) wrrapd_wrapstars_get_meta( $app_id, 'invite_expired_at' ) === '' ) {
+		wrrapd_wrapstars_set_meta( $app_id, 'invite_expired_at', gmdate( 'c' ) );
+	}
+	wrrapd_wrapstars_set_meta( $app_id, 'decline_token', '' );
+	$user_id = (int) wrrapd_wrapstars_get_meta( $app_id, 'user_id' );
+	if ( $user_id && get_userdata( $user_id ) ) {
+		wp_set_password( wp_generate_password( 32, true, true ), $user_id );
+	}
+}
+
+/**
+ * If the logged-in user's approved invite has expired, invalidate it and log them out.
+ *
+ * @param int $user_id User ID.
+ * @return bool True when the invite was expired (caller should redirect).
+ */
+function wrrapd_wrapstars_enforce_active_invite_or_logout( $user_id ) {
+	$user_id = (int) $user_id;
+	if ( ! $user_id ) {
+		return false;
+	}
+	$app = wrrapd_wrapstars_get_application_by_user( $user_id );
+	if ( ! $app || ! wrrapd_wrapstars_invite_is_expired( $app->ID ) ) {
+		return false;
+	}
+	wrrapd_wrapstars_invalidate_expired_invite( $app->ID );
+	wp_logout();
+	return true;
 }
 
 function wrrapd_wrapstars_get_meta( $post_id, $key, $default = '' ) {
@@ -667,9 +774,25 @@ function wrrapd_wrapstars_host_routing() {
 				wp_safe_redirect( wrrapd_wrapstars_portal_login_url( wrrapd_wrapstars_apply_url( $path ) ) );
 				exit;
 			}
+			if ( wrrapd_wrapstars_enforce_active_invite_or_logout( get_current_user_id() ) ) {
+				wp_safe_redirect(
+					add_query_arg(
+						'invite_expired',
+						'1',
+						wrrapd_wrapstars_portal_login_url( wrrapd_wrapstars_apply_url( $path ) )
+					)
+				);
+				exit;
+			}
 		}
 		if ( preg_match( '#^/(wrapstar-login|login)(/|$)#', $path ) ) {
 			if ( is_user_logged_in() && wrrapd_wrapstars_is_onboarding_eligible_user( get_current_user_id() ) ) {
+				if ( wrrapd_wrapstars_enforce_active_invite_or_logout( get_current_user_id() ) ) {
+					wp_safe_redirect(
+						add_query_arg( 'invite_expired', '1', wrrapd_wrapstars_portal_login_url() )
+					);
+					exit;
+				}
 				wp_safe_redirect( wrrapd_wrapstars_portal_redirect_for_user( get_current_user_id() ) );
 				exit;
 			}
@@ -687,6 +810,12 @@ function wrrapd_wrapstars_host_routing() {
 			exit;
 		}
 		if ( preg_match( '#^/(wrapstar-login|login)(/|$)#', $path ) && is_user_logged_in() && wrrapd_wrapstars_is_onboarding_eligible_user( get_current_user_id() ) ) {
+			if ( wrrapd_wrapstars_enforce_active_invite_or_logout( get_current_user_id() ) ) {
+				wp_safe_redirect(
+					add_query_arg( 'invite_expired', '1', wrrapd_wrapstars_portal_login_url() )
+				);
+				exit;
+			}
 			wp_safe_redirect( wrrapd_wrapstars_portal_redirect_for_user( get_current_user_id() ) );
 			exit;
 		}
@@ -709,6 +838,16 @@ function wrrapd_wrapstars_host_routing() {
 		if ( preg_match( '#^/onboarding#', $path ) ) {
 			if ( ! is_user_logged_in() || ! wrrapd_wrapstars_is_onboarding_eligible_user( get_current_user_id() ) ) {
 				wp_safe_redirect( wrrapd_wrapstars_portal_login_url( wrrapd_wrapstars_pros_url( $path ) ) );
+				exit;
+			}
+			if ( wrrapd_wrapstars_enforce_active_invite_or_logout( get_current_user_id() ) ) {
+				wp_safe_redirect(
+					add_query_arg(
+						'invite_expired',
+						'1',
+						wrrapd_wrapstars_portal_login_url( wrrapd_wrapstars_pros_url( $path ) )
+					)
+				);
 				exit;
 			}
 		}
@@ -1144,6 +1283,12 @@ function wrrapd_wrapstars_process_portal_login() {
 		$GLOBALS['wrrapd_ws_login_error'] = 'This invitation was declined. Contact admin@wrrapd.com if that was a mistake.';
 		return;
 	}
+	if ( $app && wrrapd_wrapstars_invite_is_expired( $app->ID ) ) {
+		wrrapd_wrapstars_invalidate_expired_invite( $app->ID );
+		wp_logout();
+		$GLOBALS['wrrapd_ws_login_error'] = 'This onboarding invitation expired after 15 days. Ask us to resend your welcome email from Command Center.';
+		return;
+	}
 	if ( ! wrrapd_wrapstars_is_onboarding_eligible_user( $user->ID ) ) {
 		wp_logout();
 		$GLOBALS['wrrapd_ws_login_error'] = 'Login is only available after your application is approved. Check your email for next steps.';
@@ -1535,6 +1680,8 @@ function wrrapd_wrapstars_provision_approved_user( $app_id ) {
 	wrrapd_wrapstars_set_meta( $app_id, 'user_id', $user_id );
 	wrrapd_wrapstars_set_user_role( $user_id, 'wrapstar_approved' );
 	wrrapd_wrapstars_set_meta( $app_id, 'portal_password_issued_at', gmdate( 'c' ) );
+	wrrapd_wrapstars_set_meta( $app_id, 'invite_expires_at', gmdate( 'c', time() + wrrapd_wrapstars_invite_ttl_seconds() ) );
+	wrrapd_wrapstars_set_meta( $app_id, 'invite_expired_at', '' );
 	wrrapd_wrapstars_set_must_change_password( $user_id, $app_id, true );
 	// Clear active decline timestamp so re-approval / re-invite works (keep decline_note for history).
 	wrrapd_wrapstars_set_meta( $app_id, 'declined_at', '' );
@@ -1619,6 +1766,7 @@ function wrrapd_wrapstars_send_approval_credentials_email( $app_id, $password, $
 		. '<p style="margin:0 0 18px;font-size:22px;line-height:1.35;font-weight:600;color:#0f172a;">Welcome to the Wrrapd family of WrapStars!</p>'
 		. '<p style="margin:0 0 18px;font-size:16px;line-height:1.6;color:#334155;">' . $e_lead . '</p>'
 		. '<p style="margin:0 0 22px;font-size:16px;line-height:1.6;color:#334155;">Please log in with the details below to begin your onboarding. For your security, the first thing you will do after signing in is choose a new password.</p>'
+		. '<p style="margin:0 0 22px;font-size:14px;line-height:1.55;color:#64748b;">This login link and temporary password expire <strong>15 days</strong> after this email is sent. If they expire, reply to this message and we will gladly resend your invitation.</p>'
 		. '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:0 0 22px;background:#f4f7f4;border-radius:12px;border:1px solid rgba(26,39,68,0.1);">'
 		. '<tr><td style="padding:18px 20px;font-family:Fraunces,Georgia,serif;font-size:15px;line-height:1.7;color:#0f172a;">'
 		. '<p style="margin:0 0 8px;"><a href="' . $e_login . '" style="color:#a88417;font-weight:700;text-decoration:underline;">Please log in to the WrapStar portal</a></p>'
@@ -1661,6 +1809,8 @@ function wrrapd_wrapstars_reset_application_to_under_review( $app_id ) {
 	wrrapd_wrapstars_set_meta( $app_id, 'decline_token', '' );
 	wrrapd_wrapstars_set_meta( $app_id, 'rejected_at', '' );
 	wrrapd_wrapstars_set_meta( $app_id, 'must_change_password', '' );
+	wrrapd_wrapstars_set_meta( $app_id, 'invite_expires_at', '' );
+	wrrapd_wrapstars_set_meta( $app_id, 'invite_expired_at', '' );
 	wrrapd_wrapstars_set_meta( $app_id, 'onboarding_step', 'welcome' );
 	wrrapd_wrapstars_set_meta( $app_id, 'suspended', '0' );
 
@@ -1804,6 +1954,11 @@ function wrrapd_wrapstars_process_decline_offer() {
 		$GLOBALS['wrrapd_ws_decline_error'] = 'This decline link is invalid or has already been used.';
 		return;
 	}
+	if ( wrrapd_wrapstars_invite_is_expired( $app_id ) ) {
+		wrrapd_wrapstars_invalidate_expired_invite( $app_id );
+		$GLOBALS['wrrapd_ws_decline_error'] = 'This invitation expired after 15 days and can no longer be declined online. Contact ' . wrrapd_wrapstars_from_email_address() . ' if you need help.';
+		return;
+	}
 	$result = wrrapd_wrapstars_mark_offer_declined( $app_id, $note );
 	if ( empty( $result['ok'] ) ) {
 		$GLOBALS['wrrapd_ws_decline_error'] = $result['error'] ?? 'Could not decline.';
@@ -1929,6 +2084,11 @@ function wrrapd_wrapstars_shortcode_decline() {
 	$status = $app_id ? (string) wrrapd_wrapstars_get_meta( $app_id, 'status' ) : '';
 	if ( $status === 'declined' ) {
 		echo '<div class="wrrapd-wrapstars-alert wrrapd-wrapstars-alert--info">This invitation was already declined.</div></div>';
+		return ob_get_clean();
+	}
+	if ( $app_id && wrrapd_wrapstars_invite_is_expired( $app_id ) ) {
+		wrrapd_wrapstars_invalidate_expired_invite( $app_id );
+		echo '<div class="wrrapd-wrapstars-alert wrrapd-wrapstars-alert--err">This invitation expired after 15 days. If you need help, email ' . esc_html( wrrapd_wrapstars_from_email_address() ) . '.</div></div>';
 		return ob_get_clean();
 	}
 	if ( ! $app_id || $token === '' || $stored === '' || ! hash_equals( $stored, $token ) ) {
@@ -2157,6 +2317,9 @@ function wrrapd_wrapstars_shortcode_status() {
 function wrrapd_wrapstars_shortcode_login() {
 	$redirect = isset( $_GET['redirect_to'] ) ? esc_url_raw( wp_unslash( $_GET['redirect_to'] ) ) : '';
 	$error    = $GLOBALS['wrrapd_ws_login_error'] ?? '';
+	if ( $error === '' && ! empty( $_GET['invite_expired'] ) ) {
+		$error = 'This onboarding invitation expired after 15 days. Ask us to resend your welcome email from Command Center.';
+	}
 	$greet    = isset( $_GET['greet'] ) ? sanitize_text_field( wp_unslash( $_GET['greet'] ) ) : '';
 	if ( $greet === '' && ! empty( $_POST['greet'] ) ) {
 		$greet = sanitize_text_field( wp_unslash( $_POST['greet'] ) );
@@ -2213,6 +2376,16 @@ function wrrapd_wrapstars_shortcode_onboarding( $atts ) {
 	}
 
 	$user_id = get_current_user_id();
+	if ( wrrapd_wrapstars_enforce_active_invite_or_logout( $user_id ) ) {
+		wp_safe_redirect(
+			add_query_arg(
+				'invite_expired',
+				'1',
+				wrrapd_wrapstars_portal_login_url( wrrapd_wrapstars_pros_url( '/onboarding/' ) )
+			)
+		);
+		exit;
+	}
 	if ( wrrapd_wrapstars_user_must_change_password( $user_id ) ) {
 		return wrrapd_wrapstars_render_change_password_gate();
 	}

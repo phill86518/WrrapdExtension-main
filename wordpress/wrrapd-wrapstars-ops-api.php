@@ -302,6 +302,8 @@ function wrrapd_wrapstars_ops_serialize_application( $id ) {
 		'hasIdFile'                  => (bool) wrrapd_wrapstars_get_meta( $id, 'id_file' ),
 		'submittedAt'                => wrrapd_wrapstars_get_meta( $id, 'submitted_at' ),
 		'approvedAt'                 => wrrapd_wrapstars_get_meta( $id, 'approved_at' ),
+		'inviteExpiresAt'            => wrrapd_wrapstars_get_invite_expires_at( $id ),
+		'inviteExpiredAt'            => wrrapd_wrapstars_get_meta( $id, 'invite_expired_at' ),
 		'activatedAt'                => wrrapd_wrapstars_get_meta( $id, 'activated_at' ),
 		'interviewAt'                => wrrapd_wrapstars_get_meta( $id, 'interview_at' ),
 		'userId'                     => (int) wrrapd_wrapstars_get_meta( $id, 'user_id' ),

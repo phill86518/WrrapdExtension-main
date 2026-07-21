@@ -216,6 +216,22 @@ export default async function AdminApplicationDetailPage({
       {app.status === "approved" || app.status === "active" ? (
         <section className="mt-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
           <h2 className="font-semibold">Onboarding progress (pros.wrrapd.com)</h2>
+          {app.status === "approved" && app.inviteExpiresAt ? (
+            <p
+              className={`mt-2 rounded-lg border px-3 py-2 text-sm ${
+                app.inviteExpiredAt ||
+                (Date.parse(app.inviteExpiresAt) > 0 && Date.parse(app.inviteExpiresAt) < Date.now())
+                  ? "border-rose-200 bg-rose-50 text-rose-950"
+                  : "border-slate-200 bg-slate-50 text-slate-800"
+              }`}
+            >
+              Invitation login / Decline link expires{" "}
+              {new Date(app.inviteExpiresAt).toLocaleString()}
+              {app.inviteExpiredAt
+                ? ` · Expired ${new Date(app.inviteExpiredAt).toLocaleString()} — use Resend welcome email`
+                : " · 15 days from last credential issue"}
+            </p>
+          ) : null}
           {app.mustChangePassword ? (
             <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
               Waiting on first-login password change (required before onboarding steps).
