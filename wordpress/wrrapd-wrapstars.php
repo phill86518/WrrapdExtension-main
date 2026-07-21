@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_WRAPSTARS_BUILD', '2026-07-21-invite-expiry-15d' );
+define( 'WRRAPD_WRAPSTARS_BUILD', '2026-07-21-hide-wp-chrome-v2' );
 /** Approval / re-invite onboarding credentials remain valid this many days. */
 define( 'WRRAPD_WRAPSTARS_INVITE_TTL_DAYS', 15 );
 
@@ -150,7 +150,10 @@ add_action( 'init', 'wrrapd_wrapstars_block_wp_login_on_portal', 1 );
 add_action( 'admin_init', 'wrrapd_wrapstars_block_wrapstar_wp_admin' );
 add_filter( 'login_redirect', 'wrrapd_wrapstars_login_redirect', 10, 3 );
 add_filter( 'body_class', 'wrrapd_wrapstars_body_class' );
-add_filter( 'show_admin_bar', 'wrrapd_wrapstars_hide_admin_bar' );
+add_filter( 'show_admin_bar', 'wrrapd_wrapstars_hide_admin_bar', 99999 );
+add_action( 'after_setup_theme', 'wrrapd_wrapstars_force_hide_admin_bar', 100 );
+add_action( 'init', 'wrrapd_wrapstars_strip_admin_bar_hooks', 999 );
+add_filter( 'document_title_parts', 'wrrapd_wrapstars_document_title_parts', 20 );
 
 add_shortcode( 'wrrapd_wrapstar_landing', 'wrrapd_wrapstars_shortcode_landing' );
 add_shortcode( 'wrrapd_wrapstar_apply', 'wrrapd_wrapstars_shortcode_apply' );
@@ -194,6 +197,41 @@ function wrrapd_wrapstars_hide_admin_bar( $show ) {
 		return false;
 	}
 	return $show;
+}
+
+/** Belt-and-suspenders: force-off even if another plugin re-enables the bar. */
+function wrrapd_wrapstars_force_hide_admin_bar() {
+	if ( ! wrrapd_wrapstars_is_portal_host() ) {
+		return;
+	}
+	show_admin_bar( false );
+}
+
+function wrrapd_wrapstars_strip_admin_bar_hooks() {
+	if ( ! wrrapd_wrapstars_is_portal_host() ) {
+		return;
+	}
+	remove_action( 'wp_head', '_admin_bar_bump_cb' );
+	remove_action( 'wp_head', 'wp_admin_bar_header' );
+	remove_action( 'wp_footer', 'wp_admin_bar_render', 1000 );
+	add_filter( 'show_admin_bar', '__return_false', 100000 );
+}
+
+/**
+ * Never title portal tabs "My WordPress" (default SiteGround blogname).
+ *
+ * @param array $parts Title parts.
+ * @return array
+ */
+function wrrapd_wrapstars_document_title_parts( $parts ) {
+	if ( ! is_array( $parts ) ) {
+		return $parts;
+	}
+	$site = isset( $parts['site'] ) ? (string) $parts['site'] : '';
+	if ( $site === '' || strcasecmp( $site, 'My WordPress' ) === 0 || stripos( $site, 'WordPress' ) !== false ) {
+		$parts['site'] = 'WrapStars';
+	}
+	return $parts;
 }
 
 /** Preferred greeting: nickname, else first name, else "there". */
@@ -2128,14 +2166,20 @@ function wrrapd_wrapstars_output_theme_cleanup_css() {
 	if ( is_admin() ) {
 		return;
 	}
+	static $done = false;
+	if ( $done ) {
+		return;
+	}
+	$done = true;
 	echo '<style id="wrrapd-wrapstars-theme-cleanup">';
-	/* Never reveal WordPress chrome on apply/pros portals */
-	echo 'html.wrrapd-wrapstars-portal,html.wrrapd-wrapstars-portal.admin-bar,body.wrrapd-wrapstars-portal.admin-bar{margin-top:0!important;padding-top:0!important;}';
-	echo '#wpadminbar,body.wrrapd-wrapstars-portal #wpadminbar{display:none!important;visibility:hidden!important;height:0!important;}';
+	/* Never reveal WordPress chrome on apply/pros portals — including logged-in admins. */
+	echo 'html.wrrapd-wrapstars-portal,html.wrrapd-wrapstars-portal.admin-bar,body.wrrapd-wrapstars-portal.admin-bar,body.admin-bar{margin-top:0!important;padding-top:0!important;}';
+	echo '#wpadminbar,html #wpadminbar,body #wpadminbar,body.wrrapd-wrapstars-portal #wpadminbar{display:none!important;visibility:hidden!important;opacity:0!important;height:0!important;max-height:0!important;overflow:hidden!important;pointer-events:none!important;}';
 	echo 'body.wrrapd-wrapstars-portal .edit-link,body.wrrapd-wrapstars-portal .post-edit-link,body.wrrapd-wrapstars-portal .wp-block-post-edit-link{display:none!important;}';
 	echo 'body.wrrapd-wrapstars-portal,body.wrrapd-wrapstars-portal button,body.wrrapd-wrapstars-portal input,body.wrrapd-wrapstars-portal select,body.wrrapd-wrapstars-portal textarea,body.wrrapd-wrapstars-portal label,body.wrrapd-wrapstars-portal a,body.wrrapd-wrapstars-portal p,body.wrrapd-wrapstars-portal li,body.wrrapd-wrapstars-portal h1,body.wrrapd-wrapstars-portal h2,body.wrrapd-wrapstars-portal h3{font-family:Fraunces,Georgia,serif!important;}';
 	echo 'body.wrrapd-wrapstars-portal header.wp-block-template-part,body.wrrapd-wrapstars-portal footer.wp-block-template-part{display:none!important;height:0!important;overflow:hidden!important;margin:0!important;padding:0!important;}';
 	echo 'body.wrrapd-wrapstars-portal .wp-block-site-title,body.wrrapd-wrapstars-portal nav.wp-block-navigation,body.wrrapd-wrapstars-portal .wp-block-post-title,body.wrrapd-wrapstars-portal .entry-header,body.wrrapd-wrapstars-portal h1.wp-block-post-title{display:none!important;height:0!important;margin:0!important;padding:0!important;}';
+	echo 'body.wrrapd-wrapstars-portal .wp-block-template-part,body.wrrapd-wrapstars-portal .powered-by,body.wrrapd-wrapstars-portal a[href*="wordpress.org"]{display:none!important;}';
 	echo 'body.wrrapd-wrapstars-portal,body.wrrapd-wrapstars-portal .wp-site-blocks,body.wrrapd-wrapstars-portal article,body.wrrapd-wrapstars-portal .type-page{padding:0!important;margin:0!important;}';
 	echo 'body.wrrapd-wrapstars-portal .wp-site-blocks{padding-top:0!important;margin-top:0!important;gap:0!important;}';
 	echo 'body.wrrapd-wrapstars-portal .wp-site-blocks>*{margin-block-start:0!important;margin-block-end:0!important;}';
@@ -2152,7 +2196,8 @@ function wrrapd_wrapstars_output_theme_cleanup_css() {
 	echo 'body.wrrapd-wrapstars-portal .site,body.wrrapd-wrapstars-portal #page{margin:0!important;padding:0!important;}';
 	echo '</style>';
 }
-add_action( 'wp_head', 'wrrapd_wrapstars_output_theme_cleanup_css', 98 );
+add_action( 'wp_head', 'wrrapd_wrapstars_output_theme_cleanup_css', 0 );
+add_action( 'wp_footer', 'wrrapd_wrapstars_output_theme_cleanup_css', 1 );
 
 function wrrapd_wrapstars_shortcode_landing() {
 	$video = wrrapd_wrapstars_hero_video_url();

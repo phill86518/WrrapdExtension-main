@@ -858,28 +858,35 @@ body.wrrapd-wrapstars-portal {
 }
 
 /* Hide WordPress chrome — never show admin bar / edit affordances on portals */
+#wpadminbar,
+html #wpadminbar,
+body #wpadminbar,
 body.wrrapd-wrapstars-portal #wpadminbar,
 html.wrrapd-wrapstars-portal #wpadminbar,
 body.wrrapd-wrapstars-portal .edit-link,
 body.wrrapd-wrapstars-portal .post-edit-link,
 body.wrrapd-wrapstars-portal .wp-block-post-edit-link,
 body.wrrapd-wrapstars-portal .woocommerce-store-notice,
-body.wrrapd-wrapstars-onboarding-host #wpadminbar {
+body.wrrapd-wrapstars-onboarding-host #wpadminbar,
+body.wrrapd-wrapstars-portal .powered-by,
+body.wrrapd-wrapstars-portal a[href*="wordpress.org"] {
 	display: none !important;
 	visibility: hidden !important;
+	opacity: 0 !important;
 	height: 0 !important;
+	max-height: 0 !important;
+	overflow: hidden !important;
+	pointer-events: none !important;
 }
 
 html.wrrapd-wrapstars-portal,
 html.wrrapd-wrapstars-portal body,
+html.wrrapd-wrapstars-portal.admin-bar,
 body.wrrapd-wrapstars-portal.admin-bar,
-body.admin-bar.wrrapd-wrapstars-portal {
+body.admin-bar.wrrapd-wrapstars-portal,
+body.admin-bar {
 	margin-top: 0 !important;
 	padding-top: 0 !important;
-}
-
-html.wrrapd-wrapstars-portal.admin-bar {
-	margin-top: 0 !important;
 }
 
 body.wrrapd-wrapstars-portal,
