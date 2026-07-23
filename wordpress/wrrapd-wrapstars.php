@@ -2320,6 +2320,12 @@ function wrrapd_wrapstars_shortcode_landing() {
 				</details>
 			</section>
 
+			<section class="wrrapd-wrapstars-dasher-box wrrapd-wrapstars-dasher-box--wide" style="margin-bottom:1.5rem;">
+				<h2>Prefer to deliver instead?</h2>
+				<p>Wrrapd also hires Delivery Drivers for final-mile gift delivery — separate from gift-wrapping.</p>
+				<a class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--xl" href="<?php echo esc_url( wrrapd_wrapstars_apply_url( '/driver/' ) ); ?>">Driver applications</a>
+			</section>
+
 			<section class="wrrapd-wrapstars-dasher-cta wrrapd-wrapstars-dasher-box wrrapd-wrapstars-dasher-box--wide">
 				<h2>Become a WrapStar today!</h2>
 				<p>Deliver smiles and get paid. Have your driver license or passport ready — the application takes about five minutes.</p>

@@ -13,10 +13,20 @@ function isIosSafari() {
   return /iphone|ipad|ipod/.test(ua) && /safari/.test(ua) && !/crios|fxios|edgios/.test(ua);
 }
 
-export function DriverInstallCard() {
+type Props = {
+  /** wrapstar (legacy misuse on WrapStar page) or driver console */
+  variant?: "wrapstar" | "driver";
+};
+
+export function DriverInstallCard({ variant = "driver" }: Props) {
   const [installEvent, setInstallEvent] = useState<BeforeInstallPromptEvent | null>(null);
   const [hidden, setHidden] = useState(false);
   const ios = useMemo(() => isIosSafari(), []);
+  const title = variant === "wrapstar" ? "Install WrapStar App" : "Install Driver App";
+  const flow =
+    variant === "wrapstar"
+      ? "WrapStar workflow"
+      : "Driver delivery workflow";
 
   useEffect(() => {
     const handler = (event: Event) => {
@@ -33,10 +43,10 @@ export function DriverInstallCard() {
     <div className="rounded-lg border border-slate-300 bg-slate-50 p-4 text-sm">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="font-semibold text-slate-900">Install WrapStar App</p>
+          <p className="font-semibold text-slate-900">{title}</p>
           {installEvent ? (
             <p className="mt-1 text-slate-700">
-              Install this app on the home screen for one-tap launch and a cleaner WrapStar workflow.
+              Install this app on the home screen for one-tap launch and a cleaner {flow}.
             </p>
           ) : ios ? (
             <p className="mt-1 text-slate-700">

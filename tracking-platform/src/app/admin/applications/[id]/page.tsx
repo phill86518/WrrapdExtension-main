@@ -6,11 +6,24 @@ import {
   getWrapstarApplication,
   runWrapstarApplicationAction,
   type ApplicationAction,
+  type WrapstarApplication,
 } from "@/lib/wrapstar-applications-admin";
+import {
+  getDriverApplication,
+  runDriverApplicationAction,
+  type DriverApplication,
+} from "@/lib/driver-applications-admin";
 import { syncActivatedApplicationToOpsRoster } from "@/lib/sync-activated-wrapstar";
+import { syncActivatedApplicationToDriverRoster } from "@/lib/sync-activated-driver";
 import { ApplicationReviewActions } from "@/components/application-review-actions";
 
 export const dynamic = "force-dynamic";
+
+function pick(v: string | string[] | undefined): string | undefined {
+  if (typeof v === "string") return v;
+  if (Array.isArray(v) && typeof v[0] === "string") return v[0];
+  return undefined;
+}
 
 async function actionForm(formData: FormData) {
   "use server";
@@ -18,45 +31,56 @@ async function actionForm(formData: FormData) {
   if (!session || session.role !== "admin") return;
   const id = Number(formData.get("appId") || 0);
   const action = String(formData.get("action") || "") as ApplicationAction;
+  const role = String(formData.get("role") || "wrapstar") === "driver" ? "driver" : "wrapstar";
   const adminNotes = String(formData.get("adminNotes") || "");
   const rejectReason = String(formData.get("rejectReason") || "");
   if (!id || !action) return;
 
-  // Block one-shot actions that were already completed (double-click / stale UI).
-  const current = await getWrapstarApplication(id);
+  const current =
+    role === "driver" ? await getDriverApplication(id) : await getWrapstarApplication(id);
   const st = current.status;
   if (action === "approve" && !["under_review", "interview"].includes(st)) {
-    redirect(`/admin/applications/${id}?ok=already_approved`);
+    redirect(`/admin/applications/${id}?role=${role}&ok=already_approved`);
   }
   if (action === "interview" && st !== "under_review") {
-    redirect(`/admin/applications/${id}?ok=already_interview`);
+    redirect(`/admin/applications/${id}?role=${role}&ok=already_interview`);
   }
   if (action === "reject" && !["under_review", "interview"].includes(st)) {
-    redirect(`/admin/applications/${id}?ok=already_rejected`);
+    redirect(`/admin/applications/${id}?role=${role}&ok=already_rejected`);
   }
   if (action === "activate" && st !== "approved") {
-    redirect(`/admin/applications/${id}?ok=already_active`);
+    redirect(`/admin/applications/${id}?role=${role}&ok=already_active`);
   }
   if (
     action === "reset_to_review" &&
     !["approved", "declined", "interview", "rejected"].includes(st)
   ) {
-    redirect(`/admin/applications/${id}?ok=reset_skipped`);
+    redirect(`/admin/applications/${id}?role=${role}&ok=reset_skipped`);
   }
 
-  const result = await runWrapstarApplicationAction(id, action, {
-    adminNotes,
-    rejectReason: action === "reject" ? rejectReason : undefined,
-  });
-
-  if (action === "activate" && result.application) {
-    await syncActivatedApplicationToOpsRoster(result.application);
+  if (role === "driver") {
+    const result = await runDriverApplicationAction(id, action, {
+      adminNotes,
+      rejectReason: action === "reject" ? rejectReason : undefined,
+    });
+    if (action === "activate" && result.application) {
+      await syncActivatedApplicationToDriverRoster(result.application);
+    }
+  } else {
+    const result = await runWrapstarApplicationAction(id, action, {
+      adminNotes,
+      rejectReason: action === "reject" ? rejectReason : undefined,
+    });
+    if (action === "activate" && result.application) {
+      await syncActivatedApplicationToOpsRoster(result.application);
+    }
   }
 
   revalidatePath("/admin/applications");
   revalidatePath(`/admin/applications/${id}`);
   revalidatePath("/admin/wrapstars");
-  redirect(`/admin/applications/${id}?ok=${encodeURIComponent(action)}`);
+  revalidatePath("/admin/drivers");
+  redirect(`/admin/applications/${id}?role=${role}&ok=${encodeURIComponent(action)}`);
 }
 
 export default async function AdminApplicationDetailPage({
@@ -74,28 +98,59 @@ export default async function AdminApplicationDetailPage({
 
   const sp = await searchParams;
   const okFlash = typeof sp.ok === "string" ? sp.ok : undefined;
+  let role: "wrapstar" | "driver" =
+    pick(sp.role) === "driver" ? "driver" : "wrapstar";
 
-  let app: Awaited<ReturnType<typeof getWrapstarApplication>>;
+  let app: WrapstarApplication | DriverApplication;
   try {
-    app = await getWrapstarApplication(id);
+    if (role === "driver") {
+      app = await getDriverApplication(id);
+    } else {
+      app = await getWrapstarApplication(id);
+    }
   } catch {
-    notFound();
+    // ID may belong to the other CPT — try the other role once.
+    try {
+      if (role === "driver") {
+        app = await getWrapstarApplication(id);
+        role = "wrapstar";
+      } else {
+        app = await getDriverApplication(id);
+        role = "driver";
+      }
+    } catch {
+      notFound();
+    }
   }
 
+  const isDriver = role === "driver";
+  const driverApp = isDriver ? (app as DriverApplication) : null;
   const steps = Object.entries(app.onboardingStepsComplete || {});
 
   return (
     <div className="mx-auto max-w-4xl">
-      <Link href="/admin/applications" className="text-sm text-blue-700 underline">
+      <Link
+        href={`/admin/applications?role=${role}`}
+        className="text-sm text-blue-700 underline"
+      >
         Back to Applications
       </Link>
       <h1 className="mt-3 text-3xl font-semibold text-slate-900">{app.fullName}</h1>
       <p className="text-sm text-slate-600">
-        #{app.id} · <span className="font-medium">{app.status}</span>
+        #{app.id} ·{" "}
+        <span
+          className={
+            isDriver
+              ? "rounded-full bg-sky-100 px-2 py-0.5 text-xs font-medium text-sky-900"
+              : "rounded-full bg-violet-100 px-2 py-0.5 text-xs font-medium text-violet-900"
+          }
+        >
+          {isDriver ? "Driver" : "WrapStar"}
+        </span>{" "}
+        · <span className="font-medium">{app.status}</span>
         {app.suspended ? " · SUSPENDED" : ""}
-        {app.fitScore ? ` · Fit ${app.fitScore}/100` : ""}
+        {!isDriver && "fitScore" in app && app.fitScore ? ` · Fit ${app.fitScore}/100` : ""}
         {app.greetingName ? ` · Greets as “${app.greetingName}”` : ""}
-        {app.nickname ? ` · Nickname: ${app.nickname}` : ""}
       </p>
 
       {okFlash ? (
@@ -105,27 +160,15 @@ export default async function AdminApplicationDetailPage({
             ? " — welcome email sent with username, temporary password, and a Decline link."
             : null}
           {okFlash === "activate"
-            ? " — added/updated on WrapStars ops roster for Command Center assignment."
-            : null}
-          {okFlash === "mark_declined"
-            ? " — invitation closed; candidate listed under Declined offer."
+            ? isDriver
+              ? " — added/updated on Drivers ops roster for courier assignment."
+              : " — added/updated on WrapStars ops roster for Command Center assignment."
             : null}
           {okFlash === "reinvite"
             ? " — status set back to Approved; welcome email resent with fresh credentials."
             : null}
           {okFlash === "resend_invite"
             ? " — welcome email resent with a new temporary password."
-            : null}
-          {okFlash === "already_approved"
-            ? " — already approved; approve cannot run twice."
-            : null}
-          {okFlash === "already_interview"
-            ? " — interview already requested."
-            : null}
-          {okFlash === "already_rejected" ? " — application already closed." : null}
-          {okFlash === "already_active" ? " — already activated." : null}
-          {okFlash === "reset_to_review"
-            ? " — returned to Under review for re-testing Approve / welcome email."
             : null}
         </p>
       ) : null}
@@ -135,7 +178,6 @@ export default async function AdminApplicationDetailPage({
           <h2 className="font-semibold">Contact & location</h2>
           <p className="mt-2 text-sm">{app.email}</p>
           <p className="text-sm">Mobile: {app.phoneMobile || "—"}</p>
-          {app.phoneWork ? <p className="text-sm">Work: {app.phoneWork}</p> : null}
           <p className="mt-2 text-sm">
             {app.addressLine1}
             {app.addressLine2 ? `, ${app.addressLine2}` : ""}
@@ -144,97 +186,73 @@ export default async function AdminApplicationDetailPage({
           </p>
         </section>
         <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <h2 className="font-semibold">Capability</h2>
-          <p className="mt-2 text-sm">
-            Deliver: <strong>{app.canDeliver || "—"}</strong>
-            {app.canDeliver === "yes" ? " (hybrid)" : app.canDeliver === "no" ? " (wrap-only)" : ""}
-          </p>
-          <p className="text-sm">Vehicle: {app.hasVehicle || "n/a"}</p>
-          <p className="text-sm">Max distance: {app.deliveryMaxDistance || "n/a"}</p>
-          <p className="text-sm">Driving record: {app.cleanDrivingRecord || "n/a"}</p>
-          <p className="text-sm">
-            Custom print: {app.hasLargeFormatPrinter || "—"}
-            {app.printerSize ? ` (${app.printerSize})` : ""}
-          </p>
-          <p className="text-sm">PO pickup: {app.wrrapdPoDailyPickup || "n/a"}</p>
+          <h2 className="font-semibold">{isDriver ? "Driver profile" : "Capability"}</h2>
+          {isDriver && driverApp ? (
+            <>
+              <p className="mt-2 text-sm">
+                Age 21+: <strong>{driverApp.age21 || "—"}</strong>
+              </p>
+              <p className="text-sm">Valid license: {driverApp.hasValidLicense || "—"}</p>
+              <p className="text-sm">Vehicle: {driverApp.hasVehicle || "—"}</p>
+              <p className="text-sm">Type: {driverApp.vehicleType || "—"}</p>
+              <p className="text-sm">Smartphone: {driverApp.hasSmartphone || "—"}</p>
+              <p className="text-sm">Driving record: {driverApp.cleanDrivingRecord || "—"}</p>
+              <p className="text-sm">Bank ready: {driverApp.bankAccountReady || "—"}</p>
+            </>
+          ) : (
+            <>
+              <p className="mt-2 text-sm">
+                Deliver: <strong>{"canDeliver" in app ? app.canDeliver || "—" : "—"}</strong>
+              </p>
+              <p className="text-sm">
+                Vehicle: {"hasVehicle" in app ? app.hasVehicle || "n/a" : "n/a"}
+              </p>
+              <p className="text-sm">
+                Driving record:{" "}
+                {"cleanDrivingRecord" in app ? app.cleanDrivingRecord || "n/a" : "n/a"}
+              </p>
+            </>
+          )}
         </section>
       </div>
 
       <section className="mt-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-        <h2 className="font-semibold">Experience & motivation</h2>
-        <p className="mt-2 whitespace-pre-wrap text-sm text-slate-800">{app.giftWrappingExperience}</p>
-        <p className="mt-3 text-sm">
-          <strong>Why:</strong> {app.whyWrapstar}
-        </p>
-        <p className="mt-2 text-xs text-slate-500">
-          Gig: {app.gigPlatforms || "—"} · Business: {app.businessStructure || "—"} · Bank ready:{" "}
-          {app.bankAccountReady || "—"}
-        </p>
-        {app.experienceRationale || app.commitmentRationale ? (
-          <p className="mt-2 text-xs text-slate-500">
-            Fit notes — experience: {app.experienceRationale || "—"} · commitment:{" "}
-            {app.commitmentRationale || "—"}
-          </p>
-        ) : null}
-      </section>
-
-      {app.status === "declined" ? (
-        <section className="mt-4 rounded-xl border border-orange-200 bg-orange-50 p-4 shadow-sm">
-          <h2 className="font-semibold text-orange-950">Declined invitation</h2>
-          <p className="mt-2 text-sm text-orange-950">
-            Last approved {(app.approvedAt || "").slice(0, 10) || "—"} · Declined{" "}
-            {(app.declinedAt || "").slice(0, 10) || "—"}
-            {app.reinviteCount ? ` · Prior re-invites: ${app.reinviteCount}` : ""}
-          </p>
-          <p className="mt-2 text-sm text-orange-900">
-            <strong>Candidate note:</strong> {app.declineNote || "—"}
-          </p>
-          <p className="mt-2 text-xs text-orange-800">
-            Portal credentials are invalid. If the blocker is resolved, use{" "}
-            <strong>Re-open invitation &amp; resend welcome email</strong> below — status returns to
-            Approved (onboarding) and they get a fresh login + Decline link.
-          </p>
-        </section>
-      ) : null}
-
-      {app.status === "approved" && (app.previousDeclinedAt || app.reinvitedAt) ? (
-        <section className="mt-4 rounded-xl border border-indigo-200 bg-indigo-50 p-4 shadow-sm">
-          <h2 className="font-semibold text-indigo-950">Re-opened after decline</h2>
-          <p className="mt-2 text-sm text-indigo-950">
-            Previously declined {(app.previousDeclinedAt || "").slice(0, 10) || "—"}
-            {app.reinvitedAt ? ` · Re-invited ${(app.reinvitedAt || "").slice(0, 10)}` : ""}
-            {app.reinviteCount ? ` · Times re-invited: ${app.reinviteCount}` : ""}
-          </p>
-          {app.declineNote ? (
-            <p className="mt-2 text-sm text-indigo-900">
-              <strong>Original decline note:</strong> {app.declineNote}
+        <h2 className="font-semibold">{isDriver ? "Availability & motivation" : "Experience & motivation"}</h2>
+        {isDriver && driverApp ? (
+          <>
+            <p className="mt-2 whitespace-pre-wrap text-sm text-slate-800">
+              {driverApp.availability || "—"}
             </p>
-          ) : null}
-        </section>
-      ) : null}
+            {driverApp.deliveryExperience ? (
+              <p className="mt-2 whitespace-pre-wrap text-sm text-slate-700">
+                <strong>Experience:</strong> {driverApp.deliveryExperience}
+              </p>
+            ) : null}
+            <p className="mt-3 text-sm">
+              <strong>Why:</strong> {driverApp.whyDrive || driverApp.whyWrapstar || "—"}
+            </p>
+          </>
+        ) : (
+          <>
+            <p className="mt-2 whitespace-pre-wrap text-sm text-slate-800">
+              {"giftWrappingExperience" in app ? app.giftWrappingExperience : ""}
+            </p>
+            <p className="mt-3 text-sm">
+              <strong>Why:</strong> {"whyWrapstar" in app ? app.whyWrapstar : "—"}
+            </p>
+          </>
+        )}
+      </section>
 
       {app.status === "approved" || app.status === "active" ? (
         <section className="mt-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <h2 className="font-semibold">Onboarding progress (pros.wrrapd.com)</h2>
+          <h2 className="font-semibold">
+            Onboarding progress (
+            {isDriver ? "pros.wrrapd.com/driver-onboarding" : "pros.wrrapd.com/onboarding"})
+          </h2>
           {app.status === "approved" && app.inviteExpiresAt ? (
-            <p
-              className={`mt-2 rounded-lg border px-3 py-2 text-sm ${
-                app.inviteExpiredAt ||
-                (Date.parse(app.inviteExpiresAt) > 0 && Date.parse(app.inviteExpiresAt) < Date.now())
-                  ? "border-rose-200 bg-rose-50 text-rose-950"
-                  : "border-slate-200 bg-slate-50 text-slate-800"
-              }`}
-            >
-              Invitation login / Decline link expires{" "}
-              {new Date(app.inviteExpiresAt).toLocaleString()}
-              {app.inviteExpiredAt
-                ? ` · Expired ${new Date(app.inviteExpiredAt).toLocaleString()} — use Resend welcome email`
-                : " · 15 days from last credential issue"}
-            </p>
-          ) : null}
-          {app.mustChangePassword ? (
-            <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
-              Waiting on first-login password change (required before onboarding steps).
+            <p className="mt-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800">
+              Invitation expires {new Date(app.inviteExpiresAt).toLocaleString()}
             </p>
           ) : null}
           <ul className="mt-2 grid gap-1 text-sm sm:grid-cols-2">
@@ -254,6 +272,7 @@ export default async function AdminApplicationDetailPage({
         suspended={app.suspended}
         adminNotes={app.adminNotes || ""}
         rejectReason={app.rejectReason || ""}
+        role={role}
         action={actionForm}
       />
     </div>

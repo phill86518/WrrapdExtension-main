@@ -153,7 +153,7 @@ export default async function WrapstarPage() {
     <WrapstarAppShell
       wrapstarName={session.name}
       wrapstarId={session.userId}
-      installCard={<DriverInstallCard />}
+      installCard={<DriverInstallCard variant="wrapstar" />}
       today={
         <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
           <p className="mb-2 text-center text-[11px] text-slate-400">

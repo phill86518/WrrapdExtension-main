@@ -42,7 +42,7 @@ The five uploaded templates were **sample stubs**, not production contracts. Pro
 |-------|-----------------|
 | Video proof | **TSA §6** (full); Code = short reminder |
 | Background checks | **Background Auth** (operative); TSA = short cross-ref |
-| Confidentiality | **TSA** (legal duty); Code = conduct reminder |
+| Confidentiality | **TSA §12** (comprehensive: customer/gift/wrap data + business/tech; indefinite survival for personal/gift data); Code = conduct reminder |
 | Arbitration | **Arbitration Agreement** (full); TSA = pointer |
 | Insurance | Explicit **no mandate** in TSA §10 (do not reintroduce in Code/orientation without amending TSA) |
 

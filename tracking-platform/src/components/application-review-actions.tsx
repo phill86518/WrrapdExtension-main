@@ -24,6 +24,8 @@ type Props = {
   suspended: boolean;
   adminNotes: string;
   rejectReason: string;
+  /** Hire role — wrapstar (default) or driver */
+  role?: "wrapstar" | "driver";
   action: (formData: FormData) => Promise<void>;
 };
 
@@ -33,6 +35,7 @@ export function ApplicationReviewActions({
   suspended,
   adminNotes,
   rejectReason,
+  role = "wrapstar",
   action,
 }: Props) {
   const [pending, setPending] = useState<string | null>(null);
@@ -56,6 +59,7 @@ export function ApplicationReviewActions({
         }}
       >
         <input type="hidden" name="appId" value={appId} />
+        <input type="hidden" name="role" value={role} />
         <label className="block text-sm">
           Reviewer notes
           <textarea

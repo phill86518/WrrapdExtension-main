@@ -1,5 +1,5 @@
 const serverUrl =
-  process.env.WRRAPD_CAP_SERVER_URL ?? "https://REPLACE_WITH_YOUR_TRACKING_HOST/driver";
+  process.env.WRRAPD_CAP_SERVER_URL ?? "https://REPLACE_WITH_YOUR_TRACKING_HOST/courier";
 
 const config = {
   appId: "com.wrrapd.tracking.driver",

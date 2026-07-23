@@ -63,11 +63,13 @@ By signing, Contractor agrees to follow this Code and Wrrapd’s published Platf
 
 ## 5. Confidentiality and Privacy (Conduct Reminder)
 
-5.1 Do not discuss, post, or share gift contents, addresses, customer information, or order details (including screenshots from the WrapStar App) with anyone not authorized to receive them.
+5.1 Treat all customer data, gift contents and messages, wrap designs, order details, and Wrrapd business or technical information as **strictly confidential**. Do not discuss, post, text, email, or share any of it (including WrapStar App screenshots) with anyone who does not need it to perform your wrapping work for Wrrapd.
 
-5.2 Do not photograph or film people or private spaces beyond what WrapStar App wrapping proof requires.
+5.2 Never reveal who is sending or receiving a gift, what is inside a package, or how Wrrapd’s systems, methods, App, pricing, or operations work.
 
-5.3 Full confidentiality and data-use obligations appear in the Services Agreement and survive termination.
+5.3 Do not photograph or film people or private spaces beyond what WrapStar App wrapping proof requires. Do not keep local copies of customer or gift data after the order is done and proof is uploaded.
+
+5.4 Full legal confidentiality, non-disclosure, return/deletion, and survival obligations appear in **Section 12 of the Services Agreement** and survive termination. Violation is grounds for immediate removal from the Platform.
 
 ---
 

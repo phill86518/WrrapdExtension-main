@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { listWrapstarApplications } from "@/lib/wrapstar-applications-admin";
+import { listDriverApplications } from "@/lib/driver-applications-admin";
 
 export const dynamic = "force-dynamic";
 
@@ -10,6 +11,12 @@ function pick(v: string | string[] | undefined): string | undefined {
   if (Array.isArray(v) && typeof v[0] === "string") return v[0];
   return undefined;
 }
+
+const ROLE_FILTERS = [
+  { id: "all", label: "All roles" },
+  { id: "wrapstar", label: "WrapStars" },
+  { id: "driver", label: "Drivers" },
+] as const;
 
 const FILTERS = [
   { id: "all", label: "All" },
@@ -33,6 +40,22 @@ function statusBadge(status: string) {
   return map[status] || "bg-slate-100 text-slate-700";
 }
 
+type Row = {
+  id: number;
+  role: "wrapstar" | "driver";
+  fullName: string;
+  email: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  status: string;
+  submittedAt: string;
+  createdAt: string;
+  fitScore?: number;
+  canDeliver?: string;
+  vehicleType?: string;
+};
+
 export default async function AdminApplicationsPage({
   searchParams,
 }: {
@@ -43,32 +66,98 @@ export default async function AdminApplicationsPage({
 
   const sp = await searchParams;
   const status = pick(sp.status) || "all";
+  const role = pick(sp.role) || "all";
   const q = (pick(sp.q) || "").trim();
 
-  let apps: Awaited<ReturnType<typeof listWrapstarApplications>> = [];
+  let apps: Row[] = [];
   let error: string | null = null;
   try {
-    apps = await listWrapstarApplications(status === "all" ? undefined : status, q || undefined);
+    const statusArg = status === "all" ? undefined : status;
+    const qArg = q || undefined;
+    const wantWs = role === "all" || role === "wrapstar";
+    const wantDrv = role === "all" || role === "driver";
+
+    const [ws, drv] = await Promise.all([
+      wantWs
+        ? listWrapstarApplications(statusArg, qArg).catch((e) => {
+            if (!wantDrv) throw e;
+            return [] as Awaited<ReturnType<typeof listWrapstarApplications>>;
+          })
+        : Promise.resolve([]),
+      wantDrv
+        ? listDriverApplications(statusArg, qArg).catch((e) => {
+            // Driver routes may not be deployed yet — don't blank WrapStars.
+            if (!wantWs) throw e;
+            console.error("Driver applications load failed:", e);
+            return [] as Awaited<ReturnType<typeof listDriverApplications>>;
+          })
+        : Promise.resolve([]),
+    ]);
+
+    apps = [
+      ...ws.map(
+        (a): Row => ({
+          id: a.id,
+          role: "wrapstar",
+          fullName: a.fullName,
+          email: a.email,
+          city: a.city,
+          state: a.state,
+          postalCode: a.postalCode,
+          status: a.status,
+          submittedAt: a.submittedAt,
+          createdAt: a.createdAt,
+          fitScore: a.fitScore,
+          canDeliver: a.canDeliver,
+        }),
+      ),
+      ...drv.map(
+        (a): Row => ({
+          id: a.id,
+          role: "driver",
+          fullName: a.fullName,
+          email: a.email,
+          city: a.city,
+          state: a.state,
+          postalCode: a.postalCode,
+          status: a.status,
+          submittedAt: a.submittedAt,
+          createdAt: a.createdAt,
+          vehicleType: a.vehicleType,
+          canDeliver: "yes",
+        }),
+      ),
+    ].sort((a, b) => (b.submittedAt || b.createdAt || "").localeCompare(a.submittedAt || a.createdAt || ""));
   } catch (e) {
     error = e instanceof Error ? e.message : String(e);
   }
+
+  const href = (next: { status?: string; role?: string; q?: string }) => {
+    const params = new URLSearchParams();
+    params.set("status", next.status ?? status);
+    params.set("role", next.role ?? role);
+    const qq = next.q !== undefined ? next.q : q;
+    if (qq) params.set("q", qq);
+    return `/admin/applications?${params.toString()}`;
+  };
 
   return (
     <div className="mx-auto max-w-6xl">
       <h1 className="text-2xl font-semibold text-slate-900">Applications</h1>
       <p className="mt-1 text-sm text-slate-600">
-        Hire pipeline from apply.wrrapd.com (not the WrapStars ops roster). Approve here to email login
+        Hire pipeline from apply.wrrapd.com — WrapStars and Drivers. Approve to email login
         credentials for pros.wrrapd.com onboarding.
       </p>
 
       <form className="mt-4 flex flex-wrap items-end gap-2" method="get">
         <input type="hidden" name="status" value={status} />
+        <input type="hidden" name="role" value={role} />
         <label className="block text-sm">
           Search name / email / phone
           <input
             name="q"
             defaultValue={q}
-            placeholder="e.g. pphill86518@gmail.com"
+            placeholder="e.g. name or email"
             className="mt-1 block w-72 max-w-full rounded border px-3 py-2"
           />
         </label>
@@ -76,24 +165,33 @@ export default async function AdminApplicationsPage({
           Search
         </button>
         {q ? (
-          <Link
-            href={`/admin/applications?status=${status}`}
-            className="rounded border border-slate-300 bg-white px-3 py-2 text-sm"
-          >
+          <Link href={href({ q: "" })} className="rounded border border-slate-300 bg-white px-3 py-2 text-sm">
             Clear
           </Link>
         ) : null}
       </form>
 
       <div className="mt-4 flex flex-wrap gap-2">
+        {ROLE_FILTERS.map((f) => (
+          <Link
+            key={f.id}
+            href={href({ role: f.id })}
+            className={
+              role === f.id
+                ? "rounded-full bg-blue-800 px-3 py-1.5 text-sm text-white"
+                : "rounded-full bg-blue-50 px-3 py-1.5 text-sm text-blue-900 hover:bg-blue-100"
+            }
+          >
+            {f.label}
+          </Link>
+        ))}
+      </div>
+
+      <div className="mt-3 flex flex-wrap gap-2">
         {FILTERS.map((f) => (
           <Link
             key={f.id}
-            href={
-              q
-                ? `/admin/applications?status=${f.id}&q=${encodeURIComponent(q)}`
-                : `/admin/applications?status=${f.id}`
-            }
+            href={href({ status: f.id })}
             className={
               status === f.id
                 ? "rounded-full bg-slate-900 px-3 py-1.5 text-sm text-white"
@@ -108,6 +206,7 @@ export default async function AdminApplicationsPage({
       {!error ? (
         <p className="mt-3 text-sm text-slate-600">
           Showing <strong>{apps.length}</strong> application{apps.length === 1 ? "" : "s"}
+          {role !== "all" ? ` · role: ${role}` : ""}
           {status !== "all" ? ` · filter: ${status}` : ""}
           {q ? ` · search: “${q}”` : ""}
         </p>
@@ -118,14 +217,14 @@ export default async function AdminApplicationsPage({
           <p className="font-semibold">Could not load applications from WordPress</p>
           <p className="mt-1">{error}</p>
           <p className="mt-2 text-xs">
-            Cloud Run should use the VM bridge:{" "}
+            Use{" "}
             <code className="rounded bg-red-100 px-1">
               WRRAPD_WRAPSTARS_WP_BASE_URL=https://api.wrrapd.com/api/wrapstars-wp-bridge
             </code>{" "}
-            plus the same{" "}
-            <code className="rounded bg-red-100 px-1">WRRAPD_WRAPSTARS_OPS_API_KEY</code> as apply/pros{" "}
-            <code className="rounded bg-red-100 px-1">wp-config.php</code>. Restart{" "}
-            <code className="rounded bg-red-100 px-1">wrrapd-server</code> after bridge deploys.
+            and matching{" "}
+            <code className="rounded bg-red-100 px-1">WRRAPD_WRAPSTARS_OPS_API_KEY</code>. Deploy
+            Driver MU-plugins for{" "}
+            <code className="rounded bg-red-100 px-1">/driver-applications</code> routes.
           </p>
         </div>
       ) : (
@@ -134,9 +233,9 @@ export default async function AdminApplicationsPage({
             <thead className="bg-slate-50 text-xs uppercase text-slate-500">
               <tr>
                 <th className="px-3 py-2">Name / email</th>
+                <th className="px-3 py-2">Role</th>
                 <th className="px-3 py-2">Location</th>
-                <th className="px-3 py-2">Deliver?</th>
-                <th className="px-3 py-2">Fit</th>
+                <th className="px-3 py-2">Detail</th>
                 <th className="px-3 py-2">Status</th>
                 <th className="px-3 py-2">Submitted</th>
               </tr>
@@ -146,15 +245,15 @@ export default async function AdminApplicationsPage({
                 <tr>
                   <td colSpan={6} className="px-3 py-8 text-center text-slate-500">
                     No applications in this view. Try <strong>All</strong>, clear search, or confirm
-                    you are on Applications (hire pipeline) — not WrapStars (live ops roster).
+                    WordPress Driver routes are deployed if filtering Drivers.
                   </td>
                 </tr>
               ) : (
                 apps.map((a) => (
-                  <tr key={a.id} className="border-t border-slate-100 hover:bg-slate-50">
+                  <tr key={`${a.role}-${a.id}`} className="border-t border-slate-100 hover:bg-slate-50">
                     <td className="px-3 py-3">
                       <Link
-                        href={`/admin/applications/${a.id}`}
+                        href={`/admin/applications/${a.id}?role=${a.role}`}
                         className="font-medium text-blue-700 underline"
                       >
                         {a.fullName || a.email}
@@ -163,10 +262,23 @@ export default async function AdminApplicationsPage({
                       <div className="text-xs text-slate-400">#{a.id}</div>
                     </td>
                     <td className="px-3 py-3">
+                      {a.role === "driver" ? (
+                        <span className="rounded-full bg-sky-100 px-2 py-0.5 text-xs text-sky-900">
+                          Driver
+                        </span>
+                      ) : (
+                        <span className="rounded-full bg-violet-100 px-2 py-0.5 text-xs text-violet-900">
+                          WrapStar
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-3 py-3">
                       {a.city}, {a.state} {a.postalCode}
                     </td>
                     <td className="px-3 py-3">
-                      {a.canDeliver === "yes" ? (
+                      {a.role === "driver" ? (
+                        <span className="text-xs text-slate-600">{a.vehicleType || "courier"}</span>
+                      ) : a.canDeliver === "yes" ? (
                         <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-900">
                           hybrid
                         </span>
@@ -175,8 +287,10 @@ export default async function AdminApplicationsPage({
                           wrap-only
                         </span>
                       )}
+                      {a.role === "wrapstar" && a.fitScore ? (
+                        <span className="ml-1 text-xs font-semibold">Fit {a.fitScore}</span>
+                      ) : null}
                     </td>
-                    <td className="px-3 py-3 font-semibold">{a.fitScore || "—"}</td>
                     <td className="px-3 py-3">
                       <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${statusBadge(a.status)}`}>
                         {a.status}

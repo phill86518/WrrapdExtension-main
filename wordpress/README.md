@@ -211,3 +211,16 @@ See **[../docs/wordpress-snippets/wrrapd-slower-cta-blink.css](../docs/wordpress
 | `wrrapd-wrapstars.css` | Yes |
 
 Elementor page shortcodes: `docs/wordpress-snippets/wrrapd-wrapstars-elementor-pages.md`
+
+## Drivers portal (same apply + pros install)
+
+Parallel hire path under `/driver/` and `/driver-onboarding/`. Deploy: **[DRIVERS-DEPLOY.md](./DRIVERS-DEPLOY.md)**.
+
+| Repo file | SiteGround `mu-plugins/` |
+|-----------|--------------------------|
+| `wrrapd-drivers.php` | Yes |
+| `wrrapd-drivers-apply.php` | Yes |
+| `wrrapd-drivers-ops-api.php` | Yes |
+| `wrrapd-drivers.css` | Yes |
+
+Elementor shortcodes: `docs/wordpress-snippets/wrrapd-drivers-elementor-pages.md` · Onboarding map: `docs/DRIVER-ONBOARDING-PORTAL.md`

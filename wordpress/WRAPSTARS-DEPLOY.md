@@ -9,7 +9,9 @@ Dedicated WordPress install for independent gift-wrappers. **Do not install on w
 | Host | Purpose |
 |------|---------|
 | **apply.wrrapd.com** | Landing, application form, applicant dashboard |
+| **apply.wrrapd.com/driver/** | Driver hire landing + apply (see [DRIVERS-DEPLOY.md](./DRIVERS-DEPLOY.md)) |
 | **pros.wrrapd.com** | Approved-only onboarding (BoldSign, insurance, quiz, PO Box, W-9) |
+| **pros.wrrapd.com/driver-onboarding/** | Driver onboarding (parallel) |
 | **wrrapd.com** | Consumer site — **no WrapStars MU-plugins** |
 
 Both subdomains point to the **same document root** (one WordPress, one database). The MU-plugin routes by `HTTP_HOST`.

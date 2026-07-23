@@ -1,0 +1,81 @@
+/* Wrrapd Drivers portal — Flex-inspired layers on WrapStars tokens */
+.wrrapd-drivers-flex .wrrapd-drivers-hero {
+  background: linear-gradient(135deg, #0b3d91 0%, #146eb4 55%, #1a8fe3 100%);
+  color: #fff;
+  padding: clamp(2.5rem, 6vw, 4.5rem) 1.25rem;
+}
+.wrrapd-drivers-hero__inner {
+  max-width: 720px;
+  margin: 0 auto;
+}
+.wrrapd-drivers-hero__kicker {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.75rem;
+  opacity: 0.9;
+  margin: 0 0 0.75rem;
+}
+.wrrapd-drivers-hero h1 {
+  font-size: clamp(1.75rem, 4vw, 2.75rem);
+  line-height: 1.15;
+  margin: 0 0 1rem;
+  color: #fff;
+}
+.wrrapd-drivers-hero__lead {
+  font-size: 1.05rem;
+  line-height: 1.55;
+  opacity: 0.95;
+  margin: 0 0 1.5rem;
+  max-width: 38rem;
+}
+.wrrapd-drivers-hero .wrrapd-wrapstars-btn--hero {
+  background: #fff;
+  color: #0b3d91;
+}
+.wrrapd-drivers-section {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 2.5rem 1.25rem;
+}
+.wrrapd-drivers-section h2 {
+  margin: 0 0 0.75rem;
+}
+.wrrapd-drivers-app-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+  margin-top: 1.25rem;
+}
+.wrrapd-drivers-app-card {
+  background: #fff;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  border-radius: 12px;
+  padding: 1.25rem;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+}
+.wrrapd-drivers-split {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 2rem;
+}
+.wrrapd-drivers-steps {
+  margin: 0.75rem 0 1rem 1.25rem;
+  line-height: 1.6;
+}
+.wrrapd-drivers-check {
+  max-width: 960px;
+  margin: 0 auto 3rem;
+  padding: 1.5rem;
+  background: #f1f5f9;
+  border-radius: 14px;
+}
+.wrrapd-drivers-app-cta {
+  margin: 1rem 0;
+  padding: 1rem;
+  background: #eff6ff;
+  border-radius: 10px;
+  border: 1px solid #bfdbfe;
+}
+.wrrapd-drivers .wrrapd-wrapstars-ob-nav__title {
+  font-weight: 700;
+}

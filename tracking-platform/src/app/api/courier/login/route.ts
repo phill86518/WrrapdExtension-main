@@ -4,12 +4,17 @@ import {
   createSessionToken,
   verifyWrapstarPassword,
 } from "@/lib/auth";
-import { findDeliveryDriverById, listDeliveryDrivers } from "@/lib/driver-registry";
+import {
+  findDeliveryDriverByEmail,
+  findDeliveryDriverById,
+  listDeliveryDrivers,
+} from "@/lib/driver-registry";
 
 /**
  * Courier Driver login — separate from WrapStar.
- * Accepts Driver name or 10-digit employee id (7…).
- * Uses the same shared contractor passcode as WrapStars for now.
+ * Accepts Driver name, email, or 10-digit employee id (7…).
+ * Uses the same shared contractor passcode as WrapStars for now
+ * (roster rows come from Admin activate sync after Driver hire onboarding).
  */
 export async function POST(request: NextRequest) {
   const formData = await request.formData();
@@ -23,21 +28,27 @@ export async function POST(request: NextRequest) {
 
   if (!nameOrId) {
     return NextResponse.json(
-      { ok: false, error: "Enter your Driver name or 10-digit ID (starts with 7)" },
+      { ok: false, error: "Enter your Driver name, email, or 10-digit ID (starts with 7)" },
       { status: 400 },
     );
   }
   const all = await listDeliveryDrivers();
   const needle = nameOrId.toLowerCase();
   const byId = await findDeliveryDriverById(nameOrId);
+  const byEmail = nameOrId.includes("@")
+    ? await findDeliveryDriverByEmail(nameOrId)
+    : undefined;
   const byName = all.find((d) => d.name.trim().toLowerCase() === needle);
   const byDisplay = all.find(
     (d) => (d.displayId || "").trim().toLowerCase() === needle || d.id.toLowerCase() === needle,
   );
-  const selected = byId || byName || byDisplay;
+  const selected = byId || byEmail || byName || byDisplay;
   if (!selected) {
     return NextResponse.json(
-      { ok: false, error: "Unknown Driver — use the exact name or 10-digit ID" },
+      {
+        ok: false,
+        error: "Unknown Driver — use the exact name, email, or 10-digit ID from activation",
+      },
       { status: 404 },
     );
   }

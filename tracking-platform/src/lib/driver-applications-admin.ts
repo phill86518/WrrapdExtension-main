@@ -1,4 +1,6 @@
-export type WrapstarApplicationStatus =
+import type { ApplicationAction } from "./wrapstar-applications-admin";
+
+export type DriverApplicationStatus =
   | "under_review"
   | "interview"
   | "approved"
@@ -7,10 +9,10 @@ export type WrapstarApplicationStatus =
   | "active"
   | string;
 
-export type WrapstarApplication = {
+export type DriverApplication = {
   id: number;
-  applicationType?: "wrapstar";
-  status: WrapstarApplicationStatus;
+  applicationType: "driver";
+  status: DriverApplicationStatus;
   suspended: boolean;
   fullName: string;
   firstName?: string;
@@ -19,31 +21,21 @@ export type WrapstarApplication = {
   lastName?: string;
   email: string;
   phoneMobile: string;
-  phoneWork?: string;
   addressLine1: string;
   addressLine2?: string;
   city: string;
   state: string;
   postalCode: string;
-  canDeliver: string;
+  age21?: string;
+  hasValidLicense?: string;
   hasVehicle: string;
-  deliveryMaxDistance: string;
+  vehicleType?: string;
+  hasSmartphone?: string;
   cleanDrivingRecord: string;
-  hasLargeFormatPrinter: string;
-  printerSize: string;
-  giftWrappingExperience: string;
-  whyWrapstar: string;
-  gigPlatforms: string;
-  businessStructure: string;
+  availability?: string;
+  whyDrive?: string;
+  deliveryExperience?: string;
   bankAccountReady: string;
-  wrrapdPoDailyPickup: string;
-  dedicatedWrapWorkspace: string;
-  comfortableVideoMonitoring: string;
-  deliveryProofReady: string;
-  fitScore: number;
-  fitScoreBreakdown: Record<string, number>;
-  experienceRationale: string;
-  commitmentRationale: string;
   adminNotes: string;
   rejectReason: string;
   declineNote?: string;
@@ -63,12 +55,12 @@ export type WrapstarApplication = {
   interviewAt: string;
   userId: number;
   createdAt: string;
+  /** Compat with WrapStar UI fields */
+  canDeliver?: string;
+  fitScore?: number;
+  whyWrapstar?: string;
 };
 
-/**
- * WordPress ops base. Prefer the api.wrrapd.com bridge (VM) — SiteGround often blocks
- * direct Cloud Run → apply.wrrapd.com calls, which made Applications look empty.
- */
 function wpBase(): string {
   return (
     process.env.WRRAPD_WRAPSTARS_WP_BASE_URL ||
@@ -81,7 +73,7 @@ function opsKey(): string {
   const key = (process.env.WRRAPD_WRAPSTARS_OPS_API_KEY || "").trim();
   if (!key) {
     throw new Error(
-      "WRRAPD_WRAPSTARS_OPS_API_KEY is not set on the tracking platform (must match WordPress WRRAPD_WRAPSTARS_OPS_API_KEY)",
+      "WRRAPD_WRAPSTARS_OPS_API_KEY is not set on the tracking platform (must match WordPress)",
     );
   }
   return key;
@@ -108,24 +100,26 @@ async function parseJson(r: Response): Promise<Record<string, unknown>> {
   return body;
 }
 
-export async function listWrapstarApplications(
+export async function listDriverApplications(
   status?: string,
   search?: string,
-): Promise<WrapstarApplication[]> {
+): Promise<DriverApplication[]> {
   const params = new URLSearchParams();
   if (status && status !== "all") params.set("status", status);
   if (search && search.trim()) params.set("q", search.trim());
   const qs = params.toString();
-  const r = await fetch(`${wpBase()}/wp-json/wrrapd/v1/applications${qs ? `?${qs}` : ""}`, {
-    headers: opsHeaders(),
-    cache: "no-store",
-  });
+  const r = await fetch(
+    `${wpBase()}/wp-json/wrrapd/v1/driver-applications${qs ? `?${qs}` : ""}`,
+    {
+      headers: opsHeaders(),
+      cache: "no-store",
+    },
+  );
   const body = await parseJson(r);
   let apps = Array.isArray(body.applications)
-    ? (body.applications as WrapstarApplication[])
+    ? (body.applications as DriverApplication[])
     : [];
-  apps = apps.map((a) => ({ ...a, applicationType: "wrapstar" as const }));
-  // Client-side filter too (works even before SiteGround ops-api search is updated).
+  apps = apps.map((a) => ({ ...a, applicationType: "driver" as const }));
   if (search && search.trim()) {
     const needle = search.trim().toLowerCase();
     apps = apps.filter((a) => {
@@ -139,41 +133,28 @@ export async function listWrapstarApplications(
   return apps;
 }
 
-export async function getWrapstarApplication(id: number): Promise<WrapstarApplication> {
-  const r = await fetch(`${wpBase()}/wp-json/wrrapd/v1/applications/${id}`, {
+export async function getDriverApplication(id: number): Promise<DriverApplication> {
+  const r = await fetch(`${wpBase()}/wp-json/wrrapd/v1/driver-applications/${id}`, {
     headers: opsHeaders(),
     cache: "no-store",
   });
   const body = await parseJson(r);
   if (!body.application || typeof body.application !== "object") {
-    throw new Error("Application not found");
+    throw new Error("Driver application not found");
   }
-  return body.application as WrapstarApplication;
+  return { ...(body.application as DriverApplication), applicationType: "driver" };
 }
 
-export type ApplicationAction =
-  | "interview"
-  | "approve"
-  | "reject"
-  | "activate"
-  | "suspend"
-  | "unsuspend"
-  | "mark_declined"
-  | "reinvite"
-  | "resend_invite"
-  | "reset_to_review"
-  | "save_notes";
-
-export async function runWrapstarApplicationAction(
+export async function runDriverApplicationAction(
   id: number,
   action: ApplicationAction,
   opts?: { adminNotes?: string; rejectReason?: string },
-): Promise<{ application: WrapstarApplication; passwordIssued?: boolean }> {
+): Promise<{ application: DriverApplication; passwordIssued?: boolean }> {
   const payload: Record<string, string> = { action };
   if (opts?.adminNotes !== undefined) payload.adminNotes = opts.adminNotes;
   if (opts?.rejectReason !== undefined) payload.rejectReason = opts.rejectReason;
 
-  const r = await fetch(`${wpBase()}/wp-json/wrrapd/v1/applications/${id}/action`, {
+  const r = await fetch(`${wpBase()}/wp-json/wrrapd/v1/driver-applications/${id}/action`, {
     method: "POST",
     headers: opsHeaders(),
     body: JSON.stringify(payload),
@@ -185,7 +166,10 @@ export async function runWrapstarApplicationAction(
   }
   const result = body.result as { passwordIssued?: boolean } | undefined;
   return {
-    application: body.application as WrapstarApplication,
+    application: {
+      ...(body.application as DriverApplication),
+      applicationType: "driver",
+    },
     passwordIssued: result?.passwordIssued,
   };
 }

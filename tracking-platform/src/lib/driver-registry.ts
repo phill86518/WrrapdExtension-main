@@ -150,6 +150,15 @@ export async function findDeliveryDriverById(id: string): Promise<DeliveryDriver
   return all.find((d) => d.id === id || d.displayId === id);
 }
 
+export async function findDeliveryDriverByEmail(
+  email: string,
+): Promise<DeliveryDriver | undefined> {
+  const needle = email.trim().toLowerCase();
+  if (!needle) return undefined;
+  const all = await listDeliveryDrivers();
+  return all.find((d) => (d.email || "").trim().toLowerCase() === needle);
+}
+
 export async function addDeliveryDriver(input: {
   name: string;
   homePostalCode: string;

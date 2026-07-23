@@ -30,11 +30,15 @@ export function CourierLoginForm() {
     <form onSubmit={onSubmit} className="mt-6 space-y-4 rounded-lg border p-6">
       <input
         name="driverName"
-        placeholder="Driver name or 10-digit ID (7…)"
+        placeholder="Driver name, email, or 10-digit ID (7…)"
         className="w-full rounded border px-3 py-2"
         required
       />
       <PasswordField name="password" placeholder="Driver passcode" autoComplete="current-password" />
+      <p className="text-xs text-slate-500">
+        New Drivers: apply at apply.wrrapd.com/drive — after activation, sign in here with your
+        roster name/email/ID and the contractor passcode from Wrrapd.
+      </p>
       {error && <p className="text-sm font-medium text-rose-600">{error}</p>}
       <button
         className="w-full rounded bg-black px-4 py-3 text-lg font-semibold text-white"

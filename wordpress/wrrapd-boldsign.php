@@ -4,7 +4,8 @@
  *
  * wp-config.php:
  *   define( 'WRRAPD_BOLDSIGN_API_KEY', '…' );
- *   define( 'WRRAPD_BOLDSIGN_IC_TEMPLATE_ID', '…' );
+ *   define( 'WRRAPD_BOLDSIGN_IC_TEMPLATE_ID', '…' );           // WrapStar IC
+ *   define( 'WRRAPD_BOLDSIGN_DRIVER_IC_TEMPLATE_ID', '…' );    // Driver / courier IC (optional)
  *   define( 'WRRAPD_BOLDSIGN_W9_TEMPLATE_ID', '…' );
  *   define( 'WRRAPD_BOLDSIGN_API_BASE', 'https://api.boldsign.com' ); // optional
  *
@@ -222,6 +223,14 @@ function wrrapd_boldsign_client() {
 		$client = new Wrrapd_BoldSign_Client();
 	}
 	return $client;
+}
+
+/** @return string Driver IC BoldSign template id (empty when not configured). */
+function wrrapd_boldsign_driver_ic_template_id() {
+	if ( defined( 'WRRAPD_BOLDSIGN_DRIVER_IC_TEMPLATE_ID' ) && WRRAPD_BOLDSIGN_DRIVER_IC_TEMPLATE_ID !== '' ) {
+		return (string) WRRAPD_BOLDSIGN_DRIVER_IC_TEMPLATE_ID;
+	}
+	return '';
 }
 
 /**

@@ -3,6 +3,7 @@ import { listAllOrders } from "@/lib/data";
 import { findDeliveryDriverById } from "@/lib/driver-registry";
 import { CourierLoginForm } from "@/components/courier-login-form";
 import { CourierDeliveryActions } from "@/components/courier-delivery-actions";
+import { DriverInstallCard } from "@/components/driver-install-card";
 import { LogoutButton } from "@/components/logout-button";
 import { WrrapdLogo } from "@/components/wrrapd-logo";
 import { wrapPhaseLabel } from "@/lib/wrap-status-display";
@@ -62,6 +63,10 @@ export default async function CourierPage() {
           </p>
         </div>
         <LogoutButton redirectPath="/courier" />
+      </div>
+
+      <div className="mb-6">
+        <DriverInstallCard variant="driver" />
       </div>
 
       <section className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50/50 p-4">

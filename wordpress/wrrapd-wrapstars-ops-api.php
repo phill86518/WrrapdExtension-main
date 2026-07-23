@@ -255,6 +255,7 @@ function wrrapd_wrapstars_ops_serialize_application( $id ) {
 
 	return array(
 		'id'                         => $id,
+		'applicationType'            => 'wrapstar',
 		'status'                     => wrrapd_wrapstars_get_meta( $id, 'status' ),
 		'suspended'                  => wrrapd_wrapstars_get_meta( $id, 'suspended' ) === '1',
 		'fullName'                   => wrrapd_wrapstars_get_meta( $id, 'full_name' ),
