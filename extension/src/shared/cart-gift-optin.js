@@ -1093,7 +1093,7 @@ function mountCartGiftOptIn(config, cartSnapshot) {
   const brandTag = document.createElement("span");
   brandTag.style.cssText =
     "font-family:inherit;font-size:14px;font-weight:700;color:#ff8e14;letter-spacing:.01em;line-height:1.25;";
-  brandTag.textContent = "Gift wrapping, handwritten note & flowers";
+  brandTag.textContent = "Delivered with premium gift-wrapping and flowers";
   brandRow.append(brandLogo, brandTag);
 
   const hook = document.createElement("h2");

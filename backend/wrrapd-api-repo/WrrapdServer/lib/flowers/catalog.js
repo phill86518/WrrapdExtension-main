@@ -42,45 +42,31 @@ function flowerUnitPriceForZip(postalCode) {
 }
 
 function deterministicSelect(byRetailerCandidates) {
+  // Target disabled as a floral supplier (Publix + Sam's only for now).
   const publix = (byRetailerCandidates.publix || []).filter((c) => c.retailPrice < scrape.CAP_PUBLIX);
-  const target = (byRetailerCandidates.target || []).filter((c) => c.retailPrice < scrape.CAP_TARGET);
   const sams = (byRetailerCandidates.sams || []).filter(
     (c) => c.isRose && c.retailPrice < scrape.CAP_SAMS_ROSES,
   );
 
   const hasP = publix.length > 0;
-  const hasT = target.length > 0;
   const hasS = sams.length > 0;
 
   let wantP = 0;
-  let wantT = 0;
   let wantS = 0;
-  if (hasP && hasT && hasS) {
-    wantP = 3;
-    wantT = 3;
-    wantS = 2;
-  } else if (hasP && hasT) {
-    wantP = 4;
-    wantT = 4;
-  } else if (hasP && hasS) {
+  if (hasP && hasS) {
     wantP = 5;
-    wantS = 2;
-  } else if (hasT && hasS) {
-    wantT = 5;
     wantS = 2;
   } else if (hasP) {
     wantP = 8;
-  } else if (hasT) {
-    wantT = 8;
   } else if (hasS) {
     wantS = 8;
   }
 
   const pick = (arr, n) => arr.slice(0, n);
-  let selected = [...pick(publix, wantP), ...pick(target, wantT), ...pick(sams, wantS)];
+  let selected = [...pick(publix, wantP), ...pick(sams, wantS)];
 
   const used = new Set(selected.map((c) => `${c.retailer}:${c.sku}`));
-  const pool = [...publix, ...target, ...sams].filter((c) => !used.has(`${c.retailer}:${c.sku}`));
+  const pool = [...publix, ...sams].filter((c) => !used.has(`${c.retailer}:${c.sku}`));
   while (selected.length < 5 && pool.length) {
     selected.push(pool.shift());
   }
@@ -91,7 +77,7 @@ function deterministicSelect(byRetailerCandidates) {
 async function grokRank(postalCode, byRetailerCandidates, storesNearby) {
   if (!grok.isConfigured()) return null;
   const compact = {};
-  for (const r of ['publix', 'target', 'sams']) {
+  for (const r of ['publix', 'sams']) {
     compact[r] = (byRetailerCandidates[r] || []).slice(0, 12).map((c) => ({
       sku: c.sku,
       title: c.title,
@@ -101,7 +87,7 @@ async function grokRank(postalCode, byRetailerCandidates, storesNearby) {
   }
   const storeSummary = Object.fromEntries(
     Object.entries(storesNearby)
-      .filter(([, s]) => s)
+      .filter(([k, s]) => s && k !== 'target')
       .map(([k, s]) => [k, { miles: s.miles, city: s.city, storeId: s.storeId }]),
   );
   try {
@@ -112,7 +98,7 @@ async function grokRank(postalCode, byRetailerCandidates, storesNearby) {
         {
           role: 'system',
           content:
-            'You are Wrrapd floral merchandising. Pick bouquet SKUs for a giftee ZIP from candidate lists. Prefer Publix, then Target; Sam\'s Club only for rose bouquets. Return JSON only: {"picks":[{"retailer":"publix|target|sams","sku":"..."}]} with 5–8 picks. Respect caps: Publix/Target under $17, Sam\'s roses under $20. Never invent SKUs.',
+            'You are Wrrapd floral merchandising. Pick bouquet SKUs for a giftee ZIP from candidate lists. Prefer Publix; Sam\'s Club only for rose bouquets. Return JSON only: {"picks":[{"retailer":"publix|sams","sku":"..."}]} with 5–8 picks. Respect caps: Publix under $17, Sam\'s roses under $20. Never invent SKUs.',
         },
         {
           role: 'user',
@@ -120,7 +106,7 @@ async function grokRank(postalCode, byRetailerCandidates, storesNearby) {
             postalCode,
             nearbyStores: storeSummary,
             candidates: compact,
-            idealCounts: { publix: 3, target: 3, samsRoses: 2 },
+            idealCounts: { publix: 5, samsRoses: 2 },
           }),
         },
       ],
@@ -128,7 +114,7 @@ async function grokRank(postalCode, byRetailerCandidates, storesNearby) {
     const parsed = grok.parseJsonContent(content);
     const picks = Array.isArray(parsed?.picks) ? parsed.picks : [];
     const byKey = {};
-    for (const r of ['publix', 'target', 'sams']) {
+    for (const r of ['publix', 'sams']) {
       for (const c of byRetailerCandidates[r] || []) {
         byKey[`${r}:${c.sku}`] = c;
       }
@@ -224,11 +210,13 @@ async function buildCatalogForZip(postalCode) {
     });
   }
 
-  const byRetailerCandidates = { publix: [], target: [], sams: [] };
+  const byRetailerCandidates = { publix: [], sams: [] };
   let anyLive = false;
   let anyScrapeFailed = false;
   await Promise.all(
-    active.map(async ([retailer, store]) => {
+    active
+      .filter(([retailer]) => retailer === 'publix' || retailer === 'sams')
+      .map(async ([retailer, store]) => {
       const result = await scrape.fetchBouquetsForStore(store);
       if (result.scrapeFailed) anyScrapeFailed = true;
       if (result.items?.length) {
@@ -249,10 +237,10 @@ async function buildCatalogForZip(postalCode) {
     }
   }
 
-  if (!selected || selected.length < 5) {
-    // Classic 4-bouquet backup (403 / empty scrape) at Wrrapd flowers unit price
+  // Classic backup only when we have zero live florist picks (not when live count < 5).
+  if (!selected || !selected.length) {
     const preferStore =
-      byRetailer.publix || byRetailer.target || byRetailer.sams || active[0][1];
+      byRetailer.publix || byRetailer.sams || active.find(([, s]) => s)?.[1] || active[0][1];
     const unit = flowerUnitPriceForZip(zip);
     selected = scrape.classicFourBouquets(preferStore, unit);
     source = 'classic_backup';

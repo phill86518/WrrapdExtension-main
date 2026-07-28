@@ -200,8 +200,8 @@ function normalizeRow(retailer, row) {
 }
 
 async function buildIndexFromCsvs() {
+  // Target CSV kept on disk but not indexed while Target is paused as a floral supplier.
   const files = [
-    { retailer: 'target', file: 'target.csv' },
     { retailer: 'publix', file: 'publix.csv' },
     { retailer: 'sams', file: 'sams.csv' },
   ];
@@ -292,18 +292,19 @@ async function nearestStoresForZip(postalCode, maxMiles = MAX_MILES) {
   const index = await ensureIndex();
   const origin = await lookupZipCoords(postalCode);
   if (!origin || !index?.stores?.length) {
-    return { origin, nearby: [], byRetailer: { publix: null, target: null, sams: null } };
+    return { origin, nearby: [], byRetailer: { publix: null, sams: null } };
   }
   const scored = [];
   for (const s of index.stores) {
     if (s.lat == null || s.lng == null) continue;
+    if (s.retailer === 'target') continue; // floral supplier paused
     const miles = haversineMiles(origin.lat, origin.lng, s.lat, s.lng);
     if (miles <= maxMiles) {
       scored.push({ ...s, miles: Math.round(miles * 100) / 100 });
     }
   }
   scored.sort((a, b) => a.miles - b.miles);
-  const byRetailer = { publix: null, target: null, sams: null };
+  const byRetailer = { publix: null, sams: null };
   for (const s of scored) {
     if (!byRetailer[s.retailer]) byRetailer[s.retailer] = s;
   }
