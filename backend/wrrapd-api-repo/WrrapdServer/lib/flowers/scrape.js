@@ -206,127 +206,72 @@ async function scrapeSams(store) {
   }
 }
 
-/** Last-resort public floral SKUs (still under caps) when live scrape returns empty. */
-function fallbackCatalog(retailer) {
-  const mixed = [
-    {
-      title: 'Mixed Seasonal Bouquet',
-      imageUrl: 'https://scene7.samsclub.com/is/image/samsclub/0002005943541_A?$DT_PDP_BB$',
-      retailPrice: 12.98,
-      isRose: false,
-    },
-    {
-      title: 'Garden Fresh Bouquet',
-      imageUrl: 'https://scene7.samsclub.com/is/image/samsclub/0002371100828_A?$DT_PDP_BB$',
-      retailPrice: 14.98,
-      isRose: false,
-    },
-    {
-      title: 'Bright Celebration Bouquet',
-      imageUrl: 'https://scene7.samsclub.com/is/image/samsclub/0002005929934_A?$DT_PDP_BB$',
-      retailPrice: 15.98,
-      isRose: false,
-    },
-    {
-      title: 'Soft Pastel Bouquet',
-      imageUrl: 'https://scene7.samsclub.com/is/image/samsclub/0002005930392_A?$DT_PDP_BB$',
-      retailPrice: 13.98,
-      isRose: false,
-    },
-    {
-      title: 'Sunshine Mixed Bouquet',
-      imageUrl: 'https://scene7.samsclub.com/is/image/samsclub/0002005943541_A?$DT_PDP_BB$',
-      retailPrice: 11.98,
-      isRose: false,
-    },
-    {
-      title: 'Blush Garden Bouquet',
-      imageUrl: 'https://scene7.samsclub.com/is/image/samsclub/0002371100828_A?$DT_PDP_BB$',
-      retailPrice: 16.48,
-      isRose: false,
-    },
-    {
-      title: 'Market Fresh Bouquet',
-      imageUrl: 'https://scene7.samsclub.com/is/image/samsclub/0002005929934_A?$DT_PDP_BB$',
-      retailPrice: 10.98,
-      isRose: false,
-    },
-    {
-      title: 'Everyday Joy Bouquet',
-      imageUrl: 'https://scene7.samsclub.com/is/image/samsclub/0002005930392_A?$DT_PDP_BB$',
-      retailPrice: 15.48,
-      isRose: false,
-    },
+/**
+ * Classic Wrrapd 4-bouquet backup (same designs as the extension assets).
+ * Used when live retailer scrape fails (e.g. HTTP 403).
+ * Price = Wrrapd flowers unit price (geo), not retail+$1.49.
+ */
+function classicFourBouquets(store, flowerUnitPrice) {
+  const price = Number(flowerUnitPrice);
+  const charged = Number.isFinite(price) && price > 0 ? Math.round(price * 100) / 100 : 17.99;
+  const images = [
+    'https://scene7.samsclub.com/is/image/samsclub/0002005943541_A?$DT_PDP_BB$',
+    'https://scene7.samsclub.com/is/image/samsclub/0002371100828_A?$DT_PDP_BB$',
+    'https://scene7.samsclub.com/is/image/samsclub/0002005929934_A?$DT_PDP_BB$',
+    'https://scene7.samsclub.com/is/image/samsclub/0002005930392_A?$DT_PDP_BB$',
   ];
-  const roses = [
-    {
-      title: 'Classic Red Rose Bouquet',
-      imageUrl: 'https://scene7.samsclub.com/is/image/samsclub/0002371100828_E?$DT_PDP_BB$',
-      retailPrice: 18.98,
-      isRose: true,
-    },
-    {
-      title: 'Dozen Long-Stem Roses',
-      imageUrl: 'https://scene7.samsclub.com/is/image/samsclub/0002005943541_A?$DT_PDP_BB$',
-      retailPrice: 19.48,
-      isRose: true,
-    },
-    {
-      title: 'Romantic Rose Bouquet',
-      imageUrl: 'https://scene7.samsclub.com/is/image/samsclub/0002371100828_E?$DT_PDP_BB$',
-      retailPrice: 17.98,
-      isRose: true,
-    },
-    {
-      title: 'Premium Rose Bouquet',
-      imageUrl: 'https://scene7.samsclub.com/is/image/samsclub/0002005943541_A?$DT_PDP_BB$',
-      retailPrice: 16.98,
-      isRose: true,
-    },
-    {
-      title: 'Sweetheart Rose Bouquet',
-      imageUrl: 'https://scene7.samsclub.com/is/image/samsclub/0002371100828_E?$DT_PDP_BB$',
-      retailPrice: 15.98,
-      isRose: true,
-    },
-  ];
-  const base = retailer === 'sams' ? roses : [...mixed, ...roses.filter((b) => b.retailPrice < CAP_PUBLIX)];
-  const cap = retailer === 'sams' ? CAP_SAMS_ROSES : retailer === 'target' ? CAP_TARGET : CAP_PUBLIX;
-  return base
-    .filter((b) => b.retailPrice < cap)
-    .filter((b) => (retailer === 'sams' ? b.isRose : true))
-    .map((b, i) => ({
-      retailer,
-      sku: `fallback-${retailer}-${i + 1}`,
-      title: b.title,
-      imageUrl: b.imageUrl,
-      retailPrice: b.retailPrice,
-      productUrl: `https://www.wrrapd.com/`,
-      isRose: b.isRose,
-      fallback: true,
-    }));
+  const s = store || {};
+  return [1, 2, 3, 4].map((n, i) => ({
+    retailer: s.retailer || 'publix',
+    sku: `flowers-${n}`,
+    designKey: `flowers-${n}`,
+    title: `Bouquet ${n}`,
+    imageUrl: images[i],
+    retailPrice: charged,
+    chargedPrice: charged,
+    productUrl: 'https://www.wrrapd.com/',
+    isRose: false,
+    classicBackup: true,
+    storeId: s.storeId,
+    storeName: s.storeName,
+    storeAddress: s.address,
+    storeCity: s.city,
+    storeState: s.state,
+    storePostalCode: s.postalCode,
+    miles: s.miles,
+  }));
 }
 
 async function fetchBouquetsForStore(store) {
-  if (!store?.retailer) return [];
+  if (!store?.retailer) return { items: [], scrapeFailed: true };
   let items = [];
-  if (store.retailer === 'target') items = await scrapeTarget(store);
-  else if (store.retailer === 'publix') items = await scrapePublix(store);
-  else if (store.retailer === 'sams') items = await scrapeSams(store);
-  if (!items.length) {
-    items = fallbackCatalog(store.retailer);
-    console.warn('[flowers-scrape] using fallback catalog for', store.retailer, store.storeId);
+  let scrapeFailed = false;
+  try {
+    if (store.retailer === 'target') items = await scrapeTarget(store);
+    else if (store.retailer === 'publix') items = await scrapePublix(store);
+    else if (store.retailer === 'sams') items = await scrapeSams(store);
+    if (!items.length) scrapeFailed = true;
+  } catch (e) {
+    scrapeFailed = true;
+    console.warn('[flowers-scrape] exception', store.retailer, e.message);
   }
-  return items.map((it) => ({
-    ...it,
-    storeId: store.storeId,
-    storeName: store.storeName,
-    storeAddress: store.address,
-    storeCity: store.city,
-    storeState: store.state,
-    storePostalCode: store.postalCode,
-    miles: store.miles,
-  }));
+  if (scrapeFailed) {
+    console.warn('[flowers-scrape] live scrape empty/failed for', store.retailer, store.storeId);
+  }
+  return {
+    scrapeFailed,
+    items: items.map((it) => ({
+      ...it,
+      live: true,
+      storeId: store.storeId,
+      storeName: store.storeName,
+      storeAddress: store.address,
+      storeCity: store.city,
+      storeState: store.state,
+      storePostalCode: store.postalCode,
+      miles: store.miles,
+    })),
+  };
 }
 
 module.exports = {
@@ -335,5 +280,5 @@ module.exports = {
   CAP_TARGET,
   CAP_SAMS_ROSES,
   fetchBouquetsForStore,
-  fallbackCatalog,
+  classicFourBouquets,
 };

@@ -46,6 +46,8 @@ export async function loadFlowersCatalog(postalCode) {
         typeof body.message === "string"
           ? body.message
           : "We apologize — floral delivery is not currently available for this ZIP code.",
+      source: typeof body.source === "string" ? body.source : null,
+      disclaimer: typeof body.disclaimer === "string" ? body.disclaimer : null,
       at: Date.now(),
     };
     cache.set(zip, payload);

@@ -1,13 +1,18 @@
 /**
  * Proximity flower catalog: nearest stores → scrape → Grok rank → public choices.
+ * On scrape failure (403 etc.): classic 4 Wrrapd bouquets at geo flowers unit price.
  */
 const crypto = require('crypto');
 const storesLib = require('./stores');
 const scrape = require('./scrape');
 const grok = require('../grok-client');
+const wrrapdPricing = require('../wrrapd-pricing');
 
 const CACHE_TTL_MS = 40 * 60 * 1000;
-/** @type {Map<string, { at: number, status: string, choices: any[], offers: Map<string, any>, message?: string }>} */
+const CLASSIC_DISCLAIMER =
+  'Actual bouquets might differ slightly from the photos shown.';
+
+/** @type {Map<string, { at: number, status: string, choices: any[], offers: Map<string, any>, message?: string, source?: string, disclaimer?: string }>} */
 const zipCache = new Map();
 /** Global offer lookup for checkout validation */
 const offerById = new Map();
@@ -22,7 +27,18 @@ function publicChoice(offer) {
     title: offer.title,
     imageUrl: offer.imageUrl,
     price: offer.chargedPrice,
+    designKey: offer.designKey || null,
   };
+}
+
+function flowerUnitPriceForZip(postalCode) {
+  try {
+    const r = wrrapdPricing.resolveWrrapdUnitPrices({ postalCode: postalCode }, '');
+    const n = Number(r?.unitPrices?.flowers);
+    return Number.isFinite(n) && n > 0 ? n : 17.99;
+  } catch {
+    return 17.99;
+  }
 }
 
 function deterministicSelect(byRetailerCandidates) {
@@ -63,7 +79,6 @@ function deterministicSelect(byRetailerCandidates) {
   const pick = (arr, n) => arr.slice(0, n);
   let selected = [...pick(publix, wantP), ...pick(target, wantT), ...pick(sams, wantS)];
 
-  // Fill to min 5 from remaining preferred order
   const used = new Set(selected.map((c) => `${c.retailer}:${c.sku}`));
   const pool = [...publix, ...target, ...sams].filter((c) => !used.has(`${c.retailer}:${c.sku}`));
   while (selected.length < 5 && pool.length) {
@@ -77,8 +92,7 @@ async function grokRank(postalCode, byRetailerCandidates, storesNearby) {
   if (!grok.isConfigured()) return null;
   const compact = {};
   for (const r of ['publix', 'target', 'sams']) {
-    compact[r] = (byRetailerCandidates[r] || []).slice(0, 12).map((c, i) => ({
-      i,
+    compact[r] = (byRetailerCandidates[r] || []).slice(0, 12).map((c) => ({
       sku: c.sku,
       title: c.title,
       retailPrice: c.retailPrice,
@@ -138,10 +152,14 @@ function toOffers(selected) {
     const offerId = crypto
       .createHash('sha256')
       .update(
-        `${c.retailer}|${c.storeId}|${c.sku}|${c.retailPrice}|${Date.now().toString(36)}`,
+        `${c.retailer}|${c.storeId}|${c.sku}|${c.retailPrice}|${c.classicBackup ? 'classic' : 'live'}|${Date.now().toString(36)}`,
       )
       .digest('hex')
       .slice(0, 24);
+    const charged =
+      c.chargedPrice != null && Number.isFinite(Number(c.chargedPrice))
+        ? Math.round(Number(c.chargedPrice) * 100) / 100
+        : chargedPrice(c.retailPrice);
     const offer = {
       offerId,
       retailer: c.retailer,
@@ -153,18 +171,25 @@ function toOffers(selected) {
       postalCode: c.storePostalCode,
       miles: c.miles,
       sku: c.sku,
+      designKey: c.designKey || null,
       title: c.title,
       imageUrl: c.imageUrl,
       productUrl: c.productUrl,
       retailPrice: c.retailPrice,
-      chargedPrice: chargedPrice(c.retailPrice),
+      chargedPrice: charged,
       isRose: !!c.isRose,
+      classicBackup: !!c.classicBackup,
       createdAt: new Date().toISOString(),
     };
     offerById.set(offerId, offer);
     offers.push(offer);
   }
   return offers;
+}
+
+function cachePayload(zip, payload, offerMap) {
+  zipCache.set(zip, { at: Date.now(), ...payload, offers: offerMap || new Map() });
+  return payload;
 }
 
 async function buildCatalogForZip(postalCode) {
@@ -183,52 +208,74 @@ async function buildCatalogForZip(postalCode) {
       status: cached.status,
       choices: cached.choices,
       message: cached.message,
+      source: cached.source,
+      disclaimer: cached.disclaimer,
     };
   }
 
   const { byRetailer } = await storesLib.nearestStoresForZip(zip);
   const active = Object.entries(byRetailer).filter(([, s]) => s);
   if (!active.length) {
-    const payload = {
+    return cachePayload(zip, {
       status: 'unavailable',
       choices: [],
       message:
         'We apologize — floral delivery is not currently available for this ZIP code. Gift wrapping is still available.',
-    };
-    zipCache.set(zip, { at: Date.now(), ...payload, offers: new Map() });
-    return payload;
+    });
   }
 
   const byRetailerCandidates = { publix: [], target: [], sams: [] };
+  let anyLive = false;
+  let anyScrapeFailed = false;
   await Promise.all(
     active.map(async ([retailer, store]) => {
-      const items = await scrape.fetchBouquetsForStore(store);
-      byRetailerCandidates[retailer] = items;
+      const result = await scrape.fetchBouquetsForStore(store);
+      if (result.scrapeFailed) anyScrapeFailed = true;
+      if (result.items?.length) {
+        anyLive = true;
+        byRetailerCandidates[retailer] = result.items;
+      }
     }),
   );
 
-  let selected = await grokRank(zip, byRetailerCandidates, byRetailer);
-  if (!selected || selected.length < 5) {
-    selected = deterministicSelect(byRetailerCandidates);
+  let selected = null;
+  let source = 'live';
+  let disclaimer = null;
+
+  if (anyLive) {
+    selected = await grokRank(zip, byRetailerCandidates, byRetailer);
+    if (!selected || selected.length < 5) {
+      selected = deterministicSelect(byRetailerCandidates);
+    }
   }
 
   if (!selected || selected.length < 5) {
-    const payload = {
-      status: 'unavailable',
-      choices: [],
-      message:
-        'We apologize — floral delivery is not currently available for this ZIP code. Gift wrapping is still available.',
-    };
-    zipCache.set(zip, { at: Date.now(), ...payload, offers: new Map() });
-    return payload;
+    // Classic 4-bouquet backup (403 / empty scrape) at Wrrapd flowers unit price
+    const preferStore =
+      byRetailer.publix || byRetailer.target || byRetailer.sams || active[0][1];
+    const unit = flowerUnitPriceForZip(zip);
+    selected = scrape.classicFourBouquets(preferStore, unit);
+    source = 'classic_backup';
+    disclaimer = CLASSIC_DISCLAIMER;
+    console.warn(
+      '[flowers-catalog] using classic 4-bouquet backup for',
+      zip,
+      'scrapeFailed=',
+      anyScrapeFailed,
+    );
   }
 
   const offers = toOffers(selected);
   const choices = offers.map(publicChoice);
-  const payload = { status: 'ok', choices, message: null };
+  const payload = {
+    status: 'ok',
+    choices,
+    message: null,
+    source,
+    disclaimer,
+  };
   const offerMap = new Map(offers.map((o) => [o.offerId, o]));
-  zipCache.set(zip, { at: Date.now(), ...payload, offers: offerMap });
-  return payload;
+  return cachePayload(zip, payload, offerMap);
 }
 
 function prefetch(postalCode) {
@@ -236,13 +283,14 @@ function prefetch(postalCode) {
   if (zip.length !== 5) return Promise.resolve({ ok: false, error: 'invalid_zip' });
   const existing = zipCache.get(zip);
   if (existing && Date.now() - existing.at < CACHE_TTL_MS) {
-    return Promise.resolve({ ok: true, cached: true, status: existing.status });
+    return Promise.resolve({ ok: true, cached: true, status: existing.status, source: existing.source });
   }
   return buildCatalogForZip(zip).then((r) => ({
     ok: true,
     cached: false,
     status: r.status,
     count: r.choices?.length || 0,
+    source: r.source,
   }));
 }
 
