@@ -1,10 +1,11 @@
 /**
  * Customer-facing Wrrapd payment summary line items (shared across retailers).
  * AI/upload fees are rolled into the gift-wrap line label, not separate rows.
+ * Flower line uses per-offer flowerPrice when present (live catalog), else unit price.
  */
 
 /**
- * @param {Array<{ wrapPref?: string, flowers?: boolean }>} choices
+ * @param {Array<{ wrapPref?: string, flowers?: boolean, flowerPrice?: number|null }>} choices
  * @param {{ giftWrapBase: number, customDesignAi: number, customDesignUpload: number, flowers: number }} unitPrices
  * @returns {Array<{ label: string, amount: string }>}
  */
@@ -16,13 +17,18 @@ export function buildGiftWrapInvoiceRows(choices, unitPrices) {
   let aiCount = 0;
   let uploadCount = 0;
   let flowerCount = 0;
+  let flowersTotal = 0;
 
   for (const ch of list) {
     const wrap = ch.wrapPref || "wrrapd";
     if (wrap === "ai") aiCount++;
     else if (wrap === "upload") uploadCount++;
     else stdCount++;
-    if (ch.flowers) flowerCount++;
+    if (ch.flowers) {
+      flowerCount++;
+      const offerAmt = Number(ch.flowerPrice);
+      flowersTotal += Number.isFinite(offerAmt) && offerAmt > 0 ? offerAmt : Number(p.flowers) || 0;
+    }
   }
 
   /** @type {Array<{ label: string, amount: string }>} */
@@ -55,7 +61,7 @@ export function buildGiftWrapInvoiceRows(choices, unitPrices) {
     const xF = flowerCount > 1 ? ` (×${flowerCount})` : "";
     rows.push({
       label: `Flowers${xF}`,
-      amount: `$${(p.flowers * flowerCount).toFixed(2)}`,
+      amount: `$${flowersTotal.toFixed(2)}`,
     });
   }
 

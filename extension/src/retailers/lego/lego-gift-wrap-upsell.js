@@ -136,28 +136,39 @@ function findCheckoutSecurelyButton() {
 function syncLegoBagPayReminder() {
   const card = document.querySelector(`[${LEGO_GIFT_CART_OPTIN_DATA_ATTR}]`);
   if (!card?.parentElement) return;
-  const show = readGiftRadio() === "yes" && readGiftChoicesSaved() && readGiftLegalTermsAccepted() && !readLegoPaymentSuccess();
+  const show =
+    readGiftRadio() === "yes" &&
+    readGiftChoicesSaved() &&
+    readGiftLegalTermsAccepted() &&
+    !readLegoPaymentSuccess();
   const existing = document.querySelector(`[${LEGO_BAG_PAY_HINT_ATTR}]`);
-  if (!show) { if (existing) existing.remove(); return; }
+  if (!show) {
+    if (existing) existing.remove();
+    return;
+  }
+  // Prefer the real Wrrapd pay summary near Checkout Securely; keep a short scroll hint only.
+  applyCheckoutSecurelyGate();
   if (existing) return;
   const hint = document.createElement("div");
   hint.setAttribute(LEGO_BAG_PAY_HINT_ATTR, "1");
   hint.setAttribute("role", "status");
-  hint.style.cssText = "box-sizing:border-box;width:100%;margin:0 0 0.75rem 0;padding:12px 14px;background:linear-gradient(180deg,#fffbeb,#fff7ed);border:1px solid #fbbf24;border-radius:0.5rem;";
+  hint.style.cssText =
+    "box-sizing:border-box;width:100%;margin:0 0 0.75rem 0;padding:12px 14px;background:linear-gradient(180deg,#fffbeb,#fff7ed);border:1px solid #fbbf24;border-radius:0.5rem;";
   const t = document.createElement("p");
   t.style.cssText = "margin:0 0 6px;font-size:15px;color:#78350f;font-weight:600;";
   t.textContent = "Please complete payment to Wrrapd to continue";
   const p = document.createElement("p");
   p.style.cssText = "margin:0 0 8px;font-size:14px;color:#92400e;";
   p.textContent =
-    "Your gift-wrap choices are saved. Please click Checkout Securely, then complete payment to Wrrapd when prompted.";
+    "Your gift-wrap and flower choices are saved. Scroll to the Wrrapd payment summary (gift-wrapping + flowers) above Checkout Securely and pay Wrrapd before continuing.";
   const go = document.createElement("button");
   go.type = "button";
   go.className = "sk-button sk-button--primary sk-button--small sk-button--neutral";
-  go.textContent = "Scroll to checkout";
+  go.textContent = "Scroll to Wrrapd payment";
   go.addEventListener("click", () => {
+    const panel = document.getElementById("wrrapd-lego-payment-summary-root");
     const b = findCheckoutSecurelyButton();
-    if (b) b.scrollIntoView({ behavior: "smooth", block: "center" });
+    (panel || b)?.scrollIntoView({ behavior: "smooth", block: "center" });
   });
   hint.append(t, p, go);
   card.parentElement.insertBefore(hint, card);
@@ -461,20 +472,20 @@ export function openLegoGiftServiceModal() {
         if (!r.checked) return;
         currentFlowerOfferId = c.offerId;
         currentFlowerPrice = Number(c.price);
-        currentFlowerTitle = c.title || "";
+        currentFlowerTitle = c.title || `Bouquet #${idx + 1}`;
         currentFlowerImageUrl = imgUrl;
-        currentFlowerDesign = c.designKey || c.title || c.offerId;
+        currentFlowerDesign = c.title || `Bouquet #${idx + 1}`;
       });
       const img = document.createElement("img");
       img.src = imgUrl;
-      img.alt = c.title || `Bouquet ${idx + 1}`;
+      img.alt = c.title || `Bouquet #${idx + 1}`;
       img.style.cssText =
         "width:100%;aspect-ratio:1;object-fit:cover;border-radius:6px;border:1px solid #e5e7eb;background:#f8fafc;";
       const cap = document.createElement("span");
       cap.textContent = formatUsd(c.price);
       cap.style.cssText = "font-weight:700;font-size:12px;";
       const name = document.createElement("span");
-      name.textContent = (c.title || "Bouquet").slice(0, 42);
+      name.textContent = c.title || `Bouquet #${idx + 1}`;
       name.style.cssText = "font-size:11px;line-height:1.25;color:#334155;";
       lab.append(r, img, cap, name);
       flowersGrid.append(lab);
@@ -485,7 +496,7 @@ export function openLegoGiftServiceModal() {
     if (!currentFlowers) return;
     flowersFinePrint.style.display = "none";
     flowersMsg.style.display = "block";
-    flowersMsg.textContent = "Finding beautiful bouquets near your giftee…";
+    flowersMsg.textContent = "Finding a lovely bouquet with your gift…";
     flowersGrid.style.display = "none";
     const zip = zipBar.getZip() || readValidatedEstimateZip("wrrapdLego") || gifteeZip5();
     const cat = await loadFlowersCatalog(zip);

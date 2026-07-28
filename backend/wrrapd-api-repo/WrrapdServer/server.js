@@ -1399,7 +1399,7 @@ function summarizeWrrapdLinesFromOrderRecord(data) {
         } else if (row.uploaded_design_name) {
             designSummary = `Upload: ${String(row.uploaded_design_name).trim()}`;
         } else if (row.checkbox_flowers) {
-            designSummary = row.selected_flower_design
+            designSummary = row.selected_flower_design && /^Bouquet\s*#\s*\d+$/i.test(String(row.selected_flower_design).trim())
                 ? `Flowers: ${String(row.selected_flower_design).trim()}`
                 : 'Flowers add-on';
         } else if (row.selected_wrapping_option) {
@@ -1429,7 +1429,7 @@ function summarizeWrrapdLinesFromOrderRecord(data) {
         } else if (row.uploaded_design_name) {
             designLabel = `Upload: ${String(row.uploaded_design_name).trim()}`;
         } else if (row.checkbox_flowers) {
-            designLabel = row.selected_flower_design
+            designLabel = row.selected_flower_design && /^Bouquet\s*#\s*\d+$/i.test(String(row.selected_flower_design).trim())
                 ? `Flowers: ${String(row.selected_flower_design).trim()}`
                 : 'Flowers add-on';
         } else if (row.selected_wrapping_option) {
@@ -1455,12 +1455,18 @@ function summarizeWrrapdLinesFromOrderRecord(data) {
             designLabel,
             designPreviewUrl,
             flowers: row.checkbox_flowers === true,
-            flowerOption:
-                row.flower_title
-                    ? String(row.flower_title).trim().slice(0, 120)
-                    : row.selected_flower_design != null && String(row.selected_flower_design).trim() !== ''
-                      ? String(row.selected_flower_design).trim().slice(0, 32)
-                      : null,
+            // Customer/tracking summary: anonymous Bouquet #N only — never retailer SKU titles.
+            flowerOption: (() => {
+                const label =
+                    row.selected_flower_design != null && String(row.selected_flower_design).trim() !== ''
+                        ? String(row.selected_flower_design).trim()
+                        : row.flower_title
+                          ? String(row.flower_title).trim()
+                          : '';
+                if (/^Bouquet\s*#\s*\d+$/i.test(label)) return label.slice(0, 32);
+                if (row.checkbox_flowers) return 'Flowers';
+                return null;
+            })(),
             deliveryHint: deliveryHint != null ? String(deliveryHint).trim().slice(0, 200) : null,
             gifteeName,
             giftMessageSnippet: gm ? gm.slice(0, 160) + (gm.length > 160 ? '…' : '') : null,
@@ -2402,7 +2408,19 @@ app.post('/process-payment', async (req, res) => {
                                 <h3 style="margin-top: 0;">Item: ${item.title}</h3>
                                 <p><strong>ASIN:</strong> ${item.asin}</p>
                                 <p><strong>Flowers:</strong> ${item.checkbox_flowers ? 'Yes' : 'No'}</p>
-                                ${item.selected_flower_design ? `<p><strong>Flower Design:</strong> ${item.selected_flower_design}</p>` : ''}
+                                ${(() => {
+                                    const offer = item.flower_offer_id
+                                        ? flowerCatalog.getOffer(String(item.flower_offer_id))
+                                        : null;
+                                    const real =
+                                        (offer && offer.title) ||
+                                        item.flower_title ||
+                                        item.selected_flower_design ||
+                                        '';
+                                    return real
+                                        ? `<p><strong>Flower product (ops):</strong> ${String(real).replace(/</g, '&lt;')}</p>`
+                                        : '';
+                                })()}
                                 ${item.selected_wrapping_option ? `<p><strong>Wrapping Option:</strong> ${item.selected_wrapping_option}</p>` : ''}
                                 
                                 ${item.selected_wrapping_option === 'ai' && item.selected_ai_design ? 
@@ -2553,11 +2571,17 @@ app.post('/process-payment', async (req, res) => {
                     imageUrl: it.imageUrl || '',
                     wrappingOption: it.selected_wrapping_option || '',
                     flowers: !!it.checkbox_flowers,
-                    flowerDesign: it.flower_title
-                        ? String(it.flower_title)
-                        : it.selected_flower_design
-                          ? String(it.selected_flower_design)
-                          : '',
+                    // Admin/ops + console: prefer real product title from the live offer.
+                    // Customer-facing emails never use this for naming (thank-you shows "Flowers" only).
+                    flowerDesign: (() => {
+                      const offer = it.flower_offer_id
+                        ? flowerCatalog.getOffer(String(it.flower_offer_id))
+                        : null;
+                      if (offer?.title) return String(offer.title);
+                      if (it.flower_title) return String(it.flower_title);
+                      if (it.selected_flower_design) return String(it.selected_flower_design);
+                      return '';
+                    })(),
                     flowerOfferId: it.flower_offer_id ? String(it.flower_offer_id) : '',
                     flowerAmount:
                         it.flower_amount != null && Number.isFinite(Number(it.flower_amount))

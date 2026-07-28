@@ -3633,14 +3633,14 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                                 if (!r.checked) return;
                                 subItem.flower_offer_id = c.offerId;
                                 subItem.flower_amount = Number(c.price);
-                                subItem.flower_title = c.title || '';
+                                subItem.flower_title = c.title || `Bouquet #${idx + 1}`;
                                 subItem.flower_image_url = imgUrl;
-                                subItem.selected_flower_design = c.designKey || c.title || c.offerId;
+                                subItem.selected_flower_design = c.title || `Bouquet #${idx + 1}`;
                                 saveItemToLocalStorage(productObj);
                             });
                             const img = document.createElement('img');
                             img.src = imgUrl;
-                            img.alt = c.title || `Bouquet ${idx + 1}`;
+                            img.alt = c.title || `Bouquet #${idx + 1}`;
                             img.style.cssText =
                                 'width:150px;height:150px;max-width:100%;border-radius:4px;object-fit:cover;border:1px solid #e5e7eb;background:#f8fafc;';
                             const cap = document.createElement('span');
@@ -3648,7 +3648,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                             cap.textContent = formatUsd(c.price);
                             const name = document.createElement('span');
                             name.style.cssText = 'font-size:11px;line-height:1.25;color:#334155;';
-                            name.textContent = (c.title || 'Bouquet').slice(0, 42);
+                            name.textContent = c.title || `Bouquet #${idx + 1}`;
                             lab.append(r, img, cap, name);
                             grid.append(lab);
                         });
@@ -3660,7 +3660,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                         if (flowerFinePrintEl) flowerFinePrintEl.style.display = 'none';
                         if (flowerMsgEl) {
                             flowerMsgEl.style.display = 'block';
-                            flowerMsgEl.textContent = 'Finding beautiful bouquets near your giftee…';
+                            flowerMsgEl.textContent = 'Finding a lovely bouquet with your gift…';
                         }
                         if (flowerDesignsDiv) flowerDesignsDiv.style.display = 'none';
                         const zip =

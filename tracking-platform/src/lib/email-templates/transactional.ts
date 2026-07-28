@@ -37,7 +37,8 @@ function wrappingModeLabel(code: string | undefined): string {
 
 function thankYouGiftSummaryLine(li: OrderLineItem): string {
   const bits: string[] = [wrappingModeLabel(li.wrappingOption)];
-  if (li.flowers) bits.push(li.flowerDesign ? `Flowers (${escapeHtml(li.flowerDesign)})` : "Flowers");
+  // Never expose retailer product names to the gifter — flowers are anonymous.
+  if (li.flowers) bits.push("Flowers");
   if (!bits.length) return "";
   return `<p style="margin:6px 0 0;font-size:12px;color:#555;line-height:1.4;">${bits.join(" · ")}</p>`;
 }
@@ -45,6 +46,7 @@ function thankYouGiftSummaryLine(li: OrderLineItem): string {
 /** Compact ops lines for admin new-order email (one item card). */
 function lineItemOpsGiftBlock(li: OrderLineItem): string {
   const parts: string[] = [];
+  // Admin/ops: show real floral product name when available.
   const flowerBit = li.flowers
     ? ` · Flowers yes${li.flowerDesign ? ` (${escapeHtml(li.flowerDesign)})` : ""}`
     : " · Flowers no";

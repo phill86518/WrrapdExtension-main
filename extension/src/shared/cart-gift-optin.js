@@ -746,20 +746,20 @@ function openGiftChoicesModal(config, cartSnapshot) {
         if (!r.checked) return;
         currentFlowerOfferId = c.offerId;
         currentFlowerPrice = Number(c.price);
-        currentFlowerTitle = c.title || "";
+        currentFlowerTitle = c.title || `Bouquet #${idx + 1}`;
         currentFlowerImageUrl = imgUrl;
-        currentFlowerDesign = c.designKey || c.title || c.offerId;
+        currentFlowerDesign = c.title || `Bouquet #${idx + 1}`;
       });
       const img = document.createElement("img");
       img.src = imgUrl;
-      img.alt = c.title || `Bouquet ${idx + 1}`;
+      img.alt = c.title || `Bouquet #${idx + 1}`;
       img.style.cssText =
         "width:100%;aspect-ratio:1;object-fit:cover;border-radius:6px;border:1px solid #e5e7eb;background:#f8fafc;";
       const cap = document.createElement("span");
       cap.textContent = formatUsd(c.price);
       cap.style.cssText = "font-weight:700;font-size:12px;";
       const name = document.createElement("span");
-      name.textContent = (c.title || "Bouquet").slice(0, 42);
+      name.textContent = c.title || `Bouquet #${idx + 1}`;
       name.style.cssText = "font-size:11px;line-height:1.25;color:#334155;";
       lab.append(r, img, cap, name);
       flowersGrid.append(lab);
@@ -770,7 +770,7 @@ function openGiftChoicesModal(config, cartSnapshot) {
     if (!currentFlowers) return;
     flowersFinePrint.style.display = "none";
     flowersMsg.style.display = "block";
-    flowersMsg.textContent = "Finding beautiful bouquets near your giftee…";
+    flowersMsg.textContent = "Finding a lovely bouquet with your gift…";
     flowersGrid.style.display = "none";
     const zip = zipBar.getZip() || readValidatedEstimateZip(config.sessionPrefix);
     const cat = await loadFlowersCatalog(zip);

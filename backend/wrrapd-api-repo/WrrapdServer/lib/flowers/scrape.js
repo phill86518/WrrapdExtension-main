@@ -409,7 +409,7 @@ function classicFourBouquets(store, flowerUnitPrice) {
     retailer: s.retailer || 'publix',
     sku: `flowers-${n}`,
     designKey: `flowers-${n}`,
-    title: `Bouquet ${n}`,
+    title: `Bouquet #${n}`,
     imageUrl: images[i],
     retailPrice: charged,
     chargedPrice: charged,

@@ -82,6 +82,13 @@ export function applyCheckoutSecurelyGate() {
       btn.removeAttribute("data-wrrapd-lego-checkout-gated");
     }
   }
+  // Mount the real Wrrapd invoice (gift-wrap + flowers) as soon as choices are saved —
+  // do not leave shoppers staring at LEGO's order total alone.
+  if (radio === "yes" && ready) {
+    void ensurePaymentSummaryUi();
+  } else {
+    removeLegoPaymentSummary();
+  }
 }
 
 function getActiveCheckoutUnitPrices() {
@@ -798,7 +805,14 @@ async function ensurePaymentSummaryUi() {
   const paid = readLegoPaymentSuccess();
   const payReady = legoPricingFetchComplete === true;
   const { invoiceRows, totalCents } = buildSummaryLinesAndTotal();
+  const sig = `${paid}|${payReady}|${totalCents}|${invoiceRows.map((r) => `${r.label}:${r.amount}`).join("|")}`;
+  const existing = document.getElementById(SUMMARY_ROOT_ID);
+  if (existing && existing.getAttribute("data-wrrapd-summary-sig") === sig) {
+    return;
+  }
   const { payBtn } = mountSummaryNearButton(btn, invoiceRows, totalCents, paid, payReady);
+  const host = document.getElementById(SUMMARY_ROOT_ID);
+  if (host) host.setAttribute("data-wrrapd-summary-sig", sig);
   if (!paid && payReady) {
     payBtn.addEventListener("click", () => {
       openLegoPaymentPopup();
