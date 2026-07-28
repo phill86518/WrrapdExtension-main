@@ -40,6 +40,21 @@ export type WrapOrderPhase =
   | "label_ready"
   | "complete";
 
+export type FlowerPickupLocation = {
+  retailer: "publix" | "target" | "sams" | string;
+  storeName: string;
+  address: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  productTitle: string;
+  retailPrice: number;
+  chargedPrice: number;
+  sku?: string;
+  productUrl?: string;
+  imageUrl?: string;
+};
+
 export type OrderLineItem = {
   asin?: string;
   title?: string;
@@ -47,8 +62,11 @@ export type OrderLineItem = {
   /** Legacy: wrrapd | upload | ai */
   wrappingOption?: string;
   flowers?: boolean;
-  /** e.g. flowers-1 … from extension */
+  /** Bouquet title or legacy flowers-N id */
   flowerDesign?: string;
+  flowerOfferId?: string;
+  flowerAmount?: number;
+  flowerImageUrl?: string;
   uploadedDesignPath?: string;
   uploadedDesignFileName?: string;
   /** HTTPS URL for gift-wrap design preview (AI or upload) — email / admin */
@@ -156,6 +174,8 @@ export type Order = {
   deliveryInstructions?: string;
   /** When true (or flowers on line items), driver should pick up flowers. */
   pickupFlowers?: boolean;
+  /** Retail store pickup details for manual florist orders + drivers. */
+  flowerPickup?: FlowerPickupLocation[];
   /** Florist shop order / ticket number when flowers were placed. */
   floristOrderNumber?: string;
   /** ISO deliver-by deadline for the giftee drop-off. */

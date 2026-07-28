@@ -114,6 +114,32 @@ function seedStates(states, { notes } = {}) {
   });
 }
 
+/** Launch markets: Atlanta, Savannah, Duval, Miami, Orlando, Tampa (city/county mix). */
+const LAUNCH_METRO_COUNTIES = [
+  { state: 'GA', county: 'FULTON' },
+  { state: 'GA', county: 'DEKALB' },
+  { state: 'GA', county: 'COBB' },
+  { state: 'GA', county: 'CLAYTON' },
+  { state: 'GA', county: 'GWINNETT' },
+  { state: 'GA', county: 'CHATHAM' },
+  { state: 'FL', county: 'DUVAL' },
+  { state: 'FL', county: 'MIAMI-DADE' },
+  { state: 'FL', county: 'ORANGE' },
+  { state: 'FL', county: 'HILLSBOROUGH' },
+];
+
+function seedLaunchMetros({ notes } = {}) {
+  const zips = [];
+  for (const { state, county } of LAUNCH_METRO_COUNTIES) {
+    zips.push(...zipCounty.listZipsForCounty(state, county));
+  }
+  return saveAllowedZipCodes(zips, {
+    notes:
+      notes ||
+      `Seeded launch metros (Atlanta, Savannah, Duval, Miami, Orlando, Tampa) — ${uniqueSortedZips(zips).length} ZIPs.`,
+  });
+}
+
 function checkZip(postalCode) {
   const z = normZip(postalCode);
   const allowed = z.length === 5 && isZipAllowed(z);
@@ -131,6 +157,8 @@ module.exports = {
   removeZips,
   listZipsForStates,
   seedStates,
+  seedLaunchMetros,
+  LAUNCH_METRO_COUNTIES,
   checkZip,
   uniqueSortedZips,
 };

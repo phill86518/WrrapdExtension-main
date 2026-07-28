@@ -28,7 +28,8 @@ import {
   buildPickupOnlyNotice,
 } from "./cart-fulfillment.js";
 import { formatUsd, getActiveUnitPrices, createUnitPricingState } from "./wrrapd-unit-pricing.js";
-import { mountGifteeZipEstimateBar } from "./giftee-zip-estimate.js";
+import { mountGifteeZipEstimateBar, readValidatedEstimateZip } from "./giftee-zip-estimate.js";
+import { loadFlowersCatalog } from "./flowers-catalog.js";
 import { unlockHubShippingFields } from "./wrrapd-hub.js";
 
 function normalizeWhitespace(value) {
@@ -272,6 +273,10 @@ function emptyChoice(title) {
     aiDesign: null,
     flowers: false,
     flowerDesign: "",
+    flowerOfferId: "",
+    flowerPrice: null,
+    flowerTitle: "",
+    flowerImageUrl: "",
     message: "",
   };
 }
@@ -678,47 +683,104 @@ function openGiftChoicesModal(config, cartSnapshot) {
 
   wrapFieldset.append(wrrapdRow, wrrapdHintWrap, uploadRow, uploadWrap, aiRow, aiWrap);
 
-  // ── Flowers ──
+  // ── Flowers (live proximity catalog) ──
   let currentFlowers = false;
   let currentFlowerDesign = "";
+  let currentFlowerOfferId = "";
+  let currentFlowerPrice = null;
+  let currentFlowerTitle = "";
+  let currentFlowerImageUrl = "";
+  let liveFlowerChoices = [];
   const flowersLabel = document.createElement("label");
   flowersLabel.style.cssText =
     "display:flex;align-items:center;gap:8px;margin:0 0 6px;font-size:15px;font-weight:700;color:#0f172a;cursor:pointer;";
   const flowersCb = document.createElement("input");
   flowersCb.type = "checkbox";
   const flowersText = document.createElement("span");
-  flowersText.textContent = "Add flowers — choose from below (15–20 stem bouquets)";
+  flowersText.textContent = "Add flowers — choose a bouquet below";
   flowersLabel.append(flowersCb, flowersText);
+  const flowersMsg = document.createElement("p");
+  flowersMsg.style.cssText =
+    "display:none;margin:0 0 10px 24px;font-size:13px;line-height:1.45;color:#475569;";
   const flowersGrid = document.createElement("div");
   flowersGrid.style.cssText =
-    "display:none;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:4px 0 14px 24px;";
-  const flowerRadios = [1, 2, 3, 4].map((n) => {
-    const lab = document.createElement("label");
-    lab.style.cssText =
-      "display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;font-size:12px;color:#0f172a;";
-    const r = document.createElement("input");
-    r.type = "radio";
-    r.name = `${config.sessionPrefix}-flower-design`;
-    r.value = `flowers-${n}`;
-    r.addEventListener("change", () => {
-      if (r.checked) currentFlowerDesign = r.value;
+    "display:none;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;margin:4px 0 14px 24px;";
+
+  function clearFlowerSelection() {
+    currentFlowerDesign = "";
+    currentFlowerOfferId = "";
+    currentFlowerPrice = null;
+    currentFlowerTitle = "";
+    currentFlowerImageUrl = "";
+  }
+
+  function renderLiveFlowerGrid(choices) {
+    flowersGrid.innerHTML = "";
+    liveFlowerChoices = Array.isArray(choices) ? choices : [];
+    liveFlowerChoices.forEach((c, idx) => {
+      const lab = document.createElement("label");
+      lab.style.cssText =
+        "display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;font-size:12px;color:#0f172a;text-align:center;";
+      const r = document.createElement("input");
+      r.type = "radio";
+      r.name = `${config.sessionPrefix}-flower-offer`;
+      r.value = c.offerId;
+      if (currentFlowerOfferId && currentFlowerOfferId === c.offerId) r.checked = true;
+      r.addEventListener("change", () => {
+        if (!r.checked) return;
+        currentFlowerOfferId = c.offerId;
+        currentFlowerPrice = Number(c.price);
+        currentFlowerTitle = c.title || "";
+        currentFlowerImageUrl = c.imageUrl || "";
+        currentFlowerDesign = c.title || c.offerId;
+      });
+      const img = document.createElement("img");
+      img.src = c.imageUrl || "";
+      img.alt = c.title || `Bouquet ${idx + 1}`;
+      img.style.cssText =
+        "width:100%;aspect-ratio:1;object-fit:cover;border-radius:6px;border:1px solid #e5e7eb;background:#f8fafc;";
+      const cap = document.createElement("span");
+      cap.textContent = formatUsd(c.price);
+      cap.style.cssText = "font-weight:700;font-size:12px;";
+      const name = document.createElement("span");
+      name.textContent = (c.title || "Bouquet").slice(0, 42);
+      name.style.cssText = "font-size:11px;line-height:1.25;color:#334155;";
+      lab.append(r, img, cap, name);
+      flowersGrid.append(lab);
     });
-    const img = document.createElement("img");
-    try {
-      img.src = chrome.runtime.getURL(`assets/flowers/flowers-${n}.webp`);
-    } catch {
-      /* ignore */
+  }
+
+  async function ensureFlowersUi() {
+    if (!currentFlowers) return;
+    flowersMsg.style.display = "block";
+    flowersMsg.textContent = "Finding beautiful bouquets near your giftee…";
+    flowersGrid.style.display = "none";
+    const zip = zipBar.getZip() || readValidatedEstimateZip(config.sessionPrefix);
+    const cat = await loadFlowersCatalog(zip);
+    if (!currentFlowers) return;
+    if (cat.status !== "ok" || !cat.choices?.length) {
+      flowersGrid.style.display = "none";
+      flowersMsg.style.display = "block";
+      flowersMsg.textContent =
+        cat.message ||
+        "We apologize — floral delivery is not currently available for this ZIP code. Gift wrapping is still available.";
+      clearFlowerSelection();
+      return;
     }
-    img.alt = `Bouquet ${n}`;
-    img.style.cssText = "width:100%;aspect-ratio:1;object-fit:cover;border-radius:6px;border:1px solid #e5e7eb;";
-    lab.append(r, img);
-    flowersGrid.append(lab);
-    return r;
-  });
+    flowersMsg.style.display = "none";
+    flowersGrid.style.display = "grid";
+    renderLiveFlowerGrid(cat.choices);
+  }
+
   flowersCb.addEventListener("change", () => {
     currentFlowers = flowersCb.checked;
-    flowersGrid.style.display = currentFlowers ? "grid" : "none";
-    if (!currentFlowers) currentFlowerDesign = "";
+    if (!currentFlowers) {
+      flowersGrid.style.display = "none";
+      flowersMsg.style.display = "none";
+      clearFlowerSelection();
+      return;
+    }
+    void ensureFlowersUi();
   });
 
   // ── Gift message ──
@@ -758,6 +820,7 @@ function openGiftChoicesModal(config, cartSnapshot) {
     wrapLegend,
     wrapFieldset,
     flowersLabel,
+    flowersMsg,
     flowersGrid,
     msgLabel,
     msgInput,
@@ -771,7 +834,7 @@ function openGiftChoicesModal(config, cartSnapshot) {
     wrrapdText.textContent = `Allow Wrrapd to choose the wrapping — ${formatUsd(p.giftWrapBase)}`;
     uploadPriceNote.textContent = `(+${formatUsd(p.customDesignUpload)})`;
     aiPriceNote.textContent = `(+${formatUsd(p.customDesignAi)})`;
-    flowersText.textContent = `Add flowers — choose from below (15–20 stem bouquets) — ${formatUsd(p.flowers)}`;
+    flowersText.textContent = "Add flowers — choose a bouquet below";
   };
 
   const zipBar = mountGifteeZipEstimateBar({
@@ -829,11 +892,16 @@ function openGiftChoicesModal(config, cartSnapshot) {
 
     currentFlowers = ch.flowers || false;
     currentFlowerDesign = ch.flowerDesign || "";
+    currentFlowerOfferId = ch.flowerOfferId || "";
+    currentFlowerPrice = ch.flowerPrice != null ? Number(ch.flowerPrice) : null;
+    currentFlowerTitle = ch.flowerTitle || "";
+    currentFlowerImageUrl = ch.flowerImageUrl || "";
     flowersCb.checked = currentFlowers;
-    flowersGrid.style.display = currentFlowers ? "grid" : "none";
-    flowerRadios.forEach((r) => {
-      r.checked = r.value === currentFlowerDesign;
-    });
+    if (currentFlowers) void ensureFlowersUi();
+    else {
+      flowersGrid.style.display = "none";
+      flowersMsg.style.display = "none";
+    }
 
     msgInput.value = ch.message || "";
 
@@ -865,6 +933,10 @@ function openGiftChoicesModal(config, cartSnapshot) {
       aiDesign,
       flowers: currentFlowers,
       flowerDesign: currentFlowerDesign,
+      flowerOfferId: currentFlowerOfferId,
+      flowerPrice: currentFlowerPrice,
+      flowerTitle: currentFlowerTitle,
+      flowerImageUrl: currentFlowerImageUrl,
       message: msgInput.value.trim(),
     };
   }
@@ -902,6 +974,11 @@ function openGiftChoicesModal(config, cartSnapshot) {
     if (occasionMissing()) {
       occasionSelect.style.borderColor = "#dc2626";
       occasionSelect.focus();
+      return;
+    }
+    if (currentFlowers && !currentFlowerOfferId) {
+      flowersMsg.style.display = "block";
+      flowersMsg.textContent = "Please select a bouquet, or uncheck Add flowers.";
       return;
     }
     captureCurrentChoices();

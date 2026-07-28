@@ -10,6 +10,8 @@ export type DriverLabelPayload = {
   orderId: string;
   pickupFlowers: boolean;
   floristOrderNumber: string | null;
+  /** Compact flower store pickup lines for the courier app. */
+  flowerPickupSummary: string | null;
   giftee: {
     name: string;
     addressLine1: string;
@@ -53,6 +55,23 @@ export function buildDriverLabelPayload(order: Order): DriverLabelPayload {
   const specialInstructions = order.deliveryInstructions?.trim() || "";
   const pickupFlowers = orderNeedsFlowerPickup(order);
   const floristOrderNumber = order.floristOrderNumber?.trim() || null;
+  const flowerPickupSummary =
+    pickupFlowers && order.flowerPickup?.length
+      ? order.flowerPickup
+          .map((fp) => {
+            const r =
+              fp.retailer === "publix"
+                ? "Publix"
+                : fp.retailer === "target"
+                  ? "Target"
+                  : fp.retailer === "sams"
+                    ? "Sam's Club"
+                    : fp.retailer;
+            return `${r}: ${fp.storeName}, ${fp.address}, ${fp.city} ${fp.state} ${fp.postalCode} — ${fp.productTitle}`;
+          })
+          .join(" | ")
+          .slice(0, 500)
+      : null;
 
   const body: Omit<DriverLabelPayload, "sig"> = {
     type: "wrrapd_driver_label_v1",
@@ -61,6 +80,7 @@ export function buildDriverLabelPayload(order: Order): DriverLabelPayload {
     orderId: order.id,
     pickupFlowers,
     floristOrderNumber: pickupFlowers ? floristOrderNumber : null,
+    flowerPickupSummary: pickupFlowers ? flowerPickupSummary : null,
     giftee: {
       name: order.recipientName,
       addressLine1: order.addressLine1,

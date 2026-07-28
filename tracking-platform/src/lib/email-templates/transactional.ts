@@ -1,7 +1,7 @@
 import { formatInTimeZone } from "date-fns-tz";
 import { toInstantDate } from "@/lib/ny-date";
 import { wrrapdScheduledInstantIsoForUi } from "@/lib/order-schedule-display";
-import type { OrderLineItem } from "@/lib/types";
+import type { FlowerPickupLocation, OrderLineItem } from "@/lib/types";
 
 const NY = "America/New_York";
 const WRRAPD_LOGO_URL = "https://pay.wrrapd.com/img/wrrapd-logo-1-small.png";
@@ -239,8 +239,28 @@ export function adminNewOrderEmailHtml(input: {
   deliveryPreferencePending?: boolean;
   amazonDeliveryDatesSnapshot?: string[];
   lineItems?: OrderLineItem[];
+  flowerPickup?: FlowerPickupLocation[];
 }): string {
   const addr2 = input.addressLine2 ? `${escapeHtml(input.addressLine2)}, ` : "";
+  const flowerPickupBlock = (input.flowerPickup || [])
+    .map((fp, i) => {
+      const retailer =
+        fp.retailer === "publix"
+          ? "Publix"
+          : fp.retailer === "target"
+            ? "Target"
+            : fp.retailer === "sams"
+              ? "Sam's Club"
+              : escapeHtml(fp.retailer);
+      return `<div style="margin:8px 0 0;padding:10px 12px;background:#fff7ed;border:1px solid #fdba74;border-radius:8px;">
+        <p style="margin:0 0 4px;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#9a3412;">Flower pickup ${i + 1} — place order manually</p>
+        <p style="margin:0;font-size:13px;font-weight:600;color:#0f172a;">${escapeHtml(fp.productTitle)}</p>
+        <p style="margin:4px 0 0;font-size:12px;color:#334155;">Retail $${Number(fp.retailPrice).toFixed(2)} · Charged $${Number(fp.chargedPrice).toFixed(2)}${fp.sku ? ` · SKU ${escapeHtml(fp.sku)}` : ""}</p>
+        <p style="margin:6px 0 0;font-size:13px;color:#0f172a;"><strong>${retailer}</strong><br/>${escapeHtml(fp.storeName)}<br/>${escapeHtml(fp.address)}, ${escapeHtml(fp.city)}, ${escapeHtml(fp.state)} ${escapeHtml(fp.postalCode)}</p>
+        ${fp.productUrl ? `<p style="margin:6px 0 0;font-size:12px;"><a href="${escapeAttr(fp.productUrl)}" style="color:#1d4ed8;">Open product page</a></p>` : ""}
+      </div>`;
+    })
+    .join("");
   const contactCell = [
     escapeHtml(input.customerPhone),
     input.customerEmail
@@ -346,6 +366,7 @@ export function adminNewOrderEmailHtml(input: {
           : ""
       }
       ${wrappedRows ? `<p style="margin:8px 0 4px;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:#64748b;">Gift-wrap items</p>${wrappedRows}` : ""}
+      ${flowerPickupBlock ? `<p style="margin:12px 0 4px;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:#9a3412;">Flower store pickup</p>${flowerPickupBlock}` : ""}
     </td></tr>
   </table>
 </td></tr>`;

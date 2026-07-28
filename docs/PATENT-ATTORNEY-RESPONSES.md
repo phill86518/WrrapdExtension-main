@@ -2,7 +2,7 @@
 
 **Prepared for:** Provisional patent counsel  
 **Date:** July 12, 2026  
-**System state:** Extension v2.0.21 · 10 retailers · live wrrapd.com · pay server · tracking platform · WrapStar network  
+**System state:** Extension v3.0.1 · 10 retailers · live wrrapd.com · pay server · tracking platform · WrapStar network  
 **Repository:** `/home/phill/wrrapd-GCP` (monorepo: `extension/`, `backend/`, `tracking-platform/`, `wordpress/`)
 
 ---

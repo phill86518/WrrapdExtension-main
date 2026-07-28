@@ -36,6 +36,7 @@ export function AdminZipCodesEditor({
   onReplace,
   onCheck,
   onSeedFlGa,
+  onSeedLaunchMetros,
 }: {
   initial: AllowedZipCodesPayload;
   onAdd: (zips: string[]) => Promise<MutateResult>;
@@ -43,6 +44,7 @@ export function AdminZipCodesEditor({
   onReplace: (zips: string[], notes?: string) => Promise<PayloadResult>;
   onCheck: (zip: string) => Promise<CheckResult>;
   onSeedFlGa: () => Promise<PayloadResult>;
+  onSeedLaunchMetros: () => Promise<PayloadResult>;
 }) {
   const [data, setData] = useState(initial);
   const [addText, setAddText] = useState("");
@@ -88,6 +90,31 @@ export function AdminZipCodesEditor({
               className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-800 hover:bg-slate-50 disabled:opacity-50"
             >
               Download CSV
+            </button>
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() =>
+                run(async () => {
+                  if (
+                    !window.confirm(
+                      "Replace the entire allowlist with launch metros only (Atlanta, Savannah, Duval, Miami, Orlando, Tampa)?",
+                    )
+                  ) {
+                    return;
+                  }
+                  const r = await onSeedLaunchMetros();
+                  if (!r.ok) {
+                    setError(r.error);
+                    return;
+                  }
+                  setData(r.data);
+                  setMessage(`Seeded launch metros (${r.data.count.toLocaleString()} ZIPs).`);
+                })
+              }
+              className="rounded-lg bg-orange-600 px-3 py-2 text-sm font-medium text-white hover:bg-orange-700 disabled:opacity-50"
+            >
+              Seed launch metros
             </button>
             <button
               type="button"

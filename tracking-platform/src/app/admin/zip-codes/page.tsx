@@ -8,6 +8,7 @@ import {
   removeAllowedZipCodes,
   replaceAllowedZipCodes,
   seedAllowedZipCodesStates,
+  seedLaunchMetroZipCodes,
   type AllowedZipCodesPayload,
 } from "@/lib/wrrapd-zip-codes-admin";
 import { notFound } from "next/navigation";
@@ -89,6 +90,21 @@ async function seedFlGaAction() {
   }
 }
 
+async function seedLaunchMetrosAction() {
+  "use server";
+  const session = await getSession();
+  if (!session || session.role !== "admin") {
+    return { ok: false as const, error: "Unauthorized" };
+  }
+  try {
+    const data = await seedLaunchMetroZipCodes();
+    revalidatePath("/admin/zip-codes");
+    return { ok: true as const, data };
+  } catch (e) {
+    return { ok: false as const, error: e instanceof Error ? e.message : "Failed to seed launch metros" };
+  }
+}
+
 export default async function AdminZipCodesPage() {
   const session = await getSession();
   if (!session || session.role !== "admin") notFound();
@@ -107,8 +123,8 @@ export default async function AdminZipCodesPage() {
       <h1 className="mt-2 text-3xl font-semibold">Allowed ZIP codes</h1>
       <p className="mt-1 text-sm text-slate-600">
         Manage which giftee ZIP codes can receive Wrrapd deliveries. Checkout and gift modals use this
-        allowlist before showing pricing. Currently seeded for Florida and Georgia; add or remove as you
-        expand.
+        allowlist before showing pricing. Use <strong>Seed launch metros</strong> for Atlanta, Savannah,
+        Duval, Miami, Orlando, and Tampa.
       </p>
 
       {loadError && (
@@ -127,6 +143,7 @@ export default async function AdminZipCodesPage() {
           onReplace={replaceAction}
           onCheck={checkAction}
           onSeedFlGa={seedFlGaAction}
+          onSeedLaunchMetros={seedLaunchMetrosAction}
         />
       ) : null}
     </div>

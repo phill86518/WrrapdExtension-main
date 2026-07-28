@@ -7,7 +7,6 @@ const path = require('path');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const FormData = require('form-data');
 const Mailgun = require('mailgun.js');
-const OpenAI = require('openai');
 const { Storage } = require('@google-cloud/storage');
 const fs = require('fs');
 const crypto = require('crypto');
@@ -17,6 +16,9 @@ const http = require('http');
 const wrrapdPricing = require(path.join(__dirname, 'lib', 'wrrapd-pricing'));
 const salesTaxZip = require(path.join(__dirname, 'lib', 'sales-tax-zip'));
 const allowedZipCodesLib = require(path.join(__dirname, 'lib', 'allowed-zip-codes'));
+const grokClient = require(path.join(__dirname, 'lib', 'grok-client'));
+const flowerStores = require(path.join(__dirname, 'lib', 'flowers', 'stores'));
+const flowerCatalog = require(path.join(__dirname, 'lib', 'flowers', 'catalog'));
 
 // Initialize Google Cloud Storage
 let storageOptions = {
@@ -242,12 +244,13 @@ async function sendProcessPaymentPairEmails(opts) {
     ]);
 }
 
-// Initialize OpenAI client
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY
-});
-
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Warm flower store index in background (CSV → JSON + zip coords)
+flowerStores
+    .ensureIndex()
+    .then((idx) => console.log('[flowers-stores] ready', idx?.counts || {}))
+    .catch((e) => console.warn('[flowers-stores] warm failed', e.message));
 
 /** Public: resolved unit prices for checkout UI (Amazon extension + pay.wrrapd.com). */
 app.get('/api/pricing-preview', (req, res) => {
@@ -535,6 +538,88 @@ app.post('/api/admin/allowed-zip-codes/seed-states', express.json(), (req, res) 
     }
 });
 
+app.post('/api/admin/allowed-zip-codes/seed-launch-metros', express.json(), (req, res) => {
+    if (!req.isApiDomain) {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
+    if (!requireWrrapdAdminKey(req, res)) return;
+    try {
+        const saved = allowedZipCodesLib.seedLaunchMetros({ notes: req.body?.notes });
+        res.status(200).json({
+            ok: true,
+            allowedZipCodes: saved.allowedZipCodes,
+            count: saved.allowedZipCodes.length,
+            updatedAt: saved.updatedAt,
+            notes: saved.notes,
+            counties: allowedZipCodesLib.LAUNCH_METRO_COUNTIES,
+        });
+    } catch (e) {
+        console.error('[admin/allowed-zip-codes/seed-launch-metros] failed', e);
+        res.status(500).json({ error: 'Failed to seed launch metro ZIP codes' });
+    }
+});
+
+app.post('/api/admin/retailer-stores/reload', express.json(), async (req, res) => {
+    if (!req.isApiDomain) {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
+    if (!requireWrrapdAdminKey(req, res)) return;
+    try {
+        const idx = await flowerStores.buildIndexFromCsvs();
+        res.status(200).json({ ok: true, counts: idx.counts, updatedAt: idx.updatedAt });
+    } catch (e) {
+        console.error('[admin/retailer-stores/reload] failed', e);
+        res.status(500).json({ error: 'Failed to rebuild store index' });
+    }
+});
+
+app.get('/api/admin/retailer-stores', (req, res) => {
+    if (!req.isApiDomain) {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
+    if (!requireWrrapdAdminKey(req, res)) return;
+    const idx = flowerStores.loadIndex();
+    res.status(200).json({
+        ok: true,
+        counts: idx?.counts || null,
+        updatedAt: idx?.updatedAt || null,
+        maxMiles: flowerStores.MAX_MILES,
+    });
+});
+
+app.post('/api/flowers/prefetch', express.json(), async (req, res) => {
+    if (!req.isApiDomain) {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
+    try {
+        const postalCode = String(req.body?.postalCode || req.query?.postalCode || '');
+        const r = await flowerCatalog.prefetch(postalCode);
+        res.status(200).json(r);
+    } catch (e) {
+        console.error('[flowers/prefetch]', e);
+        res.status(500).json({ ok: false, error: 'prefetch_failed' });
+    }
+});
+
+app.get('/api/flowers/catalog', async (req, res) => {
+    if (!req.isApiDomain) {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
+    try {
+        const postalCode = String(req.query?.postalCode || '');
+        const r = await flowerCatalog.buildCatalogForZip(postalCode);
+        res.status(200).json(r);
+    } catch (e) {
+        console.error('[flowers/catalog]', e);
+        res.status(500).json({
+            status: 'unavailable',
+            choices: [],
+            message:
+                'We apologize — floral delivery is not currently available for this ZIP code. Gift wrapping is still available.',
+        });
+    }
+});
+
 // Endpoint specific to api.wrrapd.com
 app.post('/create-payment-intent', async (req, res) => {
     if (!req.isApiDomain) {
@@ -550,6 +635,20 @@ app.post('/create-payment-intent', async (req, res) => {
             const cart = wrrapdPricing.sanitizePricingCartFromRequest(pricingCart);
             if (!cart || !Array.isArray(cart.items) || cart.items.length === 0) {
                 return res.status(400).json({ error: 'pricingCart.items required' });
+            }
+            for (const item of cart.items) {
+                for (const opt of item.options || []) {
+                    if (!opt.checkbox_flowers || !opt.flower_offer_id) continue;
+                    const chk = flowerCatalog.validateOfferAmount(opt.flower_offer_id, opt.flower_amount);
+                    if (!chk.ok) {
+                        return res.status(400).json({
+                            error: 'Flower offer price mismatch or expired — refresh Add Flowers and try again',
+                            detail: chk.error,
+                            expected: chk.expected,
+                        });
+                    }
+                    opt.flower_amount = chk.offer.chargedPrice;
+                }
             }
             const validated = wrrapdPricing.computeTotalCentsFromPricingCart(cart);
             if (!validated.ok) {
@@ -1101,6 +1200,10 @@ function normalizeOrderItems(orderData) {
                 checkbox_wrrapd: option.checkbox_wrrapd === true,
                 checkbox_flowers: option.checkbox_flowers,
                 selected_flower_design: option.selected_flower_design || null,
+                flower_offer_id: option.flower_offer_id || null,
+                flower_amount: option.flower_amount != null ? option.flower_amount : null,
+                flower_title: option.flower_title || null,
+                flower_image_url: option.flower_image_url || null,
                 selected_wrapping_option: option.selected_wrapping_option,
                 selected_ai_design: option.selected_ai_design || null,
                 uploaded_design_path: option.uploaded_design_path || null,
@@ -1353,9 +1456,11 @@ function summarizeWrrapdLinesFromOrderRecord(data) {
             designPreviewUrl,
             flowers: row.checkbox_flowers === true,
             flowerOption:
-                row.selected_flower_design != null && String(row.selected_flower_design).trim() !== ''
-                    ? String(row.selected_flower_design).trim().slice(0, 32)
-                    : null,
+                row.flower_title
+                    ? String(row.flower_title).trim().slice(0, 120)
+                    : row.selected_flower_design != null && String(row.selected_flower_design).trim() !== ''
+                      ? String(row.selected_flower_design).trim().slice(0, 32)
+                      : null,
             deliveryHint: deliveryHint != null ? String(deliveryHint).trim().slice(0, 200) : null,
             gifteeName,
             giftMessageSnippet: gm ? gm.slice(0, 160) + (gm.length > 160 ? '…' : '') : null,
@@ -2448,7 +2553,17 @@ app.post('/process-payment', async (req, res) => {
                     imageUrl: it.imageUrl || '',
                     wrappingOption: it.selected_wrapping_option || '',
                     flowers: !!it.checkbox_flowers,
-                    flowerDesign: it.selected_flower_design ? String(it.selected_flower_design) : '',
+                    flowerDesign: it.flower_title
+                        ? String(it.flower_title)
+                        : it.selected_flower_design
+                          ? String(it.selected_flower_design)
+                          : '',
+                    flowerOfferId: it.flower_offer_id ? String(it.flower_offer_id) : '',
+                    flowerAmount:
+                        it.flower_amount != null && Number.isFinite(Number(it.flower_amount))
+                            ? Number(it.flower_amount)
+                            : undefined,
+                    flowerImageUrl: it.flower_image_url ? String(it.flower_image_url) : '',
                     uploadedDesignPath: pathStr,
                     uploadedDesignFileName: uploadName,
                     wrappingDesignImageUrl: designImageUrl || undefined,
@@ -2524,6 +2639,30 @@ app.post('/process-payment', async (req, res) => {
                     : {}),
                 ...(revenue.orderValueCents != null ? { orderValueCents: revenue.orderValueCents } : {}),
             };
+            const flowerPickup = [];
+            for (const it of wrappedOnly) {
+                if (!it.checkbox_flowers || !it.flower_offer_id) continue;
+                const offer = flowerCatalog.getOffer(String(it.flower_offer_id));
+                if (!offer) continue;
+                flowerPickup.push({
+                    retailer: offer.retailer,
+                    storeName: offer.storeName,
+                    address: offer.address,
+                    city: offer.city,
+                    state: offer.state,
+                    postalCode: offer.postalCode,
+                    productTitle: offer.title,
+                    retailPrice: offer.retailPrice,
+                    chargedPrice: offer.chargedPrice,
+                    sku: offer.sku,
+                    productUrl: offer.productUrl,
+                    imageUrl: offer.imageUrl,
+                });
+            }
+            if (flowerPickup.length) {
+                ingestCommon.pickupFlowers = true;
+                ingestCommon.flowerPickup = flowerPickup;
+            }
             let ingestPayload;
             if (payRetailer === 'Lego') {
                 const legoScheduled =
@@ -2857,20 +2996,25 @@ app.post('/generate-ideas', async (req, res) => {
             retailer: safeRetailer || '(none)',
         });
 
-        // Step 1: Generate text descriptions using GPT-4o
-        console.log('[generate-ideas] Generating design descriptions...');
+        // Step 1: Generate text descriptions using xAI Grok
+        console.log('[generate-ideas] Generating design descriptions with Grok...');
         let designs = [];
         try {
+            if (!grokClient.isConfigured()) {
+                throw new Error('XAI_API_KEY is not configured');
+            }
             const userBrief = [
                 `Occasion / creative brief: ${safeOccasion}`,
                 safeProduct ? `Product being wrapped: ${safeProduct}` : '',
                 safeRetailer ? `Purchased from: ${safeRetailer}` : '',
                 'Return exactly 3 distinct wrapping-paper concepts with evocative multi-word titles (never a single generic word like Confetti, Botanical, or Modern Lines).',
                 'Each description must specify colors, motifs, layout, and mood in 2 vivid sentences suitable for a seamless gift-wrap repeat.',
+                'Respond with JSON only: {"designs":[{"title":"...","description":"..."}]}',
             ].filter(Boolean).join('\n');
 
-            const completion = await openai.chat.completions.create({
-                model: "gpt-4o",
+            const { content: rawContent } = await grokClient.chatCompletions({
+                temperature: 0.85,
+                max_tokens: 700,
                 messages: [{
                     role: "system",
                     content: [
@@ -2878,55 +3022,18 @@ app.post('/generate-ideas', async (req, res) => {
                         'Invent three premium, occasion-specific wrapping paper patterns a customer would proudly choose.',
                         'Titles must be 3–6 words, concrete and memorable — never "[Occasion] Confetti/Botanical/Modern Lines".',
                         'Descriptions must mention specific colors, shapes, and textures; avoid vague one-word themes.',
+                        'Output valid JSON only with a designs array of title+description objects.',
                     ].join(' '),
                 }, {
                     role: "user",
                     content: userBrief,
                 }],
-                temperature: 0.85,
-                max_tokens: 700,
-                response_format: {
-                    type: "json_schema",
-                    json_schema: {
-                        name: "wrapping_paper_designs",
-                        schema: {
-                            type: "object",
-                            properties: {
-                                designs: {
-                                    type: "array",
-                                    items: {
-                                        type: "object",
-                                        properties: {
-                                            title: {
-                                                type: "string",
-                                                description: "A short, catchy title for the wrapping paper design"
-                                            },
-                                            description: {
-                                                type: "string",
-                                                description: "A detailed description of the wrapping paper design"
-                                            }
-                                        },
-                                        required: ["title", "description"],
-                                        additionalProperties: false
-                                    }
-                                }
-                            },
-                            required: ["designs"],
-                            additionalProperties: false
-                        },
-                        strict: true
-                    }
-                }
             });
 
-            const rawContent = completion?.choices?.[0]?.message?.content;
-            if (typeof rawContent !== 'string' || !rawContent.trim()) {
-                throw new Error('OpenAI returned empty structured content');
-            }
-            const designsData = JSON.parse(rawContent);
+            const designsData = grokClient.parseJsonContent(rawContent);
             designs = sanitizeDesignIdeas(designsData?.designs);
-        } catch (openAiError) {
-            console.error('[generate-ideas] OpenAI structured output failed; using fallback text designs:', openAiError.message);
+        } catch (grokError) {
+            console.error('[generate-ideas] Grok structured output failed; using fallback text designs:', grokError.message);
         }
 
         if (!Array.isArray(designs) || designs.length < 3) {

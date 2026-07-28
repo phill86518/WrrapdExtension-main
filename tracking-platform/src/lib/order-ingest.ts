@@ -182,6 +182,11 @@ function parseLineItems(v: unknown, invalidFields: string[]): OrderLineItem[] | 
     if (!title && !asin && !imageUrl && !wrappingOption) continue;
     const flowers = row.flowers === true || row.flowers === "true";
     const flowerDesign = str(row.flowerDesign);
+    const flowerOfferId = str(row.flowerOfferId);
+    const flowerAmountRaw = Number(row.flowerAmount);
+    const flowerAmount =
+      Number.isFinite(flowerAmountRaw) && flowerAmountRaw > 0 ? flowerAmountRaw : undefined;
+    const flowerImageUrl = str(row.flowerImageUrl);
     const uploadedDesignPath = str(row.uploadedDesignPath);
     const uploadedDesignFileName = str(row.uploadedDesignFileName);
     const wrappingDesignImageUrl = str(row.wrappingDesignImageUrl);
@@ -199,6 +204,9 @@ function parseLineItems(v: unknown, invalidFields: string[]): OrderLineItem[] | 
       ...(wrappingOption ? { wrappingOption } : {}),
       ...(flowers ? { flowers: true } : {}),
       ...(flowerDesign ? { flowerDesign } : {}),
+      ...(flowerOfferId ? { flowerOfferId } : {}),
+      ...(flowerAmount != null ? { flowerAmount } : {}),
+      ...(flowerImageUrl ? { flowerImageUrl } : {}),
       ...(uploadedDesignPath ? { uploadedDesignPath } : {}),
       ...(uploadedDesignFileName ? { uploadedDesignFileName } : {}),
       ...(wrappingDesignImageUrl ? { wrappingDesignImageUrl } : {}),
@@ -376,9 +384,42 @@ export function parseIngestOrderPayload(body: unknown): IngestSuccess | IngestFa
     str((p as { deliverBy?: unknown }).deliverBy) ||
     str((p as { deliverByDeadline?: unknown }).deliverByDeadline);
   const pickupFlowersRaw = (p as { pickupFlowers?: unknown }).pickupFlowers;
+  const flowerPickupRaw = (p as { flowerPickup?: unknown }).flowerPickup;
+  const flowerPickup: import("@/lib/types").FlowerPickupLocation[] = [];
+  if (Array.isArray(flowerPickupRaw)) {
+    for (const row of flowerPickupRaw.slice(0, 12)) {
+      if (!row || typeof row !== "object") continue;
+      const r = row as Record<string, unknown>;
+      const retailer = str(r.retailer);
+      const storeName = str(r.storeName);
+      const address = str(r.address);
+      const city = str(r.city);
+      const state = str(r.state);
+      const postalCode = str(r.postalCode);
+      const productTitle = str(r.productTitle);
+      const retailPrice = Number(r.retailPrice);
+      const chargedPrice = Number(r.chargedPrice);
+      if (!retailer || !storeName || !address || !productTitle) continue;
+      flowerPickup.push({
+        retailer,
+        storeName,
+        address,
+        city: city || "",
+        state: state || "",
+        postalCode: postalCode || "",
+        productTitle,
+        retailPrice: Number.isFinite(retailPrice) ? retailPrice : 0,
+        chargedPrice: Number.isFinite(chargedPrice) ? chargedPrice : 0,
+        ...(str(r.sku) ? { sku: str(r.sku) } : {}),
+        ...(str(r.productUrl) ? { productUrl: str(r.productUrl) } : {}),
+        ...(str(r.imageUrl) ? { imageUrl: str(r.imageUrl) } : {}),
+      });
+    }
+  }
   const pickupFlowers =
     pickupFlowersRaw === true ||
     pickupFlowersRaw === "true" ||
+    flowerPickup.length > 0 ||
     (flowersRevenueCents != null && flowersRevenueCents > 0) ||
     Boolean(lineItems?.some((li) => li.flowers === true));
 
@@ -464,6 +505,7 @@ export function parseIngestOrderPayload(body: unknown): IngestSuccess | IngestFa
       ...(floristOrderNumber ? { floristOrderNumber } : {}),
       ...(deliverBy ? { deliverBy } : {}),
       ...(pickupFlowers ? { pickupFlowers: true } : {}),
+      ...(flowerPickup.length ? { flowerPickup } : {}),
     },
   };
 }

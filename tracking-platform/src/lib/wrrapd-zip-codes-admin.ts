@@ -135,3 +135,21 @@ export async function seedAllowedZipCodesStates(
     notes: typeof body.notes === "string" ? body.notes : null,
   };
 }
+
+export async function seedLaunchMetroZipCodes(): Promise<AllowedZipCodesPayload> {
+  const r = await fetch(`${apiBase()}/api/admin/allowed-zip-codes/seed-launch-metros`, {
+    method: "POST",
+    headers: adminHeaders(),
+    body: JSON.stringify({}),
+  });
+  const body = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    throw new Error(typeof body.error === "string" ? body.error : `HTTP ${r.status}`);
+  }
+  return {
+    allowedZipCodes: Array.isArray(body.allowedZipCodes) ? body.allowedZipCodes : [],
+    count: typeof body.count === "number" ? body.count : 0,
+    updatedAt: typeof body.updatedAt === "string" ? body.updatedAt : null,
+    notes: typeof body.notes === "string" ? body.notes : null,
+  };
+}

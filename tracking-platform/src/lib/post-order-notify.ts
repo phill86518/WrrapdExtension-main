@@ -182,6 +182,7 @@ export async function sendPostOrderNotifications(order: Order): Promise<PostOrde
     deliveryPreferencePending: order.deliveryPreferencePending,
     amazonDeliveryDatesSnapshot: order.amazonDeliveryDatesSnapshot,
     lineItems: order.lineItems,
+    flowerPickup: order.flowerPickup,
   });
   const adminSubject = order.externalOrderId?.trim()
     ? `New Wrrapd order ${order.externalOrderId.trim()}`

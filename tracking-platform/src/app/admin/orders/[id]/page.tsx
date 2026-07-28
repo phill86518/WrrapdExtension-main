@@ -106,6 +106,47 @@ export default async function AdminOrderDetailPage({
         <p className="text-sm text-slate-600">External: {order.externalOrderId}</p>
       ) : null}
 
+      {(order.pickupFlowers || (order.flowerPickup && order.flowerPickup.length > 0)) && (
+        <section className="mt-6 rounded-xl border border-orange-200 bg-orange-50 p-4 shadow-sm">
+          <h2 className="font-semibold text-orange-950">Flower pickup</h2>
+          <p className="mt-1 text-sm text-orange-900">
+            Driver must pick up flowers before giftee delivery. Place the retailer order manually using the
+            store details below.
+          </p>
+          {(order.flowerPickup || []).map((fp, i) => (
+            <div
+              key={`${fp.retailer}-${fp.sku || i}`}
+              className="mt-3 rounded-lg border border-orange-200 bg-white p-3 text-sm text-slate-800"
+            >
+              <p className="font-semibold">{fp.productTitle}</p>
+              <p className="mt-1 text-slate-600">
+                Retail ${Number(fp.retailPrice).toFixed(2)} · Charged ${Number(fp.chargedPrice).toFixed(2)}
+                {fp.sku ? ` · SKU ${fp.sku}` : ""}
+              </p>
+              <p className="mt-2">
+                <span className="font-medium capitalize">{fp.retailer === "sams" ? "Sam's Club" : fp.retailer}</span>
+                <br />
+                {fp.storeName}
+                <br />
+                {fp.address}, {fp.city}, {fp.state} {fp.postalCode}
+              </p>
+              {fp.productUrl ? (
+                <p className="mt-2">
+                  <a href={fp.productUrl} className="text-blue-700 underline" target="_blank" rel="noreferrer">
+                    Open product page
+                  </a>
+                </p>
+              ) : null}
+            </div>
+          ))}
+          {order.floristOrderNumber ? (
+            <p className="mt-2 text-sm">
+              <span className="font-medium">Florist ticket #:</span> {order.floristOrderNumber}
+            </p>
+          ) : null}
+        </section>
+      )}
+
       <div className="mt-6 grid gap-4 md:grid-cols-2">
         <section className="space-y-2 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
           <h2 className="font-semibold text-slate-900">Customer & giftee</h2>

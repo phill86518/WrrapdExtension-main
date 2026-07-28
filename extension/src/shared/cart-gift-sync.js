@@ -26,6 +26,10 @@ export function defaultEmptyChoice(title) {
     aiDesign: null,
     flowers: false,
     flowerDesign: "",
+    flowerOfferId: "",
+    flowerPrice: null,
+    flowerTitle: "",
+    flowerImageUrl: "",
     message: "",
   };
 }

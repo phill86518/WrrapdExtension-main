@@ -340,6 +340,7 @@ export type CreateOrderInput = {
   floristOrderNumber?: string;
   deliverBy?: string;
   pickupFlowers?: boolean;
+  flowerPickup?: import("@/lib/types").FlowerPickupLocation[];
 };
 
 export async function createOrder(
@@ -597,6 +598,7 @@ export async function createOrder(
       : {}),
     ...(input.deliverBy?.trim() ? { deliverBy: input.deliverBy.trim() } : {}),
     ...(input.pickupFlowers ? { pickupFlowers: true } : {}),
+    ...(input.flowerPickup?.length ? { flowerPickup: [...input.flowerPickup] } : {}),
   };
   const ocCreate = getOrdersCollection();
   if (ocCreate) {
@@ -1030,7 +1032,16 @@ export async function assignCourierDriver(
     const updated = orders.map((o) => (o.id === id ? next : o));
     await writeFallbackPayload(updated);
   }
-  return (await getOrderById(id)) ?? null;
+  const saved = (await getOrderById(id)) ?? null;
+  if (saved?.courierDriverId) {
+    try {
+      const { notifyCourierFlowerPickup } = await import("@/lib/driver-flower-notify");
+      await notifyCourierFlowerPickup(saved);
+    } catch (e) {
+      console.error("[assignCourierDriver] flower notify", e);
+    }
+  }
+  return saved;
 }
 
 export async function unassignDeletedCourierDriverOrders(courierDriverId: string): Promise<void> {

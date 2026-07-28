@@ -404,7 +404,12 @@ function computeSubtotalFromPricingCartItems(items, unitPrices) {
                 }
             }
             if (option.checkbox_flowers) {
-                flowersTotal += p.flowers;
+                const offerAmt = Number(option.flower_amount);
+                if (Number.isFinite(offerAmt) && offerAmt > 0) {
+                    flowersTotal += offerAmt;
+                } else {
+                    flowersTotal += p.flowers;
+                }
             }
         }
     }
@@ -483,6 +488,7 @@ function sanitizePricingCartFromRequest(body) {
         const options = [];
         for (const o of optsIn.slice(0, 40)) {
             if (!o || typeof o !== 'object') continue;
+            const flowerAmt = Number(o.flower_amount);
             options.push({
                 checkbox_wrrapd: o.checkbox_wrrapd === true,
                 selected_wrapping_option:
@@ -490,6 +496,10 @@ function sanitizePricingCartFromRequest(body) {
                         ? String(o.selected_wrapping_option).toLowerCase().slice(0, 32)
                         : null,
                 checkbox_flowers: o.checkbox_flowers === true,
+                flower_offer_id:
+                    o.flower_offer_id != null ? String(o.flower_offer_id).slice(0, 64) : null,
+                flower_amount:
+                    Number.isFinite(flowerAmt) && flowerAmt > 0 ? Math.round(flowerAmt * 100) / 100 : null,
             });
         }
         items.push({ options });
