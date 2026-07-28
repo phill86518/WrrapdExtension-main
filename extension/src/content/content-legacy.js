@@ -32,6 +32,7 @@ import { isZipCodeAllowed } from './lib/zip-codes.js';
 import { WRRAPD_RETAILER_AMAZON } from '../retailers/amazon/constants.js';
 import { occasionOptionsHtml, isValidOccasion } from '../shared/occasions.js';
 import { mountGifteeZipEstimateBar, readValidatedEstimateZip } from '../shared/giftee-zip-estimate.js';
+import { loadFlowersCatalog } from '../shared/flowers-catalog.js';
 import {
     hydrateUnitPricesFromSession,
     readPersistedUnitPrices,
@@ -178,6 +179,11 @@ import { formatUsd } from '../shared/wrrapd-unit-pricing.js';
                       checkbox_wrrapd: o.checkbox_wrrapd === true,
                       selected_wrapping_option: o.selected_wrapping_option || null,
                       checkbox_flowers: o.checkbox_flowers === true,
+                      flower_offer_id: o.checkbox_flowers ? o.flower_offer_id || null : null,
+                      flower_amount:
+                          o.checkbox_flowers && Number.isFinite(Number(o.flower_amount))
+                              ? Number(o.flower_amount)
+                              : null,
                   }))
                 : [],
         }));
@@ -437,6 +443,10 @@ import { formatUsd } from '../shared/wrrapd-unit-pricing.js';
             checkbox_amazon_combine: false,
             selected_wrapping_option: 'wrrapd',
             selected_flower_design: null,
+            flower_offer_id: null,
+            flower_amount: null,
+            flower_title: null,
+            flower_image_url: null,
         };
     }
 
@@ -3430,28 +3440,15 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                                 </div>
                             </div>
                             
-                            <!-- Flowers Section -->
+                            <!-- Flowers Section (live proximity catalog) -->
                             <div class="modal-section" style="margin-bottom: 30px;">
                                 <label style="display: flex; align-items: flex-start;">
                                     <input type="checkbox" id="combine-with-flowers-${i}" style="margin-right: 10px;">
-                                    <div style="font-size: 18px; font-weight: bold;">Add Flowers - choose from below (15-20 stem bouquets) - $${getActiveCheckoutUnitPrices().flowers.toFixed(2)}</div>
+                                    <div style="font-size: 18px; font-weight: bold;">Add flowers — choose a bouquet below</div>
                                 </label>
-
-                                <div id="flower-designs-${i}" style="display: none; margin-top: 20px;">
-                                    <p style="margin-bottom: 15px;">Choose your bouquet style:</p>
-                                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 20px;">
-                                        ${[1, 2, 3, 4].map(num => `
-                                            <label style="display: flex; flex-direction: column; align-items: center; cursor: pointer;">
-                                                <input type="radio" name="flower-design-${i}" value="flowers-${num}" 
-                                                    style="margin-bottom: 10px;">
-                                                <img src="${chrome.runtime.getURL(`assets/flowers/flowers-${num}.webp`)}" 
-                                                    alt="Flowers ${num}" 
-                                                    style="width: 150px; height: 150px; border-radius: 4px; object-fit: cover;" 
-                                                    class="flower-image-${i}-${num}">
-                                            </label>
-                                        `).join('')}
-                                    </div>
-                                </div>
+                                <p id="flower-msg-${i}" style="display:none;margin:10px 0 0 25px;font-size:13px;line-height:1.45;color:#475569;"></p>
+                                <p id="flower-fineprint-${i}" style="display:none;margin:8px 0 0 25px;font-size:11px;font-style:italic;line-height:1.4;color:#64748b;"></p>
+                                <div id="flower-designs-${i}" style="display: none; margin-top: 20px;"></div>
                             </div>
 
                             <!-- Combine with Amazon Section -->
@@ -3506,7 +3503,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                             aiLabel.textContent = `Generate AI designs (+${formatUsd(prices.customDesignAi)})`;
                         }
                         if (flowersLabel) {
-                            flowersLabel.textContent = `Add Flowers - choose from below (15-20 stem bouquets) - ${formatUsd(prices.flowers)}`;
+                            flowersLabel.textContent = 'Add flowers — choose a bouquet below';
                         }
                     };
                     // Prefill from Amazon line shipping ZIP when available.
@@ -3588,6 +3585,120 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                         if (amazonInstructions) {
                             amazonInstructions.style.display = combineWithAmazonCheckbox.checked ? 'block' : 'none';
                         }
+                    }
+
+                    const flowerDesignsDiv = document.getElementById(`flower-designs-${i}`);
+                    const flowerMsgEl = document.getElementById(`flower-msg-${i}`);
+                    const flowerFinePrintEl = document.getElementById(`flower-fineprint-${i}`);
+
+                    function clearAmazonFlowerSelection() {
+                        subItem.selected_flower_design = null;
+                        subItem.flower_offer_id = null;
+                        subItem.flower_amount = null;
+                        subItem.flower_title = null;
+                        subItem.flower_image_url = null;
+                    }
+
+                    function resolveAmazonFlowerImageUrl(c) {
+                        const key = String(c.designKey || c.sku || '').trim();
+                        if (/^flowers-[1-4]$/.test(key)) {
+                            try {
+                                return chrome.runtime.getURL(`assets/flowers/${key}.webp`);
+                            } catch {
+                                /* fall through */
+                            }
+                        }
+                        return c.imageUrl || '';
+                    }
+
+                    function renderAmazonLiveFlowerGrid(choices) {
+                        if (!flowerDesignsDiv) return;
+                        flowerDesignsDiv.innerHTML = '';
+                        const grid = document.createElement('div');
+                        grid.style.cssText =
+                            'display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:16px;';
+                        (Array.isArray(choices) ? choices : []).forEach((c, idx) => {
+                            const lab = document.createElement('label');
+                            lab.style.cssText =
+                                'display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;text-align:center;font-size:12px;color:#0f172a;';
+                            const r = document.createElement('input');
+                            r.type = 'radio';
+                            r.name = `flower-design-${i}`;
+                            r.value = c.offerId;
+                            if (subItem.flower_offer_id && subItem.flower_offer_id === c.offerId) {
+                                r.checked = true;
+                            }
+                            const imgUrl = resolveAmazonFlowerImageUrl(c);
+                            r.addEventListener('change', () => {
+                                if (!r.checked) return;
+                                subItem.flower_offer_id = c.offerId;
+                                subItem.flower_amount = Number(c.price);
+                                subItem.flower_title = c.title || '';
+                                subItem.flower_image_url = imgUrl;
+                                subItem.selected_flower_design = c.designKey || c.title || c.offerId;
+                                saveItemToLocalStorage(productObj);
+                            });
+                            const img = document.createElement('img');
+                            img.src = imgUrl;
+                            img.alt = c.title || `Bouquet ${idx + 1}`;
+                            img.style.cssText =
+                                'width:150px;height:150px;max-width:100%;border-radius:4px;object-fit:cover;border:1px solid #e5e7eb;background:#f8fafc;';
+                            const cap = document.createElement('span');
+                            cap.style.cssText = 'font-weight:700;font-size:13px;';
+                            cap.textContent = formatUsd(c.price);
+                            const name = document.createElement('span');
+                            name.style.cssText = 'font-size:11px;line-height:1.25;color:#334155;';
+                            name.textContent = (c.title || 'Bouquet').slice(0, 42);
+                            lab.append(r, img, cap, name);
+                            grid.append(lab);
+                        });
+                        flowerDesignsDiv.append(grid);
+                    }
+
+                    async function ensureAmazonFlowersUi() {
+                        if (!combineWithFlowersCheckbox?.checked) return;
+                        if (flowerFinePrintEl) flowerFinePrintEl.style.display = 'none';
+                        if (flowerMsgEl) {
+                            flowerMsgEl.style.display = 'block';
+                            flowerMsgEl.textContent = 'Finding beautiful bouquets near your giftee…';
+                        }
+                        if (flowerDesignsDiv) flowerDesignsDiv.style.display = 'none';
+                        const zip =
+                            (amazonZipBar && amazonZipBar.getZip && amazonZipBar.getZip()) ||
+                            readValidatedEstimateZip('wrrapdAmazon') ||
+                            '';
+                        const cat = await loadFlowersCatalog(zip);
+                        if (!combineWithFlowersCheckbox?.checked) return;
+                        if (cat.status !== 'ok' || !cat.choices?.length) {
+                            if (flowerDesignsDiv) flowerDesignsDiv.style.display = 'none';
+                            if (flowerFinePrintEl) flowerFinePrintEl.style.display = 'none';
+                            if (flowerMsgEl) {
+                                flowerMsgEl.style.display = 'block';
+                                flowerMsgEl.textContent =
+                                    cat.message ||
+                                    'We apologize — floral delivery is not currently available for this ZIP code. Gift wrapping is still available.';
+                            }
+                            clearAmazonFlowerSelection();
+                            saveItemToLocalStorage(productObj);
+                            return;
+                        }
+                        if (flowerMsgEl) flowerMsgEl.style.display = 'none';
+                        if (flowerDesignsDiv) flowerDesignsDiv.style.display = 'block';
+                        renderAmazonLiveFlowerGrid(cat.choices);
+                        if (flowerFinePrintEl) {
+                            if (cat.disclaimer || cat.source === 'classic_backup') {
+                                flowerFinePrintEl.style.display = 'block';
+                                flowerFinePrintEl.textContent =
+                                    cat.disclaimer ||
+                                    'Actual bouquets might differ slightly from the photos shown.';
+                            } else {
+                                flowerFinePrintEl.style.display = 'none';
+                            }
+                        }
+                    }
+
+                    if (combineWithFlowersCheckbox?.checked) {
+                        void ensureAmazonFlowersUi();
                     }
 
                     // Remove addCheckboxListeners call and consolidate all listeners here
@@ -3719,15 +3830,25 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                         if (combineWithFlowersCheckbox) {
                             subItem.checkbox_flowers = combineWithFlowersCheckbox.checked;
                         }
+                        if (subItem.checkbox_flowers && !subItem.flower_offer_id) {
+                            const flowerMsg = document.getElementById(`flower-msg-${i}`);
+                            if (flowerMsg) {
+                                flowerMsg.style.display = 'block';
+                                flowerMsg.textContent = 'Please select a bouquet, or uncheck Add flowers.';
+                            }
+                            return false;
+                        }
+                        if (!subItem.checkbox_flowers) {
+                            subItem.selected_flower_design = null;
+                            subItem.flower_offer_id = null;
+                            subItem.flower_amount = null;
+                            subItem.flower_title = null;
+                            subItem.flower_image_url = null;
+                        }
                         
                         const combineWithAmazonCheckbox = document.getElementById(`combine-with-amazon-${i}`);
                         if (combineWithAmazonCheckbox) {
                             subItem.checkbox_amazon_combine = combineWithAmazonCheckbox.checked;
-                        }
-                        
-                        const selectedFlowerDesign = modal.querySelector(`input[name="flower-design-${i}"]:checked`);
-                        if (selectedFlowerDesign) {
-                            subItem.selected_flower_design = selectedFlowerDesign.value;
                         }
                         
                         saveItemToLocalStorage(productObj);
@@ -3767,16 +3888,19 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                         }
                     }, true);
 
-                    // Flowers checkbox listener
+                    // Flowers checkbox listener — live proximity catalog
                     combineWithFlowersCheckbox?.addEventListener('change', function() {
                         subItem.checkbox_flowers = this.checked;
-                        saveItemToLocalStorage(productObj);
-                        
-                        // Show/hide the designs div
-                        const flowerDesignsDiv = document.getElementById(`flower-designs-${i}`);
-                        if (flowerDesignsDiv) {
-                            flowerDesignsDiv.style.display = this.checked ? 'block' : 'none';
+                        if (!this.checked) {
+                            clearAmazonFlowerSelection();
+                            if (flowerDesignsDiv) flowerDesignsDiv.style.display = 'none';
+                            if (flowerMsgEl) flowerMsgEl.style.display = 'none';
+                            if (flowerFinePrintEl) flowerFinePrintEl.style.display = 'none';
+                            saveItemToLocalStorage(productObj);
+                            return;
                         }
+                        saveItemToLocalStorage(productObj);
+                        void ensureAmazonFlowersUi();
                     });
 
                     // Amazon combine checkbox listener
@@ -3788,17 +3912,6 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                         if (amazonInstructions) {
                             amazonInstructions.style.display = this.checked ? 'block' : 'none';
                         }
-                    });
-
-                    // Flower design selection listeners
-                    const flowerDesignRadios = document.querySelectorAll(`input[name="flower-design-${i}"]`);
-                    flowerDesignRadios.forEach(radio => {
-                        radio.addEventListener('change', function() {
-                            if (this.checked) {
-                                subItem.selected_flower_design = this.value;
-                                saveItemToLocalStorage(productObj);
-                            }
-                        });
                     });
 
                     // Wrapping options listeners
@@ -11061,6 +11174,13 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                         checkbox_wrrapd: option.checkbox_wrrapd === true,
                         checkbox_flowers: option.checkbox_flowers,
                         selected_flower_design: option.selected_flower_design || null,
+                        flower_offer_id: option.flower_offer_id || null,
+                        flower_amount:
+                            option.flower_amount != null && Number.isFinite(Number(option.flower_amount))
+                                ? Number(option.flower_amount)
+                                : null,
+                        flower_title: option.flower_title || null,
+                        flower_image_url: option.flower_image_url || null,
                         selected_wrapping_option: option.selected_wrapping_option,
                         selected_ai_design: option.selected_ai_design || null,
                         aiImageData,
@@ -12074,8 +12194,10 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                     }
                 }
                 if (option.checkbox_flowers) {
-                    flowers = p.flowers;
-                    flowersTotal += p.flowers;
+                    const offerAmt = Number(option.flower_amount);
+                    flowers =
+                        Number.isFinite(offerAmt) && offerAmt > 0 ? offerAmt : p.flowers;
+                    flowersTotal += flowers;
                     qtyFlowers += 1;
                 }
                 perOptionLines.push({
@@ -12085,6 +12207,8 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                     checkbox_wrrapd: option.checkbox_wrrapd === true,
                     selected_wrapping_option: option.selected_wrapping_option || null,
                     checkbox_flowers: option.checkbox_flowers === true,
+                    flower_offer_id: option.checkbox_flowers ? option.flower_offer_id || null : null,
+                    flower_amount: option.checkbox_flowers ? flowers || null : null,
                     giftWrapBase,
                     customDesignAi,
                     customDesignUpload,

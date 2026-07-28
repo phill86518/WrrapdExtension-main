@@ -231,7 +231,10 @@ function computeServiceSubtotalCents() {
   for (const ch of allChoices) {
     if (ch.wrapPref === "ai") dollars += p.customDesignAi;
     if (ch.wrapPref === "upload") dollars += p.customDesignUpload;
-    if (ch.flowers) dollars += p.flowers;
+    if (ch.flowers) {
+      const offerAmt = Number(ch.flowerPrice);
+      dollars += Number.isFinite(offerAmt) && offerAmt > 0 ? offerAmt : p.flowers;
+    }
   }
   return Math.round(dollars * 100);
 }
@@ -264,6 +267,11 @@ function buildLegoPricingCart() {
           checkbox_wrrapd: true,
           selected_wrapping_option: ch.wrapPref || "wrrapd",
           checkbox_flowers: ch.flowers === true,
+          flower_offer_id: ch.flowers ? ch.flowerOfferId || null : null,
+          flower_amount:
+            ch.flowers && Number.isFinite(Number(ch.flowerPrice))
+              ? Number(ch.flowerPrice)
+              : null,
         }],
       }))
     : [{ options: [{ checkbox_wrrapd: true, selected_wrapping_option: "wrrapd", checkbox_flowers: false }] }];
@@ -596,7 +604,11 @@ function buildLegoOrderDataForProcessPayment() {
       checkbox_wrrapd: true,
       selected_wrapping_option: wrap,
       checkbox_flowers: flowers,
-      selected_flower_design: flowers ? (ch.flowerDesign || null) : null,
+      selected_flower_design: flowers ? (ch.flowerTitle || ch.flowerDesign || null) : null,
+      flower_offer_id: flowers ? (ch.flowerOfferId || null) : null,
+      flower_amount: flowers && Number.isFinite(Number(ch.flowerPrice)) ? Number(ch.flowerPrice) : null,
+      flower_title: flowers ? (ch.flowerTitle || null) : null,
+      flower_image_url: flowers ? (ch.flowerImageUrl || null) : null,
       selected_ai_design: wrap === "ai" ? (ch.aiDesign || null) : null,
       uploaded_design_name: wrap === "upload" ? (ch.uploadName || null) : null,
       aiPrompt: wrap === "ai" ? (ch.aiPrompt || null) : null,

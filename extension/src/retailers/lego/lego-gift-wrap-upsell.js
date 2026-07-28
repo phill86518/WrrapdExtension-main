@@ -37,7 +37,12 @@ import {
 } from "./lego-session-state.js";
 import { buildOccasionSelect, isValidOccasion } from "../../shared/occasions.js";
 import { formatUsd, getActiveUnitPrices, createUnitPricingState } from "../../shared/wrrapd-unit-pricing.js";
-import { mountGifteeZipEstimateBar, writeValidatedEstimateZip } from "../../shared/giftee-zip-estimate.js";
+import {
+  mountGifteeZipEstimateBar,
+  readValidatedEstimateZip,
+  writeValidatedEstimateZip,
+} from "../../shared/giftee-zip-estimate.js";
+import { loadFlowersCatalog } from "../../shared/flowers-catalog.js";
 
 const FLOW_MODAL_ID = "wrrapd-lego-gift-service-modal";
 const LEGO_BAG_PAY_HINT_ATTR = "data-wrrapd-lego-bag-pay-hint";
@@ -70,7 +75,22 @@ function gifteeZip5() {
 // ─── Per-item default choice ──────────────────────────────────────────────────
 
 function emptyChoice() {
-  return { wrapPref: "wrrapd", occasion: "", wrrapdHint: "", uploadName: "", uploadDataUrl: "", aiPrompt: "", aiDesign: null, flowers: false, flowerDesign: "", message: "" };
+  return {
+    wrapPref: "wrrapd",
+    occasion: "",
+    wrrapdHint: "",
+    uploadName: "",
+    uploadDataUrl: "",
+    aiPrompt: "",
+    aiDesign: null,
+    flowers: false,
+    flowerDesign: "",
+    flowerOfferId: "",
+    flowerPrice: null,
+    flowerTitle: "",
+    flowerImageUrl: "",
+    message: "",
+  };
 }
 
 // ─── Migrate legacy single-value keys into per-item array ────────────────────
@@ -378,36 +398,130 @@ export function openLegoGiftServiceModal() {
     aiWrap.style.display = currentWrapPref === "ai" ? "block" : "none";
   };
 
-  // ── Flowers ──
+  // ── Flowers (live proximity catalog — same as other retailers) ──
   let currentFlowers = false;
   let currentFlowerDesign = "";
+  let currentFlowerOfferId = "";
+  let currentFlowerPrice = null;
+  let currentFlowerTitle = "";
+  let currentFlowerImageUrl = "";
+  let liveFlowerChoices = [];
   const flowersLabel = document.createElement("label");
-  flowersLabel.style.cssText = "display:flex;align-items:center;gap:6px;margin:0 0 4px;font-size:14px;font-weight:600;color:#0f172a;cursor:pointer;";
+  flowersLabel.style.cssText =
+    "display:flex;align-items:center;gap:6px;margin:0 0 4px;font-size:14px;font-weight:600;color:#0f172a;cursor:pointer;";
   const flowersCb = document.createElement("input");
   flowersCb.type = "checkbox";
   const flowersText = document.createElement("span");
-  flowersText.textContent = "Add Flowers – 15–20 stem bouquet";
+  flowersText.textContent = "Add flowers — choose a bouquet below";
   flowersLabel.append(flowersCb, flowersText);
+  const flowersMsg = document.createElement("p");
+  flowersMsg.style.cssText =
+    "display:none;margin:0 0 10px 22px;font-size:13px;line-height:1.45;color:#475569;";
+  const flowersFinePrint = document.createElement("p");
+  flowersFinePrint.style.cssText =
+    "display:none;margin:0 0 10px 22px;font-size:11px;font-style:italic;line-height:1.4;color:#64748b;";
   const flowersGrid = document.createElement("div");
-  flowersGrid.style.cssText = "display:none;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:4px 0 10px 22px;";
-  const flowerRadios = [1, 2, 3, 4].map((n) => {
-    const lab = document.createElement("label");
-    lab.style.cssText = "display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;font-size:12px;color:#0f172a;";
-    const r = document.createElement("input");
-    r.type = "radio"; r.name = "wrrapd-lego-flower-design"; r.value = `flowers-${n}`;
-    r.addEventListener("change", () => { if (r.checked) currentFlowerDesign = r.value; });
-    const img = document.createElement("img");
-    img.src = chrome.runtime.getURL(`assets/flowers/flowers-${n}.webp`);
-    img.alt = `Bouquet ${n}`;
-    img.style.cssText = "width:100%;aspect-ratio:1;object-fit:cover;border-radius:6px;border:1px solid #e5e7eb;";
-    lab.append(r, img);
-    flowersGrid.append(lab);
-    return r;
-  });
+  flowersGrid.style.cssText =
+    "display:none;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;margin:4px 0 10px 22px;";
+
+  function clearFlowerSelection() {
+    currentFlowerDesign = "";
+    currentFlowerOfferId = "";
+    currentFlowerPrice = null;
+    currentFlowerTitle = "";
+    currentFlowerImageUrl = "";
+  }
+
+  function resolveFlowerImageUrl(c) {
+    const key = String(c.designKey || c.sku || "").trim();
+    if (/^flowers-[1-4]$/.test(key)) {
+      try {
+        return chrome.runtime.getURL(`assets/flowers/${key}.webp`);
+      } catch {
+        /* fall through */
+      }
+    }
+    return c.imageUrl || "";
+  }
+
+  function renderLiveFlowerGrid(choices) {
+    flowersGrid.innerHTML = "";
+    liveFlowerChoices = Array.isArray(choices) ? choices : [];
+    liveFlowerChoices.forEach((c, idx) => {
+      const lab = document.createElement("label");
+      lab.style.cssText =
+        "display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;font-size:12px;color:#0f172a;text-align:center;";
+      const r = document.createElement("input");
+      r.type = "radio";
+      r.name = "wrrapd-lego-flower-offer";
+      r.value = c.offerId;
+      if (currentFlowerOfferId && currentFlowerOfferId === c.offerId) r.checked = true;
+      const imgUrl = resolveFlowerImageUrl(c);
+      r.addEventListener("change", () => {
+        if (!r.checked) return;
+        currentFlowerOfferId = c.offerId;
+        currentFlowerPrice = Number(c.price);
+        currentFlowerTitle = c.title || "";
+        currentFlowerImageUrl = imgUrl;
+        currentFlowerDesign = c.designKey || c.title || c.offerId;
+      });
+      const img = document.createElement("img");
+      img.src = imgUrl;
+      img.alt = c.title || `Bouquet ${idx + 1}`;
+      img.style.cssText =
+        "width:100%;aspect-ratio:1;object-fit:cover;border-radius:6px;border:1px solid #e5e7eb;background:#f8fafc;";
+      const cap = document.createElement("span");
+      cap.textContent = formatUsd(c.price);
+      cap.style.cssText = "font-weight:700;font-size:12px;";
+      const name = document.createElement("span");
+      name.textContent = (c.title || "Bouquet").slice(0, 42);
+      name.style.cssText = "font-size:11px;line-height:1.25;color:#334155;";
+      lab.append(r, img, cap, name);
+      flowersGrid.append(lab);
+    });
+  }
+
+  async function ensureFlowersUi() {
+    if (!currentFlowers) return;
+    flowersFinePrint.style.display = "none";
+    flowersMsg.style.display = "block";
+    flowersMsg.textContent = "Finding beautiful bouquets near your giftee…";
+    flowersGrid.style.display = "none";
+    const zip = zipBar.getZip() || readValidatedEstimateZip("wrrapdLego") || gifteeZip5();
+    const cat = await loadFlowersCatalog(zip);
+    if (!currentFlowers) return;
+    if (cat.status !== "ok" || !cat.choices?.length) {
+      flowersGrid.style.display = "none";
+      flowersFinePrint.style.display = "none";
+      flowersMsg.style.display = "block";
+      flowersMsg.textContent =
+        cat.message ||
+        "We apologize — floral delivery is not currently available for this ZIP code. Gift wrapping is still available.";
+      clearFlowerSelection();
+      return;
+    }
+    flowersMsg.style.display = "none";
+    flowersGrid.style.display = "grid";
+    renderLiveFlowerGrid(cat.choices);
+    if (cat.disclaimer || cat.source === "classic_backup") {
+      flowersFinePrint.style.display = "block";
+      flowersFinePrint.textContent =
+        cat.disclaimer || "Actual bouquets might differ slightly from the photos shown.";
+    } else {
+      flowersFinePrint.style.display = "none";
+    }
+  }
+
   flowersCb.addEventListener("change", () => {
     currentFlowers = flowersCb.checked;
-    flowersGrid.style.display = currentFlowers ? "grid" : "none";
-    if (!currentFlowers) currentFlowerDesign = "";
+    if (!currentFlowers) {
+      flowersGrid.style.display = "none";
+      flowersMsg.style.display = "none";
+      flowersFinePrint.style.display = "none";
+      clearFlowerSelection();
+      return;
+    }
+    void ensureFlowersUi();
   });
 
   // ── Gift message (single row) ──
@@ -449,6 +563,8 @@ export function openLegoGiftServiceModal() {
     uploadWrap,
     aiWrap,
     flowersLabel,
+    flowersMsg,
+    flowersFinePrint,
     flowersGrid,
     msgRow,
     btnRow,
@@ -473,7 +589,7 @@ export function openLegoGiftServiceModal() {
     if (wrapLabelSpans.ai) {
       wrapLabelSpans.ai.textContent = `Generate a design with AI (+${formatUsd(p.customDesignAi)})`;
     }
-    flowersText.textContent = `Add Flowers – choose from below (15–20 stem bouquets) – ${formatUsd(p.flowers)}`;
+    flowersText.textContent = "Add flowers — choose a bouquet below";
   };
 
   const zipBar = mountGifteeZipEstimateBar({
@@ -536,9 +652,17 @@ export function openLegoGiftServiceModal() {
     // Restore flowers
     currentFlowers = ch.flowers || false;
     currentFlowerDesign = ch.flowerDesign || "";
+    currentFlowerOfferId = ch.flowerOfferId || "";
+    currentFlowerPrice = ch.flowerPrice != null ? Number(ch.flowerPrice) : null;
+    currentFlowerTitle = ch.flowerTitle || "";
+    currentFlowerImageUrl = ch.flowerImageUrl || "";
     flowersCb.checked = currentFlowers;
-    flowersGrid.style.display = currentFlowers ? "grid" : "none";
-    flowerRadios.forEach((r) => { r.checked = r.value === currentFlowerDesign; });
+    if (currentFlowers) void ensureFlowersUi();
+    else {
+      flowersGrid.style.display = "none";
+      flowersMsg.style.display = "none";
+      flowersFinePrint.style.display = "none";
+    }
 
     // Restore message
     msgInput.value = ch.message || "";
@@ -559,6 +683,10 @@ export function openLegoGiftServiceModal() {
       aiDesign: currentAiDesign,
       flowers: currentFlowers,
       flowerDesign: currentFlowerDesign,
+      flowerOfferId: currentFlowerOfferId,
+      flowerPrice: currentFlowerPrice,
+      flowerTitle: currentFlowerTitle,
+      flowerImageUrl: currentFlowerImageUrl,
       message: msgInput.value.trim(),
     };
   }
@@ -605,6 +733,11 @@ export function openLegoGiftServiceModal() {
     if (currentWrapPref === "wrrapd" && !isValidOccasion(currentOccasion)) {
       occasionSelect.style.borderColor = "#dc2626";
       occasionSelect.focus();
+      return;
+    }
+    if (currentFlowers && !currentFlowerOfferId) {
+      flowersMsg.style.display = "block";
+      flowersMsg.textContent = "Please select a bouquet, or uncheck Add flowers.";
       return;
     }
     captureCurrentChoices();
