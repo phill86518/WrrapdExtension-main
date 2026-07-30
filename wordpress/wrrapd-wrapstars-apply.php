@@ -942,7 +942,7 @@ function wrrapd_wrapstars_render_admin_application_card( $id ) {
 	echo '<div class="wrrapd-admin-app-card" style="background:#fff;border:1px solid #ccc;padding:16px;margin:12px 0;max-width:960px;">';
 	echo '<h2>' . esc_html( wrrapd_wrapstars_get_meta( $id, 'full_name' ) ) . ' <small>(' . esc_html( $status ) . ')</small>';
 	if ( $fit > 0 ) {
-		echo ' · <strong style="color:#1a087f;">Fit score: ' . (int) $fit . '/100</strong>';
+		echo ' · <strong style="color:#0f0351;">Fit score: ' . (int) $fit . '/100</strong>';
 	}
 	echo '</h2>';
 

@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_WRAPSTARS_BUILD', '2026-07-21-hide-wp-chrome-v2' );
+define( 'WRRAPD_WRAPSTARS_BUILD', '2026-07-30-header-footer-0f0351' );
 /** Approval / re-invite onboarding credentials remain valid this many days. */
 define( 'WRRAPD_WRAPSTARS_INVITE_TTL_DAYS', 15 );
 
@@ -142,6 +142,7 @@ add_action( 'init', 'wrrapd_wrapstars_maybe_handle_posts', 5 );
 add_action( 'admin_menu', 'wrrapd_wrapstars_admin_menu' );
 add_action( 'wp_enqueue_scripts', 'wrrapd_wrapstars_enqueue_assets' );
 add_action( 'wp_head', 'wrrapd_wrapstars_output_favicon', 3 );
+add_action( 'wp_head', 'wrrapd_wrapstars_output_social_meta', 2 );
 add_action( 'wp_body_open', 'wrrapd_wrapstars_output_portal_header', 5 );
 add_action( 'wp_footer', 'wrrapd_wrapstars_footer_once', 100 );
 add_action( 'wp_footer', 'wrrapd_wrapstars_output_landing_scripts', 120 );
@@ -154,6 +155,10 @@ add_filter( 'show_admin_bar', 'wrrapd_wrapstars_hide_admin_bar', 99999 );
 add_action( 'after_setup_theme', 'wrrapd_wrapstars_force_hide_admin_bar', 100 );
 add_action( 'init', 'wrrapd_wrapstars_strip_admin_bar_hooks', 999 );
 add_filter( 'document_title_parts', 'wrrapd_wrapstars_document_title_parts', 20 );
+add_filter( 'pre_get_document_title', 'wrrapd_wrapstars_pre_get_document_title', 20 );
+add_filter( 'option_blogname', 'wrrapd_wrapstars_filter_blogname' );
+add_filter( 'option_blogdescription', 'wrrapd_wrapstars_filter_blogdescription' );
+add_filter( 'oembed_response_data', 'wrrapd_wrapstars_oembed_response_data', 20, 4 );
 
 add_shortcode( 'wrrapd_wrapstar_landing', 'wrrapd_wrapstars_shortcode_landing' );
 add_shortcode( 'wrrapd_wrapstar_apply', 'wrrapd_wrapstars_shortcode_apply' );
@@ -191,24 +196,39 @@ function wrrapd_wrapstars_portal_login_url( $redirect = '', $greet = '' ) {
 	return $url;
 }
 
-/** Never show the WordPress admin bar on apply/pros portals. */
-function wrrapd_wrapstars_hide_admin_bar( $show ) {
-	if ( wrrapd_wrapstars_is_portal_host() ) {
-		return false;
+/** True for WP Administrators (manage_options) — staff only on apply/pros. */
+function wrrapd_wrapstars_is_wp_administrator( $user = null ) {
+	if ( $user instanceof WP_User ) {
+		return user_can( $user, 'manage_options' );
 	}
-	return $show;
+	return is_user_logged_in() && current_user_can( 'manage_options' );
 }
 
-/** Belt-and-suspenders: force-off even if another plugin re-enables the bar. */
+/**
+ * Admin bar on apply/pros: Administrators only.
+ * WrapStars, Drivers, and other non-staff never see the WP bar.
+ */
+function wrrapd_wrapstars_hide_admin_bar( $show ) {
+	if ( ! wrrapd_wrapstars_is_portal_host() ) {
+		return $show;
+	}
+	return wrrapd_wrapstars_is_wp_administrator();
+}
+
+/** Belt-and-suspenders for the admin bar on portal hosts. */
 function wrrapd_wrapstars_force_hide_admin_bar() {
 	if ( ! wrrapd_wrapstars_is_portal_host() ) {
 		return;
 	}
-	show_admin_bar( false );
+	show_admin_bar( wrrapd_wrapstars_is_wp_administrator() );
 }
 
 function wrrapd_wrapstars_strip_admin_bar_hooks() {
 	if ( ! wrrapd_wrapstars_is_portal_host() ) {
+		return;
+	}
+	// Leave the bar alone for Administrators.
+	if ( wrrapd_wrapstars_is_wp_administrator() ) {
 		return;
 	}
 	remove_action( 'wp_head', '_admin_bar_bump_cb' );
@@ -218,7 +238,191 @@ function wrrapd_wrapstars_strip_admin_bar_hooks() {
 }
 
 /**
- * Never title portal tabs "My WordPress" (default SiteGround blogname).
+ * Strip leading serial numbers from titles (e.g. "25. Drive with Wrrapd" → "Drive with Wrrapd").
+ *
+ * @param string $title Title.
+ * @return string
+ */
+function wrrapd_wrapstars_strip_title_serial( $title ) {
+	$title = html_entity_decode( (string) $title, ENT_QUOTES, 'UTF-8' );
+	$title = preg_replace( '/^\s*\d+\s*[.\)\-–—:]\s*/u', '', $title );
+	return trim( (string) $title );
+}
+
+/**
+ * Portal site name for tabs, oEmbed, and link previews (never "My WordPress").
+ *
+ * @param string $name Blog name.
+ * @return string
+ */
+function wrrapd_wrapstars_filter_blogname( $name ) {
+	if ( is_admin() && ! wp_doing_ajax() ) {
+		return $name;
+	}
+	return 'Wrrapd';
+}
+
+/**
+ * @param string $desc Blog description / tagline.
+ * @return string
+ */
+function wrrapd_wrapstars_filter_blogdescription( $desc ) {
+	if ( is_admin() && ! wp_doing_ajax() ) {
+		return $desc;
+	}
+	return 'Become a WrapStar or Drive with Wrrapd';
+}
+
+/**
+ * Request path without query string (leading slash).
+ *
+ * @return string
+ */
+function wrrapd_wrapstars_request_path() {
+	$uri = isset( $_SERVER['REQUEST_URI'] ) ? (string) $_SERVER['REQUEST_URI'] : '/';
+	$path = '/' . trim( (string) strtok( $uri, '?' ), '/' );
+	return ( $path === '//' || $path === '' ) ? '/' : $path;
+}
+
+/**
+ * Share-card copy for a portal path (and optional page title).
+ *
+ * @param string $path  URL path with leading slash.
+ * @param string $title Optional WP page title.
+ * @return array{title:string,description:string,image:string}
+ */
+function wrrapd_wrapstars_social_card_for_path( $path, $title = '' ) {
+	$path = '/' . trim( (string) $path, '/' );
+	if ( $path === '//' || $path === '' ) {
+		$path = '/';
+	}
+	$logo = function_exists( 'wrrapd_wrapstars_brand_logo_url' )
+		? wrrapd_wrapstars_brand_logo_url()
+		: 'https://wrrapd.com/wp-content/uploads/2025/03/Wrrapd_f-Logo-800-x-458-px.png';
+	$wrap = 'https://apply.wrrapd.com/wp-content/uploads/2026/07/Applications_Wrrapd-mp4-image.jpg';
+	$card = array(
+		'title'       => 'Become a WrapStar',
+		'description' => 'Deliver smiles and get paid. Independent gift-wrapping with Wrrapd — now accepting applications in Florida & Georgia.',
+		'image'       => $wrap,
+	);
+
+	if ( preg_match( '#^/drive(/|$)#', $path ) || preg_match( '#^/driver#', $path ) ) {
+		$card['title']       = 'Drive with Wrrapd';
+		$card['description'] = 'Deliver wrapped gifts on your schedule. Apply to become a Wrrapd Driver — launching in Florida & Georgia.';
+		$card['image']       = $logo;
+	} elseif ( preg_match( '#^/apply(/|$)#', $path ) ) {
+		$card['title']       = 'Apply to become a WrapStar';
+		$card['description'] = 'Start your WrapStar application — wrap gifts, deliver joy, and get paid.';
+		$card['image']       = $wrap;
+	} elseif ( preg_match( '#^/(onboarding|login|thank-you|status|profile|driver-onboarding)#', $path ) ) {
+		$card['title']       = 'Wrrapd Applications';
+		$card['description'] = 'WrapStar and Driver applications for Wrrapd.';
+		$card['image']       = $logo;
+	} elseif ( $path === '/' ) {
+		$card['title']       = 'Become a WrapStar';
+		$card['description'] = 'Deliver smiles and get paid. Independent gift-wrapping with Wrrapd — now accepting applications in Florida & Georgia.';
+		$card['image']       = $wrap;
+	} else {
+		$clean = wrrapd_wrapstars_strip_title_serial( (string) $title );
+		if ( $clean !== '' && stripos( $clean, 'WordPress' ) === false ) {
+			$card['title'] = $clean;
+		}
+		$card['image'] = $logo;
+	}
+
+	if ( defined( 'WRRAPD_WRAPSTARS_OG_IMAGE' ) && WRRAPD_WRAPSTARS_OG_IMAGE !== '' ) {
+		$card['image'] = (string) WRRAPD_WRAPSTARS_OG_IMAGE;
+	}
+
+	return $card;
+}
+
+/**
+ * Share-card copy for the current portal request.
+ *
+ * @return array{title:string,description:string,image:string}
+ */
+function wrrapd_wrapstars_social_card() {
+	$path  = wrrapd_wrapstars_request_path();
+	$title = function_exists( 'get_the_title' ) ? (string) get_the_title() : '';
+	if ( ( $path === '/' || ( function_exists( 'is_front_page' ) && is_front_page() ) ) ) {
+		$path = '/';
+	}
+	return wrrapd_wrapstars_social_card_for_path( $path, $title );
+}
+
+/**
+ * Open Graph / Twitter cards so shared links show the Wrrapd logo and real messaging.
+ */
+function wrrapd_wrapstars_output_social_meta() {
+	if ( is_admin() || ! wrrapd_wrapstars_is_portal_host() ) {
+		return;
+	}
+	$card = wrrapd_wrapstars_social_card();
+	$url  = home_url( wrrapd_wrapstars_request_path() );
+	if ( function_exists( 'wp_get_canonical_url' ) ) {
+		$canon = wp_get_canonical_url();
+		if ( is_string( $canon ) && $canon !== '' ) {
+			$url = $canon;
+		}
+	}
+
+	echo "\n<!-- Wrrapd portal share meta -->\n";
+	echo '<meta name="description" content="' . esc_attr( $card['description'] ) . '" />' . "\n";
+	echo '<meta property="og:locale" content="en_US" />' . "\n";
+	echo '<meta property="og:type" content="website" />' . "\n";
+	echo '<meta property="og:site_name" content="Wrrapd" />' . "\n";
+	echo '<meta property="og:title" content="' . esc_attr( $card['title'] ) . '" />' . "\n";
+	echo '<meta property="og:description" content="' . esc_attr( $card['description'] ) . '" />' . "\n";
+	echo '<meta property="og:url" content="' . esc_url( $url ) . '" />' . "\n";
+	echo '<meta property="og:image" content="' . esc_url( $card['image'] ) . '" />' . "\n";
+	echo '<meta property="og:image:secure_url" content="' . esc_url( $card['image'] ) . '" />' . "\n";
+	echo '<meta property="og:image:alt" content="Wrrapd" />' . "\n";
+	echo '<meta name="twitter:card" content="summary_large_image" />' . "\n";
+	echo '<meta name="twitter:title" content="' . esc_attr( $card['title'] ) . '" />' . "\n";
+	echo '<meta name="twitter:description" content="' . esc_attr( $card['description'] ) . '" />' . "\n";
+	echo '<meta name="twitter:image" content="' . esc_url( $card['image'] ) . '" />' . "\n";
+	echo '<meta name="application-name" content="Wrrapd" />' . "\n";
+}
+
+/**
+ * oEmbed cards used by Slack / iMessage / embeds — never "My WordPress".
+ *
+ * @param array   $data   Response data.
+ * @param WP_Post $post   Post.
+ * @param int     $width  Width.
+ * @param int     $height Height.
+ * @return array
+ */
+function wrrapd_wrapstars_oembed_response_data( $data, $post, $width, $height ) {
+	if ( ! is_array( $data ) ) {
+		return $data;
+	}
+	$path = '/';
+	if ( $post instanceof WP_Post ) {
+		$permalink = get_permalink( $post );
+		if ( is_string( $permalink ) && $permalink !== '' ) {
+			$parsed = wp_parse_url( $permalink, PHP_URL_PATH );
+			if ( is_string( $parsed ) && $parsed !== '' ) {
+				$path = $parsed;
+			}
+		}
+	}
+	$card                  = wrrapd_wrapstars_social_card_for_path( $path, $post instanceof WP_Post ? (string) $post->post_title : '' );
+	$data['provider_name'] = 'Wrrapd';
+	$data['title']         = $card['title'];
+	$data['author_name']   = 'Wrrapd';
+	unset( $data['author_url'] );
+	if ( ! empty( $card['image'] ) ) {
+		$data['thumbnail_url']    = $card['image'];
+		$data['thumbnail_width']  = 800;
+		$data['thumbnail_height'] = 458;
+	}
+	return $data;
+}
+
+/**
+ * Never title portal tabs "My WordPress"; hide page-title serial numbers in the browser tab.
  *
  * @param array $parts Title parts.
  * @return array
@@ -227,11 +431,39 @@ function wrrapd_wrapstars_document_title_parts( $parts ) {
 	if ( ! is_array( $parts ) ) {
 		return $parts;
 	}
-	$site = isset( $parts['site'] ) ? (string) $parts['site'] : '';
-	if ( $site === '' || strcasecmp( $site, 'My WordPress' ) === 0 || stripos( $site, 'WordPress' ) !== false ) {
-		$parts['site'] = 'WrapStars';
+	$parts['site'] = 'Wrrapd';
+	if ( isset( $parts['title'] ) && is_string( $parts['title'] ) && $parts['title'] !== '' ) {
+		$parts['title'] = wrrapd_wrapstars_strip_title_serial( $parts['title'] );
+		if ( $parts['title'] === '' || strcasecmp( $parts['title'], 'My WordPress' ) === 0 || stripos( $parts['title'], 'WordPress' ) !== false ) {
+			$card           = wrrapd_wrapstars_social_card();
+			$parts['title'] = $card['title'];
+		}
+	} elseif ( is_front_page() || wrrapd_wrapstars_request_path() === '/' ) {
+		$parts['title'] = 'Become a WrapStar';
 	}
 	return $parts;
+}
+
+/** Also strip serials from single-string document titles (some themes/SEO plugins). */
+function wrrapd_wrapstars_pre_get_document_title( $title ) {
+	if ( ! is_string( $title ) || $title === '' || ! wrrapd_wrapstars_is_portal_host() ) {
+		return $title;
+	}
+	// "25. Driver Apply – WrapStars" → strip serial from the page portion only.
+	$bits = preg_split( '/\s+[–—|\-]\s+/u', $title, 2 );
+	if ( ! is_array( $bits ) || ! isset( $bits[0] ) ) {
+		$clean = wrrapd_wrapstars_strip_title_serial( $title );
+	} else {
+		$bits[0] = wrrapd_wrapstars_strip_title_serial( $bits[0] );
+		$clean   = implode( ' – ', $bits );
+	}
+	if ( stripos( $clean, 'My WordPress' ) !== false || stripos( $clean, 'WordPress' ) !== false ) {
+		$card = wrrapd_wrapstars_social_card();
+		return $card['title'] . ' – Wrrapd';
+	}
+	// Prefer Wrrapd site suffix over legacy "WrapStars".
+	$clean = preg_replace( '/\s+[–—]\s+WrapStars\s*$/u', ' – Wrrapd', $clean );
+	return $clean;
 }
 
 /** Preferred greeting: nickname, else first name, else "there". */
@@ -269,7 +501,28 @@ function wrrapd_wrapstars_block_wp_login_on_portal() {
 		return;
 	}
 	$action = isset( $_REQUEST['action'] ) ? (string) $_REQUEST['action'] : '';
-	if ( in_array( $action, array( 'logout', 'postpass' ), true ) ) {
+	// Logout, password reset, and form POSTs must never be redirected away
+	// (POST often drops ?wrrapd_staff=1 from the URL — that was eating staff logins).
+	if ( in_array(
+		$action,
+		array( 'logout', 'postpass', 'lostpassword', 'retrievepassword', 'resetpass', 'rp', 'confirmaction' ),
+		true
+	) ) {
+		return;
+	}
+	if ( isset( $_SERVER['REQUEST_METHOD'] ) && strtoupper( (string) $_SERVER['REQUEST_METHOD'] ) === 'POST' ) {
+		return;
+	}
+	// Staff login bookmark.
+	if ( isset( $_GET['wrrapd_staff'] ) && (string) $_GET['wrrapd_staff'] === '1' ) {
+		return;
+	}
+	// Visiting /wp-admin/ while logged out → WP adds redirect_to=…/wp-admin/ — allow that form.
+	$redirect_to = isset( $_REQUEST['redirect_to'] ) ? (string) wp_unslash( $_REQUEST['redirect_to'] ) : '';
+	if ( $redirect_to !== '' && strpos( $redirect_to, '/wp-admin' ) !== false ) {
+		return;
+	}
+	if ( wrrapd_wrapstars_is_wp_administrator() ) {
 		return;
 	}
 	wp_safe_redirect( wrrapd_wrapstars_apply_url( '/' ) );
@@ -342,22 +595,51 @@ function wrrapd_wrapstars_admin_notify_email() {
 	return 'admin@wrrapd.com';
 }
 
+/**
+ * Only WP Administrators may use wp-admin on apply/pros.
+ * WrapStars, Drivers, and everyone else are sent to the portal front end.
+ */
 function wrrapd_wrapstars_block_wrapstar_wp_admin() {
 	if ( wp_doing_ajax() || ! is_user_logged_in() || current_user_can( 'manage_options' ) ) {
 		return;
 	}
-	if ( wrrapd_wrapstars_is_wrapstar_user( get_current_user_id() ) ) {
-		wp_safe_redirect( wrrapd_wrapstars_portal_redirect_for_user( get_current_user_id() ) );
+	$user_id = get_current_user_id();
+	if ( function_exists( 'wrrapd_drivers_is_driver_user' ) && wrrapd_drivers_is_driver_user( $user_id ) ) {
+		wp_safe_redirect( wrrapd_drivers_portal_redirect_for_user( $user_id ) );
 		exit;
 	}
+	if ( wrrapd_wrapstars_is_wrapstar_user( $user_id ) || wrrapd_wrapstars_is_onboarding_eligible_user( $user_id ) ) {
+		wp_safe_redirect( wrrapd_wrapstars_portal_redirect_for_user( $user_id ) );
+		exit;
+	}
+	wp_safe_redirect( wrrapd_wrapstars_apply_url( '/' ) );
+	exit;
 }
 
 function wrrapd_wrapstars_login_redirect( $redirect_to, $requested_redirect_to, $user ) {
 	if ( is_wp_error( $user ) || ! $user instanceof WP_User ) {
 		return $redirect_to;
 	}
+	// Administrators → always land in wp-admin (staff dashboard).
 	if ( user_can( $user, 'manage_options' ) ) {
-		return $redirect_to;
+		foreach ( array( $requested_redirect_to, $redirect_to ) as $url ) {
+			if ( is_string( $url ) && $url !== '' && strpos( $url, '/wp-admin' ) !== false ) {
+				return $url;
+			}
+		}
+		return admin_url();
+	}
+	// Non-staff must never enter wp-admin.
+	foreach ( array( $requested_redirect_to, $redirect_to ) as $url ) {
+		if ( is_string( $url ) && $url !== '' && strpos( $url, '/wp-admin' ) !== false ) {
+			if ( function_exists( 'wrrapd_drivers_is_onboarding_eligible_user' ) && wrrapd_drivers_is_onboarding_eligible_user( $user->ID ) ) {
+				return wrrapd_drivers_portal_redirect_for_user( $user->ID );
+			}
+			if ( wrrapd_wrapstars_is_onboarding_eligible_user( $user->ID ) || wrrapd_wrapstars_is_wrapstar_user( $user->ID ) ) {
+				return wrrapd_wrapstars_portal_redirect_for_user( $user->ID );
+			}
+			return wrrapd_wrapstars_apply_url( '/' );
+		}
 	}
 	if ( wrrapd_wrapstars_is_onboarding_eligible_user( $user->ID ) ) {
 		if ( $requested_redirect_to !== '' && strpos( $requested_redirect_to, 'apply.wrrapd.com' ) !== false ) {
@@ -2189,11 +2471,15 @@ function wrrapd_wrapstars_output_theme_cleanup_css() {
 	echo 'body.wrrapd-wrapstars-portal .wp-block-group__inner-container{padding:0!important;}';
 	echo 'body.wrrapd-wrapstars-portal .is-layout-constrained > :where(:not(.alignleft):not(.alignright):not(.alignfull)){max-width:none!important;margin-inline:0!important;}';
 	echo 'body.wrrapd-wrapstars-portal .entry-content > *:first-child,body.wrrapd-wrapstars-portal .wp-block-post-content > *:first-child{margin-top:0!important;padding-top:0!important;}';
-	echo 'body.wrrapd-wrapstars-portal .elementor,body.wrrapd-wrapstars-portal .elementor .e-con,body.wrrapd-wrapstars-portal .elementor .e-con-inner,body.wrrapd-wrapstars-portal .elementor-shortcode,body.wrrapd-wrapstars-portal .elementor-widget-shortcode{margin:0!important;padding:0!important;max-width:none!important;width:100%!important;background:transparent!important;overflow:visible!important;}';
+	echo 'body.wrrapd-wrapstars-portal .elementor,body.wrrapd-wrapstars-portal .elementor .e-con,body.wrrapd-wrapstars-portal .elementor .e-con-inner,body.wrrapd-wrapstars-portal .elementor-shortcode,body.wrrapd-wrapstars-portal .elementor-widget-shortcode,body.wrrapd-wrapstars-portal .elementor-widget-container{margin:0!important;padding:0!important;max-width:none!important;width:100%!important;background:transparent!important;overflow:visible!important;min-height:0!important;}';
+	/* Empty Elementor chrome above shortcodes = white strip under portal header */
+	echo 'body.wrrapd-wrapstars-portal .elementor > .e-con:not(:has(.wrrapd-wrapstars)):not(:has(.wrrapd-drivers)){display:none!important;height:0!important;min-height:0!important;margin:0!important;padding:0!important;border:0!important;overflow:hidden!important;}';
+	echo 'body.wrrapd-wrapstars-portal .elementor-widget-text-editor:not(:has(img)):not(:has(video)):not(:has(iframe)):has(p:empty){display:none!important;height:0!important;margin:0!important;padding:0!important;}';
 	echo 'body.wrrapd-wrapstars-portal .entry-content .wrrapd-wrapstars-site-footer{display:none!important;}';
-	echo 'body.wrrapd-wrapstars-portal .wrrapd-wrapstars-dasher{padding-top:0!important;margin-top:0!important;}';
-	echo 'body.wrrapd-wrapstars-portal .wrrapd-wrapstars-site-header+.wp-site-blocks,body.wrrapd-wrapstars-portal .wrrapd-wrapstars-site-header~.wp-site-blocks{margin-top:0!important;padding-top:0!important;}';
+	echo 'body.wrrapd-wrapstars-portal .wrrapd-wrapstars-dasher,body.wrrapd-wrapstars-portal .wrrapd-drivers{padding-top:0!important;margin-top:0!important;}';
+	echo 'body.wrrapd-wrapstars-portal .wrrapd-wrapstars-site-header+.wp-site-blocks,body.wrrapd-wrapstars-portal .wrrapd-wrapstars-site-header~.wp-site-blocks,body.wrrapd-wrapstars-portal .wrrapd-wrapstars-site-header+.elementor,body.wrrapd-wrapstars-portal .wrrapd-wrapstars-site-header~.elementor{margin-top:0!important;padding-top:0!important;}';
 	echo 'body.wrrapd-wrapstars-portal .site,body.wrrapd-wrapstars-portal #page{margin:0!important;padding:0!important;}';
+	echo 'body.wrrapd-wrapstars-portal .wrrapd-wrapstars-cinema-hero{margin-top:0!important;}';
 	echo '</style>';
 }
 add_action( 'wp_head', 'wrrapd_wrapstars_output_theme_cleanup_css', 0 );
@@ -2323,7 +2609,7 @@ function wrrapd_wrapstars_shortcode_landing() {
 			<section class="wrrapd-wrapstars-dasher-box wrrapd-wrapstars-dasher-box--wide" style="margin-bottom:1.5rem;">
 				<h2>Prefer to deliver instead?</h2>
 				<p>Wrrapd also hires Delivery Drivers for final-mile gift delivery — separate from gift-wrapping.</p>
-				<a class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--xl" href="<?php echo esc_url( wrrapd_wrapstars_apply_url( '/driver/' ) ); ?>">Driver applications</a>
+				<a class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--xl" href="<?php echo esc_url( wrrapd_wrapstars_apply_url( '/drive/' ) ); ?>">Driver applications</a>
 			</section>
 
 			<section class="wrrapd-wrapstars-dasher-cta wrrapd-wrapstars-dasher-box wrrapd-wrapstars-dasher-box--wide">

@@ -8,8 +8,9 @@
 	--ws-ink: #1a1a1a;
 	--ws-muted: #5c6370;
 	--ws-border: #e2e6eb;
-	--ws-purple: #1a087f;
-	--ws-purple-dark: #14065f;
+	/* Match wrrapd.com Elementor header/footer containers */
+	--ws-purple: #0f0351;
+	--ws-purple-dark: #0a0238;
 	--ws-bg: #ffffff;
 	--ws-card: #ffffff;
 	font-family: Fraunces, Georgia, serif;
@@ -958,7 +959,7 @@ body.wrrapd-wrapstars-portal .wrrapd-wrapstars * {
 }
 
 body.wrrapd-wrapstars-portal .wrrapd-wrapstars-site-header {
-	background: #1a087f;
+	background: #0f0351;
 	color: #fff;
 	padding: 0;
 	margin: 0;
@@ -1025,7 +1026,7 @@ body.wrrapd-wrapstars-portal .wrrapd-wrapstars-portal-util {
 	justify-content: flex-end;
 	gap: 0.35rem 0.5rem;
 	padding: 0.35rem clamp(0.75rem, 2vw, 1.25rem);
-	background: #14065f;
+	background: #0a0238;
 	border-top: 1px solid rgba(255, 243, 0, 0.18);
 	font-family: Fraunces, Georgia, serif;
 	font-size: clamp(0.72rem, 1.8vmin, 0.82rem);
@@ -1117,7 +1118,7 @@ body.wrrapd-wrapstars-portal .wrrapd-wrapstars-portal-util span[aria-hidden="tru
 }
 
 .wrrapd-wrapstars-cinema-hero__fallback {
-	background: linear-gradient(135deg, #1a087f 0%, #0a0a0a 55%, #2a1050 100%);
+	background: linear-gradient(135deg, #0f0351 0%, #0a0a0a 55%, #1a0a40 100%);
 }
 
 /* Uniform scrim — no hard vertical edge */
@@ -1652,7 +1653,7 @@ body.wrrapd-wrapstars-portal .wrrapd-wrapstars-site-footer {
 	width: 100%;
 	max-width: none;
 	margin: 0;
-	background: #1a087f !important;
+	background: #0f0351 !important;
 	color: #fff;
 	padding: 2rem clamp(1.25rem, 4vw, 2rem);
 	clear: both;
@@ -2207,7 +2208,7 @@ body.wrrapd-wrapstars-onboarding-host .wrrapd-wrapstars-site-footer {
 }
 
 body.wrrapd-wrapstars-onboarding-host .wrrapd-wrapstars-site-footer__inner {
-	background: rgba(15, 23, 42, 0.88);
+	background: #0f0351;
 	border-radius: 1rem;
 	padding: 1.25rem 1.5rem;
 	max-width: 1100px;
