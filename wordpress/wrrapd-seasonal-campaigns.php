@@ -1265,7 +1265,7 @@ function wrrapd_output_seasonal_campaign_assets() {
 	}
 	echo '<link rel="preconnect" href="https://fonts.googleapis.com" />';
 	echo '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />';
-	echo '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,560&amp;display=swap" />';
+	echo '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,560;9..144,700&amp;display=swap" />';
 }
 add_action( 'wp_head', 'wrrapd_output_seasonal_campaign_assets', 98 );
 
