@@ -1,7 +1,7 @@
 /**
  * Wrrapd sitewide mobile / touch layout (rem-based).
  * Header layout lives in wrrapd-orders-bridge.php (wrrapd-header-layout-css) — do not duplicate here.
- * Build: 2026-09-08-golden
+ * Build: 2026-09-08-gift-journal
  */
 
 html {
@@ -682,10 +682,28 @@ a.wrrapd-ext-cta {
 }
 
 /* =============================================================================
+   FOOTER — breathing room so copyright / social aren’t clipped at the bottom edge.
+   ============================================================================= */
+.elementor-location-footer {
+	padding-bottom: 1.25rem !important;
+	box-sizing: border-box !important;
+}
+
+.elementor-location-footer .elementor-element-7aa7d62,
+.elementor-6447 .elementor-element.elementor-element-7aa7d62 {
+	padding-bottom: 1.1rem !important;
+	box-sizing: border-box !important;
+}
+
+/* =============================================================================
    FOOTER — 4-column row like Samsung (Elementor flex at ~980px layout viewport).
    Do NOT collapse to 2-col grid; replicate desktop flex with rem-scaled type.
    ============================================================================= */
 @media (max-width: 960px) {
+	.elementor-location-footer {
+		padding-bottom: 0.85rem !important;
+	}
+
 	.elementor-location-footer .elementor-element-7aa7d62 {
 		display: flex !important;
 		flex-direction: row !important;
@@ -693,7 +711,7 @@ a.wrrapd-ext-cta {
 		align-items: flex-start !important;
 		justify-content: space-between !important;
 		gap: 0.35rem !important;
-		padding: 0.45rem 0.4rem 0.5rem !important;
+		padding: 0.45rem 0.4rem 0.85rem !important;
 		width: 100% !important;
 		max-width: 100% !important;
 		box-sizing: border-box !important;
@@ -701,7 +719,7 @@ a.wrrapd-ext-cta {
 
 	/* Elementor post-6447 — footer columns have padding-top:2rem */
 	.elementor-6447 .elementor-element.elementor-element-7aa7d62 {
-		padding: 0.45rem 0.4rem 0.5rem !important;
+		padding: 0.45rem 0.4rem 0.85rem !important;
 	}
 
 	.elementor-6447 .elementor-element.elementor-element-c9b773b,
@@ -1019,6 +1037,7 @@ a.wrrapd-ext-cta {
 	body.page-id-5576 .elementor-location-footer,
 	body.page-id-6276 .elementor-location-footer {
 		margin-top: auto !important;
+		padding-bottom: 0.95rem !important;
 	}
 
 	/* Retailer wheel — bullets below logos only on narrowest iPhones */

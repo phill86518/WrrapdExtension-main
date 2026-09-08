@@ -1,0 +1,203 @@
+{
+	"journal_name": "The Wrrapd Gift Journal",
+	"stories": [
+		{
+			"id": "wedding-every-moment",
+			"seasons": ["wedding", "evergreen"],
+			"weight": 10,
+			"kicker": "Wedding season",
+			"title": "A gift for every wedding moment",
+			"dek": "Weddings aren\u2019t one day\u2014they\u2019re a string of moments, each with someone worth thanking. Here\u2019s how to gift your way through all of them.",
+			"sections": [
+				{
+					"heading": "Start with the people standing beside you",
+					"body": "Bridesmaids and groomsmen show up for dress fittings, tastings, and the 6 a.m. hair appointment. A small, well-chosen gift when you ask them to stand with you sets the tone for everything that follows. Think a good candle, a silver bracelet, or a bottle of something bubbly\u2014then make the reveal count with real wrapping and a handwritten line."
+				},
+				{
+					"heading": "For the couple, give a reason to slow down",
+					"body": "The best couple gifts create time together after the confetti settles: a picnic kit, a proper coffee setup, a keepsake bouquet that never wilts. Registry gifts count too\u2014a toaster becomes a celebration when it arrives wrapped like you meant it instead of in a brown shipping box."
+				},
+				{
+					"heading": "Don\u2019t forget the team behind the scenes",
+					"body": "Photographers, planners, florists, and the DJ who read the room perfectly all put in long, invisible hours. A thank-you gift\u2014chocolates, a gift card, a bag of great beans\u2014lands hardest when it\u2019s unexpected. Send it the week after, when the adrenaline fades and gratitude is easy to miss."
+				},
+				{
+					"heading": "Welcome out-of-town guests properly",
+					"body": "If friends flew in, a small welcome gift at the hotel says \u201cwe\u2019re glad you\u2019re here\u201d before you even say hello. Local snacks, a water bottle, a hand-wrapped treat, and a card with the weekend schedule turn a hotel room into part of the celebration."
+				}
+			],
+			"tip": "Shop the registry anywhere online, then add custom wrapping and optional flowers at checkout so the couple opens something beautiful\u2014not a box inside a box.",
+			"picks": [
+				{ "label": "Keepsake LEGO bouquet", "slug": "target", "to": "https://www.target.com/p/lego-flower-bouquet-building-kit-10280/-/A-80130340" },
+				{ "label": "Silver bracelets for the bridal party", "slug": "vyjewelry", "to": "https://vyjewelry.shop/collections/silver-bracelets" },
+				{ "label": "Home gifts for the couple", "slug": "nordstrom", "to": "https://www.nordstrom.com/browse/home/gifts" },
+				{ "label": "Thank-you chocolates", "slug": "russellstover" }
+			],
+			"cta": { "label": "Shop wedding picks", "slug": "nordstrom", "to": "https://www.nordstrom.com/browse/home/gifts" }
+		},
+		{
+			"id": "back-to-school-occasion",
+			"seasons": ["back-to-school"],
+			"weight": 9,
+			"kicker": "Back to school",
+			"title": "Make the first day feel like an occasion",
+			"dek": "Generic supplies do the job. The right gift, wrapped and waiting on the kitchen table, does something better\u2014it turns nerves into excitement.",
+			"sections": [
+				{
+					"heading": "The one thing they carry every day",
+					"body": "A backpack is the most-used item of the whole school year, so it\u2019s worth choosing well. For little ones, soft and small wins; for teens, something sturdy with room for a laptop. Add their name or a favorite summer photo and the \u201cwhose is this?\u201d arguments end before they start."
+				},
+				{
+					"heading": "Lunchboxes, bottles, and the small stuff",
+					"body": "There\u2019s a quiet joy in opening a lunchbox that\u2019s clearly yours. Pair it with an insulated bottle that keeps drinks cold through afternoon practice. These are inexpensive gifts that get used two hundred times a year\u2014and they look far more special wrapped than tossed in a shopping bag."
+				},
+				{
+					"heading": "For the student leaving home",
+					"body": "The first move to a dorm is a milestone hiding inside a chore. Send something that says \u201cwe\u2019re proud of you\u201d: a good laptop sleeve, a real coffee setup, a notebook for the ideas they\u2019ll actually write down. Ship it wrapped so the first package in their new mailbox feels like home."
+				},
+				{
+					"heading": "Teachers deserve a proper thank-you",
+					"body": "Thirty new faces every September is a lot. A small gift from a family\u2014coffee, chocolates, a gift card\u2014is a warm way to say \u201cwe see the work.\u201d Wrap it properly and include a note from your kid; those are the ones that end up on the desk all year."
+				}
+			],
+			"tip": "Order from any store, add Wrrapd at checkout, and the first-day gift shows up wrapped and ready\u2014no late-night ribbon scramble.",
+			"picks": [
+				{ "label": "School backpacks", "slug": "target", "to": "https://www.target.com/s?searchTerm=school+backpack" },
+				{ "label": "School & office supplies", "slug": "walmart", "to": "https://www.walmart.com/browse/school-and-office-supplies/972" },
+				{ "label": "Dorm coffee gifts", "slug": "peetscoffee", "to": "https://www.peets.com/gifts" },
+				{ "label": "Teacher thank-you cards", "slug": "giftcards", "to": "https://www.giftcards.com/us/en/catalog/product-details/visa-gift-card" }
+			],
+			"cta": { "label": "Shop back-to-school", "slug": "target", "to": "https://www.target.com/s?searchTerm=school+backpack" }
+		},
+		{
+			"id": "man-who-has-everything",
+			"seasons": ["evergreen", "fall", "wedding", "back-to-school"],
+			"weight": 7,
+			"kicker": "Hard to shop for",
+			"title": "What to give the man who has everything",
+			"dek": "He already owns the gadget and the sweater. The trick isn\u2019t finding something new\u2014it\u2019s finding something only you could have given.",
+			"sections": [
+				{
+					"heading": "Go sentimental, not expensive",
+					"body": "He doesn\u2019t have the mug with your faces from that trip, or the glass etched with the year you met. Personal gifts sidestep \u201che already has one\u201d entirely, because nobody else could have made this one. A photo book, a framed print, a puzzle from a favorite shot\u2014these get kept."
+				},
+				{
+					"heading": "Upgrade the everyday",
+					"body": "The gifts that win long-term are the ones he touches daily: a wallet that finally replaces the falling-apart one, a cutting board for his Sunday cooking, a bottle that keeps coffee hot on the commute. Useful beats novel\u2014especially when it arrives looking like a gift, not a delivery."
+				},
+				{
+					"heading": "When he says \u201cnothing,\u201d he means \u201cnothing to store\u201d",
+					"body": "Food and drink solve this instantly. Great coffee, a serious box of chocolates, a bottle of what he actually drinks\u2014they get enjoyed, they disappear, and they\u2019re always welcome. Pair a bottle with the right glass and you\u2019ve built a complete, thoughtful gift in two clicks."
+				},
+				{
+					"heading": "Or give him permission to indulge",
+					"body": "A robe he\u2019d never buy himself, a proper barbecue tool set, a pair of headphones better than the ones he\u2019s been nursing along. Luxury for men is usually just quality he won\u2019t justify on his own\u2014so justify it for him, and wrap it."
+				}
+			],
+			"tip": "Whatever you pick, presentation does half the work. Custom wrapping plus a short note turns a practical gift into a memorable one.",
+			"picks": [
+				{ "label": "Headphones & tech", "slug": "bestbuy" },
+				{ "label": "Handmade & engraved finds", "slug": "etsy" },
+				{ "label": "Assorted chocolates", "slug": "russellstover" },
+				{ "label": "Coffee for the daily ritual", "slug": "peetscoffee", "to": "https://www.peets.com/gifts" }
+			],
+			"cta": { "label": "Browse gifts for him", "slug": "bestbuy" }
+		},
+		{
+			"id": "coffee-lover",
+			"seasons": ["evergreen", "fall", "back-to-school"],
+			"weight": 6,
+			"kicker": "For the coffee person",
+			"title": "Cool gifts for someone who lives on coffee",
+			"dek": "Morning cup, after-school-pickup cup, after-dinner cup. Anyone this devoted deserves a gift that understands the ritual.",
+			"sections": [
+				{
+					"heading": "A mug for every mood",
+					"body": "You can never have too many mugs, but a real coffee person needs range: a tiny cup for espresso, a mid-size for a flat white, and one oversized mug for the milky weekend latte. A heat-reveal mug that shows a hidden photo when it fills is a guaranteed grin before the first sip."
+				},
+				{
+					"heading": "Beans they\u2019d never buy themselves",
+					"body": "Most coffee lovers stick to a house favorite. Gift the splurge: a roaster-direct bag, a seasonal blend, or a sampler of origins. It\u2019s consumable, it smells incredible, and it arrives wrapped like something special instead of a grocery order."
+				},
+				{
+					"heading": "Build them a coffee station",
+					"body": "Coasters that protect the good table, a serving tray for guests, a tin for the beans\u2014small home accents that turn a kitchen corner into a caf\u00e9. Personal touches (a name, a photo, a favorite quote) make the whole setup feel like theirs."
+				},
+				{
+					"heading": "The perfect pairing: chocolate",
+					"body": "Dark chocolate with a high cocoa percentage sings next to espresso; sea-salt caramel goes beautifully with a latte. Pair a bag of beans with a box of chocolates and you\u2019ve made a gift they\u2019ll think of you for, one sip and one square at a time."
+				}
+			],
+			"tip": "Coffee travels well and wraps beautifully. Add flowers at checkout and it becomes a hostess gift, a thank-you, or a \u201cjust because.\u201d",
+			"picks": [
+				{ "label": "Peet\u2019s coffee gifts", "slug": "peetscoffee", "to": "https://www.peets.com/gifts" },
+				{ "label": "Roaster-direct beans", "slug": "freshroastedcoffee", "to": "https://www.freshroastedcoffee.com/collections/coffee" },
+				{ "label": "Chocolates to pair", "slug": "russellstover" },
+				{ "label": "Mugs & coffee accessories", "slug": "target", "to": "https://www.target.com/s?searchTerm=coffee+mug+gift" }
+			],
+			"cta": { "label": "Shop coffee gifts", "slug": "peetscoffee", "to": "https://www.peets.com/gifts" }
+		},
+		{
+			"id": "thank-you-before-the-rush",
+			"seasons": ["fall", "evergreen"],
+			"weight": 5,
+			"kicker": "Business & client gifting",
+			"title": "Why an early thank-you beats a December gift",
+			"dek": "Everyone sends gifts the week before Christmas. The smartest companies\u2014and the most thoughtful friends\u2014send theirs at Thanksgiving.",
+			"sections": [
+				{
+					"heading": "Gratitude is the whole message",
+					"body": "Thanksgiving is literally about saying thanks, which makes it the most natural moment to recognize the clients, teammates, and partners who carried the year. Your gift doesn\u2019t have to compete with a holiday theme\u2014it just has to say \u201cthank you,\u201d clearly."
+				},
+				{
+					"heading": "Arrive before the noise",
+					"body": "In December, even a beautiful gift gets lost between the office party, the school concert, and the dozen packages hitting the porch. Gifts that land in late November get opened, enjoyed, and remembered\u2014because nothing else is arriving that day."
+				},
+				{
+					"heading": "Better timing, better experience",
+					"body": "Carriers aren\u2019t slammed yet, people are still home, and offices haven\u2019t emptied for the break. A wrapped gift that shows up on time, before travel begins, is a gift that actually gets used\u2014on the table, with family, over the long weekend."
+				},
+				{
+					"heading": "Unexpected is unforgettable",
+					"body": "Because Thanksgiving gifting is still uncommon, it surprises people. Surprise reads as intention. Whether it\u2019s a gourmet box for a client or a gift card and flowers for a neighbor, arriving first is often the most memorable thing you can do."
+				}
+			],
+			"tip": "Send a few thank-yous now, wrapped and with a note, and you\u2019ll have December to yourself.",
+			"picks": [
+				{ "label": "Gift cards they can choose from", "slug": "giftcards", "to": "https://www.giftcards.com/us/en/catalog/product-details/visa-gift-card" },
+				{ "label": "Artisan chocolate gifts", "slug": "zchocolat" },
+				{ "label": "Coffee for the office", "slug": "peetscoffee", "to": "https://www.peets.com/gifts" },
+				{ "label": "Home & hosting accents", "slug": "nordstrom", "to": "https://www.nordstrom.com/browse/home/gifts" }
+			],
+			"cta": { "label": "Shop thank-you gifts", "slug": "giftcards", "to": "https://www.giftcards.com/us/en/catalog/product-details/visa-gift-card" }
+		},
+		{
+			"id": "note-they-keep",
+			"seasons": ["evergreen", "wedding", "back-to-school", "fall"],
+			"weight": 4,
+			"kicker": "The finishing touch",
+			"title": "How to write a gift note they\u2019ll actually keep",
+			"dek": "The wrapping gets the gasp. The note is what ends up in the drawer for years. Three lines are enough if they\u2019re the right three.",
+			"sections": [
+				{
+					"heading": "Name the moment, not the object",
+					"body": "Skip \u201chope you like it.\u201d Start with why now: \u201cFor your first week in the new place,\u201d \u201cBecause you survived tax season,\u201d \u201cFor the wedding weekend I\u2019ll never forget.\u201d Anchoring the gift to a moment makes it about them, not the thing."
+				},
+				{
+					"heading": "One specific memory beats ten adjectives",
+					"body": "\u201cYou\u2019re the best\u201d fades. \u201cYou drove two hours in the rain to sit with me at the hospital\u201d doesn\u2019t. Pick one true, specific detail and write it plainly. It will land harder than anything a card company printed."
+				},
+				{
+					"heading": "End with what you hope happens next",
+					"body": "A gift is a small wish for someone\u2019s future: \u201cMay every morning start this well,\u201d \u201cSave me a seat at the first dinner party.\u201d Close with that wish and sign your name the way you say it out loud."
+				}
+			],
+			"tip": "Add your message at Wrrapd checkout and we\u2019ll tuck it inside the wrapping, handwritten-style, so it\u2019s the first thing they see.",
+			"picks": [
+				{ "label": "See all featured picks", "path": "/top-gifting-choices/" }
+			],
+			"cta": { "label": "See all picks", "path": "/top-gifting-choices/" }
+		}
+	],
+	"shop_slugs": ["target", "ulta", "nordstrom", "etsy", "lego", "bestbuy", "walmart", "giftcards"]
+}

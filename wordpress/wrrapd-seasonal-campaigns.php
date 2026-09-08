@@ -1226,7 +1226,8 @@ function wrrapd_should_output_seasonal_blocks() {
  * @return list<string>
  */
 function wrrapd_campaign_body_class( $classes ) {
-	if ( ! wrrapd_should_output_seasonal_blocks() && ! is_page( 'my-orders' ) ) {
+	$on_welcome = function_exists( 'wrrapd_is_welcome_page' ) ? wrrapd_is_welcome_page() : ( is_page( array( 5576, 'welcome' ) ) );
+	if ( ! wrrapd_should_output_seasonal_blocks() && ! is_page( 'my-orders' ) && ! $on_welcome ) {
 		return $classes;
 	}
 	$c = wrrapd_active_campaign();
@@ -1239,6 +1240,9 @@ function wrrapd_campaign_body_class( $classes ) {
 	$classes[] = 'wrrapd-season-active';
 	if ( ! empty( $c['slug'] ) ) {
 		$classes[] = 'wrrapd-season-' . sanitize_html_class( (string) $c['slug'] );
+	}
+	if ( $on_welcome && is_user_logged_in() ) {
+		$classes[] = 'wrrapd-welcome-hub-page';
 	}
 	return $classes;
 }
@@ -1460,3 +1464,470 @@ function wrrapd_campaign_reminder_on_visit() {
 	wrrapd_campaign_maybe_send_reminder();
 }
 add_action( 'template_redirect', 'wrrapd_campaign_reminder_on_visit', 99 );
+
+/* =============================================================================
+ * Logged-in /welcome/ hub — "The Wrrapd Gift Journal"
+ * Seasonal hot-gifts rail + long-form original gift guides (rotated weekly) +
+ * shop-by-store band. Injected after the Elementor welcome copy; header untouched.
+ * ============================================================================= */
+
+function wrrapd_is_welcome_page() {
+	return is_page( array( 5576, 'welcome' ) );
+}
+
+function wrrapd_should_output_welcome_hub() {
+	if ( is_admin() || is_paged() || wp_doing_ajax() ) {
+		return false;
+	}
+	return wrrapd_is_welcome_page() && is_user_logged_in();
+}
+
+/**
+ * @return array<string, mixed>|null
+ */
+function wrrapd_welcome_journal_config() {
+	static $cfg = null;
+	if ( $cfg !== null ) {
+		return $cfg ?: null;
+	}
+	$cfg  = array();
+	$path = dirname( __FILE__ ) . '/wrrapd-welcome-ideas.json';
+	if ( is_readable( $path ) ) {
+		$raw = file_get_contents( $path );
+		$dec = is_string( $raw ) ? json_decode( $raw, true ) : null;
+		if ( is_array( $dec ) && ! empty( $dec['stories'] ) && is_array( $dec['stories'] ) ) {
+			$cfg = $dec;
+		}
+	}
+	return $cfg ?: null;
+}
+
+/**
+ * Season tags active right now (site timezone). Evergreen is always on.
+ *
+ * @return list<string>
+ */
+function wrrapd_welcome_active_seasons() {
+	$now = current_datetime();
+	$m   = (int) $now->format( 'n' );
+	$d   = (int) $now->format( 'j' );
+	$md  = $m * 100 + $d;
+	$out = array( 'evergreen' );
+	if ( $md >= 720 && $md <= 930 ) {
+		$out[] = 'back-to-school';
+	}
+	if ( $m >= 5 && $m <= 10 ) {
+		$out[] = 'wedding';
+	}
+	if ( $md >= 910 && $md <= 1130 ) {
+		$out[] = 'fall';
+	}
+	if ( $m === 11 || $m === 12 ) {
+		$out[] = 'holiday';
+	}
+	if ( $m === 1 || $m === 2 ) {
+		$out[] = 'winter';
+	}
+	if ( $m >= 3 && $m <= 4 ) {
+		$out[] = 'spring';
+	}
+	return $out;
+}
+
+/**
+ * Pick the featured story + supporting stories. Ordered by weight, rotated by ISO week
+ * so the page reads fresh each week without new content work.
+ *
+ * @return array{featured: array<string,mixed>|null, more: list<array<string,mixed>>}
+ */
+function wrrapd_welcome_stories_pick( $count_more = 3 ) {
+	$cfg = wrrapd_welcome_journal_config();
+	if ( ! $cfg ) {
+		return array( 'featured' => null, 'more' => array() );
+	}
+	$seasons = wrrapd_welcome_active_seasons();
+	$pool    = array();
+	foreach ( $cfg['stories'] as $s ) {
+		if ( ! is_array( $s ) || empty( $s['title'] ) || empty( $s['sections'] ) ) {
+			continue;
+		}
+		$tags = isset( $s['seasons'] ) && is_array( $s['seasons'] ) ? $s['seasons'] : array( 'evergreen' );
+		if ( count( array_intersect( $tags, $seasons ) ) === 0 ) {
+			continue;
+		}
+		$pool[] = $s;
+	}
+	if ( count( $pool ) === 0 ) {
+		return array( 'featured' => null, 'more' => array() );
+	}
+	usort(
+		$pool,
+		static function ( $a, $b ) {
+			$wa = isset( $a['weight'] ) ? (int) $a['weight'] : 0;
+			$wb = isset( $b['weight'] ) ? (int) $b['weight'] : 0;
+			return $wb <=> $wa;
+		}
+	);
+	// Rotate the featured slot weekly among the top two seasonal stories; keep the rest in weight order.
+	$week    = (int) current_datetime()->format( 'W' );
+	$top_n   = min( 2, count( $pool ) );
+	$lead_ix = $week % $top_n;
+	$feat    = $pool[ $lead_ix ];
+	$more    = array();
+	foreach ( $pool as $ix => $s ) {
+		if ( $ix === $lead_ix ) {
+			continue;
+		}
+		$more[] = $s;
+		if ( count( $more ) >= $count_more ) {
+			break;
+		}
+	}
+	return array( 'featured' => $feat, 'more' => $more );
+}
+
+/**
+ * Affiliate-aware URL for a story link: {path} → site URL; {slug,to} → /go/ redirect.
+ *
+ * @param array<string, mixed> $link
+ */
+function wrrapd_welcome_link_url( array $link ) {
+	if ( ! empty( $link['path'] ) ) {
+		return home_url( (string) $link['path'] );
+	}
+	$slug = isset( $link['slug'] ) ? preg_replace( '/[^a-z0-9_-]/', '', strtolower( (string) $link['slug'] ) ) : '';
+	if ( $slug === '' ) {
+		return '';
+	}
+	$to = isset( $link['to'] ) ? (string) $link['to'] : '';
+	if ( function_exists( 'wrrapd_affiliate_go_url' ) ) {
+		return (string) wrrapd_affiliate_go_url( $slug, $to );
+	}
+	$u = home_url( '/go/' . $slug . '/' );
+	return $to !== '' ? add_query_arg( 'to', rawurlencode( $to ), $u ) : $u;
+}
+
+/**
+ * @return array<string, array{label:string, domain:string}>
+ */
+function wrrapd_welcome_retailer_meta() {
+	static $meta = null;
+	if ( $meta !== null ) {
+		return $meta;
+	}
+	$meta = array(
+		'giftcards'          => array( 'label' => 'GiftCards.com', 'domain' => 'giftcards.com' ),
+		'booksamillion'      => array( 'label' => 'Books-A-Million', 'domain' => 'booksamillion.com' ),
+		'russellstover'      => array( 'label' => 'Russell Stover', 'domain' => 'russellstover.com' ),
+		'freshroastedcoffee' => array( 'label' => 'Fresh Roasted Coffee', 'domain' => 'freshroastedcoffee.com' ),
+		'zchocolat'          => array( 'label' => 'zChocolat', 'domain' => 'zchocolat.com' ),
+		'gearup'             => array( 'label' => 'GearUp', 'domain' => 'gearup.com' ),
+		'vyjewelry'          => array( 'label' => 'VY Jewelry', 'domain' => 'vyjewelry.shop' ),
+		'peetscoffee'        => array( 'label' => 'Peet’s Coffee', 'domain' => 'peets.com' ),
+	);
+	if ( function_exists( 'wrrapd_home_retailer_wheel_brands' ) ) {
+		foreach ( wrrapd_home_retailer_wheel_brands() as $b ) {
+			$meta[ (string) $b['slug'] ] = array( 'label' => (string) $b['label'], 'domain' => (string) $b['domain'] );
+		}
+	}
+	return $meta;
+}
+
+function wrrapd_welcome_retailer_label( $slug ) {
+	$m = wrrapd_welcome_retailer_meta();
+	return isset( $m[ $slug ] ) ? $m[ $slug ]['label'] : ucfirst( (string) $slug );
+}
+
+function wrrapd_welcome_retailer_logo( $slug ) {
+	$m   = wrrapd_welcome_retailer_meta();
+	$dom = isset( $m[ $slug ] ) ? $m[ $slug ]['domain'] : $slug . '.com';
+	if ( function_exists( 'wrrapd_mu_logo_url_for_slug' ) ) {
+		return (string) wrrapd_mu_logo_url_for_slug( $slug, $dom );
+	}
+	return 'https://www.google.com/s2/favicons?domain=' . rawurlencode( $dom ) . '&sz=64';
+}
+
+/**
+ * One story link (pick / CTA) as an <a>. Retailer name is appended when a slug is present.
+ *
+ * @param array<string, mixed> $link
+ */
+function wrrapd_welcome_render_pick_html( array $link, $with_logo = true ) {
+	$url = wrrapd_welcome_link_url( $link );
+	if ( $url === '' || empty( $link['label'] ) ) {
+		return '';
+	}
+	$slug = isset( $link['slug'] ) ? preg_replace( '/[^a-z0-9_-]/', '', strtolower( (string) $link['slug'] ) ) : '';
+	$ext  = $slug !== '';
+	$h    = '<li class="wrrapd-wj__pick"><a class="wrrapd-wj__pick-link" href="' . esc_url( $url ) . '"' . ( $ext ? ' rel="sponsored noopener noreferrer" target="_blank"' : '' ) . '>';
+	if ( $with_logo && $slug !== '' ) {
+		$h .= '<span class="wrrapd-wj__pick-logo"><img src="' . esc_url( wrrapd_welcome_retailer_logo( $slug ) ) . '" width="36" height="36" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" /></span>';
+	}
+	$h .= '<span class="wrrapd-wj__pick-text"><span class="wrrapd-wj__pick-label">' . esc_html( (string) $link['label'] ) . '</span>';
+	if ( $slug !== '' ) {
+		$h .= '<span class="wrrapd-wj__pick-store">' . esc_html( wrrapd_welcome_retailer_label( $slug ) ) . '</span>';
+	}
+	$h .= '</span></a></li>';
+	return $h;
+}
+
+/**
+ * @param array<string, mixed> $story
+ */
+function wrrapd_welcome_render_cta_html( array $story, $class = 'wrrapd-wj__cta' ) {
+	if ( empty( $story['cta'] ) || ! is_array( $story['cta'] ) ) {
+		return '';
+	}
+	$url = wrrapd_welcome_link_url( $story['cta'] );
+	if ( $url === '' ) {
+		return '';
+	}
+	$slug = isset( $story['cta']['slug'] ) ? (string) $story['cta']['slug'] : '';
+	$lbl  = isset( $story['cta']['label'] ) ? (string) $story['cta']['label'] : __( 'Shop now', 'wrrapd' );
+	return '<a class="' . esc_attr( $class ) . '" href="' . esc_url( $url ) . '"' . ( $slug !== '' ? ' rel="sponsored noopener noreferrer" target="_blank"' : '' ) . '>' . esc_html( $lbl ) . ' <span aria-hidden="true">→</span></a>';
+}
+
+/**
+ * @param array<string, mixed> $story
+ */
+function wrrapd_welcome_render_sections_html( array $story, $from = 0, $to = null ) {
+	$secs = isset( $story['sections'] ) && is_array( $story['sections'] ) ? array_values( $story['sections'] ) : array();
+	$to   = $to === null ? count( $secs ) : min( (int) $to, count( $secs ) );
+	$h    = '';
+	for ( $i = (int) $from; $i < $to; $i++ ) {
+		$s = $secs[ $i ];
+		if ( ! is_array( $s ) || empty( $s['body'] ) ) {
+			continue;
+		}
+		if ( ! empty( $s['heading'] ) ) {
+			$h .= '<h4 class="wrrapd-wj__h">' . esc_html( (string) $s['heading'] ) . '</h4>';
+		}
+		$h .= '<p class="wrrapd-wj__p">' . esc_html( (string) $s['body'] ) . '</p>';
+	}
+	return $h;
+}
+
+/**
+ * @param array<string, mixed> $story
+ */
+function wrrapd_welcome_render_tip_html( array $story ) {
+	if ( empty( $story['tip'] ) ) {
+		return '';
+	}
+	return '<p class="wrrapd-wj__tip"><span class="wrrapd-wj__tip-label">' . esc_html__( 'The Wrrapd touch', 'wrrapd' ) . '</span> ' . esc_html( (string) $story['tip'] ) . '</p>';
+}
+
+/**
+ * Featured long-form story: body on the left, "Shop this story" panel on the right.
+ *
+ * @param array<string, mixed> $story
+ */
+function wrrapd_welcome_render_feature_html( array $story ) {
+	$h  = '<article class="wrrapd-wj__feature">';
+	$h .= '<div class="wrrapd-wj__feature-body">';
+	if ( ! empty( $story['kicker'] ) ) {
+		$h .= '<p class="wrrapd-wj__kicker">' . esc_html( (string) $story['kicker'] ) . '</p>';
+	}
+	$h .= '<h3 class="wrrapd-wj__title">' . esc_html( (string) $story['title'] ) . '</h3>';
+	if ( ! empty( $story['dek'] ) ) {
+		$h .= '<p class="wrrapd-wj__dek">' . esc_html( (string) $story['dek'] ) . '</p>';
+	}
+	$h .= '<div class="wrrapd-wj__prose wrrapd-wj__prose--dropcap">' . wrrapd_welcome_render_sections_html( $story ) . '</div>';
+	$h .= wrrapd_welcome_render_tip_html( $story );
+	$h .= '</div>';
+	$picks = isset( $story['picks'] ) && is_array( $story['picks'] ) ? $story['picks'] : array();
+	$h    .= '<aside class="wrrapd-wj__panel" aria-label="' . esc_attr__( 'Shop this story', 'wrrapd' ) . '">';
+	$h    .= '<h4 class="wrrapd-wj__panel-title">' . esc_html__( 'Shop this story', 'wrrapd' ) . '</h4>';
+	if ( count( $picks ) > 0 ) {
+		$h .= '<ul class="wrrapd-wj__picks">';
+		foreach ( $picks as $p ) {
+			if ( is_array( $p ) ) {
+				$h .= wrrapd_welcome_render_pick_html( $p, true );
+			}
+		}
+		$h .= '</ul>';
+	}
+	$h .= wrrapd_welcome_render_cta_html( $story, 'wrrapd-wj__cta wrrapd-wj__cta--panel' );
+	$h .= '<p class="wrrapd-wj__panel-note">' . esc_html__( 'Shop as usual — choose Wrrapd at checkout for custom wrapping and flowers.', 'wrrapd' ) . '</p>';
+	$h .= '</aside>';
+	$h .= '</article>';
+	return $h;
+}
+
+/**
+ * Supporting story card: kicker, title, dek, first two sections; the rest folds under “Keep reading”.
+ *
+ * @param array<string, mixed> $story
+ */
+function wrrapd_welcome_render_story_html( array $story ) {
+	$secs = isset( $story['sections'] ) && is_array( $story['sections'] ) ? $story['sections'] : array();
+	$h    = '<article class="wrrapd-wj__story">';
+	if ( ! empty( $story['kicker'] ) ) {
+		$h .= '<p class="wrrapd-wj__kicker">' . esc_html( (string) $story['kicker'] ) . '</p>';
+	}
+	$h .= '<h3 class="wrrapd-wj__title wrrapd-wj__title--sm">' . esc_html( (string) $story['title'] ) . '</h3>';
+	if ( ! empty( $story['dek'] ) ) {
+		$h .= '<p class="wrrapd-wj__dek wrrapd-wj__dek--sm">' . esc_html( (string) $story['dek'] ) . '</p>';
+	}
+	$h .= '<div class="wrrapd-wj__prose">' . wrrapd_welcome_render_sections_html( $story, 0, 2 ) . '</div>';
+	if ( count( $secs ) > 2 || ! empty( $story['tip'] ) ) {
+		$h .= '<details class="wrrapd-wj__more"><summary class="wrrapd-wj__more-btn">' . esc_html__( 'Keep reading', 'wrrapd' ) . '</summary>';
+		$h .= '<div class="wrrapd-wj__prose">' . wrrapd_welcome_render_sections_html( $story, 2 ) . '</div>';
+		$h .= wrrapd_welcome_render_tip_html( $story );
+		$h .= '</details>';
+	}
+	$picks = isset( $story['picks'] ) && is_array( $story['picks'] ) ? array_slice( $story['picks'], 0, 3 ) : array();
+	if ( count( $picks ) > 0 ) {
+		$h .= '<ul class="wrrapd-wj__picks wrrapd-wj__picks--chips">';
+		foreach ( $picks as $p ) {
+			if ( is_array( $p ) ) {
+				$h .= wrrapd_welcome_render_pick_html( $p, true );
+			}
+		}
+		$h .= '</ul>';
+	}
+	$h .= wrrapd_welcome_render_cta_html( $story );
+	$h .= '</article>';
+	return $h;
+}
+
+/**
+ * @return list<string>
+ */
+function wrrapd_welcome_shop_slugs() {
+	$cfg   = wrrapd_welcome_journal_config();
+	$slugs = $cfg && ! empty( $cfg['shop_slugs'] ) && is_array( $cfg['shop_slugs'] ) ? $cfg['shop_slugs'] : array();
+	if ( count( $slugs ) === 0 && function_exists( 'wrrapd_extension_retailer_slugs' ) ) {
+		$slugs = wrrapd_extension_retailer_slugs();
+	}
+	$allowed = function_exists( 'wrrapd_affiliate_go_allowed_slugs' ) ? wrrapd_affiliate_go_allowed_slugs() : null;
+	$out     = array();
+	foreach ( $slugs as $s ) {
+		$s = preg_replace( '/[^a-z0-9_-]/', '', strtolower( (string) $s ) );
+		if ( $s === '' || ( is_array( $allowed ) && ! in_array( $s, $allowed, true ) ) ) {
+			continue;
+		}
+		$out[] = $s;
+	}
+	return array_values( array_unique( $out ) );
+}
+
+/**
+ * Full hub markup.
+ */
+function wrrapd_render_welcome_hub_html() {
+	$cfg = wrrapd_welcome_journal_config();
+	if ( ! $cfg ) {
+		return '';
+	}
+	$user  = wp_get_current_user();
+	$first = $user && $user->exists() ? trim( (string) get_user_meta( $user->ID, 'first_name', true ) ) : '';
+	if ( $first === '' && $user && $user->exists() ) {
+		$first = trim( (string) $user->display_name );
+	}
+	$journal = ! empty( $cfg['journal_name'] ) ? (string) $cfg['journal_name'] : __( 'The Wrrapd Gift Journal', 'wrrapd' );
+	$month   = wp_date( 'F Y' );
+	$picked  = wrrapd_welcome_stories_pick( 3 );
+	$c       = wrrapd_active_campaign();
+	$rail    = '';
+	if ( $c ) {
+		$gifts = wrrapd_campaign_hot_gifts_pick( $c, wrrapd_campaign_hot_gifts_display_count( $c ) );
+		$rail  = wrrapd_render_hot_gifts_rail_html( $c, $gifts, 'full' );
+	}
+
+	ob_start();
+	echo '<section id="wrrapd-welcome-hub" class="wrrapd-wj" aria-label="' . esc_attr( $journal ) . '">';
+	echo '<div class="wrrapd-wj__inner">';
+
+	// Masthead.
+	echo '<header class="wrrapd-wj__masthead">';
+	echo '<div class="wrrapd-wj__rule wrrapd-wj__rule--top" aria-hidden="true"><span></span><i></i><span></span></div>';
+	echo '<p class="wrrapd-wj__eyebrow">' . esc_html( $journal ) . ' <span class="wrrapd-wj__eyebrow-sep" aria-hidden="true">·</span> ' . esc_html( $month ) . '</p>';
+	echo '<h2 class="wrrapd-wj__masthead-title">' . esc_html( $first !== '' ? sprintf( __( 'Gift ideas while you’re here, %s', 'wrrapd' ), $first ) : __( 'Gift ideas while you’re here', 'wrrapd' ) ) . '</h2>';
+	echo '<p class="wrrapd-wj__lede">' . esc_html__( 'This season’s picks and a few short guides, refreshed every week. Shop any store you like — we’ll wrap it beautifully at checkout.', 'wrrapd' ) . '</p>';
+	echo '</header>';
+
+	// Seasonal rail.
+	if ( $rail !== '' ) {
+		echo '<div class="wrrapd-wj__rail">' . $rail . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+	}
+
+	// Featured guide.
+	if ( ! empty( $picked['featured'] ) ) {
+		echo wrrapd_welcome_render_feature_html( $picked['featured'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+	}
+
+	// Supporting guides.
+	if ( count( $picked['more'] ) > 0 ) {
+		echo '<div class="wrrapd-wj__section-head"><h3 class="wrrapd-wj__section-title">' . esc_html__( 'More from the journal', 'wrrapd' ) . '</h3></div>';
+		echo '<div class="wrrapd-wj__grid wrrapd-wj__grid--' . (int) count( $picked['more'] ) . '">';
+		foreach ( $picked['more'] as $s ) {
+			echo wrrapd_welcome_render_story_html( $s ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		}
+		echo '</div>';
+	}
+
+	// Shop-by-store band.
+	$slugs = wrrapd_welcome_shop_slugs();
+	if ( count( $slugs ) > 0 ) {
+		echo '<section class="wrrapd-wj__shops" aria-label="' . esc_attr__( 'Shop by store', 'wrrapd' ) . '">';
+		echo '<h3 class="wrrapd-wj__section-title wrrapd-wj__section-title--band">' . esc_html__( 'Shop by store', 'wrrapd' ) . '</h3>';
+		echo '<p class="wrrapd-wj__shops-sub">' . esc_html__( 'Pick any of these, then choose Wrrapd at checkout.', 'wrrapd' ) . '</p>';
+		echo '<ul class="wrrapd-wj__shops-list">';
+		foreach ( $slugs as $slug ) {
+			$url = wrrapd_welcome_link_url( array( 'slug' => $slug ) );
+			if ( $url === '' ) {
+				continue;
+			}
+			echo '<li><a class="wrrapd-wj__shop" href="' . esc_url( $url ) . '" rel="sponsored noopener noreferrer" target="_blank">';
+			echo '<img src="' . esc_url( wrrapd_welcome_retailer_logo( $slug ) ) . '" width="48" height="48" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" />';
+			echo '<span>' . esc_html( wrrapd_welcome_retailer_label( $slug ) ) . '</span></a></li>';
+		}
+		echo '</ul>';
+		echo '<a class="wrrapd-wj__all" href="' . esc_url( home_url( '/top-gifting-choices/' ) ) . '">' . esc_html__( 'See all featured picks', 'wrrapd' ) . ' <span aria-hidden="true">→</span></a>';
+		echo '</section>';
+	}
+
+	echo '<div class="wrrapd-wj__rule wrrapd-wj__rule--bottom" aria-hidden="true"><span></span><i></i><span></span></div>';
+	echo '</div></section>';
+	return (string) ob_get_clean();
+}
+
+function wrrapd_output_welcome_hub_blocks() {
+	if ( ! wrrapd_should_output_welcome_hub() ) {
+		return;
+	}
+	$html = wrrapd_render_welcome_hub_html();
+	if ( $html === '' ) {
+		return;
+	}
+	echo '<div id="wrrapd-welcome-hub-slot" hidden aria-hidden="true">' . $html . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+	echo '<!-- wrrapd-welcome-hub:' . esc_html( implode( ',', wrrapd_welcome_active_seasons() ) ) . ' -->';
+}
+add_action( 'wp_footer', 'wrrapd_output_welcome_hub_blocks', 13 );
+
+/**
+ * Move the hub into the Elementor page flow (after the welcome copy / buttons row),
+ * hide the old 10rem spacer, and align the hub’s gutters to the welcome heading.
+ */
+function wrrapd_output_welcome_hub_placement_script() {
+	if ( ! wrrapd_should_output_welcome_hub() ) {
+		return;
+	}
+	echo '<script id="wrrapd-welcome-hub-placement">';
+	echo '(function(){';
+	echo 'var done=false;';
+	echo 'function q(sel,root){try{return (root||document).querySelector(sel);}catch(e){return null;}}';
+	echo 'function pageRoot(){return q(".elementor-5576")||q(\'[data-elementor-id="5576"]\')||q(".elementor-location-single .elementor")||q("#content .elementor")||q("#content")||q("main");}';
+	echo 'function anchor(root){return q(".elementor-element-4b38cef",root)||q(".elementor-element-556f615d",root)||q(".elementor-widget-text-editor",root);}';
+	echo 'function align(hub){var ref=q(".elementor-element-5c3b382b .elementor-widget-container")||q(".elementor-element-5c3b382b")||q(".elementor-element-556f615d .elementor-widget-container");if(!ref)return;var r=ref.getBoundingClientRect(),h=hub.getBoundingClientRect();if(!r.width||!h.width)return;var l=Math.round(r.left-h.left),rt=Math.round(h.right-r.right);if(l>=0&&rt>=0&&(l+rt)<h.width*0.5){hub.style.setProperty("--wj-gutter-l",l+"px");hub.style.setProperty("--wj-gutter-r",rt+"px");}}';
+	echo 'function place(){if(done)return true;var slot=document.getElementById("wrrapd-welcome-hub-slot");if(!slot||!slot.firstElementChild)return false;var hub=slot.firstElementChild;var root=pageRoot();if(!root)return false;var a=anchor(root);';
+	echo 'var top=a;while(top&&top.parentElement&&top.parentElement!==root){top=top.parentElement;}';
+	echo 'if(top&&top.parentElement===root){top.insertAdjacentElement("afterend",hub);}else{root.appendChild(hub);}';
+	echo 'slot.remove();var sp=q(".elementor-element-c481830",root)||q(".elementor-element-3247e24",root);if(sp){sp.style.display="none";}';
+	echo 'document.body.classList.add("wrrapd-welcome-hub-ready");done=true;align(hub);window.addEventListener("resize",function(){align(hub);});return true;}';
+	echo 'document.addEventListener("DOMContentLoaded",place);window.addEventListener("load",function(){place();setTimeout(place,300);setTimeout(place,1200);});';
+	echo '})();';
+	echo '</script>';
+}
+add_action( 'wp_footer', 'wrrapd_output_welcome_hub_placement_script', 19 );
