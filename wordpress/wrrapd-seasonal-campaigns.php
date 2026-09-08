@@ -649,6 +649,22 @@ function wrrapd_campaign_hot_gifts_pick_constrained( array $ordered, $count, $ma
 			$retailer_counts[ $rk ] = ( $retailer_counts[ $rk ] ?? 0 ) + 1;
 		}
 	}
+	// Pad to full rail length so mobile 5-col doesn't leave an orphan row (e.g. 5+3).
+	if ( count( $out ) < $count ) {
+		foreach ( $ordered as $g ) {
+			if ( ! is_array( $g ) || count( $out ) >= $count ) {
+				break;
+			}
+			$key = isset( $g['product'] ) ? sanitize_key( (string) $g['product'] ) : sanitize_key( (string) ( $g['title'] ?? '' ) );
+			if ( $key !== '' && isset( $used_keys[ $key ] ) ) {
+				continue;
+			}
+			$out[] = $g;
+			if ( $key !== '' ) {
+				$used_keys[ $key ] = true;
+			}
+		}
+	}
 	return array_slice( $out, 0, $count );
 }
 

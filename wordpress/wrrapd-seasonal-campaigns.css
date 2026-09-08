@@ -368,7 +368,7 @@ body.wrrapd-season-fathers-day .elementor-element-6466f5b.wrrapd-season-headline
 }
 
 @media (max-width: 768px), (hover: none) and (pointer: coarse) {
-	/* Compact product thumbnails — 2 short rows, no sideways swipe, not tall */
+	/* 5-across × 2 rows when 10 cards — avoid orphan rows like 5+3 */
 	.wrrapd-hot-gifts-rail__grid {
 		display: flex !important;
 		flex-wrap: wrap !important;
