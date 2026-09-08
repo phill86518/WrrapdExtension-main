@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /** Bump when account UI / header polish changes — view-source should contain this string. */
-define( 'WRRAPD_MU_BUILD', '2026-09-08-header-fixup' );
+define( 'WRRAPD_MU_BUILD', '2026-09-08-cta-page-center' );
 
 $wrrapd_seasonal = dirname( __FILE__ ) . '/wrrapd-seasonal-campaigns.php';
 if ( is_readable( $wrrapd_seasonal ) ) {
@@ -1730,29 +1730,32 @@ function wrrapd_output_header_layout_css() {
 		return;
 	}
 	echo '<style id="wrrapd-header-layout-css">';
-	/* Row: brand | location | auth */
+	/* Row: brand | location | spacer | auth — CTA is page-centered (desktop) */
 	echo '.elementor-location-header .elementor-section,.elementor-location-header [data-elementor-type="header"] .e-con{min-height:0!important;--min-height:0!important;padding-block:0!important;}';
-	echo '.elementor-location-header .elementor-element-6835e730{display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;align-items:stretch!important;justify-content:space-between!important;gap:0 .35rem!important;padding-block:clamp(.06rem,.2vmin,.14rem)!important;min-height:0!important;width:100%!important;max-width:100%!important;box-sizing:border-box!important;}';
+	echo '.elementor-location-header .elementor-element-6835e730{position:relative!important;display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;align-items:stretch!important;justify-content:space-between!important;gap:0 .35rem!important;padding-block:clamp(.06rem,.2vmin,.14rem)!important;min-height:0!important;width:100%!important;max-width:100%!important;box-sizing:border-box!important;}';
 	/* Brand LEFT */
-	echo '.elementor-location-header .elementor-element-6e478726{display:flex!important;flex-direction:column!important;align-items:flex-start!important;justify-content:center!important;align-self:stretch!important;flex:0 0 24%!important;max-width:24%!important;width:24%!important;min-width:0!important;gap:0!important;margin:0!important;padding:0!important;}';
+	echo '.elementor-location-header .elementor-element-6e478726{display:flex!important;flex-direction:column!important;align-items:flex-start!important;justify-content:center!important;align-self:stretch!important;flex:0 0 24%!important;max-width:24%!important;width:24%!important;min-width:0!important;gap:0!important;margin:0!important;padding:0!important;position:relative!important;z-index:3!important;}';
 	echo '.elementor-location-header .elementor-element-6e478726>*{flex:0 0 auto!important;}';
 	echo '.elementor-location-header .elementor-element-68a38868{margin:0!important;padding:0!important;line-height:0!important;}';
 	echo '.elementor-location-header .elementor-element-68a38868 img{max-width:min(11.5rem,36vw)!important;height:auto!important;width:auto!important;margin:0!important;transform:translate(-.45rem,0)!important;object-position:left center!important;}';
 	echo '.elementor-location-header .elementor-element-1c0d63ad{margin:-.9rem 0 0!important;padding:0!important;line-height:0!important;transform:translate(-.3rem,0)!important;}';
 	echo '.elementor-location-header .elementor-element-1c0d63ad img{display:block!important;max-width:min(9.9rem,31vw)!important;margin:0!important;transform:none!important;}';
 	/* Location */
-	echo '.elementor-location-header .elementor-element-1913a20{flex:0 0 19%!important;max-width:19%!important;min-width:0!important;align-self:center!important;margin:0!important;padding:0!important;transform:translateX(-.35rem)!important;}';
+	echo '.elementor-location-header .elementor-element-1913a20{flex:0 0 19%!important;max-width:19%!important;min-width:0!important;align-self:center!important;margin:0!important;padding:0!important;transform:translateX(-.35rem)!important;position:relative!important;z-index:3!important;}';
 	echo '.elementor-location-header #wrrapd-location,.elementor-location-header #location-text,.elementor-location-header #location-text strong{font-size:clamp(.81rem,1.9vmin,.95rem)!important;line-height:1.25!important;}';
-	/* Auth column: CTA in the open middle | Register/Login+Google/Amazon pinned right */
-	echo '.elementor-location-header .elementor-element-693b4ea7{flex:1 1 52%!important;max-width:52%!important;min-width:0!important;display:flex!important;flex-direction:column!important;justify-content:center!important;align-items:stretch!important;align-self:stretch!important;margin:0!important;padding:.08rem 0!important;gap:0!important;}';
-	echo '.elementor-location-header .elementor-element-2b05a213{display:flex!important;flex-direction:row!important;align-items:center!important;justify-content:flex-end!important;width:100%!important;max-width:100%!important;margin:0!important;padding:0!important;gap:.75rem!important;min-height:0!important;}';
-	echo '.elementor-location-header .elementor-element-00ec9fc{flex:1 1 auto!important;min-width:0!important;max-width:none!important;width:auto!important;display:flex!important;align-items:center!important;justify-content:center!important;align-self:center!important;margin:0!important;order:1!important;}';
+	/* Auth column = Register/Login + Google/Amazon only (far right). CTA is NOT in this flex fight. */
+	echo '.elementor-location-header .elementor-element-693b4ea7{flex:0 0 12.5rem!important;max-width:12.5rem!important;width:12.5rem!important;min-width:12.5rem!important;margin-left:auto!important;display:flex!important;flex-direction:column!important;justify-content:center!important;align-items:stretch!important;align-self:stretch!important;padding:.08rem 0!important;gap:0!important;position:relative!important;z-index:4!important;background:transparent!important;}';
+	echo '.elementor-location-header .elementor-element-2b05a213{display:flex!important;flex-direction:row!important;align-items:center!important;justify-content:flex-end!important;width:100%!important;max-width:100%!important;margin:0!important;padding:0!important;gap:0!important;min-height:0!important;}';
+	/* Desktop: Chrome CTA truly page-centered on the header row */
+	echo '@media(min-width:1101px){';
+	echo '.elementor-location-header .elementor-element-00ec9fc{position:absolute!important;left:50%!important;top:50%!important;transform:translate(-50%,-50%)!important;z-index:2!important;flex:0 0 auto!important;width:auto!important;max-width:none!important;display:flex!important;align-items:center!important;justify-content:center!important;margin:0!important;pointer-events:auto!important;}';
 	echo '.elementor-location-header .elementor-element-7f1bdc1{width:auto!important;max-width:none!important;flex:0 0 auto!important;align-self:center!important;margin:0!important;}';
-	echo '.elementor-location-header .elementor-element-7f1bdc1 .elementor-widget-container,.elementor-location-header .elementor-element-7f1bdc1 .elementor-button-wrapper{display:flex!important;align-items:center!important;justify-content:center!important;width:auto!important;max-width:none!important;}';
-	echo '.elementor-location-header .elementor-element-7f1bdc1 .elementor-button{display:inline-flex!important;align-items:center!important;justify-content:center!important;white-space:nowrap!important;width:auto!important;min-width:0!important;max-width:none!important;font-size:clamp(.78rem,1.55vmin,.95rem)!important;line-height:1.15!important;padding:.52rem 1.4rem!important;min-height:2.55rem!important;height:auto!important;text-align:center!important;}';
-	echo '.elementor-location-header .elementor-element-7f1bdc1 .elementor-button-text{white-space:nowrap!important;display:inline!important;}';
-	/* Register/Login → Google → Amazon — always far right */
-	echo '.elementor-location-header [data-id="5c54566"],.elementor-location-header .elementor-element-5c54566{display:flex!important;flex-direction:column!important;justify-content:center!important;align-items:stretch!important;flex:0 0 12rem!important;width:12rem!important;max-width:12rem!important;gap:.45rem!important;margin:0!important;padding:0!important;order:2!important;}';
+	echo '.elementor-location-header .elementor-element-7f1bdc1 .elementor-widget-container,.elementor-location-header .elementor-element-7f1bdc1 .elementor-button-wrapper{display:flex!important;align-items:center!important;justify-content:center!important;width:auto!important;max-width:none!important;overflow:visible!important;}';
+	echo '.elementor-location-header .elementor-element-7f1bdc1 .elementor-button{display:inline-flex!important;align-items:center!important;justify-content:center!important;white-space:nowrap!important;width:auto!important;min-width:0!important;max-width:none!important;overflow:visible!important;font-size:clamp(.8rem,1.6vmin,.98rem)!important;line-height:1.15!important;padding:.55rem 1.55rem!important;min-height:2.55rem!important;height:auto!important;text-align:center!important;}';
+	echo '.elementor-location-header .elementor-element-7f1bdc1 .elementor-button-text{white-space:nowrap!important;display:inline!important;overflow:visible!important;}';
+	echo '}';
+	/* Register/Login → Google → Amazon — always far right, above CTA if paths cross */
+	echo '.elementor-location-header [data-id="5c54566"],.elementor-location-header .elementor-element-5c54566{display:flex!important;flex-direction:column!important;justify-content:center!important;align-items:stretch!important;flex:0 0 12rem!important;width:12rem!important;max-width:12rem!important;gap:.45rem!important;margin:0!important;padding:0!important;position:relative!important;z-index:5!important;}';
 	echo '.elementor-location-header [data-id="1112277b"],.elementor-location-header .elementor-element-1112277b{width:100%!important;max-width:12rem!important;margin:0!important;padding:0!important;}';
 	echo '.elementor-location-header [data-id="1112277b"] .elementor-nav-menu--main ul,.elementor-location-header .elementor-element-1112277b .elementor-nav-menu--main ul{display:flex!important;flex-direction:row!important;justify-content:space-evenly!important;align-items:center!important;width:100%!important;gap:0!important;margin:0!important;padding:0!important;}';
 	echo '.elementor-location-header [data-id="1112277b"] .elementor-item,.elementor-location-header .elementor-element-1112277b .elementor-nav-menu .elementor-item{font-size:clamp(.85rem,2.1vmin,1rem)!important;line-height:1.2!important;padding:0!important;margin:0!important;}';
@@ -1760,7 +1763,6 @@ function wrrapd_output_header_layout_css() {
 	echo '.elementor-location-header [data-id="69de726e"] .elementor-button,.elementor-location-header [data-id="2ca99876"] .elementor-button{display:inline-flex!important;width:100%!important;box-sizing:border-box!important;justify-content:center!important;align-items:center!important;margin:0!important;padding:.12rem 0!important;min-height:1.5rem!important;height:1.5rem!important;}';
 	echo '.elementor-location-header [data-id="69de726e"] .elementor-button-content-wrapper,.elementor-location-header [data-id="2ca99876"] .elementor-button-content-wrapper{display:inline-flex!important;justify-content:center!important;align-items:center!important;gap:.35rem!important;width:auto!important;}';
 	echo '.elementor-location-header [data-id="69de726e"] .elementor-button-text,.elementor-location-header [data-id="2ca99876"] .elementor-button-text,.elementor-location-header [data-id="69de726e"] .elementor-button-icon,.elementor-location-header [data-id="2ca99876"] .elementor-button-icon{flex-grow:0!important;flex-basis:auto!important;}';
-	/* If Register/Login is still a sibling of the CTA row, pin it into the right stack visually */
 	echo '.elementor-location-header .elementor-element-693b4ea7>[data-id="1112277b"],.elementor-location-header .elementor-element-693b4ea7>.elementor-element-1112277b{align-self:flex-end!important;width:12rem!important;max-width:12rem!important;margin:0 0 .2rem!important;}';
 	/* Mobile / Samsung ~980 */
 	echo '@media(max-width:1100px),(hover:none) and (pointer:coarse){';
@@ -1770,6 +1772,7 @@ function wrrapd_output_header_layout_css() {
 	echo '.elementor-location-header .elementor-element-1c0d63ad{margin:-.62rem 0 0!important;transform:translate(-.2rem,0)!important;}';
 	echo '.elementor-location-header .elementor-element-1c0d63ad img{max-height:clamp(1.15rem,6vw,1.4rem)!important;}';
 	echo '.elementor-location-header .elementor-element-1913a20{transform:translateX(-.25rem)!important;}';
+	echo '.elementor-location-header .elementor-element-693b4ea7{flex:0 0 11rem!important;width:11rem!important;max-width:11rem!important;min-width:11rem!important;}';
 	echo '.elementor-location-header [data-id="5c54566"],.elementor-location-header .elementor-element-5c54566{flex:0 0 11rem!important;width:11rem!important;max-width:11rem!important;gap:.42rem!important;margin:0 0 0 auto!important;}';
 	echo '.elementor-location-header [data-id="1112277b"],.elementor-location-header .elementor-element-1112277b{max-width:11rem!important;}';
 	echo '.elementor-location-header [data-id="1112277b"] .elementor-item,.elementor-location-header .elementor-element-1112277b .elementor-nav-menu .elementor-item{font-size:clamp(.9rem,3.8vw,1.08rem)!important;}';
@@ -1799,15 +1802,15 @@ function wrrapd_output_occasion_ticker_label_patch_script() {
 add_action( 'wp_footer', 'wrrapd_output_occasion_ticker_label_patch_script', 22 );
 
 /**
- * Move Register/Login into the Google/Amazon column so they sit directly above Google.
- * Keep Chrome CTA inside the auth row (do not absolute-center — that covered Google/Amazon).
+ * Desktop: reparent Chrome CTA onto the header row for true page centering.
+ * Always: Register/Login above Google/Amazon in the right stack.
  */
 function wrrapd_output_header_auth_stack_script() {
 	if ( is_admin() ) {
 		return;
 	}
 	echo '<script id="wrrapd-header-auth-stack">';
-	echo '(function(){function place(){var header=document.querySelector(".elementor-location-header");if(!header)return;var row=header.querySelector(".elementor-element-2b05a213")||header.querySelector(\'[data-id="2b05a213"]\');var cta=header.querySelector(".elementor-element-00ec9fc")||header.querySelector(\'[data-id="00ec9fc"]\');if(row&&cta&&cta.parentElement!==row){row.insertBefore(cta,row.firstChild);}if(document.body.classList.contains("logged-in"))return;var nav=header.querySelector(\'[data-id="1112277b"]\');var stack=header.querySelector(\'[data-id="5c54566"]\');if(!nav||!stack)return;if(nav.parentElement!==stack){stack.insertBefore(nav,stack.firstChild);}if(row&&stack.parentElement!==row){row.appendChild(stack);}}document.addEventListener("DOMContentLoaded",place);window.addEventListener("load",place);})();';
+	echo '(function(){function place(){var header=document.querySelector(".elementor-location-header");if(!header)return;var main=header.querySelector(".elementor-element-6835e730")||header.querySelector(\'[data-id="6835e730"]\');var auth=header.querySelector(".elementor-element-693b4ea7")||header.querySelector(\'[data-id="693b4ea7"]\');var row=header.querySelector(".elementor-element-2b05a213")||header.querySelector(\'[data-id="2b05a213"]\');var cta=header.querySelector(".elementor-element-00ec9fc")||header.querySelector(\'[data-id="00ec9fc"]\');var stack=header.querySelector(\'[data-id="5c54566"]\')||header.querySelector(".elementor-element-5c54566");var desk=window.matchMedia("(min-width:1101px)").matches;if(cta&&main){if(desk){if(cta.parentElement!==main)main.appendChild(cta);}else if(row&&cta.parentElement!==row){row.insertBefore(cta,row.firstChild);}}if(stack&&auth){if(row&&stack.parentElement!==row)row.appendChild(stack);else if(!row&&stack.parentElement!==auth)auth.appendChild(stack);}if(document.body.classList.contains("logged-in"))return;var nav=header.querySelector(\'[data-id="1112277b"]\');if(nav&&stack&&nav.parentElement!==stack)stack.insertBefore(nav,stack.firstChild);}document.addEventListener("DOMContentLoaded",place);window.addEventListener("load",place);window.addEventListener("resize",place);})();';
 	echo '</script>';
 }
 add_action( 'wp_footer', 'wrrapd_output_header_auth_stack_script', 21 );
