@@ -278,6 +278,11 @@ function wrrapd_holiday_windows_for_year( $year, DateTimeZone $tz ) {
 			}
 		}
 
+		// Labor Day is a short weekend — end on the holiday so Aug/Sep BTS + wedding themes take over the next day.
+		if ( $key === 'labor-day' ) {
+			$end = $date;
+		}
+
 		if ( $start <= $end ) {
 			$windows[] = array(
 				'key'   => $key,
@@ -385,19 +390,68 @@ function wrrapd_should_use_generic_gap( DateTimeImmutable $now ) {
 }
 
 /**
+ * Interleave two hot-gift lists (back-to-school + weddings in late summer).
+ *
+ * @param list<array<string, mixed>> $a
+ * @param list<array<string, mixed>> $b
+ * @return list<array<string, mixed>>
+ */
+function wrrapd_interleave_hot_gifts( array $a, array $b, $limit = 10 ) {
+	$limit = max( 1, min( WRRAPD_HOT_GIFTS_RAIL_MAX, (int) $limit ) );
+	$out   = array();
+	$i     = 0;
+	$seen  = array();
+	while ( count( $out ) < $limit && ( $i < count( $a ) || $i < count( $b ) ) ) {
+		foreach ( array( $a, $b ) as $list ) {
+			if ( count( $out ) >= $limit || $i >= count( $list ) || ! is_array( $list[ $i ] ) ) {
+				continue;
+			}
+			$g = $list[ $i ];
+			$key = isset( $g['href'] ) ? (string) $g['href'] : ( isset( $g['title'] ) ? (string) $g['title'] : '' );
+			if ( $key !== '' && isset( $seen[ $key ] ) ) {
+				continue;
+			}
+			if ( $key !== '' ) {
+				$seen[ $key ] = true;
+			}
+			$out[] = $g;
+		}
+		$i++;
+	}
+	return $out;
+}
+
+/**
  * Generic theme for gaps (after grace, before next holiday window).
+ * When $force is true (no active holiday window), always pick a generic — never return null.
  *
  * @return array<string, mixed>|null
  */
-function wrrapd_generic_campaign_for_gap( DateTimeImmutable $now, $cfg = null ) {
-	if ( ! wrrapd_should_use_generic_gap( $now ) ) {
+function wrrapd_generic_campaign_for_gap( DateTimeImmutable $now, $cfg = null, $force = false ) {
+	if ( ! $force && ! wrrapd_should_use_generic_gap( $now ) ) {
 		return null;
 	}
 	if ( ! is_array( $cfg ) ) {
 		$cfg = wrrapd_campaigns_config();
 	}
 	$month = (int) $now->format( 'n' );
-	if ( $month >= 7 && $month <= 9 ) {
+	// Late summer: back-to-school + wedding season (interleaved featured picks).
+	if ( $month >= 8 && $month <= 9 ) {
+		$bts = wrrapd_campaign_by_key( 'generic-back-to-school', $cfg );
+		$wed = wrrapd_campaign_by_key( 'generic-weddings', $cfg );
+		if ( $bts ) {
+			$bts_gifts = ( ! empty( $bts['hot_gifts'] ) && is_array( $bts['hot_gifts'] ) ) ? $bts['hot_gifts'] : array();
+			$wed_gifts = ( $wed && ! empty( $wed['hot_gifts'] ) && is_array( $wed['hot_gifts'] ) ) ? $wed['hot_gifts'] : array();
+			$limit     = wrrapd_campaign_hot_gifts_display_count( $bts, 10 );
+			$bts['hot_gifts']       = wrrapd_interleave_hot_gifts( $bts_gifts, $wed_gifts, $limit );
+			$bts['hot_gifts_title'] = 'Back-to-school & wedding picks';
+			return $bts;
+		}
+		if ( $wed ) {
+			return $wed;
+		}
+	}
+	if ( $month === 7 ) {
 		$c = wrrapd_campaign_by_key( 'generic-weddings', $cfg );
 		if ( $c ) {
 			return $c;
@@ -435,7 +489,7 @@ function wrrapd_active_campaign( $now = null ) {
 			return $c;
 		}
 	}
-	return wrrapd_generic_campaign_for_gap( $now, $cfg );
+	return wrrapd_generic_campaign_for_gap( $now, $cfg, true );
 }
 
 /**
@@ -676,7 +730,26 @@ function wrrapd_campaign_hot_gifts_pick( array $campaign, $count = 6 ) {
 	$diverse_cats     = ! empty( $campaign['hot_gifts_diverse_categories'] );
 	if ( count( $pool ) < $count ) {
 		$cfg = wrrapd_campaigns_config();
-		if ( $cfg && ! empty( $cfg['evergreen_hot_gifts'] ) && is_array( $cfg['evergreen_hot_gifts'] ) ) {
+		// Prefer real product photos from other campaigns before logo-only evergreen cards.
+		if ( $cfg && ! empty( $cfg['campaigns'] ) && is_array( $cfg['campaigns'] ) ) {
+			foreach ( $cfg['campaigns'] as $other ) {
+				if ( ! is_array( $other ) || empty( $other['hot_gifts'] ) || ! is_array( $other['hot_gifts'] ) ) {
+					continue;
+				}
+				if ( isset( $campaign['slug'], $other['slug'] ) && (string) $campaign['slug'] === (string) $other['slug'] ) {
+					continue;
+				}
+				foreach ( $other['hot_gifts'] as $g ) {
+					if ( is_array( $g ) && ! empty( $g['title'] ) && wrrapd_campaign_gift_has_real_product_image( $g ) ) {
+						$pool[] = $g;
+					}
+				}
+				if ( count( $pool ) >= $count ) {
+					break;
+				}
+			}
+		}
+		if ( count( $pool ) < $count && $cfg && ! empty( $cfg['evergreen_hot_gifts'] ) && is_array( $cfg['evergreen_hot_gifts'] ) ) {
 			foreach ( $cfg['evergreen_hot_gifts'] as $g ) {
 				if ( is_array( $g ) && ! empty( $g['title'] ) ) {
 					$pool[] = $g;
@@ -686,6 +759,17 @@ function wrrapd_campaign_hot_gifts_pick( array $campaign, $count = 6 ) {
 	}
 	if ( count( $pool ) === 0 ) {
 		return array();
+	}
+	$with_photo = array_values(
+		array_filter(
+			$pool,
+			static function ( $g ) {
+				return is_array( $g ) && wrrapd_campaign_gift_has_real_product_image( $g );
+			}
+		)
+	);
+	if ( count( $with_photo ) >= $count ) {
+		$pool = $with_photo;
 	}
 	$pinned = array();
 	$rest   = array();
@@ -711,30 +795,32 @@ function wrrapd_campaign_hot_gifts_pick( array $campaign, $count = 6 ) {
 }
 
 /**
+ * True when the gift has a real product photo (not a favicon or retailer logo fallback).
+ *
+ * @param array<string, mixed> $gift
+ */
+function wrrapd_campaign_gift_has_real_product_image( array $gift ) {
+	if ( empty( $gift['image'] ) || ! is_string( $gift['image'] ) ) {
+		return false;
+	}
+	$url = trim( (string) $gift['image'] );
+	if ( $url === '' ) {
+		return false;
+	}
+	if ( strpos( $url, 'favicons' ) !== false || strpos( $url, 'google.com/s2/favicons' ) !== false ) {
+		return false;
+	}
+	return true;
+}
+
+/**
  * @param array<string, mixed> $gift
  */
 function wrrapd_campaign_gift_image_url( array $gift ) {
-	if ( empty( $gift['image'] ) || ! is_string( $gift['image'] ) ) {
-		if ( ! empty( $gift['retailer_slug'] ) ) {
-			$logo = wrrapd_campaign_gift_logo_url( $gift );
-			if ( $logo !== '' && strpos( $logo, 'favicons' ) === false ) {
-				return $logo;
-			}
-		}
+	if ( ! wrrapd_campaign_gift_has_real_product_image( $gift ) ) {
 		return '';
 	}
 	$url = trim( (string) $gift['image'] );
-	if ( strpos( $url, 'google.com/s2/favicons' ) !== false ) {
-		$logo = wrrapd_campaign_gift_logo_url( $gift );
-		if ( $logo !== '' && strpos( $logo, 'favicons' ) === false ) {
-			return $logo;
-		}
-		if ( preg_match( '/[?&]sz=(\d+)/', $url, $m ) ) {
-			$url = preg_replace( '/([?&])sz=\d+/', '${1}sz=256', $url );
-		} else {
-			$url .= ( strpos( $url, '?' ) !== false ? '&' : '?' ) . 'sz=256';
-		}
-	}
 	if ( strpos( $url, 'covers.openlibrary.org' ) !== false ) {
 		$url = preg_replace( '/-L\.jpg$/', '-M.jpg', $url );
 	}
@@ -1028,10 +1114,10 @@ function wrrapd_render_hot_gifts_rail_html( array $campaign, array $gifts, $vari
 	if ( count( $gifts ) === 0 ) {
 		return '';
 	}
-	$title     = isset( $campaign['hot_gifts_title'] ) ? (string) $campaign['hot_gifts_title'] : __( 'Hot gifts this week', 'wrrapd' );
+	$title     = isset( $campaign['hot_gifts_title'] ) ? (string) $campaign['hot_gifts_title'] : __( 'Featured gift picks', 'wrrapd' );
 	$title_sub = isset( $campaign['hot_gifts_title_sub'] ) ? trim( (string) $campaign['hot_gifts_title_sub'] ) : '';
 	$show_flag = ! empty( $campaign['hot_gifts_title_flag'] );
-	$mod       = $variant === 'compact' ? ' wrrapd-hot-gifts-rail--compact' : '';
+	$mod       = $variant === 'compact' ? ' wrrapd-hot-gifts-rail--compact' : ' wrrapd-hot-gifts-rail--mixed-occasions';
 	$slug      = isset( $campaign['slug'] ) ? sanitize_html_class( (string) $campaign['slug'] ) : '';
 
 	ob_start();
@@ -1067,27 +1153,26 @@ function wrrapd_render_hot_gifts_rail_html( array $campaign, array $gifts, $vari
 		$retailer  = wrrapd_campaign_gift_retailer_name( $g );
 		$ret_line  = isset( $g['retailer_line'] ) ? trim( (string) $g['retailer_line'] ) : '';
 		$prod_name = isset( $g['product'] ) ? trim( (string) $g['product'] ) : trim( (string) $g['title'] );
-		$is_prod   = $photo !== '' || $retailer !== '' || $ret_line !== '';
+		$occasion  = isset( $g['occasion'] ) ? trim( (string) $g['occasion'] ) : '';
+		$is_prod   = wrrapd_campaign_gift_has_real_product_image( $g ) && $prod_meta['src'] !== '';
 
-		echo '<a class="wrrapd-hot-gifts-rail__card' . ( $is_prod ? ' wrrapd-hot-gifts-rail__card--product' : '' ) . '" role="listitem" href="' . $href . '" rel="sponsored noopener noreferrer">';
+		echo '<a class="wrrapd-hot-gifts-rail__card' . ( $is_prod ? ' wrrapd-hot-gifts-rail__card--product' : '' ) . '" role="listitem" href="' . $href . '" rel="sponsored noopener noreferrer" title="' . esc_attr( $prod_name ) . '">';
 		if ( $is_prod ) {
 			echo '<span class="wrrapd-hot-gifts-rail__photo">';
 			if ( $prod_meta['src'] !== '' ) {
-				$fb = $logo_meta['src'] !== '' ? esc_url( $logo_meta['src'] ) : '';
-				echo '<img src="' . esc_url( $prod_meta['src'] ) . '" width="' . (int) $prod_meta['width'] . '" height="' . (int) $prod_meta['height'] . '" alt="' . esc_attr( $prod_name ) . '" decoding="async" loading="lazy"' . ( $fb !== '' ? ' data-fallback="' . $fb . '" onerror="var u=this.dataset.fallback;if(u){this.onerror=null;this.src=u;}"' : '' ) . ' />';
-			} elseif ( $logo_meta['src'] !== '' ) {
-				$srcset = $logo_meta['srcset'] !== '' ? ' srcset="' . esc_attr( $logo_meta['srcset'] ) . '"' : '';
-				$sizes  = $logo_meta['sizes'] !== '' ? ' sizes="' . esc_attr( $logo_meta['sizes'] ) . '"' : '';
-				echo '<img src="' . esc_url( $logo_meta['src'] ) . '" width="' . (int) $logo_meta['width'] . '" height="' . (int) $logo_meta['height'] . '"' . $srcset . $sizes . ' alt="" decoding="async" loading="lazy" />';
+				echo '<img src="' . esc_url( $prod_meta['src'] ) . '" width="' . (int) $prod_meta['width'] . '" height="' . (int) $prod_meta['height'] . '" alt="' . esc_attr( $prod_name ) . '" decoding="async" loading="lazy" referrerpolicy="no-referrer" />';
 			}
 			echo '<span class="wrrapd-hot-gifts-rail__card-body wrrapd-hot-gifts-rail__card-overlay">';
 			echo '<span class="wrrapd-hot-gifts-rail__card-title">' . esc_html( $prod_name ) . '</span>';
 			if ( $variant !== 'compact' && $retailer !== '' ) {
-				echo '<span class="wrrapd-hot-gifts-rail__shop-at">' . esc_html( sprintf( __( 'Shop at %s -->', 'wrrapd' ), $retailer ) ) . '</span>';
 				if ( $logo_meta['src'] !== '' ) {
 					$srcset = $logo_meta['srcset'] !== '' ? ' srcset="' . esc_attr( $logo_meta['srcset'] ) . '"' : '';
 					$sizes  = $logo_meta['sizes'] !== '' ? ' sizes="' . esc_attr( $logo_meta['sizes'] ) . '"' : '';
-					echo '<span class="wrrapd-hot-gifts-rail__retailer-logo"><img src="' . esc_url( $logo_meta['src'] ) . '" width="' . (int) $logo_meta['width'] . '" height="' . (int) $logo_meta['height'] . '"' . $srcset . $sizes . ' alt="' . esc_attr( $retailer ) . '" decoding="async" loading="lazy" /></span>';
+					echo '<span class="wrrapd-hot-gifts-rail__retailer-logo"><img src="' . esc_url( $logo_meta['src'] ) . '" width="' . (int) $logo_meta['width'] . '" height="' . (int) $logo_meta['height'] . '"' . $srcset . $sizes . ' alt="' . esc_attr( $retailer ) . '" decoding="async" loading="lazy" referrerpolicy="no-referrer" /></span>';
+				}
+				echo '<span class="wrrapd-hot-gifts-rail__shop-at">' . esc_html( $retailer ) . '</span>';
+				if ( $occasion !== '' ) {
+					echo '<span class="wrrapd-hot-gifts-rail__occasion">' . esc_html( $occasion ) . '</span>';
 				}
 			}
 			echo '</span>';

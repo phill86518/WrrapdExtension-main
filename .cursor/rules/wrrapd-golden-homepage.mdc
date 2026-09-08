@@ -1,0 +1,49 @@
+---
+description: Golden homepage snapshot (header + seasonal featured gifts) — restore if future edits break the site.
+alwaysApply: true
+---
+
+# Golden homepage version (FINAL for now)
+
+**Tag / build:** `2026-09-08-golden`  
+**Git tag:** `golden-homepage-2026-09-08`  
+**Committed on:** GCP VM (`/home/phill/wrrapd-GCP`), pushed to `origin/main`.
+
+When the user says **restore / refer to the golden version**, use this snapshot — do not invent a different baseline.
+
+## What “golden” covers
+
+| Area | Canonical location |
+|------|--------------------|
+| Header layout (desktop + mobile) | `wordpress/wrrapd-orders-bridge.php` → `wrrapd_output_header_layout_css` + auth/CTA stack JS |
+| Mobile non-header layout | `wordpress/wrrapd-mobile-responsive.css` (hero, wheels, footer — **no duplicate header block**) |
+| Seasonal hero + featured gifts | `wordpress/wrrapd-seasonal-campaigns.php` + `wordpress/wrrapd-campaigns.json` + `wordpress/wrrapd-seasonal-campaigns.css` |
+| MU build string (view-source) | `WRRAPD_MU_BUILD` = `2026-09-08-golden` |
+
+## Header rules that must not regress
+
+- Brand/logo **left**, not centered.
+- Chrome CTA (`00ec9fc` / `7f1bdc1`): **one line** (`nowrap`), **page-centered** on desktop (reparented onto row `6835e730`), slightly wider padding; **hidden** on mobile/coarse.
+- Register/Login above Google/Amazon in stack `5c54566`.
+- Do **not** set `width:100%` on every header `.e-con` (breaks brand column).
+
+## Featured gifts (seasonal)
+
+- Aug–Sep gap: `generic-back-to-school` interleaved with `generic-weddings` → title **Back-to-school & wedding picks**.
+- Labor Day window ends **holiday + 1 day** (short grace) so late summer themes take over quickly.
+- Prefer verified product/hub URLs with real photos; avoid stale July 4 patriotic fillers in gap seasons.
+
+## Restore recipe
+
+```bash
+cd /home/phill/wrrapd-GCP
+git fetch origin
+git checkout golden-homepage-2026-09-08 -- \
+  wordpress/wrrapd-orders-bridge.php \
+  wordpress/wrrapd-mobile-responsive.css \
+  wordpress/wrrapd-seasonal-campaigns.php \
+  wordpress/wrrapd-seasonal-campaigns.css \
+  wordpress/wrrapd-campaigns.json
+```
+
+Then redeploy those files to SiteGround `mu-plugins/` and purge W3 cache. Confirm view-source contains `2026-09-08-golden`.
