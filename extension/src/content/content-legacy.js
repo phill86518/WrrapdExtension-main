@@ -32,7 +32,7 @@ import { isZipCodeAllowed } from './lib/zip-codes.js';
 import { WRRAPD_RETAILER_AMAZON } from '../retailers/amazon/constants.js';
 import { occasionOptionsHtml, isValidOccasion } from '../shared/occasions.js';
 import { mountGifteeZipEstimateBar, readValidatedEstimateZip } from '../shared/giftee-zip-estimate.js';
-import { loadFlowersCatalog } from '../shared/flowers-catalog.js';
+import { loadFlowersCatalog, resolveFlowerChargeDollars } from '../shared/flowers-catalog.js';
 import {
     hydrateUnitPricesFromSession,
     readPersistedUnitPrices,
@@ -180,10 +180,13 @@ import { formatUsd } from '../shared/wrrapd-unit-pricing.js';
                       selected_wrapping_option: o.selected_wrapping_option || null,
                       checkbox_flowers: o.checkbox_flowers === true,
                       flower_offer_id: o.checkbox_flowers ? o.flower_offer_id || null : null,
-                      flower_amount:
-                          o.checkbox_flowers && Number.isFinite(Number(o.flower_amount))
-                              ? Number(o.flower_amount)
-                              : null,
+                      flower_amount: o.checkbox_flowers
+                          ? resolveFlowerChargeDollars({
+                                flowerAmount: o.flower_amount,
+                                flowerOfferId: o.flower_offer_id,
+                                unitFallback: getActiveCheckoutUnitPrices().flowers,
+                            }) || null
+                          : null,
                   }))
                 : [],
         }));
@@ -3627,6 +3630,14 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                             r.value = c.offerId;
                             if (subItem.flower_offer_id && subItem.flower_offer_id === c.offerId) {
                                 r.checked = true;
+                                // Keep saved charge in sync with the live catalog price for this offer.
+                                const amt = Number(c.price);
+                                if (Number.isFinite(amt) && amt > 0) {
+                                    subItem.flower_amount = amt;
+                                    subItem.flower_title = c.title || subItem.flower_title || `Bouquet #${idx + 1}`;
+                                    subItem.selected_flower_design =
+                                        c.title || subItem.selected_flower_design || `Bouquet #${idx + 1}`;
+                                }
                             }
                             const imgUrl = resolveAmazonFlowerImageUrl(c);
                             r.addEventListener('change', () => {
@@ -3636,7 +3647,13 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                                 subItem.flower_title = c.title || `Bouquet #${idx + 1}`;
                                 subItem.flower_image_url = imgUrl;
                                 subItem.selected_flower_design = c.title || `Bouquet #${idx + 1}`;
+                                subItem.checkbox_flowers = true;
                                 saveItemToLocalStorage(productObj);
+                                try {
+                                    updateWrrapdSummary();
+                                } catch (_) {
+                                    /* summary may not be mounted yet */
+                                }
                             });
                             const img = document.createElement('img');
                             img.src = imgUrl;
@@ -3685,6 +3702,12 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                         if (flowerMsgEl) flowerMsgEl.style.display = 'none';
                         if (flowerDesignsDiv) flowerDesignsDiv.style.display = 'block';
                         renderAmazonLiveFlowerGrid(cat.choices);
+                        saveItemToLocalStorage(productObj);
+                        try {
+                            updateWrrapdSummary();
+                        } catch (_) {
+                            /* ignore */
+                        }
                         if (flowerFinePrintEl) {
                             if (cat.disclaimer || cat.source === 'classic_backup') {
                                 flowerFinePrintEl.style.display = 'block';
@@ -3830,13 +3853,41 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                         if (combineWithFlowersCheckbox) {
                             subItem.checkbox_flowers = combineWithFlowersCheckbox.checked;
                         }
-                        if (subItem.checkbox_flowers && !subItem.flower_offer_id) {
-                            const flowerMsg = document.getElementById(`flower-msg-${i}`);
-                            if (flowerMsg) {
-                                flowerMsg.style.display = 'block';
-                                flowerMsg.textContent = 'Please select a bouquet, or uncheck Add flowers.';
+                        if (subItem.checkbox_flowers) {
+                            const selectedFlower = modal.querySelector(
+                                `input[name="flower-design-${i}"]:checked`,
+                            );
+                            if (selectedFlower && selectedFlower.value) {
+                                subItem.flower_offer_id = selectedFlower.value;
+                                // Prefer price from the live catalog cache for this offerId.
+                                const charged = resolveFlowerChargeDollars({
+                                    flowerAmount: subItem.flower_amount,
+                                    flowerOfferId: subItem.flower_offer_id,
+                                    unitFallback: getActiveCheckoutUnitPrices().flowers,
+                                });
+                                if (charged > 0) subItem.flower_amount = charged;
                             }
-                            return false;
+                            if (!subItem.flower_offer_id) {
+                                const flowerMsg = document.getElementById(`flower-msg-${i}`);
+                                if (flowerMsg) {
+                                    flowerMsg.style.display = 'block';
+                                    flowerMsg.textContent =
+                                        'Please select a bouquet, or uncheck Add flowers.';
+                                }
+                                return false;
+                            }
+                            if (
+                                !Number.isFinite(Number(subItem.flower_amount)) ||
+                                Number(subItem.flower_amount) <= 0
+                            ) {
+                                const flowerMsg = document.getElementById(`flower-msg-${i}`);
+                                if (flowerMsg) {
+                                    flowerMsg.style.display = 'block';
+                                    flowerMsg.textContent =
+                                        'Please re-select a bouquet so we can confirm the price.';
+                                }
+                                return false;
+                            }
                         }
                         if (!subItem.checkbox_flowers) {
                             subItem.selected_flower_design = null;
@@ -3853,6 +3904,11 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                         
                         saveItemToLocalStorage(productObj);
                         modal.style.display = 'none';
+                        try {
+                            updateWrrapdSummary();
+                        } catch (_) {
+                            /* ignore */
+                        }
                         return false;
                         }, true);
                     }
@@ -11740,7 +11796,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                     // ====================================================================================
                     const pricingCart = buildPricingCartForPayment(addressObject);
                     const payload = {
-                        total: Math.round((total * 100).toFixed(2)),
+                        total: Math.round(Number(total) * 100),
                         address: addressObject, // Current/default Amazon address (often Wrrapd warehouse when selected)
                         gifteeOriginalAddress: gifteeOriginalAddress,
                         orderNumber: orderNumber, // Add order number to payload
@@ -12194,9 +12250,15 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                     }
                 }
                 if (option.checkbox_flowers) {
-                    const offerAmt = Number(option.flower_amount);
-                    flowers =
-                        Number.isFinite(offerAmt) && offerAmt > 0 ? offerAmt : p.flowers;
+                    flowers = resolveFlowerChargeDollars({
+                        flowerAmount: option.flower_amount,
+                        flowerOfferId: option.flower_offer_id,
+                        unitFallback: p.flowers,
+                    });
+                    // Persist the resolved amount so later payment payload matches the summary.
+                    if (flowers > 0 && option.flower_amount !== flowers) {
+                        option.flower_amount = flowers;
+                    }
                     flowersTotal += flowers;
                     qtyFlowers += 1;
                 }
@@ -12208,7 +12270,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                     selected_wrapping_option: option.selected_wrapping_option || null,
                     checkbox_flowers: option.checkbox_flowers === true,
                     flower_offer_id: option.checkbox_flowers ? option.flower_offer_id || null : null,
-                    flower_amount: option.checkbox_flowers ? flowers || null : null,
+                    flower_amount: option.checkbox_flowers && flowers > 0 ? flowers : null,
                     giftWrapBase,
                     customDesignAi,
                     customDesignUpload,
@@ -12219,14 +12281,14 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
 
         const taxRatePercent = getTaxRatePercentage();
         const taxRate = taxRatePercent / 100;
-        const subtotal = giftWrapTotal + designAiTotal + designUploadTotal + flowersTotal;
-        const estimatedTax = subtotal * taxRate;
-        const total = subtotal + estimatedTax;
+        const subtotal = roundMoney2(giftWrapTotal + designAiTotal + designUploadTotal + flowersTotal);
+        const estimatedTax = roundMoney2(subtotal * taxRate);
+        const total = roundMoney2(subtotal + estimatedTax);
         return {
-            giftWrapTotal,
-            designAiTotal,
-            designUploadTotal,
-            flowersTotal,
+            giftWrapTotal: roundMoney2(giftWrapTotal),
+            designAiTotal: roundMoney2(designAiTotal),
+            designUploadTotal: roundMoney2(designUploadTotal),
+            flowersTotal: roundMoney2(flowersTotal),
             qtyGiftWrap,
             qtyDesignAi,
             qtyDesignUpload,
@@ -12240,7 +12302,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
     }
 
     function roundMoney2(n) {
-        return Math.round(n * 100) / 100;
+        return Math.round(Number(n) * 100) / 100;
     }
 
     /** Same dollar math as updateWrrapdSummary — sent to process-payment (legacy lines + complete matrix with zeros). */

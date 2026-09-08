@@ -170,10 +170,12 @@ async function grokRank(postalCode, byRetailerCandidates, storesNearby) {
 function toOffers(selected) {
   const offers = [];
   for (const c of selected) {
+    // Deterministic ID (no Date.now): same SKU/price → same offer across cache rebuilds
+    // so the shopper's selected price still validates at payment time.
     const offerId = crypto
       .createHash('sha256')
       .update(
-        `${c.retailer}|${c.storeId}|${c.sku}|${c.retailPrice}|${c.classicBackup ? 'classic' : 'live'}|${Date.now().toString(36)}`,
+        `${c.retailer}|${c.storeId || ''}|${c.sku}|${Number(c.retailPrice)}|${c.classicBackup ? 'classic' : 'live'}`,
       )
       .digest('hex')
       .slice(0, 24);
@@ -213,6 +215,22 @@ function cachePayload(zip, payload, offerMap) {
   return payload;
 }
 
+function rehydrateOffersFromCache(cached) {
+  const map = cached && cached.offers;
+  if (!map) return;
+  if (map instanceof Map) {
+    for (const [id, o] of map) {
+      if (id && o) offerById.set(String(id), o);
+    }
+    return;
+  }
+  if (typeof map === 'object') {
+    for (const [id, o] of Object.entries(map)) {
+      if (id && o) offerById.set(String(id), o);
+    }
+  }
+}
+
 async function buildCatalogForZip(postalCode) {
   const zip = storesLib.normZip(postalCode);
   if (zip.length !== 5) {
@@ -225,6 +243,7 @@ async function buildCatalogForZip(postalCode) {
 
   const cached = zipCache.get(zip);
   if (cached && Date.now() - cached.at < CACHE_TTL_MS) {
+    rehydrateOffersFromCache(cached);
     return {
       status: cached.status,
       choices: cached.choices,
@@ -330,6 +349,7 @@ function prefetch(postalCode) {
   if (zip.length !== 5) return Promise.resolve({ ok: false, error: 'invalid_zip' });
   const existing = zipCache.get(zip);
   if (existing && Date.now() - existing.at < CACHE_TTL_MS) {
+    rehydrateOffersFromCache(existing);
     return Promise.resolve({
       ok: true,
       cached: true,

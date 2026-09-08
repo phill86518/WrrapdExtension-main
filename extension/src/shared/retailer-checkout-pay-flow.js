@@ -34,6 +34,7 @@ import {
 } from "./cart-gift-sync.js";
 import { hubAsPaymentAddress } from "./wrrapd-hub.js";
 import { buildGiftWrapInvoiceRows } from "./wrrapd-invoice-lines.js";
+import { resolveFlowerChargeDollars } from "./flowers-catalog.js";
 import { captureRetailerDeliveryDate } from "./retailer-delivery-date.js";
 import { generateWrrapdOrderNumber } from "./wrrapd-order-code.js";
 import {
@@ -45,6 +46,7 @@ import {
   createUnitPricingState,
   getActiveUnitPrices,
   hydrateUnitPricesFromSession,
+  UNIT_PRICES_FALLBACK,
   writePersistedUnitPrices,
 } from "./wrrapd-unit-pricing.js";
 
@@ -171,8 +173,11 @@ function computeServiceSubtotalCents(state, prefix) {
     if (ch.wrapPref === "ai") dollars += p.customDesignAi;
     if (ch.wrapPref === "upload") dollars += p.customDesignUpload;
     if (ch.flowers) {
-      const offerAmt = Number(ch.flowerPrice);
-      dollars += Number.isFinite(offerAmt) && offerAmt > 0 ? offerAmt : p.flowers;
+      dollars += resolveFlowerChargeDollars({
+        flowerPrice: ch.flowerPrice,
+        flowerOfferId: ch.flowerOfferId,
+        unitFallback: p.flowers,
+      });
     }
   }
   return Math.round(dollars * 100);
@@ -229,7 +234,13 @@ function buildOrderData(config) {
       checkbox_flowers: flowers,
       selected_flower_design: flowers ? (ch.flowerTitle || ch.flowerDesign || null) : null,
       flower_offer_id: flowers ? (ch.flowerOfferId || null) : null,
-      flower_amount: flowers && Number.isFinite(Number(ch.flowerPrice)) ? Number(ch.flowerPrice) : null,
+      flower_amount: flowers
+        ? resolveFlowerChargeDollars({
+            flowerPrice: ch.flowerPrice,
+            flowerOfferId: ch.flowerOfferId,
+            unitFallback: UNIT_PRICES_FALLBACK.flowers,
+          }) || null
+        : null,
       flower_title: flowers ? (ch.flowerTitle || null) : null,
       flower_image_url: flowers ? (ch.flowerImageUrl || null) : null,
       selected_ai_design: wrap === "ai" ? (ch.aiDesign || null) : null,
@@ -248,6 +259,7 @@ function buildPricingCart(state, prefix, retailer) {
   const choices = readItemChoices(prefix);
   const zipForTax = taxPostalForPricing(gifteeZip5(prefix));
   const taxRatePercent = resolveTaxRatePercent(state.taxPercent);
+  const p = getActiveUnitPrices(state);
   const items =
     choices.length > 0
       ? choices.map((ch) => ({
@@ -257,10 +269,13 @@ function buildPricingCart(state, prefix, retailer) {
               selected_wrapping_option: ch.wrapPref || "wrrapd",
               checkbox_flowers: ch.flowers === true,
               flower_offer_id: ch.flowers ? ch.flowerOfferId || null : null,
-              flower_amount:
-                ch.flowers && Number.isFinite(Number(ch.flowerPrice))
-                  ? Number(ch.flowerPrice)
-                  : null,
+              flower_amount: ch.flowers
+                ? resolveFlowerChargeDollars({
+                    flowerPrice: ch.flowerPrice,
+                    flowerOfferId: ch.flowerOfferId,
+                    unitFallback: p.flowers,
+                  }) || null
+                : null,
             },
           ],
         }))

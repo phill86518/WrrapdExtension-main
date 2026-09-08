@@ -29,7 +29,7 @@ import {
 } from "./cart-fulfillment.js";
 import { formatUsd, getActiveUnitPrices, createUnitPricingState } from "./wrrapd-unit-pricing.js";
 import { mountGifteeZipEstimateBar, readValidatedEstimateZip } from "./giftee-zip-estimate.js";
-import { loadFlowersCatalog } from "./flowers-catalog.js";
+import { loadFlowersCatalog, resolveFlowerChargeDollars } from "./flowers-catalog.js";
 import { unlockHubShippingFields } from "./wrrapd-hub.js";
 
 function normalizeWhitespace(value) {
@@ -750,6 +750,14 @@ function openGiftChoicesModal(config, cartSnapshot) {
         currentFlowerImageUrl = imgUrl;
         currentFlowerDesign = c.title || `Bouquet #${idx + 1}`;
       });
+      if (currentFlowerOfferId && currentFlowerOfferId === c.offerId) {
+        const amt = Number(c.price);
+        if (Number.isFinite(amt) && amt > 0) {
+          currentFlowerPrice = amt;
+          currentFlowerTitle = c.title || currentFlowerTitle || `Bouquet #${idx + 1}`;
+          currentFlowerDesign = c.title || currentFlowerDesign || `Bouquet #${idx + 1}`;
+        }
+      }
       const img = document.createElement("img");
       img.src = imgUrl;
       img.alt = c.title || `Bouquet #${idx + 1}`;
@@ -1008,6 +1016,19 @@ function openGiftChoicesModal(config, cartSnapshot) {
       flowersMsg.style.display = "block";
       flowersMsg.textContent = "Please select a bouquet, or uncheck Add flowers.";
       return;
+    }
+    if (currentFlowers && currentFlowerOfferId) {
+      const charged = resolveFlowerChargeDollars({
+        flowerPrice: currentFlowerPrice,
+        flowerOfferId: currentFlowerOfferId,
+        unitFallback: getActiveUnitPrices(createUnitPricingState()).flowers,
+      });
+      if (!(charged > 0)) {
+        flowersMsg.style.display = "block";
+        flowersMsg.textContent = "Please re-select a bouquet so we can confirm the price.";
+        return;
+      }
+      currentFlowerPrice = charged;
     }
     captureCurrentChoices();
 

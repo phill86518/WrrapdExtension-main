@@ -19,6 +19,7 @@ import { readLegoCartSnapshot, syncLegoCartGiftState } from "./lego-cart-extract
 import { refreshLegoGifteeShippingAddressFill } from "./lego-giftee-shipping-fill.js";
 import { buildWrrapdTermsHtml } from "../../shared/wrrapd-terms.js";
 import { buildGiftWrapInvoiceRows } from "../../shared/wrrapd-invoice-lines.js";
+import { resolveFlowerChargeDollars } from "../../shared/flowers-catalog.js";
 import { generateWrrapdOrderNumber } from "../../shared/wrrapd-order-code.js";
 import { resolveTaxRatePercent, taxPostalForPricing, WRRAPD_DEFAULT_TAX_RATE_PERCENT } from "../../shared/wrrapd-tax.js";
 import {
@@ -239,8 +240,11 @@ function computeServiceSubtotalCents() {
     if (ch.wrapPref === "ai") dollars += p.customDesignAi;
     if (ch.wrapPref === "upload") dollars += p.customDesignUpload;
     if (ch.flowers) {
-      const offerAmt = Number(ch.flowerPrice);
-      dollars += Number.isFinite(offerAmt) && offerAmt > 0 ? offerAmt : p.flowers;
+      dollars += resolveFlowerChargeDollars({
+        flowerPrice: ch.flowerPrice,
+        flowerOfferId: ch.flowerOfferId,
+        unitFallback: p.flowers,
+      });
     }
   }
   return Math.round(dollars * 100);
@@ -275,10 +279,13 @@ function buildLegoPricingCart() {
           selected_wrapping_option: ch.wrapPref || "wrrapd",
           checkbox_flowers: ch.flowers === true,
           flower_offer_id: ch.flowers ? ch.flowerOfferId || null : null,
-          flower_amount:
-            ch.flowers && Number.isFinite(Number(ch.flowerPrice))
-              ? Number(ch.flowerPrice)
-              : null,
+          flower_amount: ch.flowers
+            ? resolveFlowerChargeDollars({
+                flowerPrice: ch.flowerPrice,
+                flowerOfferId: ch.flowerOfferId,
+                unitFallback: getActiveCheckoutUnitPrices().flowers,
+              }) || null
+            : null,
         }],
       }))
     : [{ options: [{ checkbox_wrrapd: true, selected_wrapping_option: "wrrapd", checkbox_flowers: false }] }];
@@ -613,7 +620,13 @@ function buildLegoOrderDataForProcessPayment() {
       checkbox_flowers: flowers,
       selected_flower_design: flowers ? (ch.flowerTitle || ch.flowerDesign || null) : null,
       flower_offer_id: flowers ? (ch.flowerOfferId || null) : null,
-      flower_amount: flowers && Number.isFinite(Number(ch.flowerPrice)) ? Number(ch.flowerPrice) : null,
+      flower_amount: flowers
+        ? resolveFlowerChargeDollars({
+            flowerPrice: ch.flowerPrice,
+            flowerOfferId: ch.flowerOfferId,
+            unitFallback: getActiveCheckoutUnitPrices().flowers,
+          }) || null
+        : null,
       flower_title: flowers ? (ch.flowerTitle || null) : null,
       flower_image_url: flowers ? (ch.flowerImageUrl || null) : null,
       selected_ai_design: wrap === "ai" ? (ch.aiDesign || null) : null,

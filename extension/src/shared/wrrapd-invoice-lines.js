@@ -1,11 +1,13 @@
 /**
  * Customer-facing Wrrapd payment summary line items (shared across retailers).
  * AI/upload fees are rolled into the gift-wrap line label, not separate rows.
- * Flower line uses per-offer flowerPrice when present (live catalog), else unit price.
+ * Flower line uses the selected bouquet offer price (never a stale unit fallback when known).
  */
 
+import { resolveFlowerChargeDollars } from "./flowers-catalog.js";
+
 /**
- * @param {Array<{ wrapPref?: string, flowers?: boolean, flowerPrice?: number|null }>} choices
+ * @param {Array<{ wrapPref?: string, flowers?: boolean, flowerPrice?: number|null, flowerOfferId?: string|null }>} choices
  * @param {{ giftWrapBase: number, customDesignAi: number, customDesignUpload: number, flowers: number }} unitPrices
  * @returns {Array<{ label: string, amount: string }>}
  */
@@ -26,8 +28,11 @@ export function buildGiftWrapInvoiceRows(choices, unitPrices) {
     else stdCount++;
     if (ch.flowers) {
       flowerCount++;
-      const offerAmt = Number(ch.flowerPrice);
-      flowersTotal += Number.isFinite(offerAmt) && offerAmt > 0 ? offerAmt : Number(p.flowers) || 0;
+      flowersTotal += resolveFlowerChargeDollars({
+        flowerPrice: ch.flowerPrice,
+        flowerOfferId: ch.flowerOfferId,
+        unitFallback: p.flowers,
+      });
     }
   }
 

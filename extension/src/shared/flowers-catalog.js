@@ -13,6 +13,12 @@ function zip5(postalCode) {
   return String(postalCode || "").replace(/\D/g, "").slice(0, 5);
 }
 
+function asMoney(n) {
+  const x = Number(n);
+  if (!Number.isFinite(x) || x <= 0 || x > 500) return null;
+  return Math.round(x * 100) / 100;
+}
+
 async function fetchCatalogPayload(zip) {
   const r = await fetch(`${API}/api/flowers/catalog?postalCode=${encodeURIComponent(zip)}`);
   const body = await r.json().catch(() => ({}));
@@ -42,7 +48,6 @@ export function prefetchFlowersCatalog(postalCode) {
   if (inflight.has(zip)) return inflight.get(zip);
   const p = (async () => {
     try {
-      // Fire-and-forget server warm (idempotent with the GET below).
       void fetch(`${API}/api/flowers/prefetch`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -89,4 +94,33 @@ export async function loadFlowersCatalog(postalCode) {
       at: Date.now(),
     };
   }
+}
+
+/** Find a cached choice by offerId across all ZIP caches (for payment summary). */
+export function findCachedFlowerChoice(offerId) {
+  const id = String(offerId || "").trim();
+  if (!id) return null;
+  for (const payload of cache.values()) {
+    const hit = (payload.choices || []).find((c) => c && String(c.offerId) === id);
+    if (hit) return hit;
+  }
+  return null;
+}
+
+/**
+ * Resolve the dollar amount to charge for a selected bouquet.
+ * Prefer the saved amount, then cached catalog price for the offerId, then unit fallback.
+ */
+export function resolveFlowerChargeDollars({
+  flowerAmount,
+  flowerPrice,
+  flowerOfferId,
+  unitFallback,
+} = {}) {
+  const fromSaved = asMoney(flowerAmount != null ? flowerAmount : flowerPrice);
+  if (fromSaved != null) return fromSaved;
+  const choice = findCachedFlowerChoice(flowerOfferId);
+  const fromCatalog = choice ? asMoney(choice.price) : null;
+  if (fromCatalog != null) return fromCatalog;
+  return asMoney(unitFallback) || 0;
 }
