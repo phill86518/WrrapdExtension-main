@@ -77,6 +77,16 @@ function wrrapd_wrapstars_run_admin_action( $app_id, $action, $opts = array() ) 
 		return array( 'ok' => true, 'status' => wrrapd_wrapstars_get_meta( $app_id, 'status' ) );
 	}
 
+	// Ops records the screening partner's result here (portal step only captures consent).
+	if ( $action === 'save_bg_status' ) {
+		$bg = isset( $opts['bg_status'] ) ? sanitize_key( (string) $opts['bg_status'] ) : '';
+		if ( ! in_array( $bg, array( '', 'pending', 'clear', 'review' ), true ) ) {
+			return array( 'ok' => false, 'error' => 'Invalid background status.' );
+		}
+		wrrapd_wrapstars_set_meta( $app_id, 'bg_status', $bg );
+		return array( 'ok' => true, 'status' => wrrapd_wrapstars_get_meta( $app_id, 'status' ) );
+	}
+
 	if ( $action === 'interview' ) {
 		$current_status = (string) wrrapd_wrapstars_get_meta( $app_id, 'status' );
 		if ( $current_status !== 'under_review' ) {
@@ -300,6 +310,35 @@ function wrrapd_wrapstars_ops_serialize_application( $id ) {
 		'mustChangePassword'         => wrrapd_wrapstars_get_meta( $id, 'must_change_password' ) === '1',
 		'onboardingStep'             => wrrapd_wrapstars_get_meta( $id, 'onboarding_step' ),
 		'onboardingStepsComplete'    => $steps_done,
+		// Data captured by the onboarding portal (2026-09 refresh) for ops verification before Activate.
+		'onboarding'                 => array(
+			'policiesSignedAt'    => wrrapd_wrapstars_get_meta( $id, 'policies_ack_at' ),
+			'policiesSignature'   => wrrapd_wrapstars_get_meta( $id, 'policies_signature' ),
+			'orientationScore'    => wrrapd_wrapstars_get_meta( $id, 'orientation_score' ),
+			'bgLegalName'         => wrrapd_wrapstars_get_meta( $id, 'bg_legal_name' ),
+			'bgOtherNames'        => wrrapd_wrapstars_get_meta( $id, 'bg_other_names' ),
+			'bgConsentAt'         => wrrapd_wrapstars_get_meta( $id, 'bg_consent_at' ),
+			'bgStatus'            => wrrapd_wrapstars_get_meta( $id, 'bg_status' ),
+			'hasInsuranceFile'    => (bool) wrrapd_wrapstars_get_meta( $id, 'insurance_file' ),
+			'insuranceCarrier'    => wrrapd_wrapstars_get_meta( $id, 'insurance_carrier' ),
+			'insuranceExpires'    => wrrapd_wrapstars_get_meta( $id, 'insurance_expires' ),
+			'hasIdentitySelfie'   => (bool) wrrapd_wrapstars_get_meta( $id, 'identity_selfie_file' ),
+			'identityConfirmedAt' => wrrapd_wrapstars_get_meta( $id, 'identity_confirmed_at' ),
+			'workspaceAddress'    => wrrapd_wrapstars_get_meta( $id, 'workspace_address', wrrapd_wrapstars_get_meta( $id, 'po_box_address' ) ),
+			'workspaceWindows'    => array_values( array_filter( explode( ',', (string) wrrapd_wrapstars_get_meta( $id, 'workspace_windows' ) ) ) ),
+			'workspaceAccessNotes' => wrrapd_wrapstars_get_meta( $id, 'workspace_access_notes' ),
+			'hasWorkspacePhoto'   => (bool) wrrapd_wrapstars_get_meta( $id, 'workspace_photo_file' ),
+			'taxAckAt'            => wrrapd_wrapstars_get_meta( $id, 'tax_ack_at' ),
+			'taxEDelivery'        => wrrapd_wrapstars_get_meta( $id, 'tax_e_delivery' ) === '1',
+			'payoutMethod'        => wrrapd_wrapstars_get_meta( $id, 'payout_method' ),
+			'payoutHolderName'    => wrrapd_wrapstars_get_meta( $id, 'payout_holder_name' ),
+			'payoutBankName'      => wrrapd_wrapstars_get_meta( $id, 'payout_bank_name' ),
+			'payoutAccountType'   => wrrapd_wrapstars_get_meta( $id, 'payout_account_type' ),
+			'payoutRouting'       => wrrapd_wrapstars_get_meta( $id, 'payout_routing' ),
+			'payoutAccountLast4'  => wrrapd_wrapstars_get_meta( $id, 'payout_account_last4' ),
+			'hasPayoutProof'      => (bool) wrrapd_wrapstars_get_meta( $id, 'payout_proof_file' ),
+			'payoutSubmittedAt'   => wrrapd_wrapstars_get_meta( $id, 'payout_submitted_at' ),
+		),
 		'hasIdFile'                  => (bool) wrrapd_wrapstars_get_meta( $id, 'id_file' ),
 		'submittedAt'                => wrrapd_wrapstars_get_meta( $id, 'submitted_at' ),
 		'approvedAt'                 => wrrapd_wrapstars_get_meta( $id, 'approved_at' ),

@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_WRAPSTARS_BUILD', '2026-07-30-header-footer-0f0351' );
+define( 'WRRAPD_WRAPSTARS_BUILD', '2026-09-09-wrapstars-refresh' );
 /** Approval / re-invite onboarding credentials remain valid this many days. */
 define( 'WRRAPD_WRAPSTARS_INVITE_TTL_DAYS', 15 );
 
@@ -103,25 +103,57 @@ if ( ! wrrapd_wrapstars_is_portal_host() ) {
 define( 'WRRAPD_WRAPSTARS_CPT', 'wrrapd_wrapstar_app' );
 
 /**
- * Onboarding step keys in order (pros.wrrapd.com).
- * BoldSign-backed: agreement (IC), w9. All other new steps are placeholders until
- * you supply final PDFs / vendor accounts (banking, 1099, background, etc.).
+ * Onboarding step registry (pros.wrrapd.com) — single source of truth.
+ *
+ * Order matters: a step unlocks only when every earlier step is complete.
+ * Each entry: label (rail + page title), short (rail sub-line), minutes (estimate
+ * shown to the WrapStar), path (URL under pros host), group (rail section header).
+ *
+ * Renderers: `wrrapd_wrapstars_render_step_<key>()`; submit handlers live in
+ * `wrrapd_wrapstars_process_onboarding_step()`. BoldSign e-sign: agreement, w9.
+ * Legacy key `po_box` is an alias of `workspace` (meta `step_po_box` still counts).
+ *
+ * Full map + edit guide: docs/WRAPSTAR-ONBOARDING-PORTAL.md
+ *
+ * @return array<string, array{label:string,short:string,minutes:int,path:string,group:string}>
+ */
+function wrrapd_wrapstars_onboarding_step_registry() {
+	return array(
+		'welcome'     => array( 'label' => 'Welcome', 'short' => 'What to expect', 'minutes' => 2, 'path' => '/onboarding/', 'group' => 'Get started' ),
+		'agreement'   => array( 'label' => 'Independent Contractor Agreement', 'short' => 'Review & e-sign', 'minutes' => 8, 'path' => '/onboarding/agreement/', 'group' => 'Agreements' ),
+		'policies'    => array( 'label' => 'WrapStar Standards & Policies', 'short' => 'Read & acknowledge', 'minutes' => 6, 'path' => '/onboarding/policies/', 'group' => 'Agreements' ),
+		'orientation' => array( 'label' => 'Orientation & Quiz', 'short' => 'Learn the workflow', 'minutes' => 10, 'path' => '/onboarding/orientation/', 'group' => 'Training' ),
+		'background'  => array( 'label' => 'Background Check', 'short' => 'Authorize screening', 'minutes' => 3, 'path' => '/onboarding/background/', 'group' => 'Verification' ),
+		'insurance'   => array( 'label' => 'Proof of Insurance', 'short' => 'Upload your certificate', 'minutes' => 5, 'path' => '/onboarding/insurance/', 'group' => 'Verification' ),
+		'identity'    => array( 'label' => 'Identity Verification', 'short' => 'Confirm your ID', 'minutes' => 3, 'path' => '/onboarding/identity/', 'group' => 'Verification' ),
+		'workspace'   => array( 'label' => 'Wrapping Location & Handoff', 'short' => 'Where & when', 'minutes' => 4, 'path' => '/onboarding/workspace/', 'group' => 'Your setup' ),
+		'w9'          => array( 'label' => 'W-9 Tax Form', 'short' => 'E-sign', 'minutes' => 5, 'path' => '/onboarding/w-9/', 'group' => 'Tax & payouts' ),
+		'tax_1099'    => array( 'label' => 'Tax Acknowledgments', 'short' => 'Confirm contractor status', 'minutes' => 2, 'path' => '/onboarding/tax-1099/', 'group' => 'Tax & payouts' ),
+		'bank_payout' => array( 'label' => 'Payout Setup', 'short' => 'Direct deposit', 'minutes' => 4, 'path' => '/onboarding/bank-payout/', 'group' => 'Tax & payouts' ),
+		'activation'  => array( 'label' => 'Final Review', 'short' => 'We activate you', 'minutes' => 0, 'path' => '/onboarding/activation/', 'group' => 'Finish' ),
+	);
+}
+
+/**
+ * Onboarding step keys => labels, in order (derived from the registry).
+ *
+ * @return array<string, string>
  */
 function wrrapd_wrapstars_onboarding_steps() {
-	return array(
-		'welcome'     => 'Welcome & Overview',
-		'agreement'   => 'Independent Contractor Agreement',
-		'policies'    => 'Policies & Handbook',
-		'orientation' => 'Orientation & Quiz',
-		'background'  => 'Background Check',
-		'insurance'   => 'Proof of Insurance',
-		'identity'    => 'Identity Verification',
-		'po_box'      => 'PO Box / Mailing Address',
-		'w9'          => 'W-9 Tax Form',
-		'tax_1099'    => '1099 & Tax Acknowledgments',
-		'bank_payout' => 'Connect Bank / Payouts',
-		'activation'  => 'Final Review',
-	);
+	$out = array();
+	foreach ( wrrapd_wrapstars_onboarding_step_registry() as $key => $meta ) {
+		$out[ $key ] = $meta['label'];
+	}
+	return $out;
+}
+
+/** Map legacy step keys to current ones (`po_box` → `workspace`). */
+function wrrapd_wrapstars_normalize_step_key( $step ) {
+	$step = (string) $step;
+	if ( $step === 'po_box' ) {
+		return 'workspace';
+	}
+	return $step;
 }
 
 /** Next step key after $step (or activation if last). */
@@ -302,7 +334,7 @@ function wrrapd_wrapstars_social_card_for_path( $path, $title = '' ) {
 	$wrap = 'https://apply.wrrapd.com/wp-content/uploads/2026/07/Applications_Wrrapd-mp4-image.jpg';
 	$card = array(
 		'title'       => 'Become a WrapStar',
-		'description' => 'Deliver smiles and get paid. Independent gift-wrapping with Wrrapd — now accepting applications in Florida & Georgia.',
+		'description' => 'Wrap gifts from home and get paid for your craft. Independent gift-wrapping with Wrrapd — now accepting applications in Florida & Georgia.',
 		'image'       => $wrap,
 	);
 
@@ -312,7 +344,7 @@ function wrrapd_wrapstars_social_card_for_path( $path, $title = '' ) {
 		$card['image']       = $logo;
 	} elseif ( preg_match( '#^/apply(/|$)#', $path ) ) {
 		$card['title']       = 'Apply to become a WrapStar';
-		$card['description'] = 'Start your WrapStar application — wrap gifts, deliver joy, and get paid.';
+		$card['description'] = 'Start your WrapStar application — wrap beautiful gifts from home and get paid for your craft.';
 		$card['image']       = $wrap;
 	} elseif ( preg_match( '#^/(onboarding|login|thank-you|status|profile|driver-onboarding)#', $path ) ) {
 		$card['title']       = 'Wrrapd Applications';
@@ -320,7 +352,7 @@ function wrrapd_wrapstars_social_card_for_path( $path, $title = '' ) {
 		$card['image']       = $logo;
 	} elseif ( $path === '/' ) {
 		$card['title']       = 'Become a WrapStar';
-		$card['description'] = 'Deliver smiles and get paid. Independent gift-wrapping with Wrrapd — now accepting applications in Florida & Georgia.';
+		$card['description'] = 'Wrap gifts from home and get paid for your craft. Independent gift-wrapping with Wrrapd — now accepting applications in Florida & Georgia.';
 		$card['image']       = $wrap;
 	} else {
 		$clean = wrrapd_wrapstars_strip_title_serial( (string) $title );
@@ -651,21 +683,9 @@ function wrrapd_wrapstars_login_redirect( $redirect_to, $requested_redirect_to, 
 }
 
 function wrrapd_wrapstars_onboarding_step_url( $step ) {
-	$paths = array(
-		'welcome'     => '/onboarding/',
-		'agreement'   => '/onboarding/agreement/',
-		'policies'    => '/onboarding/policies/',
-		'orientation' => '/onboarding/orientation/',
-		'background'  => '/onboarding/background/',
-		'insurance'   => '/onboarding/insurance/',
-		'identity'    => '/onboarding/identity/',
-		'po_box'      => '/onboarding/po-box/',
-		'w9'          => '/onboarding/w-9/',
-		'tax_1099'    => '/onboarding/tax-1099/',
-		'bank_payout' => '/onboarding/bank-payout/',
-		'activation'  => '/onboarding/activation/',
-	);
-	$path = $paths[ $step ] ?? '/onboarding/';
+	$step     = wrrapd_wrapstars_normalize_step_key( $step );
+	$registry = wrrapd_wrapstars_onboarding_step_registry();
+	$path     = isset( $registry[ $step ] ) ? $registry[ $step ]['path'] : '/onboarding/';
 	return wrrapd_wrapstars_pros_url( $path );
 }
 
@@ -775,18 +795,58 @@ function wrrapd_wrapstars_meta_keys() {
 		'onboarding_step'     => 'welcome',
 		'step_welcome'        => '',
 		'step_agreement'      => '',
-		'step_insurance'      => '',
+		'step_policies'       => '',
 		'step_orientation'    => '',
-		'step_po_box'         => '',
+		'step_background'     => '',
+		'step_insurance'      => '',
+		'step_identity'       => '',
+		'step_workspace'      => '',
+		'step_po_box'         => '', // legacy alias of step_workspace
 		'step_w9'             => '',
+		'step_tax_1099'       => '',
+		'step_bank_payout'    => '',
 		'step_activation'     => '',
 		'boldsign_ic_doc_id'  => '',
 		'boldsign_w9_doc_id'  => '',
 		'boldsign_ic_signed'  => '',
 		'boldsign_w9_signed'  => '',
+		// Policies (step `policies`)
+		'policies_ack_sections' => '',
+		'policies_ack_at'     => '',
+		'policies_signature'  => '',
+		// Background check (step `background`)
+		'bg_legal_name'       => '',
+		'bg_other_names'      => '',
+		'bg_consent_at'       => '',
+		'bg_signature'        => '',
+		'bg_status'           => '', // ops: pending|clear|review
+		// Identity (step `identity`)
+		'identity_selfie_file' => '',
+		'identity_confirmed_at' => '',
+		// Insurance (step `insurance`)
 		'insurance_file'      => '',
-		'po_box_address'      => '',
-		'po_box_file'         => '',
+		'insurance_carrier'   => '',
+		'insurance_expires'   => '',
+		// Wrapping location & handoff (step `workspace`)
+		'workspace_address'   => '',
+		'workspace_access_notes' => '',
+		'workspace_windows'   => '', // comma list: weekday_morning, weekday_midday, weekday_afternoon, weekday_evening, saturday, sunday
+		'workspace_photo_file' => '',
+		'po_box_address'      => '', // legacy
+		'po_box_file'         => '', // legacy
+		// Tax acknowledgments (step `tax_1099`)
+		'tax_ack_at'          => '',
+		'tax_ack_signature'   => '',
+		'tax_e_delivery'      => '',
+		// Payout setup (step `bank_payout`)
+		'payout_method'       => '', // connect|direct_deposit
+		'payout_holder_name'  => '',
+		'payout_bank_name'    => '',
+		'payout_account_type' => '',
+		'payout_routing'      => '',
+		'payout_account_last4' => '',
+		'payout_proof_file'   => '',
+		'payout_submitted_at' => '',
 		'orientation_score'   => '',
 		'submitted_at'        => '',
 		'interview_at'        => '',
@@ -946,8 +1006,17 @@ function wrrapd_wrapstars_get_application_by_email( $email ) {
 }
 
 function wrrapd_wrapstars_step_complete( $post_id, $step ) {
-	$val = wrrapd_wrapstars_get_meta( $post_id, 'step_' . $step );
-	return $val === '1' || $val === 1;
+	$step = wrrapd_wrapstars_normalize_step_key( $step );
+	$val  = wrrapd_wrapstars_get_meta( $post_id, 'step_' . $step );
+	if ( $val === '1' || $val === 1 ) {
+		return true;
+	}
+	// Legacy: WrapStars who finished the old "PO Box" step keep credit for "workspace".
+	if ( $step === 'workspace' ) {
+		$legacy = wrrapd_wrapstars_get_meta( $post_id, 'step_po_box' );
+		return $legacy === '1' || $legacy === 1;
+	}
+	return false;
 }
 
 function wrrapd_wrapstars_mark_step_complete( $post_id, $step ) {
@@ -1477,28 +1546,6 @@ function wrrapd_wrapstars_output_landing_scripts() {
 	?>
 	<script id="wrrapd-wrapstars-landing">
 	(function () {
-		document.querySelectorAll('.wrrapd-wrapstars-pay__tabs').forEach(function (tablist) {
-			var tabs = tablist.querySelectorAll('[role="tab"]');
-			var root = tablist.closest('.wrrapd-wrapstars-pay');
-			if (!root) return;
-			var panels = root.querySelectorAll('[role="tabpanel"]');
-			tabs.forEach(function (tab) {
-				tab.addEventListener('click', function () {
-					var id = tab.getAttribute('data-pay-tab');
-					tabs.forEach(function (t) {
-						var on = t === tab;
-						t.setAttribute('aria-selected', on ? 'true' : 'false');
-						t.classList.toggle('is-active', on);
-					});
-					panels.forEach(function (panel) {
-						var show = panel.getAttribute('data-pay-panel') === id;
-						panel.hidden = !show;
-						panel.classList.toggle('is-active', show);
-					});
-				});
-			});
-		});
-
 		var shell = document.querySelector('.wrrapd-wrapstars-onboarding-shell');
 		if (shell) {
 			var nav = shell.querySelector('#wrrapd-ws-ob-nav');
@@ -1606,7 +1653,7 @@ function wrrapd_wrapstars_process_portal_login() {
 	if ( $app && wrrapd_wrapstars_invite_is_expired( $app->ID ) ) {
 		wrrapd_wrapstars_invalidate_expired_invite( $app->ID );
 		wp_logout();
-		$GLOBALS['wrrapd_ws_login_error'] = 'This onboarding invitation expired after 15 days. Ask us to resend your welcome email from Command Center.';
+		$GLOBALS['wrrapd_ws_login_error'] = 'This onboarding invitation expired after 15 days. Email us and we will send you a fresh welcome email.';
 		return;
 	}
 	if ( ! wrrapd_wrapstars_is_onboarding_eligible_user( $user->ID ) ) {
@@ -1628,113 +1675,362 @@ function wrrapd_wrapstars_process_onboarding_step() {
 		return;
 	}
 
-	$step = sanitize_text_field( wp_unslash( $_POST['step'] ?? '' ) );
+	$step = wrrapd_wrapstars_normalize_step_key( sanitize_text_field( wp_unslash( $_POST['step'] ?? '' ) ) );
 	$app  = wrrapd_wrapstars_get_application_by_user( get_current_user_id() );
 	if ( ! $app || ! wrrapd_wrapstars_can_access_step( $app->ID, $step ) ) {
 		return;
 	}
+	$app_id = $app->ID;
 
-	if ( $step === 'welcome' ) {
-		wrrapd_wrapstars_mark_step_complete( $app->ID, 'welcome' );
-		wp_safe_redirect( wrrapd_wrapstars_onboarding_step_url( wrrapd_wrapstars_next_onboarding_step( 'welcome' ) ) );
-		exit;
-	}
-
-	// Placeholder acknowledgment steps (documents / vendors TBD).
-	$placeholder_steps = array( 'policies', 'background', 'identity', 'tax_1099', 'bank_payout' );
-	if ( in_array( $step, $placeholder_steps, true ) ) {
-		$ack = isset( $_POST['placeholder_ack'] ) ? (string) wp_unslash( $_POST['placeholder_ack'] ) : '';
-		if ( $ack !== '1' ) {
-			$GLOBALS['wrrapd_ws_onboarding_error'] = 'Please confirm you understand this step before continuing.';
-			return;
-		}
-		wrrapd_wrapstars_set_meta( $app->ID, $step . '_placeholder_ack', '1' );
-		wrrapd_wrapstars_set_meta( $app->ID, $step . '_placeholder_ack_at', gmdate( 'c' ) );
-		$notes = sanitize_textarea_field( wp_unslash( $_POST['placeholder_notes'] ?? '' ) );
-		if ( $notes !== '' ) {
-			wrrapd_wrapstars_set_meta( $app->ID, $step . '_placeholder_notes', $notes );
-		}
-		wrrapd_wrapstars_mark_step_complete( $app->ID, $step );
+	$fail = static function ( $msg ) {
+		$GLOBALS['wrrapd_ws_onboarding_error'] = $msg;
+	};
+	$done = static function ( $step ) use ( $app_id ) {
+		wrrapd_wrapstars_mark_step_complete( $app_id, $step );
 		wp_safe_redirect( wrrapd_wrapstars_onboarding_step_url( wrrapd_wrapstars_next_onboarding_step( $step ) ) );
 		exit;
-	}
+	};
+	$text = static function ( $key ) {
+		return sanitize_text_field( wp_unslash( $_POST[ $key ] ?? '' ) );
+	};
 
-	if ( $step === 'insurance' ) {
-		$upload = wrrapd_wrapstars_handle_upload( $app->ID, 'insurance_coi' );
-		if ( ! $upload['ok'] ) {
-			$GLOBALS['wrrapd_ws_onboarding_error'] = $upload['error'];
-			return;
-		}
-		wrrapd_wrapstars_set_meta( $app->ID, 'insurance_file', $upload['path'] );
-		wrrapd_wrapstars_mark_step_complete( $app->ID, 'insurance' );
-		wp_safe_redirect( wrrapd_wrapstars_onboarding_step_url( wrrapd_wrapstars_next_onboarding_step( 'insurance' ) ) );
-		exit;
-	}
+	switch ( $step ) {
+		case 'welcome':
+			$done( 'welcome' );
+			break;
 
-	if ( $step === 'po_box' ) {
-		$po = sanitize_textarea_field( wp_unslash( $_POST['po_box_address'] ?? '' ) );
-		if ( $po === '' ) {
-			$GLOBALS['wrrapd_ws_onboarding_error'] = 'PO Box / mailing address is required.';
-			return;
-		}
-		$upload = wrrapd_wrapstars_handle_upload( $app->ID, 'po_box_proof' );
-		if ( ! $upload['ok'] ) {
-			$GLOBALS['wrrapd_ws_onboarding_error'] = $upload['error'];
-			return;
-		}
-		wrrapd_wrapstars_set_meta( $app->ID, 'po_box_address', $po );
-		wrrapd_wrapstars_set_meta( $app->ID, 'po_box_file', $upload['path'] );
-		wrrapd_wrapstars_mark_step_complete( $app->ID, 'po_box' );
-		wp_safe_redirect( wrrapd_wrapstars_onboarding_step_url( wrrapd_wrapstars_next_onboarding_step( 'po_box' ) ) );
-		exit;
+		case 'policies':
+			$sections = array_keys( wrrapd_wrapstars_policy_sections() );
+			$acks     = isset( $_POST['policy_ack'] ) && is_array( $_POST['policy_ack'] ) ? array_map( 'sanitize_key', wp_unslash( $_POST['policy_ack'] ) ) : array();
+			$missing  = array_diff( $sections, $acks );
+			$sig      = $text( 'policies_signature' );
+			if ( $missing !== array() ) {
+				$fail( 'Please acknowledge every section before continuing.' );
+				return;
+			}
+			if ( $sig === '' ) {
+				$fail( 'Please type your full name to sign.' );
+				return;
+			}
+			wrrapd_wrapstars_set_meta( $app_id, 'policies_ack_sections', implode( ',', $sections ) );
+			wrrapd_wrapstars_set_meta( $app_id, 'policies_ack_at', gmdate( 'c' ) );
+			wrrapd_wrapstars_set_meta( $app_id, 'policies_signature', $sig );
+			$done( 'policies' );
+			break;
+
+		case 'background':
+			$legal = $text( 'bg_legal_name' );
+			$sig   = $text( 'bg_signature' );
+			if ( $legal === '' ) {
+				$fail( 'Please enter your full legal name exactly as it appears on your ID.' );
+				return;
+			}
+			if ( empty( $_POST['bg_consent'] ) ) {
+				$fail( 'Please authorize the background check to continue.' );
+				return;
+			}
+			if ( $sig === '' ) {
+				$fail( 'Please type your full name to sign.' );
+				return;
+			}
+			wrrapd_wrapstars_set_meta( $app_id, 'bg_legal_name', $legal );
+			wrrapd_wrapstars_set_meta( $app_id, 'bg_other_names', $text( 'bg_other_names' ) );
+			wrrapd_wrapstars_set_meta( $app_id, 'bg_consent_at', gmdate( 'c' ) );
+			wrrapd_wrapstars_set_meta( $app_id, 'bg_signature', $sig );
+			if ( wrrapd_wrapstars_get_meta( $app_id, 'bg_status' ) === '' ) {
+				wrrapd_wrapstars_set_meta( $app_id, 'bg_status', 'pending' );
+			}
+			$done( 'background' );
+			break;
+
+		case 'insurance':
+			$upload = wrrapd_wrapstars_handle_upload( $app_id, 'insurance_coi' );
+			if ( ! $upload['ok'] ) {
+				$fail( $upload['error'] );
+				return;
+			}
+			wrrapd_wrapstars_set_meta( $app_id, 'insurance_file', $upload['path'] );
+			wrrapd_wrapstars_set_meta( $app_id, 'insurance_carrier', $text( 'insurance_carrier' ) );
+			wrrapd_wrapstars_set_meta( $app_id, 'insurance_expires', $text( 'insurance_expires' ) );
+			$done( 'insurance' );
+			break;
+
+		case 'identity':
+			if ( empty( $_POST['identity_confirm'] ) ) {
+				$fail( 'Please confirm that the ID on file is yours and current.' );
+				return;
+			}
+			$upload = wrrapd_wrapstars_handle_upload( $app_id, 'identity_selfie', array( 'jpg', 'jpeg', 'png' ) );
+			if ( ! $upload['ok'] ) {
+				$fail( 'Please upload a clear photo of yourself holding your ID (JPG or PNG). ' . $upload['error'] );
+				return;
+			}
+			wrrapd_wrapstars_set_meta( $app_id, 'identity_selfie_file', $upload['path'] );
+			wrrapd_wrapstars_set_meta( $app_id, 'identity_confirmed_at', gmdate( 'c' ) );
+			$done( 'identity' );
+			break;
+
+		case 'workspace':
+			$address = sanitize_textarea_field( wp_unslash( $_POST['workspace_address'] ?? '' ) );
+			$windows = isset( $_POST['workspace_windows'] ) && is_array( $_POST['workspace_windows'] ) ? array_map( 'sanitize_key', wp_unslash( $_POST['workspace_windows'] ) ) : array();
+			$allowed = array_keys( wrrapd_wrapstars_workspace_window_options() );
+			$windows = array_values( array_intersect( $windows, $allowed ) );
+			if ( $address === '' ) {
+				$fail( 'Please enter the address where your gifts will be dropped off and picked up.' );
+				return;
+			}
+			if ( $windows === array() ) {
+				$fail( 'Please choose at least one handoff window.' );
+				return;
+			}
+			wrrapd_wrapstars_set_meta( $app_id, 'workspace_address', $address );
+			wrrapd_wrapstars_set_meta( $app_id, 'workspace_access_notes', sanitize_textarea_field( wp_unslash( $_POST['workspace_access_notes'] ?? '' ) ) );
+			wrrapd_wrapstars_set_meta( $app_id, 'workspace_windows', implode( ',', $windows ) );
+			if ( ! empty( $_FILES['workspace_photo']['name'] ) ) {
+				$upload = wrrapd_wrapstars_handle_upload( $app_id, 'workspace_photo', array( 'jpg', 'jpeg', 'png' ) );
+				if ( $upload['ok'] ) {
+					wrrapd_wrapstars_set_meta( $app_id, 'workspace_photo_file', $upload['path'] );
+				}
+			}
+			$done( 'workspace' );
+			break;
+
+		case 'tax_1099':
+			if ( empty( $_POST['tax_ack_ic'] ) || empty( $_POST['tax_ack_withholding'] ) || empty( $_POST['tax_ack_w9'] ) ) {
+				$fail( 'Please confirm each tax acknowledgment to continue.' );
+				return;
+			}
+			$sig = $text( 'tax_ack_signature' );
+			if ( $sig === '' ) {
+				$fail( 'Please type your full name to sign.' );
+				return;
+			}
+			wrrapd_wrapstars_set_meta( $app_id, 'tax_ack_at', gmdate( 'c' ) );
+			wrrapd_wrapstars_set_meta( $app_id, 'tax_ack_signature', $sig );
+			wrrapd_wrapstars_set_meta( $app_id, 'tax_e_delivery', empty( $_POST['tax_e_delivery'] ) ? '0' : '1' );
+			$done( 'tax_1099' );
+			break;
+
+		case 'bank_payout':
+			$connect_url = defined( 'WRRAPD_WRAPSTARS_PAYOUT_CONNECT_URL' ) ? (string) WRRAPD_WRAPSTARS_PAYOUT_CONNECT_URL : '';
+			if ( $connect_url !== '' ) {
+				if ( empty( $_POST['payout_connect_done'] ) ) {
+					$fail( 'Please finish the secure payout setup, then confirm below.' );
+					return;
+				}
+				wrrapd_wrapstars_set_meta( $app_id, 'payout_method', 'connect' );
+				wrrapd_wrapstars_set_meta( $app_id, 'payout_submitted_at', gmdate( 'c' ) );
+				$done( 'bank_payout' );
+				break;
+			}
+			$holder  = $text( 'payout_holder_name' );
+			$bank    = $text( 'payout_bank_name' );
+			$type    = $text( 'payout_account_type' );
+			$routing = preg_replace( '/\D+/', '', $text( 'payout_routing' ) );
+			$acct    = preg_replace( '/\D+/', '', $text( 'payout_account' ) );
+			$acct2   = preg_replace( '/\D+/', '', $text( 'payout_account_confirm' ) );
+			if ( $holder === '' || $bank === '' ) {
+				$fail( 'Please enter the account holder name and bank name.' );
+				return;
+			}
+			if ( ! in_array( $type, array( 'checking', 'savings' ), true ) ) {
+				$fail( 'Please choose checking or savings.' );
+				return;
+			}
+			if ( strlen( $routing ) !== 9 ) {
+				$fail( 'Routing number must be 9 digits.' );
+				return;
+			}
+			if ( strlen( $acct ) < 4 || strlen( $acct ) > 17 ) {
+				$fail( 'Please enter a valid account number.' );
+				return;
+			}
+			if ( $acct !== $acct2 ) {
+				$fail( 'Account numbers do not match.' );
+				return;
+			}
+			$upload = wrrapd_wrapstars_handle_upload( $app_id, 'payout_proof' );
+			if ( ! $upload['ok'] ) {
+				$fail( 'Please upload a voided check or bank letter (PDF or image). ' . $upload['error'] );
+				return;
+			}
+			// Only the last four digits of the account number are retained here; the
+			// uploaded proof (private storage) is the record of truth for payout entry.
+			wrrapd_wrapstars_set_meta( $app_id, 'payout_method', 'direct_deposit' );
+			wrrapd_wrapstars_set_meta( $app_id, 'payout_holder_name', $holder );
+			wrrapd_wrapstars_set_meta( $app_id, 'payout_bank_name', $bank );
+			wrrapd_wrapstars_set_meta( $app_id, 'payout_account_type', $type );
+			wrrapd_wrapstars_set_meta( $app_id, 'payout_routing', $routing );
+			wrrapd_wrapstars_set_meta( $app_id, 'payout_account_last4', substr( $acct, -4 ) );
+			wrrapd_wrapstars_set_meta( $app_id, 'payout_proof_file', $upload['path'] );
+			wrrapd_wrapstars_set_meta( $app_id, 'payout_submitted_at', gmdate( 'c' ) );
+			$done( 'bank_payout' );
+			break;
+
+		default:
+			break;
 	}
+}
+
+/**
+ * Handoff windows a WrapStar can offer (step `workspace`).
+ *
+ * @return array<string, string>
+ */
+function wrrapd_wrapstars_workspace_window_options() {
+	return array(
+		'weekday_morning'   => 'Weekdays · morning (8–11 am)',
+		'weekday_midday'    => 'Weekdays · midday (11 am–2 pm)',
+		'weekday_afternoon' => 'Weekdays · afternoon (2–5 pm)',
+		'weekday_evening'   => 'Weekdays · evening (5–8 pm)',
+		'saturday'          => 'Saturdays',
+		'sunday'            => 'Sundays',
+	);
+}
+
+/**
+ * WrapStar Standards & Policies — each section requires its own acknowledgment.
+ * Approved-WrapStar audience (behind login). Keep to what the WrapStar needs to do;
+ * do not describe routing, pricing, or other internal operations.
+ *
+ * @return array<string, array{title:string,points:string[]}>
+ */
+function wrrapd_wrapstars_policy_sections() {
+	return array(
+		'craft'        => array(
+			'title'  => 'Presentation standards',
+			'points' => array(
+				'Crisp folds, hidden tape, squared corners, and clean seams on every box.',
+				'Paper, ribbon, tissue and tags follow the order card exactly — no substitutions without approval from your Wrrapd contact.',
+				'Gift tags and cards are placed as instructed. Never add personal notes, business cards, or your own branding.',
+				'Work in a clean, pet-free, smoke-free area. Gifts must arrive smelling like nothing.',
+			),
+		),
+		'custody'      => array(
+			'title'  => 'Care, custody & documentation',
+			'points' => array(
+				'You are responsible for every item from the moment it is handed to you until it is handed back.',
+				'Record a short, continuous video of each order while it is in your care: opening the package, wrapping, and sealing/labeling the finished gift.',
+				'Upload clear photos of the finished wrap before handoff. Missing documentation is treated as an incomplete order.',
+				'Never open retail packaging, test, use, or photograph the contents beyond what is needed to wrap them.',
+			),
+		),
+		'timing'       => array(
+			'title'  => 'Windows & reliability',
+			'points' => array(
+				'Gifts are dropped off and collected during the handoff windows you have offered. Finished gifts must be sealed, labeled and ready before the pickup window opens.',
+				'Most orders are completed the same day they arrive. If anything will make you miss a window, flag it immediately in your WrapStar Console.',
+				'Repeated late or missed handoffs may pause your account.',
+			),
+		),
+		'privacy'      => array(
+			'title'  => 'Privacy & conduct',
+			'points' => array(
+				'Recipient names, addresses and order details are confidential. Do not share, store, or reuse them.',
+				'Do not contact customers or recipients for any reason. All communication goes through Wrrapd.',
+				'Do not post photos or videos of orders on social media without written permission from Wrrapd.',
+				'Treat every courier, teammate, and Wrrapd contact with courtesy and professionalism.',
+			),
+		),
+		'independent'  => array(
+			'title'  => 'Independent contractor status',
+			'points' => array(
+				'You choose the windows you offer and may decline orders that do not fit your schedule.',
+				'You provide your own workspace, tools, and supplies unless an order specifies materials that Wrrapd supplies.',
+				'You are responsible for your own taxes, insurance, and licenses. Wrrapd does not withhold taxes.',
+				'Either party may end the relationship as described in your Independent Contractor Agreement.',
+			),
+		),
+	);
+}
+
+/**
+ * Orientation modules shown above the quiz (step `orientation`).
+ *
+ * @return array<int, array{title:string,points:string[]}>
+ */
+function wrrapd_wrapstars_orientation_modules() {
+	return array(
+		array(
+			'title'  => '1 · How an order reaches you',
+			'points' => array(
+				'You offer handoff windows in your WrapStar Console. When an order is assigned to you, you will see the wrap instructions and the drop-off window.',
+				'A Wrrapd courier brings the packages to your wrapping location during that window. Check the contents against the order card before you start.',
+				'Anything missing or damaged? Photograph it and flag it in the Console right away — do not wrap it.',
+			),
+		),
+		array(
+			'title'  => '2 · The wrap',
+			'points' => array(
+				'Start your documentation video before you open the outer package, and keep it running until the gift is sealed and labeled.',
+				'Follow the order card: paper, ribbon, tissue, tag, card placement, and any custom design notes.',
+				'Finish with clear photos of the wrapped gift (front, top, and any tag or card) and upload them in the Console.',
+			),
+		),
+		array(
+			'title'  => '3 · The handoff',
+			'points' => array(
+				'Seal and label each finished gift exactly as the Console instructs, and have it ready before the pickup window opens.',
+				'Your courier confirms the handoff in their app. You do not deliver, and you never meet the recipient.',
+				'Once the handoff is confirmed, the order is complete and counts toward your next payout.',
+			),
+		),
+		array(
+			'title'  => '4 · Standards that protect you',
+			'points' => array(
+				'Keep your liability and inland-marine (bailee) insurance active — it protects you while gifts are in your care.',
+				'New WrapStars start with lower-value orders while your ratings build. Consistent quality unlocks more (and larger) orders.',
+				'Missing documentation, late handoffs, or contacting recipients can lead to suspension or deactivation.',
+			),
+		),
+	);
 }
 
 function wrrapd_wrapstars_orientation_questions() {
 	return array(
 		array(
-			'q' => 'What video proof is required on every order?',
-			'a' => 'unboxing_wrap_handoff',
+			'q'       => 'When should your documentation video start and stop?',
+			'a'       => 'before_open_until_sealed',
 			'choices' => array(
-				'unboxing_wrap_handoff' => 'Unboxing, wrapping, and outbound carrier handoff',
-				'photo_only'            => 'One photo only',
-				'optional'              => 'Video is optional',
+				'before_open_until_sealed' => 'Before opening the outer package, running until the gift is sealed and labeled',
+				'finished_only'            => 'Only a quick clip of the finished gift',
+				'optional'                 => 'Video is optional if the photos look good',
 			),
 		),
 		array(
-			'q' => 'What insurance must WrapStars carry before activation?',
-			'a' => 'gl_inland',
+			'q'       => 'How do the packages get to you, and how do finished gifts leave?',
+			'a'       => 'courier_both',
 			'choices' => array(
-				'gl_only'    => 'General liability only',
-				'gl_inland'  => '$1M+ general liability AND inland marine / bailee coverage',
-				'none'       => 'No insurance required',
+				'courier_both'   => 'A Wrrapd courier drops them off and picks them up during my handoff windows',
+				'i_collect'      => 'I collect them from a pickup point and deliver them myself',
+				'customer_visit' => 'The customer brings them to me and collects them later',
 			),
 		),
 		array(
-			'q' => 'Who is responsible for loss, theft, or damage to customer goods in your possession?',
-			'a' => 'wrapstar',
+			'q'       => 'A recipient\'s name and address are on the order card. What may you do with that information?',
+			'a'       => 'nothing',
 			'choices' => array(
-				'wrrapd'    => 'Wrrapd only',
-				'wrapstar'  => 'The WrapStar (you), per the IC agreement',
-				'customer'  => 'The customer',
+				'nothing'      => 'Nothing — it is confidential and I never contact recipients or customers',
+				'thank_you'    => 'Send a quick thank-you note or text',
+				'social_share' => 'Share a photo with the name blurred out',
 			),
 		),
 		array(
-			'q' => 'New WrapStars typically start with which orders?',
-			'a' => 'low_value',
+			'q'       => 'Who is responsible for a gift while it is in your possession?',
+			'a'       => 'wrapstar',
 			'choices' => array(
-				'high_value' => 'Highest-value orders first',
-				'low_value'  => 'Lower-value orders until performance is proven',
-				'all'        => 'All orders equally from day one',
+				'wrrapd'   => 'Wrrapd only',
+				'wrapstar' => 'I am, which is why I keep my insurance active',
+				'customer' => 'The customer',
 			),
 		),
 		array(
-			'q' => 'What happens if you miss required video proof on an order?',
-			'a' => 'deactivation_risk',
+			'q'       => 'You realize you cannot finish an order before its pickup window. What do you do?',
+			'a'       => 'flag_now',
 			'choices' => array(
-				'nothing'           => 'Nothing',
-				'warning_only'      => 'Warning only, no consequences',
-				'deactivation_risk' => 'Risk of suspension or deactivation',
+				'flag_now'   => 'Flag it immediately in my WrapStar Console so the window can be adjusted',
+				'wait'       => 'Wait for the courier and explain in person',
+				'skip_video' => 'Skip the documentation video to save time',
 			),
 		),
 	);
@@ -2485,8 +2781,142 @@ function wrrapd_wrapstars_output_theme_cleanup_css() {
 add_action( 'wp_head', 'wrrapd_wrapstars_output_theme_cleanup_css', 0 );
 add_action( 'wp_footer', 'wrrapd_wrapstars_output_theme_cleanup_css', 1 );
 
+/**
+ * All public copy for the apply.wrrapd.com landing page, in one place.
+ *
+ * Edit text here; `wrrapd_wrapstars_shortcode_landing()` only renders it.
+ * Rules: see docs/WRAPSTARS-OPERATIONS-MODEL.md §2 — no pay mechanics, no tips,
+ * no delivery/pickup by WrapStars, no description of how orders are routed.
+ * Strings may contain <strong>/<em>; they are printed through wp_kses_post().
+ *
+ * @return array<string, mixed>
+ */
+function wrrapd_wrapstars_landing_content() {
+	return array(
+		'hero'      => array(
+			'kicker'  => 'Now accepting applications · Florida &amp; Georgia',
+			'title'   => 'Become a WrapStar',
+			'tagline' => 'Turn your gift-wrapping talent into income.',
+			'sub'     => 'Wrap beautiful gifts from your own space, on your own schedule. We bring the packages to you and collect them when you&rsquo;re done — you bring the magic.',
+			'cta'     => 'Start your application',
+			'note'    => 'Takes about five minutes',
+		),
+		'band'      => array(
+			array(
+				'title' => 'Wrap from where you are',
+				'text'  => 'Your home studio, your craft room, your kitchen table. Packages come to you and are collected when they&rsquo;re ready — no driving, no storefront, no commute.',
+			),
+			array(
+				'title' => 'Get paid for your craft',
+				'text'  => 'Every finished order pays. Earn per completed wrap with reliable, scheduled payouts — and more orders when the gifting seasons heat up.',
+			),
+			array(
+				'title' => 'Make the moment',
+				'text'  => 'Every box is someone&rsquo;s surprise. You are the hands behind the ribbon that makes unwrapping unforgettable.',
+			),
+		),
+		'how'       => array(
+			'title' => 'How it works',
+			'steps' => array(
+				array( 'title' => 'Apply in minutes', 'text' => 'A few quick questions, a little about your wrapping style, and a photo ID.' ),
+				array( 'title' => 'Get approved &amp; onboard', 'text' => 'A brief video chat, then e-sign your agreement and complete a short orientation.' ),
+				array( 'title' => 'Receive your orders', 'text' => 'Gifts and wrapping instructions arrive at your wrapping space during a window you choose.' ),
+				array( 'title' => 'Wrap, snap, hand back', 'text' => 'Wrap to Wrrapd standards, share a quick photo or short video, and hand the finished gifts over. Done.' ),
+			),
+		),
+		'perks'     => array(
+			'title' => 'Why WrapStars love it',
+			'items' => array(
+				array( 'title' => 'Flexible windows', 'text' => 'Tell us when you&rsquo;re available. Wrap around your life, not the other way around.' ),
+				array( 'title' => 'Focus on the craft', 'text' => 'No customer calls, no doorsteps, no deliveries. Just you, the paper, and the ribbon.' ),
+				array( 'title' => 'Standards &amp; support', 'text' => 'Clear presentation guides, supply recommendations, and a team that has your back.' ),
+				array( 'title' => 'Seasons that sparkle', 'text' => 'Holidays, birthdays, graduations, and weddings keep the orders coming all year long.' ),
+				array( 'title' => 'Custom &amp; creative', 'text' => 'Bonus opportunities for WrapStars who can print or design custom wrapping paper.' ),
+				array( 'title' => 'Be first', 'text' => 'Join the founding network of WrapStars in Florida and Georgia as Wrrapd grows.' ),
+			),
+		),
+		'reqs'      => array(
+			'title' => 'Requirements',
+			'items' => array(
+				array(
+					'title' => 'Age &amp; location',
+					'text'  => 'WrapStars must be <strong>19 years or older</strong>.',
+					'note'  => 'Launching in <strong>Florida</strong> and <strong>Georgia</strong> first — applicants in other states are welcome; opportunities may be limited initially.',
+				),
+				array(
+					'title' => 'Space &amp; supplies',
+					'text'  => 'A clean, dedicated wrapping area (home is perfect), quality paper, ribbon and tools, and a smartphone for photos.',
+					'note'  => '',
+				),
+				array(
+					'title' => 'Ready to onboard',
+					'text'  => 'A government-issued photo ID to apply. After approval you&rsquo;ll e-sign your agreement, complete orientation and tax forms, and verify insurance before your first order.',
+					'note'  => '',
+				),
+			),
+		),
+		'faq'       => array(
+			'title' => 'Frequently asked questions',
+			'items' => array(
+				array(
+					'q' => 'What does a WrapStar actually do?',
+					'a' => 'You wrap. Gifts arrive at your wrapping space with clear instructions; you wrap them beautifully, share a quick photo or short video of the finished work, and hand them back. No driving, no deliveries, no customer calls.',
+				),
+				array(
+					'q' => 'Do I need to deliver anything or pick anything up?',
+					'a' => 'No. Drop-offs and pickups are handled for you. Your only job is to make each gift look incredible.',
+				),
+				array(
+					'q' => 'How do I get paid?',
+					'a' => 'You earn for every completed order and are paid on a regular payout schedule. Full payout details are shared during onboarding. WrapStars are independent contractors, not employees.',
+				),
+				array(
+					'q' => 'Where is WrapStars available?',
+					'a' => 'We are launching in <strong>Florida</strong> and <strong>Georgia</strong>. Applicants in other states are welcome — opportunities may be limited at first as the network grows.',
+				),
+				array(
+					'q' => 'How long does it take to start?',
+					'a' => 'The application takes about five minutes. We review submissions within about seven days and may invite you to a brief video conversation. After approval you complete onboarding — agreement, orientation, tax forms, and insurance — before receiving your first orders.',
+				),
+				array(
+					'q' => 'What supplies do I need?',
+					'a' => 'Quality wrapping paper, ribbon, tissue, scissors, tape, and a neat space to work. During onboarding we walk you through Wrrapd presentation standards and share our favorite supply sources.',
+				),
+				array(
+					'q' => 'How quickly do orders need to be finished?',
+					'a' => 'Gifting is time-sensitive, so most orders are wrapped the <strong>same day</strong> they arrive, within the window you have agreed to. You always know the window up front.',
+				),
+				array(
+					'q' => 'Is gift-wrapping experience required?',
+					'a' => 'Not necessarily. We look for care, presentation, and reliability — the qualities that make every unwrap feel special. A photo of something you have wrapped can help, but attitude and follow-through matter most.',
+				),
+				array(
+					'q' => 'When will I hear back about my application?',
+					'a' => 'Within about seven days. Updates come from admin@wrrapd.com — we may invite you to a Zoom or phone conversation before a final decision.',
+				),
+				array(
+					'q' => 'When do I receive login access?',
+					'a' => 'After approval only. Your credentials and onboarding link arrive by email from admin@wrrapd.com. There is no login while your application is under review.',
+				),
+			),
+		),
+		'drivers'   => array(
+			'title' => 'Prefer to be on the road?',
+			'text'  => 'Wrrapd also welcomes local Drivers who pick up finished gifts and deliver them to the door — a separate role from gift-wrapping.',
+			'cta'   => 'Driver applications',
+		),
+		'final_cta' => array(
+			'title' => 'Ready to become a WrapStar?',
+			'text'  => 'Have your driver license or passport handy — the application takes about five minutes.',
+			'cta'   => 'Apply now',
+		),
+	);
+}
+
 function wrrapd_wrapstars_shortcode_landing() {
 	$video = wrrapd_wrapstars_hero_video_url();
+	$c     = wrrapd_wrapstars_landing_content();
+	$apply = wrrapd_wrapstars_apply_url( '/apply/' );
 	ob_start();
 	?>
 	<div class="wrrapd-wrapstars wrrapd-wrapstars-dasher">
@@ -2500,122 +2930,92 @@ function wrrapd_wrapstars_shortcode_landing() {
 			</div>
 			<div class="wrrapd-wrapstars-cinema-hero__scrim" aria-hidden="true"></div>
 			<div class="wrrapd-wrapstars-cinema-hero__content">
-				<p class="wrrapd-wrapstars-cinema-hero__kicker">Now accepting applications · Florida &amp; Georgia</p>
-				<h1>Become a WrapStar today!</h1>
-				<p class="wrrapd-wrapstars-cinema-hero__tagline">Deliver smiles and get paid.</p>
-				<p class="wrrapd-wrapstars-cinema-hero__sub">Independent gift-wrapping for people who care about presentation, reliability, and the joy of a beautifully wrapped surprise.</p>
-				<a class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--xl wrrapd-wrapstars-btn--hero" href="<?php echo esc_url( wrrapd_wrapstars_apply_url( '/apply/' ) ); ?>">Start your application</a>
+				<p class="wrrapd-wrapstars-cinema-hero__kicker"><?php echo wp_kses_post( $c['hero']['kicker'] ); ?></p>
+				<h1><?php echo wp_kses_post( $c['hero']['title'] ); ?></h1>
+				<p class="wrrapd-wrapstars-cinema-hero__tagline"><?php echo wp_kses_post( $c['hero']['tagline'] ); ?></p>
+				<p class="wrrapd-wrapstars-cinema-hero__sub"><?php echo wp_kses_post( $c['hero']['sub'] ); ?></p>
+				<a class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--xl wrrapd-wrapstars-btn--hero" href="<?php echo esc_url( $apply ); ?>"><?php echo wp_kses_post( $c['hero']['cta'] ); ?></a>
+				<?php if ( ! empty( $c['hero']['note'] ) ) : ?>
+					<p class="wrrapd-wrapstars-cinema-hero__note"><?php echo wp_kses_post( $c['hero']['note'] ); ?></p>
+				<?php endif; ?>
 			</div>
 		</section>
 
 		<div class="wrrapd-wrapstars-dasher-body">
 			<section class="wrrapd-wrapstars-dasher-band">
-				<div class="wrrapd-wrapstars-dasher-band__item wrrapd-wrapstars-dasher-box">
-					<h2>Craft the moment</h2>
-					<p>Every package is someone's surprise. Wrap with care, pride, and an eye for detail that turns delivery into delight.</p>
-				</div>
-				<div class="wrrapd-wrapstars-dasher-band__item wrrapd-wrapstars-dasher-box">
-					<h2>Hit your deadlines</h2>
-					<p>Wrapped gifts must be completed and delivered the same day or by the next day at the latest. Speed and reliability are essential.</p>
-				</div>
-				<div class="wrrapd-wrapstars-dasher-band__item wrrapd-wrapstars-dasher-box">
-					<h2>Join a trusted network</h2>
-					<p>Video proof on every order, insurance standards, and a brand built on making unwrapping unforgettable.</p>
-				</div>
+				<?php foreach ( $c['band'] as $item ) : ?>
+					<div class="wrrapd-wrapstars-dasher-band__item wrrapd-wrapstars-dasher-box">
+						<h2><?php echo wp_kses_post( $item['title'] ); ?></h2>
+						<p><?php echo wp_kses_post( $item['text'] ); ?></p>
+					</div>
+				<?php endforeach; ?>
 			</section>
 
-			<section class="wrrapd-wrapstars-pay">
-				<h2 class="wrrapd-wrapstars-section-title">How does WrapStar pay work?</h2>
-				<p class="wrrapd-wrapstars-pay__lead">We built a pay model designed to be fair and transparent for independent gift-wrappers. You see what you will earn before you accept an order — base pay, peak bonuses when demand surges, and any customer tips on top.</p>
-				<div class="wrrapd-wrapstars-pay__tabs" role="tablist" aria-label="WrapStar pay topics">
-					<button type="button" class="wrrapd-wrapstars-pay__tab is-active" role="tab" aria-selected="true" data-pay-tab="base" id="pay-tab-base" aria-controls="pay-panel-base">Base Pay</button>
-					<button type="button" class="wrrapd-wrapstars-pay__tab" role="tab" aria-selected="false" data-pay-tab="peak" id="pay-tab-peak" aria-controls="pay-panel-peak">Peak Periods</button>
-					<button type="button" class="wrrapd-wrapstars-pay__tab" role="tab" aria-selected="false" data-pay-tab="tips" id="pay-tab-tips" aria-controls="pay-panel-tips">Tips</button>
-				</div>
-				<div class="wrrapd-wrapstars-pay__panels">
-					<div class="wrrapd-wrapstars-pay__panel is-active" role="tabpanel" id="pay-panel-base" data-pay-panel="base" aria-labelledby="pay-tab-base">
-						<p><strong>Base pay</strong> is your guaranteed earnings for each completed wrap order. Before you accept, you will see the payout for that job — including pick-up, professional wrapping, video proof, and delivery or handoff within the required window (same day or next day).</p>
-						<p>Pay reflects the size of the order, materials involved, and delivery timing. You are always an independent contractor, not an employee.</p>
-					</div>
-					<div class="wrrapd-wrapstars-pay__panel" role="tabpanel" id="pay-panel-peak" data-pay-panel="peak" aria-labelledby="pay-tab-peak" hidden>
-						<p><strong>Peak periods</strong> are busy gift seasons when demand spikes — Christmas, Valentine's Day, Mother's Day, graduation season, and other holidays when customers need wrapping fast.</p>
-						<p>During these surges, WrapStars may earn <strong>peak pay bonuses</strong> on top of base pay. Accept orders you can complete on time; turnaround stays same day or next day even when volume is high.</p>
-					</div>
-					<div class="wrrapd-wrapstars-pay__panel" role="tabpanel" id="pay-panel-tips" data-pay-panel="tips" aria-labelledby="pay-tab-tips" hidden>
-						<p><strong>Tips</strong> are optional amounts customers may add when they love the presentation and service. Tips belong to you and are paid on top of base pay and any peak bonuses.</p>
-						<p>Great craftsmanship, clear communication, and on-time delivery are what earn repeat customers and generous tips.</p>
-					</div>
-				</div>
+			<section class="wrrapd-wrapstars-how">
+				<h2 class="wrrapd-wrapstars-section-title"><?php echo wp_kses_post( $c['how']['title'] ); ?></h2>
+				<ol class="wrrapd-wrapstars-how__list">
+					<?php foreach ( $c['how']['steps'] as $i => $step ) : ?>
+						<li class="wrrapd-wrapstars-how__step">
+							<span class="wrrapd-wrapstars-how__num" aria-hidden="true"><?php echo (int) ( $i + 1 ); ?></span>
+							<h3><?php echo wp_kses_post( $step['title'] ); ?></h3>
+							<p><?php echo wp_kses_post( $step['text'] ); ?></p>
+						</li>
+					<?php endforeach; ?>
+				</ol>
+				<p class="wrrapd-wrapstars-how__cta"><a class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--xl" href="<?php echo esc_url( $apply ); ?>"><?php echo wp_kses_post( $c['hero']['cta'] ); ?></a></p>
+			</section>
+
+			<section class="wrrapd-wrapstars-perks">
+				<h2 class="wrrapd-wrapstars-section-title"><?php echo wp_kses_post( $c['perks']['title'] ); ?></h2>
+				<ul class="wrrapd-wrapstars-perks__grid">
+					<?php foreach ( $c['perks']['items'] as $perk ) : ?>
+						<li class="wrrapd-wrapstars-perks__item">
+							<span class="wrrapd-wrapstars-perks__mark" aria-hidden="true">✓</span>
+							<div>
+								<h3><?php echo wp_kses_post( $perk['title'] ); ?></h3>
+								<p><?php echo wp_kses_post( $perk['text'] ); ?></p>
+							</div>
+						</li>
+					<?php endforeach; ?>
+				</ul>
 			</section>
 
 			<section class="wrrapd-wrapstars-reqs-dd">
-				<h2 class="wrrapd-wrapstars-section-title">Requirements</h2>
+				<h2 class="wrrapd-wrapstars-section-title"><?php echo wp_kses_post( $c['reqs']['title'] ); ?></h2>
 				<div class="wrrapd-wrapstars-reqs-dd__grid">
-					<div class="wrrapd-wrapstars-reqs-dd__item">
-						<span class="wrrapd-wrapstars-reqs-dd__num" aria-hidden="true">1</span>
-						<h3>Age</h3>
-						<p>WrapStars must be <strong>19 years or older</strong>.</p>
-						<p class="wrrapd-wrapstars-reqs-dd__note">Launching in <strong>Florida</strong> and <strong>Georgia</strong> first — applicants in other states are welcome; service may be limited initially.</p>
-					</div>
-					<div class="wrrapd-wrapstars-reqs-dd__item">
-						<span class="wrrapd-wrapstars-reqs-dd__num" aria-hidden="true">2</span>
-						<h3>Equipment</h3>
-						<p>A smartphone for video proof, quality wrapping supplies, and a clean workspace to wrap professionally.</p>
-					</div>
-					<div class="wrrapd-wrapstars-reqs-dd__item">
-						<span class="wrrapd-wrapstars-reqs-dd__num" aria-hidden="true">3</span>
-						<h3>Documentation</h3>
-						<p>Government-issued photo ID at application. After approval, you'll complete onboarding — including liability and inland marine insurance — before your first paid orders.</p>
-					</div>
+					<?php foreach ( $c['reqs']['items'] as $i => $req ) : ?>
+						<div class="wrrapd-wrapstars-reqs-dd__item">
+							<span class="wrrapd-wrapstars-reqs-dd__num" aria-hidden="true"><?php echo (int) ( $i + 1 ); ?></span>
+							<h3><?php echo wp_kses_post( $req['title'] ); ?></h3>
+							<p><?php echo wp_kses_post( $req['text'] ); ?></p>
+							<?php if ( ! empty( $req['note'] ) ) : ?>
+								<p class="wrrapd-wrapstars-reqs-dd__note"><?php echo wp_kses_post( $req['note'] ); ?></p>
+							<?php endif; ?>
+						</div>
+					<?php endforeach; ?>
 				</div>
 			</section>
 
 			<section class="wrrapd-wrapstars-faq-dd">
-				<h2 class="wrrapd-wrapstars-section-title">Frequently asked questions</h2>
-				<details class="wrrapd-wrapstars-faq-dd__item">
-					<summary>How does wrapping with WrapStars work?</summary>
-					<p>Customers place gift-wrap orders through Wrrapd. When an order is available in your area, you see the payout and deadline before accepting. You pick up items, wrap them to brand standards, record video proof, and deliver or hand off — all within the same-day or next-day window.</p>
-				</details>
-				<details class="wrrapd-wrapstars-faq-dd__item">
-					<summary>Where is WrapStars available?</summary>
-					<p>We are launching in <strong>Florida</strong> and <strong>Georgia</strong>. Applicants in other states are welcome — service may be limited at first as the network grows.</p>
-				</details>
-				<details class="wrrapd-wrapstars-faq-dd__item">
-					<summary>How long does it take to start?</summary>
-					<p>The application takes about four minutes. We review submissions within about seven days and may invite you to a brief interview. After approval, you will complete onboarding — agreements, insurance, orientation, and tax forms — before receiving your first orders.</p>
-				</details>
-				<details class="wrrapd-wrapstars-faq-dd__item">
-					<summary>What materials do I need to be a WrapStar?</summary>
-					<p>A smartphone, quality wrapping paper and supplies, scissors, tape, and space to work neatly. During onboarding we walk you through Wrrapd presentation standards and video-proof requirements.</p>
-				</details>
-				<details class="wrrapd-wrapstars-faq-dd__item">
-					<summary>How fast do I need to complete an order?</summary>
-					<p>Every order must be wrapped and delivered the <strong>same day</strong> or by the <strong>next day at the latest</strong>. This is not optional — customers are counting on you for timely surprises.</p>
-				</details>
-				<details class="wrrapd-wrapstars-faq-dd__item">
-					<summary>When will I hear back about my application?</summary>
-					<p>Within about seven days. Updates come from admin@wrrapd.com — we may invite you to a Zoom or phone conversation before a final decision.</p>
-				</details>
-				<details class="wrrapd-wrapstars-faq-dd__item">
-					<summary>Is gift-wrapping experience required?</summary>
-					<p>Not necessarily. We look for reliability, presentation, and professionalism — the qualities that make every unwrap feel special. A neat sample or portfolio can help, but attitude and follow-through matter most.</p>
-				</details>
-				<details class="wrrapd-wrapstars-faq-dd__item">
-					<summary>When do I receive login access?</summary>
-					<p>After approval only. Your credentials and onboarding link arrive by email from admin@wrrapd.com. There is no login while your application is under review.</p>
-				</details>
+				<h2 class="wrrapd-wrapstars-section-title"><?php echo wp_kses_post( $c['faq']['title'] ); ?></h2>
+				<?php foreach ( $c['faq']['items'] as $faq ) : ?>
+					<details class="wrrapd-wrapstars-faq-dd__item">
+						<summary><?php echo wp_kses_post( $faq['q'] ); ?></summary>
+						<p><?php echo wp_kses_post( $faq['a'] ); ?></p>
+					</details>
+				<?php endforeach; ?>
 			</section>
 
 			<section class="wrrapd-wrapstars-dasher-box wrrapd-wrapstars-dasher-box--wide" style="margin-bottom:1.5rem;">
-				<h2>Prefer to deliver instead?</h2>
-				<p>Wrrapd also hires Delivery Drivers for final-mile gift delivery — separate from gift-wrapping.</p>
-				<a class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--xl" href="<?php echo esc_url( wrrapd_wrapstars_apply_url( '/drive/' ) ); ?>">Driver applications</a>
+				<h2><?php echo wp_kses_post( $c['drivers']['title'] ); ?></h2>
+				<p><?php echo wp_kses_post( $c['drivers']['text'] ); ?></p>
+				<a class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--xl" href="<?php echo esc_url( wrrapd_wrapstars_apply_url( '/drive/' ) ); ?>"><?php echo wp_kses_post( $c['drivers']['cta'] ); ?></a>
 			</section>
 
 			<section class="wrrapd-wrapstars-dasher-cta wrrapd-wrapstars-dasher-box wrrapd-wrapstars-dasher-box--wide">
-				<h2>Become a WrapStar today!</h2>
-				<p>Deliver smiles and get paid. Have your driver license or passport ready — the application takes about five minutes.</p>
-				<a class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--xl" href="<?php echo esc_url( wrrapd_wrapstars_apply_url( '/apply/' ) ); ?>">Apply now</a>
+				<h2><?php echo wp_kses_post( $c['final_cta']['title'] ); ?></h2>
+				<p><?php echo wp_kses_post( $c['final_cta']['text'] ); ?></p>
+				<a class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--xl" href="<?php echo esc_url( $apply ); ?>"><?php echo wp_kses_post( $c['final_cta']['cta'] ); ?></a>
 			</section>
 		</div>
 	</div>
@@ -2655,7 +3055,7 @@ function wrrapd_wrapstars_shortcode_login() {
 	$redirect = isset( $_GET['redirect_to'] ) ? esc_url_raw( wp_unslash( $_GET['redirect_to'] ) ) : '';
 	$error    = $GLOBALS['wrrapd_ws_login_error'] ?? '';
 	if ( $error === '' && ! empty( $_GET['invite_expired'] ) ) {
-		$error = 'This onboarding invitation expired after 15 days. Ask us to resend your welcome email from Command Center.';
+		$error = 'This onboarding invitation expired after 15 days. Email us and we will send you a fresh welcome email.';
 	}
 	$greet    = isset( $_GET['greet'] ) ? sanitize_text_field( wp_unslash( $_GET['greet'] ) ) : '';
 	if ( $greet === '' && ! empty( $_POST['greet'] ) ) {
@@ -2728,9 +3128,9 @@ function wrrapd_wrapstars_shortcode_onboarding( $atts ) {
 	}
 
 	$atts = shortcode_atts( array( 'step' => '' ), $atts, 'wrrapd_wrapstar_onboarding' );
-	$step = $atts['step'] !== '' ? $atts['step'] : wrrapd_wrapstars_detect_onboarding_step_from_uri();
+	$step = $atts['step'] !== '' ? wrrapd_wrapstars_normalize_step_key( $atts['step'] ) : wrrapd_wrapstars_detect_onboarding_step_from_uri();
 
-	$app = wrrapd_wrapstars_get_application_by_user( $user_id );
+	$app    = wrrapd_wrapstars_get_application_by_user( $user_id );
 	$status = $app ? (string) wrrapd_wrapstars_get_meta( $app->ID, 'status' ) : '';
 	if ( $status === 'declined' ) {
 		return '<div class="wrrapd-wrapstars-alert wrrapd-wrapstars-alert--info">This WrapStar invitation was declined. Contact ' . esc_html( wrrapd_wrapstars_from_email_address() ) . ' if that was a mistake.</div>';
@@ -2739,43 +3139,55 @@ function wrrapd_wrapstars_shortcode_onboarding( $atts ) {
 		return '<div class="wrrapd-wrapstars-alert wrrapd-wrapstars-alert--info">Onboarding is available after approval. Check your email for login credentials.</div>';
 	}
 
+	$registry = wrrapd_wrapstars_onboarding_step_registry();
+	if ( ! isset( $registry[ $step ] ) ) {
+		$step = 'welcome';
+	}
 	if ( ! wrrapd_wrapstars_can_access_step( $app->ID, $step ) ) {
-		$current = wrrapd_wrapstars_get_meta( $app->ID, 'onboarding_step', 'welcome' );
-		return '<div class="wrrapd-wrapstars-alert wrrapd-wrapstars-alert--info">Complete prior steps first. <a href="' . esc_url( wrrapd_wrapstars_onboarding_step_url( $current ) ) . '">Continue onboarding</a></div>';
+		// Shortcodes render after headers are sent — link instead of redirecting.
+		$current = wrrapd_wrapstars_normalize_step_key( wrrapd_wrapstars_get_meta( $app->ID, 'onboarding_step', 'welcome' ) );
+		$label   = $registry[ $current ]['label'] ?? 'your next step';
+		return '<div class="wrrapd-wrapstars wrrapd-wrapstars-alert wrrapd-wrapstars-alert--info">This step unlocks after the ones before it. <a href="' . esc_url( wrrapd_wrapstars_onboarding_step_url( $current ) ) . '">Continue with ' . esc_html( $label ) . '</a></div>';
 	}
 
-	$steps       = wrrapd_wrapstars_onboarding_steps();
-	$step_keys   = array_keys( $steps );
-	$step_total  = count( $step_keys );
-	$step_index  = array_search( $step, $step_keys, true );
+	$step_keys  = array_keys( $registry );
+	$step_total = count( $step_keys );
+	$step_index = array_search( $step, $step_keys, true );
 	if ( $step_index === false ) {
 		$step_index = 0;
 	}
-	$step_num    = $step_index + 1;
-	$done_count  = 0;
+	$step_num   = $step_index + 1;
+	$done_count = 0;
+	$minutes_left = 0;
 	foreach ( $step_keys as $key ) {
 		if ( $key === 'activation' ) {
 			continue;
 		}
 		if ( wrrapd_wrapstars_step_complete( $app->ID, $key ) ) {
 			$done_count++;
+		} else {
+			$minutes_left += (int) $registry[ $key ]['minutes'];
 		}
 	}
-	$trackable   = max( 1, $step_total - 1 );
+	$trackable    = max( 1, $step_total - 1 );
 	$progress_pct = (int) min( 100, round( ( $done_count / $trackable ) * 100 ) );
-	$display       = wrrapd_wrapstars_greeting_name( $app->ID );
+	$display      = wrrapd_wrapstars_greeting_name( $app->ID );
 	if ( $display === 'there' ) {
 		$display = 'WrapStar';
 	}
-	$current_label = $steps[ $step ] ?? 'Onboarding';
+	$current       = $registry[ $step ];
+	$current_label = $current['label'];
+	$next_key      = wrrapd_wrapstars_next_onboarding_step( $step );
+	$next_meta     = $registry[ $next_key ] ?? null;
 
 	ob_start();
 	echo '<div class="wrrapd-wrapstars wrrapd-wrapstars-onboarding-shell">';
 
+	// Mobile top bar.
 	echo '<header class="wrrapd-wrapstars-ob-topbar" role="banner">';
 	echo '<button type="button" class="wrrapd-wrapstars-ob-menu-btn" data-ws-ob-nav-open aria-controls="wrrapd-ws-ob-nav" aria-expanded="false">Steps</button>';
 	echo '<div class="wrrapd-wrapstars-ob-topbar__center">';
-	echo '<span class="wrrapd-wrapstars-ob-topbar__eyebrow">WrapStar portal</span>';
+	echo '<span class="wrrapd-wrapstars-ob-topbar__eyebrow">WrapStar onboarding</span>';
 	echo '<strong class="wrrapd-wrapstars-ob-topbar__step">' . esc_html( $current_label ) . '</strong>';
 	echo '</div>';
 	echo '<a class="wrrapd-wrapstars-ob-topbar__logout" href="' . esc_url( wp_logout_url( home_url( '/' ) ) ) . '">Log out</a>';
@@ -2784,6 +3196,8 @@ function wrrapd_wrapstars_shortcode_onboarding( $atts ) {
 	echo '<button type="button" class="wrrapd-wrapstars-ob-backdrop" data-ws-ob-nav-close aria-label="Close steps menu" hidden></button>';
 
 	echo '<div class="wrrapd-wrapstars-onboarding">';
+
+	// ---- Left rail -------------------------------------------------------
 	echo '<aside id="wrrapd-ws-ob-nav" class="wrrapd-wrapstars-onboarding-nav" aria-label="Onboarding steps">';
 	echo '<div class="wrrapd-wrapstars-onboarding-nav__brand">';
 	echo '<a href="' . esc_url( wrrapd_wrapstars_pros_url( '/onboarding/' ) ) . '">';
@@ -2798,25 +3212,39 @@ function wrrapd_wrapstars_shortcode_onboarding( $atts ) {
 	echo '<div class="wrrapd-wrapstars-ob-progress__track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' . esc_attr( (string) $progress_pct ) . '">';
 	echo '<span class="wrrapd-wrapstars-ob-progress__fill" style="width:' . esc_attr( (string) $progress_pct ) . '%"></span>';
 	echo '</div>';
-	echo '<p class="wrrapd-wrapstars-ob-progress__hint">Step ' . esc_html( (string) $step_num ) . ' of ' . esc_html( (string) $step_total ) . '</p>';
+	echo '<p class="wrrapd-wrapstars-ob-progress__hint">' . esc_html( (string) $done_count ) . ' of ' . esc_html( (string) $trackable ) . ' steps done';
+	if ( $minutes_left > 0 ) {
+		echo ' · about ' . esc_html( (string) $minutes_left ) . ' min left';
+	}
+	echo '</p>';
 	echo '</div>';
 
 	echo '<nav class="wrrapd-wrapstars-ob-stepnav">';
 	echo '<ul class="wrrapd-wrapstars-steps wrrapd-wrapstars-steps--sidebar">';
-	$i = 0;
-	foreach ( $steps as $key => $label ) {
+	$i          = 0;
+	$last_group = '';
+	foreach ( $registry as $key => $meta ) {
 		$i++;
-		$cls = 'is-locked';
-		if ( wrrapd_wrapstars_step_complete( $app->ID, $key ) ) {
+		if ( $meta['group'] !== $last_group ) {
+			echo '<li class="wrrapd-wrapstars-ob-stepgroup" aria-hidden="true">' . esc_html( $meta['group'] ) . '</li>';
+			$last_group = $meta['group'];
+		}
+		$is_done = wrrapd_wrapstars_step_complete( $app->ID, $key );
+		$cls     = 'is-locked';
+		if ( $is_done ) {
 			$cls = 'is-done';
 		} elseif ( $key === $step ) {
 			$cls = 'is-current';
 		}
+		if ( $key === $step ) {
+			$cls .= ' is-active';
+		}
 		$can_open = wrrapd_wrapstars_can_access_step( $app->ID, $key );
-		$mark     = wrrapd_wrapstars_step_complete( $app->ID, $key ) ? '✓' : (string) $i;
+		$mark     = $is_done ? '✓' : (string) $i;
 		echo '<li class="' . esc_attr( $cls ) . '">';
-		$inner = '<span class="wrrapd-wrapstars-ob-stepmark" aria-hidden="true">' . esc_html( $mark ) . '</span>';
-		$inner .= '<span class="wrrapd-wrapstars-ob-steplabel">' . esc_html( $label ) . '</span>';
+		$inner  = '<span class="wrrapd-wrapstars-ob-stepmark" aria-hidden="true">' . esc_html( $mark ) . '</span>';
+		$inner .= '<span class="wrrapd-wrapstars-ob-steplabel"><span class="wrrapd-wrapstars-ob-steplabel__name">' . esc_html( $meta['label'] ) . '</span>';
+		$inner .= '<span class="wrrapd-wrapstars-ob-steplabel__short">' . esc_html( $is_done ? 'Complete' : $meta['short'] ) . '</span></span>';
 		if ( $can_open ) {
 			echo '<a href="' . esc_url( wrrapd_wrapstars_onboarding_step_url( $key ) ) . '"' . ( $key === $step ? ' aria-current="step"' : '' ) . '>' . $inner . '</a>';
 		} else {
@@ -2828,20 +3256,26 @@ function wrrapd_wrapstars_shortcode_onboarding( $atts ) {
 
 	echo '<div class="wrrapd-wrapstars-onboarding-nav__foot">';
 	echo '<a href="' . esc_url( wrrapd_wrapstars_pros_url( '/profile/' ) ) . '">Profile</a>';
+	echo '<a href="mailto:' . esc_attr( wrrapd_wrapstars_from_email_address() ) . '">Help</a>';
 	echo '<a href="' . esc_url( wp_logout_url( home_url( '/' ) ) ) . '">Log out</a>';
 	echo '</div>';
 	echo '</aside>';
 
+	// ---- Main stage ------------------------------------------------------
 	echo '<div class="wrrapd-wrapstars-onboarding-main">';
 	echo '<div class="wrrapd-wrapstars-ob-stage">';
 	echo '<header class="wrrapd-wrapstars-ob-stage__header">';
-	echo '<p class="wrrapd-wrapstars-ob-stage__kicker">Step ' . esc_html( (string) $step_num ) . ' · ' . esc_html( (string) $step_total ) . ' total</p>';
+	echo '<p class="wrrapd-wrapstars-ob-stage__kicker">' . esc_html( $current['group'] ) . ' · Step ' . esc_html( (string) $step_num ) . ' of ' . esc_html( (string) $step_total );
+	if ( (int) $current['minutes'] > 0 ) {
+		echo ' · about ' . esc_html( (string) $current['minutes'] ) . ' min';
+	}
+	echo '</p>';
 	echo '<h1 class="wrrapd-wrapstars-ob-stage__title">' . esc_html( $current_label ) . '</h1>';
 	echo '</header>';
 
 	$err = $GLOBALS['wrrapd_ws_onboarding_error'] ?? '';
 	if ( $err ) {
-		echo '<div class="wrrapd-wrapstars-alert wrrapd-wrapstars-alert--err">' . esc_html( $err ) . '</div>';
+		echo '<div class="wrrapd-wrapstars-alert wrrapd-wrapstars-alert--err" role="alert">' . esc_html( $err ) . '</div>';
 	}
 
 	switch ( $step ) {
@@ -2852,23 +3286,31 @@ function wrrapd_wrapstars_shortcode_onboarding( $atts ) {
 			echo do_shortcode( '[wrrapd_wrapstar_sign doc="ic_agreement"]' );
 			break;
 		case 'policies':
-		case 'background':
-		case 'identity':
-		case 'tax_1099':
-		case 'bank_payout':
-			wrrapd_wrapstars_render_step_placeholder( $app->ID, $step );
-			break;
-		case 'insurance':
-			wrrapd_wrapstars_render_step_insurance( $app->ID );
+			wrrapd_wrapstars_render_step_policies( $app->ID );
 			break;
 		case 'orientation':
 			wrrapd_wrapstars_render_step_orientation( $app->ID );
 			break;
-		case 'po_box':
-			wrrapd_wrapstars_render_step_po_box( $app->ID );
+		case 'background':
+			wrrapd_wrapstars_render_step_background( $app->ID );
+			break;
+		case 'insurance':
+			wrrapd_wrapstars_render_step_insurance( $app->ID );
+			break;
+		case 'identity':
+			wrrapd_wrapstars_render_step_identity( $app->ID );
+			break;
+		case 'workspace':
+			wrrapd_wrapstars_render_step_workspace( $app->ID );
 			break;
 		case 'w9':
 			echo do_shortcode( '[wrrapd_wrapstar_sign doc="w9"]' );
+			break;
+		case 'tax_1099':
+			wrrapd_wrapstars_render_step_tax_1099( $app->ID );
+			break;
+		case 'bank_payout':
+			wrrapd_wrapstars_render_step_bank_payout( $app->ID );
 			break;
 		case 'activation':
 			wrrapd_wrapstars_render_step_activation( $app->ID );
@@ -2876,189 +3318,153 @@ function wrrapd_wrapstars_shortcode_onboarding( $atts ) {
 		default:
 			wrrapd_wrapstars_render_step_welcome( $app->ID );
 	}
+
+	// Footer helpers: what's next + help.
+	echo '<div class="wrrapd-wrapstars-ob-foot">';
+	if ( $step !== 'activation' && $next_meta ) {
+		echo '<p class="wrrapd-wrapstars-ob-foot__next"><span>Up next</span> ' . esc_html( $next_meta['label'] );
+		if ( (int) $next_meta['minutes'] > 0 ) {
+			echo ' <em>· about ' . esc_html( (string) $next_meta['minutes'] ) . ' min</em>';
+		}
+		echo '</p>';
+	}
+	echo '<p class="wrrapd-wrapstars-ob-foot__help">Your progress is saved after every step — you can log out and pick up where you left off. Questions? Email <a href="mailto:' . esc_attr( wrrapd_wrapstars_from_email_address() ) . '">' . esc_html( wrrapd_wrapstars_from_email_address() ) . '</a>.</p>';
+	echo '</div>';
+
 	echo '</div></div></div></div>';
 	return ob_get_clean();
 }
 
+/** Resolve the onboarding step from the request path (registry paths + legacy /po-box/). */
 function wrrapd_wrapstars_detect_onboarding_step_from_uri() {
-	$uri = isset( $_SERVER['REQUEST_URI'] ) ? (string) $_SERVER['REQUEST_URI'] : '';
-	$map = array(
-		'#/onboarding/agreement#'   => 'agreement',
-		'#/onboarding/policies#'    => 'policies',
-		'#/onboarding/orientation#' => 'orientation',
-		'#/onboarding/background#'  => 'background',
-		'#/onboarding/insurance#'   => 'insurance',
-		'#/onboarding/identity#'    => 'identity',
-		'#/onboarding/po-box#'      => 'po_box',
-		'#/onboarding/w-9#'         => 'w9',
-		'#/onboarding/tax-1099#'    => 'tax_1099',
-		'#/onboarding/bank-payout#' => 'bank_payout',
-		'#/onboarding/activation#'  => 'activation',
-	);
-	foreach ( $map as $re => $key ) {
-		if ( preg_match( $re, $uri ) ) {
-			return $key;
+	$uri  = isset( $_SERVER['REQUEST_URI'] ) ? (string) wp_parse_url( (string) $_SERVER['REQUEST_URI'], PHP_URL_PATH ) : '';
+	$uri  = rtrim( $uri, '/' ) . '/';
+	$best = 'welcome';
+	$len  = 0;
+	foreach ( wrrapd_wrapstars_onboarding_step_registry() as $key => $meta ) {
+		if ( $meta['path'] === '/onboarding/' ) {
+			continue;
+		}
+		if ( str_contains( $uri, $meta['path'] ) && strlen( $meta['path'] ) > $len ) {
+			$best = $key;
+			$len  = strlen( $meta['path'] );
 		}
 	}
-	return 'welcome';
+	if ( $best === 'welcome' && str_contains( $uri, '/onboarding/po-box/' ) ) {
+		return 'workspace';
+	}
+	return $best;
+}
+
+/** Shared markup: typed-name signature field. */
+function wrrapd_wrapstars_render_signature_field( $name, $label = 'Type your full legal name to sign' ) {
+	?>
+	<div class="wrrapd-wrapstars-ob-sign">
+		<label for="<?php echo esc_attr( $name ); ?>"><?php echo esc_html( $label ); ?></label>
+		<input type="text" id="<?php echo esc_attr( $name ); ?>" name="<?php echo esc_attr( $name ); ?>" class="wrrapd-wrapstars-ob-sign__input" autocomplete="name" placeholder="Your full name" required />
+		<p class="wrrapd-wrapstars-ob-note">Typing your name here is your electronic signature and carries the same weight as a handwritten one. Signed <?php echo esc_html( gmdate( 'F j, Y' ) ); ?>.</p>
+	</div>
+	<?php
 }
 
 function wrrapd_wrapstars_render_step_welcome( $app_id ) {
-	$greet = wrrapd_wrapstars_greeting_name( $app_id );
+	$greet    = wrrapd_wrapstars_greeting_name( $app_id );
+	$registry = wrrapd_wrapstars_onboarding_step_registry();
+	$groups   = array();
+	$total    = 0;
+	foreach ( $registry as $key => $meta ) {
+		if ( in_array( $key, array( 'welcome', 'activation' ), true ) ) {
+			continue;
+		}
+		$groups[ $meta['group'] ][] = $meta;
+		$total += (int) $meta['minutes'];
+	}
 	?>
 	<div class="wrrapd-wrapstars-card wrrapd-wrapstars-card--hero wrrapd-wrapstars-welcome">
-		<p class="wrrapd-wrapstars-welcome__hello">Dear <?php echo esc_html( $greet === 'there' ? 'WrapStar' : $greet ); ?>,</p>
-		<p class="wrrapd-wrapstars-ob-lead">Welcome to Wrrapd. We are delighted you have accepted the invitation to join our family of WrapStars, and we look forward to working with you.</p>
-		<p class="wrrapd-wrapstars-ob-lead">This brief onboarding confirms the agreements, credentials, and practical details we need before you may receive orders. Please complete it promptly so we can activate your account without delay — customers are counting on us, and timely onboarding helps us place you in the network as soon as possible.</p>
-		<p class="wrrapd-wrapstars-ob-lead">Along the way you will review and e-sign contracts and tax documents, provide insurance and mailing details, and complete a short orientation. Where a final document or vendor connection is still being prepared, you will see a clear placeholder; those screens will be replaced as soon as the materials are ready, without changing the overall sequence.</p>
-		<p class="wrrapd-wrapstars-ob-lead">The steps on the left guide you from start to finish. When you are ready, please continue below.</p>
-		<p class="wrrapd-wrapstars-welcome__close">With warm regards,<br /><strong>Team Wrrapd</strong></p>
+		<p class="wrrapd-wrapstars-welcome__hello">Welcome, <?php echo esc_html( $greet === 'there' ? 'WrapStar' : $greet ); ?>!</p>
+		<p class="wrrapd-wrapstars-ob-lead">You&rsquo;re in. We&rsquo;re thrilled to have you join the founding network of WrapStars. This short onboarding takes care of the agreements, verification, and setup details we need before your first gifts arrive.</p>
+		<p class="wrrapd-wrapstars-ob-lead">It takes about <strong><?php echo esc_html( (string) $total ); ?> minutes</strong> in total. You can stop at any point — every step is saved as soon as you finish it.</p>
+
+		<div class="wrrapd-wrapstars-ob-overview">
+			<?php foreach ( $groups as $group => $items ) : ?>
+				<div class="wrrapd-wrapstars-ob-overview__group">
+					<h3><?php echo esc_html( $group ); ?></h3>
+					<ul>
+						<?php foreach ( $items as $meta ) : ?>
+							<li><span><?php echo esc_html( $meta['label'] ); ?></span><em><?php echo esc_html( (string) $meta['minutes'] ); ?> min</em></li>
+						<?php endforeach; ?>
+					</ul>
+				</div>
+			<?php endforeach; ?>
+		</div>
+
+		<div class="wrrapd-wrapstars-ob-callout">
+			<strong>Have these handy</strong>
+			<span>Your government ID, your insurance certificate (or your agent&rsquo;s contact), and a voided check or bank letter for payouts.</span>
+		</div>
+
 		<form method="post" class="wrrapd-wrapstars-ob-actions wrrapd-wrapstars-login__actions">
 			<?php wp_nonce_field( 'wrrapd_ws_onboarding', 'wrrapd_ws_nonce' ); ?>
 			<input type="hidden" name="wrrapd_ws_action" value="onboarding_step" />
 			<input type="hidden" name="step" value="welcome" />
-			<button type="submit" class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--lg">Continue</button>
+			<button type="submit" class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--lg">Let&rsquo;s begin</button>
 		</form>
 	</div>
 	<?php
 }
 
-/**
- * Config for placeholder onboarding steps — swap copy/docs when you supply finals.
- *
- * @return array{title:string,lead:string,needs:string[],vendor:string,ack:string}|null
- */
-function wrrapd_wrapstars_placeholder_step_config( $step ) {
-	$all = array(
-		'policies'    => array(
-			'title'  => 'Policies & handbook',
-			'lead'   => 'Acknowledge WrapStar operating policies, safety standards, and the independent-contractor handbook. Final PDFs will be uploaded here when counsel delivers them.',
-			'needs'  => array(
-				'WrapStar Handbook / Operations Manual (PDF TBD)',
-				'Gift-handling & video-proof policy (PDF TBD)',
-				'Code of conduct / brand standards (PDF TBD)',
-			),
-			'vendor' => 'In-app PDF viewer + checkbox acknowledgments (no BoldSign required unless counsel prefers e-sign).',
-			'ack'    => 'I understand this step is a placeholder and I will re-acknowledge when final policy documents are published.',
-		),
-		'background'  => array(
-			'title'  => 'Background check',
-			'lead'   => 'Authorized at apply time. This step will launch our screening vendor (e.g. Checkr) after approval. Until then, confirm you remain willing to complete a background check.',
-			'needs'  => array(
-				'Background-check authorization form (if separate from apply)',
-				'Vendor invite / disclosure packet (TBD)',
-			),
-			'vendor' => 'Placeholder for Checkr (or similar) hosted flow + webhook status back to Wrrapd.',
-			'ack'    => 'I authorize Wrrapd to run a background check when the vendor integration is enabled, and I understand activation may wait on a clear result.',
-		),
-		'identity'    => array(
-			'title'  => 'Identity verification',
-			'lead'   => 'Confirm government ID on file and complete any additional identity checks. A selfie / liveness vendor can plug in here later.',
-			'needs'  => array(
-				'Government ID re-upload (optional if apply ID already verified)',
-				'Selfie / liveness capture (vendor TBD)',
-			),
-			'vendor' => 'Placeholder for Persona / Stripe Identity / similar.',
-			'ack'    => 'I confirm the government ID I submitted at application is accurate, and I will complete any additional identity verification Wrrapd requests.',
-		),
-		'tax_1099'    => array(
-			'title'  => '1099 & tax acknowledgments',
-			'lead'   => 'After your W-9, acknowledge independent-contractor tax treatment and 1099 reporting. Final tax packet / counsel language will replace this placeholder.',
-			'needs'  => array(
-				'1099-NEC acknowledgment / IC tax notice (PDF TBD)',
-				'Optional state tax notices (TBD by jurisdiction)',
-			),
-			'vendor' => 'Checkbox attestation now; optional second BoldSign template later if required.',
-			'ack'    => 'I understand I am an independent contractor responsible for my own taxes, and that Wrrapd may issue a Form 1099 when required by law.',
-		),
-		'bank_payout' => array(
-			'title'  => 'Connect bank / payouts',
-			'lead'   => 'Connect the account where WrapStar earnings will be paid. Stripe Connect (or Plaid + ACH export) will live here. Until then, confirm you have a US bank account ready.',
-			'needs'  => array(
-				'Stripe Connect onboarding link (or Plaid Link)',
-				'ACH / payout schedule disclosure (PDF TBD)',
-				'Voided check / account ownership proof if required (TBD)',
-			),
-			'vendor' => 'Placeholder for Stripe Connect Express / Custom. Ops ACH CSV already exists in Command Center Finance.',
-			'ack'    => 'I confirm I have a US bank account ready for WrapStar payouts and will complete the bank connection when Wrrapd enables it.',
-		),
-	);
-	return $all[ $step ] ?? null;
-}
-
-function wrrapd_wrapstars_render_step_placeholder( $app_id, $step ) {
-	$cfg = wrrapd_wrapstars_placeholder_step_config( $step );
-	if ( ! $cfg ) {
-		echo '<div class="wrrapd-wrapstars-alert wrrapd-wrapstars-alert--err">Unknown onboarding step.</div>';
-		return;
-	}
+function wrrapd_wrapstars_render_step_policies( $app_id ) {
+	$sections = wrrapd_wrapstars_policy_sections();
 	?>
 	<div class="wrrapd-wrapstars-card">
-		<p class="wrrapd-wrapstars-pill wrrapd-wrapstars-pill--placeholder">Placeholder — final documents / vendor coming soon</p>
-		<p class="wrrapd-wrapstars-ob-lead"><?php echo esc_html( $cfg['lead'] ); ?></p>
-		<div class="wrrapd-wrapstars-ob-split">
-			<div class="wrrapd-wrapstars-ob-panel">
-				<h3>What Wrrapd will add</h3>
-				<ul class="wrrapd-wrapstars-ob-needs">
-					<?php foreach ( $cfg['needs'] as $need ) : ?>
-						<li><?php echo esc_html( $need ); ?></li>
-					<?php endforeach; ?>
-				</ul>
-			</div>
-			<div class="wrrapd-wrapstars-ob-panel wrrapd-wrapstars-ob-panel--soft">
-				<h3>Integration plan</h3>
-				<p><?php echo esc_html( $cfg['vendor'] ); ?></p>
-				<p class="wrrapd-wrapstars-ob-note">You can continue now. When finals arrive, this screen becomes the real upload / e-sign / connect flow — same step order.</p>
-			</div>
-		</div>
-		<form method="post" class="wrrapd-wrapstars-ob-actions wrrapd-wrapstars-form">
+		<p class="wrrapd-wrapstars-ob-lead">These are the standards every WrapStar works to. Read each section and tick the box to acknowledge it, then sign at the bottom.</p>
+		<form method="post" class="wrrapd-wrapstars-form wrrapd-wrapstars-ob-actions">
 			<?php wp_nonce_field( 'wrrapd_ws_onboarding', 'wrrapd_ws_nonce' ); ?>
 			<input type="hidden" name="wrrapd_ws_action" value="onboarding_step" />
-			<input type="hidden" name="step" value="<?php echo esc_attr( $step ); ?>" />
-			<label class="ws-check">
-				<input type="checkbox" name="placeholder_ack" value="1" required />
-				<span><?php echo esc_html( $cfg['ack'] ); ?></span>
-			</label>
-			<label>Optional notes for Wrrapd ops
-				<textarea name="placeholder_notes" rows="2" placeholder="Questions or details for our team…"></textarea>
-			</label>
-			<button type="submit" class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--lg">Acknowledge &amp; continue</button>
-		</form>
-	</div>
-	<?php
-}
-
-function wrrapd_wrapstars_render_step_insurance( $app_id ) {
-	?>
-	<div class="wrrapd-wrapstars-card">
-		<p class="wrrapd-wrapstars-ob-lead">Upload your Certificate of Insurance (COI) showing <strong>$1M+ general liability</strong> and <strong>inland marine / bailee</strong> coverage. Ops verifies before activation.</p>
-		<form method="post" enctype="multipart/form-data" class="wrrapd-wrapstars-form wrrapd-wrapstars-ob-actions">
-			<?php wp_nonce_field( 'wrrapd_ws_onboarding', 'wrrapd_ws_nonce' ); ?>
-			<input type="hidden" name="wrrapd_ws_action" value="onboarding_step" />
-			<input type="hidden" name="step" value="insurance" />
-			<label>Insurance COI (PDF or image) <input type="file" name="insurance_coi" accept=".pdf,.jpg,.jpeg,.png" required /></label>
-			<button type="submit" class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--lg">Upload &amp; continue</button>
+			<input type="hidden" name="step" value="policies" />
+			<?php foreach ( $sections as $key => $section ) : ?>
+				<section class="wrrapd-wrapstars-ob-policy">
+					<h3><?php echo esc_html( $section['title'] ); ?></h3>
+					<ul>
+						<?php foreach ( $section['points'] as $point ) : ?>
+							<li><?php echo esc_html( $point ); ?></li>
+						<?php endforeach; ?>
+					</ul>
+					<label class="ws-check">
+						<input type="checkbox" name="policy_ack[]" value="<?php echo esc_attr( $key ); ?>" required />
+						<span>I have read and agree to the <?php echo esc_html( strtolower( $section['title'] ) ); ?>.</span>
+					</label>
+				</section>
+			<?php endforeach; ?>
+			<?php wrrapd_wrapstars_render_signature_field( 'policies_signature' ); ?>
+			<button type="submit" class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--lg">Sign &amp; continue</button>
 		</form>
 	</div>
 	<?php
 }
 
 function wrrapd_wrapstars_render_step_orientation( $app_id ) {
-	$quiz_err = $GLOBALS['wrrapd_ws_quiz_error'] ?? '';
+	$quiz_err  = $GLOBALS['wrrapd_ws_quiz_error'] ?? '';
 	$questions = wrrapd_wrapstars_orientation_questions();
+	$modules   = wrrapd_wrapstars_orientation_modules();
 	?>
 	<div class="wrrapd-wrapstars-card">
-		<p class="wrrapd-wrapstars-ob-lead">Review the standards below, then pass the quiz with <strong>80% or higher</strong>.</p>
-		<ul class="wrrapd-wrapstars-ob-standards">
-			<li>Record video on <strong>every</strong> order: unboxing → wrap → outbound handoff</li>
-			<li>Maintain $1M+ GL and inland marine insurance at all times</li>
-			<li>You are personally liable for loss, theft, or damage while goods are in your possession</li>
-			<li>New WrapStars start with lower-value orders until performance is proven</li>
-			<li>Missing videos or poor ratings can lead to fast deactivation</li>
-		</ul>
+		<p class="wrrapd-wrapstars-ob-lead">Here is exactly how a WrapStar order flows, start to finish. Read the four short modules, then pass the quiz with <strong>80% or higher</strong> (you can retake it).</p>
+		<div class="wrrapd-wrapstars-ob-modules">
+			<?php foreach ( $modules as $module ) : ?>
+				<details class="wrrapd-wrapstars-ob-module" open>
+					<summary><?php echo esc_html( $module['title'] ); ?></summary>
+					<ul>
+						<?php foreach ( $module['points'] as $point ) : ?>
+							<li><?php echo esc_html( $point ); ?></li>
+						<?php endforeach; ?>
+					</ul>
+				</details>
+			<?php endforeach; ?>
+		</div>
 	</div>
 	<?php if ( $quiz_err ) : ?>
-		<div class="wrrapd-wrapstars-alert wrrapd-wrapstars-alert--err"><?php echo esc_html( $quiz_err ); ?></div>
+		<div class="wrrapd-wrapstars-alert wrrapd-wrapstars-alert--err" role="alert"><?php echo esc_html( $quiz_err ); ?></div>
 	<?php endif; ?>
 	<form class="wrrapd-wrapstars-card wrrapd-wrapstars-quiz" method="post">
 		<?php wp_nonce_field( 'wrrapd_ws_quiz', 'wrrapd_ws_nonce' ); ?>
@@ -3077,26 +3483,257 @@ function wrrapd_wrapstars_render_step_orientation( $app_id ) {
 	<?php
 }
 
-function wrrapd_wrapstars_render_step_po_box( $app_id ) {
+function wrrapd_wrapstars_render_step_background( $app_id ) {
+	$full_name = (string) wrrapd_wrapstars_get_meta( $app_id, 'full_name' );
 	?>
 	<div class="wrrapd-wrapstars-card">
-		<p class="wrrapd-wrapstars-ob-lead">Enter the address where you will receive retailer packages, then upload USPS Form 1583, a PO Box receipt, or similar proof.</p>
+		<p class="wrrapd-wrapstars-ob-lead">Because gifts are entrusted to WrapStars, every WrapStar completes a background check before activation. Confirm your details and authorize the screening below — our screening partner will email you a secure link if anything further is needed.</p>
+		<div class="wrrapd-wrapstars-ob-disclosure">
+			<h3>Disclosure</h3>
+			<p>Wrrapd Inc. may obtain a consumer report and/or investigative consumer report about you from a consumer reporting agency for the purpose of evaluating you for, and during, your engagement as an independent contractor. The report may include information about your character, general reputation, personal characteristics, criminal history, and mode of living, as permitted by law. You have the right to request a copy of the report and to dispute inaccurate information with the reporting agency. A summary of your rights under the Fair Credit Reporting Act will be provided with the screening partner&rsquo;s invitation.</p>
+		</div>
+		<form method="post" class="wrrapd-wrapstars-form wrrapd-wrapstars-ob-actions">
+			<?php wp_nonce_field( 'wrrapd_ws_onboarding', 'wrrapd_ws_nonce' ); ?>
+			<input type="hidden" name="wrrapd_ws_action" value="onboarding_step" />
+			<input type="hidden" name="step" value="background" />
+			<label>Full legal name (exactly as on your ID)
+				<input type="text" name="bg_legal_name" value="<?php echo esc_attr( $full_name ); ?>" autocomplete="name" required />
+			</label>
+			<label>Other names you have used <span class="ws-optional">(optional)</span>
+				<input type="text" name="bg_other_names" placeholder="Maiden name, previous legal name…" />
+			</label>
+			<label class="ws-check">
+				<input type="checkbox" name="bg_consent" value="1" required />
+				<span>I have read the disclosure above and authorize Wrrapd and its screening partner to obtain a background check on me. I understand activation may depend on the result.</span>
+			</label>
+			<?php wrrapd_wrapstars_render_signature_field( 'bg_signature' ); ?>
+			<button type="submit" class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--lg">Authorize &amp; continue</button>
+		</form>
+	</div>
+	<?php
+}
+
+function wrrapd_wrapstars_render_step_insurance( $app_id ) {
+	?>
+	<div class="wrrapd-wrapstars-card">
+		<p class="wrrapd-wrapstars-ob-lead">Insurance protects you while gifts are in your care. Upload your Certificate of Insurance (COI) showing <strong>general liability of $1,000,000 or more</strong> and <strong>inland marine / bailee coverage</strong>. Our team verifies it before activation.</p>
+		<div class="wrrapd-wrapstars-ob-split">
+			<div class="wrrapd-wrapstars-ob-panel">
+				<h3>Don&rsquo;t have coverage yet?</h3>
+				<p>Ask any business insurance agent for a small-business policy with <em>general liability</em> plus <em>inland marine (bailee&rsquo;s customer goods)</em> coverage. Many carriers quote online in minutes. Tell them you handle customers&rsquo; goods at your own location and do not transport them.</p>
+			</div>
+			<div class="wrrapd-wrapstars-ob-panel wrrapd-wrapstars-ob-panel--soft">
+				<h3>What we look for on the COI</h3>
+				<ul class="wrrapd-wrapstars-ob-needs">
+					<li>Your name (or business name) as the insured</li>
+					<li>General liability limit of $1M+ per occurrence</li>
+					<li>Inland marine / bailee coverage line</li>
+					<li>Policy dates that are current</li>
+				</ul>
+			</div>
+		</div>
 		<form method="post" enctype="multipart/form-data" class="wrrapd-wrapstars-form wrrapd-wrapstars-ob-actions">
 			<?php wp_nonce_field( 'wrrapd_ws_onboarding', 'wrrapd_ws_nonce' ); ?>
 			<input type="hidden" name="wrrapd_ws_action" value="onboarding_step" />
-			<input type="hidden" name="step" value="po_box" />
-			<label>PO Box / mailing address <textarea name="po_box_address" rows="3" required></textarea></label>
-			<label>Proof (photo or PDF) <input type="file" name="po_box_proof" accept=".pdf,.jpg,.jpeg,.png" required /></label>
+			<input type="hidden" name="step" value="insurance" />
+			<div class="ws-field-row">
+				<label>Insurance carrier <span class="ws-optional">(optional)</span>
+					<input type="text" name="insurance_carrier" placeholder="e.g. Hiscox, Next, The Hartford" />
+				</label>
+				<label>Policy expiration <span class="ws-optional">(optional)</span>
+					<input type="date" name="insurance_expires" />
+				</label>
+			</div>
+			<label>Certificate of Insurance (PDF or image)
+				<input type="file" name="insurance_coi" accept=".pdf,.jpg,.jpeg,.png" required />
+			</label>
+			<button type="submit" class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--lg">Upload &amp; continue</button>
+		</form>
+	</div>
+	<?php
+}
+
+function wrrapd_wrapstars_render_step_identity( $app_id ) {
+	$id_file  = (string) wrrapd_wrapstars_get_meta( $app_id, 'id_file' );
+	$has_id   = $id_file !== '' && file_exists( $id_file );
+	$id_name  = $has_id ? basename( $id_file ) : '';
+	$uploaded = (string) wrrapd_wrapstars_get_meta( $app_id, 'submitted_at' );
+	?>
+	<div class="wrrapd-wrapstars-card">
+		<p class="wrrapd-wrapstars-ob-lead">One quick check so we know the person onboarding is the person we approved.</p>
+		<div class="wrrapd-wrapstars-ob-callout <?php echo $has_id ? 'wrrapd-wrapstars-ob-callout--ok' : ''; ?>">
+			<strong><?php echo $has_id ? 'Government ID on file' : 'No ID on file'; ?></strong>
+			<span>
+				<?php if ( $has_id ) : ?>
+					Received with your application<?php echo $uploaded !== '' ? ' on ' . esc_html( gmdate( 'F j, Y', strtotime( $uploaded ) ) ) : ''; ?> (<?php echo esc_html( $id_name ); ?>).
+				<?php else : ?>
+					Please email a photo of your government ID to <?php echo esc_html( wrrapd_wrapstars_from_email_address() ); ?> before activation.
+				<?php endif; ?>
+			</span>
+		</div>
+		<form method="post" enctype="multipart/form-data" class="wrrapd-wrapstars-form wrrapd-wrapstars-ob-actions">
+			<?php wp_nonce_field( 'wrrapd_ws_onboarding', 'wrrapd_ws_nonce' ); ?>
+			<input type="hidden" name="wrrapd_ws_action" value="onboarding_step" />
+			<input type="hidden" name="step" value="identity" />
+			<label>Photo of you holding your ID (JPG or PNG)
+				<input type="file" name="identity_selfie" accept=".jpg,.jpeg,.png" capture="user" required />
+			</label>
+			<p class="wrrapd-wrapstars-ob-note">Good light, face and ID both visible, no filters. This photo is stored privately and used only for verification.</p>
+			<label class="ws-check">
+				<input type="checkbox" name="identity_confirm" value="1" required />
+				<span>I confirm the ID on file is mine, current, and matches the legal name I provided.</span>
+			</label>
+			<button type="submit" class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--lg">Verify &amp; continue</button>
+		</form>
+	</div>
+	<?php
+}
+
+function wrrapd_wrapstars_render_step_workspace( $app_id ) {
+	$saved_addr = (string) wrrapd_wrapstars_get_meta( $app_id, 'workspace_address' );
+	if ( $saved_addr === '' ) {
+		$parts = array_filter(
+			array(
+				trim( (string) wrrapd_wrapstars_get_meta( $app_id, 'address_line1' ) . ' ' . (string) wrrapd_wrapstars_get_meta( $app_id, 'address_line2' ) ),
+				trim( (string) wrrapd_wrapstars_get_meta( $app_id, 'city' ) . ', ' . (string) wrrapd_wrapstars_get_meta( $app_id, 'state' ) . ' ' . (string) wrrapd_wrapstars_get_meta( $app_id, 'postal_code' ), ' ,' ),
+			)
+		);
+		$saved_addr = implode( "\n", $parts );
+	}
+	$saved_windows = array_filter( explode( ',', (string) wrrapd_wrapstars_get_meta( $app_id, 'workspace_windows' ) ) );
+	$saved_notes   = (string) wrrapd_wrapstars_get_meta( $app_id, 'workspace_access_notes' );
+	?>
+	<div class="wrrapd-wrapstars-card">
+		<p class="wrrapd-wrapstars-ob-lead">Tell us where gifts should be dropped off and collected, and when you are usually available for a handoff. You can fine-tune your availability week by week later in your WrapStar Console.</p>
+		<form method="post" enctype="multipart/form-data" class="wrrapd-wrapstars-form wrrapd-wrapstars-ob-actions">
+			<?php wp_nonce_field( 'wrrapd_ws_onboarding', 'wrrapd_ws_nonce' ); ?>
+			<input type="hidden" name="wrrapd_ws_action" value="onboarding_step" />
+			<input type="hidden" name="step" value="workspace" />
+			<label>Wrapping location (drop-off &amp; pickup address)
+				<textarea name="workspace_address" rows="3" required><?php echo esc_textarea( $saved_addr ); ?></textarea>
+			</label>
+			<fieldset class="wrrapd-wrapstars-ob-fieldset">
+				<legend>Handoff windows you can usually offer</legend>
+				<div class="wrrapd-wrapstars-ob-chips">
+					<?php foreach ( wrrapd_wrapstars_workspace_window_options() as $val => $label ) : ?>
+						<label class="wrrapd-wrapstars-ob-chip">
+							<input type="checkbox" name="workspace_windows[]" value="<?php echo esc_attr( $val ); ?>" <?php checked( in_array( $val, $saved_windows, true ) ); ?> />
+							<span><?php echo esc_html( $label ); ?></span>
+						</label>
+					<?php endforeach; ?>
+				</div>
+			</fieldset>
+			<label>Access notes for your courier <span class="ws-optional">(optional)</span>
+				<textarea name="workspace_access_notes" rows="2" placeholder="Gate code, side door, buzzer, where to leave packages if you step out…"><?php echo esc_textarea( $saved_notes ); ?></textarea>
+			</label>
+			<label>Photo of your wrapping space <span class="ws-optional">(optional, JPG/PNG)</span>
+				<input type="file" name="workspace_photo" accept=".jpg,.jpeg,.png" />
+			</label>
 			<button type="submit" class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--lg">Save &amp; continue</button>
 		</form>
 	</div>
 	<?php
 }
 
+function wrrapd_wrapstars_render_step_tax_1099( $app_id ) {
+	?>
+	<div class="wrrapd-wrapstars-card">
+		<p class="wrrapd-wrapstars-ob-lead">A few confirmations about how WrapStars are paid and taxed. Nothing to fill in — just read and confirm.</p>
+		<form method="post" class="wrrapd-wrapstars-form wrrapd-wrapstars-ob-actions">
+			<?php wp_nonce_field( 'wrrapd_ws_onboarding', 'wrrapd_ws_nonce' ); ?>
+			<input type="hidden" name="wrrapd_ws_action" value="onboarding_step" />
+			<input type="hidden" name="step" value="tax_1099" />
+			<label class="ws-check">
+				<input type="checkbox" name="tax_ack_ic" value="1" required />
+				<span>I understand I am an <strong>independent contractor</strong>, not an employee of Wrrapd, and I am responsible for my own federal, state, and local taxes.</span>
+			</label>
+			<label class="ws-check">
+				<input type="checkbox" name="tax_ack_withholding" value="1" required />
+				<span>I understand Wrrapd does <strong>not withhold</strong> income or payroll taxes from my payouts, and that Wrrapd may issue an IRS <strong>Form 1099-NEC</strong> when my annual earnings meet the reporting threshold.</span>
+			</label>
+			<label class="ws-check">
+				<input type="checkbox" name="tax_ack_w9" value="1" required />
+				<span>I confirm the information on my W-9 is accurate and I will notify Wrrapd if my legal name, business name, address, or taxpayer ID changes.</span>
+			</label>
+			<label class="ws-check">
+				<input type="checkbox" name="tax_e_delivery" value="1" />
+				<span>I consent to receive my tax forms <strong>electronically</strong> (you may withdraw this consent at any time by emailing <?php echo esc_html( wrrapd_wrapstars_from_email_address() ); ?>).</span>
+			</label>
+			<?php wrrapd_wrapstars_render_signature_field( 'tax_ack_signature' ); ?>
+			<button type="submit" class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--lg">Confirm &amp; continue</button>
+		</form>
+	</div>
+	<?php
+}
+
+function wrrapd_wrapstars_render_step_bank_payout( $app_id ) {
+	$connect_url = defined( 'WRRAPD_WRAPSTARS_PAYOUT_CONNECT_URL' ) ? (string) WRRAPD_WRAPSTARS_PAYOUT_CONNECT_URL : '';
+	$holder      = (string) wrrapd_wrapstars_get_meta( $app_id, 'payout_holder_name' );
+	if ( $holder === '' ) {
+		$holder = (string) wrrapd_wrapstars_get_meta( $app_id, 'full_name' );
+	}
+	?>
+	<div class="wrrapd-wrapstars-card">
+		<?php if ( $connect_url !== '' ) : ?>
+			<p class="wrrapd-wrapstars-ob-lead">Payouts are sent by direct deposit. Set up your payout account securely with our payments partner, then come back and confirm.</p>
+			<p class="wrrapd-wrapstars-ob-actions"><a class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--lg" href="<?php echo esc_url( $connect_url ); ?>" target="_blank" rel="noopener">Set up payouts securely</a></p>
+			<form method="post" class="wrrapd-wrapstars-form wrrapd-wrapstars-ob-actions">
+				<?php wp_nonce_field( 'wrrapd_ws_onboarding', 'wrrapd_ws_nonce' ); ?>
+				<input type="hidden" name="wrrapd_ws_action" value="onboarding_step" />
+				<input type="hidden" name="step" value="bank_payout" />
+				<label class="ws-check">
+					<input type="checkbox" name="payout_connect_done" value="1" required />
+					<span>I have completed the secure payout setup.</span>
+				</label>
+				<button type="submit" class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--lg">Confirm &amp; continue</button>
+			</form>
+		<?php else : ?>
+			<p class="wrrapd-wrapstars-ob-lead">Payouts are sent by direct deposit to a U.S. bank account in your name (or your business&rsquo;s name). Enter your account details and upload a voided check or bank letter so we can verify them.</p>
+			<form method="post" enctype="multipart/form-data" class="wrrapd-wrapstars-form wrrapd-wrapstars-ob-actions" autocomplete="off">
+				<?php wp_nonce_field( 'wrrapd_ws_onboarding', 'wrrapd_ws_nonce' ); ?>
+				<input type="hidden" name="wrrapd_ws_action" value="onboarding_step" />
+				<input type="hidden" name="step" value="bank_payout" />
+				<div class="ws-field-row">
+					<label>Account holder name
+						<input type="text" name="payout_holder_name" value="<?php echo esc_attr( $holder ); ?>" required />
+					</label>
+					<label>Bank name
+						<input type="text" name="payout_bank_name" value="<?php echo esc_attr( (string) wrrapd_wrapstars_get_meta( $app_id, 'payout_bank_name' ) ); ?>" required />
+					</label>
+				</div>
+				<div class="ws-field-row ws-field-row--3">
+					<label>Account type
+						<select name="payout_account_type" required>
+							<option value="">Select…</option>
+							<option value="checking">Checking</option>
+							<option value="savings">Savings</option>
+						</select>
+					</label>
+					<label>Routing number (9 digits)
+						<input type="text" name="payout_routing" inputmode="numeric" pattern="[0-9]{9}" maxlength="9" required />
+					</label>
+					<label>Account number
+						<input type="password" name="payout_account" inputmode="numeric" autocomplete="off" required />
+					</label>
+				</div>
+				<label>Confirm account number
+					<input type="password" name="payout_account_confirm" inputmode="numeric" autocomplete="off" required />
+				</label>
+				<label>Voided check or bank letter (PDF or image)
+					<input type="file" name="payout_proof" accept=".pdf,.jpg,.jpeg,.png" required />
+				</label>
+				<p class="wrrapd-wrapstars-ob-note">For your security we keep only the last four digits of your account number in your profile; your uploaded document is stored privately and used to set up your payouts.</p>
+				<button type="submit" class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--lg">Save payout details &amp; continue</button>
+			</form>
+		<?php endif; ?>
+	</div>
+	<?php
+}
+
 function wrrapd_wrapstars_render_step_activation( $app_id ) {
-	$steps   = wrrapd_wrapstars_onboarding_steps();
+	$registry = wrrapd_wrapstars_onboarding_step_registry();
 	$all_done = true;
-	foreach ( array_keys( $steps ) as $key ) {
+	foreach ( array_keys( $registry ) as $key ) {
 		if ( $key === 'activation' ) {
 			continue;
 		}
@@ -3107,14 +3744,19 @@ function wrrapd_wrapstars_render_step_activation( $app_id ) {
 	}
 	?>
 	<div class="wrrapd-wrapstars-card wrrapd-wrapstars-card--hero">
-		<p class="wrrapd-wrapstars-ob-lead">Ops reviews this checklist in Command Center before <strong>Activate</strong>. Keep an eye on incomplete items in the left rail.</p>
+		<?php if ( $all_done ) : ?>
+			<p class="wrrapd-wrapstars-ob-lead">Beautifully done — every step is complete. Our team is now verifying your documents, insurance, background check, and payout details. You will receive an email the moment you are activated.</p>
+		<?php else : ?>
+			<p class="wrrapd-wrapstars-ob-lead">Almost there. Finish the open items below and this page will update automatically.</p>
+		<?php endif; ?>
 		<ul class="wrrapd-wrapstars-activation-checklist">
-			<?php foreach ( $steps as $key => $label ) : ?>
+			<?php foreach ( $registry as $key => $meta ) : ?>
 				<?php if ( $key === 'activation' ) { continue; } ?>
-				<li class="<?php echo wrrapd_wrapstars_step_complete( $app_id, $key ) ? 'is-done' : 'is-open'; ?>">
-					<span class="wrrapd-wrapstars-activation-checklist__mark" aria-hidden="true"><?php echo wrrapd_wrapstars_step_complete( $app_id, $key ) ? '✓' : '○'; ?></span>
-					<span><?php echo esc_html( $label ); ?></span>
-					<?php if ( ! wrrapd_wrapstars_step_complete( $app_id, $key ) && wrrapd_wrapstars_can_access_step( $app_id, $key ) ) : ?>
+				<?php $is_done = wrrapd_wrapstars_step_complete( $app_id, $key ); ?>
+				<li class="<?php echo $is_done ? 'is-done' : 'is-open'; ?>">
+					<span class="wrrapd-wrapstars-activation-checklist__mark" aria-hidden="true"><?php echo $is_done ? '✓' : '○'; ?></span>
+					<span><?php echo esc_html( $meta['label'] ); ?></span>
+					<?php if ( ! $is_done && wrrapd_wrapstars_can_access_step( $app_id, $key ) ) : ?>
 						<a class="wrrapd-wrapstars-activation-checklist__link" href="<?php echo esc_url( wrrapd_wrapstars_onboarding_step_url( $key ) ); ?>">Open</a>
 					<?php endif; ?>
 				</li>
@@ -3123,10 +3765,22 @@ function wrrapd_wrapstars_render_step_activation( $app_id ) {
 		<?php if ( $all_done ) : ?>
 			<div class="wrrapd-wrapstars-ob-callout wrrapd-wrapstars-ob-callout--ok">
 				<strong>Pending activation</strong>
-				<span>All applicant-facing steps are complete. Our team will verify documents, insurance, background, and payout readiness, then activate you. You'll get an email when you're live.</span>
+				<span>Verification usually takes a few business days. Once you are active you will receive your WrapStar Console access, set your first handoff windows, and start receiving orders.</span>
 			</div>
-		<?php else : ?>
-			<div class="wrrapd-wrapstars-alert wrrapd-wrapstars-alert--info">Finish the open steps above, then return here.</div>
+			<div class="wrrapd-wrapstars-ob-split">
+				<div class="wrrapd-wrapstars-ob-panel">
+					<h3>While you wait</h3>
+					<ul class="wrrapd-wrapstars-ob-needs">
+						<li>Stock up on quality paper, ribbon, tissue, and tags.</li>
+						<li>Set up your wrapping area with good light for your documentation videos.</li>
+						<li>Re-read the presentation standards — first impressions matter.</li>
+					</ul>
+				</div>
+				<div class="wrrapd-wrapstars-ob-panel wrrapd-wrapstars-ob-panel--soft">
+					<h3>Need to change something?</h3>
+					<p>Email <a href="mailto:<?php echo esc_attr( wrrapd_wrapstars_from_email_address() ); ?>"><?php echo esc_html( wrrapd_wrapstars_from_email_address() ); ?></a> and we will update your details before activation.</p>
+				</div>
+			</div>
 		<?php endif; ?>
 	</div>
 	<?php
@@ -3206,10 +3860,12 @@ function wrrapd_wrapstars_admin_page() {
 			wrrapd_wrapstars_run_admin_action(
 				$app_id,
 				$action,
-				array(
-					'admin_notes'   => (string) wp_unslash( $_POST['admin_notes'] ?? '' ),
-					'reject_reason' => (string) wp_unslash( $_POST['reject_reason'] ?? '' ),
-				)
+				$action === 'save_bg_status'
+					? array( 'bg_status' => (string) wp_unslash( $_POST['bg_status'] ?? '' ) )
+					: array(
+						'admin_notes'   => (string) wp_unslash( $_POST['admin_notes'] ?? '' ),
+						'reject_reason' => (string) wp_unslash( $_POST['reject_reason'] ?? '' ),
+					)
 			);
 		}
 	}

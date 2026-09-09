@@ -20,15 +20,16 @@
   |------------------------------|-----------------------|-----------------------------------------------------|
   | /onboarding/                 | Onboarding            | [wrrapd_wrapstar_onboarding step="welcome"]         |
   | /onboarding/agreement/       | IC Agreement          | [wrrapd_wrapstar_onboarding step="agreement"]       |
-  | /onboarding/policies/        | Policies (placeholder)| [wrrapd_wrapstar_onboarding step="policies"]        |
+  | /onboarding/policies/        | Standards & Policies  | [wrrapd_wrapstar_onboarding step="policies"]        |
   | /onboarding/orientation/     | Orientation           | [wrrapd_wrapstar_onboarding step="orientation"]     |
-  | /onboarding/background/      | Background (placeholder)| [wrrapd_wrapstar_onboarding step="background"]    |
+  | /onboarding/background/      | Background Check      | [wrrapd_wrapstar_onboarding step="background"]      |
   | /onboarding/insurance/       | Insurance             | [wrrapd_wrapstar_onboarding step="insurance"]       |
-  | /onboarding/identity/        | Identity (placeholder)| [wrrapd_wrapstar_onboarding step="identity"]        |
-  | /onboarding/po-box/          | PO Box                | [wrrapd_wrapstar_onboarding step="po_box"]          |
+  | /onboarding/identity/        | Identity              | [wrrapd_wrapstar_onboarding step="identity"]        |
+  | /onboarding/workspace/       | Wrapping Location     | [wrrapd_wrapstar_onboarding step="workspace"]       |
+  | /onboarding/po-box/ (legacy) | (renders workspace)   | [wrrapd_wrapstar_onboarding step="po_box"]          |
   | /onboarding/w-9/             | W-9                   | [wrrapd_wrapstar_onboarding step="w9"]              |
-  | /onboarding/tax-1099/        | 1099 (placeholder)    | [wrrapd_wrapstar_onboarding step="tax_1099"]        |
-  | /onboarding/bank-payout/     | Bank (placeholder)    | [wrrapd_wrapstar_onboarding step="bank_payout"]     |
+  | /onboarding/tax-1099/        | Tax Acknowledgments   | [wrrapd_wrapstar_onboarding step="tax_1099"]        |
+  | /onboarding/bank-payout/     | Payout Setup          | [wrrapd_wrapstar_onboarding step="bank_payout"]     |
   | /onboarding/activation/      | Activation            | [wrrapd_wrapstar_onboarding step="activation"]      |
   | /profile/                    | Profile               | [wrrapd_wrapstar_profile]                           |
 

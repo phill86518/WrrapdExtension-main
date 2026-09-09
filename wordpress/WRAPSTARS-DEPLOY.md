@@ -31,7 +31,9 @@ Both hosts must share the **identical** path.
 
 - Use SiteGround WordPress Installer on the `wrapstars` folder
 - **Site title:** Wrrapd WrapStars
-- **Admin URL:** `https://apply.wrrapd.com/wp-admin/`
+- **Admin URL:** `https://apply.wrrapd.com/wp-admin/` (Administrators only; WrapStars/Drivers are blocked)
+- **Staff login:** `https://apply.wrrapd.com/wp-login.php?wrrapd_staff=1&redirect_to=https%3A%2F%2Fapply.wrrapd.com%2Fwp-admin%2F` — or just open `/wp-admin/` while logged out (login form is allowed when `redirect_to` points at wp-admin).
+- Plain `/wp-login.php` without staff/admin redirect still goes to the landing page (applicant lockout).
 - Enable HTTPS for both subdomains (Let's Encrypt in Site Tools)
 
 ### 3. Install plugins (minimal)
@@ -168,13 +170,21 @@ Create the same pages (same WP database) — URLs work on both hosts; host routi
 | Background | `onboarding/background` | `[wrrapd_wrapstar_onboarding step="background"]` |
 | Insurance | `onboarding/insurance` | `[wrrapd_wrapstar_onboarding step="insurance"]` |
 | Identity | `onboarding/identity` | `[wrrapd_wrapstar_onboarding step="identity"]` |
-| PO Box | `onboarding/po-box` | `[wrrapd_wrapstar_onboarding step="po_box"]` |
+| Wrapping Location & Handoff | `onboarding/workspace` | `[wrrapd_wrapstar_onboarding step="workspace"]` |
+| *(legacy)* PO Box | `onboarding/po-box` | `[wrrapd_wrapstar_onboarding step="po_box"]` → renders the `workspace` step; safe to delete |
 | W-9 | `onboarding/w-9` | `[wrrapd_wrapstar_onboarding step="w9"]` |
 | Tax 1099 | `onboarding/tax-1099` | `[wrrapd_wrapstar_onboarding step="tax_1099"]` |
 | Bank / payout | `onboarding/bank-payout` | `[wrrapd_wrapstar_onboarding step="bank_payout"]` |
 | Activation | `onboarding/activation` | `[wrrapd_wrapstar_onboarding step="activation"]` |
 
 Full portal map + document handoff list: **[../docs/WRAPSTAR-ONBOARDING-PORTAL.md](../docs/WRAPSTAR-ONBOARDING-PORTAL.md)**.
+Internal operating model + **public-copy rules** (what may never appear on the site): **[../docs/WRAPSTARS-OPERATIONS-MODEL.md](../docs/WRAPSTARS-OPERATIONS-MODEL.md)**.
+
+Optional `wp-config.php` for hosted payout onboarding (replaces the direct-deposit form on `bank-payout`):
+
+```php
+define( 'WRRAPD_WRAPSTARS_PAYOUT_CONNECT_URL', 'https://…hosted-onboarding-link' );
+```
 
 Use **parent page** `onboarding` for child slugs in WordPress (Pages → Attributes → Parent).
 
