@@ -1513,23 +1513,25 @@ function wrrapd_welcome_active_seasons() {
 	$d   = (int) $now->format( 'j' );
 	$md  = $m * 100 + $d;
 	$out = array( 'evergreen' );
-	if ( $md >= 720 && $md <= 930 ) {
-		$out[] = 'back-to-school';
-	}
-	if ( $m >= 5 && $m <= 10 ) {
-		$out[] = 'wedding';
-	}
-	if ( $md >= 910 && $md <= 1130 ) {
-		$out[] = 'fall';
-	}
-	if ( $m === 11 || $m === 12 ) {
-		$out[] = 'holiday';
-	}
-	if ( $m === 1 || $m === 2 ) {
-		$out[] = 'winter';
-	}
-	if ( $m >= 3 && $m <= 4 ) {
-		$out[] = 'spring';
+
+	// month*100+day windows, inclusive. Deliberately overlapping so shoulder weeks read as a mix.
+	$windows = array(
+		'winter'         => array( 101, 229 ),
+		'valentines'     => array( 115, 214 ),
+		'spring'         => array( 301, 430 ),
+		'mothers-day'    => array( 415, 512 ),
+		'graduation'     => array( 425, 615 ),
+		'fathers-day'    => array( 525, 621 ),
+		'summer'         => array( 601, 820 ),
+		'back-to-school' => array( 720, 930 ),
+		'wedding'        => array( 501, 1031 ),
+		'fall'           => array( 910, 1130 ),
+		'holiday'        => array( 1101, 1231 ),
+	);
+	foreach ( $windows as $tag => $w ) {
+		if ( $md >= $w[0] && $md <= $w[1] ) {
+			$out[] = $tag;
+		}
 	}
 	return $out;
 }
@@ -1568,22 +1570,46 @@ function wrrapd_welcome_stories_pick( $count_more = 3 ) {
 			return $wb <=> $wa;
 		}
 	);
-	// Rotate the featured slot weekly among the top two seasonal stories; keep the rest in weight order.
-	$week    = (int) current_datetime()->format( 'W' );
-	$top_n   = min( 2, count( $pool ) );
-	$lead_ix = $week % $top_n;
-	$feat    = $pool[ $lead_ix ];
-	$more    = array();
-	foreach ( $pool as $ix => $s ) {
-		if ( $ix === $lead_ix ) {
-			continue;
+	// The lead must be tied to a season that's actually running, never a year-round filler.
+	$dated  = array_values( array_diff( $seasons, array( 'evergreen' ) ) );
+	$onnow  = array();
+	foreach ( $pool as $s ) {
+		$tags = isset( $s['seasons'] ) && is_array( $s['seasons'] ) ? $s['seasons'] : array();
+		if ( count( $dated ) > 0 && count( array_intersect( $tags, $dated ) ) > 0 ) {
+			$onnow[] = $s;
 		}
-		$more[] = $s;
-		if ( count( $more ) >= $count_more ) {
+	}
+	$lead_from = count( $onnow ) > 0 ? $onnow : $pool;
+
+	// Only the top weight band may lead, so a general-interest guide never outranks the
+	// occasion that's actually running. Up to three candidates rotate weekly.
+	$top   = isset( $lead_from[0]['weight'] ) ? (int) $lead_from[0]['weight'] : 0;
+	$cands = array();
+	foreach ( $lead_from as $s ) {
+		if ( ( isset( $s['weight'] ) ? (int) $s['weight'] : 0 ) >= $top - 2 ) {
+			$cands[] = $s;
+		}
+		if ( count( $cands ) >= 3 ) {
 			break;
 		}
 	}
-	return array( 'featured' => $feat, 'more' => $more );
+
+	// The rest of the pool rotates too, so a returning reader sees different guides week to week.
+	$week = (int) current_datetime()->format( 'W' );
+	$feat = $cands[ $week % count( $cands ) ];
+	$fid  = isset( $feat['id'] ) ? (string) $feat['id'] : '';
+	$rest = array();
+	foreach ( $pool as $s ) {
+		if ( $fid !== '' && isset( $s['id'] ) && (string) $s['id'] === $fid ) {
+			continue;
+		}
+		$rest[] = $s;
+	}
+	if ( count( $rest ) > $count_more ) {
+		$off  = $week % count( $rest );
+		$rest = array_merge( array_slice( $rest, $off ), array_slice( $rest, 0, $off ) );
+	}
+	return array( 'featured' => $feat, 'more' => array_slice( $rest, 0, $count_more ) );
 }
 
 /**

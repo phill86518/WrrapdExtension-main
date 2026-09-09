@@ -3,7 +3,9 @@
 	"stories": [
 		{
 			"id": "wedding-every-moment",
-			"seasons": ["wedding", "evergreen"],
+			"seasons": [
+				"wedding"
+			],
 			"weight": 10,
 			"kicker": "Wedding season",
 			"title": "A gift for every wedding moment",
@@ -28,17 +30,38 @@
 			],
 			"tip": "Shop the registry anywhere online, then add custom wrapping and optional flowers at checkout so the couple opens something beautiful\u2014not a box inside a box.",
 			"picks": [
-				{ "label": "Keepsake LEGO bouquet", "slug": "target", "to": "https://www.target.com/p/lego-flower-bouquet-building-kit-10280/-/A-80130340" },
-				{ "label": "Silver bracelets for the bridal party", "slug": "vyjewelry", "to": "https://vyjewelry.shop/collections/silver-bracelets" },
-				{ "label": "Home gifts for the couple", "slug": "nordstrom", "to": "https://www.nordstrom.com/browse/home/gifts" },
-				{ "label": "Thank-you chocolates", "slug": "russellstover" }
+				{
+					"label": "Keepsake LEGO bouquet",
+					"slug": "target",
+					"to": "https://www.target.com/p/lego-flower-bouquet-building-kit-10280/-/A-80130340"
+				},
+				{
+					"label": "Silver bracelets for the bridal party",
+					"slug": "vyjewelry",
+					"to": "https://vyjewelry.shop/collections/silver-bracelets"
+				},
+				{
+					"label": "Home gifts for the couple",
+					"slug": "nordstrom",
+					"to": "https://www.nordstrom.com/browse/home/gifts"
+				},
+				{
+					"label": "Thank-you chocolates",
+					"slug": "russellstover"
+				}
 			],
-			"cta": { "label": "Shop wedding picks", "slug": "nordstrom", "to": "https://www.nordstrom.com/browse/home/gifts" }
+			"cta": {
+				"label": "Shop wedding picks",
+				"slug": "nordstrom",
+				"to": "https://www.nordstrom.com/browse/home/gifts"
+			}
 		},
 		{
 			"id": "back-to-school-occasion",
-			"seasons": ["back-to-school"],
-			"weight": 9,
+			"seasons": [
+				"back-to-school"
+			],
+			"weight": 11,
 			"kicker": "Back to school",
 			"title": "Make the first day feel like an occasion",
 			"dek": "Generic supplies do the job. The right gift, wrapped and waiting on the kitchen table, does something better\u2014it turns nerves into excitement.",
@@ -62,16 +85,41 @@
 			],
 			"tip": "Order from any store, add Wrrapd at checkout, and the first-day gift shows up wrapped and ready\u2014no late-night ribbon scramble.",
 			"picks": [
-				{ "label": "School backpacks", "slug": "target", "to": "https://www.target.com/s?searchTerm=school+backpack" },
-				{ "label": "School & office supplies", "slug": "walmart", "to": "https://www.walmart.com/browse/school-and-office-supplies/972" },
-				{ "label": "Dorm coffee gifts", "slug": "peetscoffee", "to": "https://www.peets.com/gifts" },
-				{ "label": "Teacher thank-you cards", "slug": "giftcards", "to": "https://www.giftcards.com/us/en/catalog/product-details/visa-gift-card" }
+				{
+					"label": "School backpacks",
+					"slug": "target",
+					"to": "https://www.target.com/s?searchTerm=school+backpack"
+				},
+				{
+					"label": "School & office supplies",
+					"slug": "walmart",
+					"to": "https://www.walmart.com/browse/school-and-office-supplies/972"
+				},
+				{
+					"label": "Dorm coffee gifts",
+					"slug": "peetscoffee",
+					"to": "https://www.peets.com/gifts"
+				},
+				{
+					"label": "Teacher thank-you cards",
+					"slug": "giftcards",
+					"to": "https://www.giftcards.com/us/en/catalog/product-details/visa-gift-card"
+				}
 			],
-			"cta": { "label": "Shop back-to-school", "slug": "target", "to": "https://www.target.com/s?searchTerm=school+backpack" }
+			"cta": {
+				"label": "Shop back-to-school",
+				"slug": "target",
+				"to": "https://www.target.com/s?searchTerm=school+backpack"
+			}
 		},
 		{
 			"id": "man-who-has-everything",
-			"seasons": ["evergreen", "fall", "wedding", "back-to-school"],
+			"seasons": [
+				"evergreen",
+				"fall",
+				"wedding",
+				"back-to-school"
+			],
 			"weight": 7,
 			"kicker": "Hard to shop for",
 			"title": "What to give the man who has everything",
@@ -96,16 +144,36 @@
 			],
 			"tip": "Whatever you pick, presentation does half the work. Custom wrapping plus a short note turns a practical gift into a memorable one.",
 			"picks": [
-				{ "label": "Headphones & tech", "slug": "bestbuy" },
-				{ "label": "Handmade & engraved finds", "slug": "etsy" },
-				{ "label": "Assorted chocolates", "slug": "russellstover" },
-				{ "label": "Coffee for the daily ritual", "slug": "peetscoffee", "to": "https://www.peets.com/gifts" }
+				{
+					"label": "Headphones & tech",
+					"slug": "bestbuy"
+				},
+				{
+					"label": "Handmade & engraved finds",
+					"slug": "etsy"
+				},
+				{
+					"label": "Assorted chocolates",
+					"slug": "russellstover"
+				},
+				{
+					"label": "Coffee for the daily ritual",
+					"slug": "peetscoffee",
+					"to": "https://www.peets.com/gifts"
+				}
 			],
-			"cta": { "label": "Browse gifts for him", "slug": "bestbuy" }
+			"cta": {
+				"label": "Browse gifts for him",
+				"slug": "bestbuy"
+			}
 		},
 		{
 			"id": "coffee-lover",
-			"seasons": ["evergreen", "fall", "back-to-school"],
+			"seasons": [
+				"evergreen",
+				"fall",
+				"back-to-school"
+			],
 			"weight": 6,
 			"kicker": "For the coffee person",
 			"title": "Cool gifts for someone who lives on coffee",
@@ -130,17 +198,38 @@
 			],
 			"tip": "Coffee travels well and wraps beautifully. Add flowers at checkout and it becomes a hostess gift, a thank-you, or a \u201cjust because.\u201d",
 			"picks": [
-				{ "label": "Peet\u2019s coffee gifts", "slug": "peetscoffee", "to": "https://www.peets.com/gifts" },
-				{ "label": "Roaster-direct beans", "slug": "freshroastedcoffee", "to": "https://www.freshroastedcoffee.com/collections/coffee" },
-				{ "label": "Chocolates to pair", "slug": "russellstover" },
-				{ "label": "Mugs & coffee accessories", "slug": "target", "to": "https://www.target.com/s?searchTerm=coffee+mug+gift" }
+				{
+					"label": "Peet\u2019s coffee gifts",
+					"slug": "peetscoffee",
+					"to": "https://www.peets.com/gifts"
+				},
+				{
+					"label": "Roaster-direct beans",
+					"slug": "freshroastedcoffee",
+					"to": "https://www.freshroastedcoffee.com/collections/coffee"
+				},
+				{
+					"label": "Chocolates to pair",
+					"slug": "russellstover"
+				},
+				{
+					"label": "Mugs & coffee accessories",
+					"slug": "target",
+					"to": "https://www.target.com/s?searchTerm=coffee+mug+gift"
+				}
 			],
-			"cta": { "label": "Shop coffee gifts", "slug": "peetscoffee", "to": "https://www.peets.com/gifts" }
+			"cta": {
+				"label": "Shop coffee gifts",
+				"slug": "peetscoffee",
+				"to": "https://www.peets.com/gifts"
+			}
 		},
 		{
 			"id": "thank-you-before-the-rush",
-			"seasons": ["fall", "evergreen"],
-			"weight": 5,
+			"seasons": [
+				"fall"
+			],
+			"weight": 8,
 			"kicker": "Business & client gifting",
 			"title": "Why an early thank-you beats a December gift",
 			"dek": "Everyone sends gifts the week before Christmas. The smartest companies\u2014and the most thoughtful friends\u2014send theirs at Thanksgiving.",
@@ -164,16 +253,40 @@
 			],
 			"tip": "Send a few thank-yous now, wrapped and with a note, and you\u2019ll have December to yourself.",
 			"picks": [
-				{ "label": "Gift cards they can choose from", "slug": "giftcards", "to": "https://www.giftcards.com/us/en/catalog/product-details/visa-gift-card" },
-				{ "label": "Artisan chocolate gifts", "slug": "zchocolat" },
-				{ "label": "Coffee for the office", "slug": "peetscoffee", "to": "https://www.peets.com/gifts" },
-				{ "label": "Home & hosting accents", "slug": "nordstrom", "to": "https://www.nordstrom.com/browse/home/gifts" }
+				{
+					"label": "Gift cards they can choose from",
+					"slug": "giftcards",
+					"to": "https://www.giftcards.com/us/en/catalog/product-details/visa-gift-card"
+				},
+				{
+					"label": "Artisan chocolate gifts",
+					"slug": "zchocolat"
+				},
+				{
+					"label": "Coffee for the office",
+					"slug": "peetscoffee",
+					"to": "https://www.peets.com/gifts"
+				},
+				{
+					"label": "Home & hosting accents",
+					"slug": "nordstrom",
+					"to": "https://www.nordstrom.com/browse/home/gifts"
+				}
 			],
-			"cta": { "label": "Shop thank-you gifts", "slug": "giftcards", "to": "https://www.giftcards.com/us/en/catalog/product-details/visa-gift-card" }
+			"cta": {
+				"label": "Shop thank-you gifts",
+				"slug": "giftcards",
+				"to": "https://www.giftcards.com/us/en/catalog/product-details/visa-gift-card"
+			}
 		},
 		{
 			"id": "note-they-keep",
-			"seasons": ["evergreen", "wedding", "back-to-school", "fall"],
+			"seasons": [
+				"evergreen",
+				"wedding",
+				"back-to-school",
+				"fall"
+			],
 			"weight": 4,
 			"kicker": "The finishing touch",
 			"title": "How to write a gift note they\u2019ll actually keep",
@@ -194,10 +307,774 @@
 			],
 			"tip": "Add your message at Wrrapd checkout and we\u2019ll tuck it inside the wrapping, handwritten-style, so it\u2019s the first thing they see.",
 			"picks": [
-				{ "label": "See all featured picks", "path": "/top-gifting-choices/" }
+				{
+					"label": "See all featured picks",
+					"path": "/top-gifting-choices/"
+				}
 			],
-			"cta": { "label": "See all picks", "path": "/top-gifting-choices/" }
+			"cta": {
+				"label": "See all picks",
+				"path": "/top-gifting-choices/"
+			}
+		},
+		{
+			"id": "holiday-plan-december",
+			"seasons": [
+				"holiday"
+			],
+			"weight": 10,
+			"kicker": "Holiday gifting",
+			"title": "The holiday plan that saves your December",
+			"dek": "Nobody wants to be the person paying for overnight shipping on the 22nd. A little order now buys you a calm, generous month.",
+			"sections": [
+				{
+					"heading": "Make the list before the sales start",
+					"body": "Write down every name in one place first: family, the coworkers you always forget, your kid\u2019s teacher, the neighbor who signs for your packages. Seeing the whole list at once shows where to spend properly and where a small, well-wrapped token is plenty \u2014 and it stops the December drift of three gifts for one person and none for four others."
+				},
+				{
+					"heading": "Buy for the hard people first",
+					"body": "The person who \u201cdoesn\u2019t need anything\u201d is the one who will eat your last free weekend. Start there while you still have patience, while stock is deep, and while shipping windows are wide enough to fix a mistake. The easy names can wait until December without any real risk."
+				},
+				{
+					"heading": "Batch the small gifts",
+					"body": "Teachers, sitters, mail carriers, the barista who knows your order: pick one good thing \u2014 chocolates, a bag of beans, a gift card \u2014 and buy it in quantity. The same gift, wrapped individually with a different note on each, reads as thoughtful rather than lazy, and it takes one decision instead of fifteen."
+				},
+				{
+					"heading": "Hand off the wrapping",
+					"body": "The tape-and-scissors evening is the part nobody misses. Order what you like from any store, choose Wrrapd at checkout, and gifts arrive wrapped \u2014 including the ones shipping straight to somebody else\u2019s house, which are usually the ones that would otherwise turn up in bare cardboard."
+				}
+			],
+			"tip": "Ordering early also means you can add flowers to the December gifts that need to feel like an occasion rather than a delivery.",
+			"picks": [
+				{
+					"label": "Holiday gift ideas",
+					"slug": "target",
+					"to": "https://www.target.com/s?searchTerm=holiday+gifts"
+				},
+				{
+					"label": "Gift cards for the tricky names",
+					"slug": "giftcards",
+					"to": "https://www.giftcards.com/us/en/catalog/product-details/visa-gift-card"
+				},
+				{
+					"label": "Chocolates by the box",
+					"slug": "russellstover"
+				},
+				{
+					"label": "Coffee gifts",
+					"slug": "peetscoffee",
+					"to": "https://www.peets.com/gifts"
+				}
+			],
+			"cta": {
+				"label": "Start your holiday list",
+				"slug": "target",
+				"to": "https://www.target.com/s?searchTerm=holiday+gifts"
+			}
+		},
+		{
+			"id": "holiday-host-gathering",
+			"seasons": [
+				"holiday",
+				"fall"
+			],
+			"weight": 9,
+			"kicker": "For the host",
+			"title": "Host and hostess gifts for the season of gathering",
+			"dek": "Somebody is cooking for twelve people and washing every dish afterward. Turn up with something better than the bottle you grabbed on the corner.",
+			"sections": [
+				{
+					"heading": "Bring something that outlasts the night",
+					"body": "A candle, a serving board, a good tin of olive oil, a set of coasters \u2014 things that stay in the kitchen long after the leftovers are gone. Hand it over wrapped and it reads as a gift rather than a contribution to the table, which is a surprisingly large difference."
+				},
+				{
+					"heading": "Consumables are never wrong",
+					"body": "Chocolates, coffee, a bottle they\u2019d actually pour. They add nothing to a house already full of things, and they usually get shared with the same people you spent the evening with. For a host who has been cooking for two days, something they can simply enjoy is the entire point."
+				},
+				{
+					"heading": "Match the gift to the gathering",
+					"body": "A formal dinner and a chaotic family Thanksgiving want different things. For the first, something for the table or the bar cart. For the second, something for the host personally \u2014 a treat they can hide in a cupboard and open once the house is finally quiet."
+				},
+				{
+					"heading": "Send it if you can\u2019t be there",
+					"body": "When you can\u2019t make the drive, a wrapped box with a real note lands harder than a text. Aim for the day before the gathering so it\u2019s part of the table rather than a follow-up, and say plainly that you wish you were there."
+				}
+			],
+			"tip": "Add flowers at checkout and the host gift doubles as the centerpiece\u2014one delivery, one less errand for the person doing all the work.",
+			"picks": [
+				{
+					"label": "Home & hosting accents",
+					"slug": "nordstrom",
+					"to": "https://www.nordstrom.com/browse/home/gifts"
+				},
+				{
+					"label": "Assorted chocolates",
+					"slug": "russellstover"
+				},
+				{
+					"label": "Coffee gifts",
+					"slug": "peetscoffee",
+					"to": "https://www.peets.com/gifts"
+				},
+				{
+					"label": "Handmade kitchen finds",
+					"slug": "etsy"
+				}
+			],
+			"cta": {
+				"label": "Shop host gifts",
+				"slug": "nordstrom",
+				"to": "https://www.nordstrom.com/browse/home/gifts"
+			}
+		},
+		{
+			"id": "holiday-long-list",
+			"seasons": [
+				"holiday"
+			],
+			"weight": 9,
+			"kicker": "The long list",
+			"title": "Teachers, coworkers, neighbors: the long list, handled",
+			"dek": "Twenty small gifts can feel like a chore or like the nicest thing you do all month. It mostly comes down to choosing once.",
+			"sections": [
+				{
+					"heading": "One good gift, repeated",
+					"body": "Pick a single item that suits almost anyone \u2014 a box of chocolates, a bag of beans, a gift card with a real amount on it \u2014 and buy it in quantity. Consistency isn\u2019t laziness; it\u2019s how caterers, hosts, and anyone who has ever run an office get through December."
+				},
+				{
+					"heading": "Let the note do the personalizing",
+					"body": "The gift can repeat; the message shouldn\u2019t. One line naming something specific \u2014 the late pickup they covered, the driveway they shoveled, the shift they swapped \u2014 turns an identical box into a personal one. Thirty seconds per person, and it\u2019s the part they keep."
+				},
+				{
+					"heading": "Set one number and stick to it",
+					"body": "Decide the per-person amount before you shop, not while you shop. A clear number keeps twenty small gifts from quietly becoming a car payment, and it removes the awkward arithmetic of whether the neighbor should get more than the teacher."
+				},
+				{
+					"heading": "Presentation is the whole difference",
+					"body": "A wrapped box on a desk gets noticed; a plastic bag gets moved. This is where a small budget stretches furthest, because the reveal is the part people actually remember \u2014 and it\u2019s the difference between giving a gift and handing something over."
+				}
+			],
+			"tip": "Ordering a batch? Each one is wrapped individually, so twenty gifts still feel like twenty gifts instead of a bulk shipment.",
+			"picks": [
+				{
+					"label": "Gift cards",
+					"slug": "giftcards",
+					"to": "https://www.giftcards.com/us/en/catalog/product-details/visa-gift-card"
+				},
+				{
+					"label": "Chocolate boxes",
+					"slug": "russellstover"
+				},
+				{
+					"label": "Roaster-direct beans",
+					"slug": "freshroastedcoffee",
+					"to": "https://www.freshroastedcoffee.com/collections/coffee"
+				},
+				{
+					"label": "Books & small gifts",
+					"slug": "booksamillion"
+				}
+			],
+			"cta": {
+				"label": "Shop the long list",
+				"slug": "giftcards",
+				"to": "https://www.giftcards.com/us/en/catalog/product-details/visa-gift-card"
+			}
+		},
+		{
+			"id": "holiday-kids-wonder",
+			"seasons": [
+				"holiday"
+			],
+			"weight": 8,
+			"kicker": "For the kids",
+			"title": "Gifts that keep the wonder going",
+			"dek": "Kids remember two things: what they opened, and how it felt to open it. Only one of those costs extra.",
+			"sections": [
+				{
+					"heading": "Build-together beats battery-powered",
+					"body": "A set they assemble with someone \u2014 bricks, a model, a baking kit \u2014 buys hours instead of minutes. The good ones come back out in February, which is the only test that matters. Needing an adult nearby is a feature, not a drawback."
+				},
+				{
+					"heading": "Books age better than toys",
+					"body": "A book chosen for a specific kid, with their name and the year written inside the cover, stays on a shelf long after the plastic has gone. Pair one with something small and physical and you\u2019ve built a gift with two acts instead of one."
+				},
+				{
+					"heading": "One considered thing beats five cheap ones",
+					"body": "Five small gifts produce about five seconds of excitement each. One thing they\u2019ve been circling since October produces a memory. If the budget is tight, spend it in a single place and wrap it properly rather than spreading it thin."
+				},
+				{
+					"heading": "Make the unwrapping part of it",
+					"body": "Nobody photographs a shipping box. Real paper, ribbon, a name tag in actual handwriting \u2014 that\u2019s the two minutes kids talk about later, and it\u2019s the cheapest upgrade on the whole list. Wrap each piece separately even when it\u2019s one set."
+				}
+			],
+			"tip": "Shipping to cousins or grandkids? We wrap each parcel and include your note, so the box that arrives already looks like the morning itself.",
+			"picks": [
+				{
+					"label": "LEGO building sets",
+					"slug": "lego"
+				},
+				{
+					"label": "Children\u2019s books",
+					"slug": "booksamillion"
+				},
+				{
+					"label": "Toys & games",
+					"slug": "target",
+					"to": "https://www.target.com/s?searchTerm=kids+gifts"
+				},
+				{
+					"label": "Handmade keepsakes",
+					"slug": "etsy"
+				}
+			],
+			"cta": {
+				"label": "Shop gifts for kids",
+				"slug": "lego"
+			}
+		},
+		{
+			"id": "winter-new-year-reset",
+			"seasons": [
+				"winter"
+			],
+			"weight": 10,
+			"kicker": "January",
+			"title": "Gifts for the quiet weeks after the holidays",
+			"dek": "January is grey, everyone is broke, and nobody is expecting a parcel. That is precisely why one lands so well.",
+			"sections": [
+				{
+					"heading": "Make a cold morning better",
+					"body": "Great coffee, a heavy mug, a blanket that actually gets used on the sofa. Small comforts do more work in January than anything expensive did in December, because the novelty of the holidays is gone and the weather still has two months to run."
+				},
+				{
+					"heading": "Support the new habit, gently",
+					"body": "Someone starting something \u2014 a class, a running routine, a new job \u2014 is easier to support than to surprise. Kit for the habit says \u201cI noticed\u201d without tipping over into pressure. Keep it light: the gear, not a lecture about sticking with it."
+				},
+				{
+					"heading": "January birthdays deserve better",
+					"body": "Anyone born in the first three weeks of January has spent their whole life being folded into the holidays. A gift that clearly isn\u2019t leftover Christmas \u2014 wrapped differently, sent on the actual day \u2014 quietly fixes a lifetime of mild injustice."
+				},
+				{
+					"heading": "Send the belated thank-you",
+					"body": "Anyone who hosted, drove, cooked, or babysat in December was far too busy to be thanked properly at the time. A wrapped gift in the second week of January is unexpected, and unexpected is what people remember once the decorations are down."
+				}
+			],
+			"tip": "A January gift with flowers is the cheapest way to make a dark week feel like an occasion.",
+			"picks": [
+				{
+					"label": "Coffee gifts",
+					"slug": "peetscoffee",
+					"to": "https://www.peets.com/gifts"
+				},
+				{
+					"label": "Cozy home picks",
+					"slug": "target",
+					"to": "https://www.target.com/s?searchTerm=throw+blanket+gift"
+				},
+				{
+					"label": "Self-care sets",
+					"slug": "ulta"
+				},
+				{
+					"label": "Gear for the new routine",
+					"slug": "gearup"
+				}
+			],
+			"cta": {
+				"label": "Shop cozy gifts",
+				"slug": "peetscoffee",
+				"to": "https://www.peets.com/gifts"
+			}
+		},
+		{
+			"id": "winter-cozy-comfort",
+			"seasons": [
+				"winter"
+			],
+			"weight": 9,
+			"kicker": "Deep winter",
+			"title": "Comfort gifts for the coldest weeks",
+			"dek": "February asks very little of a gift. Warm, soft, or edible will cover it.",
+			"sections": [
+				{
+					"heading": "Warmth you can wear indoors",
+					"body": "Thick socks, a robe, slippers that won\u2019t fall apart by March. These are the things people are faintly embarrassed to buy themselves and genuinely pleased to receive, which is close to a perfect description of a good gift."
+				},
+				{
+					"heading": "A small luxury for the shelf",
+					"body": "A good hand cream, a bath set, a candle that smells like something other than \u201cwinter spice.\u201d Inexpensive, used daily, and lovely when it arrives wrapped \u2014 the sort of thing that quietly improves February without needing an occasion attached."
+				},
+				{
+					"heading": "Feed the hibernation",
+					"body": "Hot chocolate worth drinking, a tin of good biscuits, coffee for the long grey afternoons. Food gifts fit the season exactly: nobody wants another object in February, but everybody wants something warm at four o\u2019clock."
+				},
+				{
+					"heading": "Something to look forward to",
+					"body": "A book they mentioned once, a puzzle for a snowed-in Sunday, tickets to something in spring. Comfort isn\u2019t only physical \u2014 sometimes it\u2019s having a date on the calendar, which is the one thing February is genuinely short of."
+				}
+			],
+			"tip": "Soft goods wrap beautifully. Add a note saying when to open it and you\u2019ve made a small event out of an ordinary Tuesday.",
+			"picks": [
+				{
+					"label": "Beauty & bath sets",
+					"slug": "ulta"
+				},
+				{
+					"label": "Cozy apparel",
+					"slug": "kohls"
+				},
+				{
+					"label": "Books & puzzles",
+					"slug": "booksamillion"
+				},
+				{
+					"label": "Home comforts",
+					"slug": "nordstrom",
+					"to": "https://www.nordstrom.com/browse/home/gifts"
+				}
+			],
+			"cta": {
+				"label": "Shop comfort gifts",
+				"slug": "ulta"
+			}
+		},
+		{
+			"id": "valentines-partner",
+			"seasons": [
+				"valentines"
+			],
+			"weight": 10,
+			"kicker": "Valentine\u2019s Day",
+			"title": "Valentine\u2019s gifts that aren\u2019t a last-minute bouquet",
+			"dek": "Flowers are lovely. Flowers grabbed at 6 p.m. on the 14th, still in the plastic sleeve, are a receipt. The fix takes about four minutes.",
+			"sections": [
+				{
+					"heading": "Pick the thing that references you two",
+					"body": "The record from the old apartment, the coffee from that trip, a glass engraved with a date nobody else would care about. Specific beats expensive every single time, because the gift is really just a way of saying you were paying attention."
+				},
+				{
+					"heading": "Then make the delivery the romance",
+					"body": "Half of what people remember about Valentine\u2019s is the reveal: how it looked, where it was waiting, what the note said. Wrapping isn\u2019t decoration here \u2014 it\u2019s most of the gift, and it\u2019s the first thing a rushed evening sacrifices."
+				},
+				{
+					"heading": "Keep the flowers, just plan them",
+					"body": "Ordered ahead and arriving with the gift, flowers stop being an apology and start being a flourish. Same flowers, completely different message. The only variable that matters is whether you chose them on Tuesday or panicked on Saturday."
+				},
+				{
+					"heading": "If you\u2019re far apart",
+					"body": "Send it to arrive on the 13th, not the 14th. A wrapped parcel waiting when they get home beats a video call with nothing to open, and it means the day starts well instead of hinging on the postal service."
+				}
+			],
+			"tip": "Add flowers to any gift at Wrrapd checkout and the whole thing arrives together, wrapped, on the day you choose.",
+			"picks": [
+				{
+					"label": "Silver bracelets",
+					"slug": "vyjewelry",
+					"to": "https://vyjewelry.shop/collections/silver-bracelets"
+				},
+				{
+					"label": "Fragrance & beauty",
+					"slug": "sephora"
+				},
+				{
+					"label": "Artisan chocolate",
+					"slug": "zchocolat"
+				},
+				{
+					"label": "Something to unwrap together",
+					"slug": "nordstrom",
+					"to": "https://www.nordstrom.com/browse/home/gifts"
+				}
+			],
+			"cta": {
+				"label": "Shop Valentine\u2019s gifts",
+				"slug": "vyjewelry",
+				"to": "https://vyjewelry.shop/collections/silver-bracelets"
+			}
+		},
+		{
+			"id": "valentines-everyone",
+			"seasons": [
+				"valentines"
+			],
+			"weight": 9,
+			"kicker": "Not just couples",
+			"title": "Valentine\u2019s for everyone else you love",
+			"dek": "Friends, kids, parents, the person who kept you sane last year. It\u2019s a good excuse, and nobody said it was only for couples.",
+			"sections": [
+				{
+					"heading": "The friend who always shows up",
+					"body": "Chocolate, a candle, a small piece of jewelry, and a card that says the thing you\u2019d never manage out loud. Low stakes, very high return \u2014 and February is one of the few months with no other excuse to send anything."
+				},
+				{
+					"heading": "Kids love the ritual more than the gift",
+					"body": "A small wrapped box on the breakfast table on the 14th costs almost nothing and gets remembered for years. Books, stickers, one good chocolate \u2014 it\u2019s the ceremony they\u2019re after, not the contents. Set it out the night before."
+				},
+				{
+					"heading": "Send one to a parent",
+					"body": "Nobody sends parents anything in February, which is exactly why it works. A wrapped box arriving with no occasion attached is the entire gift; what\u2019s inside is almost incidental. Chocolates and a few honest lines will do it."
+				},
+				{
+					"heading": "And one for yourself, honestly",
+					"body": "The bath set you keep not buying, the book that\u2019s been in a browser tab since November. If you\u2019re already placing an order for other people, adding a line for yourself is efficient rather than indulgent."
+				}
+			],
+			"tip": "Ordering a few at once? Each is wrapped individually, so none of them feel like they came out of a batch.",
+			"picks": [
+				{
+					"label": "Chocolate boxes",
+					"slug": "russellstover"
+				},
+				{
+					"label": "Books for every age",
+					"slug": "booksamillion"
+				},
+				{
+					"label": "Small gifts & cards",
+					"slug": "target",
+					"to": "https://www.target.com/s?searchTerm=valentines+gifts"
+				},
+				{
+					"label": "Beauty treats",
+					"slug": "ulta"
+				}
+			],
+			"cta": {
+				"label": "Shop Valentine\u2019s picks",
+				"slug": "russellstover"
+			}
+		},
+		{
+			"id": "spring-easter-basket",
+			"seasons": [
+				"spring"
+			],
+			"weight": 10,
+			"kicker": "Spring",
+			"title": "Easter baskets and spring gifts worth photographing",
+			"dek": "Somewhere between the chocolate rabbit and the plastic grass, the basket stopped feeling special. That\u2019s an easy thing to fix.",
+			"sections": [
+				{
+					"heading": "Build around one real gift",
+					"body": "A book, a small building set, something for the garden \u2014 one thing that survives past Sunday afternoon. The candy is the confetti, not the gift. A basket with a single considered item beats one filled to the brim with foil wrappers."
+				},
+				{
+					"heading": "Spring gifts for grown-ups too",
+					"body": "Seeds and tools for the person eyeing the back yard, a light scarf, good sunscreen for someone about to spend the summer outdoors. Spring gifting is mostly about anticipation: you\u2019re handing over the season slightly before it arrives."
+				},
+				{
+					"heading": "The first warm weekend deserves something",
+					"body": "Once the evenings stretch out, people start hosting again. A bottle for the first cookout, a citronella candle, a set of outdoor glasses \u2014 small things that mark the shift and then get used every weekend after."
+				},
+				{
+					"heading": "Say thank you at the end of the school year",
+					"body": "Late spring is teacher-and-coach season, and everyone involved is running on empty. A wrapped gift in May, when nobody else has the energy left to organize one, is the gift that actually gets remembered."
+				}
+			],
+			"tip": "Sending a basket to another house? Have it wrapped and delivered so it arrives looking like a gift instead of a grocery order.",
+			"picks": [
+				{
+					"label": "Building sets",
+					"slug": "lego"
+				},
+				{
+					"label": "Books for the basket",
+					"slug": "booksamillion"
+				},
+				{
+					"label": "Spring gift ideas",
+					"slug": "target",
+					"to": "https://www.target.com/s?searchTerm=spring+gifts"
+				},
+				{
+					"label": "Beauty & sun care",
+					"slug": "ulta"
+				}
+			],
+			"cta": {
+				"label": "Shop spring gifts",
+				"slug": "target",
+				"to": "https://www.target.com/s?searchTerm=spring+gifts"
+			}
+		},
+		{
+			"id": "spring-housewarming",
+			"seasons": [
+				"spring",
+				"summer"
+			],
+			"weight": 9,
+			"kicker": "New places",
+			"title": "Housewarming gifts with staying power",
+			"dek": "Moving season runs from spring into late summer, and most people arrive at a new place with a great many boxes and no candles.",
+			"sections": [
+				{
+					"heading": "Give what nobody buys themselves",
+					"body": "Good towels, a serving board, a decent doormat, a wind chime for the porch. Practical things, one notch nicer than the version they\u2019d have grabbed in a rush on moving weekend \u2014 that\u2019s the whole trick with housewarming gifts."
+				},
+				{
+					"heading": "Or give them the first night",
+					"body": "A bottle, a box of chocolates, coffee and mugs for the morning after the truck leaves. Consumables are perfect when someone has nowhere to put anything yet, and the first morning in a new kitchen is rough without coffee."
+				},
+				{
+					"heading": "Skip the sixth candle",
+					"body": "If you know others are coming to the same housewarming, choose what nobody else thinks of: a plant, kitchen tools, a framed print of the new street. Wrapped well, that\u2019s the one they end up mentioning to other people."
+				},
+				{
+					"heading": "For a first apartment, think basics",
+					"body": "A first place is usually short on the boring things \u2014 a good knife, real towels, a lamp that isn\u2019t the overhead light. Unglamorous gifts are enormously welcome when someone is eating dinner off a box."
+				}
+			],
+			"tip": "Shipping straight to the new address? We wrap it and include your note, so the first delivery at the new place is a good one.",
+			"picks": [
+				{
+					"label": "Home gifts",
+					"slug": "nordstrom",
+					"to": "https://www.nordstrom.com/browse/home/gifts"
+				},
+				{
+					"label": "One-of-a-kind finds",
+					"slug": "etsy"
+				},
+				{
+					"label": "Kitchen & home",
+					"slug": "target",
+					"to": "https://www.target.com/s?searchTerm=housewarming+gift"
+				},
+				{
+					"label": "Everyday essentials",
+					"slug": "walmart"
+				}
+			],
+			"cta": {
+				"label": "Shop housewarming gifts",
+				"slug": "nordstrom",
+				"to": "https://www.nordstrom.com/browse/home/gifts"
+			}
+		},
+		{
+			"id": "mothers-day",
+			"seasons": [
+				"mothers-day"
+			],
+			"weight": 11,
+			"kicker": "Mother\u2019s Day",
+			"title": "Mother\u2019s Day beyond flowers \u2014 but keep the flowers",
+			"dek": "She\u2019ll tell you not to make a fuss. Make a small, well-organized fuss anyway.",
+			"sections": [
+				{
+					"heading": "Pick what she\u2019d never justify",
+					"body": "The good hand cream, the nice earrings, the coat she looked at twice and put back. Mothers are famously bad at buying the slightly better version of anything, and that\u2019s precisely the gap you\u2019re filling. Buy the one she wouldn\u2019t."
+				},
+				{
+					"heading": "Or give her the afternoon",
+					"body": "A book and no plans, a brunch she doesn\u2019t cook, a spa set and a locked bathroom door. The time is the gift; the object is just how you hand it over. Make the plan concrete or it quietly won\u2019t happen."
+				},
+				{
+					"heading": "Grandmothers, stepmothers, and the friend who mothered you",
+					"body": "The list is longer than one person. A small wrapped gift to someone who wasn\u2019t expecting to be counted is the most surprising thing you\u2019ll send in May \u2014 and usually the one that gets a phone call rather than a text."
+				},
+				{
+					"heading": "Keep the flowers, add them properly",
+					"body": "Flowers arriving with a gift beat flowers arriving alone. Order once and have both turn up wrapped on the same morning, instead of juggling two deliveries and hoping the bouquet isn\u2019t left in the sun on a doorstep."
+				}
+			],
+			"tip": "Add flowers at checkout and we\u2019ll deliver them with the gift\u2014no second order, nothing wilting on a doorstep.",
+			"picks": [
+				{
+					"label": "Beauty & skincare",
+					"slug": "ulta"
+				},
+				{
+					"label": "Fragrance",
+					"slug": "sephora"
+				},
+				{
+					"label": "Jewelry",
+					"slug": "vyjewelry",
+					"to": "https://vyjewelry.shop/collections/silver-bracelets"
+				},
+				{
+					"label": "Home & gifts",
+					"slug": "nordstrom",
+					"to": "https://www.nordstrom.com/browse/home/gifts"
+				}
+			],
+			"cta": {
+				"label": "Shop Mother\u2019s Day gifts",
+				"slug": "nordstrom",
+				"to": "https://www.nordstrom.com/browse/home/gifts"
+			}
+		},
+		{
+			"id": "graduation-next-chapter",
+			"seasons": [
+				"graduation"
+			],
+			"weight": 11,
+			"kicker": "Graduation",
+			"title": "Graduation gifts for the next chapter",
+			"dek": "Cards with cash in them are fine. Something they\u2019ll still own in five years is better\u2014and it doesn\u2019t have to cost more.",
+			"sections": [
+				{
+					"heading": "Give what the next year needs",
+					"body": "A laptop bag that survives a commute, a real coffee setup for the first apartment, a good pen for someone about to start signing things. Useful, and a quiet vote of confidence in whatever they\u2019re walking into next."
+				},
+				{
+					"heading": "Make the money memorable",
+					"body": "If a gift card genuinely is the right answer \u2014 and for a graduate it often is \u2014 don\u2019t hand it over in a bare envelope. Put it in a wrapped box with a note about what you watched them get through. Same amount, entirely different memory."
+				},
+				{
+					"heading": "Mark the moment in something lasting",
+					"body": "A framed print, an engraved piece, a book inscribed with the date. Graduation gifts get kept far longer than most, so one small permanent detail \u2014 a name, a year, a line you actually mean \u2014 pays off for decades."
+				},
+				{
+					"heading": "Don\u2019t overthink high school",
+					"body": "For an eighteen-year-old, practical wins: headphones, a suitcase, something for the dorm. Save the sentimental keepsake for the people who already have somewhere to put it and a shelf to put it on."
+				}
+			],
+			"tip": "Wrap it and write the note early\u2014commencement week fills up fast, and the gift that arrives on time is the one opened with everyone watching.",
+			"picks": [
+				{
+					"label": "Tech & headphones",
+					"slug": "bestbuy"
+				},
+				{
+					"label": "Gift cards",
+					"slug": "giftcards",
+					"to": "https://www.giftcards.com/us/en/catalog/product-details/visa-gift-card"
+				},
+				{
+					"label": "Books to inscribe",
+					"slug": "booksamillion"
+				},
+				{
+					"label": "First-apartment coffee",
+					"slug": "peetscoffee",
+					"to": "https://www.peets.com/gifts"
+				}
+			],
+			"cta": {
+				"label": "Shop graduation gifts",
+				"slug": "bestbuy"
+			}
+		},
+		{
+			"id": "fathers-day",
+			"seasons": [
+				"fathers-day"
+			],
+			"weight": 11,
+			"kicker": "Father\u2019s Day",
+			"title": "For the dad who says not to get him anything",
+			"dek": "He means it, and he\u2019s also going to notice if nothing turns up. Here\u2019s the way through.",
+			"sections": [
+				{
+					"heading": "Replace something worn out",
+					"body": "The wallet held together by habit, the grill set missing a tong, the headphones with the flaking earpad. Swapping a tired thing for a good version is the highest-percentage gift there is, because he\u2019d never get round to it himself."
+				},
+				{
+					"heading": "Feed him",
+					"body": "Steaks, a rub set, real coffee, a serious box of chocolate. Consumables sidestep the \u201cI don\u2019t need more stuff\u201d objection entirely, and he\u2019ll share them, which he\u2019ll enjoy considerably more than the gift itself."
+				},
+				{
+					"heading": "Lean into the hobby, not the stereotype",
+					"body": "If he fishes, the gift is tackle \u2014 not a novelty mug about fishing. Anyone with a hobby keeps a mental list of small upgrades they\u2019ve been putting off; ask one question and you\u2019ll usually get the whole list."
+				},
+				{
+					"heading": "Give the day, not just the box",
+					"body": "The gift can be the excuse for a cookout, a fishing morning, a game together. Wrap the small thing that starts it and the day itself becomes the present \u2014 which is generally what he wanted and wouldn\u2019t ask for."
+				}
+			],
+			"tip": "The kids\u2019 notes are the part dads keep. Add the message at checkout and we\u2019ll tuck it inside the wrapping.",
+			"picks": [
+				{
+					"label": "Tech & audio",
+					"slug": "bestbuy"
+				},
+				{
+					"label": "Outdoor & sport gear",
+					"slug": "gearup"
+				},
+				{
+					"label": "Chocolates",
+					"slug": "russellstover"
+				},
+				{
+					"label": "Coffee gifts",
+					"slug": "peetscoffee",
+					"to": "https://www.peets.com/gifts"
+				}
+			],
+			"cta": {
+				"label": "Shop Father\u2019s Day gifts",
+				"slug": "bestbuy"
+			}
+		},
+		{
+			"id": "summer-cookouts-cabins",
+			"seasons": [
+				"summer"
+			],
+			"weight": 9,
+			"kicker": "Summer",
+			"title": "Cookouts, cabins, and the summer gift calendar",
+			"dek": "Summer gifting isn\u2019t one holiday. It\u2019s a steady run of weekends where you turn up at somebody else\u2019s house.",
+			"sections": [
+				{
+					"heading": "The cookout gift",
+					"body": "Not another bag of ice. Good tongs, a rub set, a cooler bag, a bottle for the host to open once everyone\u2019s gone home. Aim for something that shows up again next weekend rather than getting consumed within the hour."
+				},
+				{
+					"heading": "The lake house or cabin weekend",
+					"body": "When someone hands you a spare room for three nights, the thank-you should be planned rather than scavenged from a gas station on the way. Coffee for the mornings, a game for the rain, a candle for the room they cleared out."
+				},
+				{
+					"heading": "Weddings, showers, and everything between",
+					"body": "Summer is peak celebration season. Keep two or three reliable gifts in mind \u2014 a home piece, a keepsake, a good gift card \u2014 so you\u2019re never shopping at nine o\u2019clock the night before with nothing good left."
+				},
+				{
+					"heading": "Ship ahead when you\u2019re travelling",
+					"body": "Nobody wants to fly with a wrapped box in a carry-on. Send it to the address you\u2019re visiting so it\u2019s waiting when you arrive: you turn up empty-handed and the gift is already on the porch."
+				}
+			],
+			"tip": "Add your message at checkout and we\u2019ll tuck it inside the wrapping \u2014 handy when the gift arrives at the house before you do.",
+			"picks": [
+				{
+					"label": "Grill & outdoor",
+					"slug": "target",
+					"to": "https://www.target.com/s?searchTerm=grill+gift+set"
+				},
+				{
+					"label": "Coolers & essentials",
+					"slug": "walmart"
+				},
+				{
+					"label": "Home & hosting",
+					"slug": "nordstrom",
+					"to": "https://www.nordstrom.com/browse/home/gifts"
+				},
+				{
+					"label": "Handmade keepsakes",
+					"slug": "etsy"
+				}
+			],
+			"cta": {
+				"label": "Shop summer gifts",
+				"slug": "target",
+				"to": "https://www.target.com/s?searchTerm=grill+gift+set"
+			}
 		}
 	],
-	"shop_slugs": ["target", "ulta", "nordstrom", "etsy", "lego", "bestbuy", "walmart", "giftcards"]
+	"shop_slugs": [
+		"target",
+		"ulta",
+		"nordstrom",
+		"etsy",
+		"lego",
+		"bestbuy",
+		"walmart",
+		"giftcards"
+	]
 }
