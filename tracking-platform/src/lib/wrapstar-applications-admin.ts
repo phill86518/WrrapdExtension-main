@@ -54,6 +54,34 @@ export type WrapstarApplication = {
   mustChangePassword?: boolean;
   onboardingStep: string;
   onboardingStepsComplete: Record<string, boolean>;
+  onboarding?: {
+    policiesSignedAt?: string;
+    policiesSignature?: string;
+    orientationScore?: string;
+    bgLegalName?: string;
+    bgOtherNames?: string;
+    bgConsentAt?: string;
+    bgStatus?: string;
+    hasInsuranceFile?: boolean;
+    insuranceCarrier?: string;
+    insuranceExpires?: string;
+    hasIdentitySelfie?: boolean;
+    identityConfirmedAt?: string;
+    workspaceAddress?: string;
+    workspaceWindows?: string[];
+    workspaceAccessNotes?: string;
+    hasWorkspacePhoto?: boolean;
+    taxAckAt?: string;
+    taxEDelivery?: boolean;
+    payoutMethod?: string;
+    payoutHolderName?: string;
+    payoutBankName?: string;
+    payoutAccountType?: string;
+    payoutRouting?: string;
+    payoutAccountLast4?: string;
+    hasPayoutProof?: boolean;
+    payoutSubmittedAt?: string;
+  };
   hasIdFile: boolean;
   submittedAt: string;
   approvedAt: string;
@@ -162,16 +190,18 @@ export type ApplicationAction =
   | "reinvite"
   | "resend_invite"
   | "reset_to_review"
-  | "save_notes";
+  | "save_notes"
+  | "save_bg_status";
 
 export async function runWrapstarApplicationAction(
   id: number,
   action: ApplicationAction,
-  opts?: { adminNotes?: string; rejectReason?: string },
+  opts?: { adminNotes?: string; rejectReason?: string; bgStatus?: string },
 ): Promise<{ application: WrapstarApplication; passwordIssued?: boolean }> {
   const payload: Record<string, string> = { action };
   if (opts?.adminNotes !== undefined) payload.adminNotes = opts.adminNotes;
   if (opts?.rejectReason !== undefined) payload.rejectReason = opts.rejectReason;
+  if (opts?.bgStatus !== undefined) payload.bgStatus = opts.bgStatus;
 
   const r = await fetch(`${wpBase()}/wp-json/wrrapd/v1/applications/${id}/action`, {
     method: "POST",

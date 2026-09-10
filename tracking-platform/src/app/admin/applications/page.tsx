@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { listWrapstarApplications } from "@/lib/wrapstar-applications-admin";
 import { listDriverApplications } from "@/lib/driver-applications-admin";
+import { hireRoleLabel, JOYRIDER_LABEL, JOYRIDER_LABEL_PLURAL } from "@/lib/role-labels";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +16,7 @@ function pick(v: string | string[] | undefined): string | undefined {
 const ROLE_FILTERS = [
   { id: "all", label: "All roles" },
   { id: "wrapstar", label: "WrapStars" },
-  { id: "driver", label: "Drivers" },
+  { id: "driver", label: JOYRIDER_LABEL_PLURAL },
 ] as const;
 
 const FILTERS = [
@@ -145,8 +146,8 @@ export default async function AdminApplicationsPage({
     <div className="mx-auto max-w-6xl">
       <h1 className="text-2xl font-semibold text-slate-900">Applications</h1>
       <p className="mt-1 text-sm text-slate-600">
-        Hire pipeline from apply.wrrapd.com — WrapStars and Drivers. Approve to email login
-        credentials for pros.wrrapd.com onboarding.
+        Hire pipeline from apply.wrrapd.com — WrapStars and {JOYRIDER_LABEL_PLURAL}. Approve to
+        email login credentials for pros.wrrapd.com onboarding.
       </p>
 
       <form className="mt-4 flex flex-wrap items-end gap-2" method="get">
@@ -223,7 +224,7 @@ export default async function AdminApplicationsPage({
             </code>{" "}
             and matching{" "}
             <code className="rounded bg-red-100 px-1">WRRAPD_WRAPSTARS_OPS_API_KEY</code>. Deploy
-            Driver MU-plugins for{" "}
+            JoyRider MU-plugins for{" "}
             <code className="rounded bg-red-100 px-1">/driver-applications</code> routes.
           </p>
         </div>
@@ -245,7 +246,7 @@ export default async function AdminApplicationsPage({
                 <tr>
                   <td colSpan={6} className="px-3 py-8 text-center text-slate-500">
                     No applications in this view. Try <strong>All</strong>, clear search, or confirm
-                    WordPress Driver routes are deployed if filtering Drivers.
+                    WordPress JoyRider routes are deployed if filtering {JOYRIDER_LABEL_PLURAL}.
                   </td>
                 </tr>
               ) : (
@@ -264,7 +265,7 @@ export default async function AdminApplicationsPage({
                     <td className="px-3 py-3">
                       {a.role === "driver" ? (
                         <span className="rounded-full bg-sky-100 px-2 py-0.5 text-xs text-sky-900">
-                          Driver
+                          {hireRoleLabel("driver")}
                         </span>
                       ) : (
                         <span className="rounded-full bg-violet-100 px-2 py-0.5 text-xs text-violet-900">
@@ -277,14 +278,10 @@ export default async function AdminApplicationsPage({
                     </td>
                     <td className="px-3 py-3">
                       {a.role === "driver" ? (
-                        <span className="text-xs text-slate-600">{a.vehicleType || "courier"}</span>
-                      ) : a.canDeliver === "yes" ? (
-                        <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-900">
-                          hybrid
-                        </span>
+                        <span className="text-xs text-slate-600">{a.vehicleType || JOYRIDER_LABEL}</span>
                       ) : (
                         <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-xs text-indigo-900">
-                          wrap-only
+                          wrap
                         </span>
                       )}
                       {a.role === "wrapstar" && a.fitScore ? (

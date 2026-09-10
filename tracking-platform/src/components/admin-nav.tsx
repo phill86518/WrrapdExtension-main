@@ -3,7 +3,7 @@ export const ADMIN_NAV_LINKS = [
   { href: "/admin/orders", label: "Orders", match: "prefix" as const },
   { href: "/admin/applications", label: "Applications", match: "prefix" as const },
   { href: "/admin/wrapstars", label: "WrapStars", match: "prefix" as const },
-  { href: "/admin/drivers", label: "Drivers", match: "prefix" as const },
+  { href: "/admin/drivers", label: "JoyRiders", match: "prefix" as const },
   { href: "/admin/finance", label: "Finance", match: "prefix" as const },
   { href: "/admin/reports", label: "Reports", match: "prefix" as const },
   { href: "/admin/pricing", label: "Checkout pricing", match: "prefix" as const },

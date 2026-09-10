@@ -16,6 +16,7 @@ import {
 import { syncActivatedApplicationToOpsRoster } from "@/lib/sync-activated-wrapstar";
 import { syncActivatedApplicationToDriverRoster } from "@/lib/sync-activated-driver";
 import { ApplicationReviewActions } from "@/components/application-review-actions";
+import { hireRoleLabel, WRAPSTAR_ONBOARDING_STEP_LABELS } from "@/lib/role-labels";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +35,7 @@ async function actionForm(formData: FormData) {
   const role = String(formData.get("role") || "wrapstar") === "driver" ? "driver" : "wrapstar";
   const adminNotes = String(formData.get("adminNotes") || "");
   const rejectReason = String(formData.get("rejectReason") || "");
+  const bgStatus = String(formData.get("bgStatus") || "");
   if (!id || !action) return;
 
   const current =
@@ -70,6 +72,7 @@ async function actionForm(formData: FormData) {
     const result = await runWrapstarApplicationAction(id, action, {
       adminNotes,
       rejectReason: action === "reject" ? rejectReason : undefined,
+      bgStatus: action === "save_bg_status" ? bgStatus : undefined,
     });
     if (action === "activate" && result.application) {
       await syncActivatedApplicationToOpsRoster(result.application);
@@ -125,7 +128,9 @@ export default async function AdminApplicationDetailPage({
 
   const isDriver = role === "driver";
   const driverApp = isDriver ? (app as DriverApplication) : null;
+  const wrapApp = !isDriver ? (app as WrapstarApplication) : null;
   const steps = Object.entries(app.onboardingStepsComplete || {});
+  const onboarding = wrapApp?.onboarding;
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -145,7 +150,7 @@ export default async function AdminApplicationDetailPage({
               : "rounded-full bg-violet-100 px-2 py-0.5 text-xs font-medium text-violet-900"
           }
         >
-          {isDriver ? "Driver" : "WrapStar"}
+          {hireRoleLabel(role)}
         </span>{" "}
         · <span className="font-medium">{app.status}</span>
         {app.suspended ? " · SUSPENDED" : ""}
@@ -161,7 +166,7 @@ export default async function AdminApplicationDetailPage({
             : null}
           {okFlash === "activate"
             ? isDriver
-              ? " — added/updated on Drivers ops roster for courier assignment."
+              ? " — added/updated on the JoyRider ops roster for courier assignment."
               : " — added/updated on WrapStars ops roster for Command Center assignment."
             : null}
           {okFlash === "reinvite"
@@ -170,6 +175,7 @@ export default async function AdminApplicationDetailPage({
           {okFlash === "resend_invite"
             ? " — welcome email resent with a new temporary password."
             : null}
+          {okFlash === "save_bg_status" ? " — background-check status saved." : null}
         </p>
       ) : null}
 
@@ -186,7 +192,7 @@ export default async function AdminApplicationDetailPage({
           </p>
         </section>
         <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <h2 className="font-semibold">{isDriver ? "Driver profile" : "Capability"}</h2>
+          <h2 className="font-semibold">{isDriver ? "JoyRider profile" : "Wrap setup"}</h2>
           {isDriver && driverApp ? (
             <>
               <p className="mt-2 text-sm">
@@ -199,20 +205,21 @@ export default async function AdminApplicationDetailPage({
               <p className="text-sm">Driving record: {driverApp.cleanDrivingRecord || "—"}</p>
               <p className="text-sm">Bank ready: {driverApp.bankAccountReady || "—"}</p>
             </>
-          ) : (
+          ) : "dedicatedWrapWorkspace" in app ? (
             <>
               <p className="mt-2 text-sm">
-                Deliver: <strong>{"canDeliver" in app ? app.canDeliver || "—" : "—"}</strong>
+                Workspace: <strong>{app.dedicatedWrapWorkspace || "—"}</strong>
               </p>
               <p className="text-sm">
-                Vehicle: {"hasVehicle" in app ? app.hasVehicle || "n/a" : "n/a"}
+                Custom print: {app.hasLargeFormatPrinter || "—"}
+                {app.printerSize ? ` (${app.printerSize})` : ""}
               </p>
-              <p className="text-sm">
-                Driving record:{" "}
-                {"cleanDrivingRecord" in app ? app.cleanDrivingRecord || "n/a" : "n/a"}
-              </p>
+              <p className="text-sm">Video documentation: {app.comfortableVideoMonitoring || "—"}</p>
+              <p className="text-sm">Finished-wrap photos: {app.deliveryProofReady || "—"}</p>
+              <p className="text-sm">Bank ready: {app.bankAccountReady || "—"}</p>
+              <p className="text-sm">Business: {app.businessStructure || "—"}</p>
             </>
-          )}
+          ) : null}
         </section>
       </div>
 
@@ -258,11 +265,95 @@ export default async function AdminApplicationDetailPage({
           <ul className="mt-2 grid gap-1 text-sm sm:grid-cols-2">
             {steps.map(([step, done]) => (
               <li key={step} className={done ? "text-emerald-800" : "text-slate-500"}>
-                {done ? "✓" : "○"} {step}
+                {done ? "✓" : "○"} {WRAPSTAR_ONBOARDING_STEP_LABELS[step] || step}
               </li>
             ))}
           </ul>
           <p className="mt-2 text-xs text-slate-500">Current step: {app.onboardingStep || "—"}</p>
+          {onboarding ? (
+            <dl className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
+              <div>
+                <dt className="text-xs uppercase text-slate-500">Policies</dt>
+                <dd>
+                  {onboarding.policiesSignedAt || "—"}
+                  {onboarding.policiesSignature ? ` · ${onboarding.policiesSignature}` : ""}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs uppercase text-slate-500">Orientation</dt>
+                <dd>{onboarding.orientationScore ? `${onboarding.orientationScore}%` : "—"}</dd>
+              </div>
+              <div>
+                <dt className="text-xs uppercase text-slate-500">Background</dt>
+                <dd>
+                  {onboarding.bgStatus || "not started"}
+                  {onboarding.bgLegalName ? ` · ${onboarding.bgLegalName}` : ""}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs uppercase text-slate-500">Insurance</dt>
+                <dd>
+                  {onboarding.hasInsuranceFile ? "COI uploaded" : "no file"}
+                  {onboarding.insuranceCarrier ? ` · ${onboarding.insuranceCarrier}` : ""}
+                  {onboarding.insuranceExpires ? ` · exp ${onboarding.insuranceExpires}` : ""}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs uppercase text-slate-500">Identity</dt>
+                <dd>
+                  {onboarding.hasIdentitySelfie ? "selfie on file" : "no selfie"}
+                  {onboarding.identityConfirmedAt ? ` · ${onboarding.identityConfirmedAt}` : ""}
+                </dd>
+              </div>
+              <div className="sm:col-span-2">
+                <dt className="text-xs uppercase text-slate-500">Wrapping location</dt>
+                <dd className="whitespace-pre-wrap">{onboarding.workspaceAddress || "—"}</dd>
+                {onboarding.workspaceWindows && onboarding.workspaceWindows.length > 0 ? (
+                  <dd className="text-xs text-slate-600">{onboarding.workspaceWindows.join(", ")}</dd>
+                ) : null}
+              </div>
+              <div>
+                <dt className="text-xs uppercase text-slate-500">Tax acknowledgments</dt>
+                <dd>
+                  {onboarding.taxAckAt || "—"}
+                  {onboarding.taxEDelivery ? " · e-delivery yes" : ""}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs uppercase text-slate-500">Payout</dt>
+                <dd>
+                  {onboarding.payoutMethod || "—"}
+                  {onboarding.payoutBankName ? ` · ${onboarding.payoutBankName}` : ""}
+                  {onboarding.payoutAccountLast4 ? ` · ****${onboarding.payoutAccountLast4}` : ""}
+                  {onboarding.hasPayoutProof ? " · proof uploaded" : ""}
+                </dd>
+              </div>
+            </dl>
+          ) : null}
+          {wrapApp ? (
+            <form action={actionForm} className="mt-4 flex flex-wrap items-end gap-2">
+              <input type="hidden" name="appId" value={app.id} />
+              <input type="hidden" name="role" value="wrapstar" />
+              <input type="hidden" name="action" value="save_bg_status" />
+              <input type="hidden" name="adminNotes" value={app.adminNotes || ""} />
+              <label className="text-sm">
+                Background status
+                <select
+                  name="bgStatus"
+                  defaultValue={onboarding?.bgStatus || ""}
+                  className="ml-2 rounded border px-2 py-1"
+                >
+                  <option value="">not started</option>
+                  <option value="pending">pending</option>
+                  <option value="clear">clear</option>
+                  <option value="review">needs review</option>
+                </select>
+              </label>
+              <button type="submit" className="rounded bg-slate-900 px-3 py-1.5 text-sm text-white">
+                Save
+              </button>
+            </form>
+          ) : null}
         </section>
       ) : null}
 

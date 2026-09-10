@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: Wrrapd Drivers Portal (MU)
- * Description: Courier Driver application + onboarding on apply.wrrapd.com /driver and pros.wrrapd.com /driver-onboarding. Parallel to WrapStars.
+ * Description: Courier Driver application + onboarding on apply.wrrapd.com /drive and pros.wrrapd.com /driver-onboarding. Parallel to WrapStars.
  * Author: Wrrapd
  *
  * Install alongside WrapStars MU-plugins on the dedicated apply/pros WordPress:
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_DRIVERS_BUILD', '2026-07-23-v1' );
+define( 'WRRAPD_DRIVERS_BUILD', '2026-07-23-v3' );
 define( 'WRRAPD_DRIVERS_INVITE_TTL_DAYS', 15 );
 define( 'WRRAPD_DRIVERS_CPT', 'wrrapd_driver_app' );
 
@@ -128,6 +128,26 @@ add_shortcode( 'wrrapd_driver_thankyou', 'wrrapd_drivers_shortcode_thankyou' );
 add_shortcode( 'wrrapd_driver_login', 'wrrapd_drivers_shortcode_login' );
 add_shortcode( 'wrrapd_driver_onboarding', 'wrrapd_drivers_shortcode_onboarding' );
 add_shortcode( 'wrrapd_driver_decline', 'wrrapd_drivers_shortcode_decline' );
+add_filter( 'the_content', 'wrrapd_drivers_force_thankyou_content', 999 );
+add_filter( 'elementor/frontend/the_content', 'wrrapd_drivers_force_thankyou_content', 999 );
+
+/**
+ * Dedicated JoyRider confirmation — do not let a mis-set WP/Elementor page show the landing.
+ *
+ * @param string $content Existing page content.
+ * @return string
+ */
+function wrrapd_drivers_force_thankyou_content( $content ) {
+	if ( is_admin() || ! wrrapd_drivers_is_portal_host() ) {
+		return $content;
+	}
+	$uri  = isset( $_SERVER['REQUEST_URI'] ) ? (string) $_SERVER['REQUEST_URI'] : '/';
+	$path = '/' . trim( (string) strtok( $uri, '?' ), '/' );
+	if ( preg_match( '#^/(drive/driver-thank-you|drive/thank-you|driver-thank-you)(/|$)#', $path ) ) {
+		return do_shortcode( '[wrrapd_driver_thankyou]' );
+	}
+	return $content;
+}
 
 function wrrapd_drivers_apply_url( $path = '/' ) {
 	$path = '/' . ltrim( (string) $path, '/' );
@@ -140,7 +160,7 @@ function wrrapd_drivers_pros_url( $path = '/' ) {
 }
 
 function wrrapd_drivers_portal_login_url( $redirect = '', $greet = '' ) {
-	$url = wrrapd_drivers_apply_url( '/driver-login/' );
+	$url = wrrapd_drivers_apply_url( '/drive/driver-login/' );
 	if ( $redirect !== '' ) {
 		$url = add_query_arg( 'redirect_to', $redirect, $url );
 	}
@@ -158,7 +178,7 @@ function wrrapd_drivers_onboarding_step_url( $step ) {
 		'policies'    => '/driver-onboarding/driver-policies/',
 		'orientation' => '/driver-onboarding/driver-orientation/',
 		'background'  => '/driver-onboarding/driver-background/',
-		'insurance'   => '/driver-onboarding/driver-insurance/',
+		'insurance'   => '/driver-onboarding/35-driver-insurance/',
 		'identity'    => '/driver-onboarding/driver-identity/',
 		'w9'          => '/driver-onboarding/driver-w-9/',
 		'tax_1099'    => '/driver-onboarding/driver-tax-1099/',
@@ -467,8 +487,14 @@ function wrrapd_drivers_login_redirect( $redirect_to, $requested_redirect_to, $u
 	if ( is_wp_error( $user ) || ! $user instanceof WP_User ) {
 		return $redirect_to;
 	}
+	// Administrators are handled by WrapStars login_redirect → wp-admin.
 	if ( user_can( $user, 'manage_options' ) ) {
-		return $redirect_to;
+		foreach ( array( $requested_redirect_to, $redirect_to ) as $url ) {
+			if ( is_string( $url ) && $url !== '' && strpos( $url, '/wp-admin' ) !== false ) {
+				return $url;
+			}
+		}
+		return admin_url();
 	}
 	if ( wrrapd_drivers_is_onboarding_eligible_user( $user->ID ) ) {
 		if ( $requested_redirect_to !== '' && strpos( $requested_redirect_to, 'driver-onboarding' ) !== false ) {
@@ -489,7 +515,7 @@ function wrrapd_drivers_enqueue_assets() {
 		return;
 	}
 	$uri = isset( $_SERVER['REQUEST_URI'] ) ? (string) $_SERVER['REQUEST_URI'] : '';
-	$need = (bool) preg_match( '#/(driver|driver-login|driver-onboarding|driver-decline)(/|$)#', $uri );
+	$need = (bool) preg_match( '#/(drive|driver-login|driver-onboarding|driver-decline|decline-driver)(/|$)#', $uri );
 	if ( ! $need && ! is_singular() ) {
 		// Still load on pages that may use shortcodes without path match.
 		$need = true;
@@ -524,8 +550,8 @@ function wrrapd_drivers_host_routing() {
 		$path = '/';
 	}
 
-	$is_drive_apply = (bool) preg_match( '#^/driver(/|$)#', $path )
-		|| (bool) preg_match( '#^/(driver-login|driver-decline)(/|$)#', $path );
+	$is_drive_apply = (bool) preg_match( '#^/drive(/|$)#', $path )
+		|| (bool) preg_match( '#^/(drive/driver-login|drive/decline-driver|driver-login|driver-decline|decline-driver)(/|$)#', $path );
 	$is_drive_ob = (bool) preg_match( '#^/driver-onboarding#', $path );
 
 	if ( wrrapd_drivers_unified_host() ) {
@@ -539,7 +565,7 @@ function wrrapd_drivers_host_routing() {
 				exit;
 			}
 		}
-		if ( preg_match( '#^/driver-login(/|$)#', $path ) && is_user_logged_in() && wrrapd_drivers_is_onboarding_eligible_user( get_current_user_id() ) ) {
+		if ( preg_match( '#^/(drive/driver-login|driver-login)(/|$)#', $path ) && is_user_logged_in() && wrrapd_drivers_is_onboarding_eligible_user( get_current_user_id() ) ) {
 			if ( wrrapd_drivers_enforce_active_invite_or_logout( get_current_user_id() ) ) {
 				wp_safe_redirect( add_query_arg( 'invite_expired', '1', wrrapd_drivers_portal_login_url() ) );
 				exit;
@@ -555,7 +581,7 @@ function wrrapd_drivers_host_routing() {
 			wp_safe_redirect( wrrapd_drivers_pros_url( $path ) );
 			exit;
 		}
-		if ( preg_match( '#^/driver-login(/|$)#', $path ) && is_user_logged_in() && wrrapd_drivers_is_onboarding_eligible_user( get_current_user_id() ) ) {
+		if ( preg_match( '#^/(drive/driver-login|driver-login)(/|$)#', $path ) && is_user_logged_in() && wrrapd_drivers_is_onboarding_eligible_user( get_current_user_id() ) ) {
 			if ( wrrapd_drivers_enforce_active_invite_or_logout( get_current_user_id() ) ) {
 				wp_safe_redirect( add_query_arg( 'invite_expired', '1', wrrapd_drivers_portal_login_url() ) );
 				exit;
@@ -796,7 +822,7 @@ function wrrapd_drivers_decline_offer_url( $app_id, $token ) {
 			'app'   => (int) $app_id,
 			'token' => rawurlencode( (string) $token ),
 		),
-		wrrapd_drivers_apply_url( '/driver-decline/' )
+		wrrapd_drivers_apply_url( '/drive/decline-driver/' )
 	);
 }
 
@@ -805,7 +831,7 @@ function wrrapd_drivers_send_approval_credentials_email( $app_id, $password, $co
 	$greet   = wrrapd_drivers_greeting_name( $app_id );
 	$login   = wrrapd_drivers_portal_login_url( wrrapd_drivers_pros_url( '/driver-onboarding/' ), $greet );
 	$token   = (string) wrrapd_drivers_get_meta( $app_id, 'decline_token' );
-	$decline = $token !== '' ? wrrapd_drivers_decline_offer_url( $app_id, $token ) : wrrapd_drivers_apply_url( '/driver-decline/' );
+	$decline = $token !== '' ? wrrapd_drivers_decline_offer_url( $app_id, $token ) : wrrapd_drivers_apply_url( '/drive/decline-driver/' );
 	$subject = 'Congratulations — welcome to the Wrrapd Driver network';
 	$lead    = 'We are thrilled to welcome you as a Wrrapd Delivery Driver.';
 	if ( $context === 'reinvite' ) {
@@ -929,6 +955,7 @@ function wrrapd_drivers_detect_onboarding_step_from_uri() {
 		'/driver-onboarding/driver-orientation' => 'orientation',
 		'/driver-onboarding/driver-background'  => 'background',
 		'/driver-onboarding/driver-insurance'   => 'insurance',
+		'/driver-onboarding/35-driver-insurance' => 'insurance',
 		'/driver-onboarding/driver-identity'    => 'identity',
 		'/driver-onboarding/driver-w-9'         => 'w9',
 		'/driver-onboarding/driver-tax-1099'    => 'tax_1099',
@@ -1153,63 +1180,132 @@ function wrrapd_drivers_render_step_activation( $app_id ) {
 	<?php
 }
 
+/**
+ * Full-bleed hero video for the Driver landing (same pattern as WrapStars Applications_Wrrapd.mp4).
+ * Looks up Media Library attachment titled/filename containing "wrrapd-driver-ad".
+ *
+ * @return string Escaped URL or empty string.
+ */
+function wrrapd_drivers_hero_video_url() {
+	if ( defined( 'WRRAPD_DRIVERS_HERO_VIDEO' ) && WRRAPD_DRIVERS_HERO_VIDEO !== '' ) {
+		return esc_url( WRRAPD_DRIVERS_HERO_VIDEO );
+	}
+	static $cached = null;
+	if ( $cached !== null ) {
+		return $cached;
+	}
+	$cached      = '';
+	$attachments = get_posts(
+		array(
+			'post_type'      => 'attachment',
+			'post_mime_type' => 'video',
+			'posts_per_page' => 30,
+			'post_status'    => 'inherit',
+			'orderby'        => 'date',
+			'order'          => 'DESC',
+		)
+	);
+	foreach ( $attachments as $att ) {
+		$title = strtolower( (string) $att->post_title );
+		$file  = strtolower( (string) get_attached_file( $att->ID ) );
+		$slug  = strtolower( (string) $att->post_name );
+		if (
+			strpos( $title, 'wrrapd-driver-ad' ) !== false
+			|| strpos( $title, 'wrrapd_driver_ad' ) !== false
+			|| strpos( $file, 'wrrapd-driver-ad' ) !== false
+			|| strpos( $file, 'wrrapd_driver_ad' ) !== false
+			|| strpos( $slug, 'wrrapd-driver-ad' ) !== false
+		) {
+			$cached = esc_url( wp_get_attachment_url( $att->ID ) );
+			break;
+		}
+	}
+	return $cached;
+}
+
 function wrrapd_drivers_shortcode_landing() {
+	$video = wrrapd_drivers_hero_video_url();
+	$apply = wrrapd_drivers_apply_url( '/drive/driver-apply/' );
 	ob_start();
 	?>
-	<div class="wrrapd-wrapstars wrrapd-drivers wrrapd-drivers-flex">
-		<section class="wrrapd-drivers-hero">
-			<div class="wrrapd-drivers-hero__inner">
-				<p class="wrrapd-drivers-hero__kicker">Wrrapd Drivers · Florida &amp; Georgia</p>
-				<h1>Start earning with Wrrapd Drivers</h1>
-				<p class="wrrapd-drivers-hero__lead">If you are 21 or older with an eligible vehicle, a smartphone, and a valid driver license, you can deliver wrapped gifts on your schedule. See offers in the Driver app before you accept.</p>
-				<a class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--xl wrrapd-wrapstars-btn--hero" href="<?php echo esc_url( wrrapd_drivers_apply_url( '/driver/driver-apply/' ) ); ?>">Apply to drive</a>
+	<div class="wrrapd-wrapstars wrrapd-wrapstars-dasher wrrapd-drivers wrrapd-drivers-flex">
+		<section class="wrrapd-wrapstars-cinema-hero">
+			<div class="wrrapd-wrapstars-cinema-hero__media" aria-hidden="true">
+				<?php if ( $video !== '' ) : ?>
+					<video class="wrrapd-wrapstars-cinema-hero__video" src="<?php echo esc_url( $video ); ?>" autoplay muted loop playsinline preload="metadata"></video>
+				<?php else : ?>
+					<div class="wrrapd-wrapstars-cinema-hero__fallback"></div>
+				<?php endif; ?>
+			</div>
+			<div class="wrrapd-wrapstars-cinema-hero__scrim" aria-hidden="true"></div>
+			<div class="wrrapd-wrapstars-cinema-hero__content">
+				<p class="wrrapd-wrapstars-cinema-hero__kicker">Now accepting applications · Florida &amp; Georgia</p>
+				<h1>Drive with Wrrapd</h1>
+				<p class="wrrapd-wrapstars-cinema-hero__tagline">Deliver joy. Earn on your schedule.</p>
+				<p class="wrrapd-wrapstars-cinema-hero__sub">Pick up beautifully wrapped gifts from WrapStars and deliver smiles to the door — when it works for you.</p>
+				<a class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--xl wrrapd-wrapstars-btn--hero" href="<?php echo esc_url( $apply ); ?>">Apply to drive</a>
 			</div>
 		</section>
 
-		<section class="wrrapd-drivers-section">
-			<h2>Download the app after you are activated</h2>
-			<p>Apply on the web first. After approval and onboarding, ops activates your account — then you sign in to the Driver app to accept delivery offers.</p>
-			<div class="wrrapd-drivers-app-cards">
-				<div class="wrrapd-drivers-app-card">
-					<h3>iPhone</h3>
-					<p>Use Safari or the App Store when the Driver app is published. Until then, open the web console on your phone.</p>
-					<a class="wrrapd-wrapstars-btn" href="<?php echo esc_url( wrrapd_drivers_courier_app_url() ); ?>">Open Driver Console</a>
+		<div class="wrrapd-wrapstars-dasher-body">
+			<section class="wrrapd-wrapstars-dasher-band">
+				<div class="wrrapd-wrapstars-dasher-band__item wrrapd-wrapstars-dasher-box">
+					<h2>Your schedule</h2>
+					<p>See delivery offers when you are ready. Accept the ones that fit — no shifts, no floor managers.</p>
 				</div>
-				<div class="wrrapd-drivers-app-card">
-					<h3>Android</h3>
-					<p>Use Chrome or Google Play when the Driver app is published. Until then, open the web console on your phone.</p>
-					<a class="wrrapd-wrapstars-btn" href="<?php echo esc_url( wrrapd_drivers_courier_app_url() ); ?>">Open Driver Console</a>
+				<div class="wrrapd-wrapstars-dasher-band__item wrrapd-wrapstars-dasher-box">
+					<h2>Gifts, not groceries</h2>
+					<p>You deliver finished wrap orders. WrapStars handle the wrapping — you bring the final-mile magic.</p>
 				</div>
-			</div>
-		</section>
+				<div class="wrrapd-wrapstars-dasher-band__item wrrapd-wrapstars-dasher-box">
+					<h2>Clear offers</h2>
+					<p>Know the pickup, drop-off, and payout before you tap accept. Simple, transparent, local.</p>
+				</div>
+			</section>
 
-		<section class="wrrapd-drivers-section wrrapd-drivers-split">
-			<div>
-				<h2>What happens after you apply</h2>
-				<ol class="wrrapd-drivers-steps">
-					<li>Submit your application (about five minutes).</li>
-					<li>We review within about seven days — we may schedule a brief interview.</li>
-					<li>If approved, complete Driver onboarding (agreements, insurance, tax).</li>
-					<li>Ops activates you — then download the app and start delivering.</li>
-				</ol>
-				<p><a href="<?php echo esc_url( wrrapd_drivers_apply_url( '/apply/' ) ); ?>">Looking for WrapStars gift-wrapping instead?</a></p>
-			</div>
-			<div>
-				<h2>FAQ</h2>
-				<details class="wrrapd-wrapstars-faq-dd__item"><summary>What is involved in onboarding?</summary><p>Agreements, orientation quiz, background check authorization, vehicle insurance upload, identity confirmation, W-9 / tax acknowledgments, and bank setup. Ops activates you when steps are complete.</p></details>
-				<details class="wrrapd-wrapstars-faq-dd__item"><summary>What is a delivery offer?</summary><p>An offer in the Driver app to pick up a wrapped gift from a WrapStar and deliver it to the recipient. You see details before you accept.</p></details>
-				<details class="wrrapd-wrapstars-faq-dd__item"><summary>Do I wrap the gifts?</summary><p>No. WrapStars wrap; Drivers deliver. You scan the box QR for final-mile details.</p></details>
-				<details class="wrrapd-wrapstars-faq-dd__item"><summary>Where is this available?</summary><p>Launching in Florida and Georgia. Other states may be limited at first.</p></details>
-			</div>
-		</section>
+			<section class="wrrapd-wrapstars-reqs-dd">
+				<h2 class="wrrapd-wrapstars-section-title">Requirements</h2>
+				<div class="wrrapd-wrapstars-reqs-dd__grid">
+					<div class="wrrapd-wrapstars-reqs-dd__item">
+						<span class="wrrapd-wrapstars-reqs-dd__num" aria-hidden="true">1</span>
+						<h3>Age &amp; license</h3>
+						<p>Drivers must be <strong>21 or older</strong> with a valid driver license.</p>
+					</div>
+					<div class="wrrapd-wrapstars-reqs-dd__item">
+						<span class="wrrapd-wrapstars-reqs-dd__num" aria-hidden="true">2</span>
+						<h3>Vehicle &amp; phone</h3>
+						<p>An eligible personal vehicle, current insurance, and a smartphone for offers and navigation.</p>
+					</div>
+					<div class="wrrapd-wrapstars-reqs-dd__item">
+						<span class="wrrapd-wrapstars-reqs-dd__num" aria-hidden="true">3</span>
+						<h3>Where we launch</h3>
+						<p>Starting in <strong>Florida</strong> and <strong>Georgia</strong>. Other areas may open as the network grows.</p>
+					</div>
+				</div>
+			</section>
 
-		<section class="wrrapd-drivers-check">
-			<div>
-				<h2>Check requirements</h2>
-				<p>Confirm a few basics — age, license, vehicle, and smartphone — then start your application.</p>
-				<a class="wrrapd-wrapstars-btn" href="<?php echo esc_url( wrrapd_drivers_apply_url( '/driver/driver-apply/' ) ); ?>">Check requirements &amp; apply</a>
-			</div>
-		</section>
+			<section class="wrrapd-wrapstars-faq-dd">
+				<h2 class="wrrapd-wrapstars-section-title">Quick answers</h2>
+				<details class="wrrapd-wrapstars-faq-dd__item">
+					<summary>Do I wrap the gifts?</summary>
+					<p>No — WrapStars wrap. Drivers pick up and deliver the finished gift.</p>
+				</details>
+				<details class="wrrapd-wrapstars-faq-dd__item">
+					<summary>How long does applying take?</summary>
+					<p>About five minutes. We typically review within seven days.</p>
+				</details>
+				<details class="wrrapd-wrapstars-faq-dd__item">
+					<summary>Looking to wrap instead?</summary>
+					<p><a href="<?php echo esc_url( wrrapd_drivers_apply_url( '/apply/' ) ); ?>">Apply to become a WrapStar</a>.</p>
+				</details>
+			</section>
+
+			<section class="wrrapd-wrapstars-dasher-box wrrapd-wrapstars-dasher-box--wide" style="text-align:center;">
+				<h2 class="wrrapd-wrapstars-section-title" style="margin-bottom:0.75rem;">Ready when you are</h2>
+				<p style="margin:0 0 1.25rem;">Start your Driver application today.</p>
+				<a class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--xl" href="<?php echo esc_url( $apply ); ?>">Apply to drive</a>
+			</section>
+		</div>
 	</div>
 	<?php
 	return ob_get_clean();
@@ -1218,20 +1314,25 @@ function wrrapd_drivers_shortcode_landing() {
 function wrrapd_drivers_shortcode_thankyou() {
 	ob_start();
 	?>
-	<div class="wrrapd-wrapstars wrrapd-drivers">
+	<div class="wrrapd-wrapstars wrrapd-drivers wrrapd-wrapstars-dasher">
 		<section class="wrrapd-wrapstars-dasher-apply-head">
 			<p class="wrrapd-wrapstars-dasher-kicker">Application received</p>
 			<h1>Thank you for applying</h1>
-			<p class="wrrapd-wrapstars-dasher-lead">We have received your Driver application. We will be in touch within about <strong>7 days</strong>. Watch for email from <strong><?php echo esc_html( wrrapd_drivers_from_email_address() ); ?></strong>.</p>
+			<p class="wrrapd-wrapstars-dasher-lead">We have received your JoyRider application. We will be in touch within about <strong>7 days</strong>. Watch for email from <strong><?php echo esc_html( wrrapd_drivers_from_email_address() ); ?></strong>.</p>
 		</section>
-		<div class="wrrapd-wrapstars-card">
+		<div class="wrrapd-wrapstars-card wrrapd-wrapstars-dasher-thanks wrrapd-wrapstars-dasher-thanks--celebrate">
 			<ul>
 				<li>Your application is <strong>under review</strong>.</li>
+				<li>Decisions are typically made within <strong>about 7 days</strong>.</li>
 				<li>We may contact you for a brief interview.</li>
-				<li>If approved, you will receive login credentials for Driver onboarding.</li>
+				<li>If approved, you will receive login credentials to start JoyRider onboarding.</li>
 			</ul>
-			<p><a href="<?php echo esc_url( wrrapd_drivers_apply_url( '/driver/' ) ); ?>">Back to Drivers</a>
-			· <a href="<?php echo esc_url( wrrapd_drivers_apply_url( '/' ) ); ?>">WrapStar applications</a></p>
+			<p class="wrrapd-wrapstars-dasher-thanks__note">There is no login until you are approved — we will email you when it is time.</p>
+			<div class="wrrapd-wrapstars-thanks-actions">
+				<a class="wrrapd-wrapstars-btn" href="<?php echo esc_url( wrrapd_drivers_apply_url( '/drive/' ) ); ?>">Back to JoyRider home</a>
+				<a class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--ghost" href="<?php echo esc_url( wrrapd_drivers_apply_url( '/' ) ); ?>">WrapStar applications</a>
+				<a class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--ghost" href="https://wrrapd.com/">Visit wrrapd.com</a>
+			</div>
 		</div>
 	</div>
 	<?php
@@ -1386,7 +1487,7 @@ function wrrapd_drivers_admin_page() {
 		)
 	);
 	echo '<div class="wrap"><h1>Driver Applications</h1>';
-	echo '<p>Day-to-day hiring: Command Center → Applications (Driver filter). Portal: <strong>apply.wrrapd.com/driver/</strong> · onboarding <strong>pros.wrrapd.com/driver-onboarding/</strong></p>';
+	echo '<p>Day-to-day hiring: Command Center → Applications (Driver filter). Portal: <strong>apply.wrrapd.com/drive/</strong> · onboarding <strong>pros.wrrapd.com/driver-onboarding/</strong></p>';
 	echo '<table class="widefat striped"><thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Status</th><th>Submitted</th></tr></thead><tbody>';
 	foreach ( $posts as $p ) {
 		echo '<tr><td>' . (int) $p->ID . '</td><td>' . esc_html( wrrapd_drivers_get_meta( $p->ID, 'full_name' ) ) . '</td><td>' . esc_html( wrrapd_drivers_get_meta( $p->ID, 'email' ) ) . '</td><td>' . esc_html( wrrapd_drivers_get_meta( $p->ID, 'status' ) ) . '</td><td>' . esc_html( wrrapd_drivers_get_meta( $p->ID, 'submitted_at' ) ) . '</td></tr>';

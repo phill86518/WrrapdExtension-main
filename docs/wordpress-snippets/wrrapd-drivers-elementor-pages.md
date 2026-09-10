@@ -2,17 +2,18 @@
   Drivers portal — Elementor page shortcodes (same WP install as WrapStars)
 
   ONE WordPress; apply.wrrapd.com + pros.wrrapd.com → same document root.
-  All Driver page slugs use a driver- prefix (except parent landing slug "driver").
+  Public name: **JoyRider**. Code / slugs still say driver. Parent landing slug is `drive`
+  (live) or `driver` (legacy). The apply form redirects to `/drive/driver-thank-you/`.
 
   === apply.wrrapd.com pages ===
 
   | Permalink                         | Example title           | Shortcode                 |
   |-----------------------------------|-------------------------|---------------------------|
-  | /driver/                          | Drive with Wrrapd       | [wrrapd_driver_landing]   |
-  | /driver/driver-apply/             | Driver Apply            | [wrrapd_driver_apply]     |
-  | /driver/driver-thank-you/         | Driver Thank You        | [wrrapd_driver_thankyou]  |
-  | /driver-login/                    | Driver Login            | [wrrapd_driver_login]     |
-  | /driver-decline/                  | Decline Driver          | [wrrapd_driver_decline]   |
+  | /drive/                           | Become a JoyRider       | [wrrapd_driver_landing]   |
+  | /drive/driver-apply/              | JoyRider Apply          | [wrrapd_driver_apply]     |
+  | /drive/driver-thank-you/          | JoyRider Thank You      | [wrrapd_driver_thankyou]  |  **required — do not put the landing shortcode here** |
+  | /drive/driver-login/              | JoyRider Login          | [wrrapd_driver_login]     |
+  | /drive/decline-driver/            | Decline invitation      | [wrrapd_driver_decline]   |
 
   Parent for apply + thank-you: page with slug `driver`.
   Login + decline: top-level (no parent).

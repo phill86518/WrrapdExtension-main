@@ -478,6 +478,7 @@ function wrrapd_wrapstars_ops_application_action( $request ) {
 					? (string) ( $body['adminNotes'] ?? $body['admin_notes'] ?? '' )
 					: null,
 				'reject_reason' => (string) ( $body['rejectReason'] ?? $body['reject_reason'] ?? '' ),
+				'bg_status'     => (string) ( $body['bgStatus'] ?? $body['bg_status'] ?? '' ),
 			),
 			static function ( $v ) {
 				return $v !== null;

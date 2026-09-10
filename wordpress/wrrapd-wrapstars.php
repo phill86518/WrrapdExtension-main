@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_WRAPSTARS_BUILD', '2026-09-09-wrapstars-refresh' );
+define( 'WRRAPD_WRAPSTARS_BUILD', '2026-09-09-thankyou-joyrider' );
 /** Approval / re-invite onboarding credentials remain valid this many days. */
 define( 'WRRAPD_WRAPSTARS_INVITE_TTL_DAYS', 15 );
 
@@ -191,6 +191,8 @@ add_filter( 'pre_get_document_title', 'wrrapd_wrapstars_pre_get_document_title',
 add_filter( 'option_blogname', 'wrrapd_wrapstars_filter_blogname' );
 add_filter( 'option_blogdescription', 'wrrapd_wrapstars_filter_blogdescription' );
 add_filter( 'oembed_response_data', 'wrrapd_wrapstars_oembed_response_data', 20, 4 );
+add_filter( 'the_content', 'wrrapd_wrapstars_force_path_shortcode_content', 999 );
+add_filter( 'elementor/frontend/the_content', 'wrrapd_wrapstars_force_path_shortcode_content', 999 );
 
 add_shortcode( 'wrrapd_wrapstar_landing', 'wrrapd_wrapstars_shortcode_landing' );
 add_shortcode( 'wrrapd_wrapstar_apply', 'wrrapd_wrapstars_shortcode_apply' );
@@ -339,16 +341,20 @@ function wrrapd_wrapstars_social_card_for_path( $path, $title = '' ) {
 	);
 
 	if ( preg_match( '#^/drive(/|$)#', $path ) || preg_match( '#^/driver#', $path ) ) {
-		$card['title']       = 'Drive with Wrrapd';
-		$card['description'] = 'Deliver wrapped gifts on your schedule. Apply to become a Wrrapd Driver — launching in Florida & Georgia.';
+		$card['title']       = 'Become a JoyRider';
+		$card['description'] = 'Deliver wrapped gifts on your schedule. Apply to become a Wrrapd JoyRider — launching in Florida & Georgia.';
+		$card['image']       = $logo;
+	} elseif ( preg_match( '#^/thank-you(/|$)#', $path ) ) {
+		$card['title']       = 'Thank you for applying';
+		$card['description'] = 'We received your WrapStar application. We will be in touch within about seven days.';
 		$card['image']       = $logo;
 	} elseif ( preg_match( '#^/apply(/|$)#', $path ) ) {
 		$card['title']       = 'Apply to become a WrapStar';
 		$card['description'] = 'Start your WrapStar application — wrap beautiful gifts from home and get paid for your craft.';
 		$card['image']       = $wrap;
-	} elseif ( preg_match( '#^/(onboarding|login|thank-you|status|profile|driver-onboarding)#', $path ) ) {
+	} elseif ( preg_match( '#^/(onboarding|login|status|profile|driver-onboarding)#', $path ) ) {
 		$card['title']       = 'Wrrapd Applications';
-		$card['description'] = 'WrapStar and Driver applications for Wrrapd.';
+		$card['description'] = 'WrapStar and JoyRider applications for Wrrapd.';
 		$card['image']       = $logo;
 	} elseif ( $path === '/' ) {
 		$card['title']       = 'Become a WrapStar';
@@ -1241,6 +1247,25 @@ function wrrapd_wrapstars_host_routing() {
 			}
 		}
 	}
+}
+
+/**
+ * Dedicated confirmation pages must never show the landing / apply form.
+ * The live /thank-you/ page was a WordPress page titled "Thank you!" that still
+ * contained [wrrapd_wrapstar_landing]. This filter wins regardless of Elementor.
+ *
+ * @param string $content Existing page content.
+ * @return string
+ */
+function wrrapd_wrapstars_force_path_shortcode_content( $content ) {
+	if ( is_admin() || ! wrrapd_wrapstars_is_portal_host() ) {
+		return $content;
+	}
+	$path = wrrapd_wrapstars_request_path();
+	if ( preg_match( '#^/thank-you(/|$)#', $path ) ) {
+		return do_shortcode( '[wrrapd_wrapstar_thankyou]' );
+	}
+	return $content;
 }
 
 function wrrapd_wrapstars_body_class( $classes ) {
@@ -2755,8 +2780,8 @@ function wrrapd_wrapstars_output_theme_cleanup_css() {
 	echo '#wpadminbar,html #wpadminbar,body #wpadminbar,body.wrrapd-wrapstars-portal #wpadminbar{display:none!important;visibility:hidden!important;opacity:0!important;height:0!important;max-height:0!important;overflow:hidden!important;pointer-events:none!important;}';
 	echo 'body.wrrapd-wrapstars-portal .edit-link,body.wrrapd-wrapstars-portal .post-edit-link,body.wrrapd-wrapstars-portal .wp-block-post-edit-link{display:none!important;}';
 	echo 'body.wrrapd-wrapstars-portal,body.wrrapd-wrapstars-portal button,body.wrrapd-wrapstars-portal input,body.wrrapd-wrapstars-portal select,body.wrrapd-wrapstars-portal textarea,body.wrrapd-wrapstars-portal label,body.wrrapd-wrapstars-portal a,body.wrrapd-wrapstars-portal p,body.wrrapd-wrapstars-portal li,body.wrrapd-wrapstars-portal h1,body.wrrapd-wrapstars-portal h2,body.wrrapd-wrapstars-portal h3{font-family:Fraunces,Georgia,serif!important;}';
-	echo 'body.wrrapd-wrapstars-portal header.wp-block-template-part,body.wrrapd-wrapstars-portal footer.wp-block-template-part{display:none!important;height:0!important;overflow:hidden!important;margin:0!important;padding:0!important;}';
-	echo 'body.wrrapd-wrapstars-portal .wp-block-site-title,body.wrrapd-wrapstars-portal nav.wp-block-navigation,body.wrrapd-wrapstars-portal .wp-block-post-title,body.wrrapd-wrapstars-portal .entry-header,body.wrrapd-wrapstars-portal h1.wp-block-post-title{display:none!important;height:0!important;margin:0!important;padding:0!important;}';
+	echo 'body.wrrapd-wrapstars-portal header.wp-block-template-part,body.wrrapd-wrapstars-portal footer.wp-block-template-part,body.wrrapd-wrapstars-portal header.wp-block-group,body.wrrapd-wrapstars-portal header:not(.wrrapd-wrapstars-site-header):not(.wrrapd-wrapstars-ob-topbar),body.wrrapd-wrapstars-portal .wp-site-blocks>header{display:none!important;height:0!important;overflow:hidden!important;margin:0!important;padding:0!important;}';
+	echo 'body.wrrapd-wrapstars-portal .wp-block-site-title,body.wrrapd-wrapstars-portal nav.wp-block-navigation,body.wrrapd-wrapstars-portal nav.wp-block-navigation-submenu,body.wrrapd-wrapstars-portal .wp-block-navigation__responsive-container,body.wrrapd-wrapstars-portal #site-navigation,body.wrrapd-wrapstars-portal .wp-block-post-title,body.wrrapd-wrapstars-portal .entry-header,body.wrrapd-wrapstars-portal h1.wp-block-post-title{display:none!important;height:0!important;margin:0!important;padding:0!important;}';
 	echo 'body.wrrapd-wrapstars-portal .wp-block-template-part,body.wrrapd-wrapstars-portal .powered-by,body.wrrapd-wrapstars-portal a[href*="wordpress.org"]{display:none!important;}';
 	echo 'body.wrrapd-wrapstars-portal,body.wrrapd-wrapstars-portal .wp-site-blocks,body.wrrapd-wrapstars-portal article,body.wrrapd-wrapstars-portal .type-page{padding:0!important;margin:0!important;}';
 	echo 'body.wrrapd-wrapstars-portal .wp-site-blocks{padding-top:0!important;margin-top:0!important;gap:0!important;}';
@@ -2902,8 +2927,8 @@ function wrrapd_wrapstars_landing_content() {
 		),
 		'drivers'   => array(
 			'title' => 'Prefer to be on the road?',
-			'text'  => 'Wrrapd also welcomes local Drivers who pick up finished gifts and deliver them to the door — a separate role from gift-wrapping.',
-			'cta'   => 'Driver applications',
+			'text'  => 'Wrrapd also welcomes local JoyRiders who pick up finished gifts and deliver them to the door — a separate role from gift-wrapping.',
+			'cta'   => 'JoyRider applications',
 		),
 		'final_cta' => array(
 			'title' => 'Ready to become a WrapStar?',
@@ -3040,7 +3065,10 @@ function wrrapd_wrapstars_shortcode_thankyou() {
 				<li>If approved, you'll receive <strong>login credentials</strong> and a link to start onboarding.</li>
 			</ul>
 			<p class="wrrapd-wrapstars-dasher-thanks__note">There is no login until you are approved — we'll email you when it's time.</p>
-			<p><a class="wrrapd-wrapstars-btn" href="<?php echo esc_url( wrrapd_wrapstars_apply_url( '/' ) ); ?>">Back to home</a></p>
+			<div class="wrrapd-wrapstars-thanks-actions">
+				<a class="wrrapd-wrapstars-btn" href="<?php echo esc_url( wrrapd_wrapstars_apply_url( '/' ) ); ?>">Back to WrapStar home</a>
+				<a class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--ghost" href="https://wrrapd.com/">Visit wrrapd.com</a>
+			</div>
 		</div>
 	</div>
 	<?php

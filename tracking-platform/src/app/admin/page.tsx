@@ -19,7 +19,7 @@ const MODULES = [
   {
     href: "/admin/orders",
     title: "Orders",
-    body: "Active, scheduled, delinquent, and past boards — WrapStar + Driver assignment.",
+    body: "Active, scheduled, delinquent, and past boards — WrapStar + JoyRider assignment.",
   },
   {
     href: "/admin/orders/calendar",
@@ -29,7 +29,7 @@ const MODULES = [
   {
     href: "/admin/applications",
     title: "Applications",
-    body: "Review, interview, approve, and activate WrapStar applicants.",
+    body: "Review, interview, approve, and activate WrapStar and JoyRider applicants.",
   },
   {
     href: "/admin/wrapstars",
@@ -38,7 +38,7 @@ const MODULES = [
   },
   {
     href: "/admin/drivers",
-    title: "Drivers",
+    title: "JoyRiders",
     body: "Couriers (IDs start with 7). Demo: Devon 7260981201, Morgan 7261090301. App: /courier",
   },
   {

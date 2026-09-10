@@ -5,7 +5,7 @@
 > section may appear on `apply.wrrapd.com`, `pros.wrrapd.com`, `wrrapd.com`, in emails, or in any
 > customer- or applicant-facing string. See "Public-copy rules" below before editing any copy.
 
-Last updated: 2026-09-09 (landing refresh + onboarding portal completion).
+Last updated: 2026-09-09 (JoyRider public name + dedicated thank-you pages).
 
 ---
 
@@ -19,8 +19,8 @@ up, does the work, and delivers it. Wrrapd is an **aggregator + router**:
 2. Wrrapd **routes each order intelligently** (ZIP proximity, load, rank — see
    `tracking-platform/src/lib/allocation.ts`) to:
    - a **WrapStar** (independent gift-wrapper, 1099) for the wrapping work, and/or
-   - a **Driver** (independent courier, 1099) for logistics and floral work.
-3. **Drivers** own every physical hop and are the *only* role that ever meets the end customer:
+   - a **JoyRider** (internal code still says Driver / courier; 1099) for logistics and floral work.
+3. **JoyRiders** own every physical hop and are the *only* role that ever meets the end customer:
    1. collect inbound retailer packages from Wrrapd **PO Boxes**;
    2. **drop packages to the assigned WrapStar** at a scheduled handoff window;
    3. **purchase flowers** when an order requires them;
@@ -29,17 +29,17 @@ up, does the work, and delivers it. Wrrapd is an **aggregator + router**:
    5. **make the final delivery** to the giftee.
 4. **WrapStars never see or contact the customer/giftee.** They receive packages at their
    wrapping location, wrap to Wrrapd standards, document the work (photo/video), and hand the
-   finished gifts back to the Driver.
+   finished gifts back to the JoyRider.
 
 ### Consequences the product must respect
 
 | Topic | Rule | Where it shows up |
 |---|---|---|
-| Tips | WrapStars **cannot receive tips** today (restaurant analogy: the chef does not get the table's tip; the wait-staff/Driver does). A WrapStar tip-sharing feature may come later. **Do not mention tips anywhere on WrapStar pages.** | Landing, apply, onboarding, emails |
-| Pay | WrapStar pay is a **share of the gift-wrap (and custom design) revenue** after Wrrapd's platform take (defaults 28% wrap / 15% flowers — flowers are Driver-side). Per-WrapStar overrides exist in Command Center → WrapStars → detail. **Never publish percentages, "base pay", "peak bonuses", or "see the payout before you accept."** Public copy says only "paid per completed order, on a regular schedule; details during onboarding." | `tracking-platform/src/lib/finance.ts`, `admin/finance`, `admin/wrapstars/[id]` |
+| Tips | WrapStars **cannot receive tips** today (restaurant analogy: the chef does not get the table's tip; the wait-staff / JoyRider does). A WrapStar tip-sharing feature may come later. **Do not mention tips anywhere on WrapStar pages.** | Landing, apply, onboarding, emails |
+| Pay | WrapStar pay is a **share of the gift-wrap (and custom design) revenue** after Wrrapd's platform take (defaults 28% wrap / 15% flowers — flowers are JoyRider-side). Per-WrapStar overrides exist in Command Center → WrapStars → detail. **Never publish percentages, "base pay", "peak bonuses", or "see the payout before you accept."** Public copy says only "paid per completed order, on a regular schedule; details during onboarding." | `tracking-platform/src/lib/finance.ts`, `admin/finance`, `admin/wrapstars/[id]` |
 | Delivery / pickup | WrapStars do **not** drive, deliver, pick up from PO Boxes, or hand off to carriers. Public copy: "packages are brought to you and collected when you're done — no driving." | Landing FAQ/how-it-works, apply form (delivery questions removed), orientation |
-| PO Boxes | PO Boxes are a **Driver** concern. WrapStar onboarding no longer has a "PO Box" step; it has **Wrapping Location & Handoff** (`workspace`). | `wrrapd_wrapstars_onboarding_steps()` |
-| Flowers | Floral sourcing/combination is a **Driver** concern. Do not mention flowers on WrapStar pages. | — |
+| PO Boxes | PO Boxes are a **JoyRider** concern. WrapStar onboarding no longer has a "PO Box" step; it has **Wrapping Location & Handoff** (`workspace`). | `wrrapd_wrapstars_onboarding_steps()` |
+| Flowers | Floral sourcing/combination is a **JoyRider** concern. Do not mention flowers on WrapStar pages. | — |
 | Routing / aggregation | Never describe aggregation, re-routing, allocation logic, ZIP proximity, ranks, or the extension. | — |
 | Turnaround | Public copy may say "tight turnaround — usually same day," framed as a craft standard, not as an ops SLA. | Landing "Hit your window" |
 | Proof | WrapStars document each order with photo/video (chain of custody). Public copy: "share a quick photo or short video of the finished wrap." Internal onboarding may say more (unboxing → wrap → handoff to your Wrrapd courier). | Apply ack, orientation |
@@ -57,8 +57,9 @@ up, does the work, and delivers it. Wrrapd is an **aggregator + router**:
 3. **No tips on WrapStar pages** (see above).
 4. **WrapStars wrap. Full stop.** Do not describe them picking up, delivering, meeting customers, or
    handing off to carriers. Allowed: "packages are brought to you and collected when you're done."
-5. **Drivers pages** may describe pickup + delivery generically ("pick up finished gifts, deliver
-   to the door") but must not describe PO Boxes, floral purchasing, or WrapStar routing.
+5. **JoyRider pages** may describe pickup + delivery generically ("pick up finished gifts, deliver
+   to the door") but must not describe PO Boxes, floral purchasing, or WrapStar routing. Public
+   name is **JoyRider**; URLs and code may still say `/drive/` and `driver`.
 6. **Short, warm, plain labels** in shopper/applicant UI (see `.cursor/rules/customer-facing-copy.mdc`).
 7. **Internal words to avoid in public strings:** Command Center, ops, allocation, allocator, ingest,
    platform take, placeholder, vendor, TBD, BoldSign (use "e-sign"), Checkr/Persona/Stripe
@@ -75,7 +76,7 @@ up, does the work, and delivers it. Wrrapd is an **aggregator + router**:
 | Landing `apply.wrrapd.com/` | `wordpress/wrrapd-wrapstars.php` → `wrrapd_wrapstars_landing_content()` (all copy as arrays) and `wrrapd_wrapstars_shortcode_landing()` (markup) | Edit copy in the content array; markup loops over it |
 | Social / SEO cards | `wrrapd_wrapstars_social_card_for_path()` | og:description per path |
 | Apply form | `wordpress/wrrapd-wrapstars-apply.php` → `wrrapd_wrapstars_shortcode_apply()`; validation in `wrrapd_wrapstars_process_application()`; scoring `wrrapd_wrapstars_compute_fit_score()` | Client wizard: `wordpress/wrrapd-wrapstars-apply.js` (review rows + TIDBITS) |
-| Thank-you page | `wrrapd_wrapstars_shortcode_thankyou()` | |
+| Thank-you page | `wrrapd_wrapstars_shortcode_thankyou()` — forced on `/thank-you/` even if the WP page has the wrong shortcode | WP page should still contain only `[wrrapd_wrapstar_thankyou]` |
 | Approval / invite emails | `wrrapd_wrapstars_send_approval_credentials_email()` | |
 | Onboarding portal | `wrrapd_wrapstars_onboarding_step_registry()` (labels, blurbs, minutes, slugs) + `wrrapd_wrapstars_render_step_*()` | See `docs/WRAPSTAR-ONBOARDING-PORTAL.md` |
 | Orientation content + quiz | `wrrapd_wrapstars_orientation_modules()` / `wrrapd_wrapstars_orientation_questions()` | Quiz answers keyed by `a` |
@@ -91,7 +92,9 @@ no PM2 or Cloud Run restart.
 ## 4. Roles glossary (internal)
 
 - **WrapStar** — independent gift-wrapper. Wraps at their own location. No customer contact. No tips (for now).
-- **Driver** — independent courier. PO Box collection, WrapStar drop/pickup, floral purchase, final delivery. Only customer-facing role.
-- **Command Center** — `tracking-platform` admin (Cloud Run). Applications, WrapStars, Orders, Finance, Pricing.
+- **JoyRider** — **public / Command Center name** (decided 2026-09-09) for the independent courier. Same person as the internal **Driver** role. PO Box collection, WrapStar drop/pickup, floral purchase, final delivery. Only customer-facing role.
+- **Driver** — **code / URL / CPT name only** (`wrrapd-drivers.php`, `/drive/`, `wrrapd_driver_app`, `courierDriverId`, Command Center route `/admin/drivers`). Do not introduce a second CPT. When adding UI copy, say JoyRider.
+- **Command Center** — `tracking-platform` admin (Cloud Run). Applications, WrapStars, JoyRiders (`/admin/drivers`), Orders, Finance, Pricing.
 - **WrapStar Console** — `tracking-platform` `/wrapstar` companion UI (queue, calendar, availability).
+- **JoyRider / courier app** — `tracking-platform` `/courier` (internal route may still say driver).
 - **Portal** — WordPress `apply.wrrapd.com` (public + apply) / `pros.wrrapd.com` (approved-only onboarding).

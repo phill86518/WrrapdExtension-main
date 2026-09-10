@@ -151,6 +151,7 @@ See **[../docs/wordpress-snippets/wrrapd-wrapstars-elementor-pages.md](../docs/w
 |------|------|-----------|
 | Home | `/` | `[wrrapd_wrapstar_landing]` |
 | Apply | `apply` | `[wrrapd_wrapstar_apply]` |
+| Thank you | `thank-you` | `[wrrapd_wrapstar_thankyou]` — **must not** contain the landing shortcode |
 | Dashboard | `dashboard` | `[wrrapd_wrapstar_status]` |
 | WrapStar login | `wrapstar-login` | `[wrrapd_wrapstar_login]` |
 | Decline offer | `decline-offer` | `[wrrapd_wrapstar_decline]` |
