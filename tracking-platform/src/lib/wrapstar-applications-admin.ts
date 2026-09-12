@@ -89,6 +89,8 @@ export type WrapstarApplication = {
   inviteExpiredAt?: string;
   activatedAt: string;
   interviewAt: string;
+  interviewSkipped?: boolean;
+  interviewSkippedAt?: string;
   userId: number;
   createdAt: string;
 };
@@ -182,6 +184,7 @@ export async function getWrapstarApplication(id: number): Promise<WrapstarApplic
 export type ApplicationAction =
   | "interview"
   | "approve"
+  | "approve_without_interview"
   | "reject"
   | "activate"
   | "suspend"

@@ -971,6 +971,9 @@ function wrrapd_wrapstars_render_admin_application_card( $id ) {
 	if ( $fit > 0 ) {
 		echo ' · <strong style="color:#0f0351;">Fit score: ' . (int) $fit . '/100</strong>';
 	}
+	if ( wrrapd_wrapstars_get_meta( $id, 'interview_skipped' ) === '1' ) {
+		echo ' · <span style="color:#6b21a8;">Interview skipped</span>';
+	}
 	echo '</h2>';
 
 	if ( $fit > 0 ) {
@@ -1069,17 +1072,22 @@ function wrrapd_wrapstars_render_admin_application_card( $id ) {
 	if ( $status === 'under_review' ) {
 		echo '<button type="submit" name="wrrapd_ws_admin_action" value="save_notes" class="button">Save notes</button> ';
 		echo '<button type="submit" name="wrrapd_ws_admin_action" value="interview" class="button button-primary">Mark for Zoom interview</button> ';
+		echo '<button type="submit" name="wrrapd_ws_admin_action" value="approve_without_interview" class="button button-primary" onclick="return confirm(\'Approve this WrapStar without an interview? They will receive login credentials immediately.\');">Approve without interview</button> ';
 		echo '<textarea name="reject_reason" placeholder="Rejection reason" rows="2" style="width:100%;margin:8px 0;"></textarea>';
 		echo '<button type="submit" name="wrrapd_ws_admin_action" value="reject" class="button">Reject</button>';
 	}
 	if ( $status === 'interview' ) {
 		echo '<button type="submit" name="wrrapd_ws_admin_action" value="save_notes" class="button">Save notes</button> ';
 		echo '<button type="submit" name="wrrapd_ws_admin_action" value="approve" class="button button-primary">Passed interview — approve for onboarding</button> ';
+		echo '<button type="submit" name="wrrapd_ws_admin_action" value="approve_without_interview" class="button" onclick="return confirm(\'Approve this WrapStar without completing the interview? They will receive login credentials immediately.\');">Approve without interview</button> ';
 		echo '<textarea name="reject_reason" placeholder="Rejection reason" rows="2" style="width:100%;margin:8px 0;"></textarea>';
 		echo '<button type="submit" name="wrrapd_ws_admin_action" value="reject" class="button">Reject</button>';
 	}
 	if ( $status === 'approved' && wrrapd_wrapstars_step_complete( $id, 'w9' ) ) {
-		echo '<button type="submit" name="wrrapd_ws_admin_action" value="activate" class="button button-primary">Activate WrapStar</button>';
+		echo '<button type="submit" name="wrrapd_ws_admin_action" value="activate" class="button button-primary">Activate WrapStar</button> ';
+	}
+	if ( in_array( $status, array( 'approved', 'declined', 'interview', 'rejected' ), true ) ) {
+		echo '<button type="submit" name="wrrapd_ws_admin_action" value="reset_to_review" class="button">Reset to under review (test)</button>';
 	}
 	if ( $status === 'active' ) {
 		echo '<button type="submit" name="wrrapd_ws_admin_action" value="suspend" class="button">Suspend</button>';

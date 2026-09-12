@@ -12,6 +12,8 @@ grouped with time estimates, and the orientation reflects the courier-drop / cou
 
 ## Approval email → first login
 
+Command Center and WP Admin can **Approve without interview** (skip Zoom) or **Passed interview — approve**. Both send the same welcome email from `admin@wrrapd.com`. Skipped interviews are stored as `interview_skipped` on the application.
+
 Command Center **Approve** emails from `admin@wrrapd.com`:
 
 - Welcome / congratulations copy

@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_DRIVERS_BUILD', '2026-07-23-v3' );
+define( 'WRRAPD_DRIVERS_BUILD', '2026-09-12-skip-interview' );
 define( 'WRRAPD_DRIVERS_INVITE_TTL_DAYS', 15 );
 define( 'WRRAPD_DRIVERS_CPT', 'wrrapd_driver_app' );
 
@@ -141,9 +141,13 @@ function wrrapd_drivers_force_thankyou_content( $content ) {
 	if ( is_admin() || ! wrrapd_drivers_is_portal_host() ) {
 		return $content;
 	}
+	// Existing WP page: ID 65, title "Driver Thank You", permalink /drive/driver-thank-you/.
+	if ( is_page( 65 ) || is_page( 'driver-thank-you' ) ) {
+		return do_shortcode( '[wrrapd_driver_thankyou]' );
+	}
 	$uri  = isset( $_SERVER['REQUEST_URI'] ) ? (string) $_SERVER['REQUEST_URI'] : '/';
 	$path = '/' . trim( (string) strtok( $uri, '?' ), '/' );
-	if ( preg_match( '#^/(drive/driver-thank-you|drive/thank-you|driver-thank-you)(/|$)#', $path ) ) {
+	if ( preg_match( '#(drive/driver-thank-you|drive/thank-you|driver/driver-thank-you|driver-thank-you)(/|$)#', $path ) ) {
 		return do_shortcode( '[wrrapd_driver_thankyou]' );
 	}
 	return $content;
@@ -929,7 +933,7 @@ function wrrapd_drivers_reset_application_to_under_review( $app_id ) {
 		return array( 'ok' => false, 'error' => 'Reset is only available from approved, declined, interview, or rejected.' );
 	}
 	wrrapd_drivers_set_meta( $app_id, 'status', 'under_review' );
-	foreach ( array( 'approved_at', 'activated_at', 'interview_at', 'declined_at', 'decline_token', 'rejected_at', 'must_change_password', 'invite_expires_at', 'invite_expired_at' ) as $k ) {
+	foreach ( array( 'approved_at', 'activated_at', 'interview_at', 'interview_skipped', 'interview_skipped_at', 'declined_at', 'decline_token', 'rejected_at', 'must_change_password', 'invite_expires_at', 'invite_expired_at' ) as $k ) {
 		wrrapd_drivers_set_meta( $app_id, $k, '' );
 	}
 	wrrapd_drivers_set_meta( $app_id, 'onboarding_step', 'welcome' );
@@ -1477,6 +1481,20 @@ function wrrapd_drivers_admin_page() {
 	if ( ! current_user_can( 'manage_options' ) ) {
 		return;
 	}
+	if ( isset( $_POST['wrrapd_drv_admin_action'] ) && check_admin_referer( 'wrrapd_drv_admin' ) ) {
+		$app_id = (int) ( $_POST['app_id'] ?? 0 );
+		$action = sanitize_text_field( wp_unslash( $_POST['wrrapd_drv_admin_action'] ) );
+		if ( function_exists( 'wrrapd_drivers_run_admin_action' ) ) {
+			wrrapd_drivers_run_admin_action(
+				$app_id,
+				$action,
+				array(
+					'admin_notes'   => (string) wp_unslash( $_POST['admin_notes'] ?? '' ),
+					'reject_reason' => (string) wp_unslash( $_POST['reject_reason'] ?? '' ),
+				)
+			);
+		}
+	}
 	$posts = get_posts(
 		array(
 			'post_type'      => WRRAPD_DRIVERS_CPT,
@@ -1486,11 +1504,44 @@ function wrrapd_drivers_admin_page() {
 			'order'          => 'DESC',
 		)
 	);
-	echo '<div class="wrap"><h1>Driver Applications</h1>';
-	echo '<p>Day-to-day hiring: Command Center → Applications (Driver filter). Portal: <strong>apply.wrrapd.com/drive/</strong> · onboarding <strong>pros.wrrapd.com/driver-onboarding/</strong></p>';
-	echo '<table class="widefat striped"><thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Status</th><th>Submitted</th></tr></thead><tbody>';
+	echo '<div class="wrap"><h1>JoyRider Applications</h1>';
+	echo '<p>Day-to-day hiring: Command Center → Applications (JoyRider filter). This WP screen can also interview, skip interview, approve, or reject.</p>';
+	echo '<p>Portal: <strong>apply.wrrapd.com/drive/</strong> · onboarding <strong>pros.wrrapd.com/driver-onboarding/</strong></p>';
 	foreach ( $posts as $p ) {
-		echo '<tr><td>' . (int) $p->ID . '</td><td>' . esc_html( wrrapd_drivers_get_meta( $p->ID, 'full_name' ) ) . '</td><td>' . esc_html( wrrapd_drivers_get_meta( $p->ID, 'email' ) ) . '</td><td>' . esc_html( wrrapd_drivers_get_meta( $p->ID, 'status' ) ) . '</td><td>' . esc_html( wrrapd_drivers_get_meta( $p->ID, 'submitted_at' ) ) . '</td></tr>';
+		$id     = (int) $p->ID;
+		$status = (string) wrrapd_drivers_get_meta( $id, 'status' );
+		$notes  = (string) wrrapd_drivers_get_meta( $id, 'admin_notes' );
+		$skip   = wrrapd_drivers_get_meta( $id, 'interview_skipped' ) === '1';
+		echo '<div style="background:#fff;border:1px solid #ccc;padding:16px;margin:12px 0;max-width:960px;">';
+		echo '<h2>' . esc_html( wrrapd_drivers_get_meta( $id, 'full_name' ) ) . ' <small>#' . $id . ' · ' . esc_html( $status ) . '</small>';
+		if ( $skip ) {
+			echo ' · <span style="color:#6b21a8;">Interview skipped</span>';
+		}
+		echo '</h2>';
+		echo '<p>' . esc_html( wrrapd_drivers_get_meta( $id, 'email' ) ) . ' · submitted ' . esc_html( wrrapd_drivers_get_meta( $id, 'submitted_at' ) ) . '</p>';
+		echo '<form method="post">';
+		wp_nonce_field( 'wrrapd_drv_admin' );
+		echo '<input type="hidden" name="app_id" value="' . $id . '" />';
+		echo '<label>Reviewer notes<br/><textarea name="admin_notes" rows="2" style="width:100%;">' . esc_textarea( $notes ) . '</textarea></label><br/>';
+		if ( $status === 'under_review' ) {
+			echo '<button type="submit" name="wrrapd_drv_admin_action" value="save_notes" class="button">Save notes</button> ';
+			echo '<button type="submit" name="wrrapd_drv_admin_action" value="interview" class="button button-primary">Mark for interview</button> ';
+			echo '<button type="submit" name="wrrapd_drv_admin_action" value="approve_without_interview" class="button button-primary" onclick="return confirm(\'Approve this JoyRider without an interview? They will receive login credentials immediately.\');">Approve without interview</button> ';
+			echo '<textarea name="reject_reason" placeholder="Rejection reason" rows="2" style="width:100%;margin:8px 0;"></textarea>';
+			echo '<button type="submit" name="wrrapd_drv_admin_action" value="reject" class="button">Reject</button>';
+		} elseif ( $status === 'interview' ) {
+			echo '<button type="submit" name="wrrapd_drv_admin_action" value="save_notes" class="button">Save notes</button> ';
+			echo '<button type="submit" name="wrrapd_drv_admin_action" value="approve" class="button button-primary">Passed interview — approve</button> ';
+			echo '<button type="submit" name="wrrapd_drv_admin_action" value="approve_without_interview" class="button" onclick="return confirm(\'Approve this JoyRider without completing the interview?\');">Approve without interview</button> ';
+			echo '<textarea name="reject_reason" placeholder="Rejection reason" rows="2" style="width:100%;margin:8px 0;"></textarea>';
+			echo '<button type="submit" name="wrrapd_drv_admin_action" value="reject" class="button">Reject</button>';
+		} elseif ( $status === 'approved' ) {
+			echo '<button type="submit" name="wrrapd_drv_admin_action" value="activate" class="button button-primary">Activate JoyRider</button> ';
+			echo '<button type="submit" name="wrrapd_drv_admin_action" value="reset_to_review" class="button">Reset to under review (test)</button>';
+		} elseif ( in_array( $status, array( 'declined', 'rejected' ), true ) ) {
+			echo '<button type="submit" name="wrrapd_drv_admin_action" value="reset_to_review" class="button">Reset to under review (test)</button>';
+		}
+		echo '</form></div>';
 	}
-	echo '</tbody></table></div>';
+	echo '</div>';
 }

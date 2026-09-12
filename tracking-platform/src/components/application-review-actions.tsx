@@ -117,11 +117,12 @@ export function ApplicationReviewActions({
               <button
                 type="submit"
                 name="action"
-                value="approve"
+                value="approve_without_interview"
                 disabled={busy}
                 className={`${BTN} bg-indigo-700 font-semibold text-white hover:bg-indigo-800`}
+                title="Skip interview and send onboarding credentials now (testing or known applicants)"
               >
-                {pending === "approve" ? "Approving…" : "Approve for onboarding"}
+                {pending === "approve_without_interview" ? "Approving…" : "Approve without interview"}
               </button>
               <button
                 type="submit"
@@ -145,6 +146,16 @@ export function ApplicationReviewActions({
                 className={`${BTN} bg-indigo-700 font-semibold text-white hover:bg-indigo-800`}
               >
                 {pending === "approve" ? "Approving…" : "Passed interview — approve"}
+              </button>
+              <button
+                type="submit"
+                name="action"
+                value="approve_without_interview"
+                disabled={busy}
+                className={`${BTN} border border-indigo-300 bg-indigo-50 font-semibold text-indigo-900 hover:bg-indigo-100`}
+                title="Skip the rest of the interview and send onboarding credentials now"
+              >
+                {pending === "approve_without_interview" ? "Approving…" : "Approve without interview"}
               </button>
               <button
                 type="submit"
@@ -242,8 +253,9 @@ export function ApplicationReviewActions({
       </form>
       <p className="mt-3 text-xs text-slate-500">
         One-shot actions (approve, reject, interview, activate) dim after use and cannot run again from
-        that state. Approve / re-invite emails username, a fresh temporary password, login link, and a
-        Decline link. Declined offers live under{" "}
+        that state. <strong>Approve without interview</strong> skips Zoom and sends onboarding
+        credentials immediately (testing or known applicants). Approve / re-invite emails username, a
+        fresh temporary password, login link, and a Decline link. Declined offers live under{" "}
         <Link className="cursor-pointer underline" href="/admin/applications?status=declined">
           Declined offer
         </Link>

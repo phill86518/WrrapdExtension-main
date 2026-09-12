@@ -53,6 +53,8 @@ export type DriverApplication = {
   inviteExpiredAt?: string;
   activatedAt: string;
   interviewAt: string;
+  interviewSkipped?: boolean;
+  interviewSkippedAt?: string;
   userId: number;
   createdAt: string;
   /** Compat with WrapStar UI fields */

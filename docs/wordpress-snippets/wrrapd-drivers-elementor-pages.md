@@ -11,11 +11,17 @@
   |-----------------------------------|-------------------------|---------------------------|
   | /drive/                           | Become a JoyRider       | [wrrapd_driver_landing]   |
   | /drive/driver-apply/              | JoyRider Apply          | [wrrapd_driver_apply]     |
-  | /drive/driver-thank-you/          | JoyRider Thank You      | [wrrapd_driver_thankyou]  |  **required — do not put the landing shortcode here** |
+  | /drive/driver-thank-you/          | JoyRider Thank You      | [wrrapd_driver_thankyou]  |  **existing page ID 65 — do not create a second thank-you page** |
   | /drive/driver-login/              | JoyRider Login          | [wrrapd_driver_login]     |
   | /drive/decline-driver/            | Decline invitation      | [wrrapd_driver_decline]   |
 
-  Parent for apply + thank-you: page with slug `driver`.
+  JoyRider thank-you is the existing WordPress page **ID 65**
+  (`https://apply.wrrapd.com/drive/driver-thank-you/`, title still
+  “27. Driver Thank You”). In Elementor leave **only** the shortcode
+  `[wrrapd_driver_thankyou]` — delete extra Heading widgets and empty
+  “Drag widget here” containers. Do not create a new thank-you page.
+
+  Parent for apply + thank-you: page with slug `drive` (legacy `driver`).
   Login + decline: top-level (no parent).
 
   WrapStar landing links to /driver/.

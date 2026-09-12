@@ -84,10 +84,22 @@ function wrrapd_drivers_run_admin_action( $app_id, $action, $opts = array() ) {
 		return array( 'ok' => true, 'status' => 'interview' );
 	}
 
+	if ( $action === 'approve_without_interview' ) {
+		$opts['skip_interview'] = '1';
+		$action                 = 'approve';
+	}
+
 	if ( $action === 'approve' ) {
 		$current = (string) wrrapd_drivers_get_meta( $app_id, 'status' );
 		if ( ! in_array( $current, array( 'under_review', 'interview' ), true ) ) {
 			return array( 'ok' => false, 'error' => 'Approve cannot run from status “' . $current . '”.', 'status' => $current );
+		}
+		$skip_interview = ! empty( $opts['skip_interview'] ) || $current === 'under_review';
+		if ( $skip_interview ) {
+			wrrapd_drivers_set_meta( $app_id, 'interview_skipped', '1' );
+			wrrapd_drivers_set_meta( $app_id, 'interview_skipped_at', gmdate( 'c' ) );
+		} else {
+			wrrapd_drivers_set_meta( $app_id, 'interview_skipped', '0' );
 		}
 		wrrapd_drivers_set_meta( $app_id, 'status', 'approved' );
 		wrrapd_drivers_set_meta( $app_id, 'approved_at', gmdate( 'c' ) );
@@ -237,6 +249,8 @@ function wrrapd_drivers_ops_serialize_application( $id ) {
 		'inviteExpiredAt'         => wrrapd_drivers_get_meta( $id, 'invite_expired_at' ),
 		'activatedAt'             => wrrapd_drivers_get_meta( $id, 'activated_at' ),
 		'interviewAt'             => wrrapd_drivers_get_meta( $id, 'interview_at' ),
+		'interviewSkipped'        => wrrapd_drivers_get_meta( $id, 'interview_skipped' ) === '1',
+		'interviewSkippedAt'      => wrrapd_drivers_get_meta( $id, 'interview_skipped_at' ),
 		'userId'                  => (int) wrrapd_drivers_get_meta( $id, 'user_id' ),
 		'createdAt'               => get_post_time( 'c', true, $app ),
 		// Compat fields for shared Admin UI.

@@ -682,17 +682,51 @@ a.wrrapd-ext-cta {
 }
 
 /* =============================================================================
-   FOOTER — breathing room so copyright / social aren’t clipped at the bottom edge.
+   FOOTER — tight vertical stack, especially logo → address (all viewports).
    ============================================================================= */
-.elementor-location-footer {
-	padding-bottom: 1.25rem !important;
+.elementor-location-footer,
+.elementor-6447 {
+	padding-bottom: 0.55rem !important;
 	box-sizing: border-box !important;
 }
 
 .elementor-location-footer .elementor-element-7aa7d62,
 .elementor-6447 .elementor-element.elementor-element-7aa7d62 {
-	padding-bottom: 1.1rem !important;
+	padding-top: 0.65rem !important;
+	padding-bottom: 0.55rem !important;
+	gap: 0.65rem !important;
+	--padding-top: 0.65rem !important;
+	--padding-bottom: 0.55rem !important;
 	box-sizing: border-box !important;
+}
+
+.elementor-location-footer .elementor-element-9545954 > .e-con-inner,
+.elementor-6447 .elementor-element-9545954 > .e-con-inner {
+	gap: 0.08rem !important;
+}
+
+.elementor-location-footer .elementor-element-1101871,
+.elementor-6447 .elementor-element-1101871 {
+	margin: 0 !important;
+	padding: 0 !important;
+}
+
+.elementor-location-footer .elementor-element-1101871 img,
+.elementor-6447 .elementor-element-1101871 img {
+	max-height: 3.1rem !important;
+	width: auto !important;
+	height: auto !important;
+	margin: 0 !important;
+	display: block !important;
+	object-fit: contain !important;
+	object-position: left bottom !important;
+}
+
+.elementor-location-footer .elementor-element-a75f890,
+.elementor-6447 .elementor-element-a75f890 {
+	margin: 0 !important;
+	padding: 0 !important;
+	gap: 0 !important;
 }
 
 /* =============================================================================

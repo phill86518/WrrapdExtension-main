@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_WRAPSTARS_BUILD', '2026-09-09-thankyou-joyrider' );
+define( 'WRRAPD_WRAPSTARS_BUILD', '2026-09-12-skip-interview' );
 /** Approval / re-invite onboarding credentials remain valid this many days. */
 define( 'WRRAPD_WRAPSTARS_INVITE_TTL_DAYS', 15 );
 
@@ -173,6 +173,8 @@ add_action( 'init', 'wrrapd_wrapstars_register_roles' );
 add_action( 'init', 'wrrapd_wrapstars_maybe_handle_posts', 5 );
 add_action( 'admin_menu', 'wrrapd_wrapstars_admin_menu' );
 add_action( 'wp_enqueue_scripts', 'wrrapd_wrapstars_enqueue_assets' );
+add_action( 'wp_enqueue_scripts', 'wrrapd_wrapstars_strip_third_party_chrome', 99999 );
+add_action( 'wp_print_scripts', 'wrrapd_wrapstars_strip_third_party_chrome', 99999 );
 add_action( 'wp_head', 'wrrapd_wrapstars_output_favicon', 3 );
 add_action( 'wp_head', 'wrrapd_wrapstars_output_social_meta', 2 );
 add_action( 'wp_body_open', 'wrrapd_wrapstars_output_portal_header', 5 );
@@ -183,6 +185,7 @@ add_action( 'init', 'wrrapd_wrapstars_block_wp_login_on_portal', 1 );
 add_action( 'admin_init', 'wrrapd_wrapstars_block_wrapstar_wp_admin' );
 add_filter( 'login_redirect', 'wrrapd_wrapstars_login_redirect', 10, 3 );
 add_filter( 'body_class', 'wrrapd_wrapstars_body_class' );
+add_filter( 'language_attributes', 'wrrapd_wrapstars_language_attributes' );
 add_filter( 'show_admin_bar', 'wrrapd_wrapstars_hide_admin_bar', 99999 );
 add_action( 'after_setup_theme', 'wrrapd_wrapstars_force_hide_admin_bar', 100 );
 add_action( 'init', 'wrrapd_wrapstars_strip_admin_bar_hooks', 999 );
@@ -243,32 +246,50 @@ function wrrapd_wrapstars_is_wp_administrator( $user = null ) {
  * WrapStars, Drivers, and other non-staff never see the WP bar.
  */
 function wrrapd_wrapstars_hide_admin_bar( $show ) {
-	if ( ! wrrapd_wrapstars_is_portal_host() ) {
+	if ( is_admin() || ! wrrapd_wrapstars_is_portal_host() ) {
 		return $show;
 	}
-	return wrrapd_wrapstars_is_wp_administrator();
+	// Public apply/pros pages must not reserve the 32px admin-bar gap,
+	// even when an Administrator previews them. Use wp-admin to edit.
+	return false;
 }
 
 /** Belt-and-suspenders for the admin bar on portal hosts. */
 function wrrapd_wrapstars_force_hide_admin_bar() {
-	if ( ! wrrapd_wrapstars_is_portal_host() ) {
+	if ( is_admin() || ! wrrapd_wrapstars_is_portal_host() ) {
 		return;
 	}
-	show_admin_bar( wrrapd_wrapstars_is_wp_administrator() );
+	show_admin_bar( false );
 }
 
 function wrrapd_wrapstars_strip_admin_bar_hooks() {
-	if ( ! wrrapd_wrapstars_is_portal_host() ) {
-		return;
-	}
-	// Leave the bar alone for Administrators.
-	if ( wrrapd_wrapstars_is_wp_administrator() ) {
+	if ( is_admin() || ! wrrapd_wrapstars_is_portal_host() ) {
 		return;
 	}
 	remove_action( 'wp_head', '_admin_bar_bump_cb' );
 	remove_action( 'wp_head', 'wp_admin_bar_header' );
 	remove_action( 'wp_footer', 'wp_admin_bar_render', 1000 );
 	add_filter( 'show_admin_bar', '__return_false', 100000 );
+}
+
+/**
+ * Put the portal class on <html> so admin-bar margin-top:32px can be killed.
+ * body.wrrapd-wrapstars-portal alone cannot override html { margin-top }.
+ *
+ * @param string $output language_attributes() markup.
+ * @return string
+ */
+function wrrapd_wrapstars_language_attributes( $output ) {
+	if ( is_admin() || ! wrrapd_wrapstars_is_portal_host() ) {
+		return $output;
+	}
+	if ( str_contains( $output, 'wrrapd-wrapstars-portal' ) ) {
+		return $output;
+	}
+	if ( preg_match( '/\bclass="/', $output ) ) {
+		return preg_replace( '/\bclass="/', 'class="wrrapd-wrapstars-portal ', $output, 1 );
+	}
+	return trim( $output ) . ' class="wrrapd-wrapstars-portal"';
 }
 
 /**
@@ -856,6 +877,8 @@ function wrrapd_wrapstars_meta_keys() {
 		'orientation_score'   => '',
 		'submitted_at'        => '',
 		'interview_at'        => '',
+		'interview_skipped'   => '',
+		'interview_skipped_at'=> '',
 		'approved_at'         => '',
 		'activated_at'        => '',
 		'rejected_at'         => '',
@@ -1280,6 +1303,9 @@ function wrrapd_wrapstars_body_class( $classes ) {
 	if ( str_contains( $uri, '/onboarding' ) ) {
 		$classes[] = 'wrrapd-wrapstars-onboarding-host';
 	}
+	if ( preg_match( '#/(thank-you|driver-thank-you)(/|$)#', $uri ) ) {
+		$classes[] = 'wrrapd-wrapstars-thankyou-host';
+	}
 	return $classes;
 }
 
@@ -1439,6 +1465,36 @@ add_action( 'wp_ajax_nopriv_wrrapd_ws_places_details', 'wrrapd_wrapstars_ajax_pl
 add_action( 'wp_ajax_wrrapd_ws_places_details', 'wrrapd_wrapstars_ajax_places_details' );
 add_action( 'wp_ajax_nopriv_wrrapd_ws_validate_address', 'wrrapd_wrapstars_ajax_validate_address' );
 add_action( 'wp_ajax_wrrapd_ws_validate_address', 'wrrapd_wrapstars_ajax_validate_address' );
+
+function wrrapd_wrapstars_strip_third_party_chrome() {
+	if ( is_admin() || ! wrrapd_wrapstars_is_portal_host() ) {
+		return;
+	}
+	global $wp_scripts, $wp_styles;
+	$needles = array( 'sg-ai', 'sg_ai', 'sgai', 'ai-studio', 'ai_studio' );
+	if ( $wp_scripts instanceof WP_Scripts ) {
+		foreach ( array_keys( (array) $wp_scripts->registered ) as $handle ) {
+			foreach ( $needles as $needle ) {
+				if ( str_contains( (string) $handle, $needle ) ) {
+					wp_dequeue_script( $handle );
+					wp_deregister_script( $handle );
+					break;
+				}
+			}
+		}
+	}
+	if ( $wp_styles instanceof WP_Styles ) {
+		foreach ( array_keys( (array) $wp_styles->registered ) as $handle ) {
+			foreach ( $needles as $needle ) {
+				if ( str_contains( (string) $handle, $needle ) ) {
+					wp_dequeue_style( $handle );
+					wp_deregister_style( $handle );
+					break;
+				}
+			}
+		}
+	}
+}
 
 function wrrapd_wrapstars_enqueue_assets() {
 	$css = dirname( __FILE__ ) . '/wrrapd-wrapstars.css';
@@ -1604,6 +1660,9 @@ function wrrapd_wrapstars_footer_once() {
 	}
 	$done = true;
 	wrrapd_wrapstars_output_portal_footer();
+	echo '<script id="wrrapd-wrapstars-chrome-strip">';
+	echo '(function(){function wipe(){document.querySelectorAll("footer.wp-block-template-part,.wp-block-template-part[class*=footer],#sg-ai-studio-root,#sg-ai-studio,.sg-ai-studio,[class*=sg-ai],[id*=sg-ai]").forEach(function(n){try{n.remove();}catch(e){}}); } wipe(); if(window.MutationObserver){new MutationObserver(wipe).observe(document.documentElement,{childList:true,subtree:true});}})();';
+	echo '</script>';
 }
 
 // --- POST handlers ---
@@ -2446,6 +2505,8 @@ function wrrapd_wrapstars_reset_application_to_under_review( $app_id ) {
 	wrrapd_wrapstars_set_meta( $app_id, 'approved_at', '' );
 	wrrapd_wrapstars_set_meta( $app_id, 'activated_at', '' );
 	wrrapd_wrapstars_set_meta( $app_id, 'interview_at', '' );
+	wrrapd_wrapstars_set_meta( $app_id, 'interview_skipped', '' );
+	wrrapd_wrapstars_set_meta( $app_id, 'interview_skipped_at', '' );
 	wrrapd_wrapstars_set_meta( $app_id, 'declined_at', '' );
 	wrrapd_wrapstars_set_meta( $app_id, 'decline_token', '' );
 	wrrapd_wrapstars_set_meta( $app_id, 'rejected_at', '' );
@@ -2776,7 +2837,7 @@ function wrrapd_wrapstars_output_theme_cleanup_css() {
 	$done = true;
 	echo '<style id="wrrapd-wrapstars-theme-cleanup">';
 	/* Never reveal WordPress chrome on apply/pros portals — including logged-in admins. */
-	echo 'html.wrrapd-wrapstars-portal,html.wrrapd-wrapstars-portal.admin-bar,body.wrrapd-wrapstars-portal.admin-bar,body.admin-bar{margin-top:0!important;padding-top:0!important;}';
+	echo 'html.wrrapd-wrapstars-portal,html.wrrapd-wrapstars-portal.admin-bar,html:has(body.wrrapd-wrapstars-portal),html:has(body.wrrapd-wrapstars-portal).admin-bar,body.wrrapd-wrapstars-portal.admin-bar,body.admin-bar{margin-top:0!important;padding-top:0!important;}';
 	echo '#wpadminbar,html #wpadminbar,body #wpadminbar,body.wrrapd-wrapstars-portal #wpadminbar{display:none!important;visibility:hidden!important;opacity:0!important;height:0!important;max-height:0!important;overflow:hidden!important;pointer-events:none!important;}';
 	echo 'body.wrrapd-wrapstars-portal .edit-link,body.wrrapd-wrapstars-portal .post-edit-link,body.wrrapd-wrapstars-portal .wp-block-post-edit-link{display:none!important;}';
 	echo 'body.wrrapd-wrapstars-portal,body.wrrapd-wrapstars-portal button,body.wrrapd-wrapstars-portal input,body.wrrapd-wrapstars-portal select,body.wrrapd-wrapstars-portal textarea,body.wrrapd-wrapstars-portal label,body.wrrapd-wrapstars-portal a,body.wrrapd-wrapstars-portal p,body.wrrapd-wrapstars-portal li,body.wrrapd-wrapstars-portal h1,body.wrrapd-wrapstars-portal h2,body.wrrapd-wrapstars-portal h3{font-family:Fraunces,Georgia,serif!important;}';
@@ -2801,6 +2862,9 @@ function wrrapd_wrapstars_output_theme_cleanup_css() {
 	echo 'body.wrrapd-wrapstars-portal .wrrapd-wrapstars-site-header+.wp-site-blocks,body.wrrapd-wrapstars-portal .wrrapd-wrapstars-site-header~.wp-site-blocks,body.wrrapd-wrapstars-portal .wrrapd-wrapstars-site-header+.elementor,body.wrrapd-wrapstars-portal .wrrapd-wrapstars-site-header~.elementor{margin-top:0!important;padding-top:0!important;}';
 	echo 'body.wrrapd-wrapstars-portal .site,body.wrrapd-wrapstars-portal #page{margin:0!important;padding:0!important;}';
 	echo 'body.wrrapd-wrapstars-portal .wrrapd-wrapstars-cinema-hero{margin-top:0!important;}';
+	/* SiteGround AI Agent chat bubble (logged-in front-end) + leftover theme chrome */
+	echo '#sg-ai-studio-root,#sg-ai-studio,.sg-ai-studio,.sgai-widget,.sg-assistant,[class*="sg-ai"],[id*="sg-ai"],[class*="sgai-"],[id*="sgai-"],iframe[src*="ai-studio"],iframe[src*="sg-ai"]{display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important;height:0!important;width:0!important;overflow:hidden!important;}';
+	echo 'body.wrrapd-wrapstars-portal footer.wp-block-template-part,body.wrrapd-wrapstars-portal .wp-block-template-part[class*="footer"],body.wrrapd-wrapstars-portal .powered-by,body.wrrapd-wrapstars-portal .wp-block-site-tagline{display:none!important;height:0!important;margin:0!important;padding:0!important;overflow:hidden!important;}';
 	echo '</style>';
 }
 add_action( 'wp_head', 'wrrapd_wrapstars_output_theme_cleanup_css', 0 );

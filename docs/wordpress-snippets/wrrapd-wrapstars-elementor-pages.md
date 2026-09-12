@@ -10,7 +10,7 @@
   |-------------|--------------------|------------------------------|
   | /           | Become a WrapStar | [wrrapd_wrapstar_landing]    |
   | /apply/     | Apply              | [wrrapd_wrapstar_apply]      |
-  | /thank-you/ | Thank you          | [wrrapd_wrapstar_thankyou]   |  **required — do not put the landing shortcode here** |
+  | /thank-you/ | Thank you          | [wrrapd_wrapstar_thankyou]   |  **page ID 43 — already corrected in WP; MU still overrides this path** |
   | /dashboard/ | My Application     | [wrrapd_wrapstar_status]     |
   | /wrapstar-login/ | WrapStar Login | [wrrapd_wrapstar_login]   |
   | /decline-offer/ | Decline invitation | [wrrapd_wrapstar_decline] |

@@ -8,10 +8,10 @@ Courier Driver hire pipeline parallel to WrapStars. **Same WordPress install** a
 
 | Host / path | Purpose |
 |-------------|---------|
-| **apply.wrrapd.com/driver/** | Driver landing (Flex-inspired) |
-| **apply.wrrapd.com/driver/driver-apply/** | Application form |
-| **apply.wrrapd.com/driver/driver-thank-you/** | Post-submit |
-| **apply.wrrapd.com/driver-login/** | Approved Driver portal login |
+| **apply.wrrapd.com/drive/** | JoyRider landing |
+| **apply.wrrapd.com/drive/driver-apply/** | Application form |
+| **apply.wrrapd.com/drive/driver-thank-you/** | Post-submit (existing WP page **ID 65**) |
+| **apply.wrrapd.com/drive/driver-login/** | Approved JoyRider portal login |
 | **apply.wrrapd.com/driver-decline/** | Decline invitation |
 | **pros.wrrapd.com/driver-onboarding/** | Post-approve onboarding |
 | **Command Center → Applications** | Hire pipeline (role filter: Drivers) |

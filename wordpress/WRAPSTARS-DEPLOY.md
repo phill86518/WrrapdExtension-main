@@ -119,7 +119,7 @@ On **tracking Cloud Run**, set the same secret:
 - `WRRAPD_WRAPSTARS_OPS_API_KEY` = same value
 - `WRRAPD_WRAPSTARS_WP_BASE_URL` = `https://apply.wrrapd.com` (optional; this is the default)
 
-Then open Command Center → **Applications** to interview / approve / reject / activate. Do not use WP Admin for day-to-day hiring.
+Then open Command Center → **Applications** to interview, **approve without interview**, approve after interview, reject, or activate. WordPress → WrapStars has the same skip-interview button as a fallback.
 
 ### Verify MU-plugin loaded
 

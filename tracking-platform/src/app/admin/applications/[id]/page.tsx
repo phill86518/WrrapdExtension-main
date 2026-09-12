@@ -41,7 +41,10 @@ async function actionForm(formData: FormData) {
   const current =
     role === "driver" ? await getDriverApplication(id) : await getWrapstarApplication(id);
   const st = current.status;
-  if (action === "approve" && !["under_review", "interview"].includes(st)) {
+  if (
+    (action === "approve" || action === "approve_without_interview") &&
+    !["under_review", "interview"].includes(st)
+  ) {
     redirect(`/admin/applications/${id}?role=${role}&ok=already_approved`);
   }
   if (action === "interview" && st !== "under_review") {
@@ -153,6 +156,11 @@ export default async function AdminApplicationDetailPage({
           {hireRoleLabel(role)}
         </span>{" "}
         · <span className="font-medium">{app.status}</span>
+        {app.interviewSkipped ? (
+          <span className="ml-1 rounded-full bg-violet-100 px-2 py-0.5 text-xs font-medium text-violet-900">
+            interview skipped
+          </span>
+        ) : null}
         {app.suspended ? " · SUSPENDED" : ""}
         {!isDriver && "fitScore" in app && app.fitScore ? ` · Fit ${app.fitScore}/100` : ""}
         {app.greetingName ? ` · Greets as “${app.greetingName}”` : ""}
@@ -161,8 +169,11 @@ export default async function AdminApplicationDetailPage({
       {okFlash ? (
         <p className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
           Action completed: <strong>{okFlash}</strong>
-          {okFlash === "approve"
+          {okFlash === "approve" || okFlash === "approve_without_interview"
             ? " — welcome email sent with username, temporary password, and a Decline link."
+            : null}
+          {okFlash === "approve_without_interview"
+            ? " Interview was skipped."
             : null}
           {okFlash === "activate"
             ? isDriver

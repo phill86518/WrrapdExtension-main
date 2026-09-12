@@ -110,6 +110,11 @@ function wrrapd_wrapstars_run_admin_action( $app_id, $action, $opts = array() ) 
 		return array( 'ok' => true, 'status' => 'interview' );
 	}
 
+	if ( $action === 'approve_without_interview' ) {
+		$opts['skip_interview'] = '1';
+		$action                 = 'approve';
+	}
+
 	if ( $action === 'approve' ) {
 		$current_status = (string) wrrapd_wrapstars_get_meta( $app_id, 'status' );
 		if ( ! in_array( $current_status, array( 'under_review', 'interview' ), true ) ) {
@@ -118,6 +123,13 @@ function wrrapd_wrapstars_run_admin_action( $app_id, $action, $opts = array() ) 
 				'error' => 'Already approved or closed — approve cannot run again from status “' . $current_status . '”.',
 				'status'=> $current_status,
 			);
+		}
+		$skip_interview = ! empty( $opts['skip_interview'] ) || $current_status === 'under_review';
+		if ( $skip_interview ) {
+			wrrapd_wrapstars_set_meta( $app_id, 'interview_skipped', '1' );
+			wrrapd_wrapstars_set_meta( $app_id, 'interview_skipped_at', gmdate( 'c' ) );
+		} else {
+			wrrapd_wrapstars_set_meta( $app_id, 'interview_skipped', '0' );
 		}
 		wrrapd_wrapstars_set_meta( $app_id, 'status', 'approved' );
 		wrrapd_wrapstars_set_meta( $app_id, 'approved_at', gmdate( 'c' ) );
@@ -346,6 +358,8 @@ function wrrapd_wrapstars_ops_serialize_application( $id ) {
 		'inviteExpiredAt'            => wrrapd_wrapstars_get_meta( $id, 'invite_expired_at' ),
 		'activatedAt'                => wrrapd_wrapstars_get_meta( $id, 'activated_at' ),
 		'interviewAt'                => wrrapd_wrapstars_get_meta( $id, 'interview_at' ),
+		'interviewSkipped'           => wrrapd_wrapstars_get_meta( $id, 'interview_skipped' ) === '1',
+		'interviewSkippedAt'         => wrrapd_wrapstars_get_meta( $id, 'interview_skipped_at' ),
 		'userId'                     => (int) wrrapd_wrapstars_get_meta( $id, 'user_id' ),
 		'createdAt'                  => get_post_time( 'c', true, $app ),
 	);

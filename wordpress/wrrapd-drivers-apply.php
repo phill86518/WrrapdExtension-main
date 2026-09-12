@@ -217,13 +217,13 @@ function wrrapd_drivers_process_application() {
 	$admin .= 'Command Center → Applications (Driver filter)' . "\n";
 	wrrapd_drivers_send_email( wrrapd_drivers_admin_notify_email(), 'New Driver application: ' . $full_name, $admin );
 
-	wp_safe_redirect( wrrapd_drivers_apply_url( '/driver/driver-thank-you/' ) );
+	wp_safe_redirect( wrrapd_drivers_apply_url( '/drive/driver-thank-you/' ) );
 	exit;
 }
 
 function wrrapd_drivers_shortcode_apply() {
 	if ( ! wrrapd_drivers_is_apply_host() ) {
-		return '<p class="wrrapd-wrapstars-alert">Apply at <a href="' . esc_url( wrrapd_drivers_apply_url( '/driver/driver-apply/' ) ) . '">apply.wrrapd.com/driver/driver-apply/</a>.</p>';
+		return '<p class="wrrapd-wrapstars-alert">Apply at <a href="' . esc_url( wrrapd_drivers_apply_url( '/drive/driver-apply/' ) ) . '">apply.wrrapd.com/drive/driver-apply/</a>.</p>';
 	}
 	$errors = $GLOBALS['wrrapd_drv_form_errors'] ?? array();
 	$states = wrrapd_drivers_apply_state_options();
@@ -235,7 +235,7 @@ function wrrapd_drivers_shortcode_apply() {
 			<p class="wrrapd-wrapstars-dasher-kicker">Driver application</p>
 			<h1>Apply to drive with Wrrapd</h1>
 			<p class="wrrapd-wrapstars-dasher-lead">About five minutes. Have your driver license ready to upload.</p>
-			<p><a href="<?php echo esc_url( wrrapd_drivers_apply_url( '/driver/' ) ); ?>">← Back to Drivers</a>
+			<p><a href="<?php echo esc_url( wrrapd_drivers_apply_url( '/drive/' ) ); ?>">← Back to Drivers</a>
 			· <a href="<?php echo esc_url( wrrapd_drivers_apply_url( '/apply/' ) ); ?>">WrapStar application</a></p>
 		</section>
 
