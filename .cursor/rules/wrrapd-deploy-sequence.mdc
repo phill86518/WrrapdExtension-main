@@ -13,7 +13,30 @@ Human-readable **copy-paste blocks** (same order): monorepo **[DEPLOYMENT.md](..
 2. **VM — GitHub push first:** `cd /home/phill/wrrapd-GCP` → `git status` → `git add -A` → `git commit -m "…"` (skip commit if nothing to commit) → `git push origin main`.  
    - Do **not** put `git pull origin main` before this unless the user explicitly asked to merge remote changes onto the VM first.
 3. **VM — Pay / API server (`wrrapd-server`):** Only when **`backend/wrrapd-api-repo/WrrapdServer`** (or its deps) changed — extension-only or tracking-only skips this. Commands: `cd /home/phill/wrrapd-GCP/backend/wrrapd-api-repo/WrrapdServer` → `npm install` → `pm2 restart wrrapd-server` → `curl -sS http://127.0.0.1:8080/health` (optional: `pm2 logs wrrapd-server --lines 80`). This runs on the **GCP VM**, not on Windows.
-4. **VM — Tracking (Cloud Run):** `cd /home/phill/wrrapd-GCP` → set `PROJECT_ID`, `TAG`, `IMAGE` → `gcloud builds submit tracking-platform --tag "$IMAGE" --project "$PROJECT_ID"` → `gcloud run deploy wrrapd-tracking …` → optional `gcloud run services describe … --format='value(status.url)'`.
+4. **VM — Tracking (Cloud Run):** Only when **`tracking-platform/`** changed. **GCP project ID is always the literal `wrrapd-chrome-extension`** — never derive it with `gcloud config get-value project`, never guess, never use `wrrapd-logins` for Cloud Run/Cloud Build. Use exactly this block:
+
+   ```bash
+   cd /home/phill/wrrapd-GCP
+   gcloud config set project wrrapd-chrome-extension
+   PROJECT_ID=wrrapd-chrome-extension
+   TAG=$(git rev-parse --short HEAD)
+   IMAGE="gcr.io/${PROJECT_ID}/wrrapd-tracking:${TAG}"
+   gcloud builds submit tracking-platform --tag "$IMAGE" --project "$PROJECT_ID"
+   gcloud run deploy wrrapd-tracking --image "$IMAGE" --region us-central1 --project "$PROJECT_ID" --allow-unauthenticated
+   gcloud run services describe wrrapd-tracking --region us-central1 --project "$PROJECT_ID" --format='value(status.url)'
+   ```
+
+   Service: `wrrapd-tracking`, region `us-central1`, image `gcr.io/wrrapd-chrome-extension/wrrapd-tracking:<tag>`. Image-only deploy — no `--set-env-vars` (it wipes the service env).
+
+## GCP identifiers (fixed — do not vary)
+
+| Thing | Value |
+|---|---|
+| GCP project for Cloud Run / Cloud Build / GCR (extension, tracking, pay server) | **`wrrapd-chrome-extension`** |
+| Cloud Run service | `wrrapd-tracking` |
+| Cloud Run region | `us-central1` |
+| VM host | `wrrapd-server-1` (`admin_@34.58.136.32`) |
+| Separate IAM-only project (logins) — **not** for deploys | `wrrapd-logins` |
 
 ## After steps 1–4 (Windows — extension build; **not** the GCP VM)
 
