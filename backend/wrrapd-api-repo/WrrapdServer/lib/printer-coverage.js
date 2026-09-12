@@ -69,12 +69,14 @@ function normalizeSite(raw) {
     id = wrapstarId ? `ws-${wrapstarId}` : `manual-${postalCode}-${slug(name) || 'site'}`;
   }
   const printerSize = String(raw.printerSize || '').trim();
+  const printerModel = String(raw.printerModel || '').trim().slice(0, 120);
   return {
     id,
     wrapstarId: wrapstarId || null,
     name: name || (wrapstarId ? `WrapStar ${wrapstarId}` : 'Printer site'),
     postalCode,
     printerSize,
+    printerModel,
     printerLabel: String(raw.printerLabel || '').trim() || printerLabelFor(printerSize),
     active: raw.active !== false,
     source,
@@ -274,6 +276,7 @@ function checkZip(postalCode) {
         name: s.name,
         postalCode: s.postalCode,
         printerSize: s.printerSize,
+        printerModel: s.printerModel,
         printerLabel: s.printerLabel,
         distanceMiles: h.distanceMiles,
       };
@@ -287,7 +290,7 @@ function checkZip(postalCode) {
       const d = zipCentroids.distanceBetweenZipsMiles(zip, s.postalCode);
       if (d == null) continue;
       if (!nearest || d < nearest.distanceMiles) {
-        nearest = { id: s.id, name: s.name, postalCode: s.postalCode, printerLabel: s.printerLabel, distanceMiles: Math.round(d * 10) / 10 };
+        nearest = { id: s.id, name: s.name, postalCode: s.postalCode, printerModel: s.printerModel, printerLabel: s.printerLabel, distanceMiles: Math.round(d * 10) / 10 };
       }
     }
   }

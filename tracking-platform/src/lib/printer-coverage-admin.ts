@@ -15,6 +15,8 @@ export type PrinterSite = {
   name: string;
   postalCode: string;
   printerSize: string;
+  /** Free-text machine, e.g. "Epson SureColor P6570D" */
+  printerModel: string;
   printerLabel: string;
   active: boolean;
   source: "roster" | "manual";
@@ -60,6 +62,7 @@ export type PrinterZipCheck = {
     name: string;
     postalCode: string;
     printerSize: string;
+    printerModel?: string;
     printerLabel: string;
     distanceMiles: number;
   }>;
@@ -67,12 +70,18 @@ export type PrinterZipCheck = {
     id: string;
     name: string;
     postalCode: string;
+    printerModel?: string;
     printerLabel: string;
     distanceMiles: number;
   } | null;
   geo: { zip: string; state: string; county: string } | null;
   knownCentroid: boolean;
 };
+
+/** "Epson SureColor P6570D · 24 inches" style summary for popups and tables. */
+export function printerSummary(site: { printerModel?: string; printerLabel?: string }): string {
+  return [site.printerModel, site.printerLabel].filter(Boolean).join(" · ");
+}
 
 /** Matches WordPress `wrrapd_wrapstars_printer_size_options()` and the pay server. */
 export const PRINTER_SIZE_OPTIONS: Array<{ value: string; label: string }> = [
@@ -128,6 +137,7 @@ export async function upsertPrinterSite(input: {
   name: string;
   postalCode: string;
   printerSize?: string;
+  printerModel?: string;
   active?: boolean;
   source?: "roster" | "manual";
   notes?: string;

@@ -1,6 +1,20 @@
 {
   "radiusMiles": 15,
-  "updatedAt": null,
-  "notes": "Printer sites (WrapStars with large-format printers). Managed from Command Center → Custom-design coverage; roster sites are pushed from the tracking platform on WrapStar activation.",
-  "sites": []
+  "updatedAt": "2026-09-12T19:40:00.000Z",
+  "notes": "Printer sites (WrapStars with large-format printers). Managed from Command Center → Custom-design coverage; roster sites are pushed from the tracking platform on WrapStar activation. HQ (32218) is a permanent manual site.",
+  "sites": [
+    {
+      "id": "hq-32218",
+      "wrapstarId": null,
+      "name": "Wrrapd HQ",
+      "postalCode": "32218",
+      "printerSize": "24",
+      "printerModel": "Epson SureColor P6570D",
+      "printerLabel": "24 inches",
+      "active": true,
+      "source": "manual",
+      "notes": "Headquarters printer — Jacksonville",
+      "updatedAt": "2026-09-12T19:40:00.000Z"
+    }
+  ]
 }

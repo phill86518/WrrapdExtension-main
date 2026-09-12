@@ -49,6 +49,7 @@ async function upsertAction(input: {
   name: string;
   postalCode: string;
   printerSize?: string;
+  printerModel?: string;
   notes?: string;
 }): Promise<ReportResult> {
   "use server";

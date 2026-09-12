@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import {
   PRINTER_SIZE_OPTIONS,
+  printerSummary,
   type PrinterCoverageReport,
   type PrinterSiteReportRow,
   type PrinterZipCheck,
@@ -50,7 +51,14 @@ export function AdminPrinterCoverage({
   initial: PrinterCoverageReport;
   rosterPrinters: RosterPrinter[];
   onSyncRoster: () => Promise<ReportResult>;
-  onUpsert: (input: { id?: string; name: string; postalCode: string; printerSize?: string; notes?: string }) => Promise<ReportResult>;
+  onUpsert: (input: {
+    id?: string;
+    name: string;
+    postalCode: string;
+    printerSize?: string;
+    printerModel?: string;
+    notes?: string;
+  }) => Promise<ReportResult>;
   onRemove: (id: string) => Promise<ReportResult>;
   onSetActive: (id: string, active: boolean) => Promise<ReportResult>;
   onSetRadius: (radiusMiles: number) => Promise<ReportResult>;
@@ -63,7 +71,7 @@ export function AdminPrinterCoverage({
   const [checkZip, setCheckZip] = useState("");
   const [checkResult, setCheckResult] = useState<PrinterZipCheck | null>(null);
   const [coverageFilter, setCoverageFilter] = useState("");
-  const [manual, setManual] = useState({ name: "", postalCode: "", printerSize: "", notes: "" });
+  const [manual, setManual] = useState({ name: "", postalCode: "", printerSize: "", printerModel: "", notes: "" });
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -267,7 +275,7 @@ export function AdminPrinterCoverage({
                         )}
                       </p>
                       <p className="text-sm text-slate-700">
-                        Printer: <strong>{s.printerLabel || "size not recorded"}</strong>
+                        Printer: <strong>{printerSummary(s) || "not recorded"}</strong>
                         {s.notes ? ` · ${s.notes}` : ""}
                       </p>
                       <p className="text-xs text-slate-500">
@@ -388,13 +396,15 @@ export function AdminPrinterCoverage({
                 <ul className="mt-1 list-disc pl-5 text-xs">
                   {checkResult.sites.map((s) => (
                     <li key={s.id}>
-                      {s.name} · {s.postalCode} · {s.printerLabel || "printer"} · {s.distanceMiles} mi
+                      {s.name} · {s.postalCode} · {printerSummary(s) || "printer"} · {s.distanceMiles} mi
                     </li>
                   ))}
                 </ul>
               ) : checkResult.nearestOutOfRange ? (
                 <p className="mt-1 text-xs">
-                  Nearest printer: {checkResult.nearestOutOfRange.name} at {checkResult.nearestOutOfRange.postalCode} (
+                  Nearest printer: {checkResult.nearestOutOfRange.name}
+                  {printerSummary(checkResult.nearestOutOfRange) ? ` (${printerSummary(checkResult.nearestOutOfRange)})` : ""} at{" "}
+                  {checkResult.nearestOutOfRange.postalCode} (
                   {checkResult.nearestOutOfRange.distanceMiles} mi — outside the {checkResult.radiusMiles} mi radius).
                 </p>
               ) : !checkResult.knownCentroid ? (
@@ -425,6 +435,12 @@ export function AdminPrinterCoverage({
               placeholder="Printer ZIP"
               className="rounded-lg border border-slate-300 px-3 py-2 font-mono text-sm"
             />
+            <input
+              value={manual.printerModel}
+              onChange={(e) => setManual({ ...manual, printerModel: e.target.value })}
+              placeholder="Printer model (e.g. Epson SureColor P6570D)"
+              className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            />
             <select
               value={manual.printerSize}
               onChange={(e) => setManual({ ...manual, printerSize: e.target.value })}
@@ -453,10 +469,11 @@ export function AdminPrinterCoverage({
                   name: manual.name.trim(),
                   postalCode: manual.postalCode,
                   printerSize: manual.printerSize || undefined,
+                  printerModel: manual.printerModel.trim() || undefined,
                   notes: manual.notes.trim() || undefined,
                 });
                 applyReport(r, `Added printer site ${manual.name.trim()} at ${manual.postalCode}.`);
-                if (r.ok) setManual({ name: "", postalCode: "", printerSize: "", notes: "" });
+                if (r.ok) setManual({ name: "", postalCode: "", printerSize: "", printerModel: "", notes: "" });
               })
             }
             className="mt-3 rounded-lg bg-emerald-700 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-800 disabled:opacity-50"
@@ -502,7 +519,7 @@ export function AdminPrinterCoverage({
                       </button>
                     </td>
                     <td className="px-3 py-2 text-xs">{countyLabel(s.geo) || "—"}</td>
-                    <td className="px-3 py-2 text-xs">{s.printerLabel || "—"}</td>
+                    <td className="px-3 py-2 text-xs">{printerSummary(s) || "—"}</td>
                     <td className="px-3 py-2 text-xs">{s.source}</td>
                     <td className="px-3 py-2 text-xs">
                       {s.active ? (

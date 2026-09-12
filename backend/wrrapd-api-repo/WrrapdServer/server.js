@@ -607,6 +607,7 @@ app.post('/api/admin/printer-sites/upsert', express.json(), (req, res) => {
             name: body.name,
             postalCode: body.postalCode,
             printerSize: body.printerSize,
+            printerModel: body.printerModel,
             printerLabel: body.printerLabel,
             active: body.active,
             source: body.source,
