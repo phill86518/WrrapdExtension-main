@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_WRAPSTARS_BUILD', '2026-09-12-wrapstar-cta-invite' );
+define( 'WRRAPD_WRAPSTARS_BUILD', '2026-09-12-wrap-trivia' );
 /** Approval / re-invite onboarding credentials remain valid this many days. */
 define( 'WRRAPD_WRAPSTARS_INVITE_TTL_DAYS', 15 );
 
@@ -3054,10 +3054,10 @@ function wrrapd_wrapstars_landing_content() {
 				),
 			),
 		),
-		'final_cta' => array(
-			'title' => 'Your ribbon. Their gasp.',
-			'text'  => 'Join the founding WrapStars in Florida and Georgia — the artists behind the unwrap. Five minutes, and you&rsquo;re in the running.',
-			'cta'   => 'Start your application',
+		'trivia'    => array(
+			'kicker' => 'Gift-wrap trivia',
+			'title'  => 'Wrapping paper was an accident',
+			'text'   => 'In 1917, a Kansas City stationery shop ran out of plain tissue at Christmas and put out leftover envelope linings instead. Shoppers bought every sheet. Decorative gift wrap was born that week &mdash; and the world has been tearing into pretty paper ever since.',
 		),
 	);
 }
@@ -3155,10 +3155,10 @@ function wrrapd_wrapstars_shortcode_landing() {
 				<?php endforeach; ?>
 			</section>
 
-			<section class="wrrapd-wrapstars-dasher-cta wrrapd-wrapstars-dasher-box wrrapd-wrapstars-dasher-box--wide">
-				<h2><?php echo wp_kses_post( $c['final_cta']['title'] ); ?></h2>
-				<p><?php echo wp_kses_post( $c['final_cta']['text'] ); ?></p>
-				<a class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--xl" href="<?php echo esc_url( $apply ); ?>"><?php echo wp_kses_post( $c['final_cta']['cta'] ); ?></a>
+			<section class="wrrapd-wrapstars-dasher-cta wrrapd-wrapstars-dasher-box wrrapd-wrapstars-dasher-box--wide" aria-label="Gift-wrap trivia">
+				<p class="wrrapd-wrapstars-dasher-kicker"><?php echo wp_kses_post( $c['trivia']['kicker'] ); ?></p>
+				<h2><?php echo wp_kses_post( $c['trivia']['title'] ); ?></h2>
+				<p><?php echo wp_kses_post( $c['trivia']['text'] ); ?></p>
 			</section>
 		</div>
 	</div>
