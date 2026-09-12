@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /** Bump when account UI / header polish changes — view-source should contain this string. */
-define( 'WRRAPD_MU_BUILD', '2026-09-10-footer-tight' );
+define( 'WRRAPD_MU_BUILD', '2026-09-12-footer-redesign' );
 
 $wrrapd_seasonal = dirname( __FILE__ ) . '/wrrapd-seasonal-campaigns.php';
 if ( is_readable( $wrrapd_seasonal ) ) {
@@ -1737,9 +1737,14 @@ function wrrapd_output_header_layout_css() {
 	echo '.elementor-location-header .elementor-element-6e478726{display:flex!important;flex-direction:column!important;align-items:flex-start!important;justify-content:center!important;align-self:stretch!important;flex:0 0 24%!important;max-width:24%!important;width:24%!important;min-width:0!important;gap:0!important;margin:0!important;padding:0!important;position:relative!important;z-index:3!important;}';
 	echo '.elementor-location-header .elementor-element-6e478726>*{flex:0 0 auto!important;}';
 	echo '.elementor-location-header .elementor-element-68a38868{margin:0!important;padding:0!important;line-height:0!important;}';
-	echo '.elementor-location-header .elementor-element-68a38868 img{max-width:min(11.5rem,36vw)!important;height:auto!important;width:auto!important;margin:0!important;transform:translate(-.45rem,0)!important;object-position:left center!important;}';
-	echo '.elementor-location-header .elementor-element-1c0d63ad{margin:-.9rem 0 0!important;padding:0!important;line-height:0!important;transform:translate(-.3rem,0)!important;}';
+	echo '.elementor-location-header .elementor-element-68a38868 img{max-width:min(12.4rem,38vw)!important;height:auto!important;width:auto!important;margin:0!important;transform:translate(-.45rem,0)!important;object-position:left center!important;}';
+	echo '.elementor-location-header .elementor-element-1c0d63ad{margin:-1.05rem 0 0!important;padding:0!important;line-height:0!important;transform:translate(-.3rem,0)!important;}';
 	echo '.elementor-location-header .elementor-element-1c0d63ad img{display:block!important;max-width:min(9.9rem,31vw)!important;margin:0!important;transform:none!important;}';
+	/* Customizer "Additional CSS" (wp-custom-css) still pins the guest-home logo to
+	   min(13.5rem,42vw) at (0,4,2). Match its shape and add .elementor-widget so this
+	   wins on specificity rather than on stylesheet order. */
+	echo 'body.home:not(.logged-in) .elementor-location-header .elementor-element-68a38868.elementor-widget img,body.page-id-4857:not(.logged-in) .elementor-location-header .elementor-element-68a38868.elementor-widget img{max-height:none!important;max-width:min(14.6rem,44vw)!important;width:auto!important;height:auto!important;}';
+	echo 'body.logged-in .elementor-location-header .elementor-element-68a38868.elementor-widget img{max-height:clamp(3.5rem,11vmin,5.25rem)!important;width:auto!important;height:auto!important;}';
 	/* Location */
 	echo '.elementor-location-header .elementor-element-1913a20{flex:0 0 19%!important;max-width:19%!important;min-width:0!important;align-self:center!important;margin:0!important;padding:0!important;transform:translateX(-.35rem)!important;position:relative!important;z-index:3!important;}';
 	echo '.elementor-location-header #wrrapd-location,.elementor-location-header #location-text,.elementor-location-header #location-text strong{font-size:clamp(.81rem,1.9vmin,.95rem)!important;line-height:1.25!important;}';
@@ -1825,7 +1830,7 @@ function wrrapd_output_mobile_fullwidth_css() {
 	}
 	echo '<style id="wrrapd-mobile-fullwidth-css">';
 	echo 'html,body{width:100%!important;max-width:100%!important;overflow-x:clip!important;margin:0!important;padding:0!important;}';
-	echo '.elementor,.elementor-4857,.elementor-location-header,.elementor-location-footer,#page,#content,.site,.site-content{width:100%!important;max-width:100%!important;overflow-x:clip!important;box-sizing:border-box!important;}';
+	echo '.elementor,.elementor-4857,.elementor-location-header,.wrrapd-footer,#page,#content,.site,.site-content{width:100%!important;max-width:100%!important;overflow-x:clip!important;box-sizing:border-box!important;}';
 	/* ONLY the outer header row — never every .e-con (that forces brand full-width and centers the logo). */
 	echo '.elementor-location-header .elementor-element-6835e730{width:100%!important;max-width:100%!important;box-sizing:border-box!important;}';
 	echo '.occasion-ticker-shell,.occasion-ticker-panel,.ticker-container,.occasion-ticker{max-width:100%!important;overflow-x:clip!important;box-sizing:border-box!important;}';
@@ -2082,6 +2087,208 @@ function wrrapd_inject_header_cta_rules() {
 	echo '<script>(function(){var re=/add\\s+your\\s+free\\s+chrome\\s+extension\\s+today/i;document.querySelectorAll("a,button,.elementor-button,.elementor-heading-title").forEach(function(el){var t=(el.textContent||"").replace(/\\s+/g," ").trim();if(!re.test(t))return;var wrap=el.closest(".elementor-element,section,div")||el;wrap.style.display="none";});})();</script>';
 }
 add_action( 'wp_head', 'wrrapd_inject_header_cta_rules', 99 );
+
+/**
+ * The WrapStars and Drivers portals are separate hosts that render their own footers.
+ *
+ * @return bool
+ */
+function wrrapd_site_footer_is_suppressed() {
+	if ( is_admin() ) {
+		return true;
+	}
+	if ( function_exists( 'wrrapd_wrapstars_is_portal_host' ) && wrrapd_wrapstars_is_portal_host() ) {
+		return true;
+	}
+	if ( function_exists( 'wrrapd_drivers_is_portal_host' ) && wrrapd_drivers_is_portal_host() ) {
+		return true;
+	}
+	return false;
+}
+
+/**
+ * Footer link groups. The account column follows the login state so members never
+ * see "Create an account". Every URL here is a published page — do not add /faq,
+ * which 404s.
+ *
+ * @return list<array{title:string,links:list<array{label:string,url:string,blank?:bool}>}>
+ */
+function wrrapd_site_footer_columns() {
+	$account = is_user_logged_in()
+		? array(
+			array( 'label' => __( 'Your gift journal', 'wrrapd' ), 'url' => home_url( '/welcome/' ) ),
+			array( 'label' => __( 'My orders', 'wrrapd' ), 'url' => home_url( '/my-orders/' ) ),
+			array( 'label' => __( 'Account settings', 'wrrapd' ), 'url' => home_url( '/account/' ) ),
+		)
+		: array(
+			array( 'label' => __( 'Create an account', 'wrrapd' ), 'url' => home_url( '/register/' ) ),
+			array( 'label' => __( 'Log in', 'wrrapd' ), 'url' => home_url( '/login/' ) ),
+		);
+
+	return array(
+		array(
+			'title' => __( 'Gifting', 'wrrapd' ),
+			'links' => array(
+				array( 'label' => __( 'Top gifting choices', 'wrrapd' ), 'url' => home_url( '/top-gifting-choices/' ) ),
+				array( 'label' => __( 'Stores we wrap for', 'wrrapd' ), 'url' => home_url( '/#wrrapd-retailer-wheels-row' ) ),
+				array( 'label' => __( 'Get the Chrome extension', 'wrrapd' ), 'url' => wrrapd_chrome_extension_install_url(), 'blank' => true ),
+			),
+		),
+		array(
+			'title' => __( 'Your account', 'wrrapd' ),
+			'links' => $account,
+		),
+		array(
+			'title' => __( 'Company', 'wrrapd' ),
+			'links' => array(
+				array( 'label' => __( 'About us', 'wrrapd' ), 'url' => home_url( '/about-us/' ) ),
+				array( 'label' => __( 'Contact us', 'wrrapd' ), 'url' => home_url( '/contact/' ) ),
+			),
+		),
+		array(
+			'title' => __( 'Policies', 'wrrapd' ),
+			'links' => array(
+				array( 'label' => __( 'Terms of use', 'wrrapd' ), 'url' => home_url( '/terms/' ) ),
+				array( 'label' => __( 'Privacy & data', 'wrrapd' ), 'url' => home_url( '/privacy/' ) ),
+				array( 'label' => __( 'Affiliate disclosure', 'wrrapd' ), 'url' => home_url( '/affiliate-disclosure/' ) ),
+				array( 'label' => __( 'Electronic communications', 'wrrapd' ), 'url' => home_url( '/ecomms-policy/' ) ),
+				array( 'label' => __( 'SMS consent', 'wrrapd' ), 'url' => home_url( '/sms-consent/' ) ),
+			),
+		),
+	);
+}
+
+/**
+ * Replaces the Elementor 6447 footer template, which could not hold a mission
+ * statement or this many link groups. Styling lives in wrrapd_output_site_footer_css.
+ */
+function wrrapd_render_site_footer() {
+	static $done = false;
+	if ( $done || wrrapd_site_footer_is_suppressed() ) {
+		return;
+	}
+	$done = true;
+
+	$socials = array(
+		array(
+			'label' => __( 'Wrrapd on Facebook', 'wrrapd' ),
+			'url'   => 'https://www.facebook.com/wrrapd',
+			'path'  => 'M504 256C504 119 393 8 256 8S8 119 8 256c0 123.78 90.69 226.38 209.25 245V327.69h-63V256h63v-54.64c0-62.15 37-96.48 93.67-96.48 27.14 0 55.52 4.84 55.52 4.84v61h-31.28c-30.8 0-40.41 19.12-40.41 38.73V256h68.78l-11 71.69h-57.78V501C413.31 482.38 504 379.78 504 256z',
+		),
+		array(
+			'label' => __( 'Wrrapd on X', 'wrrapd' ),
+			'url'   => 'https://www.x.com/wrrapd',
+			'path'  => 'M389.2 48h70.6L305.6 224.2 487 464H345L233.7 318.6 106.5 464H35.8L200.7 275.5 26.8 48H172.4L272.9 180.9 389.2 48zM364.4 421.8h39.1L151.1 88h-42L364.4 421.8z',
+		),
+	);
+
+	echo '<footer class="wrrapd-footer" role="contentinfo">';
+	echo '<div class="wrrapd-footer__inner">';
+
+	echo '<div class="wrrapd-footer__lead">';
+	echo '<a class="wrrapd-footer__brand" href="' . esc_url( home_url( '/' ) ) . '" rel="home">';
+	echo '<img src="https://wrrapd.com/wp-content/uploads/2025/03/Wrrapd_f-Logo-800-x-458-px.png" width="800" height="458" alt="' . esc_attr__( 'Wrrapd', 'wrrapd' ) . '" loading="lazy" decoding="async" />';
+	echo '</a>';
+	echo '<p class="wrrapd-footer__mission">' . esc_html__( 'We’re on a mission to make every gift worth unwrapping.', 'wrrapd' ) . '</p>';
+	echo '</div>';
+
+	echo '<nav class="wrrapd-footer__nav" aria-label="' . esc_attr__( 'Footer', 'wrrapd' ) . '">';
+	foreach ( wrrapd_site_footer_columns() as $col ) {
+		echo '<div class="wrrapd-footer__col">';
+		echo '<h2 class="wrrapd-footer__heading">' . esc_html( (string) $col['title'] ) . '</h2>';
+		echo '<ul class="wrrapd-footer__list">';
+		foreach ( $col['links'] as $link ) {
+			$blank = ! empty( $link['blank'] ) ? ' target="_blank" rel="noopener"' : '';
+			echo '<li><a href="' . esc_url( (string) $link['url'] ) . '"' . $blank . '>' . esc_html( (string) $link['label'] ) . '</a></li>';
+		}
+		echo '</ul>';
+		echo '</div>';
+	}
+	echo '</nav>';
+
+	echo '<p class="wrrapd-footer__cta"><a href="' . esc_url( wrrapd_chrome_extension_install_url() ) . '" target="_blank" rel="noopener">' . esc_html__( 'Add the free Chrome extension', 'wrrapd' ) . '</a></p>';
+
+	echo '<div class="wrrapd-footer__bar">';
+	echo '<ul class="wrrapd-footer__social">';
+	foreach ( $socials as $s ) {
+		echo '<li><a href="' . esc_url( (string) $s['url'] ) . '" target="_blank" rel="noopener" aria-label="' . esc_attr( (string) $s['label'] ) . '">';
+		echo '<svg viewBox="0 0 512 512" aria-hidden="true" focusable="false"><path d="' . esc_attr( (string) $s['path'] ) . '"/></svg>';
+		echo '</a></li>';
+	}
+	echo '</ul>';
+	echo '<p class="wrrapd-footer__copy">© ' . esc_html( (string) gmdate( 'Y' ) ) . ' ' . esc_html__( 'Wrrapd Inc.; all rights reserved.', 'wrrapd' ) . '</p>';
+	echo '</div>';
+
+	echo '</div>';
+	echo '</footer>';
+}
+add_action( 'wp_footer', 'wrrapd_render_site_footer', 5 );
+
+/**
+ * Footer layout — single source. Also retires the Elementor 6447 template, whose
+ * markup wrrapd_render_site_footer replaces.
+ */
+function wrrapd_output_site_footer_css() {
+	if ( wrrapd_site_footer_is_suppressed() ) {
+		return;
+	}
+	/* Same URL the seasonal plugin uses, so the browser serves one request either way. */
+	echo '<link rel="preconnect" href="https://fonts.googleapis.com" />';
+	echo '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />';
+	echo '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,560;9..144,700&amp;display=swap" />';
+
+	echo '<style id="wrrapd-site-footer-css">';
+	echo '.elementor-location-footer,[data-elementor-type="footer"]{display:none!important;}';
+	echo '.wrrapd-footer{--wf-ink:#fff;--wf-gold:#f7ff00;background:#0f0351;color:var(--wf-ink);margin-top:auto;width:100%;box-sizing:border-box;font-family:"Source Sans 3","Roboto",system-ui,-apple-system,"Segoe UI",sans-serif;}';
+	echo '.wrrapd-footer *{box-sizing:border-box;}';
+	echo '.wrrapd-footer__inner{max-width:78rem;margin:0 auto;padding:clamp(2.25rem,4.5vw,3.5rem) clamp(1.25rem,4vw,3rem) clamp(1.1rem,2vw,1.6rem);}';
+	/* Lead: bigger logo, mission statement underneath — no address. */
+	echo '.wrrapd-footer__lead{margin:0 0 clamp(1.9rem,4vw,2.9rem);}';
+	echo '.wrrapd-footer__brand{display:inline-block;line-height:0;margin:0 0 clamp(.85rem,2vw,1.3rem);}';
+	echo '.wrrapd-footer__brand img{display:block;width:auto;height:auto;max-height:clamp(4.15rem,8.5vw,6.4rem);max-width:100%;}';
+	echo '.wrrapd-footer__mission{margin:0;font-family:"Fraunces","Playfair Display",Georgia,serif;font-weight:700;font-size:clamp(1.55rem,3.6vw,2.6rem);line-height:1.13;letter-spacing:-.015em;color:var(--wf-ink);max-width:24ch;text-wrap:balance;}';
+	/* Link groups */
+	echo '.wrrapd-footer__nav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:clamp(1.4rem,3vw,2.5rem);margin:0 0 clamp(1.75rem,3.5vw,2.5rem);}';
+	echo '.wrrapd-footer__heading{margin:0 0 .95rem;font-family:inherit;font-size:.95rem;font-weight:800;line-height:1.2;color:var(--wf-gold);text-transform:none;}';
+	echo '.wrrapd-footer__list{list-style:none;margin:0;padding:0;}';
+	echo '.wrrapd-footer__list li{margin:0 0 .62rem;}';
+	echo '.wrrapd-footer__list a{display:inline-block;color:var(--wf-ink);font-size:.93rem;font-weight:600;line-height:1.35;text-decoration:none;border-bottom:1px solid transparent;transition:color .15s ease,border-color .15s ease;}';
+	echo '.wrrapd-footer__list a:hover,.wrrapd-footer__list a:focus-visible{color:var(--wf-gold);border-bottom-color:var(--wf-gold);}';
+	/* Extension CTA sits where Etsy puts its app badges. */
+	echo '.wrrapd-footer__cta{margin:0 0 clamp(1.5rem,3vw,2.1rem);}';
+	echo '.wrrapd-footer__cta a{display:inline-flex;align-items:center;gap:.5rem;background:var(--wf-gold);color:#0f0351;font-size:.93rem;font-weight:800;line-height:1;text-decoration:none;padding:.78rem 1.35rem;border-radius:999px;transition:transform .15s ease,box-shadow .15s ease;}';
+	echo '.wrrapd-footer__cta a:hover,.wrrapd-footer__cta a:focus-visible{transform:translateY(-1px);box-shadow:0 .5rem 1.1rem rgba(0,0,0,.28);}';
+	/* Hide the whole row, not just the button, so its margin does not leave a gap. */
+	echo 'html.wrrapd-ext-installed .wrrapd-footer__cta{display:none!important;}';
+	/* Bottom bar */
+	echo '.wrrapd-footer__bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.9rem 1.5rem;border-top:1px solid rgba(255,255,255,.18);padding-top:clamp(.95rem,2vw,1.3rem);}';
+	echo '.wrrapd-footer__social{display:flex;align-items:center;gap:.55rem;list-style:none;margin:0;padding:0;}';
+	echo '.wrrapd-footer__social a{display:inline-flex;align-items:center;justify-content:center;width:2.15rem;height:2.15rem;border-radius:50%;background:rgba(255,255,255,.12);color:var(--wf-ink);transition:background .15s ease,color .15s ease;}';
+	echo '.wrrapd-footer__social a:hover,.wrrapd-footer__social a:focus-visible{background:var(--wf-gold);color:#0f0351;}';
+	echo '.wrrapd-footer__social svg{width:1.02rem;height:1.02rem;fill:currentColor;}';
+	echo '.wrrapd-footer__copy{margin:0;font-size:.82rem;font-weight:600;line-height:1.4;color:rgba(255,255,255,.72);}';
+	/* Tablet: two columns, still comfortable. */
+	echo '@media(max-width:900px){';
+	echo '.wrrapd-footer__nav{grid-template-columns:repeat(2,minmax(0,1fr));gap:1.5rem 1.75rem;}';
+	echo '}';
+	echo '@media(max-width:560px){';
+	echo '.wrrapd-footer__inner{padding:1.9rem 1.15rem 1.1rem;}';
+	echo '.wrrapd-footer__mission{font-size:1.42rem;max-width:26ch;}';
+	echo '.wrrapd-footer__nav{gap:1.35rem 1.1rem;}';
+	echo '.wrrapd-footer__heading{font-size:.88rem;margin-bottom:.7rem;}';
+	echo '.wrrapd-footer__list a{font-size:.86rem;}';
+	echo '.wrrapd-footer__list li{margin-bottom:.5rem;}';
+	echo '.wrrapd-footer__cta a{width:100%;justify-content:center;}';
+	echo '.wrrapd-footer__bar{justify-content:center;text-align:center;}';
+	echo '.wrrapd-footer__copy{width:100%;text-align:center;}';
+	echo '}';
+	echo '@media(prefers-reduced-motion:reduce){';
+	echo '.wrrapd-footer__cta a,.wrrapd-footer__list a,.wrrapd-footer__social a{transition:none;}';
+	echo '.wrrapd-footer__cta a:hover{transform:none;}';
+	echo '}';
+	echo '</style>';
+}
+add_action( 'wp_head', 'wrrapd_output_site_footer_css', 9998 );
 
 /**
  * Keep footer year current and absorb dead Amazon callback route into home.
