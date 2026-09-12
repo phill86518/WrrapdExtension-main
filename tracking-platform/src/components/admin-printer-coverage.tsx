@@ -7,7 +7,7 @@ import {
   type PrinterCoverageReport,
   type PrinterSiteReportRow,
   type PrinterZipCheck,
-} from "@/lib/printer-coverage-admin";
+} from "@/lib/printer-coverage-shared";
 
 type ReportResult = { ok: true; report: PrinterCoverageReport } | { ok: false; error: string };
 type CheckResult = { ok: true; result: PrinterZipCheck } | { ok: false; error: string };
