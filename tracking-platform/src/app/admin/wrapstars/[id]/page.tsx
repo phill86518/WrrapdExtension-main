@@ -6,6 +6,7 @@ import { listOrdersForWrapstar } from "@/lib/data";
 import { findWrapstarById, updateWrapstar } from "@/lib/wrapstar-registry";
 import { getWrapstarProfile, setWrapstarPayoutTakes } from "@/lib/wrapstar-profiles";
 import { normalizeOrderStatus } from "@/lib/types";
+import { PRINTER_SIZE_OPTIONS, trySyncRosterPrinterSites } from "@/lib/printer-coverage-admin";
 import {
   createPayoutBatch,
   formatUsdCents,
@@ -24,6 +25,8 @@ async function updateProfileAction(formData: FormData) {
   const id = String(formData.get("wrapstarId") || "");
   const canDeliver = String(formData.get("canDeliver") || "") === "yes";
   const vehicleRaw = String(formData.get("hasVehicle") || "");
+  const printerRaw = String(formData.get("hasPrinter") || "");
+  const printerSize = String(formData.get("printerSize") || "");
   await updateWrapstar(id, {
     name: String(formData.get("name") || ""),
     homePostalCode: String(formData.get("homePostalCode") || ""),
@@ -34,10 +37,15 @@ async function updateProfileAction(formData: FormData) {
     ...(vehicleRaw === "yes" || vehicleRaw === "no" ? { hasVehicle: vehicleRaw === "yes" } : {}),
     deliveryMaxDistance: String(formData.get("deliveryMaxDistance") || "") || undefined,
     assignedDriverId: String(formData.get("assignedDriverId") || "") || undefined,
+    ...(printerRaw === "yes" || printerRaw === "no" ? { hasPrinter: printerRaw === "yes" } : {}),
+    ...(printerRaw === "yes" ? { printerSize } : printerRaw === "no" ? { printerSize: "" } : {}),
   });
+  // Home ZIP / printer changes move custom-design coverage on api.wrrapd.com.
+  await trySyncRosterPrinterSites(`profile ${id}`);
   revalidatePath(`/admin/wrapstars/${id}`);
   revalidatePath("/admin/wrapstars");
   revalidatePath("/admin/drivers");
+  revalidatePath("/admin/printer-coverage");
 }
 
 async function payoutAction(formData: FormData) {
@@ -188,6 +196,33 @@ export default async function AdminWrapstarDetailPage({
               placeholder="e.g. 15-30"
               className="mt-1 w-full rounded border px-3 py-2"
             />
+          </label>
+          <label className="text-sm">
+            Large-format printer? (unlocks upload / AI designs nearby)
+            <select
+              name="hasPrinter"
+              defaultValue={wrapstar.hasPrinter === true ? "yes" : wrapstar.hasPrinter === false ? "no" : ""}
+              className="mt-1 w-full rounded border px-3 py-2"
+            >
+              <option value="">Unknown</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+            </select>
+          </label>
+          <label className="text-sm">
+            Printer size
+            <select
+              name="printerSize"
+              defaultValue={wrapstar.printerSize || ""}
+              className="mt-1 w-full rounded border px-3 py-2"
+            >
+              <option value="">Select…</option>
+              {PRINTER_SIZE_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
           </label>
           <label className="text-sm">
             Assigned Driver ID (optional)

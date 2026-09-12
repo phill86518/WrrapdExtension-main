@@ -20,6 +20,7 @@ import {
 import type { OnboardingStatus } from "@/lib/types";
 import { normalizeOrderStatus } from "@/lib/types";
 import { formatUsdCents, listEarnings, walletForWrapstar } from "@/lib/finance";
+import { printerSizeLabel, trySyncRosterPrinterSites } from "@/lib/printer-coverage-admin";
 
 export const dynamic = "force-dynamic";
 
@@ -43,8 +44,10 @@ async function deleteAction(formData: FormData) {
   const id = String(formData.get("wrapstarId") || "");
   const res = await deleteWrapstar(id);
   if (res.ok) await unassignDeletedWrapstarOrders(id);
+  await trySyncRosterPrinterSites(`delete ${id}`);
   revalidatePath("/admin/wrapstars");
   revalidatePath("/admin/orders");
+  revalidatePath("/admin/printer-coverage");
 }
 
 async function statusAction(formData: FormData) {
@@ -55,7 +58,10 @@ async function statusAction(formData: FormData) {
   const status = String(formData.get("status") || "pending") as OnboardingStatus;
   const notes = String(formData.get("notes") || "");
   await setOnboardingStatus(id, status, notes);
+  // Approval state gates whether this WrapStar's printer unlocks custom designs.
+  await trySyncRosterPrinterSites(`status ${id}`);
   revalidatePath("/admin/wrapstars");
+  revalidatePath("/admin/printer-coverage");
 }
 
 async function forceDatesAction(formData: FormData) {
@@ -109,7 +115,11 @@ export default async function AdminWrapstarsPage() {
         <Link href="/admin/applications?status=all" className="font-medium text-blue-700 underline">
           Applications
         </Link>
-        — not this page.
+        — not this page. Printer flags feed{" "}
+        <Link href="/admin/printer-coverage" className="font-medium text-blue-700 underline">
+          Custom-design coverage
+        </Link>
+        .
       </p>
 
       <form action={addAction} className="mt-6 grid gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-5">
@@ -136,6 +146,7 @@ export default async function AdminWrapstarsPage() {
               <th className="px-3 py-2">Name</th>
               <th className="px-3 py-2">Home ZIP</th>
               <th className="px-3 py-2">Mode</th>
+              <th className="px-3 py-2">Printer</th>
               <th className="px-3 py-2">Status</th>
               <th className="px-3 py-2">Open orders</th>
               <th className="px-3 py-2">Lifetime</th>
@@ -158,6 +169,20 @@ export default async function AdminWrapstarsPage() {
                     <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-indigo-900">wrap-only</span>
                   ) : (
                     <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-emerald-900">hybrid</span>
+                  )}
+                </td>
+                <td className="px-3 py-3 text-xs">
+                  {w.hasPrinter ? (
+                    <span
+                      className="rounded-full bg-fuchsia-100 px-2 py-0.5 text-fuchsia-900"
+                      title={printerSizeLabel(w.printerSize) || "Large-format printer"}
+                    >
+                      🖨 {printerSizeLabel(w.printerSize) || "printer"}
+                    </span>
+                  ) : w.hasPrinter === false ? (
+                    <span className="text-slate-400">none</span>
+                  ) : (
+                    <span className="text-slate-400">unknown</span>
                   )}
                 </td>
                 <td className="px-3 py-3">

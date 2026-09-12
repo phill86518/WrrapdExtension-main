@@ -8,6 +8,7 @@ export const ADMIN_NAV_LINKS = [
   { href: "/admin/reports", label: "Reports", match: "prefix" as const },
   { href: "/admin/pricing", label: "Checkout pricing", match: "prefix" as const },
   { href: "/admin/zip-codes", label: "Allowed ZIP codes", match: "prefix" as const },
+  { href: "/admin/printer-coverage", label: "Custom-design coverage", match: "prefix" as const },
 ] as const;
 
 export function isAdminNavActive(pathname: string, href: string, match: "exact" | "prefix"): boolean {

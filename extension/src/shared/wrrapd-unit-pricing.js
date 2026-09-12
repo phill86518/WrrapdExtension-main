@@ -11,18 +11,26 @@ export const UNIT_PRICES_FALLBACK = Object.freeze({
 
 const PRICE_REFRESH_TTL_MS = 5 * 60 * 1000;
 
-/** @returns {{ unitPriceOverride: object|null, fetchPromise: Promise<void>|null, lastFetchAt: number, lastGeoKey: string }} */
+/** @returns {{ unitPriceOverride: object|null, fetchPromise: Promise<void>|null, lastFetchAt: number, lastGeoKey: string, customDesignAvailable: boolean }} */
 export function createUnitPricingState() {
   return {
     unitPriceOverride: null,
     fetchPromise: null,
     lastFetchAt: 0,
     lastGeoKey: "",
+    // Custom-design paper (upload / AI) is only offered where a WrapStar printer is in
+    // range of the giftee ZIP. Unknown → false (fail closed).
+    customDesignAvailable: false,
   };
 }
 
 export function getActiveUnitPrices(state) {
   return state?.unitPriceOverride || UNIT_PRICES_FALLBACK;
+}
+
+/** @returns {{ customDesignAvailable: boolean }} */
+export function getUnitPricingCapabilities(state) {
+  return { customDesignAvailable: state?.customDesignAvailable === true };
 }
 
 function normalizePostal5(zip) {
@@ -48,7 +56,7 @@ function unitPricesSessionKey(prefix) {
  * Persist the unit prices the shopper saw after giftee ZIP Submit,
  * so payment summary / Stripe use the same catalog (not Duval fallback).
  */
-export function writePersistedUnitPrices(sessionPrefix, prices, postalCode) {
+export function writePersistedUnitPrices(sessionPrefix, prices, postalCode, capabilities) {
   if (!sessionPrefix || !prices) return;
   const zip = normalizePostal5(postalCode);
   const next = {
@@ -59,6 +67,7 @@ export function writePersistedUnitPrices(sessionPrefix, prices, postalCode) {
       customDesignUpload: Number(prices.customDesignUpload),
       flowers: Number(prices.flowers),
     },
+    customDesignAvailable: capabilities?.customDesignAvailable === true,
     at: Date.now(),
   };
   if (
@@ -73,7 +82,7 @@ export function writePersistedUnitPrices(sessionPrefix, prices, postalCode) {
   }
 }
 
-/** @returns {{ postalCode: string, unitPrices: object, at: number } | null} */
+/** @returns {{ postalCode: string, unitPrices: object, customDesignAvailable: boolean, at: number } | null} */
 export function readPersistedUnitPrices(sessionPrefix) {
   if (!sessionPrefix) return null;
   try {
@@ -94,11 +103,24 @@ export function readPersistedUnitPrices(sessionPrefix) {
     return {
       postalCode: normalizePostal5(parsed.postalCode),
       unitPrices,
+      customDesignAvailable: parsed.customDesignAvailable === true,
       at: Number(parsed.at) || 0,
     };
   } catch {
     return null;
   }
+}
+
+/**
+ * Persisted custom-design availability for the giftee ZIP the shopper confirmed.
+ * Returns false when unknown or when the ZIP no longer matches (fail closed).
+ */
+export function readPersistedCustomDesignAvailability(sessionPrefix, expectedZip) {
+  const data = readPersistedUnitPrices(sessionPrefix);
+  if (!data) return false;
+  const want = normalizePostal5(expectedZip);
+  if (want.length === 5 && data.postalCode && data.postalCode !== want) return false;
+  return data.customDesignAvailable === true;
 }
 
 /**
@@ -112,6 +134,7 @@ export function hydrateUnitPricesFromSession(state, sessionPrefix, expectedZip) 
   const want = normalizePostal5(expectedZip);
   if (want.length === 5 && data.postalCode && data.postalCode !== want) return false;
   state.unitPriceOverride = data.unitPrices;
+  state.customDesignAvailable = data.customDesignAvailable === true;
   return true;
 }
 
@@ -136,11 +159,13 @@ async function refreshUnitPricesFromServer(state, geo, retailer) {
     };
     if (Object.values(next).every((n) => Number.isFinite(n) && n >= 0 && n < 100000)) {
       state.unitPriceOverride = next;
+      state.customDesignAvailable = j?.customDesign?.available === true;
       return true;
     }
   } catch {
     /* fall back to defaults / persisted */
   }
+  state.customDesignAvailable = false;
   return false;
 }
 
@@ -166,7 +191,12 @@ export function ensureUnitPrices(state, geo, retailer, opts = {}) {
         state.lastGeoKey = geoKey;
         state.lastFetchAt = Date.now();
         if (ok && opts.sessionPrefix) {
-          writePersistedUnitPrices(opts.sessionPrefix, state.unitPriceOverride, geo?.postalCode);
+          writePersistedUnitPrices(
+            opts.sessionPrefix,
+            state.unitPriceOverride,
+            geo?.postalCode,
+            getUnitPricingCapabilities(state),
+          );
         }
         return ok;
       })

@@ -240,6 +240,10 @@ export type WrapStar = {
   /** Optional assigned courier for wrap-only WrapStars */
   assignedDriverId?: string;
   metroId?: MetroId;
+  /** Owns a large-format printer → can print custom-design (upload / AI) wrapping paper. */
+  hasPrinter?: boolean;
+  /** Printer size key from the apply form: under24 | 24 | 36 | 44plus */
+  printerSize?: string;
 };
 
 /**

@@ -269,9 +269,13 @@ export function openLegoGiftServiceModal() {
   wrrapdHintWrap.appendChild(wrrapdHintInput);
 
   const wrapLabelSpans = {};
+  const wrapLabelEls = {};
   const wrapRadios = wrapChoices.map(({ value, label }) => {
     const lbl = document.createElement("label");
     lbl.style.cssText = "display:flex;align-items:center;gap:6px;cursor:pointer;margin-bottom:4px;font-size:14px;color:#0f172a;";
+    wrapLabelEls[value] = lbl;
+    // Upload / AI rows stay hidden until the server confirms a printer is in range of the giftee ZIP.
+    if (value !== "wrrapd") lbl.style.display = "none";
     const inp = document.createElement("input");
     inp.type = "radio"; inp.name = "wrrapd-lego-wrap"; inp.value = value;
     inp.addEventListener("change", () => {
@@ -407,6 +411,19 @@ export function openLegoGiftServiceModal() {
     wrrapdHintWrap.style.display = currentWrapPref === "wrrapd" ? "flex" : "none";
     uploadWrap.style.display = currentWrapPref === "upload" ? "block" : "none";
     aiWrap.style.display = currentWrapPref === "ai" ? "block" : "none";
+  };
+
+  // Custom-design paper (upload / AI) only where a WrapStar printer is in range of the giftee ZIP.
+  let customDesignAvailable = false;
+  const applyCustomDesignVisibility = () => {
+    const show = customDesignAvailable === true;
+    if (wrapLabelEls.upload) wrapLabelEls.upload.style.display = show ? "flex" : "none";
+    if (wrapLabelEls.ai) wrapLabelEls.ai.style.display = show ? "flex" : "none";
+    if (!show && (currentWrapPref === "upload" || currentWrapPref === "ai")) {
+      currentWrapPref = "wrrapd";
+      wrapRadios.forEach((r) => { r.checked = r.value === "wrrapd"; });
+    }
+    refreshWrapSubs();
   };
 
   // ── Flowers (live proximity catalog — same as other retailers) ──
@@ -597,7 +614,7 @@ export function openLegoGiftServiceModal() {
     writeValidatedEstimateZip("wrrapdLego", scrapedZip);
   }
 
-  const applyModalPrices = (prices) => {
+  const applyModalPrices = (prices, _zip, capabilities) => {
     const p = prices || getActiveUnitPrices(createUnitPricingState());
     if (wrapLabelSpans.wrrapd) {
       wrapLabelSpans.wrrapd.textContent = `Allow Wrrapd to choose the design — ${formatUsd(p.giftWrapBase)}`;
@@ -609,6 +626,8 @@ export function openLegoGiftServiceModal() {
       wrapLabelSpans.ai.textContent = `Generate a design with AI (+${formatUsd(p.customDesignAi)})`;
     }
     flowersText.textContent = "Add flowers — choose a bouquet below";
+    customDesignAvailable = capabilities?.customDesignAvailable === true;
+    applyCustomDesignVisibility();
   };
 
   const zipBar = mountGifteeZipEstimateBar({
@@ -666,7 +685,8 @@ export function openLegoGiftServiceModal() {
       renderAiResults([currentAiDesign]);
     }
 
-    refreshWrapSubs();
+    // Drops a remembered upload/AI choice when this giftee ZIP has no printer in range.
+    applyCustomDesignVisibility();
 
     // Restore flowers
     currentFlowers = ch.flowers || false;

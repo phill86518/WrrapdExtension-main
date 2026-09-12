@@ -672,6 +672,24 @@ function openGiftChoicesModal(config, cartSnapshot) {
     aiWrap.style.display = currentWrapPref === "ai" ? "block" : "none";
   };
 
+  // Custom-design paper (upload / AI) is only offered when a WrapStar printer is within
+  // range of the giftee ZIP (server decides via pricing-preview). Hidden until confirmed.
+  let customDesignAvailable = false;
+  const applyCustomDesignVisibility = () => {
+    const show = customDesignAvailable === true;
+    uploadRow.style.display = show ? "flex" : "none";
+    aiRow.style.display = show ? "flex" : "none";
+    if (!show && (currentWrapPref === "upload" || currentWrapPref === "ai")) {
+      currentWrapPref = "wrrapd";
+      wrrapdRadio.checked = true;
+      uploadRadio.checked = false;
+      aiRadio.checked = false;
+    }
+    refreshWrapSubs();
+  };
+  uploadRow.style.display = "none";
+  aiRow.style.display = "none";
+
   [wrrapdRadio, uploadRadio, aiRadio].forEach((r) => {
     r.addEventListener("change", () => {
       if (r.checked) {
@@ -864,12 +882,14 @@ function openGiftChoicesModal(config, cartSnapshot) {
   panel.append(title, gatedBody);
   overlay.append(panel);
 
-  const applyModalPrices = (prices) => {
+  const applyModalPrices = (prices, _zip, capabilities) => {
     const p = prices || getActiveUnitPrices(createUnitPricingState());
     wrrapdText.textContent = `Allow Wrrapd to choose the wrapping — ${formatUsd(p.giftWrapBase)}`;
     uploadPriceNote.textContent = `(+${formatUsd(p.customDesignUpload)})`;
     aiPriceNote.textContent = `(+${formatUsd(p.customDesignAi)})`;
     flowersText.textContent = "Add flowers — choose a bouquet below";
+    customDesignAvailable = capabilities?.customDesignAvailable === true;
+    applyCustomDesignVisibility();
   };
 
   const zipBar = mountGifteeZipEstimateBar({
@@ -923,7 +943,8 @@ function openGiftChoicesModal(config, cartSnapshot) {
     aiResults.innerHTML = "";
     if (currentAiDesign) renderDesigns([currentAiDesign]);
 
-    refreshWrapSubs();
+    // Drops a remembered upload/AI choice when this giftee ZIP has no printer in range.
+    applyCustomDesignVisibility();
 
     currentFlowers = ch.flowers || false;
     currentFlowerDesign = ch.flowerDesign || "";

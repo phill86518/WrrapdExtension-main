@@ -87,6 +87,8 @@ function normalizeWrapStar(raw: Partial<WrapStar> & { id?: string; name?: string
     wrapOnly,
     assignedDriverId: raw.assignedDriverId,
     metroId: raw.metroId,
+    ...(raw.hasPrinter === true || raw.hasPrinter === false ? { hasPrinter: raw.hasPrinter } : {}),
+    ...(raw.printerSize ? { printerSize: String(raw.printerSize) } : {}),
   };
 }
 
@@ -254,6 +256,8 @@ export async function addWrapstar(input: {
   deliveryMaxDistance?: string;
   wrapOnly?: boolean;
   metroId?: WrapStar["metroId"];
+  hasPrinter?: boolean;
+  printerSize?: string;
 }): Promise<{ ok: true; wrapstar: WrapStar } | { ok: false; error: string }> {
   const clean = input.name.trim();
   if (!clean) return { ok: false, error: "WrapStar name is required." };
@@ -293,6 +297,8 @@ export async function addWrapstar(input: {
     hasVehicle: input.hasVehicle,
     deliveryMaxDistance: input.deliveryMaxDistance,
     metroId: input.metroId,
+    ...(input.hasPrinter !== undefined ? { hasPrinter: input.hasPrinter } : {}),
+    ...(input.hasPrinter && input.printerSize ? { printerSize: input.printerSize } : {}),
   };
 
   const col = trackingWrapstarsCollection();
@@ -322,6 +328,8 @@ export async function updateWrapstar(
       | "wrapOnly"
       | "assignedDriverId"
       | "metroId"
+      | "hasPrinter"
+      | "printerSize"
     >
   >,
 ): Promise<{ ok: true; wrapstar: WrapStar } | { ok: false; error: string }> {
@@ -355,7 +363,10 @@ export async function updateWrapstar(
       ? { assignedDriverId: patch.assignedDriverId || undefined }
       : {}),
     ...(patch.metroId !== undefined ? { metroId: patch.metroId } : {}),
+    ...(patch.hasPrinter !== undefined ? { hasPrinter: patch.hasPrinter } : {}),
+    ...(patch.printerSize !== undefined ? { printerSize: patch.printerSize || undefined } : {}),
   };
+  if (nextWs.hasPrinter === false) delete nextWs.printerSize;
   if (!nextWs.homePostalCode || nextWs.homePostalCode.length !== 5) {
     return { ok: false, error: "A valid 5-digit home ZIP is required." };
   }

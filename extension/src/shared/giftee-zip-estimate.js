@@ -12,6 +12,7 @@ import {
   createUnitPricingState,
   ensureUnitPrices,
   getActiveUnitPrices,
+  getUnitPricingCapabilities,
   writePersistedUnitPrices,
 } from "./wrrapd-unit-pricing.js";
 import { prefetchFlowersCatalog } from "./flowers-catalog.js";
@@ -145,8 +146,11 @@ export function mountGifteeZipEstimateBar(opts) {
       { sessionPrefix },
     );
     const prices = getActiveUnitPrices(pricingState);
-    writePersistedUnitPrices(sessionPrefix, prices, zip);
-    onPricesReady?.(prices, zip);
+    // Capabilities (e.g. custom-design paper) ride along with the geo prices so every
+    // modal decides "show Upload / AI?" from the same server answer for this ZIP.
+    const capabilities = getUnitPricingCapabilities(pricingState);
+    writePersistedUnitPrices(sessionPrefix, prices, zip, capabilities);
+    onPricesReady?.(prices, zip, capabilities);
     setStatus("");
     ready = true;
     setGatedVisible(true);
@@ -222,6 +226,7 @@ export function mountGifteeZipEstimateBar(opts) {
     root,
     getZip: () => currentZip || (ready ? readValidatedEstimateZip(sessionPrefix) : ""),
     isReady: () => ready && currentZip.length === 5,
+    getCapabilities: () => getUnitPricingCapabilities(pricingState),
     requireValidZip: () => {
       if (ready && currentZip.length === 5) return true;
       setStatus("Please enter the giftee ZIP and click Submit.");

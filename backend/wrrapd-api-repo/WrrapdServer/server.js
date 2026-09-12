@@ -16,6 +16,7 @@ const http = require('http');
 const wrrapdPricing = require(path.join(__dirname, 'lib', 'wrrapd-pricing'));
 const salesTaxZip = require(path.join(__dirname, 'lib', 'sales-tax-zip'));
 const allowedZipCodesLib = require(path.join(__dirname, 'lib', 'allowed-zip-codes'));
+const printerCoverage = require(path.join(__dirname, 'lib', 'printer-coverage'));
 const grokClient = require(path.join(__dirname, 'lib', 'grok-client'));
 const flowerStores = require(path.join(__dirname, 'lib', 'flowers', 'stores'));
 const flowerCatalog = require(path.join(__dirname, 'lib', 'flowers', 'catalog'));
@@ -269,6 +270,12 @@ app.get('/api/pricing-preview', (req, res) => {
         .slice(0, 5) || '32226';
     let estimatedSalesTaxPercent = salesTaxZip.getCombinedRateAsTaxPercent(zip5);
     if (estimatedSalesTaxPercent === null) estimatedSalesTaxPercent = 7.5;
+    // Custom-design paper (upload / AI) only where an active WrapStar printer is within radius
+    // of the giftee ZIP. No ZIP → not available (fail closed).
+    const requestedZip = String(geo.postalCode || '').replace(/\D/g, '').slice(0, 5);
+    const customDesign = requestedZip.length === 5
+        ? printerCoverage.publicAvailability(requestedZip)
+        : { postalCode: '', available: false, radiusMiles: printerCoverage.getRadiusMiles() };
     res.status(200).json({
         ok: true,
         unitPrices: r.unitPrices,
@@ -277,8 +284,18 @@ app.get('/api/pricing-preview', (req, res) => {
         timeZone: r.timeZone,
         retailer: r.retailer,
         geo: r.geo || null,
+        customDesign,
         ...(estimatedSalesTaxPercent !== null ? { estimatedSalesTaxPercent } : {}),
     });
+});
+
+/** Public: is custom-printed wrapping paper (upload / AI design) available for a giftee ZIP? */
+app.get('/api/custom-design-availability', (req, res) => {
+    if (!req.isApiDomain) {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
+    const zip = typeof req.query.postalCode === 'string' ? req.query.postalCode : '';
+    res.status(200).json({ ok: true, ...printerCoverage.publicAvailability(zip) });
 });
 
 const EXTENSION_RETAILER_ORIGIN =
@@ -557,6 +574,138 @@ app.post('/api/admin/allowed-zip-codes/seed-launch-metros', express.json(), (req
         console.error('[admin/allowed-zip-codes/seed-launch-metros] failed', e);
         res.status(500).json({ error: 'Failed to seed launch metro ZIP codes' });
     }
+});
+
+// ─── Custom-design (printer) coverage — admin ─────────────────────────────────
+
+/** Admin: full printer-site + coverage report for the Command Center dashboard. */
+app.get('/api/admin/printer-sites', (req, res) => {
+    if (!req.isApiDomain) {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
+    if (!requireWrrapdAdminKey(req, res)) return;
+    try {
+        printerCoverage.loadSites({ force: true });
+        res.status(200).json({ ok: true, report: printerCoverage.getAdminReport() });
+    } catch (e) {
+        console.error('[admin/printer-sites] report failed', e);
+        res.status(500).json({ error: 'Failed to build printer coverage report' });
+    }
+});
+
+/** Admin: add / update one printer site (manual or roster). */
+app.post('/api/admin/printer-sites/upsert', express.json(), (req, res) => {
+    if (!req.isApiDomain) {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
+    if (!requireWrrapdAdminKey(req, res)) return;
+    try {
+        const body = req.body && typeof req.body === 'object' ? req.body : {};
+        const { site } = printerCoverage.upsertSite({
+            id: body.id,
+            wrapstarId: body.wrapstarId,
+            name: body.name,
+            postalCode: body.postalCode,
+            printerSize: body.printerSize,
+            printerLabel: body.printerLabel,
+            active: body.active,
+            source: body.source,
+            notes: body.notes,
+        });
+        res.status(200).json({ ok: true, site, report: printerCoverage.getAdminReport() });
+    } catch (e) {
+        console.error('[admin/printer-sites/upsert] failed', e);
+        res.status(400).json({ error: e && e.message ? e.message : 'Failed to save printer site' });
+    }
+});
+
+/** Admin: remove a printer site by id (or wrapstarId). */
+app.post('/api/admin/printer-sites/remove', express.json(), (req, res) => {
+    if (!req.isApiDomain) {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
+    if (!requireWrrapdAdminKey(req, res)) return;
+    try {
+        const { removed } = printerCoverage.removeSite(req.body && req.body.id);
+        res.status(200).json({ ok: true, removed, report: printerCoverage.getAdminReport() });
+    } catch (e) {
+        console.error('[admin/printer-sites/remove] failed', e);
+        res.status(500).json({ error: 'Failed to remove printer site' });
+    }
+});
+
+/** Admin: pause / resume a printer site without deleting it. */
+app.post('/api/admin/printer-sites/active', express.json(), (req, res) => {
+    if (!req.isApiDomain) {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
+    if (!requireWrrapdAdminKey(req, res)) return;
+    try {
+        const { updated } = printerCoverage.setSiteActive(req.body && req.body.id, req.body && req.body.active !== false);
+        res.status(200).json({ ok: true, updated, report: printerCoverage.getAdminReport() });
+    } catch (e) {
+        console.error('[admin/printer-sites/active] failed', e);
+        res.status(500).json({ error: 'Failed to update printer site' });
+    }
+});
+
+/** Admin: set the coverage radius (miles) applied to every printer site. */
+app.post('/api/admin/printer-sites/radius', express.json(), (req, res) => {
+    if (!req.isApiDomain) {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
+    if (!requireWrrapdAdminKey(req, res)) return;
+    try {
+        printerCoverage.setRadiusMiles(req.body && req.body.radiusMiles, { notes: req.body && req.body.notes });
+        res.status(200).json({ ok: true, report: printerCoverage.getAdminReport() });
+    } catch (e) {
+        console.error('[admin/printer-sites/radius] failed', e);
+        res.status(500).json({ error: 'Failed to set coverage radius' });
+    }
+});
+
+/**
+ * Admin: replace all roster-sourced sites with the tracking platform's approved
+ * WrapStars that own a printer (manual sites are kept).
+ */
+app.put('/api/admin/printer-sites/roster', express.json({ limit: '2mb' }), (req, res) => {
+    if (!req.isApiDomain) {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
+    if (!requireWrrapdAdminKey(req, res)) return;
+    try {
+        const sites = Array.isArray(req.body && req.body.sites) ? req.body.sites : null;
+        if (!sites) {
+            return res.status(400).json({ error: 'sites array required' });
+        }
+        printerCoverage.replaceRosterSites(sites, { notes: req.body && req.body.notes });
+        res.status(200).json({ ok: true, report: printerCoverage.getAdminReport() });
+    } catch (e) {
+        console.error('[admin/printer-sites/roster] failed', e);
+        res.status(500).json({ error: 'Failed to sync roster printer sites' });
+    }
+});
+
+/** Admin: which printer sites cover a giftee ZIP (nearest first)? */
+app.get('/api/admin/printer-sites/check', (req, res) => {
+    if (!req.isApiDomain) {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
+    if (!requireWrrapdAdminKey(req, res)) return;
+    const zip = typeof req.query.postalCode === 'string' ? req.query.postalCode : '';
+    res.status(200).json({ ok: true, result: printerCoverage.checkZip(zip) });
+});
+
+/** Admin: preview ZIPs within a radius of any ZIP (before adding a site). */
+app.get('/api/admin/printer-sites/radius-preview', (req, res) => {
+    if (!req.isApiDomain) {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
+    if (!requireWrrapdAdminKey(req, res)) return;
+    const zip = typeof req.query.postalCode === 'string' ? req.query.postalCode : '';
+    const radius = req.query.radiusMiles != null ? Number(req.query.radiusMiles) : printerCoverage.getRadiusMiles();
+    const zips = require(path.join(__dirname, 'lib', 'zip-centroids')).zipsWithinRadius(zip, radius);
+    res.status(200).json({ ok: true, postalCode: printerCoverage.normZip(zip), radiusMiles: radius, count: zips.length, zips });
 });
 
 app.post('/api/admin/retailer-stores/reload', express.json(), async (req, res) => {

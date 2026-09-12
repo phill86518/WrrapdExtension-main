@@ -3405,8 +3405,8 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                                             </div>
                                         </label>
 
-                                        <!-- Upload Option -->
-                                        <label style="display: flex; align-items: start;">
+                                        <!-- Upload Option (shown only when a WrapStar printer is in range of the giftee ZIP) -->
+                                        <label data-wrrapd-custom-design="upload" style="display: none; align-items: start;">
                                             <input type="radio" name="wrapping-option-${i}" value="upload" style="margin-right: 10px; ">
                                             <div>
                                                 <div style="font-weight: bold;">Upload your own design (+$${getActiveCheckoutUnitPrices().customDesignUpload.toFixed(2)})</div>
@@ -3420,8 +3420,8 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                                             </div>
                                         </label>
 
-                                        <!-- AI Generation Option -->
-                                        <label style="display: flex; align-items: start;">
+                                        <!-- AI Generation Option (shown only when a WrapStar printer is in range of the giftee ZIP) -->
+                                        <label data-wrrapd-custom-design="ai" style="display: none; align-items: start;">
                                             <input type="radio" name="wrapping-option-${i}" value="ai" style="margin-right: 10px;">
                                                 <div style="width: 100%;">
                                                     <div style="font-weight: bold;">Generate AI designs (+$${getActiveCheckoutUnitPrices().customDesignAi.toFixed(2)})</div>
@@ -3482,8 +3482,29 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                     const modal = document.getElementById(`wrrapd-modal-${i}`);
                     const modalContent = modal?.querySelector('.wrrapd-modal-content');
                     const modalHeading = modalContent?.querySelector('h2');
-                    const applyAmazonModalPrices = (prices) => {
+                    /**
+                     * Custom-design paper (upload / AI) is only offered when api.wrrapd.com says a
+                     * WrapStar printer is within range of the giftee ZIP. Unknown → hidden.
+                     */
+                    const applyAmazonCustomDesignVisibility = (available) => {
+                        if (!modal) return;
+                        const show = available === true;
+                        for (const value of ['upload', 'ai']) {
+                            const radio = modal.querySelector(`input[name="wrapping-option-${i}"][value="${value}"]`);
+                            const label = radio?.closest('label');
+                            if (label) label.style.display = show ? 'flex' : 'none';
+                            if (!show && radio?.checked) {
+                                const fallback = modal.querySelector(`input[name="wrapping-option-${i}"][value="wrrapd"]`);
+                                if (fallback) {
+                                    fallback.checked = true;
+                                    fallback.dispatchEvent(new Event('change'));
+                                }
+                            }
+                        }
+                    };
+                    const applyAmazonModalPrices = (prices, _zip, capabilities) => {
                         if (!modal || !prices) return;
+                        applyAmazonCustomDesignVisibility(capabilities?.customDesignAvailable === true);
                         const boldTitleIn = (value) =>
                             modal
                                 .querySelector(`input[name="wrapping-option-${i}"][value="${value}"]`)
