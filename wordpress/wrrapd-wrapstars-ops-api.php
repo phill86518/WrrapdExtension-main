@@ -74,6 +74,7 @@ function wrrapd_wrapstars_run_admin_action( $app_id, $action, $opts = array() ) 
 
 	if ( $action === 'save_notes' ) {
 		wrrapd_wrapstars_set_meta( $app_id, 'admin_notes', $notes !== null ? $notes : '' );
+		wrrapd_wrapstars_set_meta( $app_id, 'notes_updated_at', gmdate( 'c' ) );
 		return array( 'ok' => true, 'status' => wrrapd_wrapstars_get_meta( $app_id, 'status' ) );
 	}
 
@@ -100,6 +101,7 @@ function wrrapd_wrapstars_run_admin_action( $app_id, $action, $opts = array() ) 
 		wrrapd_wrapstars_set_meta( $app_id, 'interview_at', gmdate( 'c' ) );
 		if ( $notes !== null ) {
 			wrrapd_wrapstars_set_meta( $app_id, 'admin_notes', $notes );
+			wrrapd_wrapstars_set_meta( $app_id, 'notes_updated_at', gmdate( 'c' ) );
 		}
 		$body  = "Hi {$name},\n\n";
 		$body .= "Thank you for applying to become a WrapStar!\n\n";
@@ -136,6 +138,7 @@ function wrrapd_wrapstars_run_admin_action( $app_id, $action, $opts = array() ) 
 		wrrapd_wrapstars_set_meta( $app_id, 'onboarding_step', 'welcome' );
 		if ( $notes !== null ) {
 			wrrapd_wrapstars_set_meta( $app_id, 'admin_notes', $notes );
+			wrrapd_wrapstars_set_meta( $app_id, 'notes_updated_at', gmdate( 'c' ) );
 		}
 		$provision = wrrapd_wrapstars_provision_approved_user( $app_id );
 		$password_issued = false;
@@ -158,6 +161,7 @@ function wrrapd_wrapstars_run_admin_action( $app_id, $action, $opts = array() ) 
 		wrrapd_wrapstars_set_meta( $app_id, 'reject_reason', $reason );
 		if ( $notes !== null ) {
 			wrrapd_wrapstars_set_meta( $app_id, 'admin_notes', $notes );
+			wrrapd_wrapstars_set_meta( $app_id, 'notes_updated_at', gmdate( 'c' ) );
 		}
 		$body_reason = $reason !== '' ? $reason : 'We are unable to move forward with your application at this time.';
 		wrrapd_wrapstars_send_email( $email, 'Update on your WrapStar application', "Hi {$name},\n\n{$body_reason}\n" );
@@ -182,6 +186,7 @@ function wrrapd_wrapstars_run_admin_action( $app_id, $action, $opts = array() ) 
 		}
 		if ( $notes !== null ) {
 			wrrapd_wrapstars_set_meta( $app_id, 'admin_notes', $notes );
+			wrrapd_wrapstars_set_meta( $app_id, 'notes_updated_at', gmdate( 'c' ) );
 		}
 		wrrapd_wrapstars_send_email(
 			$email,
@@ -194,14 +199,17 @@ function wrrapd_wrapstars_run_admin_action( $app_id, $action, $opts = array() ) 
 
 	if ( $action === 'suspend' ) {
 		wrrapd_wrapstars_set_meta( $app_id, 'suspended', '1' );
+		wrrapd_wrapstars_set_meta( $app_id, 'suspended_at', gmdate( 'c' ) );
 		if ( $notes !== null ) {
 			wrrapd_wrapstars_set_meta( $app_id, 'admin_notes', $notes );
+			wrrapd_wrapstars_set_meta( $app_id, 'notes_updated_at', gmdate( 'c' ) );
 		}
 		return array( 'ok' => true, 'status' => wrrapd_wrapstars_get_meta( $app_id, 'status' ) );
 	}
 
 	if ( $action === 'unsuspend' ) {
 		wrrapd_wrapstars_set_meta( $app_id, 'suspended', '' );
+		wrrapd_wrapstars_set_meta( $app_id, 'unsuspended_at', gmdate( 'c' ) );
 		return array( 'ok' => true, 'status' => wrrapd_wrapstars_get_meta( $app_id, 'status' ) );
 	}
 
@@ -213,6 +221,7 @@ function wrrapd_wrapstars_run_admin_action( $app_id, $action, $opts = array() ) 
 		}
 		if ( $notes !== null ) {
 			wrrapd_wrapstars_set_meta( $app_id, 'admin_notes', $notes );
+			wrrapd_wrapstars_set_meta( $app_id, 'notes_updated_at', gmdate( 'c' ) );
 		}
 		return array( 'ok' => true, 'status' => 'declined' );
 	}
@@ -354,12 +363,18 @@ function wrrapd_wrapstars_ops_serialize_application( $id ) {
 		'hasIdFile'                  => (bool) wrrapd_wrapstars_get_meta( $id, 'id_file' ),
 		'submittedAt'                => wrrapd_wrapstars_get_meta( $id, 'submitted_at' ),
 		'approvedAt'                 => wrrapd_wrapstars_get_meta( $id, 'approved_at' ),
+		'inviteSentAt'               => wrrapd_wrapstars_get_meta( $id, 'portal_password_issued_at' ),
 		'inviteExpiresAt'            => wrrapd_wrapstars_get_invite_expires_at( $id ),
 		'inviteExpiredAt'            => wrrapd_wrapstars_get_meta( $id, 'invite_expired_at' ),
 		'activatedAt'                => wrrapd_wrapstars_get_meta( $id, 'activated_at' ),
 		'interviewAt'                => wrrapd_wrapstars_get_meta( $id, 'interview_at' ),
 		'interviewSkipped'           => wrrapd_wrapstars_get_meta( $id, 'interview_skipped' ) === '1',
 		'interviewSkippedAt'         => wrrapd_wrapstars_get_meta( $id, 'interview_skipped_at' ),
+		'rejectedAt'                 => wrrapd_wrapstars_get_meta( $id, 'rejected_at' ),
+		'suspendedAt'                => wrrapd_wrapstars_get_meta( $id, 'suspended_at' ),
+		'unsuspendedAt'              => wrrapd_wrapstars_get_meta( $id, 'unsuspended_at' ),
+		'notesUpdatedAt'             => wrrapd_wrapstars_get_meta( $id, 'notes_updated_at' ),
+		'resetAt'                    => wrrapd_wrapstars_get_meta( $id, 'reset_at' ),
 		'userId'                     => (int) wrrapd_wrapstars_get_meta( $id, 'user_id' ),
 		'createdAt'                  => get_post_time( 'c', true, $app ),
 	);

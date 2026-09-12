@@ -975,6 +975,9 @@ function wrrapd_wrapstars_render_admin_application_card( $id ) {
 		echo ' · <span style="color:#6b21a8;">Interview skipped</span>';
 	}
 	echo '</h2>';
+	if ( function_exists( 'wrrapd_wrapstars_admin_echo_hire_timeline' ) ) {
+		wrrapd_wrapstars_admin_echo_hire_timeline( $id );
+	}
 
 	if ( $fit > 0 ) {
 		echo '<table class="widefat" style="max-width:520px;margin:8px 0;"><tbody>';

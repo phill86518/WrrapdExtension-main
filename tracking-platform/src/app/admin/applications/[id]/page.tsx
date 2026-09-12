@@ -17,6 +17,8 @@ import { syncActivatedApplicationToOpsRoster } from "@/lib/sync-activated-wrapst
 import { syncActivatedApplicationToDriverRoster } from "@/lib/sync-activated-driver";
 import { ApplicationReviewActions } from "@/components/application-review-actions";
 import { hireRoleLabel, WRAPSTAR_ONBOARDING_STEP_LABELS } from "@/lib/role-labels";
+import { formatDateTimeNy } from "@/lib/ny-date";
+import { hireTimelineRows } from "@/lib/hire-timeline";
 
 export const dynamic = "force-dynamic";
 
@@ -134,6 +136,25 @@ export default async function AdminApplicationDetailPage({
   const wrapApp = !isDriver ? (app as WrapstarApplication) : null;
   const steps = Object.entries(app.onboardingStepsComplete || {});
   const onboarding = wrapApp?.onboarding;
+  const timeline = hireTimelineRows({
+    submittedAt: app.submittedAt,
+    createdAt: app.createdAt,
+    interviewAt: app.interviewAt,
+    interviewSkippedAt: app.interviewSkippedAt,
+    approvedAt: app.approvedAt,
+    inviteSentAt: app.inviteSentAt,
+    inviteExpiresAt: app.inviteExpiresAt,
+    inviteExpiredAt: app.inviteExpiredAt,
+    activatedAt: app.activatedAt,
+    rejectedAt: app.rejectedAt,
+    declinedAt: app.declinedAt,
+    previousDeclinedAt: app.previousDeclinedAt,
+    reinvitedAt: app.reinvitedAt,
+    suspendedAt: app.suspendedAt,
+    unsuspendedAt: app.unsuspendedAt,
+    notesUpdatedAt: app.notesUpdatedAt,
+    resetAt: app.resetAt,
+  });
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -190,7 +211,24 @@ export default async function AdminApplicationDetailPage({
         </p>
       ) : null}
 
-      <div className="mt-6 grid gap-4 md:grid-cols-2">
+      <section className="mt-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <h2 className="font-semibold">Hire timeline</h2>
+        <p className="mt-1 text-xs text-slate-500">All times Eastern (ET).</p>
+        {timeline.length === 0 ? (
+          <p className="mt-3 text-sm text-slate-500">No hire timestamps on this application yet.</p>
+        ) : (
+          <dl className="mt-3 grid gap-2 sm:grid-cols-2">
+            {timeline.map((row) => (
+              <div key={row.key} className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2">
+                <dt className="text-xs uppercase tracking-wide text-slate-500">{row.label}</dt>
+                <dd className="text-sm font-medium text-slate-900">{row.value}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
+      </section>
+
+      <div className="mt-4 grid gap-4 md:grid-cols-2">
         <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
           <h2 className="font-semibold">Contact & location</h2>
           <p className="mt-2 text-sm">{app.email}</p>
@@ -270,7 +308,7 @@ export default async function AdminApplicationDetailPage({
           </h2>
           {app.status === "approved" && app.inviteExpiresAt ? (
             <p className="mt-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800">
-              Invitation expires {new Date(app.inviteExpiresAt).toLocaleString()}
+              Invitation expires {formatDateTimeNy(app.inviteExpiresAt) || app.inviteExpiresAt}
             </p>
           ) : null}
           <ul className="mt-2 grid gap-1 text-sm sm:grid-cols-2">
@@ -286,7 +324,7 @@ export default async function AdminApplicationDetailPage({
               <div>
                 <dt className="text-xs uppercase text-slate-500">Policies</dt>
                 <dd>
-                  {onboarding.policiesSignedAt || "—"}
+                  {formatDateTimeNy(onboarding.policiesSignedAt) || onboarding.policiesSignedAt || "—"}
                   {onboarding.policiesSignature ? ` · ${onboarding.policiesSignature}` : ""}
                 </dd>
               </div>
@@ -313,7 +351,9 @@ export default async function AdminApplicationDetailPage({
                 <dt className="text-xs uppercase text-slate-500">Identity</dt>
                 <dd>
                   {onboarding.hasIdentitySelfie ? "selfie on file" : "no selfie"}
-                  {onboarding.identityConfirmedAt ? ` · ${onboarding.identityConfirmedAt}` : ""}
+                  {onboarding.identityConfirmedAt
+                    ? ` · ${formatDateTimeNy(onboarding.identityConfirmedAt) || onboarding.identityConfirmedAt}`
+                    : ""}
                 </dd>
               </div>
               <div className="sm:col-span-2">
@@ -326,7 +366,7 @@ export default async function AdminApplicationDetailPage({
               <div>
                 <dt className="text-xs uppercase text-slate-500">Tax acknowledgments</dt>
                 <dd>
-                  {onboarding.taxAckAt || "—"}
+                  {formatDateTimeNy(onboarding.taxAckAt) || onboarding.taxAckAt || "—"}
                   {onboarding.taxEDelivery ? " · e-delivery yes" : ""}
                 </dd>
               </div>
@@ -337,6 +377,9 @@ export default async function AdminApplicationDetailPage({
                   {onboarding.payoutBankName ? ` · ${onboarding.payoutBankName}` : ""}
                   {onboarding.payoutAccountLast4 ? ` · ****${onboarding.payoutAccountLast4}` : ""}
                   {onboarding.hasPayoutProof ? " · proof uploaded" : ""}
+                  {onboarding.payoutSubmittedAt
+                    ? ` · submitted ${formatDateTimeNy(onboarding.payoutSubmittedAt) || onboarding.payoutSubmittedAt}`
+                    : ""}
                 </dd>
               </div>
             </dl>

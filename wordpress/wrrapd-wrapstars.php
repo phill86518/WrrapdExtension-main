@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_WRAPSTARS_BUILD', '2026-09-12-skip-interview' );
+define( 'WRRAPD_WRAPSTARS_BUILD', '2026-09-12-hire-timestamps' );
 /** Approval / re-invite onboarding credentials remain valid this many days. */
 define( 'WRRAPD_WRAPSTARS_INVITE_TTL_DAYS', 15 );
 
@@ -819,6 +819,10 @@ function wrrapd_wrapstars_meta_keys() {
 		'profile_local_path'  => '',
 		'tier'                => 'new',
 		'suspended'           => '0',
+		'suspended_at'        => '',
+		'unsuspended_at'      => '',
+		'notes_updated_at'    => '',
+		'reset_at'            => '',
 		'onboarding_step'     => 'welcome',
 		'step_welcome'        => '',
 		'step_agreement'      => '',
@@ -894,6 +898,65 @@ function wrrapd_wrapstars_meta_keys() {
 		'invite_expires_at'   => '',
 		'invite_expired_at'   => '',
 	);
+}
+
+/**
+ * Format a stored ISO hire stamp for WP Admin (site timezone).
+ *
+ * @param string $iso UTC/ISO timestamp.
+ * @return string
+ */
+function wrrapd_wrapstars_format_admin_stamp( $iso ) {
+	$iso = trim( (string) $iso );
+	if ( $iso === '' ) {
+		return '';
+	}
+	$ts = strtotime( $iso );
+	if ( ! $ts ) {
+		return $iso;
+	}
+	return wp_date( 'M j, Y, g:i A T', $ts );
+}
+
+/**
+ * Print hire date/time rows on a WP Admin application card.
+ *
+ * @param int $id Application post ID.
+ */
+function wrrapd_wrapstars_admin_echo_hire_timeline( $id ) {
+	$id   = (int) $id;
+	$rows = array(
+		'Application submitted' => wrrapd_wrapstars_get_meta( $id, 'submitted_at' ),
+		'Interview requested'   => wrrapd_wrapstars_get_meta( $id, 'interview_at' ),
+		'Interview skipped'     => wrrapd_wrapstars_get_meta( $id, 'interview_skipped_at' ),
+		'Approved'              => wrrapd_wrapstars_get_meta( $id, 'approved_at' ),
+		'Login invite sent'     => wrrapd_wrapstars_get_meta( $id, 'portal_password_issued_at' ),
+		'Invite expires'        => function_exists( 'wrrapd_wrapstars_get_invite_expires_at' ) ? wrrapd_wrapstars_get_invite_expires_at( $id ) : wrrapd_wrapstars_get_meta( $id, 'invite_expires_at' ),
+		'Invite expired'        => wrrapd_wrapstars_get_meta( $id, 'invite_expired_at' ),
+		'Activated'             => wrrapd_wrapstars_get_meta( $id, 'activated_at' ),
+		'Rejected'              => wrrapd_wrapstars_get_meta( $id, 'rejected_at' ),
+		'Offer declined'        => wrrapd_wrapstars_get_meta( $id, 'declined_at' ),
+		'Previous decline'      => wrrapd_wrapstars_get_meta( $id, 'previous_declined_at' ),
+		'Reinvited'             => wrrapd_wrapstars_get_meta( $id, 'reinvited_at' ),
+		'Suspended'             => wrrapd_wrapstars_get_meta( $id, 'suspended_at' ),
+		'Unsuspended'           => wrrapd_wrapstars_get_meta( $id, 'unsuspended_at' ),
+		'Notes updated'         => wrrapd_wrapstars_get_meta( $id, 'notes_updated_at' ),
+		'Reset to review'       => wrrapd_wrapstars_get_meta( $id, 'reset_at' ),
+	);
+	echo '<h3>Hire dates</h3><table class="widefat" style="max-width:560px;margin:8px 0;"><tbody>';
+	$any = false;
+	foreach ( $rows as $label => $iso ) {
+		$fmt = wrrapd_wrapstars_format_admin_stamp( $iso );
+		if ( $fmt === '' ) {
+			continue;
+		}
+		$any = true;
+		echo '<tr><td>' . esc_html( $label ) . '</td><td><strong>' . esc_html( $fmt ) . '</strong></td></tr>';
+	}
+	if ( ! $any ) {
+		echo '<tr><td colspan="2">No hire timestamps yet.</td></tr>';
+	}
+	echo '</tbody></table>';
 }
 
 /**
@@ -2513,8 +2576,10 @@ function wrrapd_wrapstars_reset_application_to_under_review( $app_id ) {
 	wrrapd_wrapstars_set_meta( $app_id, 'must_change_password', '' );
 	wrrapd_wrapstars_set_meta( $app_id, 'invite_expires_at', '' );
 	wrrapd_wrapstars_set_meta( $app_id, 'invite_expired_at', '' );
+	wrrapd_wrapstars_set_meta( $app_id, 'portal_password_issued_at', '' );
 	wrrapd_wrapstars_set_meta( $app_id, 'onboarding_step', 'welcome' );
 	wrrapd_wrapstars_set_meta( $app_id, 'suspended', '0' );
+	wrrapd_wrapstars_set_meta( $app_id, 'reset_at', gmdate( 'c' ) );
 
 	foreach ( array_keys( wrrapd_wrapstars_onboarding_steps() ) as $step ) {
 		wrrapd_wrapstars_set_meta( $app_id, 'step_' . $step, '' );

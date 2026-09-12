@@ -4,6 +4,8 @@ import { getSession } from "@/lib/auth";
 import { listWrapstarApplications } from "@/lib/wrapstar-applications-admin";
 import { listDriverApplications } from "@/lib/driver-applications-admin";
 import { hireRoleLabel, JOYRIDER_LABEL, JOYRIDER_LABEL_PLURAL } from "@/lib/role-labels";
+import { formatDateTimeNy } from "@/lib/ny-date";
+import { latestHireAction } from "@/lib/hire-timeline";
 
 export const dynamic = "force-dynamic";
 
@@ -52,6 +54,15 @@ type Row = {
   status: string;
   submittedAt: string;
   createdAt: string;
+  approvedAt?: string;
+  interviewAt?: string;
+  interviewSkippedAt?: string;
+  activatedAt?: string;
+  rejectedAt?: string;
+  declinedAt?: string;
+  reinvitedAt?: string;
+  inviteSentAt?: string;
+  resetAt?: string;
   fitScore?: number;
   canDeliver?: string;
   vehicleType?: string;
@@ -108,6 +119,15 @@ export default async function AdminApplicationsPage({
           status: a.status,
           submittedAt: a.submittedAt,
           createdAt: a.createdAt,
+          approvedAt: a.approvedAt,
+          interviewAt: a.interviewAt,
+          interviewSkippedAt: a.interviewSkippedAt,
+          activatedAt: a.activatedAt,
+          rejectedAt: a.rejectedAt,
+          declinedAt: a.declinedAt,
+          reinvitedAt: a.reinvitedAt,
+          inviteSentAt: a.inviteSentAt,
+          resetAt: a.resetAt,
           fitScore: a.fitScore,
           canDeliver: a.canDeliver,
         }),
@@ -124,6 +144,15 @@ export default async function AdminApplicationsPage({
           status: a.status,
           submittedAt: a.submittedAt,
           createdAt: a.createdAt,
+          approvedAt: a.approvedAt,
+          interviewAt: a.interviewAt,
+          interviewSkippedAt: a.interviewSkippedAt,
+          activatedAt: a.activatedAt,
+          rejectedAt: a.rejectedAt,
+          declinedAt: a.declinedAt,
+          reinvitedAt: a.reinvitedAt,
+          inviteSentAt: a.inviteSentAt,
+          resetAt: a.resetAt,
           vehicleType: a.vehicleType,
           canDeliver: "yes",
         }),
@@ -239,18 +268,22 @@ export default async function AdminApplicationsPage({
                 <th className="px-3 py-2">Detail</th>
                 <th className="px-3 py-2">Status</th>
                 <th className="px-3 py-2">Submitted</th>
+                <th className="px-3 py-2">Approved</th>
+                <th className="px-3 py-2">Latest action</th>
               </tr>
             </thead>
             <tbody>
               {apps.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-3 py-8 text-center text-slate-500">
+                  <td colSpan={8} className="px-3 py-8 text-center text-slate-500">
                     No applications in this view. Try <strong>All</strong>, clear search, or confirm
                     WordPress JoyRider routes are deployed if filtering {JOYRIDER_LABEL_PLURAL}.
                   </td>
                 </tr>
               ) : (
-                apps.map((a) => (
+                apps.map((a) => {
+                  const latest = latestHireAction(a);
+                  return (
                   <tr key={`${a.role}-${a.id}`} className="border-t border-slate-100 hover:bg-slate-50">
                     <td className="px-3 py-3">
                       <Link
@@ -293,11 +326,25 @@ export default async function AdminApplicationsPage({
                         {a.status}
                       </span>
                     </td>
+                    <td className="px-3 py-3 text-xs text-slate-600 whitespace-nowrap">
+                      {formatDateTimeNy(a.submittedAt || a.createdAt) || "—"}
+                    </td>
+                    <td className="px-3 py-3 text-xs text-slate-600 whitespace-nowrap">
+                      {formatDateTimeNy(a.approvedAt) || "—"}
+                    </td>
                     <td className="px-3 py-3 text-xs text-slate-600">
-                      {(a.submittedAt || a.createdAt || "").slice(0, 10) || "—"}
+                      {latest ? (
+                        <span>
+                          <span className="block font-medium text-slate-800">{latest.label}</span>
+                          <span className="whitespace-nowrap">{latest.value}</span>
+                        </span>
+                      ) : (
+                        "—"
+                      )}
                     </td>
                   </tr>
-                ))
+                  );
+                })
               )}
             </tbody>
           </table>

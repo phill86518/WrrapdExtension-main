@@ -89,6 +89,14 @@ export function isScheduledInstantInPastNy(iso: string, now: Date = new Date()):
   return t < startToday;
 }
 
+/** Hire / admin timestamps: Sep 12, 2026, 4:02 PM ET. Empty if unparseable. */
+export function formatDateTimeNy(iso: string | Date | unknown): string {
+  if (iso == null || (typeof iso === "string" && !iso.trim())) return "";
+  const d = toInstantDate(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return `${formatInTimeZone(d, NY, "MMM d, yyyy, h:mm a")} ET`;
+}
+
 /** Human label for a calendar day in Eastern (e.g. Wed Apr 23, 2026). */
 export function calendarDayLabelNy(dateKey: string): string {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) return dateKey;

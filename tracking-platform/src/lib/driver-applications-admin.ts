@@ -49,12 +49,18 @@ export type DriverApplication = {
   hasIdFile: boolean;
   submittedAt: string;
   approvedAt: string;
+  inviteSentAt?: string;
   inviteExpiresAt?: string;
   inviteExpiredAt?: string;
   activatedAt: string;
   interviewAt: string;
   interviewSkipped?: boolean;
   interviewSkippedAt?: string;
+  rejectedAt?: string;
+  suspendedAt?: string;
+  unsuspendedAt?: string;
+  notesUpdatedAt?: string;
+  resetAt?: string;
   userId: number;
   createdAt: string;
   /** Compat with WrapStar UI fields */

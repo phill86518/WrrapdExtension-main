@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_DRIVERS_BUILD', '2026-09-12-skip-interview' );
+define( 'WRRAPD_DRIVERS_BUILD', '2026-09-12-hire-timestamps' );
 define( 'WRRAPD_DRIVERS_INVITE_TTL_DAYS', 15 );
 define( 'WRRAPD_DRIVERS_CPT', 'wrrapd_driver_app' );
 
@@ -370,6 +370,65 @@ function wrrapd_drivers_get_invite_expires_at( $app_id ) {
 	}
 	$ts = strtotime( $issued );
 	return $ts ? gmdate( 'c', $ts + wrrapd_drivers_invite_ttl_seconds() ) : '';
+}
+
+/**
+ * Format a stored ISO hire stamp for WP Admin (site timezone).
+ *
+ * @param string $iso UTC/ISO timestamp.
+ * @return string
+ */
+function wrrapd_drivers_format_admin_stamp( $iso ) {
+	$iso = trim( (string) $iso );
+	if ( $iso === '' ) {
+		return '';
+	}
+	$ts = strtotime( $iso );
+	if ( ! $ts ) {
+		return $iso;
+	}
+	return wp_date( 'M j, Y, g:i A T', $ts );
+}
+
+/**
+ * Print hire date/time rows on a WP Admin JoyRider card.
+ *
+ * @param int $id Application post ID.
+ */
+function wrrapd_drivers_admin_echo_hire_timeline( $id ) {
+	$id   = (int) $id;
+	$rows = array(
+		'Application submitted' => wrrapd_drivers_get_meta( $id, 'submitted_at' ),
+		'Interview requested'   => wrrapd_drivers_get_meta( $id, 'interview_at' ),
+		'Interview skipped'     => wrrapd_drivers_get_meta( $id, 'interview_skipped_at' ),
+		'Approved'              => wrrapd_drivers_get_meta( $id, 'approved_at' ),
+		'Login invite sent'     => wrrapd_drivers_get_meta( $id, 'portal_password_issued_at' ),
+		'Invite expires'        => wrrapd_drivers_get_invite_expires_at( $id ),
+		'Invite expired'        => wrrapd_drivers_get_meta( $id, 'invite_expired_at' ),
+		'Activated'             => wrrapd_drivers_get_meta( $id, 'activated_at' ),
+		'Rejected'              => wrrapd_drivers_get_meta( $id, 'rejected_at' ),
+		'Offer declined'        => wrrapd_drivers_get_meta( $id, 'declined_at' ),
+		'Previous decline'      => wrrapd_drivers_get_meta( $id, 'previous_declined_at' ),
+		'Reinvited'             => wrrapd_drivers_get_meta( $id, 'reinvited_at' ),
+		'Suspended'             => wrrapd_drivers_get_meta( $id, 'suspended_at' ),
+		'Unsuspended'           => wrrapd_drivers_get_meta( $id, 'unsuspended_at' ),
+		'Notes updated'         => wrrapd_drivers_get_meta( $id, 'notes_updated_at' ),
+		'Reset to review'       => wrrapd_drivers_get_meta( $id, 'reset_at' ),
+	);
+	echo '<h3>Hire dates</h3><table class="widefat" style="max-width:560px;margin:8px 0;"><tbody>';
+	$any = false;
+	foreach ( $rows as $label => $iso ) {
+		$fmt = wrrapd_drivers_format_admin_stamp( $iso );
+		if ( $fmt === '' ) {
+			continue;
+		}
+		$any = true;
+		echo '<tr><td>' . esc_html( $label ) . '</td><td><strong>' . esc_html( $fmt ) . '</strong></td></tr>';
+	}
+	if ( ! $any ) {
+		echo '<tr><td colspan="2">No hire timestamps yet.</td></tr>';
+	}
+	echo '</tbody></table>';
 }
 
 function wrrapd_drivers_invite_is_expired( $app_id ) {
@@ -933,11 +992,12 @@ function wrrapd_drivers_reset_application_to_under_review( $app_id ) {
 		return array( 'ok' => false, 'error' => 'Reset is only available from approved, declined, interview, or rejected.' );
 	}
 	wrrapd_drivers_set_meta( $app_id, 'status', 'under_review' );
-	foreach ( array( 'approved_at', 'activated_at', 'interview_at', 'interview_skipped', 'interview_skipped_at', 'declined_at', 'decline_token', 'rejected_at', 'must_change_password', 'invite_expires_at', 'invite_expired_at' ) as $k ) {
+	foreach ( array( 'approved_at', 'activated_at', 'interview_at', 'interview_skipped', 'interview_skipped_at', 'declined_at', 'decline_token', 'rejected_at', 'must_change_password', 'invite_expires_at', 'invite_expired_at', 'portal_password_issued_at' ) as $k ) {
 		wrrapd_drivers_set_meta( $app_id, $k, '' );
 	}
 	wrrapd_drivers_set_meta( $app_id, 'onboarding_step', 'welcome' );
 	wrrapd_drivers_set_meta( $app_id, 'suspended', '0' );
+	wrrapd_drivers_set_meta( $app_id, 'reset_at', gmdate( 'c' ) );
 	foreach ( array_keys( wrrapd_drivers_onboarding_steps() ) as $step ) {
 		wrrapd_drivers_set_meta( $app_id, 'step_' . $step, '' );
 	}
@@ -1518,7 +1578,10 @@ function wrrapd_drivers_admin_page() {
 			echo ' · <span style="color:#6b21a8;">Interview skipped</span>';
 		}
 		echo '</h2>';
-		echo '<p>' . esc_html( wrrapd_drivers_get_meta( $id, 'email' ) ) . ' · submitted ' . esc_html( wrrapd_drivers_get_meta( $id, 'submitted_at' ) ) . '</p>';
+		echo '<p>' . esc_html( wrrapd_drivers_get_meta( $id, 'email' ) ) . '</p>';
+		if ( function_exists( 'wrrapd_drivers_admin_echo_hire_timeline' ) ) {
+			wrrapd_drivers_admin_echo_hire_timeline( $id );
+		}
 		echo '<form method="post">';
 		wp_nonce_field( 'wrrapd_drv_admin' );
 		echo '<input type="hidden" name="app_id" value="' . $id . '" />';
