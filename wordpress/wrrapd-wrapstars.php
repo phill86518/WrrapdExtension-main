@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_WRAPSTARS_BUILD', '2026-09-12-wrapstar-cta' );
+define( 'WRRAPD_WRAPSTARS_BUILD', '2026-09-12-wrapstar-cta-invite' );
 /** Approval / re-invite onboarding credentials remain valid this many days. */
 define( 'WRRAPD_WRAPSTARS_INVITE_TTL_DAYS', 15 );
 
@@ -3055,9 +3055,9 @@ function wrrapd_wrapstars_landing_content() {
 			),
 		),
 		'final_cta' => array(
-			'title' => 'Ready to become a WrapStar?',
-			'text'  => 'Have a government-issued photo ID handy — the application takes about five minutes. WrapStars wrap from home. No driving.',
-			'cta'   => 'Apply now',
+			'title' => 'Your ribbon. Their gasp.',
+			'text'  => 'Join the founding WrapStars in Florida and Georgia — the artists behind the unwrap. Five minutes, and you&rsquo;re in the running.',
+			'cta'   => 'Start your application',
 		),
 	);
 }
