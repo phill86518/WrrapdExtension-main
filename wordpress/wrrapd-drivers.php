@@ -147,7 +147,7 @@ function wrrapd_drivers_force_thankyou_content( $content ) {
 	}
 	$uri  = isset( $_SERVER['REQUEST_URI'] ) ? (string) $_SERVER['REQUEST_URI'] : '/';
 	$path = '/' . trim( (string) strtok( $uri, '?' ), '/' );
-	if ( preg_match( '#(drive/driver-thank-you|drive/thank-you|driver/driver-thank-you|driver-thank-you)(/|$)#', $path ) ) {
+	if ( preg_match( '#^/(drive/driver-thank-you|drive/thank-you|driver/driver-thank-you|driver-thank-you)(/|$)#', $path ) ) {
 		return do_shortcode( '[wrrapd_driver_thankyou]' );
 	}
 	return $content;
