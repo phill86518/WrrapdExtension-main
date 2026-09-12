@@ -852,7 +852,7 @@ function wrrapd_wrapstars_shortcode_apply() {
 							</div>
 						</div>
 						<div class="ws-field">
-							<label for="ws-gov-id">Government ID (driver license or passport)<?php echo wrrapd_wrapstars_apply_required_mark(); ?></label>
+							<label for="ws-gov-id">Government-issued photo ID<?php echo wrrapd_wrapstars_apply_required_mark(); ?></label>
 							<input type="file" id="ws-gov-id" name="gov_id" accept=".jpg,.jpeg,.png,.pdf" required />
 						</div>
 						<div class="ws-check"><input type="checkbox" name="ack_video" value="1" required id="ack_vid" /><span><label for="ack_vid">I agree to follow Wrrapd's documentation standards — a short video of each order while it is in my care and photos of the finished wrap — to protect every gift and uphold our quality bar.</label></span></div>

@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_WRAPSTARS_BUILD', '2026-09-12-hire-timestamps' );
+define( 'WRRAPD_WRAPSTARS_BUILD', '2026-09-12-wrapstar-cta' );
 /** Approval / re-invite onboarding credentials remain valid this many days. */
 define( 'WRRAPD_WRAPSTARS_INVITE_TTL_DAYS', 15 );
 
@@ -3054,14 +3054,9 @@ function wrrapd_wrapstars_landing_content() {
 				),
 			),
 		),
-		'drivers'   => array(
-			'title' => 'Prefer to be on the road?',
-			'text'  => 'Wrrapd also welcomes local JoyRiders who pick up finished gifts and deliver them to the door — a separate role from gift-wrapping.',
-			'cta'   => 'JoyRider applications',
-		),
 		'final_cta' => array(
 			'title' => 'Ready to become a WrapStar?',
-			'text'  => 'Have your driver license or passport handy — the application takes about five minutes.',
+			'text'  => 'Have a government-issued photo ID handy — the application takes about five minutes. WrapStars wrap from home. No driving.',
 			'cta'   => 'Apply now',
 		),
 	);
@@ -3158,12 +3153,6 @@ function wrrapd_wrapstars_shortcode_landing() {
 						<p><?php echo wp_kses_post( $faq['a'] ); ?></p>
 					</details>
 				<?php endforeach; ?>
-			</section>
-
-			<section class="wrrapd-wrapstars-dasher-box wrrapd-wrapstars-dasher-box--wide" style="margin-bottom:1.5rem;">
-				<h2><?php echo wp_kses_post( $c['drivers']['title'] ); ?></h2>
-				<p><?php echo wp_kses_post( $c['drivers']['text'] ); ?></p>
-				<a class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--xl" href="<?php echo esc_url( wrrapd_wrapstars_apply_url( '/drive/' ) ); ?>"><?php echo wp_kses_post( $c['drivers']['cta'] ); ?></a>
 			</section>
 
 			<section class="wrrapd-wrapstars-dasher-cta wrrapd-wrapstars-dasher-box wrrapd-wrapstars-dasher-box--wide">
