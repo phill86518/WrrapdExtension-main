@@ -10,7 +10,13 @@ import type {
   OrdersFilePayload,
   OrderStatus,
 } from "@/lib/types";
-import { normalizeOrderStatus, orderWrapstarId, orderWrapstarName } from "@/lib/types";
+import {
+  isAllocationCommitted,
+  isAllocationReleasedToModules,
+  normalizeOrderStatus,
+  orderWrapstarId,
+  orderWrapstarName,
+} from "@/lib/types";
 import { getFirestoreDb } from "@/lib/firebase-admin";
 import { buildDemoSeedOrders } from "@/lib/demo-orders";
 import { computeAssignmentsForOrders } from "@/lib/allocation";
@@ -96,6 +102,30 @@ async function readFallbackOrders(): Promise<Order[]> {
   return migrateOrLoadFallbackOrders();
 }
 
+function clearLiveAssignment(o: Order): Order {
+  const next: Order = { ...o };
+  delete next.wrapstarId;
+  delete next.wrapstarName;
+  delete next.driverId;
+  delete next.driverName;
+  delete next.courierDriverId;
+  delete next.courierDriverName;
+  delete next.assignmentSource;
+  delete next.stopSequence;
+  return next;
+}
+
+function clearProposal(o: Order): Order {
+  const next: Order = { ...o };
+  delete next.proposedWrapstarId;
+  delete next.proposedWrapstarName;
+  delete next.proposedCourierDriverId;
+  delete next.proposedCourierDriverName;
+  delete next.proposedDistanceMiles;
+  delete next.proposedFulfillmentMode;
+  return next;
+}
+
 export async function applyAutoAllocationToOrders(orders: Order[]): Promise<Order[]> {
   const wrapstars = await listRegisteredWrapstars();
   const deliveryDrivers = await listDeliveryDrivers();
@@ -112,7 +142,7 @@ export async function applyAutoAllocationToOrders(orders: Order[]): Promise<Orde
     ) {
       return { ...o, status, wrapstarId: orderWrapstarId(o), wrapstarName: orderWrapstarName(o) };
     }
-    if (o.assignmentSource === "manual" && orderWrapstarId(o)) {
+    if (isAllocationCommitted(o) && orderWrapstarId(o)) {
       const a = map.get(o.id);
       return {
         ...o,
@@ -124,35 +154,34 @@ export async function applyAutoAllocationToOrders(orders: Order[]): Promise<Orde
         fulfillmentMode: a?.fulfillmentMode || o.fulfillmentMode,
         courierDriverId: a?.courierDriverId ?? o.courierDriverId,
         courierDriverName: a?.courierDriverName ?? o.courierDriverName,
+        allocationStatus: "approved" as const,
       };
     }
     const a = map.get(o.id);
-    if (!a) {
-      return {
+    const boardStatus = status === "assigned" ? "scheduled" : status;
+    if (a) {
+      const proposed = clearLiveAssignment({
         ...o,
-        status,
-        wrapstarId: orderWrapstarId(o),
-        wrapstarName: orderWrapstarName(o),
-      };
+        status: boardStatus,
+        proposedWrapstarId: a.wrapstarId,
+        proposedWrapstarName: a.wrapstarName,
+        proposedCourierDriverId: a.courierDriverId,
+        proposedCourierDriverName: a.courierDriverName,
+        proposedDistanceMiles: Math.round(a.distanceMiles * 10) / 10,
+        proposedFulfillmentMode: a.fulfillmentMode,
+        allocationStatus: "proposed",
+        updatedAt: nowIso(),
+        updatedBy: "allocator",
+      });
+      return proposed;
     }
-    const next: Order = {
-      ...o,
-      wrapstarId: a.wrapstarId,
-      wrapstarName: a.wrapstarName,
-      driverId: a.wrapstarId,
-      driverName: a.wrapstarName,
-      fulfillmentMode: a.fulfillmentMode,
-      courierDriverId: a.courierDriverId,
-      courierDriverName: a.courierDriverName,
-      assignmentSource: o.assignmentSource === "manual" ? "manual" : "auto",
+    return {
+      ...clearProposal(clearLiveAssignment(o)),
+      status: boardStatus,
+      allocationStatus: "unallocated" as const,
       updatedAt: nowIso(),
       updatedBy: "allocator",
-      status:
-        status === "pending" || status === "scheduled" || status === "assigned"
-          ? "assigned"
-          : status,
     };
-    return next;
   });
   return assignStopSequences(merged);
 }
@@ -654,10 +683,11 @@ export async function listOrdersByStatus(status: OrderBoardBucket) {
   const now = new Date();
 
   if (status === "delinquent") {
-    return orders.filter((o) => isOrderDelinquent(o, now));
+    return orders.filter((o) => isAllocationReleasedToModules(o) && isOrderDelinquent(o, now));
   }
   if (status === "active") {
     return orders.filter((o) => {
+      if (!isAllocationReleasedToModules(o)) return false;
       if (isOrderDelinquent(o, now)) return false;
       const st = normalizeOrderStatus(o.status);
       return (
@@ -670,6 +700,7 @@ export async function listOrdersByStatus(status: OrderBoardBucket) {
   }
   if (status === "scheduled") {
     return orders.filter((o) => {
+      if (!isAllocationReleasedToModules(o)) return false;
       if (isOrderDelinquent(o, now)) return false;
       const st = normalizeOrderStatus(o.status);
       return st === "scheduled" || st === "pending";
@@ -693,8 +724,92 @@ export async function listAllOrders(): Promise<Order[]> {
 export async function listOrdersForDateKey(dateKey: string): Promise<Order[]> {
   const all = await listAllOrders();
   return assignStopSequences(all).filter(
-    (o) => formatDateKeyNy(wrrapdScheduledInstantIsoForUi(o)) === dateKey,
+    (o) =>
+      isAllocationReleasedToModules(o) &&
+      formatDateKeyNy(wrrapdScheduledInstantIsoForUi(o)) === dateKey,
   );
+}
+
+export async function listAllocationQueue(): Promise<Order[]> {
+  const all = await listAllOrders();
+  const open = all.filter((o) => {
+    const st = normalizeOrderStatus(o.status);
+    if (st === "delivered" || st === "cancelled" || st === "refunded") return false;
+    return o.allocationStatus === "proposed" || o.allocationStatus === "unallocated";
+  });
+  return open.sort((a, b) => {
+    if (a.allocationStatus !== b.allocationStatus) {
+      return a.allocationStatus === "proposed" ? -1 : 1;
+    }
+    return (b.createdAt || "").localeCompare(a.createdAt || "");
+  });
+}
+
+export async function approveProposedAllocation(
+  id: string,
+  updatedBy: string,
+): Promise<Order | null> {
+  const current = await getOrderById(id);
+  if (!current?.proposedWrapstarId) return null;
+  const st = normalizeOrderStatus(current.status);
+  const next: Order = {
+    ...current,
+    wrapstarId: current.proposedWrapstarId,
+    wrapstarName: current.proposedWrapstarName,
+    driverId: current.proposedWrapstarId,
+    driverName: current.proposedWrapstarName,
+    fulfillmentMode: current.proposedFulfillmentMode || current.fulfillmentMode,
+    assignmentSource: "auto",
+    allocationStatus: "approved",
+    allocationApprovedAt: nowIso(),
+    allocationApprovedBy: updatedBy,
+    status: st === "pending" || st === "scheduled" || st === "assigned" ? "assigned" : st,
+    updatedAt: nowIso(),
+    updatedBy,
+  };
+  if (current.proposedCourierDriverId) {
+    next.courierDriverId = current.proposedCourierDriverId;
+    next.courierDriverName = current.proposedCourierDriverName;
+  } else {
+    delete next.courierDriverId;
+    delete next.courierDriverName;
+  }
+  const oc = getOrdersCollection();
+  if (oc) {
+    await oc.doc(id).set(next);
+    const snap = await oc.get();
+    const routed = assignStopSequences(snap.docs.map((d) => d.data() as Order));
+    await Promise.all(routed.map((o) => oc.doc(o.id).set(o)));
+  } else {
+    const orders = await readFallbackOrders();
+    const updated = orders.map((o) => (o.id === id ? next : o));
+    await writeFallbackPayload(assignStopSequences(updated));
+  }
+  return (await getOrderById(id)) ?? next;
+}
+
+export async function holdAllocationUnallocated(
+  id: string,
+  updatedBy: string,
+): Promise<Order | null> {
+  const current = await getOrderById(id);
+  if (!current) return null;
+  const st = normalizeOrderStatus(current.status);
+  const next = clearProposal({
+    ...clearLiveAssignment(current),
+    status: st === "assigned" ? "scheduled" : st,
+    allocationStatus: "unallocated",
+    updatedAt: nowIso(),
+    updatedBy,
+  });
+  const oc = getOrdersCollection();
+  if (oc) {
+    await oc.doc(id).set(next);
+  } else {
+    const orders = await readFallbackOrders();
+    await writeFallbackPayload(orders.map((o) => (o.id === id ? next : o)));
+  }
+  return (await getOrderById(id)) ?? next;
 }
 
 export async function listWrapstarOrders(wrapstarId: string) {
@@ -710,6 +825,7 @@ export async function listWrapstarOrders(wrapstarId: string) {
   const mine = orders.filter((o) => {
     const st = normalizeOrderStatus(o.status);
     return (
+      isAllocationReleasedToModules(o) &&
       orderWrapstarId(o) === wrapstarId &&
       (st === "assigned" ||
         st === "accepted" ||
@@ -768,7 +884,7 @@ export async function listDriverPastOrders(driverId: string, limit = 80): Promis
 export async function listOrdersForWrapstar(wrapstarId: string): Promise<Order[]> {
   const all = await listAllOrders();
   return all
-    .filter((o) => orderWrapstarId(o) === wrapstarId)
+    .filter((o) => isAllocationReleasedToModules(o) && orderWrapstarId(o) === wrapstarId)
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 }
 
@@ -952,6 +1068,9 @@ export async function assignWrapstar(id: string, wrapstarId: string, updatedBy: 
     driverName: wrapstar.name,
     fulfillmentMode: wrapOnly ? "driver_final_mile" : "self_delivery",
     assignmentSource: "manual",
+    allocationStatus: "approved",
+    allocationApprovedAt: nowIso(),
+    allocationApprovedBy: updatedBy,
     status: st === "scheduled" || st === "pending" ? "assigned" : st,
     updatedAt: nowIso(),
     updatedBy,

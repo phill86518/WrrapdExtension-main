@@ -17,6 +17,7 @@ import { redirect } from "next/navigation";
 function revalidateOrders() {
   revalidatePath("/admin/orders");
   revalidatePath("/admin/orders/calendar");
+  revalidatePath("/admin/allocations");
   revalidatePath("/admin");
 }
 

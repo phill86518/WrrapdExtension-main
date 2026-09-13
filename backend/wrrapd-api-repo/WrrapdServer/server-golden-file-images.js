@@ -507,7 +507,7 @@ app.post('/process-payment', async (req, res) => {
         // Send email to admin
         await mg.messages.create(process.env.MAILGUN_DOMAIN, {
             from: "Wrrapd <noreply@wrrapd.com>",
-            to: ["angel@wrrapd.com", "admin@wrrapd.com"],
+            to: ["admin@wrrapd.com"],
             subject: `New order #${orderNumber}`,
             html: adminEmailBody,
             ...(adminAttachments.length > 0 ? { inline: adminAttachments } : {})

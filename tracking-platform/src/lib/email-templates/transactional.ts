@@ -130,7 +130,7 @@ export function thankYouEmailHtml(input: {
   <p style="margin:10px 0 0;font-size:15px;color:rgba(255,255,255,0.92);">Your gift is in caring hands.</p>
 </td></tr>
 <tr><td style="padding:28px 28px 8px;">
-  <p style="margin:0;font-size:16px;color:#1a1a1a;">Hi ${escapeHtml(firstName(input.customerName))},</p>
+  <p style="margin:0;font-size:16px;color:#1a1a1a;">Hi ${escapeHtml(firstName(input.customerGreetingName || input.customerName))},</p>
   <p style="margin:14px 0 0;font-size:15px;line-height:1.55;color:#333;">
     We're honored to gift-wrap for you. Here is a summary of your Wrrapd delivery.
   </p>
@@ -224,6 +224,11 @@ export function formatWrrapdDeliveryWindowEtForNotifications(order: {
 }
 
 /** Internal / operations — detailed admin notification layout. */
+function formatUsdFromCents(cents: number | undefined): string {
+  if (cents == null || !Number.isFinite(cents)) return "";
+  return `$${(cents / 100).toFixed(2)}`;
+}
+
 export function adminNewOrderEmailHtml(input: {
   /** Amazon-style id or "Manual — …" — never internal ord-* */
   publicOrderRef: string;
@@ -242,6 +247,13 @@ export function adminNewOrderEmailHtml(input: {
   amazonDeliveryDatesSnapshot?: string[];
   lineItems?: OrderLineItem[];
   flowerPickup?: FlowerPickupLocation[];
+  retailer?: string;
+  orderValueCents?: number;
+  wrapRevenueCents?: number;
+  flowersRevenueCents?: number;
+  amountPaidLabel?: string;
+  deliveryInstructions?: string;
+  allocationNote?: string;
 }): string {
   const addr2 = input.addressLine2 ? `${escapeHtml(input.addressLine2)}, ` : "";
   const flowerPickupBlock = (input.flowerPickup || [])
@@ -333,6 +345,34 @@ export function adminNewOrderEmailHtml(input: {
   <table role="presentation" width="100%" style="background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">
     <tr><td style="padding:10px 12px;">
       <table role="presentation" width="100%" style="font-size:13px;line-height:1.35;color:#0f172a;">
+        ${
+          input.retailer
+            ? `<tr>
+          <td style="padding:6px 8px 2px 0;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:#64748b;vertical-align:top;">Retailer</td>
+          <td style="padding:6px 0 2px;font-weight:600;">${escapeHtml(input.retailer)}</td>
+        </tr>
+        <tr><td colspan="2" style="padding:4px 0 4px;border-bottom:1px solid #e2e8f0;"></td></tr>`
+            : ""
+        }
+        ${
+          (() => {
+            const amountPaid = input.amountPaidLabel || formatUsdFromCents(input.orderValueCents);
+            const wrapRev = formatUsdFromCents(input.wrapRevenueCents);
+            const flowerRev = formatUsdFromCents(input.flowersRevenueCents);
+            const moneyBits = [
+              amountPaid ? `Charged ${amountPaid}` : "",
+              wrapRev ? `Wrap ${wrapRev}` : "",
+              flowerRev ? `Flowers ${flowerRev}` : "",
+            ].filter(Boolean);
+            return moneyBits.length
+              ? `<tr>
+          <td style="padding:6px 8px 2px 0;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:#64748b;vertical-align:top;">Payment</td>
+          <td style="padding:6px 0 2px;">${escapeHtml(moneyBits.join(" · "))}</td>
+        </tr>
+        <tr><td colspan="2" style="padding:4px 0 4px;border-bottom:1px solid #e2e8f0;"></td></tr>`
+              : "";
+          })()
+        }
         <tr>
           <td style="padding:6px 8px 2px 0;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:#64748b;vertical-align:top;">Customer (gifter)</td>
           <td style="padding:6px 0 2px;">
@@ -353,6 +393,24 @@ export function adminNewOrderEmailHtml(input: {
           <td style="padding:6px 8px 2px 0;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:#64748b;vertical-align:top;">Window (ET)</td>
           <td style="padding:6px 0 2px;font-size:13px;">${escapeHtml(input.scheduledEtLabel)}</td>
         </tr>
+        ${
+          input.allocationNote
+            ? `<tr><td colspan="2" style="padding:4px 0 4px;border-bottom:1px solid #e2e8f0;"></td></tr>
+        <tr>
+          <td style="padding:6px 8px 2px 0;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:#64748b;vertical-align:top;">Allocation</td>
+          <td style="padding:6px 0 2px;font-size:13px;">${escapeHtml(input.allocationNote)}</td>
+        </tr>`
+            : ""
+        }
+        ${
+          input.deliveryInstructions
+            ? `<tr><td colspan="2" style="padding:4px 0 4px;border-bottom:1px solid #e2e8f0;"></td></tr>
+        <tr>
+          <td style="padding:6px 8px 2px 0;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:#64748b;vertical-align:top;">Instructions</td>
+          <td style="padding:6px 0 2px;font-size:13px;">${escapeHtml(input.deliveryInstructions)}</td>
+        </tr>`
+            : ""
+        }
       </table>
       ${
         input.deliveryPreferencePending && input.amazonDeliveryDatesSnapshot?.length

@@ -1,4 +1,5 @@
 import type { Order } from "@/lib/types";
+import { isDepartedStaffEmail } from "@/lib/departed-staff-emails";
 import {
   getPublicOrigin,
   sendTransactionalEmail,
@@ -56,8 +57,29 @@ function opsInboxRecipient(): string {
     .split(/[;,]/)
     .map((s) => s.trim().toLowerCase())
     .filter(Boolean);
-  const notOrders = parts.find((a) => a !== "orders@wrrapd.com");
+  const notOrders = parts.find((a) => a !== "orders@wrrapd.com" && !isDepartedStaffEmail(a));
   return notOrders || OPS_INBOX_DEFAULT;
+}
+
+function allocationOpsNote(order: Order): string {
+  if (order.allocationStatus === "proposed" && order.proposedWrapstarName) {
+    const miles =
+      order.proposedDistanceMiles != null ? ` · ${order.proposedDistanceMiles.toFixed(1)} mi` : "";
+    const courier = order.proposedCourierDriverName
+      ? ` · JoyRider ${order.proposedCourierDriverName}`
+      : order.proposedFulfillmentMode === "self_delivery"
+        ? " · WrapStar self-delivery"
+        : " · JoyRider not yet matched";
+    return `Proposed (awaiting Command Center approval): ${order.proposedWrapstarName}${miles}${courier}`;
+  }
+  if (order.allocationStatus === "unallocated") {
+    return "Unallocated — no approved WrapStar within 15 miles of the giftee ZIP. Manual assignment in Allocations.";
+  }
+  if (order.wrapstarName) {
+    const courier = order.courierDriverName ? ` · JoyRider ${order.courierDriverName}` : "";
+    return `Assigned: ${order.wrapstarName}${courier}`;
+  }
+  return "Not yet allocated.";
 }
 
 /** BCC on customer thank-you: same ops inbox only; skip if customer is already that address. */
@@ -183,6 +205,12 @@ export async function sendPostOrderNotifications(order: Order): Promise<PostOrde
     amazonDeliveryDatesSnapshot: order.amazonDeliveryDatesSnapshot,
     lineItems: order.lineItems,
     flowerPickup: order.flowerPickup,
+    retailer: order.retailer,
+    orderValueCents: order.orderValueCents,
+    wrapRevenueCents: order.wrapRevenueCents,
+    flowersRevenueCents: order.flowersRevenueCents,
+    deliveryInstructions: order.deliveryInstructions,
+    allocationNote: allocationOpsNote(order),
   });
   const adminSubject = order.externalOrderId?.trim()
     ? `New Wrrapd order ${order.externalOrderId.trim()}`

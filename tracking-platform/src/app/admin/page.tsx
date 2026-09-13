@@ -3,7 +3,7 @@ import { SameOriginLogoutLink } from "@/components/same-origin-logout-link";
 import { PasswordField } from "@/components/password-field";
 import { WrrapdLogo } from "@/components/wrrapd-logo";
 import { getSession } from "@/lib/auth";
-import { listOrdersByStatus } from "@/lib/data";
+import { listAllocationQueue, listOrdersByStatus } from "@/lib/data";
 import { ensureDemoStaffing } from "@/lib/demo-staffing";
 
 export const dynamic = "force-dynamic";
@@ -16,6 +16,11 @@ function pickSearchParam(v: string | string[] | undefined): string | undefined {
 }
 
 const MODULES = [
+  {
+    href: "/admin/allocations",
+    title: "Allocations",
+    body: "Review 15-mile auto-matches. Approve to release onto Orders, WrapStars, and JoyRiders — or assign by hand.",
+  },
   {
     href: "/admin/orders",
     title: "Orders",
@@ -102,16 +107,19 @@ export default async function AdminPage({
   let delinquentCount = 0;
   let activeCount = 0;
   let scheduledCount = 0;
+  let allocationCount = 0;
   try {
     await ensureDemoStaffing();
-    const [active, scheduled, delinquent] = await Promise.all([
+    const [active, scheduled, delinquent, allocationQueue] = await Promise.all([
       listOrdersByStatus("active"),
       listOrdersByStatus("scheduled"),
       listOrdersByStatus("delinquent"),
+      listAllocationQueue(),
     ]);
     activeCount = active.length;
     scheduledCount = scheduled.length;
     delinquentCount = delinquent.length;
+    allocationCount = allocationQueue.length;
   } catch (err) {
     console.error("[admin] hub stats failed", err);
     return (
@@ -139,6 +147,12 @@ export default async function AdminPage({
           Module hub — open Orders for boards, Applications for hiring, and the left rail for everything else.
         </p>
         <div className="mt-5 flex flex-wrap gap-3">
+          <Link
+            href="/admin/allocations"
+            className="inline-flex items-center rounded-xl bg-gradient-to-b from-[#1a2744] to-[#0f172a] px-4 py-2.5 text-sm font-bold text-white shadow-md"
+          >
+            Allocations · {allocationCount} waiting
+          </Link>
           <Link
             href="/admin/orders"
             className="inline-flex items-center rounded-xl bg-gradient-to-b from-[#c9a227] to-[#a88417] px-4 py-2.5 text-sm font-bold text-[#1a1a12] shadow-md"
@@ -170,6 +184,11 @@ export default async function AdminPage({
             <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-[#c9a227] via-amber-500 to-[#c9a227]" />
             <h3 className="mt-2 font-bold text-[#0f172a]">{mod.title}</h3>
             <p className="mt-2 text-sm leading-relaxed text-[#2d4a38]">{mod.body}</p>
+            {mod.href === "/admin/allocations" && allocationCount > 0 ? (
+              <p className="mt-3 text-xs font-bold uppercase tracking-wide text-amber-800">
+                {allocationCount} waiting for approval
+              </p>
+            ) : null}
             {mod.href === "/admin/orders" && delinquentCount > 0 ? (
               <p className="mt-3 text-xs font-bold uppercase tracking-wide text-rose-700">
                 {delinquentCount} delinquent need attention

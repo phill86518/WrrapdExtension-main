@@ -7,6 +7,7 @@ import { DriverInstallCard } from "@/components/driver-install-card";
 import { LogoutButton } from "@/components/logout-button";
 import { WrrapdLogo } from "@/components/wrrapd-logo";
 import { wrapPhaseLabel } from "@/lib/wrap-status-display";
+import { isAllocationReleasedToModules } from "@/lib/types";
 import { getContractorRecord } from "@/lib/contractor-records";
 import { ContractorAccountCard } from "@/components/contractor-account-card";
 import Link from "next/link";
@@ -48,7 +49,7 @@ export default async function CourierPage() {
 
   const orders = await listAllOrders();
   const mine = orders
-    .filter((o) => o.courierDriverId === driver.id)
+    .filter((o) => isAllocationReleasedToModules(o) && o.courierDriverId === driver.id)
     .sort((a, b) => (b.readyForCourierAt || "").localeCompare(a.readyForCourierAt || ""));
 
   const ready = mine.filter((o) => o.wrapPhase === "complete" || o.readyForCourierAt);

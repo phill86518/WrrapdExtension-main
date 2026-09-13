@@ -18,6 +18,9 @@ export type OnboardingStatus = "pending" | "approved" | "rejected";
 
 export type AssignmentSource = "auto" | "manual";
 
+/** Auto-match is a proposal until ops approves it in Command Center → Allocations. */
+export type AllocationStatus = "proposed" | "unallocated" | "approved";
+
 export type FulfillmentMode = "self_delivery" | "driver_final_mile";
 
 /** Where the shopper placed the underlying gift order (multi-retailer ingest + ops). */
@@ -197,6 +200,21 @@ export type Order = {
    * Admin board uses this with wrapPhase === "complete".
    */
   readyForCourierAt?: string;
+  /**
+   * proposed = auto-match within 15 miles, waiting for Command Center approval.
+   * unallocated = no WrapStar in range (manual assign).
+   * approved = live on Orders / WrapStar / JoyRider modules.
+   * Legacy rows without this field that already have a WrapStar stay on the boards.
+   */
+  allocationStatus?: AllocationStatus;
+  allocationApprovedAt?: string;
+  allocationApprovedBy?: string;
+  proposedWrapstarId?: string;
+  proposedWrapstarName?: string;
+  proposedCourierDriverId?: string;
+  proposedCourierDriverName?: string;
+  proposedDistanceMiles?: number;
+  proposedFulfillmentMode?: FulfillmentMode;
 };
 
 export type MetroId =
@@ -431,6 +449,30 @@ export function normalizeOrderStatus(status: string | undefined): OrderStatus {
 /** Prefer wrapstarId; fall back to legacy driverId. */
 export function orderWrapstarId(o: Pick<Order, "wrapstarId" | "driverId">): string | undefined {
   return o.wrapstarId || o.driverId;
+}
+
+/** True once ops approved (or legacy row already had a live WrapStar). */
+export function isAllocationCommitted(
+  o: Pick<Order, "allocationStatus" | "assignmentSource" | "wrapstarId" | "driverId">,
+): boolean {
+  if (o.allocationStatus === "approved") return true;
+  if (o.assignmentSource === "manual" && orderWrapstarId(o)) return true;
+  if (
+    orderWrapstarId(o) &&
+    o.allocationStatus !== "proposed" &&
+    o.allocationStatus !== "unallocated"
+  ) {
+    return true;
+  }
+  return false;
+}
+
+/** Orders / WrapStar / JoyRider boards — hide the allocation queue. */
+export function isAllocationReleasedToModules(
+  o: Pick<Order, "allocationStatus" | "assignmentSource" | "wrapstarId" | "driverId">,
+): boolean {
+  if (o.allocationStatus === "proposed" || o.allocationStatus === "unallocated") return false;
+  return true;
 }
 
 export function orderWrapstarName(o: Pick<Order, "wrapstarName" | "driverName">): string | undefined {

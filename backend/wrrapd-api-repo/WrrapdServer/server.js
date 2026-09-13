@@ -20,6 +20,7 @@ const printerCoverage = require(path.join(__dirname, 'lib', 'printer-coverage'))
 const grokClient = require(path.join(__dirname, 'lib', 'grok-client'));
 const flowerStores = require(path.join(__dirname, 'lib', 'flowers', 'stores'));
 const flowerCatalog = require(path.join(__dirname, 'lib', 'flowers', 'catalog'));
+const orderEmails = require(path.join(__dirname, 'lib', 'order-emails'));
 
 // Initialize Google Cloud Storage
 let storageOptions = {
@@ -195,12 +196,13 @@ async function sendProcessPaymentPairEmails(opts) {
     } = opts;
 
     const smtpOnly = process.env.FORCE_SMTP_ONLY === 'true';
+    const liveAdminTo = orderEmails.filterLiveRecipients(adminRecipients);
     if (smtpReadyForPay()) {
         const transporter = createPaySmtpTransport();
         return Promise.allSettled([
             transporter.sendMail({
                 from: adminFrom,
-                to: adminRecipients,
+                to: liveAdminTo,
                 subject: adminSubject,
                 html: adminHtml,
                 attachments: inlineToNodemailer(adminAttachments),
@@ -226,7 +228,7 @@ async function sendProcessPaymentPairEmails(opts) {
     return Promise.allSettled([
         mg.messages.create(process.env.MAILGUN_DOMAIN, {
             from: adminFrom,
-            to: adminRecipients,
+            to: liveAdminTo,
             subject: adminSubject,
             html: adminHtml,
             ...(adminAttachments.length > 0 ? { inline: adminAttachments } : {}),
@@ -2673,6 +2675,23 @@ app.post('/process-payment', async (req, res) => {
         let trackingGifteeForEmail = normalizeAddressShape({});
         /** When true, tracking Cloud Run already sent thank-you + ops emails — skip legacy pair from this server. */
         let trackingIngestHandledNotifications = false;
+        let fallbackEmailContext = {
+            recipientName: '',
+            addressLine1: '',
+            addressLine2: '',
+            city: '',
+            state: '',
+            postalCode: '',
+            scheduledEtLabel: '',
+            lineItems: [],
+            retailer: payRetailer || '',
+            customerName: '',
+            sourceNote: '',
+            wrapRevenueCents: null,
+            flowersRevenueCents: null,
+            orderValueCents: null,
+            ingestFailedReason: '',
+        };
 
         // Ingest ONE tracking order for this checkout (prevents multi-email fan-out).
         if (normalizedOrderData.length > 0) {
@@ -2902,75 +2921,135 @@ app.post('/process-payment', async (req, res) => {
                 };
             }
             const ingestResult = await ingestOrderIntoTracking(ingestPayload);
+            const retailerYmd =
+                ingestPayload.retailerEstimatedDeliveryDate ||
+                (Array.isArray(ingestPayload.amazonDeliveryDays) &&
+                    ingestPayload.amazonDeliveryDays[ingestPayload.amazonDeliveryDays.length - 1]) ||
+                ingestPayload.amazonDeliveryDay ||
+                '';
+            fallbackEmailContext = {
+                recipientName,
+                addressLine1: ingestCommon.addressLine1,
+                addressLine2: ingestCommon.addressLine2,
+                city: ingestCommon.city,
+                state: ingestCommon.state,
+                postalCode: ingestCommon.postalCode,
+                scheduledEtLabel: orderEmails.deliveryWindowLabel(payRetailer, retailerYmd),
+                lineItems: lineItems.length ? lineItems : wrappedOnly.map((it) => ({
+                    title: it.title || 'Wrapped item',
+                    asin: it.asin || '',
+                    imageUrl: it.imageUrl || '',
+                    wrappingOption: it.selected_wrapping_option || '',
+                    flowers: !!it.checkbox_flowers,
+                    occasion: it.occasion || '',
+                    giftMessage: it.giftMessage || '',
+                    senderName: it.senderName || '',
+                })),
+                retailer: payRetailer || '',
+                customerName,
+                sourceNote: ingestPayload.sourceNote || '',
+                wrapRevenueCents: ingestCommon.wrapRevenueCents,
+                flowersRevenueCents: ingestCommon.flowersRevenueCents,
+                orderValueCents: ingestCommon.orderValueCents,
+                ingestFailedReason: '',
+            };
             if (!ingestResult.ok) {
                 nonBlockingWarnings.push(`tracking ingest failed: ${ingestResult.reason}`);
+                fallbackEmailContext.ingestFailedReason = ingestResult.reason || 'unknown';
             } else {
                 trackingIngestHandledNotifications = true;
             }
         }
 
-        // Admin email template (legacy pay server path — only if tracking did not already notify)
-        const adminEmailBody = `
-            <div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto;">
-                <h1 style="color: #333;">New Payment Received</h1>
-                <p>A payment of <strong>$${amount}</strong> has been successfully processed.</p>
-                <p><strong>Order Number:</strong> ${orderNumber}</p>
-                
-                <div style="margin: 20px 0; padding: 15px; background-color: #f2f2f2; border-radius: 5px;">
-                    <h2 style="margin-top: 0; color: #333;">Customer Information</h2>
-                    <p><strong>Name (Giftee):</strong> ${(trackingGifteeForEmail.name && String(trackingGifteeForEmail.name).trim()) || billingDetails?.name || 'N/A'}</p>
-                    <p><strong>Email (Gifter):</strong> ${customerEmail}</p>
-                    <p><strong>Phone (Gifter):</strong> ${customerPhone}</p>
-                    ${
-                        trackingGifteeForEmail && (trackingGifteeForEmail.street || trackingGifteeForEmail.line1)
-                            ? `<p><strong>Delivery address (Giftee):</strong> ${trackingGifteeForEmail.name || 'N/A'}, ${trackingGifteeForEmail.street || trackingGifteeForEmail.line1 || 'N/A'}, ${trackingGifteeForEmail.city || 'N/A'}, ${trackingGifteeForEmail.state || 'N/A'} ${trackingGifteeForEmail.postalCode || 'N/A'}${trackingGifteeForEmail.country ? `, ${trackingGifteeForEmail.country}` : ''}</p>`
-                            : ''
-                    }
-                    ${billingDetails && billingDetails.address && (!finalShippingAddressFromCheckout || 
-                      (billingDetails.address.line1 !== finalShippingAddressFromCheckout.street?.split(',')[0]?.trim())) ? 
-                      `<p><strong>Billing Address (Gifter):</strong> ${billingDetails.name || 'N/A'}, ${billingDetails.address.line1 || 'N/A'}${billingDetails.address.line2 ? ', ' + billingDetails.address.line2 : ''}, ${billingDetails.address.city || 'N/A'}, ${billingDetails.address.state || 'N/A'} ${billingDetails.address.postal_code || 'N/A'}, ${billingDetails.address.country || 'N/A'}</p>` : 
-                      ''}
-                </div>
-                
-                <h2 style="color: #333;">Order Items</h2>
-                ${processedItems.map(item => item.adminRow).join('')}
-            </div>
-        `;
-        
-        // Customer email template
-        const customerEmailBody = `
-            <div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto;">
-                <h1 style="color: #333;">Thank you for your order!</h1>
-                <p>We've received your payment of <strong>$${amount}</strong>.</p>
-                <p><strong>Order Number:</strong> ${orderNumber}</p>
-                
-                <h2 style="color: #333;">Order Items</h2>
-                ${processedItems.map(item => item.customerRow).join('')}
-                
-                <p>We'll start processing your order right away!</p>
-                <p>If you have any questions, please don't hesitate to contact us.</p>
-                <br>
-                <p>Best regards,</p>
-                <p>The Wrrapd Team</p>
-            </div>
-        `;
+        const gifteeName =
+            fallbackEmailContext.recipientName ||
+            (trackingGifteeForEmail.name && String(trackingGifteeForEmail.name).trim()) ||
+            '—';
+        const gifteeStreet =
+            fallbackEmailContext.addressLine1 ||
+            trackingGifteeForEmail.street ||
+            trackingGifteeForEmail.line1 ||
+            '';
+        const gifteeCity = fallbackEmailContext.city || trackingGifteeForEmail.city || '';
+        const gifteeState = fallbackEmailContext.state || trackingGifteeForEmail.state || '';
+        const gifteeZip =
+            fallbackEmailContext.postalCode ||
+            trackingGifteeForEmail.postalCode ||
+            '';
+        const customerAddressLine = [gifteeStreet, [gifteeCity, gifteeState, gifteeZip].filter(Boolean).join(', ')]
+            .filter(Boolean)
+            .join(', ');
+        const thankYouLineItems =
+            fallbackEmailContext.lineItems && fallbackEmailContext.lineItems.length
+                ? fallbackEmailContext.lineItems
+                : normalizedOrderData.map((it) => ({
+                      title: it.title || 'Wrapped item',
+                      asin: it.asin || '',
+                      imageUrl: it.imageUrl || '',
+                      wrappingOption: it.selected_wrapping_option || '',
+                      flowers: !!it.checkbox_flowers,
+                      occasion: it.occasion || '',
+                      giftMessage: it.giftMessage || '',
+                      senderName: it.senderName || '',
+                  }));
+        const gifterName =
+            fallbackEmailContext.customerName ||
+            gifterFullName ||
+            (billingDetails && billingDetails.name) ||
+            customerEmail;
+        const scheduledEtLabel =
+            fallbackEmailContext.scheduledEtLabel ||
+            orderEmails.deliveryWindowLabel(payRetailer, '');
 
-        // Legacy SMTP pair ("New order #…" / "Your Wrrapd Order Confirmation #…") — skip when tracking ingest
-        // succeeded; Cloud Run already sent "New Wrrapd order …" + "Thank you — Wrrapd order …".
+        const customerEmailBody = orderEmails.thankYouEmailHtml({
+            customerName: gifterName,
+            customerGreetingName: greetingFirstName || gifterName,
+            orderId: orderNumber,
+            recipientName: gifteeName,
+            addressLine: customerAddressLine,
+            scheduledEtLabel,
+            lineItems: thankYouLineItems,
+        });
+        const adminEmailBody = orderEmails.adminNewOrderEmailHtml({
+            publicOrderRef: orderNumber,
+            customerName: gifterName,
+            customerPhone,
+            customerEmail,
+            recipientName: gifteeName,
+            addressLine1: gifteeStreet,
+            addressLine2: fallbackEmailContext.addressLine2,
+            city: gifteeCity,
+            state: gifteeState,
+            postalCode: gifteeZip,
+            scheduledEtLabel,
+            sourceNote: fallbackEmailContext.sourceNote,
+            lineItems: thankYouLineItems,
+            retailer: payRetailer || fallbackEmailContext.retailer,
+            amountPaidLabel: `$${amount}`,
+            wrapRevenueCents: fallbackEmailContext.wrapRevenueCents,
+            flowersRevenueCents: fallbackEmailContext.flowersRevenueCents,
+            orderValueCents: fallbackEmailContext.orderValueCents,
+            ingestFailedReason: fallbackEmailContext.ingestFailedReason,
+            allocationNote: fallbackEmailContext.ingestFailedReason
+                ? 'Tracking ingest failed — allocate in Command Center after the order is recovered.'
+                : 'Review proposed allocation in Command Center → Allocations.',
+        });
+
+        // Same subject + branded bodies as Cloud Run. Skip only when tracking already sent them.
         if (!trackingIngestHandledNotifications) {
             const emailResults = await sendProcessPaymentPairEmails({
-                adminRecipients: ['angel@wrrapd.com', 'admin@wrrapd.com'],
+                adminRecipients: ['admin@wrrapd.com'],
                 adminFrom:
                     (smtpReadyForPay() && process.env.SMTP_FROM_ADMIN?.trim()) ||
                     'Wrrapd <noreply@wrrapd.com>',
-                adminSubject: `New order #${orderNumber}`,
+                adminSubject: orderEmails.adminNewOrderSubject(orderNumber),
                 adminHtml: adminEmailBody,
                 adminAttachments,
                 customerTo: customerEmail,
                 customerFrom:
                     (smtpReadyForPay() && process.env.SMTP_FROM_CUSTOMER?.trim()) ||
                     'Wrrapd Orders <orders@wrrapd.com>',
-                customerSubject: `Your Wrrapd Order Confirmation #${orderNumber}`,
+                customerSubject: orderEmails.thankYouSubject(orderNumber),
                 customerHtml: customerEmailBody,
                 customerAttachments,
                 customerReplyTo: 'support@wrrapd.com',
