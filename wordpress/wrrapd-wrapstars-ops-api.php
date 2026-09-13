@@ -456,7 +456,8 @@ function wrrapd_wrapstars_ops_portal_auth( $request ) {
 	$ws_app = wrrapd_wrapstars_get_application_by_user( $user->ID );
 	if ( $ws_app ) {
 		$ws_id = (int) $ws_app->ID;
-		if ( $portal === '' || $portal === 'wrapstar' ) {
+		// Only an active, unsuspended WrapStar can actually sign in — stamp only then.
+		if ( ( $portal === '' || $portal === 'wrapstar' ) && wrrapd_wrapstars_get_meta( $ws_id, 'status' ) === 'active' && wrrapd_wrapstars_get_meta( $ws_id, 'suspended' ) !== '1' ) {
 			wrrapd_wrapstars_set_meta( $ws_id, 'portal_last_login_at', $now );
 			wrrapd_wrapstars_set_meta( $ws_id, 'portal_login_count', (string) ( (int) wrrapd_wrapstars_get_meta( $ws_id, 'portal_login_count', '0' ) + 1 ) );
 		}
@@ -475,7 +476,7 @@ function wrrapd_wrapstars_ops_portal_auth( $request ) {
 		$drv_app = wrrapd_drivers_get_application_by_user( $user->ID );
 		if ( $drv_app ) {
 			$drv_id = (int) $drv_app->ID;
-			if ( $portal === '' || $portal === 'driver' ) {
+			if ( ( $portal === '' || $portal === 'driver' ) && wrrapd_drivers_get_meta( $drv_id, 'status' ) === 'active' && wrrapd_drivers_get_meta( $drv_id, 'suspended' ) !== '1' ) {
 				wrrapd_drivers_set_meta( $drv_id, 'portal_last_login_at', $now );
 				wrrapd_drivers_set_meta( $drv_id, 'portal_login_count', (string) ( (int) wrrapd_drivers_get_meta( $drv_id, 'portal_login_count', '0' ) + 1 ) );
 			}

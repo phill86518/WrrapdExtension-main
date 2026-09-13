@@ -83,27 +83,26 @@ export async function POST(request: NextRequest) {
       void touchContractorLogin("driver", roster.id).catch(() => undefined);
       return issueSession(roster.id, roster.name);
     }
-    // Wrong WP password → fall through only if the shared passcode matches (legacy email+passcode).
-    if (auth.status === 401 && !(await verifyWrapstarPassword(password))) {
-      return NextResponse.json({ ok: false, error: "Invalid email or password." }, { status: 401 });
-    }
-    if (auth.status !== 401 && !(await verifyWrapstarPassword(password))) {
-      return NextResponse.json({ ok: false, error: auth.error }, { status: 503 });
-    }
-  } else if (!(await verifyWrapstarPassword(password))) {
-    return NextResponse.json({ ok: false, error: "Invalid credentials" }, { status: 401 });
+    // WordPress is the only authority for email logins — no shared-passcode fallback.
+    const generic = auth.status === 401 ? "Invalid email or password." : auth.error;
+    return NextResponse.json(
+      { ok: false, error: generic },
+      { status: auth.status === 401 ? 401 : 503 },
+    );
   }
 
-  // Legacy roster lookup + shared passcode.
+  // Legacy (demo rows only): roster name or 10-digit ID + shared passcode. Roster status must be approved.
+  if (!(await verifyWrapstarPassword(password))) {
+    return NextResponse.json({ ok: false, error: "Invalid credentials" }, { status: 401 });
+  }
   const all = await listDeliveryDrivers();
   const needle = identifier.toLowerCase();
   const byId = await findDeliveryDriverById(identifier);
-  const byEmail = identifier.includes("@") ? await findDeliveryDriverByEmail(identifier) : undefined;
   const byName = all.find((d) => d.name.trim().toLowerCase() === needle);
   const byDisplay = all.find(
     (d) => (d.displayId || "").trim().toLowerCase() === needle || d.id.toLowerCase() === needle,
   );
-  const selected = byId || byEmail || byName || byDisplay;
+  const selected = byId || byName || byDisplay;
   if (!selected) {
     return NextResponse.json(
       { ok: false, error: "Unknown JoyRider — use your email address, or the exact roster name / 10-digit ID." },

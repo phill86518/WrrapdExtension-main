@@ -3,6 +3,7 @@ import { applySessionCookieToResponse, createSessionToken, verifyWrapstarPasswor
 import { findWrapstarByEmail, findWrapstarById, findWrapstarByName } from "@/lib/wrapstar-registry";
 import { looksLikeEmail, verifyPortalCredentials } from "@/lib/wp-portal-auth";
 import { touchContractorLogin } from "@/lib/contractor-records";
+import { getWrapstarProfile } from "@/lib/wrapstar-profiles";
 
 /**
  * WrapStar App login (wrapstar.wrrapd.com).
@@ -38,11 +39,7 @@ export async function POST(request: NextRequest) {
   if (looksLikeEmail(identifier)) {
     const auth = await verifyPortalCredentials(identifier, password, "wrapstar");
     if (!auth.ok) {
-      // Legacy email + shared passcode (founder/demo rows) still works; otherwise surface the error.
-      if (await verifyWrapstarPassword(password)) {
-        const roster = await findWrapstarByEmail(identifier);
-        if (roster) return issueSession(roster.id, roster.name);
-      }
+      // WordPress is the only authority for email logins — no shared-passcode fallback here.
       const generic = auth.status === 401 ? "Invalid email or password." : auth.error;
       return NextResponse.json(
         { ok: false, error: generic },
@@ -83,7 +80,8 @@ export async function POST(request: NextRequest) {
     return issueSession(roster.id, roster.name);
   }
 
-  // Legacy: roster name / ID + shared passcode.
+  // Legacy (founder / demo rows only): roster name or 10-digit ID + shared passcode.
+  // Still gated: the roster profile must be approved (set by Approve onboarding or admin).
   if (!(await verifyWrapstarPassword(password))) {
     return NextResponse.json({ ok: false, error: "Invalid credentials" }, { status: 401 });
   }
@@ -92,6 +90,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { ok: false, error: "Unknown WrapStar — use your email address, or the exact roster name / 10-digit ID." },
       { status: 404 },
+    );
+  }
+  const profile = await getWrapstarProfile(selected.id);
+  if (profile.onboardingStatus !== "approved") {
+    return NextResponse.json(
+      { ok: false, error: "Your WrapStar account is not active yet." },
+      { status: 403 },
     );
   }
   return issueSession(selected.id, selected.name);
