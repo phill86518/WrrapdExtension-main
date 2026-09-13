@@ -101,6 +101,10 @@ export type WrapstarApplication = {
   /** Last sign-in on wrapstar.wrrapd.com (via WP portal-auth) */
   portalLastLoginAt?: string;
   portalLoginCount?: number;
+  /** Command Center temporarily reopened the onboarding portal for this active contractor */
+  onboardingReopened?: boolean;
+  onboardingReopenedAt?: string;
+  onboardingClosedAt?: string;
   userId: number;
   createdAt: string;
 };
@@ -203,6 +207,8 @@ export type ApplicationAction =
   | "reinvite"
   | "resend_invite"
   | "reset_to_review"
+  | "reopen_onboarding"
+  | "close_onboarding"
   | "save_notes"
   | "save_bg_status";
 

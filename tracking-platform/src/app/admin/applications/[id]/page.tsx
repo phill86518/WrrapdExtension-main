@@ -58,6 +58,9 @@ async function actionForm(formData: FormData) {
   if (action === "activate" && st !== "approved") {
     redirect(`/admin/applications/${id}?role=${role}&ok=already_active`);
   }
+  if ((action === "reopen_onboarding" || action === "close_onboarding") && st !== "active") {
+    redirect(`/admin/applications/${id}?role=${role}&ok=not_active`);
+  }
   if (
     action === "reset_to_review" &&
     !["approved", "declined", "interview", "rejected"].includes(st)
@@ -208,6 +211,16 @@ export default async function AdminApplicationDetailPage({
             ? " — welcome email resent with a new temporary password."
             : null}
           {okFlash === "save_bg_status" ? " — background-check status saved." : null}
+          {okFlash === "activate"
+            ? " Onboarding site is now closed for them; they sign in only at the contractor portal."
+            : null}
+          {okFlash === "reopen_onboarding"
+            ? " — onboarding site reopened for this contractor; a short email with the link was sent. Close it again when they're done."
+            : null}
+          {okFlash === "close_onboarding"
+            ? " — onboarding site closed again and their onboarding sessions were signed out."
+            : null}
+          {okFlash === "not_active" ? " — skipped: only active contractors can have onboarding reopened or closed." : null}
         </p>
       ) : null}
 
@@ -426,6 +439,8 @@ export default async function AdminApplicationDetailPage({
           .map(([k]) => WRAPSTAR_ONBOARDING_STEP_LABELS[k] || k)}
         portalLastLoginAt={app.portalLastLoginAt}
         portalLoginCount={app.portalLoginCount}
+        onboardingReopened={!!app.onboardingReopened}
+        onboardingReopenedAt={app.onboardingReopenedAt}
       />
     </div>
   );

@@ -22,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_WRAPSTARS_BUILD', '2026-09-12-contractor-portals' );
+define( 'WRRAPD_WRAPSTARS_BUILD', '2026-09-12-portals-lock' );
 /** Approval / re-invite onboarding credentials remain valid this many days. */
 define( 'WRRAPD_WRAPSTARS_INVITE_TTL_DAYS', 15 );
 
@@ -555,10 +555,46 @@ function wrrapd_wrapstars_greeting_name( $app_id ) {
 	return 'there';
 }
 
+/**
+ * Once Command Center approves onboarding (status active) the onboarding portal is closed for
+ * that person — they use wrapstar.wrrapd.com from then on. Command Center can temporarily
+ * reopen it (meta onboarding_reopened = 1) for the rare re-sign / re-upload case.
+ *
+ * @return bool
+ */
+function wrrapd_wrapstars_onboarding_closed_for_user( $user_id ) {
+	static $cache = array();
+	$user_id = (int) $user_id;
+	if ( isset( $cache[ $user_id ] ) ) {
+		return $cache[ $user_id ];
+	}
+	$closed = false;
+	$app    = wrrapd_wrapstars_get_application_by_user( $user_id );
+	if ( $app ) {
+		$closed = (string) wrrapd_wrapstars_get_meta( $app->ID, 'status' ) === 'active'
+			&& (string) wrrapd_wrapstars_get_meta( $app->ID, 'onboarding_reopened' ) !== '1';
+	}
+	$cache[ $user_id ] = $closed;
+	return $closed;
+}
+
+/** Sign the user out everywhere on this WordPress (all devices). */
+function wrrapd_wrapstars_destroy_user_sessions( $user_id ) {
+	$user_id = (int) $user_id;
+	if ( $user_id <= 0 || ! class_exists( 'WP_Session_Tokens' ) ) {
+		return;
+	}
+	WP_Session_Tokens::get_instance( $user_id )->destroy_all();
+}
+
 /** @return bool */
 function wrrapd_wrapstars_is_onboarding_eligible_user( $user_id ) {
-	return wrrapd_wrapstars_user_has_role( $user_id, 'wrapstar_approved' )
+	$has_role = wrrapd_wrapstars_user_has_role( $user_id, 'wrapstar_approved' )
 		|| wrrapd_wrapstars_user_has_role( $user_id, 'wrapstar_active' );
+	if ( ! $has_role ) {
+		return false;
+	}
+	return ! wrrapd_wrapstars_onboarding_closed_for_user( $user_id );
 }
 
 function wrrapd_wrapstars_from_email_address() {
@@ -1861,6 +1897,13 @@ function wrrapd_wrapstars_process_portal_login() {
 		wrrapd_wrapstars_invalidate_expired_invite( $app->ID );
 		wp_logout();
 		$GLOBALS['wrrapd_ws_login_error'] = 'This onboarding invitation expired after 15 days. Email us and we will send you a fresh welcome email.';
+		return;
+	}
+	if ( wrrapd_wrapstars_onboarding_closed_for_user( $user->ID ) ) {
+		// Onboarding approved in Command Center → this portal is closed; the WrapStar app takes over.
+		wp_logout();
+		$app_host = function_exists( 'wrrapd_wrapstars_app_url' ) ? wp_parse_url( wrrapd_wrapstars_app_url(), PHP_URL_HOST ) : 'wrapstar.wrrapd.com';
+		$GLOBALS['wrrapd_ws_login_error'] = 'Your onboarding is complete. Sign in at ' . $app_host . ' with this same email and password.';
 		return;
 	}
 	if ( ! wrrapd_wrapstars_is_onboarding_eligible_user( $user->ID ) ) {

@@ -142,7 +142,13 @@ function wrrapd_drivers_run_admin_action( $app_id, $action, $opts = array() ) {
 		$user_id = (int) wrrapd_drivers_get_meta( $app_id, 'user_id' );
 		if ( $user_id ) {
 			wrrapd_drivers_set_user_role( $user_id, 'driver_active' );
+			// Onboarding portal is now closed for them: end any open onboarding sessions.
+			if ( function_exists( 'wrrapd_drivers_destroy_user_sessions' ) ) {
+				wrrapd_drivers_destroy_user_sessions( $user_id );
+			}
 		}
+		wrrapd_drivers_set_meta( $app_id, 'onboarding_reopened', '' );
+		wrrapd_drivers_set_meta( $app_id, 'onboarding_closed_at', gmdate( 'c' ) );
 		if ( $notes !== null ) {
 			wrrapd_drivers_set_meta( $app_id, 'admin_notes', $notes );
 			wrrapd_drivers_set_meta( $app_id, 'notes_updated_at', gmdate( 'c' ) );
@@ -169,6 +175,41 @@ function wrrapd_drivers_run_admin_action( $app_id, $action, $opts = array() ) {
 		wrrapd_drivers_set_meta( $app_id, 'suspended', '' );
 		wrrapd_drivers_set_meta( $app_id, 'unsuspended_at', gmdate( 'c' ) );
 		return array( 'ok' => true, 'status' => wrrapd_drivers_get_meta( $app_id, 'status' ) );
+	}
+
+	// Rare: let an active JoyRider back into the onboarding portal (re-sign / re-upload).
+	if ( $action === 'reopen_onboarding' ) {
+		$current = (string) wrrapd_drivers_get_meta( $app_id, 'status' );
+		if ( $current !== 'active' ) {
+			return array( 'ok' => false, 'error' => 'Only an active JoyRider can have onboarding reopened.', 'status' => $current );
+		}
+		wrrapd_drivers_set_meta( $app_id, 'onboarding_reopened', '1' );
+		wrrapd_drivers_set_meta( $app_id, 'onboarding_reopened_at', gmdate( 'c' ) );
+		if ( $notes !== null ) {
+			wrrapd_drivers_set_meta( $app_id, 'admin_notes', $notes );
+			wrrapd_drivers_set_meta( $app_id, 'notes_updated_at', gmdate( 'c' ) );
+		}
+		$onboarding_url = wrrapd_drivers_pros_url( '/driver-onboarding/' );
+		wrrapd_drivers_send_email(
+			$email,
+			'Your Wrrapd onboarding page is open again',
+			"Hi {$name},\n\nWe reopened your onboarding page so you can update a document:\n{$onboarding_url}\n\nSign in with your usual email and password. We'll close it again once you're done.\n"
+		);
+		return array( 'ok' => true, 'status' => 'active', 'onboardingReopened' => true );
+	}
+
+	if ( $action === 'close_onboarding' ) {
+		wrrapd_drivers_set_meta( $app_id, 'onboarding_reopened', '' );
+		wrrapd_drivers_set_meta( $app_id, 'onboarding_closed_at', gmdate( 'c' ) );
+		$user_id = (int) wrrapd_drivers_get_meta( $app_id, 'user_id' );
+		if ( $user_id && function_exists( 'wrrapd_drivers_destroy_user_sessions' ) ) {
+			wrrapd_drivers_destroy_user_sessions( $user_id );
+		}
+		if ( $notes !== null ) {
+			wrrapd_drivers_set_meta( $app_id, 'admin_notes', $notes );
+			wrrapd_drivers_set_meta( $app_id, 'notes_updated_at', gmdate( 'c' ) );
+		}
+		return array( 'ok' => true, 'status' => wrrapd_drivers_get_meta( $app_id, 'status' ), 'onboardingReopened' => false );
 	}
 	if ( $action === 'mark_declined' ) {
 		$note = $reason !== '' ? $reason : ( $notes !== null ? $notes : '' );
@@ -268,6 +309,9 @@ function wrrapd_drivers_ops_serialize_application( $id ) {
 		'passwordChangedAt'       => wrrapd_drivers_get_meta( $id, 'password_changed_at' ),
 		'portalLastLoginAt'       => wrrapd_drivers_get_meta( $id, 'portal_last_login_at' ),
 		'portalLoginCount'        => (int) wrrapd_drivers_get_meta( $id, 'portal_login_count', '0' ),
+		'onboardingReopened'      => wrrapd_drivers_get_meta( $id, 'onboarding_reopened' ) === '1',
+		'onboardingReopenedAt'    => wrrapd_drivers_get_meta( $id, 'onboarding_reopened_at' ),
+		'onboardingClosedAt'      => wrrapd_drivers_get_meta( $id, 'onboarding_closed_at' ),
 		'userId'                  => (int) wrrapd_drivers_get_meta( $id, 'user_id' ),
 		'createdAt'               => get_post_time( 'c', true, $app ),
 		// Compat fields for shared Admin UI.

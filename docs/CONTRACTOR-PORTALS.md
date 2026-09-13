@@ -15,9 +15,21 @@ still say `driver` / `courier` / `/drive/` — do not rename without a migration
 | Apply | `apply.wrrapd.com` (WrapStar) · `apply.wrrapd.com/drive/` (JoyRider) | none |
 | Review → Approve for onboarding | Command Center → Applications | WordPress issues **username = email** + temporary password (email) |
 | Onboarding (agreements, W-9, insurance, ID, payout) | `pros.wrrapd.com/onboarding/` · `apply.wrrapd.com/drive/driver-onboarding/` | same WordPress login |
-| Profile (any time after approval) | `apply.wrrapd.com/profile/` or `pros.wrrapd.com/profile/` · `apply.wrrapd.com/drive/driver-profile/` | same login; change password here |
-| **Approve onboarding** (final hire step) | Command Center → application → **Approve onboarding → active WrapStar/JoyRider** | — |
-| Work | **`wrapstar.wrrapd.com`** (WrapStar App) · **`joyrider.wrrapd.com`** (JoyRider App) | **same email + password** as onboarding |
+| Profile (during onboarding) | `apply.wrrapd.com/profile/` or `pros.wrrapd.com/profile/` · `apply.wrrapd.com/drive/driver-profile/` | same login; change password here |
+| **Approve onboarding** (final hire step) | Command Center → application → **Approve onboarding → active WrapStar/JoyRider** | onboarding site **closes** for them (sessions signed out) |
+| Work | **`wrapstar.wrrapd.com`** (WrapStar App) · **`joyrider.wrrapd.com`** (JoyRider App) | **same email + password** as onboarding; contact details + password now edited **inside the app** |
+
+### One login per stage — hard rules
+
+- **Before** Approve onboarding: the portal apps refuse the login ("Almost there — finish onboarding first").
+- **After** Approve onboarding: the onboarding site (`apply.` / `pros.`) refuses the login
+  ("Your onboarding is complete. Sign in at wrapstar.wrrapd.com …") and any open onboarding
+  sessions are destroyed. `wrrapd_wrapstars_onboarding_closed_for_user()` /
+  `wrrapd_drivers_onboarding_closed_for_user()` gate every onboarding/profile page.
+- **Reopen (rare):** Command Center → application (active) → **Reopen onboarding portal (rare)**.
+  Sets `onboarding_reopened = 1`, emails the contractor a short note with the onboarding link; the
+  contractor app keeps working. **Close onboarding portal** clears the flag and signs them out of
+  the onboarding site again. Both exist on the WP admin screens too.
 
 Singular subdomains (`wrapstar.`, `joyrider.`) are the right call — they match how a contractor
 refers to themselves ("the WrapStar app"), they are shorter to type on a phone, and they mirror
@@ -59,10 +71,14 @@ asks for confirmation when steps are still open.
    issued for that host only.
 3. Legacy fallback: roster name / 10-digit ID + shared contractor passcode (founder + demo rows).
    Contractors with a migrated record do **not** see the shared-passcode form — their password lives in
-   WordPress and is changed on the profile page.
+   WordPress.
 
-Password changes: profile page → **Username & password** (current + new, min 10 chars). Works on
-`apply.wrrapd.com/profile/`, `pros.wrrapd.com/profile/`, `apply.wrrapd.com/drive/driver-profile/`.
+Self-service after activation (Account tab → **Edit contact details** / **Change password**):
+`POST /api/contractor/contact` and `POST /api/contractor/password` (session required) call
+WordPress `POST /wrrapd/v1/portal-contact` / `POST /wrrapd/v1/portal-password` (ops key, active
++ unsuspended only). Contact edits write to the WP application (source of truth) and mirror onto
+the contractor record; email (the login) is changed by support only. During onboarding the same
+edits live on the WP profile page → **Username & password**.
 
 ---
 
@@ -160,8 +176,6 @@ run.app URL (map `track.wrrapd.com` the same way later if you want a friendly ad
 Use `--update-env-vars` only (never `--set-env-vars`):
 
 - `WRAPSTAR_PORTAL_HOST=wrapstar.wrrapd.com` · `JOYRIDER_PORTAL_HOST=joyrider.wrrapd.com`
-- `WRAPSTAR_PROFILE_URL=https://pros.wrrapd.com/profile/`
-- `JOYRIDER_PROFILE_URL=https://apply.wrrapd.com/drive/driver-profile/`
 
 WordPress overrides (`wp-config.php`, defaults already correct): `WRRAPD_WRAPSTARS_APP_URL`
 (`https://wrapstar.wrrapd.com/`), `WRRAPD_COURIER_APP_URL` (`https://joyrider.wrrapd.com`).
@@ -189,6 +203,8 @@ WordPress overrides (`wp-config.php`, defaults already correct): `WRRAPD_WRAPSTA
 | WrapStar profile page | `wordpress/wrrapd-wrapstars-profile.php` (+ force-content + virtual page in `wrrapd-wrapstars.php`) |
 | JoyRider profile page | `wrrapd_drivers_shortcode_profile()` in `wordpress/wrrapd-drivers.php` |
 | Portal auth endpoint | `wrrapd_wrapstars_ops_portal_auth()` in `wordpress/wrrapd-wrapstars-ops-api.php` |
+| Portal self-service endpoints | `wrrapd_wrapstars_ops_portal_password()` / `_portal_contact()` (same file); app side `src/lib/wp-portal-account.ts`, `src/app/api/contractor/*`, `src/components/contractor-account-settings.tsx` |
+| Onboarding closure + reopen | `*_onboarding_closed_for_user()` in `wrrapd-wrapstars.php` / `wrrapd-drivers.php`; actions `reopen_onboarding` / `close_onboarding` in both ops-api files; WP admin buttons in `wrrapd-wrapstars-apply.php` / `wrrapd-drivers.php` |
 | Host routing | `tracking-platform/src/middleware.ts`, `src/lib/portal-hosts.ts` |
 | Login routes | `src/app/api/wrapstar/login/route.ts`, `src/app/api/courier/login/route.ts`, `src/lib/wp-portal-auth.ts` |
 | Contractor record | `src/lib/contractor-records.ts`, `src/lib/sync-activated-wrapstar.ts`, `src/lib/sync-activated-driver.ts` |

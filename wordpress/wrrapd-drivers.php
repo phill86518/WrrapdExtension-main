@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_DRIVERS_BUILD', '2026-09-12-contractor-portals' );
+define( 'WRRAPD_DRIVERS_BUILD', '2026-09-12-portals-lock' );
 define( 'WRRAPD_DRIVERS_INVITE_TTL_DAYS', 15 );
 define( 'WRRAPD_DRIVERS_CPT', 'wrrapd_driver_app' );
 
@@ -276,9 +276,45 @@ function wrrapd_drivers_set_user_role( $user_id, $role ) {
 	$user->set_role( $role );
 }
 
+/**
+ * Once Command Center approves onboarding (status active) the onboarding portal is closed for
+ * that JoyRider — they use joyrider.wrrapd.com from then on. Command Center can temporarily
+ * reopen it (meta onboarding_reopened = 1) for the rare re-sign / re-upload case.
+ *
+ * @return bool
+ */
+function wrrapd_drivers_onboarding_closed_for_user( $user_id ) {
+	static $cache = array();
+	$user_id = (int) $user_id;
+	if ( isset( $cache[ $user_id ] ) ) {
+		return $cache[ $user_id ];
+	}
+	$closed = false;
+	$app    = wrrapd_drivers_get_application_by_user( $user_id );
+	if ( $app ) {
+		$closed = (string) wrrapd_drivers_get_meta( $app->ID, 'status' ) === 'active'
+			&& (string) wrrapd_drivers_get_meta( $app->ID, 'onboarding_reopened' ) !== '1';
+	}
+	$cache[ $user_id ] = $closed;
+	return $closed;
+}
+
+/** Sign the user out everywhere on this WordPress (all devices). */
+function wrrapd_drivers_destroy_user_sessions( $user_id ) {
+	$user_id = (int) $user_id;
+	if ( $user_id <= 0 || ! class_exists( 'WP_Session_Tokens' ) ) {
+		return;
+	}
+	WP_Session_Tokens::get_instance( $user_id )->destroy_all();
+}
+
 function wrrapd_drivers_is_onboarding_eligible_user( $user_id ) {
-	return wrrapd_drivers_user_has_role( $user_id, 'driver_approved' )
+	$has_role = wrrapd_drivers_user_has_role( $user_id, 'driver_approved' )
 		|| wrrapd_drivers_user_has_role( $user_id, 'driver_active' );
+	if ( ! $has_role ) {
+		return false;
+	}
+	return ! wrrapd_drivers_onboarding_closed_for_user( $user_id );
 }
 
 function wrrapd_drivers_is_driver_user( $user_id ) {
@@ -855,8 +891,14 @@ function wrrapd_drivers_process_portal_login() {
 		$GLOBALS['wrrapd_drv_login_error'] = 'Invalid email or password.';
 		return;
 	}
+	if ( wrrapd_drivers_onboarding_closed_for_user( $user->ID ) ) {
+		// Onboarding approved in Command Center → this portal is closed; the JoyRider app takes over.
+		$app_host = wp_parse_url( wrrapd_drivers_courier_app_url(), PHP_URL_HOST );
+		$GLOBALS['wrrapd_drv_login_error'] = 'Your onboarding is complete. Sign in at ' . ( $app_host ? $app_host : 'joyrider.wrrapd.com' ) . ' with this same email and password.';
+		return;
+	}
 	if ( ! wrrapd_drivers_is_onboarding_eligible_user( $user->ID ) ) {
-		$GLOBALS['wrrapd_drv_login_error'] = 'This login is for approved Drivers only.';
+		$GLOBALS['wrrapd_drv_login_error'] = 'This login is for approved JoyRiders only.';
 		return;
 	}
 	$app = wrrapd_drivers_get_application_by_user( $user->ID );
@@ -2001,6 +2043,12 @@ function wrrapd_drivers_admin_page() {
 			echo '<button type="submit" name="wrrapd_drv_admin_action" value="reset_to_review" class="button">Reset to under review (test)</button>';
 		} elseif ( in_array( $status, array( 'declined', 'rejected' ), true ) ) {
 			echo '<button type="submit" name="wrrapd_drv_admin_action" value="reset_to_review" class="button">Reset to under review (test)</button>';
+		} elseif ( $status === 'active' ) {
+			if ( wrrapd_drivers_get_meta( $id, 'onboarding_reopened' ) === '1' ) {
+				echo '<button type="submit" name="wrrapd_drv_admin_action" value="close_onboarding" class="button">Close onboarding portal</button>';
+			} else {
+				echo '<button type="submit" name="wrrapd_drv_admin_action" value="reopen_onboarding" class="button" onclick="return confirm(\'Reopen the onboarding portal for this active JoyRider? (Rare — only to re-sign or re-upload a document.)\');">Reopen onboarding portal (rare)</button>';
+			}
 		}
 		echo '</form></div>';
 	}

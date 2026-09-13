@@ -27,9 +27,6 @@ import { ContractorAccountCard } from "@/components/contractor-account-card";
 
 export const dynamic = "force-dynamic";
 
-const WRAPSTAR_PROFILE_URL =
-  process.env.WRAPSTAR_PROFILE_URL?.trim() || "https://pros.wrrapd.com/profile/";
-
 const QUEUE_HELP = "Tap Today, a date, or the calendar to see wrap jobs for that day.";
 
 function isWrapstarSession(role: string | undefined) {
@@ -109,16 +106,8 @@ export default async function WrapstarPage() {
   const contractor = await getContractorRecord("wrapstar", session.userId).catch(() => null);
   const accountPanel = (
     <>
-      <ContractorAccountCard
-        record={contractor}
-        roleLabel="WrapStar"
-        profileUrl={WRAPSTAR_PROFILE_URL}
-      />
-      <DriverAccountPanel
-        wrapstarId={session.userId}
-        passwordManagedExternally={!!contractor}
-        profileUrl={WRAPSTAR_PROFILE_URL}
-      />
+      <ContractorAccountCard record={contractor} roleLabel="WrapStar" />
+      {contractor ? null : <DriverAccountPanel wrapstarId={session.userId} />}
     </>
   );
   if (profile.onboardingStatus !== "approved") {

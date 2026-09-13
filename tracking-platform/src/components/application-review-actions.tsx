@@ -34,6 +34,9 @@ type Props = {
   onboardingOpen?: string[];
   portalLastLoginAt?: string;
   portalLoginCount?: number;
+  /** Onboarding portal temporarily reopened for this active contractor (rare) */
+  onboardingReopened?: boolean;
+  onboardingReopenedAt?: string;
 };
 
 export function ApplicationReviewActions({
@@ -49,6 +52,8 @@ export function ApplicationReviewActions({
   onboardingOpen = [],
   portalLastLoginAt,
   portalLoginCount,
+  onboardingReopened = false,
+  onboardingReopenedAt,
 }: Props) {
   const [pending, setPending] = useState<string | null>(null);
   const busy = pending !== null;
@@ -103,6 +108,36 @@ export function ApplicationReviewActions({
           {portalLoginCount ? ` · ${portalLoginCount} sign-in${portalLoginCount === 1 ? "" : "s"}` : ""}
         </p>
       ) : null}
+      {status === "active" ? (
+        <p
+          className={`mt-2 rounded-lg border px-3 py-2 text-xs ${
+            onboardingReopened
+              ? "border-amber-200 bg-amber-50 text-amber-900"
+              : "border-slate-200 bg-slate-50 text-slate-600"
+          }`}
+        >
+          {onboardingReopened ? (
+            <>
+              <strong>Onboarding portal reopened</strong>
+              {onboardingReopenedAt
+                ? ` on ${new Date(onboardingReopenedAt).toLocaleString("en-US", {
+                    timeZone: "America/New_York",
+                    month: "short",
+                    day: "numeric",
+                    hour: "numeric",
+                    minute: "2-digit",
+                  })} ET`
+                : ""}
+              . This {roleLabel} can sign in to the onboarding site again until you close it.
+            </>
+          ) : (
+            <>
+              Onboarding portal <strong>closed</strong> — since approval this {roleLabel} signs in
+              only at {portalHost}. Reopen only if a document must be re-signed or re-uploaded.
+            </>
+          )}
+        </p>
+      ) : null}
       <form
         action={action}
         className="mt-3 space-y-3"
@@ -112,6 +147,15 @@ export function ApplicationReviewActions({
           if (next === "activate" && !onboardingComplete && onboardingTotal > 0) {
             const ok = window.confirm(
               `Onboarding is not finished (${onboardingDone} of ${onboardingTotal} steps). Approve onboarding and activate this ${roleLabel} anyway?`,
+            );
+            if (!ok) {
+              e.preventDefault();
+              return;
+            }
+          }
+          if (next === "reopen_onboarding") {
+            const ok = window.confirm(
+              `Reopen the onboarding site for this active ${roleLabel}? This is rare — only for re-signing or re-uploading a document. They will get a short email with the link.`,
             );
             if (!ok) {
               e.preventDefault();
@@ -288,6 +332,32 @@ export function ApplicationReviewActions({
               className={`${BTN} bg-amber-700 text-white hover:bg-amber-800`}
             >
               {pending === "suspend" ? "Suspending…" : "Suspend"}
+            </button>
+          ) : null}
+
+          {status === "active" && !onboardingReopened ? (
+            <button
+              type="submit"
+              name="action"
+              value="reopen_onboarding"
+              disabled={busy}
+              className={`${BTN} border border-slate-400 bg-slate-50 text-slate-800 hover:bg-slate-100`}
+              title="Rare: let this active contractor back into the onboarding site to re-sign or re-upload a document"
+            >
+              {pending === "reopen_onboarding" ? "Reopening…" : "Reopen onboarding portal (rare)"}
+            </button>
+          ) : null}
+
+          {status === "active" && onboardingReopened ? (
+            <button
+              type="submit"
+              name="action"
+              value="close_onboarding"
+              disabled={busy}
+              className={`${BTN} bg-slate-800 text-white hover:bg-slate-900`}
+              title="Close the onboarding site again and sign them out of it"
+            >
+              {pending === "close_onboarding" ? "Closing…" : "Close onboarding portal"}
             </button>
           ) : null}
 

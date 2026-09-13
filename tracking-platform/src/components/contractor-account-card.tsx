@@ -1,5 +1,6 @@
 import type { ContractorRecord } from "@/lib/contractor-records";
 import { formatDateTimeNy } from "@/lib/ny-date";
+import { ContractorAccountSettings } from "./contractor-account-settings";
 
 function dateOnly(iso?: string): string {
   if (!iso) return "";
@@ -10,15 +11,14 @@ function dateOnly(iso?: string): string {
 type Props = {
   record: ContractorRecord | null;
   roleLabel: "WrapStar" | "JoyRider";
-  /** WordPress profile page where contact details + password are managed */
-  profileUrl: string;
 };
 
 /**
  * Uber/DoorDash-style "Account" tab: who you are to Wrrapd, what's signed and on file, how you get
- * paid, and key dates. Read-only here — edits happen on the WordPress profile page.
+ * paid, and key dates. Contact details + password are edited right here (the onboarding site is
+ * closed once onboarding is approved).
  */
-export function ContractorAccountCard({ record, roleLabel, profileUrl }: Props) {
+export function ContractorAccountCard({ record, roleLabel }: Props) {
   if (!record) {
     return (
       <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -27,12 +27,6 @@ export function ContractorAccountCard({ record, roleLabel, profileUrl }: Props) 
           Your contractor record has not been migrated yet. It appears here automatically after
           Wrrapd approves your onboarding.
         </p>
-        <a
-          href={profileUrl}
-          className="mt-3 inline-block text-sm font-semibold text-blue-700 underline"
-        >
-          View your profile
-        </a>
       </section>
     );
   }
@@ -104,12 +98,19 @@ export function ContractorAccountCard({ record, roleLabel, profileUrl }: Props) 
             </div>
           ))}
         </dl>
-        <a
-          href={profileUrl}
-          className="mt-3 inline-block text-sm font-semibold text-blue-700 underline"
-        >
-          Edit contact details or password
-        </a>
+        <ContractorAccountSettings
+          email={record.email}
+          contact={{
+            nickname: record.greetingName,
+            phoneMobile: record.phoneMobile,
+            phoneWork: record.phoneWork,
+            addressLine1: record.addressLine1,
+            addressLine2: record.addressLine2,
+            city: record.city,
+            state: record.state,
+            postalCode: record.postalCode,
+          }}
+        />
       </section>
 
       <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">

@@ -183,7 +183,13 @@ function wrrapd_wrapstars_run_admin_action( $app_id, $action, $opts = array() ) 
 		$user_id = (int) wrrapd_wrapstars_get_meta( $app_id, 'user_id' );
 		if ( $user_id ) {
 			wrrapd_wrapstars_set_user_role( $user_id, 'wrapstar_active' );
+			// Onboarding portal is now closed for them: end any open onboarding sessions.
+			if ( function_exists( 'wrrapd_wrapstars_destroy_user_sessions' ) ) {
+				wrrapd_wrapstars_destroy_user_sessions( $user_id );
+			}
 		}
+		wrrapd_wrapstars_set_meta( $app_id, 'onboarding_reopened', '' );
+		wrrapd_wrapstars_set_meta( $app_id, 'onboarding_closed_at', gmdate( 'c' ) );
 		if ( $notes !== null ) {
 			wrrapd_wrapstars_set_meta( $app_id, 'admin_notes', $notes );
 			wrrapd_wrapstars_set_meta( $app_id, 'notes_updated_at', gmdate( 'c' ) );
@@ -212,6 +218,41 @@ function wrrapd_wrapstars_run_admin_action( $app_id, $action, $opts = array() ) 
 		wrrapd_wrapstars_set_meta( $app_id, 'suspended', '' );
 		wrrapd_wrapstars_set_meta( $app_id, 'unsuspended_at', gmdate( 'c' ) );
 		return array( 'ok' => true, 'status' => wrrapd_wrapstars_get_meta( $app_id, 'status' ) );
+	}
+
+	// Rare: let an active WrapStar back into the onboarding portal (re-sign / re-upload).
+	if ( $action === 'reopen_onboarding' ) {
+		$current_status = (string) wrrapd_wrapstars_get_meta( $app_id, 'status' );
+		if ( $current_status !== 'active' ) {
+			return array( 'ok' => false, 'error' => 'Only an active WrapStar can have onboarding reopened.', 'status' => $current_status );
+		}
+		wrrapd_wrapstars_set_meta( $app_id, 'onboarding_reopened', '1' );
+		wrrapd_wrapstars_set_meta( $app_id, 'onboarding_reopened_at', gmdate( 'c' ) );
+		if ( $notes !== null ) {
+			wrrapd_wrapstars_set_meta( $app_id, 'admin_notes', $notes );
+			wrrapd_wrapstars_set_meta( $app_id, 'notes_updated_at', gmdate( 'c' ) );
+		}
+		$onboarding_url = function_exists( 'wrrapd_wrapstars_pros_url' ) ? wrrapd_wrapstars_pros_url( '/onboarding/' ) : 'https://pros.wrrapd.com/onboarding/';
+		wrrapd_wrapstars_send_email(
+			$email,
+			'Your Wrrapd onboarding page is open again',
+			"Hi {$name},\n\nWe reopened your onboarding page so you can update a document:\n{$onboarding_url}\n\nSign in with your usual email and password. We'll close it again once you're done.\n"
+		);
+		return array( 'ok' => true, 'status' => 'active', 'onboardingReopened' => true );
+	}
+
+	if ( $action === 'close_onboarding' ) {
+		wrrapd_wrapstars_set_meta( $app_id, 'onboarding_reopened', '' );
+		wrrapd_wrapstars_set_meta( $app_id, 'onboarding_closed_at', gmdate( 'c' ) );
+		$user_id = (int) wrrapd_wrapstars_get_meta( $app_id, 'user_id' );
+		if ( $user_id && function_exists( 'wrrapd_wrapstars_destroy_user_sessions' ) ) {
+			wrrapd_wrapstars_destroy_user_sessions( $user_id );
+		}
+		if ( $notes !== null ) {
+			wrrapd_wrapstars_set_meta( $app_id, 'admin_notes', $notes );
+			wrrapd_wrapstars_set_meta( $app_id, 'notes_updated_at', gmdate( 'c' ) );
+		}
+		return array( 'ok' => true, 'status' => wrrapd_wrapstars_get_meta( $app_id, 'status' ), 'onboardingReopened' => false );
 	}
 
 	if ( $action === 'mark_declined' ) {
@@ -379,6 +420,9 @@ function wrrapd_wrapstars_ops_serialize_application( $id ) {
 		'passwordChangedAt'          => wrrapd_wrapstars_get_meta( $id, 'password_changed_at' ),
 		'portalLastLoginAt'          => wrrapd_wrapstars_get_meta( $id, 'portal_last_login_at' ),
 		'portalLoginCount'           => (int) wrrapd_wrapstars_get_meta( $id, 'portal_login_count', '0' ),
+		'onboardingReopened'         => wrrapd_wrapstars_get_meta( $id, 'onboarding_reopened' ) === '1',
+		'onboardingReopenedAt'       => wrrapd_wrapstars_get_meta( $id, 'onboarding_reopened_at' ),
+		'onboardingClosedAt'         => wrrapd_wrapstars_get_meta( $id, 'onboarding_closed_at' ),
 		'userId'                     => (int) wrrapd_wrapstars_get_meta( $id, 'user_id' ),
 		'createdAt'                  => get_post_time( 'c', true, $app ),
 	);
@@ -423,8 +467,164 @@ function wrrapd_wrapstars_ops_register_rest_routes() {
 			'permission_callback' => 'wrrapd_wrapstars_ops_api_permission',
 		)
 	);
+	// Active contractors manage their password + contact details inside the portal apps
+	// (the onboarding site is closed to them after activation).
+	register_rest_route(
+		'wrrapd/v1',
+		'/portal-password',
+		array(
+			'methods'             => 'POST',
+			'callback'            => 'wrrapd_wrapstars_ops_portal_password',
+			'permission_callback' => 'wrrapd_wrapstars_ops_api_permission',
+		)
+	);
+	register_rest_route(
+		'wrrapd/v1',
+		'/portal-contact',
+		array(
+			'methods'             => 'POST',
+			'callback'            => 'wrrapd_wrapstars_ops_portal_contact',
+			'permission_callback' => 'wrrapd_wrapstars_ops_api_permission',
+		)
+	);
 }
 add_action( 'rest_api_init', 'wrrapd_wrapstars_ops_register_rest_routes' );
+
+/**
+ * Resolve the WordPress user + active application for a portal self-service call.
+ *
+ * @param WP_REST_Request $request Request.
+ * @return array{user:WP_User,portal:string,app_id:int}|WP_REST_Response
+ */
+function wrrapd_wrapstars_ops_portal_resolve_active( $request ) {
+	$email  = sanitize_email( (string) $request->get_param( 'email' ) );
+	$portal = sanitize_key( (string) $request->get_param( 'portal' ) );
+	if ( $email === '' || ! in_array( $portal, array( 'wrapstar', 'driver' ), true ) ) {
+		return new WP_REST_Response( array( 'ok' => false, 'error' => 'Email and portal are required.' ), 400 );
+	}
+	$user = get_user_by( 'email', $email );
+	if ( ! $user ) {
+		$user = get_user_by( 'login', $email );
+	}
+	if ( ! $user ) {
+		return new WP_REST_Response( array( 'ok' => false, 'error' => 'Account not found.' ), 404 );
+	}
+	if ( $portal === 'wrapstar' ) {
+		$app = wrrapd_wrapstars_get_application_by_user( $user->ID );
+		$ok  = $app && wrrapd_wrapstars_get_meta( $app->ID, 'status' ) === 'active' && wrrapd_wrapstars_get_meta( $app->ID, 'suspended' ) !== '1';
+	} else {
+		$app = function_exists( 'wrrapd_drivers_get_application_by_user' ) ? wrrapd_drivers_get_application_by_user( $user->ID ) : null;
+		$ok  = $app && wrrapd_drivers_get_meta( $app->ID, 'status' ) === 'active' && wrrapd_drivers_get_meta( $app->ID, 'suspended' ) !== '1';
+	}
+	if ( ! $ok ) {
+		return new WP_REST_Response( array( 'ok' => false, 'error' => 'This account is not active.' ), 403 );
+	}
+	return array( 'user' => $user, 'portal' => $portal, 'app_id' => (int) $app->ID );
+}
+
+/**
+ * POST /wrrapd/v1/portal-password  { email, portal, currentPassword, newPassword }
+ *
+ * @param WP_REST_Request $request Request.
+ * @return WP_REST_Response
+ */
+function wrrapd_wrapstars_ops_portal_password( $request ) {
+	$ctx = wrrapd_wrapstars_ops_portal_resolve_active( $request );
+	if ( $ctx instanceof WP_REST_Response ) {
+		return $ctx;
+	}
+	$user    = $ctx['user'];
+	$current = (string) $request->get_param( 'currentPassword' );
+	$new     = (string) $request->get_param( 'newPassword' );
+	if ( $current === '' || ! wp_check_password( $current, $user->user_pass, $user->ID ) ) {
+		return new WP_REST_Response( array( 'ok' => false, 'error' => 'Current password is incorrect.' ), 401 );
+	}
+	if ( strlen( $new ) < 10 ) {
+		return new WP_REST_Response( array( 'ok' => false, 'error' => 'Choose a new password with at least 10 characters.' ), 400 );
+	}
+	if ( $new === $current ) {
+		return new WP_REST_Response( array( 'ok' => false, 'error' => 'Pick a password different from your current one.' ), 400 );
+	}
+	wp_set_password( $new, $user->ID );
+	$now = gmdate( 'c' );
+	if ( $ctx['portal'] === 'wrapstar' ) {
+		wrrapd_wrapstars_set_meta( $ctx['app_id'], 'password_changed_at', $now );
+		wrrapd_wrapstars_set_must_change_password( $user->ID, $ctx['app_id'], false );
+	} else {
+		wrrapd_drivers_set_meta( $ctx['app_id'], 'password_changed_at', $now );
+		if ( function_exists( 'wrrapd_drivers_set_must_change_password' ) ) {
+			wrrapd_drivers_set_must_change_password( $user->ID, $ctx['app_id'], false );
+		}
+	}
+	return new WP_REST_Response( array( 'ok' => true, 'passwordChangedAt' => $now ), 200 );
+}
+
+/**
+ * POST /wrrapd/v1/portal-contact  { email, portal, nickname?, phoneMobile?, phoneWork?, addressLine1?, addressLine2?, city?, state?, postalCode? }
+ *
+ * Email (the login) is not editable here — support handles email changes.
+ *
+ * @param WP_REST_Request $request Request.
+ * @return WP_REST_Response
+ */
+function wrrapd_wrapstars_ops_portal_contact( $request ) {
+	$ctx = wrrapd_wrapstars_ops_portal_resolve_active( $request );
+	if ( $ctx instanceof WP_REST_Response ) {
+		return $ctx;
+	}
+	$app_id = $ctx['app_id'];
+	$map    = array(
+		'nickname'     => 'nickname',
+		'phoneMobile'  => 'phone_mobile',
+		'phoneWork'    => 'phone_work',
+		'addressLine1' => 'address_line1',
+		'addressLine2' => 'address_line2',
+		'city'         => 'city',
+		'state'        => 'state',
+		'postalCode'   => 'postal_code',
+	);
+	$set = $ctx['portal'] === 'wrapstar' ? 'wrrapd_wrapstars_set_meta' : 'wrrapd_drivers_set_meta';
+	$get = $ctx['portal'] === 'wrapstar' ? 'wrrapd_wrapstars_get_meta' : 'wrrapd_drivers_get_meta';
+	$saved = array();
+	foreach ( $map as $param => $meta_key ) {
+		$value = $request->get_param( $param );
+		if ( $value === null ) {
+			continue;
+		}
+		$value = sanitize_text_field( (string) $value );
+		if ( $meta_key === 'state' ) {
+			$value = strtoupper( $value );
+		}
+		call_user_func( $set, $app_id, $meta_key, $value );
+		$saved[ $param ] = $value;
+	}
+	if ( isset( $saved['phoneMobile'] ) ) {
+		call_user_func( $set, $app_id, 'phone', $saved['phoneMobile'] );
+	}
+	$now = gmdate( 'c' );
+	call_user_func( $set, $app_id, 'profile_updated_at', $now );
+	if ( $ctx['portal'] === 'wrapstar' && function_exists( 'wrrapd_wrapstars_sync_profile_to_gcs' ) ) {
+		wrrapd_wrapstars_sync_profile_to_gcs( $app_id );
+	}
+	return new WP_REST_Response(
+		array(
+			'ok'               => true,
+			'saved'            => $saved,
+			'profileUpdatedAt' => $now,
+			'contact'          => array(
+				'nickname'     => (string) call_user_func( $get, $app_id, 'nickname' ),
+				'phoneMobile'  => (string) call_user_func( $get, $app_id, 'phone_mobile' ),
+				'phoneWork'    => (string) call_user_func( $get, $app_id, 'phone_work' ),
+				'addressLine1' => (string) call_user_func( $get, $app_id, 'address_line1' ),
+				'addressLine2' => (string) call_user_func( $get, $app_id, 'address_line2' ),
+				'city'         => (string) call_user_func( $get, $app_id, 'city' ),
+				'state'        => (string) call_user_func( $get, $app_id, 'state' ),
+				'postalCode'   => (string) call_user_func( $get, $app_id, 'postal_code' ),
+			),
+		),
+		200
+	);
+}
 
 /**
  * POST /wrrapd/v1/portal-auth  { email, password, portal?: "wrapstar"|"driver" }

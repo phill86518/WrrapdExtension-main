@@ -1093,7 +1093,12 @@ function wrrapd_wrapstars_render_admin_application_card( $id ) {
 		echo '<button type="submit" name="wrrapd_ws_admin_action" value="reset_to_review" class="button">Reset to under review (test)</button>';
 	}
 	if ( $status === 'active' ) {
-		echo '<button type="submit" name="wrrapd_ws_admin_action" value="suspend" class="button">Suspend</button>';
+		echo '<button type="submit" name="wrrapd_ws_admin_action" value="suspend" class="button">Suspend</button> ';
+		if ( wrrapd_wrapstars_get_meta( $id, 'onboarding_reopened' ) === '1' ) {
+			echo '<button type="submit" name="wrrapd_ws_admin_action" value="close_onboarding" class="button">Close onboarding portal</button>';
+		} else {
+			echo '<button type="submit" name="wrrapd_ws_admin_action" value="reopen_onboarding" class="button" onclick="return confirm(\'Reopen the onboarding portal for this active WrapStar? (Rare — only to re-sign or re-upload a document.)\');">Reopen onboarding portal (rare)</button>';
+		}
 	}
 	echo '</form></div>';
 }

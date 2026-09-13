@@ -13,9 +13,6 @@ import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
-const JOYRIDER_PROFILE_URL =
-  process.env.JOYRIDER_PROFILE_URL?.trim() || "https://apply.wrrapd.com/drive/driver-profile/";
-
 export default async function CourierPage() {
   const session = await getSession();
   if (!session || session.role !== "driver") {
@@ -153,11 +150,7 @@ export default async function CourierPage() {
 
       <section className="mt-6">
         <h2 className="mb-3 text-lg font-semibold text-slate-900">Account</h2>
-        <ContractorAccountCard
-          record={contractor}
-          roleLabel="JoyRider"
-          profileUrl={JOYRIDER_PROFILE_URL}
-        />
+        <ContractorAccountCard record={contractor} roleLabel="JoyRider" />
       </section>
     </main>
   );

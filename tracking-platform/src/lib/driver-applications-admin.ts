@@ -65,6 +65,9 @@ export type DriverApplication = {
   /** Last sign-in on joyrider.wrrapd.com (via WP portal-auth) */
   portalLastLoginAt?: string;
   portalLoginCount?: number;
+  onboardingReopened?: boolean;
+  onboardingReopenedAt?: string;
+  onboardingClosedAt?: string;
   userId: number;
   createdAt: string;
   /** Compat with WrapStar UI fields */
