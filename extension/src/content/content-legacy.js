@@ -73,6 +73,8 @@ import { formatUsd } from '../shared/wrrapd-unit-pricing.js';
     let wrrapdCheckoutUnitPriceOverride = null;
     let wrrapdCheckoutUnitPriceGeoKey = '';
     let wrrapdCheckoutUnitPriceFetchPromise = null;
+    /** Giftee-ZIP sales tax from pricing-preview (not Amazon's warehouse tax scrape). */
+    let wrrapdCheckoutGifteeTaxPercent = null;
 
     function getActiveCheckoutUnitPrices() {
         return wrrapdCheckoutUnitPriceOverride || WRRAPD_CHECKOUT_UNIT_PRICES_FALLBACK;
@@ -97,6 +99,9 @@ import { formatUsd } from '../shared/wrrapd-unit-pricing.js';
         const hydrated = { unitPriceOverride: null };
         if (hydrateUnitPricesFromSession(hydrated, 'wrrapdAmazon', zip)) {
             wrrapdCheckoutUnitPriceOverride = hydrated.unitPriceOverride;
+            if (hydrated.estimatedSalesTaxPercent != null) {
+                wrrapdCheckoutGifteeTaxPercent = hydrated.estimatedSalesTaxPercent;
+            }
         } else {
             const persisted = readPersistedUnitPrices('wrrapdAmazon');
             if (persisted?.unitPrices && (!zip || !persisted.postalCode || persisted.postalCode === zip)) {
@@ -120,7 +125,9 @@ import { formatUsd } from '../shared/wrrapd-unit-pricing.js';
                     if (ok) {
                         wrrapdCheckoutUnitPriceGeoKey = geoKey;
                         if (wrrapdCheckoutUnitPriceOverride && zip.length === 5) {
-                            writePersistedUnitPrices('wrrapdAmazon', wrrapdCheckoutUnitPriceOverride, zip);
+                            writePersistedUnitPrices('wrrapdAmazon', wrrapdCheckoutUnitPriceOverride, zip, {
+                                estimatedSalesTaxPercent: wrrapdCheckoutGifteeTaxPercent,
+                            });
                         }
                     }
                     return ok;
@@ -159,6 +166,10 @@ import { formatUsd } from '../shared/wrrapd-unit-pricing.js';
                 )
             ) {
                 wrrapdCheckoutUnitPriceOverride = next;
+                const taxPct = Number(j.estimatedSalesTaxPercent);
+                if (Number.isFinite(taxPct) && taxPct >= 0 && taxPct <= 20) {
+                    wrrapdCheckoutGifteeTaxPercent = taxPct;
+                }
                 return true;
             }
         } catch (e) {
@@ -191,12 +202,17 @@ import { formatUsd } from '../shared/wrrapd-unit-pricing.js';
                 : [],
         }));
         const ao = addressObject && typeof addressObject === 'object' ? addressObject : {};
+        // Always price + tax from the giftee ZIP (modal), never the Wrrapd warehouse
+        // address Amazon ships to. Warehouse 32218 + Miami wrap prices is what
+        // blew up "Total does not match server pricing".
+        const gifteeZip = amazonGifteeZipForPricing();
+        const postalCode = gifteeZip || String(ao.postalCode || '').replace(/\D/g, '').slice(0, 5);
         return {
             items,
-            taxRatePercent: getTaxRatePercentage(),
-            ...(ao.postalCode ? { postalCode: String(ao.postalCode).trim().slice(0, 16) } : {}),
-            ...(ao.state ? { state: String(ao.state).trim().slice(0, 16) } : {}),
-            ...(ao.country ? { country: String(ao.country).trim().slice(0, 8) } : {}),
+            taxRatePercent: getWrrapdGifteeTaxRatePercent(),
+            ...(postalCode ? { postalCode } : {}),
+            country: 'US',
+            retailer: 'amazon',
         };
     }
 
@@ -12300,7 +12316,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             });
         });
 
-        const taxRatePercent = getTaxRatePercentage();
+        const taxRatePercent = getWrrapdGifteeTaxRatePercent();
         const taxRate = taxRatePercent / 100;
         const subtotal = roundMoney2(giftWrapTotal + designAiTotal + designUploadTotal + flowersTotal);
         const estimatedTax = roundMoney2(subtotal * taxRate);
@@ -12557,7 +12573,33 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
         }
     }
     
-    // Retrieves the current tax rate based on the subtotal and tax values in the order summary
+    /**
+     * Sales tax on Wrrapd fees is the giftee ZIP rate from pricing-preview.
+     * Do not scrape Amazon's order-summary tax — that is the warehouse / Amazon-item
+     * rate (Duval 7.5%) and will not match Miami-Dade 7% (etc.).
+     */
+    function getWrrapdGifteeTaxRatePercent() {
+        if (
+            typeof wrrapdCheckoutGifteeTaxPercent === 'number' &&
+            Number.isFinite(wrrapdCheckoutGifteeTaxPercent) &&
+            wrrapdCheckoutGifteeTaxPercent >= 0 &&
+            wrrapdCheckoutGifteeTaxPercent <= 20
+        ) {
+            return wrrapdCheckoutGifteeTaxPercent;
+        }
+        const persisted = readPersistedUnitPrices('wrrapdAmazon');
+        const zip = amazonGifteeZipForPricing();
+        if (
+            persisted &&
+            typeof persisted.estimatedSalesTaxPercent === 'number' &&
+            (!zip || !persisted.postalCode || persisted.postalCode === zip)
+        ) {
+            return persisted.estimatedSalesTaxPercent;
+        }
+        return 7.5;
+    }
+
+    // Legacy Amazon-page scrape (kept for debug; not used for Wrrapd totals).
     function getTaxRatePercentage() {
         console.log("[getTaxRatePercentage] Attempting to calculate the tax rate percentage.");
     

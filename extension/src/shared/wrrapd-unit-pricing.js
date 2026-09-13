@@ -21,6 +21,7 @@ export function createUnitPricingState() {
     // Custom-design paper (upload / AI) is only offered where a WrapStar printer is in
     // range of the giftee ZIP. Unknown → false (fail closed).
     customDesignAvailable: false,
+    estimatedSalesTaxPercent: null,
   };
 }
 
@@ -30,7 +31,11 @@ export function getActiveUnitPrices(state) {
 
 /** @returns {{ customDesignAvailable: boolean }} */
 export function getUnitPricingCapabilities(state) {
-  return { customDesignAvailable: state?.customDesignAvailable === true };
+  const tax = Number(state?.estimatedSalesTaxPercent);
+  return {
+    customDesignAvailable: state?.customDesignAvailable === true,
+    ...(Number.isFinite(tax) && tax >= 0 && tax <= 20 ? { estimatedSalesTaxPercent: tax } : {}),
+  };
 }
 
 function normalizePostal5(zip) {
@@ -68,6 +73,10 @@ export function writePersistedUnitPrices(sessionPrefix, prices, postalCode, capa
       flowers: Number(prices.flowers),
     },
     customDesignAvailable: capabilities?.customDesignAvailable === true,
+    estimatedSalesTaxPercent:
+      Number.isFinite(Number(capabilities?.estimatedSalesTaxPercent))
+        ? Number(capabilities.estimatedSalesTaxPercent)
+        : undefined,
     at: Date.now(),
   };
   if (
@@ -100,10 +109,12 @@ export function readPersistedUnitPrices(sessionPrefix) {
     if (!Object.values(unitPrices).every((n) => Number.isFinite(n) && n >= 0 && n < 100000)) {
       return null;
     }
+    const taxPct = Number(parsed.estimatedSalesTaxPercent);
     return {
       postalCode: normalizePostal5(parsed.postalCode),
       unitPrices,
       customDesignAvailable: parsed.customDesignAvailable === true,
+      estimatedSalesTaxPercent: Number.isFinite(taxPct) && taxPct >= 0 && taxPct <= 20 ? taxPct : undefined,
       at: Number(parsed.at) || 0,
     };
   } catch {
@@ -135,6 +146,9 @@ export function hydrateUnitPricesFromSession(state, sessionPrefix, expectedZip) 
   if (want.length === 5 && data.postalCode && data.postalCode !== want) return false;
   state.unitPriceOverride = data.unitPrices;
   state.customDesignAvailable = data.customDesignAvailable === true;
+  if (data.estimatedSalesTaxPercent != null) {
+    state.estimatedSalesTaxPercent = data.estimatedSalesTaxPercent;
+  }
   return true;
 }
 
@@ -160,6 +174,9 @@ async function refreshUnitPricesFromServer(state, geo, retailer) {
     if (Object.values(next).every((n) => Number.isFinite(n) && n >= 0 && n < 100000)) {
       state.unitPriceOverride = next;
       state.customDesignAvailable = j?.customDesign?.available === true;
+      const taxPct = Number(j?.estimatedSalesTaxPercent);
+      state.estimatedSalesTaxPercent =
+        Number.isFinite(taxPct) && taxPct >= 0 && taxPct <= 20 ? taxPct : null;
       return true;
     }
   } catch {

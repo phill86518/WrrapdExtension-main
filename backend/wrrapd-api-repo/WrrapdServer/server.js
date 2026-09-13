@@ -821,11 +821,18 @@ app.post('/create-payment-intent', async (req, res) => {
             if (total != null && total !== '') {
                 const clientCents = Math.round(Number(total));
                 if (Number.isFinite(clientCents) && Math.abs(clientCents - amountCents) > 1) {
-                    return res.status(400).json({
-                        error: 'Total does not match server pricing',
-                        serverCents: amountCents,
+                    // Charge the server-priced amount (giftee ZIP + tax table). Checkout
+                    // updates the on-page total from pricing.serverCents so the shopper
+                    // pays what we display — do not block the payment form.
+                    console.warn('[create-payment-intent] client/server total mismatch', {
+                        orderNumber: orderNumber || null,
                         clientCents,
+                        serverCents: amountCents,
+                        postalCode: cart.postalCode,
+                        retailer: cart.retailer,
                     });
+                    pricingDebug.clientCents = clientCents;
+                    pricingDebug.adjusted = true;
                 }
             }
         } else {

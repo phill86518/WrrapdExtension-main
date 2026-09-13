@@ -49,9 +49,10 @@ function flowerUnitPriceForZip(postalCode) {
 function deterministicSelect(byRetailerCandidates) {
   // Target disabled as a floral supplier (Publix + Sam's only for now).
   const publix = (byRetailerCandidates.publix || []).filter((c) => c.retailPrice < scrape.CAP_PUBLIX);
-  const sams = (byRetailerCandidates.sams || []).filter(
-    (c) => c.isRose && c.retailPrice < scrape.CAP_SAMS_ROSES,
-  );
+  const samsAll = (byRetailerCandidates.sams || []).filter((c) => c.retailPrice < scrape.CAP_SAMS_ROSES);
+  // Prefer roses when Publix is also in the mix; if Publix is empty, keep every
+  // Sam's bouquet so the shopper sees a real price ladder (not four identical classics).
+  const sams = publix.length ? samsAll.filter((c) => c.isRose) : samsAll;
 
   const hasP = publix.length > 0;
   const hasS = sams.length > 0;

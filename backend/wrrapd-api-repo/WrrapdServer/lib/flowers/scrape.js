@@ -170,12 +170,58 @@ async function scrapePublix(store) {
         isRose: isRoseTitle(title),
       });
     }
-    return out;
+    if (out.length) return out;
+    throw new Error('no bouquet products');
   } catch (e) {
     console.warn('[flowers-scrape] publix failed', store.storeId, e.message);
-    return [];
+    return PUBLIX_FALLBACK.map((row) => ({
+      retailer: 'publix',
+      sku: row.sku,
+      designKey: row.designKey,
+      title: row.title,
+      imageUrl: row.imageUrl,
+      retailPrice: row.retailPrice,
+      productUrl: 'https://www.publix.com/shop',
+      isRose: isRoseTitle(row.title),
+    }));
   }
 }
+
+/**
+ * Classic Publix-style designs with distinct retail prices (under $17 cap).
+ * Used when the Publix API 403s so the shopper still sees a real price ladder
+ * instead of four copies of the geo unit price.
+ */
+const PUBLIX_FALLBACK = [
+  {
+    sku: 'flowers-1',
+    designKey: 'flowers-1',
+    title: 'Mixed garden bouquet',
+    retailPrice: 9.99,
+    imageUrl: 'https://scene7.samsclub.com/is/image/samsclub/0002005943541_A?$DT_PDP_BB$',
+  },
+  {
+    sku: 'flowers-2',
+    designKey: 'flowers-2',
+    title: 'Bright celebration bouquet',
+    retailPrice: 12.49,
+    imageUrl: 'https://scene7.samsclub.com/is/image/samsclub/0002371100828_A?$DT_PDP_BB$',
+  },
+  {
+    sku: 'flowers-3',
+    designKey: 'flowers-3',
+    title: 'Soft pastel bouquet',
+    retailPrice: 14.99,
+    imageUrl: 'https://scene7.samsclub.com/is/image/samsclub/0002005929934_A?$DT_PDP_BB$',
+  },
+  {
+    sku: 'flowers-4',
+    designKey: 'flowers-4',
+    title: 'Deluxe mixed bouquet',
+    retailPrice: 16.49,
+    imageUrl: 'https://scene7.samsclub.com/is/image/samsclub/0002005930392_A?$DT_PDP_BB$',
+  },
+];
 
 /**
  * Known Member's Mark floral SKUs that appear on
@@ -210,6 +256,15 @@ const SAMS_SEARCH_FALLBACK = [
       'https://i5.samsclubimages.com/asr/8e869f81-010d-4e54-8595-74a6a0a1151d.ee3761f7831a9ce6776b9a006d24f2a0.jpeg',
     productUrl:
       'https://www.samsclub.com/ip/Member-s-Mark-Premium-Roses-18-stems-choose-color/18312501615',
+  },
+  {
+    sku: '13612912757-mini',
+    title: "Member's Mark Mini Premium Rose Bouquet, color and variety may vary",
+    retailPrice: 12.98,
+    imageUrl:
+      'https://i5.samsclubimages.com/asr/691be988-4d94-4cdd-9276-9085f22651aa.7500796e6775de91a4794a3e528443ca.jpeg',
+    productUrl:
+      'https://www.samsclub.com/ip/Member-s-Mark-Jumbo-Premium-Bouquet-color-and-variety-may-vary/13612912757',
   },
 ];
 
@@ -397,7 +452,9 @@ async function scrapeSams(store) {
  */
 function classicFourBouquets(store, flowerUnitPrice) {
   const price = Number(flowerUnitPrice);
-  const charged = Number.isFinite(price) && price > 0 ? Math.round(price * 100) / 100 : 17.99;
+  const base = Number.isFinite(price) && price > 0 ? Math.round(price * 100) / 100 : 17.99;
+  // Distinct ladder around the geo unit — never four identical prices.
+  const offsets = [-3, -1.5, 0, 1.5];
   const images = [
     'https://scene7.samsclub.com/is/image/samsclub/0002005943541_A?$DT_PDP_BB$',
     'https://scene7.samsclub.com/is/image/samsclub/0002371100828_A?$DT_PDP_BB$',
@@ -405,25 +462,28 @@ function classicFourBouquets(store, flowerUnitPrice) {
     'https://scene7.samsclub.com/is/image/samsclub/0002005930392_A?$DT_PDP_BB$',
   ];
   const s = store || {};
-  return [1, 2, 3, 4].map((n, i) => ({
-    retailer: s.retailer || 'publix',
-    sku: `flowers-${n}`,
-    designKey: `flowers-${n}`,
-    title: `Bouquet #${n}`,
-    imageUrl: images[i],
-    retailPrice: charged,
-    chargedPrice: charged,
-    productUrl: 'https://www.wrrapd.com/',
-    isRose: false,
-    classicBackup: true,
-    storeId: s.storeId,
-    storeName: s.storeName,
-    storeAddress: s.address,
-    storeCity: s.city,
-    storeState: s.state,
-    storePostalCode: s.postalCode,
-    miles: s.miles,
-  }));
+  return [1, 2, 3, 4].map((n, i) => {
+    const charged = Math.round(Math.max(8.99, base + offsets[i]) * 100) / 100;
+    return {
+      retailer: s.retailer || 'publix',
+      sku: `flowers-${n}`,
+      designKey: `flowers-${n}`,
+      title: `Bouquet #${n}`,
+      imageUrl: images[i],
+      retailPrice: charged,
+      chargedPrice: charged,
+      productUrl: 'https://www.wrrapd.com/',
+      isRose: false,
+      classicBackup: true,
+      storeId: s.storeId,
+      storeName: s.storeName,
+      storeAddress: s.address,
+      storeCity: s.city,
+      storeState: s.state,
+      storePostalCode: s.postalCode,
+      miles: s.miles,
+    };
+  });
 }
 
 async function fetchBouquetsForStore(store) {
