@@ -150,8 +150,8 @@ function wrrapd_drivers_run_admin_action( $app_id, $action, $opts = array() ) {
 		$app_url = wrrapd_drivers_courier_app_url();
 		wrrapd_drivers_send_email(
 			$email,
-			"You're live as a Wrrapd Driver",
-			"Hi {$name},\n\nYour Driver account is activated. Open the Driver app to accept delivery offers:\n{$app_url}\n\nSign in with your name or Driver ID and the contractor passcode from Wrrapd.\n"
+			"You're live as a JoyRider",
+			"Hi {$name},\n\nYour JoyRider account is activated. Open the JoyRider app to accept delivery offers:\n{$app_url}\n\nSign in with the same email and password you used for onboarding.\n"
 		);
 		return array( 'ok' => true, 'status' => 'active' );
 	}
@@ -265,6 +265,9 @@ function wrrapd_drivers_ops_serialize_application( $id ) {
 		'unsuspendedAt'           => wrrapd_drivers_get_meta( $id, 'unsuspended_at' ),
 		'notesUpdatedAt'          => wrrapd_drivers_get_meta( $id, 'notes_updated_at' ),
 		'resetAt'                 => wrrapd_drivers_get_meta( $id, 'reset_at' ),
+		'passwordChangedAt'       => wrrapd_drivers_get_meta( $id, 'password_changed_at' ),
+		'portalLastLoginAt'       => wrrapd_drivers_get_meta( $id, 'portal_last_login_at' ),
+		'portalLoginCount'        => (int) wrrapd_drivers_get_meta( $id, 'portal_login_count', '0' ),
 		'userId'                  => (int) wrrapd_drivers_get_meta( $id, 'user_id' ),
 		'createdAt'               => get_post_time( 'c', true, $app ),
 		// Compat fields for shared Admin UI.

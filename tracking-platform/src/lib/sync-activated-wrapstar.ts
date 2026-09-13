@@ -3,8 +3,17 @@ import type { WrapstarApplication } from "./wrapstar-applications-admin";
 import { addWrapstar, findWrapstarByEmail, updateWrapstar } from "./wrapstar-registry";
 import { setOnboardingStatus } from "./wrapstar-profiles";
 import { trySyncRosterPrinterSites } from "./printer-coverage-admin";
+import {
+  contractorRecordFromWrapstarApplication,
+  getContractorRecord,
+  saveContractorRecord,
+} from "./contractor-records";
 
-/** After WP Activate: ensure ops WrapStar roster has this person with delivery + printer flags. */
+/**
+ * After Command Center "Approve onboarding" (WP `activate`): ensure the ops WrapStar roster has
+ * this person with delivery + printer flags, and migrate the contractor record (profile, signed
+ * agreements, tax, payout summary, hire timeline) so wrapstar.wrrapd.com can show it.
+ */
 export async function syncActivatedApplicationToOpsRoster(
   app: WrapstarApplication,
 ): Promise<{ ok: true; wrapstarId: string } | { ok: false; error: string }> {
@@ -50,6 +59,14 @@ export async function syncActivatedApplicationToOpsRoster(
     if (!created.ok) return created;
     await setOnboardingStatus(created.wrapstar.id, "approved", `Activated from application #${app.id}`);
     wrapstarId = created.wrapstar.id;
+  }
+
+  // Contractor record: everything the WrapStar app's Account tab shows post-activation.
+  try {
+    const previous = await getContractorRecord("wrapstar", wrapstarId);
+    await saveContractorRecord(contractorRecordFromWrapstarApplication(app, wrapstarId, previous));
+  } catch (err) {
+    console.error("[activate] contractor record migration failed", err);
   }
 
   // Custom-design coverage on api.wrrapd.com follows the roster: approved WrapStars with a

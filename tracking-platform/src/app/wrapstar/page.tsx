@@ -22,8 +22,13 @@ import { WrapstarEarningsPanel } from "@/components/wrapstar/wrapstar-earnings-p
 import { WrapstarHelpPanel } from "@/components/wrapstar/wrapstar-help-panel";
 import { WrapstarAvailabilitySection } from "@/components/wrapstar/wrapstar-availability-section";
 import { listEarningsForWrapstar, walletForWrapstar } from "@/lib/finance";
+import { getContractorRecord } from "@/lib/contractor-records";
+import { ContractorAccountCard } from "@/components/contractor-account-card";
 
 export const dynamic = "force-dynamic";
+
+const WRAPSTAR_PROFILE_URL =
+  process.env.WRAPSTAR_PROFILE_URL?.trim() || "https://pros.wrrapd.com/profile/";
 
 const QUEUE_HELP = "Tap Today, a date, or the calendar to see wrap jobs for that day.";
 
@@ -101,6 +106,21 @@ export default async function WrapstarPage() {
 
   const wallet = await walletForWrapstar(session.userId);
   const earnings = await listEarningsForWrapstar(session.userId);
+  const contractor = await getContractorRecord("wrapstar", session.userId).catch(() => null);
+  const accountPanel = (
+    <>
+      <ContractorAccountCard
+        record={contractor}
+        roleLabel="WrapStar"
+        profileUrl={WRAPSTAR_PROFILE_URL}
+      />
+      <DriverAccountPanel
+        wrapstarId={session.userId}
+        passwordManagedExternally={!!contractor}
+        profileUrl={WRAPSTAR_PROFILE_URL}
+      />
+    </>
+  );
   if (profile.onboardingStatus !== "approved") {
     return (
       <WrapstarAppShell
@@ -143,7 +163,7 @@ export default async function WrapstarPage() {
             }))}
           />
         }
-        account={<DriverAccountPanel wrapstarId={session.userId} />}
+        account={accountPanel}
         help={<WrapstarHelpPanel />}
       />
     );
@@ -192,7 +212,7 @@ export default async function WrapstarPage() {
           }))}
         />
       }
-      account={<DriverAccountPanel wrapstarId={session.userId} />}
+      account={accountPanel}
       help={<WrapstarHelpPanel />}
     />
   );

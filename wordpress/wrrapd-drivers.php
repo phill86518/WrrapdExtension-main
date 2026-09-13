@@ -7,6 +7,7 @@
  * Install alongside WrapStars MU-plugins on the dedicated apply/pros WordPress:
  *   wp-content/mu-plugins/wrrapd-drivers.php
  *   wp-content/mu-plugins/wrrapd-drivers-apply.php
+ *   wp-content/mu-plugins/wrrapd-drivers-apply.js
  *   wp-content/mu-plugins/wrrapd-drivers-ops-api.php
  *   wp-content/mu-plugins/wrrapd-drivers.css
  *
@@ -17,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_DRIVERS_BUILD', '2026-09-12-hire-timestamps' );
+define( 'WRRAPD_DRIVERS_BUILD', '2026-09-12-contractor-portals' );
 define( 'WRRAPD_DRIVERS_INVITE_TTL_DAYS', 15 );
 define( 'WRRAPD_DRIVERS_CPT', 'wrrapd_driver_app' );
 
@@ -128,6 +129,7 @@ add_shortcode( 'wrrapd_driver_thankyou', 'wrrapd_drivers_shortcode_thankyou' );
 add_shortcode( 'wrrapd_driver_login', 'wrrapd_drivers_shortcode_login' );
 add_shortcode( 'wrrapd_driver_onboarding', 'wrrapd_drivers_shortcode_onboarding' );
 add_shortcode( 'wrrapd_driver_decline', 'wrrapd_drivers_shortcode_decline' );
+add_shortcode( 'wrrapd_driver_profile', 'wrrapd_drivers_shortcode_profile' );
 add_filter( 'the_content', 'wrrapd_drivers_force_thankyou_content', 999 );
 add_filter( 'elementor/frontend/the_content', 'wrrapd_drivers_force_thankyou_content', 999 );
 
@@ -150,8 +152,48 @@ function wrrapd_drivers_force_thankyou_content( $content ) {
 	if ( preg_match( '#^/(drive/driver-thank-you|drive/thank-you|driver/driver-thank-you|driver-thank-you)(/|$)#', $path ) ) {
 		return do_shortcode( '[wrrapd_driver_thankyou]' );
 	}
+	// JoyRider profile — no WP page content needed; the path alone renders it.
+	if ( preg_match( '#^/(drive/driver-profile|drive/profile|driver-profile)(/|$)#', $path ) && is_main_query() ) {
+		return do_shortcode( '[wrrapd_driver_profile]' );
+	}
 	return $content;
 }
+
+/**
+ * /drive/driver-profile/ needs no WordPress page: on a 404 for that path we render a
+ * minimal themed document around the profile shortcode (wp_head/wp_footer still run).
+ */
+function wrrapd_drivers_virtual_profile_page() {
+	if ( is_admin() || ! wrrapd_drivers_is_portal_host() || ! is_404() ) {
+		return;
+	}
+	$uri  = isset( $_SERVER['REQUEST_URI'] ) ? (string) $_SERVER['REQUEST_URI'] : '/';
+	$path = '/' . trim( (string) strtok( $uri, '?' ), '/' );
+	if ( ! preg_match( '#^/(drive/driver-profile|drive/profile|driver-profile)(/|$)#', $path ) ) {
+		return;
+	}
+	status_header( 200 );
+	nocache_headers();
+	?>
+<!doctype html>
+<html <?php language_attributes(); ?>>
+<head>
+<meta charset="<?php bloginfo( 'charset' ); ?>" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex" />
+<title>JoyRider profile · Wrrapd</title>
+<?php wp_head(); ?>
+</head>
+<body <?php body_class( 'wrrapd-virtual-page' ); ?>>
+<?php wp_body_open(); ?>
+<main class="wrrapd-virtual-page__main"><?php echo do_shortcode( '[wrrapd_driver_profile]' ); ?></main>
+<?php wp_footer(); ?>
+</body>
+</html>
+	<?php
+	exit;
+}
+add_action( 'template_redirect', 'wrrapd_drivers_virtual_profile_page', 5 );
 
 function wrrapd_drivers_apply_url( $path = '/' ) {
 	$path = '/' . ltrim( (string) $path, '/' );
@@ -193,11 +235,20 @@ function wrrapd_drivers_onboarding_step_url( $step ) {
 	return wrrapd_drivers_pros_url( $path );
 }
 
+/**
+ * Post-activation JoyRider app (Cloud Run, host-routed to /courier).
+ * Override with WRRAPD_COURIER_APP_URL in wp-config.php.
+ */
 function wrrapd_drivers_courier_app_url() {
 	if ( defined( 'WRRAPD_COURIER_APP_URL' ) && WRRAPD_COURIER_APP_URL !== '' ) {
 		return rtrim( (string) WRRAPD_COURIER_APP_URL, '/' );
 	}
-	return 'https://track.wrrapd.com/courier';
+	return 'https://joyrider.wrrapd.com';
+}
+
+/** JoyRider profile page on the apply/pros WordPress. */
+function wrrapd_drivers_profile_url() {
+	return wrrapd_drivers_apply_url( '/drive/driver-profile/' );
 }
 
 function wrrapd_drivers_register_roles() {
@@ -601,6 +652,14 @@ function wrrapd_drivers_enqueue_assets() {
 			WRRAPD_DRIVERS_BUILD
 		);
 	}
+	// Multi-step Driver apply wizard (same UX family as WrapStars apply).
+	if ( preg_match( '#/drive/driver-apply(/|$)#', $uri ) || preg_match( '#/driver-apply(/|$)#', $uri ) ) {
+		$js = dirname( __FILE__ ) . '/wrrapd-drivers-apply.js';
+		if ( is_readable( $js ) ) {
+			$ver = WRRAPD_DRIVERS_BUILD . '-' . (string) filemtime( $js );
+			wp_enqueue_script( 'wrrapd-drivers-apply', content_url( 'mu-plugins/wrrapd-drivers-apply.js' ), array(), $ver, true );
+		}
+	}
 }
 
 function wrrapd_drivers_host_routing() {
@@ -690,7 +749,99 @@ function wrrapd_drivers_maybe_handle_posts() {
 		wrrapd_drivers_process_change_password();
 	} elseif ( $action === 'decline_offer' ) {
 		wrrapd_drivers_process_decline_offer();
+	} elseif ( $action === 'save_profile' ) {
+		wrrapd_drivers_process_profile_save();
+	} elseif ( $action === 'profile_password' ) {
+		wrrapd_drivers_process_profile_password();
 	}
+}
+
+/**
+ * JoyRider profile — contact & mailing edits (approved / active only).
+ */
+function wrrapd_drivers_process_profile_save() {
+	if ( ! is_user_logged_in() || ! isset( $_POST['wrrapd_drv_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['wrrapd_drv_nonce'] ) ), 'wrrapd_drv_profile' ) ) {
+		return;
+	}
+	$user_id = get_current_user_id();
+	$app     = wrrapd_drivers_get_application_by_user( $user_id );
+	if ( ! $app ) {
+		$GLOBALS['wrrapd_drv_profile_errors'] = array( 'No JoyRider application is linked to this account.' );
+		return;
+	}
+	if ( ! in_array( (string) wrrapd_drivers_get_meta( $app->ID, 'status' ), array( 'approved', 'active' ), true ) ) {
+		$GLOBALS['wrrapd_drv_profile_errors'] = array( 'Profile editing is available after approval.' );
+		return;
+	}
+	$first = sanitize_text_field( wp_unslash( $_POST['first_name'] ?? '' ) );
+	$last  = sanitize_text_field( wp_unslash( $_POST['last_name'] ?? '' ) );
+	$email = sanitize_email( wp_unslash( $_POST['email'] ?? '' ) );
+	if ( $first === '' || $last === '' || ! is_email( $email ) ) {
+		$GLOBALS['wrrapd_drv_profile_errors'] = array( 'First name, last name, and a valid email are required.' );
+		return;
+	}
+	$middle = sanitize_text_field( wp_unslash( $_POST['middle_name'] ?? '' ) );
+	wrrapd_drivers_set_meta( $app->ID, 'first_name', $first );
+	wrrapd_drivers_set_meta( $app->ID, 'middle_name', $middle );
+	wrrapd_drivers_set_meta( $app->ID, 'last_name', $last );
+	wrrapd_drivers_set_meta( $app->ID, 'full_name', trim( preg_replace( '/\s+/', ' ', $first . ' ' . $middle . ' ' . $last ) ) );
+	wrrapd_drivers_set_meta( $app->ID, 'nickname', sanitize_text_field( wp_unslash( $_POST['nickname'] ?? '' ) ) );
+	wrrapd_drivers_set_meta( $app->ID, 'email', strtolower( $email ) );
+	$mobile = sanitize_text_field( wp_unslash( $_POST['phone_mobile'] ?? '' ) );
+	wrrapd_drivers_set_meta( $app->ID, 'phone_mobile', $mobile );
+	wrrapd_drivers_set_meta( $app->ID, 'phone', $mobile );
+	wrrapd_drivers_set_meta( $app->ID, 'address_line1', sanitize_text_field( wp_unslash( $_POST['address_line1'] ?? '' ) ) );
+	wrrapd_drivers_set_meta( $app->ID, 'address_line2', sanitize_text_field( wp_unslash( $_POST['address_line2'] ?? '' ) ) );
+	wrrapd_drivers_set_meta( $app->ID, 'city', sanitize_text_field( wp_unslash( $_POST['city'] ?? '' ) ) );
+	wrrapd_drivers_set_meta( $app->ID, 'state', strtoupper( sanitize_text_field( wp_unslash( $_POST['state'] ?? '' ) ) ) );
+	wrrapd_drivers_set_meta( $app->ID, 'postal_code', sanitize_text_field( wp_unslash( $_POST['postal_code'] ?? '' ) ) );
+	wrrapd_drivers_set_meta( $app->ID, 'vehicle_type', sanitize_text_field( wp_unslash( $_POST['vehicle_type'] ?? '' ) ) );
+	wrrapd_drivers_set_meta( $app->ID, 'profile_updated_at', gmdate( 'c' ) );
+	$user = get_userdata( $user_id );
+	if ( $user && strtolower( (string) $user->user_email ) !== strtolower( $email ) && ! email_exists( $email ) ) {
+		wp_update_user( array( 'ID' => $user_id, 'user_email' => strtolower( $email ), 'display_name' => wrrapd_drivers_get_meta( $app->ID, 'full_name' ) ) );
+	}
+	$GLOBALS['wrrapd_drv_profile_ok'] = true;
+}
+
+/**
+ * JoyRider profile — password change at any time after approval.
+ */
+function wrrapd_drivers_process_profile_password() {
+	if ( ! is_user_logged_in() || ! isset( $_POST['wrrapd_drv_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['wrrapd_drv_nonce'] ) ), 'wrrapd_drv_profile_pw' ) ) {
+		$GLOBALS['wrrapd_drv_profile_pw_error'] = 'Security check failed. Please try again.';
+		return;
+	}
+	$user_id = get_current_user_id();
+	$user    = get_userdata( $user_id );
+	$current = (string) wp_unslash( $_POST['current_password'] ?? '' );
+	$new     = (string) wp_unslash( $_POST['new_password'] ?? '' );
+	$confirm = (string) wp_unslash( $_POST['confirm_password'] ?? '' );
+	if ( ! $user || ! wp_check_password( $current, $user->user_pass, $user_id ) ) {
+		$GLOBALS['wrrapd_drv_profile_pw_error'] = 'Current password is incorrect.';
+		return;
+	}
+	if ( strlen( $new ) < 10 ) {
+		$GLOBALS['wrrapd_drv_profile_pw_error'] = 'Choose a new password with at least 10 characters.';
+		return;
+	}
+	if ( $new !== $confirm ) {
+		$GLOBALS['wrrapd_drv_profile_pw_error'] = 'New password and confirmation do not match.';
+		return;
+	}
+	if ( $new === $current ) {
+		$GLOBALS['wrrapd_drv_profile_pw_error'] = 'Pick a password different from your current one.';
+		return;
+	}
+	wp_set_password( $new, $user_id );
+	$app = wrrapd_drivers_get_application_by_user( $user_id );
+	if ( $app ) {
+		wrrapd_drivers_set_must_change_password( $user_id, (int) $app->ID, false );
+		wrrapd_drivers_set_meta( $app->ID, 'password_changed_at', gmdate( 'c' ) );
+	}
+	wp_set_current_user( $user_id );
+	wp_set_auth_cookie( $user_id, true );
+	$GLOBALS['wrrapd_drv_profile_pw_ok'] = true;
 }
 
 function wrrapd_drivers_process_portal_login() {
@@ -1232,12 +1383,12 @@ function wrrapd_drivers_render_step_activation( $app_id ) {
 	$app_url = wrrapd_drivers_courier_app_url();
 	?>
 	<div class="wrrapd-wrapstars-card">
-		<h2>Final review &amp; Driver app</h2>
-		<p class="wrrapd-wrapstars-ob-lead">You have completed onboarding steps. Ops will <strong>Activate</strong> your account in Command Center. After activation, sign in to the Driver app with your name or Driver ID and the contractor passcode provided by Wrrapd.</p>
+		<h2>Final review &amp; JoyRider app</h2>
+		<p class="wrrapd-wrapstars-ob-lead">You have completed onboarding. Our team now reviews your documents and activates your account. After activation, sign in to the JoyRider app with the same email and password you use here.</p>
 		<div class="wrrapd-drivers-app-cta">
-			<p><strong>Download / open the Driver app</strong></p>
-			<p><a class="wrrapd-wrapstars-btn" href="<?php echo esc_url( $app_url ); ?>" target="_blank" rel="noopener">Open Driver Console</a></p>
-			<p class="wrrapd-wrapstars-ob-note">App Store / Play Store links and QR codes will appear here when the native shells are published. Until then use the web Driver Console above.</p>
+			<p><strong>JoyRider app</strong></p>
+			<p><a class="wrrapd-wrapstars-btn" href="<?php echo esc_url( $app_url ); ?>" target="_blank" rel="noopener">Open the JoyRider app</a></p>
+			<p class="wrrapd-wrapstars-ob-note">App Store / Play Store links will appear here when the native apps are published. Until then use the web app above.</p>
 		</div>
 		<p class="wrrapd-wrapstars-ob-note">No further action is needed here — watch email from <?php echo esc_html( wrrapd_drivers_from_email_address() ); ?> for activation confirmation.</p>
 	</div>
@@ -1504,6 +1655,11 @@ function wrrapd_drivers_shortcode_onboarding( $atts ) {
 					</li>
 				<?php endforeach; ?>
 			</ol>
+			<div class="wrrapd-wrapstars-onboarding-nav__foot">
+				<a href="<?php echo esc_url( wrrapd_drivers_profile_url() ); ?>">Profile</a>
+				<a href="mailto:<?php echo esc_attr( wrrapd_drivers_from_email_address() ); ?>">Help</a>
+				<a href="<?php echo esc_url( wp_logout_url( wrrapd_drivers_apply_url( '/drive/' ) ) ); ?>">Log out</a>
+			</div>
 		</aside>
 		<main class="wrrapd-wrapstars-ob-main">
 			<?php
@@ -1520,6 +1676,248 @@ function wrrapd_drivers_shortcode_onboarding( $atts ) {
 			}
 			?>
 		</main>
+	</div>
+	<?php
+	return ob_get_clean();
+}
+
+/**
+ * JoyRider profile page — /drive/driver-profile/ on the apply host.
+ * Summary from the application, documents on file, contact & vehicle (editable), username & password.
+ */
+function wrrapd_drivers_shortcode_profile() {
+	if ( ! wrrapd_drivers_is_portal_host() ) {
+		return '';
+	}
+	if ( ! is_user_logged_in() || ! wrrapd_drivers_is_onboarding_eligible_user( get_current_user_id() ) ) {
+		$login = wrrapd_drivers_portal_login_url( wrrapd_drivers_profile_url() );
+		return '<div class="wrrapd-wrapstars wrrapd-drivers wrrapd-wrapstars-dasher"><div class="wrrapd-wrapstars-card wrrapd-ws-profile-gate"><h1>Your JoyRider profile</h1><p>Please <a href="' . esc_url( $login ) . '">log in</a> to view your profile.</p><a class="wrrapd-wrapstars-btn" href="' . esc_url( $login ) . '">Log in</a></div></div>';
+	}
+	$user = wp_get_current_user();
+	$app  = wrrapd_drivers_get_application_by_user( $user->ID );
+	if ( ! $app ) {
+		return '<p class="wrrapd-wrapstars-alert wrrapd-wrapstars-alert--info">No application is linked to this account.</p>';
+	}
+	$id       = (int) $app->ID;
+	$status   = (string) wrrapd_drivers_get_meta( $id, 'status' );
+	$editable = in_array( $status, array( 'approved', 'active' ), true );
+	$errors   = $GLOBALS['wrrapd_drv_profile_errors'] ?? array();
+	$ok       = ! empty( $GLOBALS['wrrapd_drv_profile_ok'] );
+	$pw_ok    = ! empty( $GLOBALS['wrrapd_drv_profile_pw_ok'] );
+	$pw_error = $GLOBALS['wrrapd_drv_profile_pw_error'] ?? '';
+	$full     = (string) wrrapd_drivers_get_meta( $id, 'full_name' );
+	$greet    = wrrapd_drivers_greeting_name( $id );
+	$app_url  = wrrapd_drivers_courier_app_url();
+	$app_host = preg_replace( '#^https?://#', '', rtrim( $app_url, '/' ) );
+
+	$fmt = static function ( $iso, $with_time = false ) {
+		$ts = $iso !== '' ? strtotime( (string) $iso ) : 0;
+		return $ts ? wp_date( $with_time ? 'M j, Y, g:i A' : 'M j, Y', $ts ) : '';
+	};
+	$submitted  = $fmt( wrrapd_drivers_get_meta( $id, 'submitted_at' ) );
+	$approved   = $fmt( wrrapd_drivers_get_meta( $id, 'approved_at' ) );
+	$activated  = $fmt( wrrapd_drivers_get_meta( $id, 'activated_at' ) );
+	$pw_changed = $fmt( wrrapd_drivers_get_meta( $id, 'password_changed_at' ), true );
+
+	switch ( $status ) {
+		case 'active':
+			$badge = array( 'Active JoyRider', 'is-active' );
+			break;
+		case 'approved':
+			$badge = array( 'Approved · onboarding', 'is-approved' );
+			break;
+		case 'interview':
+			$badge = array( 'Interview stage', 'is-review' );
+			break;
+		case 'under_review':
+			$badge = array( 'Application under review', 'is-review' );
+			break;
+		case 'declined':
+			$badge = array( 'Invitation declined', 'is-closed' );
+			break;
+		case 'rejected':
+			$badge = array( 'Not selected', 'is-closed' );
+			break;
+		default:
+			$badge = array( ucfirst( str_replace( '_', ' ', $status ) ), '' );
+	}
+
+	$steps = wrrapd_drivers_onboarding_steps();
+	$done  = 0;
+	$total = 0;
+	foreach ( array_keys( $steps ) as $key ) {
+		if ( $key === 'activation' ) {
+			continue;
+		}
+		$total++;
+		if ( wrrapd_drivers_step_complete( $id, $key ) ) {
+			$done++;
+		}
+	}
+	$docs = array();
+	foreach ( array( 'agreement', 'policies', 'background', 'insurance', 'identity', 'w9', 'tax_1099', 'bank_payout' ) as $key ) {
+		if ( ! isset( $steps[ $key ] ) ) {
+			continue;
+		}
+		$is_done = wrrapd_drivers_step_complete( $id, $key );
+		$docs[]  = array( 'label' => $steps[ $key ], 'ok' => $is_done, 'value' => $is_done ? 'Complete' : 'Pending' );
+	}
+
+	$vehicle_labels = array(
+		'sedan'     => 'Sedan',
+		'suv'       => 'SUV',
+		'truck'     => 'Pickup truck',
+		'van'       => 'Van',
+		'hatchback' => 'Hatchback',
+		'other'     => 'Other',
+	);
+	$vehicle = (string) wrrapd_drivers_get_meta( $id, 'vehicle_type' );
+
+	ob_start();
+	?>
+	<div class="wrrapd-wrapstars wrrapd-drivers wrrapd-wrapstars-dasher wrrapd-apply-wizard-root wrrapd-ws-profile">
+		<section class="wrrapd-wrapstars-dasher-apply-head wrrapd-ws-profile__head">
+			<p class="wrrapd-wrapstars-dasher-kicker">JoyRider profile</p>
+			<h1><?php echo esc_html( $full !== '' ? $full : $greet ); ?></h1>
+			<p class="wrrapd-ws-profile__badges">
+				<span class="wrrapd-ws-profile__badge <?php echo esc_attr( $badge[1] ); ?>"><?php echo esc_html( $badge[0] ); ?></span>
+				<?php if ( $activated !== '' ) : ?>
+					<span class="wrrapd-ws-profile__since">JoyRider since <?php echo esc_html( $activated ); ?></span>
+				<?php elseif ( $approved !== '' ) : ?>
+					<span class="wrrapd-ws-profile__since">Approved <?php echo esc_html( $approved ); ?></span>
+				<?php elseif ( $submitted !== '' ) : ?>
+					<span class="wrrapd-ws-profile__since">Applied <?php echo esc_html( $submitted ); ?></span>
+				<?php endif; ?>
+			</p>
+		</section>
+
+		<?php if ( $ok ) : ?><div class="wrrapd-wrapstars-alert wrrapd-wrapstars-alert--ok">Profile saved.</div><?php endif; ?>
+		<?php foreach ( $errors as $err ) : ?><div class="wrrapd-wrapstars-alert wrrapd-wrapstars-alert--err"><?php echo esc_html( $err ); ?></div><?php endforeach; ?>
+
+		<div class="wrrapd-ws-profile__grid">
+			<section class="wrrapd-wrapstars-card wrrapd-ws-profile__card">
+				<h2>At a glance</h2>
+				<dl class="wrrapd-ws-profile__dl">
+					<div><dt>Goes by</dt><dd><?php echo esc_html( $greet ); ?></dd></div>
+					<div><dt>Status</dt><dd><?php echo esc_html( $badge[0] ); ?></dd></div>
+					<?php if ( $submitted !== '' ) : ?><div><dt>Applied</dt><dd><?php echo esc_html( $submitted ); ?></dd></div><?php endif; ?>
+					<?php if ( $approved !== '' ) : ?><div><dt>Approved</dt><dd><?php echo esc_html( $approved ); ?></dd></div><?php endif; ?>
+					<?php if ( $activated !== '' ) : ?><div><dt>Activated</dt><dd><?php echo esc_html( $activated ); ?></dd></div><?php endif; ?>
+					<?php if ( $status === 'approved' && $total > 0 ) : ?>
+						<div><dt>Onboarding</dt><dd><?php echo esc_html( $done . ' of ' . $total ); ?> steps complete · <a href="<?php echo esc_url( wrrapd_drivers_apply_url( '/drive/driver-onboarding/' ) ); ?>">Continue</a></dd></div>
+					<?php endif; ?>
+					<div><dt>Home base</dt><dd><?php echo esc_html( trim( wrrapd_drivers_get_meta( $id, 'city' ) . ', ' . wrrapd_drivers_get_meta( $id, 'state' ) . ' ' . wrrapd_drivers_get_meta( $id, 'postal_code' ) ) ); ?></dd></div>
+					<?php if ( $vehicle !== '' ) : ?><div><dt>Vehicle</dt><dd><?php echo esc_html( $vehicle_labels[ $vehicle ] ?? ucfirst( $vehicle ) ); ?></dd></div><?php endif; ?>
+					<?php if ( wrrapd_drivers_get_meta( $id, 'availability' ) !== '' ) : ?><div class="is-wide"><dt>Availability</dt><dd><?php echo esc_html( wrrapd_drivers_get_meta( $id, 'availability' ) ); ?></dd></div><?php endif; ?>
+					<?php if ( wrrapd_drivers_get_meta( $id, 'delivery_experience' ) !== '' ) : ?><div class="is-wide"><dt>Delivery experience</dt><dd><?php echo esc_html( wrrapd_drivers_get_meta( $id, 'delivery_experience' ) ); ?></dd></div><?php endif; ?>
+				</dl>
+				<?php if ( $status === 'active' ) : ?>
+					<p class="wrrapd-ws-profile__app"><a class="wrrapd-wrapstars-btn" href="<?php echo esc_url( $app_url ); ?>">Open the JoyRider app</a></p>
+				<?php endif; ?>
+			</section>
+
+			<section class="wrrapd-wrapstars-card wrrapd-ws-profile__card">
+				<h2>Documents &amp; payout</h2>
+				<ul class="wrrapd-ws-profile__docs">
+					<li class="<?php echo wrrapd_drivers_get_meta( $id, 'id_file' ) !== '' ? 'is-ok' : 'is-open'; ?>">
+						<span class="wrrapd-ws-profile__mark" aria-hidden="true"><?php echo wrrapd_drivers_get_meta( $id, 'id_file' ) !== '' ? '✓' : '○'; ?></span>
+						<span class="wrrapd-ws-profile__doclabel">Driver license</span>
+						<span class="wrrapd-ws-profile__docval"><?php echo wrrapd_drivers_get_meta( $id, 'id_file' ) !== '' ? 'On file' : 'Not uploaded'; ?></span>
+					</li>
+					<?php foreach ( $docs as $doc ) : ?>
+						<li class="<?php echo $doc['ok'] ? 'is-ok' : 'is-open'; ?>">
+							<span class="wrrapd-ws-profile__mark" aria-hidden="true"><?php echo $doc['ok'] ? '✓' : '○'; ?></span>
+							<span class="wrrapd-ws-profile__doclabel"><?php echo esc_html( $doc['label'] ); ?></span>
+							<span class="wrrapd-ws-profile__docval"><?php echo esc_html( $doc['value'] ); ?></span>
+						</li>
+					<?php endforeach; ?>
+				</ul>
+				<p class="wrrapd-ws-profile__note">Need to update a document or bank account? Email <a href="mailto:<?php echo esc_attr( wrrapd_drivers_from_email_address() ); ?>"><?php echo esc_html( wrrapd_drivers_from_email_address() ); ?></a>.</p>
+			</section>
+		</div>
+
+		<section class="wrrapd-wrapstars-card wrrapd-ws-profile__card">
+			<h2>Contact, mailing &amp; vehicle</h2>
+			<?php if ( ! $editable ) : ?><p class="wrrapd-ws-profile__note">Details can be edited after approval.</p><?php endif; ?>
+			<form class="wrrapd-wrapstars-form" method="post">
+				<?php wp_nonce_field( 'wrrapd_drv_profile', 'wrrapd_drv_nonce' ); ?>
+				<input type="hidden" name="wrrapd_drv_action" value="save_profile" />
+				<fieldset class="wrrapd-ws-profile__fieldset" <?php disabled( ! $editable ); ?>>
+				<div class="ws-field-row ws-field-row--3">
+					<div class="ws-field"><label for="dp-first">First name</label><input type="text" id="dp-first" name="first_name" value="<?php echo esc_attr( wrrapd_drivers_get_meta( $id, 'first_name' ) ); ?>" required /></div>
+					<div class="ws-field"><label for="dp-middle">Middle name</label><input type="text" id="dp-middle" name="middle_name" value="<?php echo esc_attr( wrrapd_drivers_get_meta( $id, 'middle_name' ) ); ?>" /></div>
+					<div class="ws-field"><label for="dp-last">Last name</label><input type="text" id="dp-last" name="last_name" value="<?php echo esc_attr( wrrapd_drivers_get_meta( $id, 'last_name' ) ); ?>" required /></div>
+				</div>
+				<div class="ws-field-row">
+					<div class="ws-field"><label for="dp-nick">Preferred name</label><input type="text" id="dp-nick" name="nickname" value="<?php echo esc_attr( wrrapd_drivers_get_meta( $id, 'nickname' ) ); ?>" placeholder="How we greet you" /></div>
+					<div class="ws-field"><label for="dp-email">Email address</label><input type="email" id="dp-email" name="email" value="<?php echo esc_attr( wrrapd_drivers_get_meta( $id, 'email' ) ); ?>" required /></div>
+				</div>
+				<div class="ws-field-row">
+					<div class="ws-field"><label for="dp-mobile">Mobile phone</label><input type="tel" id="dp-mobile" name="phone_mobile" value="<?php echo esc_attr( wrrapd_drivers_get_meta( $id, 'phone_mobile', wrrapd_drivers_get_meta( $id, 'phone' ) ) ); ?>" required /></div>
+					<div class="ws-field"><label for="dp-vehicle">Vehicle</label>
+						<select id="dp-vehicle" name="vehicle_type">
+							<option value="">Select…</option>
+							<?php foreach ( $vehicle_labels as $val => $label ) : ?>
+								<option value="<?php echo esc_attr( $val ); ?>" <?php selected( $vehicle, $val ); ?>><?php echo esc_html( $label ); ?></option>
+							<?php endforeach; ?>
+						</select>
+					</div>
+				</div>
+				<div class="ws-field">
+					<label for="dp-address">Street address</label>
+					<input type="text" id="dp-address" name="address_line1" value="<?php echo esc_attr( wrrapd_drivers_get_meta( $id, 'address_line1' ) ); ?>" required />
+					<input type="text" id="dp-address2" name="address_line2" class="wrrapd-address-line2" value="<?php echo esc_attr( wrrapd_drivers_get_meta( $id, 'address_line2' ) ); ?>" placeholder="Apt, suite, unit, etc. (optional)" />
+				</div>
+				<div class="ws-field-row ws-field-row--3">
+					<div class="ws-field"><label for="dp-city">City</label><input type="text" id="dp-city" name="city" value="<?php echo esc_attr( wrrapd_drivers_get_meta( $id, 'city' ) ); ?>" required /></div>
+					<div class="ws-field"><label for="dp-zip">ZIP code</label><input type="text" id="dp-zip" name="postal_code" value="<?php echo esc_attr( wrrapd_drivers_get_meta( $id, 'postal_code' ) ); ?>" required /></div>
+					<div class="ws-field"><label for="dp-state">State</label>
+						<?php if ( function_exists( 'wrrapd_drivers_apply_state_options' ) ) : ?>
+							<select id="dp-state" name="state" required>
+								<?php $cur = wrrapd_drivers_get_meta( $id, 'state' ); ?>
+								<?php foreach ( wrrapd_drivers_apply_state_options() as $value => $label ) : ?>
+									<?php if ( $value === '' ) { continue; } ?>
+									<option value="<?php echo esc_attr( $value ); ?>" <?php selected( $cur, $value ); ?>><?php echo esc_html( $label ); ?></option>
+								<?php endforeach; ?>
+							</select>
+						<?php else : ?>
+							<input type="text" id="dp-state" name="state" maxlength="2" value="<?php echo esc_attr( wrrapd_drivers_get_meta( $id, 'state' ) ); ?>" required />
+						<?php endif; ?>
+					</div>
+				</div>
+				<?php if ( $editable ) : ?><button type="submit" class="wrrapd-wrapstars-btn">Save profile</button><?php endif; ?>
+				</fieldset>
+			</form>
+		</section>
+
+		<section class="wrrapd-wrapstars-card wrrapd-ws-profile__card" id="account">
+			<h2>Username &amp; password</h2>
+			<?php if ( $pw_ok ) : ?><div class="wrrapd-wrapstars-alert wrrapd-wrapstars-alert--ok">Password updated.</div><?php endif; ?>
+			<?php if ( $pw_error !== '' ) : ?><div class="wrrapd-wrapstars-alert wrrapd-wrapstars-alert--err"><?php echo esc_html( $pw_error ); ?></div><?php endif; ?>
+			<dl class="wrrapd-ws-profile__dl">
+				<div><dt>Username</dt><dd><code><?php echo esc_html( $user->user_email ); ?></code></dd></div>
+				<div><dt>Password</dt><dd>••••••••••<?php echo $pw_changed !== '' ? ' <span class="wrrapd-ws-profile__muted">· changed ' . esc_html( $pw_changed ) . '</span>' : ''; ?></dd></div>
+				<div class="is-wide"><dt>Where to sign in</dt><dd>
+					<?php if ( $status === 'active' ) : ?>
+						<a href="<?php echo esc_url( $app_url ); ?>"><?php echo esc_html( $app_host ); ?></a> — same email and password.
+					<?php else : ?>
+						<a href="<?php echo esc_url( wrrapd_drivers_apply_url( '/drive/driver-onboarding/' ) ); ?>">Onboarding</a> for now. Once you are activated, the same email and password open the JoyRider app at <a href="<?php echo esc_url( $app_url ); ?>"><?php echo esc_html( $app_host ); ?></a>.
+					<?php endif; ?>
+				</dd></div>
+			</dl>
+			<form class="wrrapd-wrapstars-form wrrapd-ws-profile__pw" method="post">
+				<?php wp_nonce_field( 'wrrapd_drv_profile_pw', 'wrrapd_drv_nonce' ); ?>
+				<input type="hidden" name="wrrapd_drv_action" value="profile_password" />
+				<h3>Change password</h3>
+				<div class="ws-field-row ws-field-row--3">
+					<div class="ws-field"><label for="dp-pw-current">Current password</label><input type="password" id="dp-pw-current" name="current_password" required autocomplete="current-password" /></div>
+					<div class="ws-field"><label for="dp-pw-new">New password</label><input type="password" id="dp-pw-new" name="new_password" required minlength="10" autocomplete="new-password" /></div>
+					<div class="ws-field"><label for="dp-pw-confirm">Confirm new password</label><input type="password" id="dp-pw-confirm" name="confirm_password" required minlength="10" autocomplete="new-password" /></div>
+				</div>
+				<p class="wrrapd-ws-profile__note">At least 10 characters.</p>
+				<button type="submit" class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--secondary">Update password</button>
+			</form>
+		</section>
 	</div>
 	<?php
 	return ob_get_clean();

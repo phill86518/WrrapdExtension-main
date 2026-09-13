@@ -17,7 +17,14 @@ export const TRACKING_COLLECTIONS = {
   wrapstarShifts: "tracking_wrapstar_shifts",
   wrapstarShiftGifts: "tracking_wrapstar_shift_gifts",
   wrapstarShiftVideos: "tracking_wrapstar_shift_videos",
+  /** Contractor record migrated from WordPress on "Approve onboarding" (profile, agreements, tax, payout summary). */
+  contractorRecords: "tracking_contractor_records",
 } as const;
+
+export function trackingContractorRecordsCollection(): CollectionReference | null {
+  const db = getFirestoreDb();
+  return db ? db.collection(TRACKING_COLLECTIONS.contractorRecords) : null;
+}
 
 export function trackingWrapstarsCollection(): CollectionReference | null {
   const db = getFirestoreDb();

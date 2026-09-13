@@ -2,7 +2,17 @@
 
 import { FormEvent, useState } from "react";
 
-export function DriverAccountPanel({ wrapstarId }: { wrapstarId?: string }) {
+type Props = {
+  wrapstarId?: string;
+  /**
+   * Contractors who sign in with their WordPress email + password manage that password on their
+   * profile page — the shared legacy passcode form is hidden for them.
+   */
+  passwordManagedExternally?: boolean;
+  profileUrl?: string;
+};
+
+export function DriverAccountPanel({ wrapstarId, passwordManagedExternally, profileUrl }: Props) {
   const [open, setOpen] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -31,6 +41,32 @@ export function DriverAccountPanel({ wrapstarId }: { wrapstarId?: string }) {
     setCurrentPassword("");
     setNewPassword("");
     setMessage("Password changed successfully.");
+  }
+
+  if (passwordManagedExternally) {
+    return (
+      <section className="mt-4 rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h3 className="text-sm font-semibold text-slate-800">Sign-in</h3>
+            {wrapstarId ? (
+              <p className="mt-0.5 font-mono text-xs text-slate-500">ID {wrapstarId}</p>
+            ) : null}
+          </div>
+          {profileUrl ? (
+            <a
+              href={profileUrl}
+              className="rounded-lg border border-slate-300 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-800 shadow-sm hover:bg-slate-100"
+            >
+              Change password
+            </a>
+          ) : null}
+        </div>
+        <p className="mt-2 text-xs text-slate-600">
+          You sign in with your email and password. Change it any time from your profile.
+        </p>
+      </section>
+    );
   }
 
   return (

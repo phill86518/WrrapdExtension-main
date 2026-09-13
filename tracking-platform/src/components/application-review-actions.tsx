@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
+import { hireRoleLabel } from "@/lib/role-labels";
 
 const BTN =
   "rounded px-3 py-2 text-sm cursor-pointer transition disabled:cursor-not-allowed disabled:opacity-45 disabled:pointer-events-none";
@@ -27,6 +28,12 @@ type Props = {
   /** Hire role — wrapstar (default) or driver */
   role?: "wrapstar" | "driver";
   action: (formData: FormData) => Promise<void>;
+  /** Onboarding progress (excluding the activation step) — drives the Approve onboarding button */
+  onboardingDone?: number;
+  onboardingTotal?: number;
+  onboardingOpen?: string[];
+  portalLastLoginAt?: string;
+  portalLoginCount?: number;
 };
 
 export function ApplicationReviewActions({
@@ -37,9 +44,17 @@ export function ApplicationReviewActions({
   rejectReason,
   role = "wrapstar",
   action,
+  onboardingDone = 0,
+  onboardingTotal = 0,
+  onboardingOpen = [],
+  portalLastLoginAt,
+  portalLoginCount,
 }: Props) {
   const [pending, setPending] = useState<string | null>(null);
   const busy = pending !== null;
+  const roleLabel = hireRoleLabel(role);
+  const portalHost = role === "driver" ? "joyrider.wrrapd.com" : "wrapstar.wrrapd.com";
+  const onboardingComplete = onboardingTotal > 0 && onboardingDone >= onboardingTotal;
 
   const pastInterview = ["interview", "approved", "active", "declined", "rejected"].includes(status);
   const pastApprove = ["approved", "active", "declined"].includes(status);
@@ -49,12 +64,60 @@ export function ApplicationReviewActions({
   return (
     <section className="mt-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
       <h2 className="font-semibold">Review actions</h2>
+      {status === "approved" ? (
+        <div
+          className={`mt-3 rounded-lg border px-3 py-2 text-sm ${
+            onboardingComplete
+              ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+              : "border-amber-200 bg-amber-50 text-amber-900"
+          }`}
+        >
+          <p className="font-semibold">
+            Onboarding {onboardingDone} of {onboardingTotal} steps complete
+            {onboardingComplete ? " — ready to approve" : ""}
+          </p>
+          {!onboardingComplete && onboardingOpen.length ? (
+            <p className="mt-1 text-xs">Still open: {onboardingOpen.join(", ")}</p>
+          ) : null}
+          <p className="mt-1 text-xs">
+            <strong>Approve onboarding</strong> makes this person an active {roleLabel}: the WordPress
+            account flips to active, their profile, signed agreements, tax and payout summary and hire
+            dates migrate to the ops roster, and they can sign in at <strong>{portalHost}</strong> with
+            the same email and password from onboarding.
+          </p>
+        </div>
+      ) : null}
+      {status === "active" ? (
+        <p className="mt-2 text-xs text-slate-500">
+          Portal: {portalHost}
+          {portalLastLoginAt
+            ? ` · last sign-in ${new Date(portalLastLoginAt).toLocaleString("en-US", {
+                timeZone: "America/New_York",
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+                hour: "numeric",
+                minute: "2-digit",
+              })} ET`
+            : " · never signed in"}
+          {portalLoginCount ? ` · ${portalLoginCount} sign-in${portalLoginCount === 1 ? "" : "s"}` : ""}
+        </p>
+      ) : null}
       <form
         action={action}
         className="mt-3 space-y-3"
         onSubmit={(e) => {
           const submitter = (e.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null;
           const next = submitter?.value || "working";
+          if (next === "activate" && !onboardingComplete && onboardingTotal > 0) {
+            const ok = window.confirm(
+              `Onboarding is not finished (${onboardingDone} of ${onboardingTotal} steps). Approve onboarding and activate this ${roleLabel} anyway?`,
+            );
+            if (!ok) {
+              e.preventDefault();
+              return;
+            }
+          }
           setPending(next);
         }}
       >
@@ -101,7 +164,7 @@ export function ApplicationReviewActions({
           ) : null}
           {pastApprove ? <Spent>✓ Approved for onboarding</Spent> : null}
           {pastReject ? <Spent>✓ Rejected</Spent> : null}
-          {pastActivate ? <Spent>✓ Activated (live)</Spent> : null}
+          {pastActivate ? <Spent>✓ Onboarding approved — active {roleLabel}</Spent> : null}
 
           {status === "under_review" ? (
             <>
@@ -189,8 +252,11 @@ export function ApplicationReviewActions({
                 value="activate"
                 disabled={busy}
                 className={`${BTN} bg-emerald-700 font-semibold text-white hover:bg-emerald-800`}
+                title={`Approve onboarding → active ${roleLabel}. Migrates profile, agreements, tax + payout summary to the roster and unlocks ${portalHost}.`}
               >
-                {pending === "activate" ? "Activating…" : "Activate WrapStar (live)"}
+                {pending === "activate"
+                  ? "Approving…"
+                  : `Approve onboarding → active ${roleLabel}`}
               </button>
               <button
                 type="submit"
@@ -252,10 +318,12 @@ export function ApplicationReviewActions({
         </div>
       </form>
       <p className="mt-3 text-xs text-slate-500">
-        One-shot actions (approve, reject, interview, activate) dim after use and cannot run again from
-        that state. <strong>Approve without interview</strong> skips Zoom and sends onboarding
-        credentials immediately (testing or known applicants). Approve / re-invite emails username, a
-        fresh temporary password, login link, and a Decline link. Declined offers live under{" "}
+        One-shot actions (approve, reject, interview, approve onboarding) dim after use and cannot run
+        again from that state. <strong>Approve without interview</strong> skips Zoom and sends
+        onboarding credentials immediately (testing or known applicants). Approve / re-invite emails
+        username, a fresh temporary password, login link, and a Decline link.{" "}
+        <strong>Approve onboarding</strong> is the final hire step — it activates the {roleLabel} and
+        migrates their record to the contractor portal. Declined offers live under{" "}
         <Link className="cursor-pointer underline" href="/admin/applications?status=declined">
           Declined offer
         </Link>

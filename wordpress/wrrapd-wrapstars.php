@@ -6,6 +6,10 @@
  *
  * Install on the **dedicated WrapStars WordPress** (separate from wrrapd.com):
  *   wp-content/mu-plugins/wrrapd-wrapstars.php
+ *   wp-content/mu-plugins/wrrapd-wrapstars-apply.php
+ *   wp-content/mu-plugins/wrrapd-wrapstars-apply.js
+ *   wp-content/mu-plugins/wrrapd-wrapstars-profile.php   ← /profile/ page (required)
+ *   wp-content/mu-plugins/wrrapd-wrapstars-ops-api.php
  *   wp-content/mu-plugins/wrrapd-boldsign.php
  *   wp-content/mu-plugins/wrrapd-wrapstars.css
  *
@@ -18,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_WRAPSTARS_BUILD', '2026-09-12-wrap-trivia' );
+define( 'WRRAPD_WRAPSTARS_BUILD', '2026-09-12-contractor-portals' );
 /** Approval / re-invite onboarding credentials remain valid this many days. */
 define( 'WRRAPD_WRAPSTARS_INVITE_TTL_DAYS', 15 );
 
@@ -90,6 +94,19 @@ function wrrapd_wrapstars_is_portal_host() {
 /** Single WP install serves both apply + pros URLs (SiteGround cannot share docroot yet). */
 function wrrapd_wrapstars_unified_host() {
 	return wrrapd_wrapstars_apply_host() === wrrapd_wrapstars_pros_host();
+}
+
+/**
+ * Post-activation WrapStar app (Command Center companion on Cloud Run).
+ * Override with WRRAPD_WRAPSTARS_APP_URL in wp-config.php.
+ *
+ * @return string
+ */
+function wrrapd_wrapstars_app_url() {
+	if ( defined( 'WRRAPD_WRAPSTARS_APP_URL' ) && WRRAPD_WRAPSTARS_APP_URL !== '' ) {
+		return rtrim( (string) WRRAPD_WRAPSTARS_APP_URL, '/' ) . '/';
+	}
+	return 'https://wrapstar.wrrapd.com/';
 }
 
 /**
@@ -1351,8 +1368,50 @@ function wrrapd_wrapstars_force_path_shortcode_content( $content ) {
 	if ( preg_match( '#^/thank-you(/|$)#', $path ) ) {
 		return do_shortcode( '[wrrapd_wrapstar_thankyou]' );
 	}
+	// /profile/ was a bare WP page (theme placeholder + featured image). Always render the profile.
+	if ( preg_match( '#^/profile(/|$)#', $path ) && is_main_query() ) {
+		if ( function_exists( 'wrrapd_wrapstars_shortcode_profile' ) ) {
+			return do_shortcode( '[wrrapd_wrapstar_profile]' );
+		}
+		return '<div class="wrrapd-wrapstars"><div class="wrrapd-wrapstars-alert wrrapd-wrapstars-alert--err">Profile module missing — upload <code>wrrapd-wrapstars-profile.php</code> to <code>mu-plugins/</code>.</div></div>';
+	}
 	return $content;
 }
+
+/**
+ * /profile/ without a WordPress page (e.g. pros host): render a minimal themed document
+ * around the profile shortcode so the URL always works.
+ */
+function wrrapd_wrapstars_virtual_profile_page() {
+	if ( is_admin() || ! wrrapd_wrapstars_is_portal_host() || ! is_404() ) {
+		return;
+	}
+	$path = wrrapd_wrapstars_request_path();
+	if ( ! preg_match( '#^/profile(/|$)#', $path ) ) {
+		return;
+	}
+	status_header( 200 );
+	nocache_headers();
+	?>
+<!doctype html>
+<html <?php language_attributes(); ?>>
+<head>
+<meta charset="<?php bloginfo( 'charset' ); ?>" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex" />
+<title>WrapStar profile · Wrrapd</title>
+<?php wp_head(); ?>
+</head>
+<body <?php body_class( 'wrrapd-virtual-page' ); ?>>
+<?php wp_body_open(); ?>
+<main class="wrrapd-virtual-page__main"><?php echo do_shortcode( '[wrrapd_wrapstar_profile]' ); ?></main>
+<?php wp_footer(); ?>
+</body>
+</html>
+	<?php
+	exit;
+}
+add_action( 'template_redirect', 'wrrapd_wrapstars_virtual_profile_page', 5 );
 
 function wrrapd_wrapstars_body_class( $classes ) {
 	$classes[] = 'wrrapd-wrapstars-portal';
@@ -1648,10 +1707,8 @@ function wrrapd_wrapstars_output_portal_header() {
 	echo '</div>';
 	if ( is_user_logged_in() && wrrapd_wrapstars_is_onboarding_eligible_user( get_current_user_id() ) ) {
 		echo '<nav class="wrrapd-wrapstars-portal-util" aria-label="WrapStar portal">';
-		if ( wrrapd_wrapstars_is_pros_host() ) {
-			echo '<a href="' . esc_url( wrrapd_wrapstars_pros_url( '/profile/' ) ) . '">Profile</a>';
-			echo '<span aria-hidden="true">·</span>';
-		}
+		echo '<a href="' . esc_url( wrrapd_wrapstars_pros_url( '/profile/' ) ) . '">Profile</a>';
+		echo '<span aria-hidden="true">·</span>';
 		echo '<a href="' . esc_url( wrrapd_wrapstars_pros_url( '/onboarding/' ) ) . '">Onboarding</a>';
 		echo '<span aria-hidden="true">·</span>';
 		echo '<a href="' . esc_url( wp_logout_url( home_url( '/' ) ) ) . '">Log out</a>';
@@ -1750,6 +1807,9 @@ function wrrapd_wrapstars_maybe_handle_posts() {
 	}
 	if ( $action === 'save_profile' ) {
 		wrrapd_wrapstars_process_profile_save();
+	}
+	if ( $action === 'profile_password' && function_exists( 'wrrapd_wrapstars_process_profile_password' ) ) {
+		wrrapd_wrapstars_process_profile_password();
 	}
 	if ( $action === 'change_password' ) {
 		wrrapd_wrapstars_process_change_password();
@@ -2909,6 +2969,8 @@ function wrrapd_wrapstars_output_theme_cleanup_css() {
 	echo 'body.wrrapd-wrapstars-portal header.wp-block-template-part,body.wrrapd-wrapstars-portal footer.wp-block-template-part,body.wrrapd-wrapstars-portal header.wp-block-group,body.wrrapd-wrapstars-portal header:not(.wrrapd-wrapstars-site-header):not(.wrrapd-wrapstars-ob-topbar),body.wrrapd-wrapstars-portal .wp-site-blocks>header{display:none!important;height:0!important;overflow:hidden!important;margin:0!important;padding:0!important;}';
 	echo 'body.wrrapd-wrapstars-portal .wp-block-site-title,body.wrrapd-wrapstars-portal nav.wp-block-navigation,body.wrrapd-wrapstars-portal nav.wp-block-navigation-submenu,body.wrrapd-wrapstars-portal .wp-block-navigation__responsive-container,body.wrrapd-wrapstars-portal #site-navigation,body.wrrapd-wrapstars-portal .wp-block-post-title,body.wrrapd-wrapstars-portal .entry-header,body.wrrapd-wrapstars-portal h1.wp-block-post-title{display:none!important;height:0!important;margin:0!important;padding:0!important;}';
 	echo 'body.wrrapd-wrapstars-portal .wp-block-template-part,body.wrrapd-wrapstars-portal .powered-by,body.wrrapd-wrapstars-portal a[href*="wordpress.org"]{display:none!important;}';
+	/* Theme page template chrome (featured image / cover placeholder — the "tree") never belongs on portal pages. */
+	echo 'body.wrrapd-wrapstars-portal .wp-block-post-featured-image,body.wrrapd-wrapstars-portal figure.post-thumbnail,body.wrrapd-wrapstars-portal .entry-content>.wp-block-cover:not(:has(.wrrapd-wrapstars)),body.wrrapd-wrapstars-portal .wp-block-post-content>.wp-block-cover:not(:has(.wrrapd-wrapstars)),body.wrrapd-wrapstars-portal .wp-block-post-content>.wp-block-image:not(:has(.wrrapd-wrapstars)):first-child,body.wrrapd-wrapstars-portal .wp-block-comments,body.wrrapd-wrapstars-portal .wp-block-post-comments,body.wrrapd-wrapstars-portal .comments-area{display:none!important;height:0!important;margin:0!important;padding:0!important;}';
 	echo 'body.wrrapd-wrapstars-portal,body.wrrapd-wrapstars-portal .wp-site-blocks,body.wrrapd-wrapstars-portal article,body.wrrapd-wrapstars-portal .type-page{padding:0!important;margin:0!important;}';
 	echo 'body.wrrapd-wrapstars-portal .wp-site-blocks{padding-top:0!important;margin-top:0!important;gap:0!important;}';
 	echo 'body.wrrapd-wrapstars-portal .wp-site-blocks>*{margin-block-start:0!important;margin-block-end:0!important;}';

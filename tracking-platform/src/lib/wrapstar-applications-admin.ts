@@ -97,6 +97,10 @@ export type WrapstarApplication = {
   unsuspendedAt?: string;
   notesUpdatedAt?: string;
   resetAt?: string;
+  passwordChangedAt?: string;
+  /** Last sign-in on wrapstar.wrrapd.com (via WP portal-auth) */
+  portalLastLoginAt?: string;
+  portalLoginCount?: number;
   userId: number;
   createdAt: string;
 };

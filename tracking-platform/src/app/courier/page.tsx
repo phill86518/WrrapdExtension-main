@@ -7,9 +7,14 @@ import { DriverInstallCard } from "@/components/driver-install-card";
 import { LogoutButton } from "@/components/logout-button";
 import { WrrapdLogo } from "@/components/wrrapd-logo";
 import { wrapPhaseLabel } from "@/lib/wrap-status-display";
+import { getContractorRecord } from "@/lib/contractor-records";
+import { ContractorAccountCard } from "@/components/contractor-account-card";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
+
+const JOYRIDER_PROFILE_URL =
+  process.env.JOYRIDER_PROFILE_URL?.trim() || "https://apply.wrrapd.com/drive/driver-profile/";
 
 export default async function CourierPage() {
   const session = await getSession();
@@ -17,9 +22,9 @@ export default async function CourierPage() {
     return (
       <main className="mx-auto min-h-screen max-w-xl px-4 py-10">
         <WrrapdLogo className="h-14 w-auto max-w-[220px]" />
-        <h1 className="mt-3 text-3xl font-semibold">Driver Console Login</h1>
+        <h1 className="mt-3 text-3xl font-semibold">JoyRider App Login</h1>
         <p className="mt-2 text-sm text-slate-600">
-          Courier final-mile app — separate from the WrapStar wrapping app.
+          Sign in to see pickups and deliveries. WrapStars use the WrapStar app instead.
         </p>
         <CourierLoginForm />
       </main>
@@ -51,13 +56,15 @@ export default async function CourierPage() {
 
   const ready = mine.filter((o) => o.wrapPhase === "complete" || o.readyForCourierAt);
   const waiting = mine.filter((o) => !ready.includes(o));
+  const delivered = mine.filter((o) => o.status === "delivered");
+  const contractor = await getContractorRecord("driver", driver.id).catch(() => null);
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-6">
       <div className="mb-5 flex items-start justify-between gap-3">
         <div>
           <WrrapdLogo className="h-12 w-auto max-w-[200px]" />
-          <h1 className="mt-2 text-2xl font-semibold">Driver Console</h1>
+          <h1 className="mt-2 text-2xl font-semibold">JoyRider App</h1>
           <p className="text-sm text-slate-600">
             {driver.name} · <span className="font-mono text-xs">{driver.displayId || driver.id}</span>
           </p>
@@ -121,6 +128,36 @@ export default async function CourierPage() {
             ))
           )}
         </ul>
+      </section>
+
+      <details className="mt-6 rounded-xl border border-slate-200 bg-white p-4">
+        <summary className="cursor-pointer text-lg font-semibold text-slate-900">
+          Delivery history{delivered.length ? ` (${delivered.length})` : ""}
+        </summary>
+        <ul className="mt-3 space-y-2">
+          {delivered.length === 0 ? (
+            <li className="text-sm text-slate-600">No completed deliveries yet.</li>
+          ) : (
+            delivered.slice(0, 50).map((o) => (
+              <li key={o.id} className="rounded-lg border border-slate-100 px-3 py-2 text-sm">
+                <span className="font-medium">{o.externalOrderId || o.id}</span>
+                <span className="ml-2 text-xs text-slate-500">
+                  {o.recipientName} · {o.city}
+                  {o.updatedAt ? ` · ${new Date(o.updatedAt).toLocaleDateString()}` : ""}
+                </span>
+              </li>
+            ))
+          )}
+        </ul>
+      </details>
+
+      <section className="mt-6">
+        <h2 className="mb-3 text-lg font-semibold text-slate-900">Account</h2>
+        <ContractorAccountCard
+          record={contractor}
+          roleLabel="JoyRider"
+          profileUrl={JOYRIDER_PROFILE_URL}
+        />
       </section>
     </main>
   );

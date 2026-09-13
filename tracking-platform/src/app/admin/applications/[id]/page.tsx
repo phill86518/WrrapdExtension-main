@@ -419,6 +419,13 @@ export default async function AdminApplicationDetailPage({
         rejectReason={app.rejectReason || ""}
         role={role}
         action={actionForm}
+        onboardingDone={steps.filter(([k, v]) => k !== "activation" && v).length}
+        onboardingTotal={steps.filter(([k]) => k !== "activation").length}
+        onboardingOpen={steps
+          .filter(([k, v]) => k !== "activation" && !v)
+          .map(([k]) => WRAPSTAR_ONBOARDING_STEP_LABELS[k] || k)}
+        portalLastLoginAt={app.portalLastLoginAt}
+        portalLoginCount={app.portalLoginCount}
       />
     </div>
   );

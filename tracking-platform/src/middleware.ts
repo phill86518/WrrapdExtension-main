@@ -6,6 +6,7 @@ import {
   SESSION_MAX_AGE_SEC,
   getSessionSecretBytes,
 } from "@/lib/session-constants";
+import { portalHomePath, portalKindForHost } from "@/lib/portal-hosts";
 
 type SessionPayload = {
   role: "admin" | "wrapstar" | "driver";
@@ -17,6 +18,37 @@ const secret = getSessionSecretBytes();
 
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
+
+  /**
+   * Contractor portal hosts: wrapstar.wrrapd.com → /wrapstar, joyrider.wrrapd.com → /courier.
+   * The root of each host rewrites to its app (URL bar stays clean); the *other* contractor app
+   * and Command Center redirect away so one host = one audience.
+   */
+  const portal = portalKindForHost(
+    request.headers.get("x-forwarded-host") || request.headers.get("host"),
+  );
+  if (portal) {
+    const home = portalHomePath(portal);
+    const other = portal === "wrapstar" ? "/courier" : "/wrapstar";
+    if (pathname === "/" || pathname === "/platform") {
+      const u = request.nextUrl.clone();
+      u.pathname = home;
+      return NextResponse.rewrite(u);
+    }
+    if (
+      pathname === other ||
+      pathname.startsWith(`${other}/`) ||
+      pathname === "/admin" ||
+      pathname.startsWith("/admin/") ||
+      pathname === "/driver" ||
+      pathname.startsWith("/driver/")
+    ) {
+      const u = request.nextUrl.clone();
+      u.pathname = home;
+      u.search = "";
+      return NextResponse.redirect(u);
+    }
+  }
   /** Case aliases (Windows / typed URLs); lowercase routes are canonical. */
   if (pathname === "/Admin" || pathname.startsWith("/Admin/")) {
     const u = request.nextUrl.clone();
@@ -66,6 +98,9 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
+    "/",
+    "/platform",
+    "/admin",
     "/admin/:path*",
     "/driver/:path*",
     "/courier/:path*",

@@ -188,10 +188,11 @@ function wrrapd_wrapstars_run_admin_action( $app_id, $action, $opts = array() ) 
 			wrrapd_wrapstars_set_meta( $app_id, 'admin_notes', $notes );
 			wrrapd_wrapstars_set_meta( $app_id, 'notes_updated_at', gmdate( 'c' ) );
 		}
+		$app_url = function_exists( 'wrrapd_wrapstars_app_url' ) ? wrrapd_wrapstars_app_url() : 'https://wrapstar.wrrapd.com/';
 		wrrapd_wrapstars_send_email(
 			$email,
 			"You're live as a WrapStar",
-			"Hi {$name},\n\nYour account is activated. You'll start with lower-value orders. Remember: video proof on every order.\n"
+			"Hi {$name},\n\nYour account is activated. Open the WrapStar app to see your shifts and wrap jobs:\n{$app_url}\n\nSign in with the same email and password you used for onboarding.\n\nYou'll start with lower-value orders. Remember: video proof on every order.\n"
 		);
 		wrrapd_wrapstars_sync_profile_to_gcs( $app_id );
 		return array( 'ok' => true, 'status' => 'active' );
@@ -375,6 +376,9 @@ function wrrapd_wrapstars_ops_serialize_application( $id ) {
 		'unsuspendedAt'              => wrrapd_wrapstars_get_meta( $id, 'unsuspended_at' ),
 		'notesUpdatedAt'             => wrrapd_wrapstars_get_meta( $id, 'notes_updated_at' ),
 		'resetAt'                    => wrrapd_wrapstars_get_meta( $id, 'reset_at' ),
+		'passwordChangedAt'          => wrrapd_wrapstars_get_meta( $id, 'password_changed_at' ),
+		'portalLastLoginAt'          => wrrapd_wrapstars_get_meta( $id, 'portal_last_login_at' ),
+		'portalLoginCount'           => (int) wrrapd_wrapstars_get_meta( $id, 'portal_login_count', '0' ),
 		'userId'                     => (int) wrrapd_wrapstars_get_meta( $id, 'user_id' ),
 		'createdAt'                  => get_post_time( 'c', true, $app ),
 	);
@@ -408,8 +412,97 @@ function wrrapd_wrapstars_ops_register_rest_routes() {
 			'permission_callback' => 'wrrapd_wrapstars_ops_api_permission',
 		)
 	);
+	// Contractor portals (wrapstar.wrrapd.com / joyrider.wrrapd.com) verify the WordPress
+	// onboarding username + password here, so one set of credentials works everywhere.
+	register_rest_route(
+		'wrrapd/v1',
+		'/portal-auth',
+		array(
+			'methods'             => 'POST',
+			'callback'            => 'wrrapd_wrapstars_ops_portal_auth',
+			'permission_callback' => 'wrrapd_wrapstars_ops_api_permission',
+		)
+	);
 }
 add_action( 'rest_api_init', 'wrrapd_wrapstars_ops_register_rest_routes' );
+
+/**
+ * POST /wrrapd/v1/portal-auth  { email, password, portal?: "wrapstar"|"driver" }
+ *
+ * Verifies WordPress credentials (server-to-server, ops key required) and returns which
+ * hire roles this person holds plus their current status. Stamps portal_last_login_at.
+ *
+ * @param WP_REST_Request $request Request.
+ * @return WP_REST_Response
+ */
+function wrrapd_wrapstars_ops_portal_auth( $request ) {
+	$email    = sanitize_email( (string) $request->get_param( 'email' ) );
+	$password = (string) $request->get_param( 'password' );
+	$portal   = sanitize_key( (string) $request->get_param( 'portal' ) );
+	if ( $email === '' || $password === '' ) {
+		return new WP_REST_Response( array( 'ok' => false, 'error' => 'Email and password are required.' ), 400 );
+	}
+	$user = get_user_by( 'email', $email );
+	if ( ! $user ) {
+		$user = get_user_by( 'login', $email );
+	}
+	if ( ! $user || ! wp_check_password( $password, $user->user_pass, $user->ID ) ) {
+		return new WP_REST_Response( array( 'ok' => false, 'error' => 'Invalid email or password.' ), 401 );
+	}
+
+	$now   = gmdate( 'c' );
+	$roles = array();
+
+	$ws_app = wrrapd_wrapstars_get_application_by_user( $user->ID );
+	if ( $ws_app ) {
+		$ws_id = (int) $ws_app->ID;
+		if ( $portal === '' || $portal === 'wrapstar' ) {
+			wrrapd_wrapstars_set_meta( $ws_id, 'portal_last_login_at', $now );
+			wrrapd_wrapstars_set_meta( $ws_id, 'portal_login_count', (string) ( (int) wrrapd_wrapstars_get_meta( $ws_id, 'portal_login_count', '0' ) + 1 ) );
+		}
+		$roles['wrapstar'] = array(
+			'applicationId' => $ws_id,
+			'status'        => (string) wrrapd_wrapstars_get_meta( $ws_id, 'status' ),
+			'suspended'     => wrrapd_wrapstars_get_meta( $ws_id, 'suspended' ) === '1',
+			'fullName'      => (string) wrrapd_wrapstars_get_meta( $ws_id, 'full_name' ),
+			'greetingName'  => wrrapd_wrapstars_greeting_name( $ws_id ),
+			'activatedAt'   => (string) wrrapd_wrapstars_get_meta( $ws_id, 'activated_at' ),
+			'mustChangePassword' => wrrapd_wrapstars_user_must_change_password( $user->ID ),
+		);
+	}
+
+	if ( function_exists( 'wrrapd_drivers_get_application_by_user' ) ) {
+		$drv_app = wrrapd_drivers_get_application_by_user( $user->ID );
+		if ( $drv_app ) {
+			$drv_id = (int) $drv_app->ID;
+			if ( $portal === '' || $portal === 'driver' ) {
+				wrrapd_drivers_set_meta( $drv_id, 'portal_last_login_at', $now );
+				wrrapd_drivers_set_meta( $drv_id, 'portal_login_count', (string) ( (int) wrrapd_drivers_get_meta( $drv_id, 'portal_login_count', '0' ) + 1 ) );
+			}
+			$roles['driver'] = array(
+				'applicationId' => $drv_id,
+				'status'        => (string) wrrapd_drivers_get_meta( $drv_id, 'status' ),
+				'suspended'     => wrrapd_drivers_get_meta( $drv_id, 'suspended' ) === '1',
+				'fullName'      => (string) wrrapd_drivers_get_meta( $drv_id, 'full_name' ),
+				'greetingName'  => wrrapd_drivers_greeting_name( $drv_id ),
+				'activatedAt'   => (string) wrrapd_drivers_get_meta( $drv_id, 'activated_at' ),
+				'mustChangePassword' => function_exists( 'wrrapd_drivers_user_must_change_password' ) ? wrrapd_drivers_user_must_change_password( $user->ID ) : false,
+			);
+		}
+	}
+
+	return new WP_REST_Response(
+		array(
+			'ok'          => true,
+			'userId'      => (int) $user->ID,
+			'email'       => strtolower( (string) $user->user_email ),
+			'displayName' => (string) $user->display_name,
+			'roles'       => $roles,
+			'checkedAt'   => $now,
+		),
+		200
+	);
+}
 
 /**
  * @param WP_REST_Request $request Request.
