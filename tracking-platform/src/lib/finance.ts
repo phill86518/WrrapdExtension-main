@@ -18,10 +18,14 @@ const CONFIG_FILE = path.join(DATA_DIR, "payout-config.json");
 const DEFAULT_CONFIG: PayoutConfig = {
   basePayCents: 1800,
   peakMultiplier: 1.25,
-  tipPassthrough: true,
+  tipPassthrough: false,
   platformFeeCents: 0,
   platformTakeWrapPercent: 28,
   platformTakeFlowersPercent: 15,
+  wrapstarHourlyCents: 2500,
+  joyriderHourlyCents: 2200,
+  wrapstarPaceGiftsPerHour: 12,
+  hourlyByZip: [],
   updatedAt: new Date().toISOString(),
 };
 
@@ -97,6 +101,7 @@ export async function listEarningsForWrapstar(wrapstarId: string): Promise<Earni
     .sort((a, b) => b.earnedAt.localeCompare(a.earnedAt));
 }
 
+/** @deprecated Per-order revenue split. Live pay is hourly-by-ZIP — see hourly-rates.ts and docs/CONTRACTOR-HOURLY-PAY.md. Kept so existing ledger rows still compute. */
 export async function createEarningsForDeliveredOrder(order: Order): Promise<EarningsEntry | null> {
   const wsId = orderWrapstarId(order);
   if (!wsId) return null;

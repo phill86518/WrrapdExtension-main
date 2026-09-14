@@ -5,7 +5,7 @@
 > section may appear on `apply.wrrapd.com`, `pros.wrrapd.com`, `wrrapd.com`, in emails, or in any
 > customer- or applicant-facing string. See "Public-copy rules" below before editing any copy.
 
-Last updated: 2026-09-09 (JoyRider public name + dedicated thank-you pages).
+Last updated: 2026-09-13 (hourly-by-ZIP pay; no pay mechanics on public pages).
 
 ---
 
@@ -36,7 +36,7 @@ up, does the work, and delivers it. Wrrapd is an **aggregator + router**:
 | Topic | Rule | Where it shows up |
 |---|---|---|
 | Tips | WrapStars **cannot receive tips** today (restaurant analogy: the chef does not get the table's tip; the wait-staff / JoyRider does). A WrapStar tip-sharing feature may come later. **Do not mention tips anywhere on WrapStar pages.** | Landing, apply, onboarding, emails |
-| Pay | WrapStar pay is a **share of the gift-wrap (and custom design) revenue** after Wrrapd's platform take (defaults 28% wrap / 15% flowers — flowers are JoyRider-side). Per-WrapStar overrides exist in Command Center → WrapStars → detail. **Never publish percentages, "base pay", "peak bonuses", or "see the payout before you accept."** Public copy says only "paid per completed order, on a regular schedule; details during onboarding." | `tracking-platform/src/lib/finance.ts`, `admin/finance`, `admin/wrapstars/[id]` |
+| Pay | **Hourly by ZIP** for WrapStars **and** JoyRiders — not per order. WrapStar expected pace is **12 gifts/hour**; shortfall reduces that hour by `(hourly ÷ 12)` per unfinished gift. WrapStars buy paper, small boxes, scissors, cutters, and tape. **Never publish rates, hourly, per-order, pace, penalties, ZIP tables, or "how you get paid."** Public pages omit pay entirely; details live in onboarding + the contractor app. | `docs/CONTRACTOR-HOURLY-PAY.md`, `docs/legal/contractor-compensation-schedule.md`, Command Center → Finance → Hourly rates |
 | Delivery / pickup | WrapStars do **not** drive, deliver, pick up from PO Boxes, or hand off to carriers. Public copy: "packages are brought to you and collected when you're done — no driving." | Landing FAQ/how-it-works, apply form (delivery questions removed), orientation |
 | PO Boxes | PO Boxes are a **JoyRider** concern. WrapStar onboarding no longer has a "PO Box" step; it has **Wrapping Location & Handoff** (`workspace`). | `wrrapd_wrapstars_onboarding_steps()` |
 | Flowers | Floral sourcing/combination is a **JoyRider** concern. Do not mention flowers on WrapStar pages. | — |
@@ -51,9 +51,10 @@ up, does the work, and delivers it. Wrrapd is an **aggregator + router**:
 
 1. **Never outline the business model.** No "we aggregate," "we route," "orders come from our
    Chrome extension," "Drivers collect from PO Boxes," "Drivers buy flowers," etc.
-2. **No pay mechanics.** No percentages, base pay, peak pay, bonuses, tips, "see payout before you
-   accept," or fee language. Allowed: "paid per completed order," "reliable payouts,"
-   "details shared during onboarding."
+2. **No pay mechanics — and no “how you get paid” at all on public pages.** No hourly, per-order,
+   percentages, base pay, peak pay, bonuses, tips, pace, ZIP rates, "see payout before you accept,"
+   or fee language. Do not add a “How do I get paid?” FAQ. Onboarding and the contractor apps may
+   describe the Compensation Schedule after approval.
 3. **No tips on WrapStar pages** (see above).
 4. **WrapStars wrap. Full stop.** Do not describe them picking up, delivering, meeting customers, or
    handing off to carriers. Allowed: "packages are brought to you and collected when you're done."

@@ -22,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_WRAPSTARS_BUILD', '2026-09-12-portals-lock' );
+define( 'WRRAPD_WRAPSTARS_BUILD', '2026-09-13-hourly-pay' );
 /** Approval / re-invite onboarding credentials remain valid this many days. */
 define( 'WRRAPD_WRAPSTARS_INVITE_TTL_DAYS', 15 );
 
@@ -374,7 +374,7 @@ function wrrapd_wrapstars_social_card_for_path( $path, $title = '' ) {
 	$wrap = 'https://apply.wrrapd.com/wp-content/uploads/2026/07/Applications_Wrrapd-mp4-image.jpg';
 	$card = array(
 		'title'       => 'Become a WrapStar',
-		'description' => 'Wrap gifts from home and get paid for your craft. Independent gift-wrapping with Wrrapd — now accepting applications in Florida & Georgia.',
+		'description' => 'Wrap gifts from home as an independent WrapStar. Now accepting applications in Florida & Georgia.',
 		'image'       => $wrap,
 	);
 
@@ -388,7 +388,7 @@ function wrrapd_wrapstars_social_card_for_path( $path, $title = '' ) {
 		$card['image']       = $logo;
 	} elseif ( preg_match( '#^/apply(/|$)#', $path ) ) {
 		$card['title']       = 'Apply to become a WrapStar';
-		$card['description'] = 'Start your WrapStar application — wrap beautiful gifts from home and get paid for your craft.';
+		$card['description'] = 'Start your WrapStar application — wrap beautiful gifts from home on your own schedule.';
 		$card['image']       = $wrap;
 	} elseif ( preg_match( '#^/(onboarding|login|status|profile|driver-onboarding)#', $path ) ) {
 		$card['title']       = 'Wrrapd Applications';
@@ -396,7 +396,7 @@ function wrrapd_wrapstars_social_card_for_path( $path, $title = '' ) {
 		$card['image']       = $logo;
 	} elseif ( $path === '/' ) {
 		$card['title']       = 'Become a WrapStar';
-		$card['description'] = 'Wrap gifts from home and get paid for your craft. Independent gift-wrapping with Wrrapd — now accepting applications in Florida & Georgia.';
+		$card['description'] = 'Wrap gifts from home as an independent WrapStar. Now accepting applications in Florida & Georgia.';
 		$card['image']       = $wrap;
 	} else {
 		$clean = wrrapd_wrapstars_strip_title_serial( (string) $title );
@@ -2186,7 +2186,7 @@ function wrrapd_wrapstars_policy_sections() {
 			'title'  => 'Independent contractor status',
 			'points' => array(
 				'You choose the windows you offer and may decline orders that do not fit your schedule.',
-				'You provide your own workspace, tools, and supplies unless an order specifies materials that Wrrapd supplies.',
+				'You provide your own workspace and supplies — wrapping paper, small boxes when needed, scissors, cutters, and tape — unless an order says Wrrapd will supply a material.',
 				'You are responsible for your own taxes, insurance, and licenses. Wrrapd does not withhold taxes.',
 				'Either party may end the relationship as described in your Independent Contractor Agreement.',
 			),
@@ -2220,9 +2220,9 @@ function wrrapd_wrapstars_orientation_modules() {
 		array(
 			'title'  => '3 · The handoff',
 			'points' => array(
-				'Seal and label each finished gift exactly as the Console instructs, and have it ready before the pickup window opens.',
+				'Seal and label each finished gift exactly as the Console instructs — including the delivery barcode — and have it ready before the pickup window opens.',
 				'Your courier confirms the handoff in their app. You do not deliver, and you never meet the recipient.',
-				'Once the handoff is confirmed, the order is complete and counts toward your next payout.',
+				'Seal, label (including the delivery barcode), and have each gift ready before the pickup window opens. Once the handoff is confirmed, the order is complete.',
 			),
 		),
 		array(
@@ -3055,7 +3055,7 @@ function wrrapd_wrapstars_landing_content() {
 		'hero'      => array(
 			'kicker'  => 'Now accepting applications · Florida &amp; Georgia',
 			'title'   => 'Become a WrapStar',
-			'tagline' => 'Turn your gift-wrapping talent into income.',
+			'tagline' => 'Turn your gift-wrapping talent into something people remember.',
 			'sub'     => 'Wrap beautiful gifts from your own space, on your own schedule. We bring the packages to you and collect them when you&rsquo;re done — you bring the magic.',
 			'cta'     => 'Start your application',
 			'note'    => 'Takes about five minutes',
@@ -3066,8 +3066,8 @@ function wrrapd_wrapstars_landing_content() {
 				'text'  => 'Your home studio, your craft room, your kitchen table. Packages come to you and are collected when they&rsquo;re ready — no driving, no storefront, no commute.',
 			),
 			array(
-				'title' => 'Get paid for your craft',
-				'text'  => 'Every finished order pays. Earn per completed wrap with reliable, scheduled payouts — and more orders when the gifting seasons heat up.',
+				'title' => 'Keep the craft yours',
+				'text'  => 'You wrap in your own space, with your own hands. Holidays, birthdays, and weddings keep the work coming — you bring the finish that makes the unwrap special.',
 			),
 			array(
 				'title' => 'Make the moment',
@@ -3104,7 +3104,7 @@ function wrrapd_wrapstars_landing_content() {
 				),
 				array(
 					'title' => 'Space &amp; supplies',
-					'text'  => 'A clean, dedicated wrapping area (home is perfect), quality paper, ribbon and tools, and a smartphone for photos.',
+					'text'  => 'A clean, dedicated wrapping area (home is perfect), your own paper, small boxes when needed, scissors, cutters, tape, ribbon, and a smartphone for photos.',
 					'note'  => '',
 				),
 				array(
@@ -3126,10 +3126,6 @@ function wrrapd_wrapstars_landing_content() {
 					'a' => 'No. Drop-offs and pickups are handled for you. Your only job is to make each gift look incredible.',
 				),
 				array(
-					'q' => 'How do I get paid?',
-					'a' => 'You earn for every completed order and are paid on a regular payout schedule. Full payout details are shared during onboarding. WrapStars are independent contractors, not employees.',
-				),
-				array(
 					'q' => 'Where is WrapStars available?',
 					'a' => 'We are launching in <strong>Florida</strong> and <strong>Georgia</strong>. Applicants in other states are welcome — opportunities may be limited at first as the network grows.',
 				),
@@ -3139,7 +3135,11 @@ function wrrapd_wrapstars_landing_content() {
 				),
 				array(
 					'q' => 'What supplies do I need?',
-					'a' => 'Quality wrapping paper, ribbon, tissue, scissors, tape, and a neat space to work. During onboarding we walk you through Wrrapd presentation standards and share our favorite supply sources.',
+					'a' => 'Your own wrapping paper, small boxes when an item needs a box, scissors, cutters, tape, ribbon, tissue, and a neat space to work. During onboarding we walk you through Wrrapd presentation standards.',
+				),
+				array(
+					'q' => 'Looking to deliver instead?',
+					'a' => 'JoyRiders pick up and drop off gifts. <a href="https://apply.wrrapd.com/drive/">Apply to become a JoyRider</a>.',
 				),
 				array(
 					'q' => 'How quickly do orders need to be finished?',
@@ -3258,6 +3258,12 @@ function wrrapd_wrapstars_shortcode_landing() {
 						<p><?php echo wp_kses_post( $faq['a'] ); ?></p>
 					</details>
 				<?php endforeach; ?>
+			</section>
+
+			<section class="wrrapd-wrapstars-dasher-box wrrapd-wrapstars-dasher-box--wide" style="text-align:center;">
+				<h2 class="wrrapd-wrapstars-section-title" style="margin-bottom:0.75rem;">Prefer to deliver?</h2>
+				<p style="margin:0 0 1.25rem;">JoyRiders pick up and drop off gifts. WrapStars wrap &mdash; JoyRiders bring the smile to the door.</p>
+				<a class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--xl" href="<?php echo esc_url( wrrapd_wrapstars_apply_url( '/drive/' ) ); ?>">Become a JoyRider</a>
 			</section>
 
 			<section class="wrrapd-wrapstars-dasher-cta wrrapd-wrapstars-dasher-box wrrapd-wrapstars-dasher-box--wide" aria-label="Gift-wrap trivia">

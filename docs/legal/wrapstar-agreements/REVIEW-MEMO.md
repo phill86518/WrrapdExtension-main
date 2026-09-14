@@ -68,8 +68,8 @@ Changes made so terms fit a wrap-only, modest-pay independent contractor:
 
 1. Packages → WrapStar approved mailing address / PO / designee; WrapStar stages for separate courier/carrier.  
 2. Proof = three stages only (unbox, wrap, finished).  
-3. Pay text still defers to Platform Compensation Schedule (avoids locking unimplemented tips/peak).  
-4. Separate Delivery Driver / courier agreement remains out of scope for this suite.
+3. Pay is **hourly by ZIP**, not per order. WrapStar pace is 12 gifts/hour with a (rate÷12) reduction per unfinished gift. Materials (paper, small boxes, scissors, cutters, tape) are the WrapStar’s. See `docs/CONTRACTOR-HOURLY-PAY.md` and TSA §8.  
+4. JoyRider IC is a separate suite: `docs/legal/joyrider-agreements/`.
 
 ---
 

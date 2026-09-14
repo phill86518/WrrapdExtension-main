@@ -820,9 +820,9 @@ function wrrapd_wrapstars_shortcode_apply() {
 					</section>
 
 					<section class="wrrapd-apply-screen" data-screen="3" data-step-label="Step 3 of 5">
-						<h2>Getting paid &amp; authorization</h2>
+						<h2>Authorization &amp; workspace</h2>
 						<div class="ws-field">
-							<label for="ws-bank-ready">Do you have a bank account you could receive payments into?<?php echo wrrapd_wrapstars_apply_required_mark(); ?></label>
+							<label for="ws-bank-ready">Do you have a US bank account?<?php echo wrrapd_wrapstars_apply_required_mark(); ?></label>
 							<select name="bank_account_ready" id="ws-bank-ready" required><option value="">Select…</option><option value="yes">Yes</option><option value="no">No</option></select>
 						</div>
 						<div class="wrrapd-apply-disclosure">

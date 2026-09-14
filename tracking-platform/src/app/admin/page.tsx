@@ -49,7 +49,7 @@ const MODULES = [
   {
     href: "/admin/finance",
     title: "Finance & payouts",
-    body: "Earnings ledger, wallets, ACH CSV export, and pay rates.",
+    body: "Hourly ZIP rates, wallets, and ACH CSV export.",
   },
   {
     href: "/admin/reports",

@@ -3,7 +3,7 @@
 	var TIDBITS = [
 		'WrapStars wrap from their own space — packages are brought to you and collected when they are ready. Being able to print custom wrapping paper means you can match a design to the occasion, too.',
 		'Professional wrappers often use the "hospital corner" fold — borrowed from bed-making — to get crisp, seamless edges on box corners without extra tape.',
-		'This step covers authorization and logistics — no trivia here, just the important details.',
+		'This step covers authorization and your workspace — no trivia here, just the important details.',
 		'The record for fastest gift wrap is under 30 seconds for a shoebox-sized present — most professionals average 2–3 minutes for something that clean.',
 		'Double-check your answers below, then submit when you are ready.'
 	];

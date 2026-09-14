@@ -11,7 +11,6 @@ import {
   listPayouts,
   markPayoutPaid,
   payoutBatchToCsv,
-  savePayoutConfig,
   walletForWrapstar,
 } from "@/lib/finance";
 
@@ -35,22 +34,6 @@ async function markPaidAction(formData: FormData) {
   const reference = String(formData.get("reference") || "");
   await markPayoutPaid(payoutId, reference);
   revalidatePath("/admin/finance");
-}
-
-async function saveRatesAction(formData: FormData) {
-  "use server";
-  const session = await getSession();
-  if (!session || session.role !== "admin") return;
-  await savePayoutConfig({
-    basePayCents: Math.round(Number(formData.get("basePayDollars") || 0) * 100),
-    peakMultiplier: Number(formData.get("peakMultiplier") || 1.25),
-    platformFeeCents: Math.round(Number(formData.get("platformFeeDollars") || 0) * 100),
-    tipPassthrough: formData.get("tipPassthrough") === "on",
-    platformTakeWrapPercent: Number(formData.get("platformTakeWrapPercent") || 28),
-    platformTakeFlowersPercent: Number(formData.get("platformTakeFlowersPercent") || 15),
-  });
-  revalidatePath("/admin/finance");
-  revalidatePath("/admin/finance/rates");
 }
 
 function pick(v: string | string[] | undefined): string | undefined {
@@ -91,8 +74,8 @@ export default async function AdminFinancePage({
     <div className="mx-auto max-w-6xl">
       <h1 className="text-2xl font-semibold text-slate-900">Finance & payouts</h1>
       <p className="mt-1 text-sm text-slate-600">
-        Wrrapd collects all checkout revenue. WrapStar pay = 72% of gift-wrap gross (incl. AI/upload) and 85%
-        of flowers by default (platform keep 28% / 15%). Ledger + ACH export; Stripe Connect later.
+        Contractors are paid hourly by ZIP (not per order). Ledger + ACH export stay here; set
+        defaults and ZIP overrides under Hourly rates.
       </p>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-3">
@@ -105,12 +88,13 @@ export default async function AdminFinancePage({
           <p className="mt-1 text-2xl font-semibold">{formatUsdCents(paidTotal)}</p>
         </div>
         <div className="rounded-xl border bg-white p-4 shadow-sm">
-          <p className="text-xs uppercase text-slate-500">Platform keep</p>
+          <p className="text-xs uppercase text-slate-500">Hourly defaults</p>
           <p className="mt-1 text-2xl font-semibold">
-            {config.platformTakeWrapPercent ?? 28}% wrap / {config.platformTakeFlowersPercent ?? 15}% flowers
+            ${((config.wrapstarHourlyCents || 2500) / 100).toFixed(0)} WS · $
+            {((config.joyriderHourlyCents || 2200) / 100).toFixed(0)} JR
           </p>
           <Link href="/admin/finance/rates" className="text-xs text-blue-700 underline">
-            Edit rates
+            Edit hourly rates
           </Link>
         </div>
       </div>
@@ -254,55 +238,11 @@ export default async function AdminFinancePage({
         </table>
       </section>
 
-      {/* rates form also embedded for convenience */}
-      <section className="mt-8 rounded-xl border bg-white p-4 shadow-sm">
-        <h2 className="font-semibold">Quick rate edit</h2>
-        <form action={saveRatesAction} className="mt-3 grid gap-3 md:grid-cols-3">
-          <label className="text-sm">
-            Wrap take (%)
-            <input
-              name="platformTakeWrapPercent"
-              type="number"
-              step="0.1"
-              defaultValue={config.platformTakeWrapPercent ?? 28}
-              className="mt-1 w-full rounded border px-3 py-2"
-            />
-          </label>
-          <label className="text-sm">
-            Flowers take (%)
-            <input
-              name="platformTakeFlowersPercent"
-              type="number"
-              step="0.1"
-              defaultValue={config.platformTakeFlowersPercent ?? 15}
-              className="mt-1 w-full rounded border px-3 py-2"
-            />
-          </label>
-          <label className="text-sm">
-            Fallback base pay ($)
-            <input
-              name="basePayDollars"
-              type="number"
-              step="0.01"
-              defaultValue={(config.basePayCents / 100).toFixed(2)}
-              className="mt-1 w-full rounded border px-3 py-2"
-            />
-          </label>
-          <input type="hidden" name="peakMultiplier" value={config.peakMultiplier} />
-          <input
-            type="hidden"
-            name="platformFeeDollars"
-            value={(config.platformFeeCents / 100).toFixed(2)}
-          />
-          <label className="flex items-end gap-2 text-sm">
-            <input name="tipPassthrough" type="checkbox" defaultChecked={config.tipPassthrough} />
-            Tip passthrough
-          </label>
-          <button type="submit" className="rounded bg-slate-900 px-3 py-2 text-sm text-white md:col-span-3 md:w-fit">
-            Save rates
-          </button>
-        </form>
-      </section>
+      <p className="mt-6 text-sm text-slate-600">
+        <Link href="/admin/finance/rates" className="text-blue-700 underline">
+          Edit hourly rates by ZIP
+        </Link>
+      </p>
     </div>
   );
 }

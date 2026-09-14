@@ -32,7 +32,7 @@ By signing, Contractor acknowledges that Contractor has read, understands, and a
 
 2.1 Contractor is and shall remain an **independent contractor**. Contractor is solely responsible for all federal, state, and local taxes, withholdings, and filings arising from compensation under this Agreement. Wrrapd will issue IRS Form **1099-NEC** (or successor) as required by law.
 
-2.2 Contractor shall provide, at Contractor’s own expense except as Wrrapd expressly agrees in writing, the labor, basic wrapping tools and supplies, workspace, a compatible smartphone capable of running the WrapStar App, camera capability for required proof, and internet access reasonably needed to perform the Services. Wrrapd does **not** require Contractor to purchase commercial insurance as a condition of engagement under this Agreement.
+2.2 Contractor shall provide, at Contractor’s own expense except as Wrrapd expressly agrees in writing, the labor, workspace, a compatible smartphone capable of running the WrapStar App, camera capability for required proof, internet access, and **ordinary wrapping materials**, including gift-wrapping paper, small boxes when an item requires a box, scissors, cutters, and tape. Wrrapd does **not** require Contractor to purchase commercial insurance as a condition of engagement under this Agreement.
 
 2.3 Subject to Platform rules and brand, quality, proof, and timing standards published by Wrrapd (including in the WrapStar App), Contractor controls the manner and means of performing the Services, including when and where wrapping is performed at an approved location.
 
@@ -64,7 +64,7 @@ By signing, Contractor acknowledges that Contractor has read, understands, and a
 
 (d) Record and upload clear **video and/or other proof** through the WrapStar App (or other Platform channel Wrrapd designates) as required by Section 6;
 
-(e) Make wrapped orders available for pickup or release according to Platform / WrapStar App instructions (for example, staged for a separate courier, carrier, or Company designee). Contractor is **not** required to transport goods to a recipient’s address;
+(e) Affix the Platform barcode / delivery label to each finished gift and make wrapped orders available for pickup or release according to Platform / WrapStar App instructions (for example, staged for a separate courier). Contractor is **not** required to transport goods to a recipient’s address;
 
 (f) Maintain a clean, professional wrapping workspace; and
 
@@ -128,17 +128,19 @@ By signing, Contractor acknowledges that Contractor has read, understands, and a
 
 ## 8. Compensation
 
-8.1 Compensation is determined by the **rates, revenue splits, bonuses, and payment schedules then published in the WrapStar App or on the Platform** or otherwise provided by Wrrapd in writing (the “**Compensation Schedule**”). The Compensation Schedule may reflect order type, complexity, materials, flowers, timing, and other factors.
+8.1 Contractor is paid an **hourly rate**, not a per-order piece rate. The rate is determined by the **Compensation Schedule** then published in the WrapStar App or on the Platform (including ZIP-specific rates: exact ZIP, then 3-digit prefix, then the WrapStar default). Wrrapd may change published rates prospectively.
 
-8.2 Unless the Compensation Schedule states otherwise, earnings for an order generally accrue when wrapping is marked **complete** in the WrapStar App in accordance with Platform rules, the order has been released or staged as required, **and** required proof under Section 6.1 has been submitted and accepted.
+8.2 Hours accrue for accepted wrap windows actually worked, as recorded in the WrapStar App, prorated to fifteen (15) minutes. Wrrapd does not guarantee hours, volume, or income.
 
-8.3 Wrrapd does not guarantee order volume, peak demand, or tips. If the Platform enables customer tips or peak adjustments for wrapping work, such amounts will be handled according to the then-current Compensation Schedule and Platform rules.
+8.3 **Pace.** The expected wrapping pace is **twelve (12) finished gifts per paid hour**. If Contractor finishes fewer than twelve gifts in a paid hour, compensation for that hour is reduced by **shortfall × (that hour’s hourly rate ÷ 12)**, where shortfall equals twelve minus the number of gifts finished in that hour (not less than zero). A gift is finished only when it is wrapped to published standards, documented under Section 6.1, labeled (including the delivery barcode), and ready for courier pickup. Wrrapd may waive a reduction for a documented exception (for example, a missing inbound package).
 
-8.4 Ordinary wrapping supplies and business expenses are Contractor’s responsibility unless Wrrapd expressly provides materials or reimbursement in writing for a given order.
+8.4 **Materials.** Ordinary wrapping supplies — including gift-wrapping paper, small boxes when needed, scissors, cutters, and tape — are Contractor’s responsibility unless Wrrapd expressly provides a material or reimbursement in writing for a given order.
 
-8.5 Wrrapd may withhold, offset, or claw back compensation for fraud, failed or fabricated proof, chargebacks, amounts attributable to Contractor’s negligence or willful misconduct under Section 5, overpayments, or other amounts Contractor owes Wrrapd.
+8.5 Wrrapd may withhold, offset, or claw back compensation for fraud, failed or fabricated proof, chargebacks, amounts attributable to Contractor’s negligence or willful misconduct under Section 5, overpayments, pace reductions under Section 8.3, or other amounts Contractor owes Wrrapd.
 
 8.6 Contractor is solely responsible for all taxes on compensation. Contractor shall complete Form W-9 (or equivalent) before payouts.
+
+8.7 Tips are not part of WrapStar compensation unless the Compensation Schedule later states otherwise.
 
 ---
 

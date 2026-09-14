@@ -221,6 +221,18 @@ function wrrapd_drivers_process_application() {
 	exit;
 }
 
+/**
+ * Red required asterisk (reuse WrapStars helper when present).
+ *
+ * @return string
+ */
+function wrrapd_drivers_apply_required_mark() {
+	if ( function_exists( 'wrrapd_wrapstars_apply_required_mark' ) ) {
+		return wrrapd_wrapstars_apply_required_mark();
+	}
+	return '<span class="ws-required" aria-hidden="true">*</span>';
+}
+
 function wrrapd_drivers_shortcode_apply() {
 	if ( ! wrrapd_drivers_is_apply_host() ) {
 		return '<p class="wrrapd-wrapstars-alert">Apply at <a href="' . esc_url( wrrapd_drivers_apply_url( '/drive/driver-apply/' ) ) . '">apply.wrrapd.com/drive/driver-apply/</a>.</p>';
@@ -228,134 +240,214 @@ function wrrapd_drivers_shortcode_apply() {
 	$errors = $GLOBALS['wrrapd_drv_form_errors'] ?? array();
 	$states = wrrapd_drivers_apply_state_options();
 	$vtypes = wrrapd_drivers_vehicle_type_options();
+	$req    = wrrapd_drivers_apply_required_mark();
 	ob_start();
 	?>
-	<div class="wrrapd-wrapstars wrrapd-drivers">
-		<section class="wrrapd-wrapstars-dasher-apply-head">
-			<p class="wrrapd-wrapstars-dasher-kicker">Driver application</p>
-			<h1>Apply to drive with Wrrapd</h1>
-			<p class="wrrapd-wrapstars-dasher-lead">About five minutes. Have your driver license ready to upload.</p>
-			<p><a href="<?php echo esc_url( wrrapd_drivers_apply_url( '/drive/' ) ); ?>">← Back to Drivers</a>
-			· <a href="<?php echo esc_url( wrrapd_drivers_apply_url( '/apply/' ) ); ?>">WrapStar application</a></p>
-		</section>
-
+	<div class="wrrapd-wrapstars wrrapd-wrapstars-dasher wrrapd-drivers wrrapd-apply-wizard-root wrrapd-drivers-apply-root">
 		<?php if ( $errors ) : ?>
 			<div class="wrrapd-wrapstars-alert wrrapd-wrapstars-alert--err">
 				<ul><?php foreach ( $errors as $e ) : ?><li><?php echo esc_html( $e ); ?></li><?php endforeach; ?></ul>
 			</div>
 		<?php endif; ?>
 
-		<form method="post" enctype="multipart/form-data" class="wrrapd-wrapstars-form wrrapd-wrapstars-card" autocomplete="on">
+		<form class="wrrapd-apply-wizard wrrapd-wrapstars-form" id="wrrapd-driver-apply-form" method="post" enctype="multipart/form-data" autocomplete="on" novalidate>
 			<?php wp_nonce_field( 'wrrapd_drv_apply', 'wrrapd_drv_nonce' ); ?>
 			<input type="hidden" name="wrrapd_drv_action" value="apply" />
-			<input type="hidden" name="form_started_at" value="<?php echo esc_attr( (string) time() ); ?>" />
-			<p class="ws-honeypot" style="position:absolute;left:-9999px;" aria-hidden="true">
-				<label>Company website <input type="text" name="company_website" tabindex="-1" autocomplete="off" /></label>
-			</p>
+			<input type="hidden" name="form_started_at" id="drv_form_started_at" value="" />
+			<label class="wrrapd-apply-honeypot" aria-hidden="true" tabindex="-1">Company website <input type="text" name="company_website" autocomplete="off" tabindex="-1" /></label>
 
-			<h2>Contact</h2>
-			<div class="ws-grid-2">
-				<label>First name * <input name="first_name" required /></label>
-				<label>Last name * <input name="last_name" required /></label>
-			</div>
-			<div class="ws-grid-2">
-				<label>Nickname <input name="nickname" /></label>
-				<label>Middle name <input name="middle_name" /></label>
-			</div>
-			<div class="ws-grid-2">
-				<label>Email * <input type="email" name="email" required /></label>
-				<label>Mobile phone * <input name="phone_mobile" required /></label>
+			<div class="wrrapd-apply-wizard__progress" aria-live="polite" hidden>
+				<div class="wrrapd-apply-wizard__progress-track"><div class="wrrapd-apply-wizard__progress-fill" id="wrrapd-drv-progress-fill"></div></div>
+				<p class="wrrapd-apply-wizard__progress-label" id="wrrapd-drv-progress-label"></p>
 			</div>
 
-			<h2>Address</h2>
-			<label>Street address * <input name="address_line1" required /></label>
-			<label>Apt / suite <input name="address_line2" /></label>
-			<div class="ws-grid-3">
-				<label>City * <input name="city" required /></label>
-				<label>State *
-					<select name="state" required>
-						<option value="">Select…</option>
-						<?php foreach ( $states as $code => $label ) : ?>
-							<option value="<?php echo esc_attr( $code ); ?>"><?php echo esc_html( $label ); ?></option>
-						<?php endforeach; ?>
-					</select>
-				</label>
-				<label>ZIP * <input name="postal_code" required pattern="[0-9]{5}" /></label>
+			<div class="wrrapd-apply-wizard__layout">
+				<div class="wrrapd-apply-wizard__main">
+
+					<section class="wrrapd-apply-screen is-active" data-screen="0" data-step-label="" data-screen-type="basics">
+						<p class="wrrapd-drivers-apply-kicker">Driver application · ~5 minutes</p>
+						<h1 class="wrrapd-apply-hero-title">Let's drive with Wrrapd!</h1>
+						<p class="wrrapd-apply-standards-intro">Have your driver license ready to upload. We'll start with your contact info.</p>
+
+						<div class="wrrapd-apply-basics-fields">
+							<div class="ws-field-row ws-field-row--3">
+								<div class="ws-field">
+									<label for="drv-first-name">First name<?php echo $req; ?></label>
+									<input type="text" id="drv-first-name" name="first_name" autocomplete="given-name" required />
+								</div>
+								<div class="ws-field">
+									<label for="drv-middle-name">Middle name</label>
+									<input type="text" id="drv-middle-name" name="middle_name" autocomplete="additional-name" />
+								</div>
+								<div class="ws-field">
+									<label for="drv-last-name">Last name<?php echo $req; ?></label>
+									<input type="text" id="drv-last-name" name="last_name" autocomplete="family-name" required />
+								</div>
+							</div>
+
+							<div class="ws-field">
+								<label for="drv-nickname">Nickname <span class="ws-optional">(optional — how we should greet you)</span></label>
+								<input type="text" id="drv-nickname" name="nickname" autocomplete="nickname" maxlength="60" placeholder="e.g. Ace" />
+							</div>
+
+							<div class="ws-field-row">
+								<div class="ws-field">
+									<label for="drv-email">Email address<?php echo $req; ?></label>
+									<input type="email" id="drv-email" name="email" autocomplete="email" required />
+								</div>
+								<div class="ws-field">
+									<label for="drv-phone">Mobile phone<?php echo $req; ?></label>
+									<input type="tel" id="drv-phone" name="phone_mobile" autocomplete="tel" inputmode="tel" maxlength="14" placeholder="(555) 555-5555" required />
+								</div>
+							</div>
+
+							<div class="ws-field">
+								<label for="drv-address-line1">Street address<?php echo $req; ?></label>
+								<input type="text" id="drv-address-line1" name="address_line1" autocomplete="address-line1" required />
+								<input type="text" id="drv-address-line2" name="address_line2" class="wrrapd-address-line2" autocomplete="address-line2" placeholder="Apt, suite, unit, etc. (optional)" />
+							</div>
+
+							<div class="ws-field-row ws-field-row--3">
+								<div class="ws-field">
+									<label for="drv-city">City<?php echo $req; ?></label>
+									<input type="text" id="drv-city" name="city" autocomplete="address-level2" required />
+								</div>
+								<div class="ws-field">
+									<label for="drv-state">State<?php echo $req; ?></label>
+									<select name="state" id="drv-state" required>
+										<option value="">Select…</option>
+										<?php foreach ( $states as $code => $label ) : ?>
+											<option value="<?php echo esc_attr( $code ); ?>"><?php echo esc_html( $label ); ?></option>
+										<?php endforeach; ?>
+									</select>
+								</div>
+								<div class="ws-field">
+									<label for="drv-postal">ZIP code<?php echo $req; ?></label>
+									<input type="text" id="drv-postal" name="postal_code" autocomplete="postal-code" inputmode="numeric" maxlength="10" required pattern="[0-9]{5}(-[0-9]{4})?" />
+								</div>
+							</div>
+							<p class="wrrapd-apply-note">Launching in Florida &amp; Georgia first — other states welcome; service may be limited initially.</p>
+						</div>
+
+						<div class="wrrapd-apply-basics-nav">
+							<a class="wrrapd-drivers-apply-backlink" href="<?php echo esc_url( wrrapd_drivers_apply_url( '/drive/' ) ); ?>">← Drivers</a>
+							<button type="button" class="wrrapd-wrapstars-btn wrrapd-apply-basics-next" id="wrrapd-drv-basics-next" disabled>Next</button>
+						</div>
+					</section>
+
+					<section class="wrrapd-apply-screen" data-screen="1" data-step-label="Step 1 of 3">
+						<h2>Requirements</h2>
+						<p class="wrrapd-apply-standards-intro">A few quick checks — age, license, vehicle, and phone.</p>
+						<div class="ws-field-row">
+							<div class="ws-field">
+								<label for="drv-age-21">Are you 21 or older?<?php echo $req; ?></label>
+								<select name="age_21" id="drv-age-21" required>
+									<option value="">Select…</option>
+									<option value="yes">Yes</option>
+									<option value="no">No</option>
+								</select>
+							</div>
+							<div class="ws-field">
+								<label for="drv-license">Valid driver license?<?php echo $req; ?></label>
+								<select name="has_valid_license" id="drv-license" required>
+									<option value="">Select…</option>
+									<option value="yes">Yes</option>
+									<option value="no">No</option>
+								</select>
+							</div>
+						</div>
+						<div class="ws-field-row">
+							<div class="ws-field">
+								<label for="drv-has-vehicle">Eligible vehicle?<?php echo $req; ?></label>
+								<select name="has_vehicle" id="drv-has-vehicle" required>
+									<option value="">Select…</option>
+									<option value="yes">Yes</option>
+									<option value="no">No</option>
+								</select>
+							</div>
+							<div class="ws-field">
+								<label for="drv-vehicle-type">Vehicle type<?php echo $req; ?></label>
+								<select name="vehicle_type" id="drv-vehicle-type" required>
+									<option value="">Select…</option>
+									<?php foreach ( $vtypes as $code => $label ) : ?>
+										<option value="<?php echo esc_attr( $code ); ?>"><?php echo esc_html( $label ); ?></option>
+									<?php endforeach; ?>
+								</select>
+							</div>
+						</div>
+						<div class="ws-field-row">
+							<div class="ws-field">
+								<label for="drv-smartphone">Smartphone for the Driver app?<?php echo $req; ?></label>
+								<select name="has_smartphone" id="drv-smartphone" required>
+									<option value="">Select…</option>
+									<option value="yes">Yes</option>
+									<option value="no">No</option>
+								</select>
+							</div>
+							<div class="ws-field">
+								<label for="drv-clean-record">Clean driving record?<?php echo $req; ?></label>
+								<select name="clean_driving_record" id="drv-clean-record" required>
+									<option value="">Select…</option>
+									<option value="yes">Yes</option>
+									<option value="no">No</option>
+									<option value="discuss">Prefer to discuss</option>
+								</select>
+							</div>
+						</div>
+						<div class="ws-field">
+							<label for="drv-bank-ready">Do you have a US bank account?<?php echo $req; ?></label>
+							<select name="bank_account_ready" id="drv-bank-ready" required>
+								<option value="">Select…</option>
+								<option value="yes">Yes</option>
+								<option value="no">Not yet</option>
+							</select>
+						</div>
+					</section>
+
+					<section class="wrrapd-apply-screen" data-screen="2" data-step-label="Step 2 of 3">
+						<h2>About you</h2>
+						<p class="wrrapd-apply-standards-intro">Tell us when you can drive — and upload a photo of your ID.</p>
+						<div class="ws-field">
+							<label for="drv-availability">Typical availability<?php echo $req; ?></label>
+							<textarea name="availability" id="drv-availability" rows="3" required placeholder="Evenings, weekends, weekdays…"></textarea>
+						</div>
+						<div class="ws-field">
+							<label for="drv-experience">Delivery / gig experience <span class="ws-optional">(optional)</span></label>
+							<textarea name="delivery_experience" id="drv-experience" rows="3" placeholder="DoorDash, Uber, Amazon Flex, etc."></textarea>
+						</div>
+						<div class="ws-field">
+							<label for="drv-why">Why do you want to drive with Wrrapd?<?php echo $req; ?></label>
+							<textarea name="why_drive" id="drv-why" rows="4" required placeholder="Share your motivation and what you know about your local area."></textarea>
+						</div>
+						<div class="ws-field">
+							<label for="drv-gov-id">Government photo ID (driver license preferred)<?php echo $req; ?></label>
+							<input type="file" id="drv-gov-id" name="gov_id" accept=".pdf,.jpg,.jpeg,.png" required />
+							<p class="wrrapd-apply-field-hint">PDF, JPG, or PNG.</p>
+						</div>
+					</section>
+
+					<section class="wrrapd-apply-screen" data-screen="3" data-step-label="Step 3 of 3">
+						<h2>Review &amp; submit</h2>
+						<div id="wrrapd-drv-apply-review" class="wrrapd-apply-review"></div>
+
+						<div class="wrrapd-apply-disclosure">
+							<h3>Acknowledgments</h3>
+							<label class="ws-check"><input type="checkbox" name="ack_age_vehicle" value="1" id="drv-ack-age" required /> <span><label for="drv-ack-age">I confirm I am 21+, hold a valid license, and have an eligible vehicle and smartphone.</label></span></label>
+							<label class="ws-check"><input type="checkbox" name="ack_background_check" value="1" id="drv-ack-bg" required /> <span><label for="drv-ack-bg">I authorize a background check as part of Driver onboarding.</label></span></label>
+							<label class="ws-check"><input type="checkbox" name="ack_contact" value="1" id="drv-ack-contact" required /> <span><label for="drv-ack-contact">Wrrapd may contact me by email or phone about this application.</label></span></label>
+						</div>
+
+						<button type="submit" class="wrrapd-wrapstars-btn wrrapd-apply-submit">Submit Driver application</button>
+					</section>
+
+					<div class="wrrapd-apply-wizard__nav" hidden>
+						<button type="button" class="wrrapd-apply-back wrrapd-wrapstars-btn wrrapd-wrapstars-btn--ghost">Back</button>
+						<button type="button" class="wrrapd-apply-next wrrapd-wrapstars-btn">Next</button>
+					</div>
+				</div>
+
+				<aside class="wrrapd-apply-wizard__tidbit" id="wrrapd-drv-apply-tidbit" aria-live="polite" hidden></aside>
 			</div>
-
-			<h2>Requirements</h2>
-			<label>Are you 21 or older? *
-				<select name="age_21" required>
-					<option value="">Select…</option>
-					<option value="yes">Yes</option>
-					<option value="no">No</option>
-				</select>
-			</label>
-			<label>Do you have a valid driver license? *
-				<select name="has_valid_license" required>
-					<option value="">Select…</option>
-					<option value="yes">Yes</option>
-					<option value="no">No</option>
-				</select>
-			</label>
-			<label>Do you have an eligible vehicle? *
-				<select name="has_vehicle" required>
-					<option value="">Select…</option>
-					<option value="yes">Yes</option>
-					<option value="no">No</option>
-				</select>
-			</label>
-			<label>Vehicle type *
-				<select name="vehicle_type" required>
-					<option value="">Select…</option>
-					<?php foreach ( $vtypes as $code => $label ) : ?>
-						<option value="<?php echo esc_attr( $code ); ?>"><?php echo esc_html( $label ); ?></option>
-					<?php endforeach; ?>
-				</select>
-			</label>
-			<label>Do you have a smartphone for the Driver app? *
-				<select name="has_smartphone" required>
-					<option value="">Select…</option>
-					<option value="yes">Yes</option>
-					<option value="no">No</option>
-				</select>
-			</label>
-			<label>Clean driving record? *
-				<select name="clean_driving_record" required>
-					<option value="">Select…</option>
-					<option value="yes">Yes</option>
-					<option value="no">No</option>
-					<option value="discuss">Prefer to discuss</option>
-				</select>
-			</label>
-			<label>Bank account ready for payouts? *
-				<select name="bank_account_ready" required>
-					<option value="">Select…</option>
-					<option value="yes">Yes</option>
-					<option value="no">Not yet</option>
-				</select>
-			</label>
-
-			<h2>About you</h2>
-			<label>Typical availability *
-				<textarea name="availability" rows="3" required placeholder="Evenings, weekends, weekdays…"></textarea>
-			</label>
-			<label>Delivery / gig experience (optional)
-				<textarea name="delivery_experience" rows="3"></textarea>
-			</label>
-			<label>Why do you want to drive with Wrrapd? *
-				<textarea name="why_drive" rows="3" required></textarea>
-			</label>
-			<label>Government photo ID (driver license preferred) *
-				<input type="file" name="gov_id" accept=".pdf,.jpg,.jpeg,.png" required />
-			</label>
-
-			<h2>Acknowledgments</h2>
-			<label class="ws-check"><input type="checkbox" name="ack_age_vehicle" value="1" required /> <span>I confirm I am 21+, hold a valid license, and have an eligible vehicle and smartphone.</span></label>
-			<label class="ws-check"><input type="checkbox" name="ack_background_check" value="1" required /> <span>I authorize a background check as part of Driver onboarding.</span></label>
-			<label class="ws-check"><input type="checkbox" name="ack_contact" value="1" required /> <span>Wrrapd may contact me by email or phone about this application.</span></label>
-
-			<button type="submit" class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--xl">Submit Driver application</button>
 		</form>
 	</div>
 	<?php

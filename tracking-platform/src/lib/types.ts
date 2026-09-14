@@ -408,22 +408,31 @@ export type PayoutBatch = {
   periodEnd?: string;
 };
 
+export type HourlyZipRate = {
+  /** 5-digit ZIP or 3-digit prefix */
+  zip: string;
+  wrapstarCents: number;
+  joyriderCents: number;
+};
+
 export type PayoutConfig = {
-  /** Fallback flat WrapStar pay when order has no wrap/flower revenue breakdown. */
+  /** @deprecated Per-order fallback — retired. Hourly ZIP rates are the pay model. */
   basePayCents: number;
   peakMultiplier: number;
   tipPassthrough: boolean;
   platformFeeCents: number;
-  /**
-   * Platform keep on gift-wrap gross (base + AI + upload). WrapStar gets the rest.
-   * Default 28.
-   */
+  /** @deprecated Revenue-split model retired 2026-09-13. */
   platformTakeWrapPercent: number;
-  /**
-   * Platform keep on flowers gross. WrapStar gets the rest.
-   * Default 15.
-   */
+  /** @deprecated Revenue-split model retired 2026-09-13. */
   platformTakeFlowersPercent: number;
+  /** Default WrapStar hourly rate (cents). ZIP overrides win. */
+  wrapstarHourlyCents: number;
+  /** Default JoyRider hourly rate (cents). ZIP overrides win. */
+  joyriderHourlyCents: number;
+  /** Expected finished gifts per WrapStar hour. Reduction = (rate / this) per shortfall. */
+  wrapstarPaceGiftsPerHour: number;
+  /** Exact ZIP or 3-digit prefix overrides. */
+  hourlyByZip: HourlyZipRate[];
   updatedAt: string;
 };
 

@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_DRIVERS_BUILD', '2026-09-12-portals-lock' );
+define( 'WRRAPD_DRIVERS_BUILD', '2026-09-13-hourly-pay' );
 define( 'WRRAPD_DRIVERS_INVITE_TTL_DAYS', 15 );
 define( 'WRRAPD_DRIVERS_CPT', 'wrrapd_driver_app' );
 
@@ -1259,11 +1259,11 @@ function wrrapd_drivers_render_change_password_gate() {
 function wrrapd_drivers_placeholder_step_config( $step ) {
 	$all = array(
 		'agreement'   => array(
-			'title' => 'Driver independent contractor agreement',
-			'lead'  => 'Review and e-sign the Delivery Driver IC agreement (BoldSign template when configured via WRRAPD_BOLDSIGN_DRIVER_IC_TEMPLATE_ID). Until then, acknowledge to continue.',
-			'needs' => array( 'Driver / courier IC agreement PDF', 'BoldSign template ID' ),
+			'title' => 'JoyRider independent contractor agreement',
+			'lead'  => 'You are an independent contractor. You pick up inbound items from a nearby Wrrapd location, drop them to WrapStars, pick up flowers and finished wraps, scan each gift barcode for the delivery address (and whether flowers go with it), and make the final delivery. Pay and other commercial terms are in the Compensation Schedule you will see in the JoyRider app after activation — not on this page.',
+			'needs' => array( 'JoyRider IC agreement', 'BoldSign template when WRRAPD_BOLDSIGN_DRIVER_IC_TEMPLATE_ID is set' ),
 			'vendor'=> 'BoldSign send-from-template when WRRAPD_BOLDSIGN_DRIVER_IC_TEMPLATE_ID is set.',
-			'ack'   => 'I understand this step is a placeholder and I will re-sign when the final Driver agreement is published.',
+			'ack'   => 'I have read these JoyRider duties and agree I am an independent contractor. I will e-sign the full agreement when it is presented.',
 		),
 		'policies'    => array(
 			'title' => 'Policies & safety',
@@ -1497,10 +1497,10 @@ function wrrapd_drivers_shortcode_landing() {
 			<div class="wrrapd-wrapstars-cinema-hero__scrim" aria-hidden="true"></div>
 			<div class="wrrapd-wrapstars-cinema-hero__content">
 				<p class="wrrapd-wrapstars-cinema-hero__kicker">Now accepting applications · Florida &amp; Georgia</p>
-				<h1>Drive with Wrrapd</h1>
-				<p class="wrrapd-wrapstars-cinema-hero__tagline">Deliver joy. Earn on your schedule.</p>
+				<h1>Become a JoyRider</h1>
+				<p class="wrrapd-wrapstars-cinema-hero__tagline">Deliver joy on your schedule.</p>
 				<p class="wrrapd-wrapstars-cinema-hero__sub">Pick up beautifully wrapped gifts from WrapStars and deliver smiles to the door — when it works for you.</p>
-				<a class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--xl wrrapd-wrapstars-btn--hero" href="<?php echo esc_url( $apply ); ?>">Apply to drive</a>
+				<a class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--xl wrrapd-wrapstars-btn--hero" href="<?php echo esc_url( $apply ); ?>">Start your application</a>
 			</div>
 		</section>
 
@@ -1515,8 +1515,8 @@ function wrrapd_drivers_shortcode_landing() {
 					<p>You deliver finished wrap orders. WrapStars handle the wrapping — you bring the final-mile magic.</p>
 				</div>
 				<div class="wrrapd-wrapstars-dasher-band__item wrrapd-wrapstars-dasher-box">
-					<h2>Clear offers</h2>
-					<p>Know the pickup, drop-off, and payout before you tap accept. Simple, transparent, local.</p>
+					<h2>Clear stops</h2>
+					<p>See pickup and drop-off in the app. Simple, local, and on your schedule.</p>
 				</div>
 			</section>
 
@@ -1526,7 +1526,7 @@ function wrrapd_drivers_shortcode_landing() {
 					<div class="wrrapd-wrapstars-reqs-dd__item">
 						<span class="wrrapd-wrapstars-reqs-dd__num" aria-hidden="true">1</span>
 						<h3>Age &amp; license</h3>
-						<p>Drivers must be <strong>21 or older</strong> with a valid driver license.</p>
+						<p>JoyRiders must be <strong>21 or older</strong> with a valid driver license.</p>
 					</div>
 					<div class="wrrapd-wrapstars-reqs-dd__item">
 						<span class="wrrapd-wrapstars-reqs-dd__num" aria-hidden="true">2</span>
@@ -1545,7 +1545,7 @@ function wrrapd_drivers_shortcode_landing() {
 				<h2 class="wrrapd-wrapstars-section-title">Quick answers</h2>
 				<details class="wrrapd-wrapstars-faq-dd__item">
 					<summary>Do I wrap the gifts?</summary>
-					<p>No — WrapStars wrap. Drivers pick up and deliver the finished gift.</p>
+					<p>No — WrapStars wrap. JoyRiders pick up and deliver the finished gift.</p>
 				</details>
 				<details class="wrrapd-wrapstars-faq-dd__item">
 					<summary>How long does applying take?</summary>
@@ -1559,8 +1559,8 @@ function wrrapd_drivers_shortcode_landing() {
 
 			<section class="wrrapd-wrapstars-dasher-box wrrapd-wrapstars-dasher-box--wide" style="text-align:center;">
 				<h2 class="wrrapd-wrapstars-section-title" style="margin-bottom:0.75rem;">Ready when you are</h2>
-				<p style="margin:0 0 1.25rem;">Start your Driver application today.</p>
-				<a class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--xl" href="<?php echo esc_url( $apply ); ?>">Apply to drive</a>
+				<p style="margin:0 0 1.25rem;">Start your JoyRider application today.</p>
+				<a class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--xl" href="<?php echo esc_url( $apply ); ?>">Start your application</a>
 			</section>
 		</div>
 	</div>

@@ -154,4 +154,5 @@ cd ..
 - PM2 details: [backend/wrrapd-api-repo/WrrapdServer/README-PM2.md](backend/wrrapd-api-repo/WrrapdServer/README-PM2.md)
 - Tracking app + Cloud Run notes: [tracking-platform/README.md](tracking-platform/README.md)
 - Contractor portals (wrapstar.wrrapd.com / joyrider.wrrapd.com DNS + domain mapping, login, Approve onboarding): [docs/CONTRACTOR-PORTALS.md](docs/CONTRACTOR-PORTALS.md)
+- Contractor hourly pay (internal; never on public pages): [docs/CONTRACTOR-HOURLY-PAY.md](docs/CONTRACTOR-HOURLY-PAY.md)
 - Cursor rule (same sequence): [.cursor/rules/wrrapd-deploy-sequence.mdc](.cursor/rules/wrrapd-deploy-sequence.mdc)

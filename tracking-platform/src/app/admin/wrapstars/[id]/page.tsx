@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/auth";
 import { listOrdersForWrapstar } from "@/lib/data";
 import { findWrapstarById, updateWrapstar } from "@/lib/wrapstar-registry";
-import { getWrapstarProfile, setWrapstarPayoutTakes } from "@/lib/wrapstar-profiles";
+import { getWrapstarProfile } from "@/lib/wrapstar-profiles";
+import { hourlyRateCents, WRAPSTAR_PACE_GIFTS_PER_HOUR } from "@/lib/hourly-rates";
 import { normalizeOrderStatus } from "@/lib/types";
 import { PRINTER_SIZE_OPTIONS, trySyncRosterPrinterSites } from "@/lib/printer-coverage-admin";
 import {
@@ -59,26 +60,6 @@ async function payoutAction(formData: FormData) {
   redirect(`/admin/wrapstars/${id}`);
 }
 
-async function updatePayoutTakesAction(formData: FormData) {
-  "use server";
-  const session = await getSession();
-  if (!session || session.role !== "admin") return;
-  const id = String(formData.get("wrapstarId") || "");
-  const useGlobal = formData.get("useGlobalRates") === "on";
-  if (useGlobal) {
-    await setWrapstarPayoutTakes(id, {
-      platformTakeWrapPercent: null,
-      platformTakeFlowersPercent: null,
-    });
-  } else {
-    await setWrapstarPayoutTakes(id, {
-      platformTakeWrapPercent: Number(formData.get("platformTakeWrapPercent") || 28),
-      platformTakeFlowersPercent: Number(formData.get("platformTakeFlowersPercent") || 15),
-    });
-  }
-  revalidatePath(`/admin/wrapstars/${id}`);
-}
-
 export default async function AdminWrapstarDetailPage({
   params,
 }: {
@@ -99,12 +80,7 @@ export default async function AdminWrapstarDetailPage({
     getPayoutConfig(),
   ]);
   const myPayouts = payouts.filter((p) => p.wrapstarId === id);
-  const hasCustomTakes =
-    typeof profile.platformTakeWrapPercent === "number" ||
-    typeof profile.platformTakeFlowersPercent === "number";
-  const effectiveWrapTake = profile.platformTakeWrapPercent ?? globalRates.platformTakeWrapPercent ?? 28;
-  const effectiveFlowerTake =
-    profile.platformTakeFlowersPercent ?? globalRates.platformTakeFlowersPercent ?? 15;
+  const hourly = hourlyRateCents(globalRates, "wrapstar", wrapstar.homePostalCode || "");
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -240,51 +216,15 @@ export default async function AdminWrapstarDetailPage({
       </section>
 
       <section className="mt-6 rounded-xl border bg-white p-4 shadow-sm">
-        <h2 className="font-semibold">Payout split (this WrapStar)</h2>
+        <h2 className="font-semibold">Hourly rate (this WrapStar)</h2>
         <p className="mt-1 text-sm text-slate-600">
-          Wrrapd keeps the % below of wrap / flowers revenue; this WrapStar receives the rest. Leave global
-          on to use Finance defaults ({globalRates.platformTakeWrapPercent ?? 28}% wrap /{" "}
-          {globalRates.platformTakeFlowersPercent ?? 15}% flowers).
+          ${(hourly / 100).toFixed(2)} / hour for ZIP {wrapstar.homePostalCode || "—"} · pace{" "}
+          {WRAPSTAR_PACE_GIFTS_PER_HOUR} gifts/hour. Change defaults and ZIP table in{" "}
+          <Link href="/admin/finance/rates" className="text-blue-700 underline">
+            Finance → Hourly rates
+          </Link>
+          .
         </p>
-        <p className="mt-1 text-xs text-slate-500">
-          Effective now: platform keeps {effectiveWrapTake}% wrap / {effectiveFlowerTake}% flowers → WrapStar
-          gets {100 - effectiveWrapTake}% / {100 - effectiveFlowerTake}%
-          {hasCustomTakes ? " (custom)" : " (global)"}.
-        </p>
-        <form action={updatePayoutTakesAction} className="mt-3 grid gap-3 md:grid-cols-2">
-          <input type="hidden" name="wrapstarId" value={wrapstar.id} />
-          <label className="flex items-center gap-2 text-sm md:col-span-2">
-            <input name="useGlobalRates" type="checkbox" defaultChecked={!hasCustomTakes} />
-            Use global Finance rates (clear per-WrapStar override)
-          </label>
-          <label className="text-sm">
-            Platform take — wrap incl. AI/upload (%)
-            <input
-              name="platformTakeWrapPercent"
-              type="number"
-              min={0}
-              max={100}
-              step={0.1}
-              defaultValue={effectiveWrapTake}
-              className="mt-1 w-full rounded border px-3 py-2"
-            />
-          </label>
-          <label className="text-sm">
-            Platform take — flowers (%)
-            <input
-              name="platformTakeFlowersPercent"
-              type="number"
-              min={0}
-              max={100}
-              step={0.1}
-              defaultValue={effectiveFlowerTake}
-              className="mt-1 w-full rounded border px-3 py-2"
-            />
-          </label>
-          <button type="submit" className="rounded bg-slate-900 px-3 py-2 text-sm text-white md:col-span-2 md:w-fit">
-            Save payout split
-          </button>
-        </form>
       </section>
 
       <section className="mt-6 rounded-xl border bg-white p-4 shadow-sm">
