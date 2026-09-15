@@ -850,6 +850,29 @@ img, video {
 	margin-top: 0;
 }
 
+.wrrapd-legal-card h3,
+.wrrapd-page-shell h3,
+.elementor-widget-html .wrrapd-page-shell h3 {
+	margin: 1.1rem 0 0.4rem;
+	font-family: Fraunces, Georgia, serif !important;
+	font-size: clamp(1.02rem, 2.2vw, 1.15rem) !important;
+	font-weight: 560 !important;
+	line-height: 1.25 !important;
+	color: #0c1222 !important;
+}
+
+body:has(.wrrapd-page-shell) .page-header,
+body:has(.wrrapd-page-shell) .entry-header {
+	display: none !important;
+}
+
+.entry-content:has(.wrrapd-page-shell),
+.page-content:has(.wrrapd-page-shell) {
+	max-width: none !important;
+	padding: 0 !important;
+	margin: 0 !important;
+}
+
 .wrrapd-legal-card p,
 .wrrapd-legal-card li,
 .wrrapd-page-shell p,

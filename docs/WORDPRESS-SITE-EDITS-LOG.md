@@ -8,6 +8,13 @@ WordPress + Elementor + Hello theme content mostly lives **in the production dat
 
 ## Recent changes
 
+### 2026-09-14 — Legal pages match affiliate disclosure layout
+
+- **Privacy (`/privacy/`, page 6772)** and **Ecomms (`/ecomms-policy/`, page 6889)** rebuilt with the same `wrrapd-page-shell` / cream card / Fraunces headings as Affiliate Disclosure. Template: `elementor_header_footer`. Legal wording unchanged.
+- **Terms (`/terms/`, page 5209):** added the gold **Legal** eyebrow to match the other legal pages. Elementor HTML widget otherwise unchanged.
+- **Snippets:** `docs/wordpress-snippets/wrrapd-privacy-page.html`, `wrrapd-ecomms-page.html`; h3 + hide-default-title CSS in `wrrapd-static-pages.css` and Additional CSS (`custom_css` post 6064).
+- **Purge W3 cache** after checking `/privacy/` and `/ecomms-policy/`.
+
 ### 2026-07 — WrapStars portal (apply.wrrapd.com + pros.wrrapd.com)
 
 - **New MU-plugins** (dedicated WordPress only — **not** `wrrapd.com`): `wordpress/wrrapd-wrapstars.php`, `wordpress/wrrapd-boldsign.php`, `wordpress/wrrapd-wrapstars.css`.
