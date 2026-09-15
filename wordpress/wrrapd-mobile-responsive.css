@@ -713,13 +713,16 @@ a.wrrapd-ext-cta {
 	}
 
 	body.logged-in .elementor-location-header .elementor-element-6e478726 {
-		flex: 0 0 20% !important;
-		max-width: 20% !important;
+		flex: 0 0 auto !important;
+		width: auto !important;
+		max-width: min(40vw, 9.6rem) !important;
 	}
 
 	body.logged-in .elementor-location-header .elementor-element-1913a20 {
-		flex: 0 0 22% !important;
-		max-width: 22% !important;
+		flex: 1 1 auto !important;
+		max-width: none !important;
+		min-width: 0 !important;
+		transform: none !important;
 	}
 
 	body.logged-in .elementor-location-header .elementor-element-693b4ea7 {
