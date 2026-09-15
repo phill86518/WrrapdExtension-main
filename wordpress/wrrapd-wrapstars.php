@@ -22,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_WRAPSTARS_BUILD', '2026-09-13-hourly-pay' );
+define( 'WRRAPD_WRAPSTARS_BUILD', '2026-09-14-lost-page-brand' );
 /** Approval / re-invite onboarding credentials remain valid this many days. */
 define( 'WRRAPD_WRAPSTARS_INVITE_TTL_DAYS', 15 );
 
@@ -1449,6 +1449,30 @@ function wrrapd_wrapstars_virtual_profile_page() {
 }
 add_action( 'template_redirect', 'wrrapd_wrapstars_virtual_profile_page', 5 );
 
+function wrrapd_wrapstars_render_lost_page() {
+	if ( is_admin() || ! is_404() ) {
+		return;
+	}
+	if ( function_exists( 'wrrapd_render_not_found_page' ) ) {
+		return;
+	}
+	echo '<section class="wrrapd-lost" role="region" aria-labelledby="wrrapd-lost-title">';
+	echo '<div class="wrrapd-lost__inner">';
+	echo '<div class="wrrapd-lost__stage" aria-hidden="true">';
+	echo '<span class="wrrapd-lost__sparkle wrrapd-lost__sparkle--a"></span>';
+	echo '<span class="wrrapd-lost__sparkle wrrapd-lost__sparkle--b"></span>';
+	echo '<span class="wrrapd-lost__sparkle wrrapd-lost__sparkle--c"></span>';
+	echo '<div class="wrrapd-lost__box"><span class="wrrapd-lost__lid"></span><span class="wrrapd-lost__bow"></span></div>';
+	echo '</div>';
+	echo '<h1 id="wrrapd-lost-title">This page isn’t wrapped yet</h1>';
+	echo '<p>That link doesn’t go anywhere. Let’s get you back to something lovely.</p>';
+	echo '<p class="wrrapd-lost__actions">';
+	echo '<a href="' . esc_url( home_url( '/' ) ) . '">Home</a>';
+	echo '<a href="https://wrrapd.com/">Wrrapd.com</a>';
+	echo '</p></div></section>';
+}
+add_action( 'wp_footer', 'wrrapd_wrapstars_render_lost_page', 3 );
+
 function wrrapd_wrapstars_body_class( $classes ) {
 	$classes[] = 'wrrapd-wrapstars-portal';
 	if ( wrrapd_wrapstars_is_apply_host() ) {
@@ -1738,7 +1762,7 @@ function wrrapd_wrapstars_output_portal_header() {
 	echo '<a class="wrrapd-wrapstars-brand__logo" href="' . esc_url( $home_url ) . '" rel="home">';
 	echo '<img src="' . esc_url( wrrapd_wrapstars_brand_logo_url() ) . '" width="800" height="458" alt="Wrrapd" decoding="async" />';
 	echo '</a>';
-	echo '<img class="wrrapd-wrapstars-brand__tagline" src="' . esc_url( wrrapd_wrapstars_brand_tagline_url() ) . '" width="344" height="65" alt="Wrapping Happiness!" decoding="async" />';
+	echo '<img class="wrrapd-wrapstars-brand__tagline" src="' . esc_url( wrrapd_wrapstars_brand_tagline_url() ) . '" width="344" height="65" alt="Wrapping Happiness" decoding="async" />';
 	echo '</div>';
 	echo '</div>';
 	if ( is_user_logged_in() && wrrapd_wrapstars_is_onboarding_eligible_user( get_current_user_id() ) ) {
@@ -1761,7 +1785,8 @@ function wrrapd_wrapstars_output_portal_footer() {
 	echo '<footer class="wrrapd-wrapstars-site-footer" role="contentinfo">';
 	echo '<div class="wrrapd-wrapstars-site-footer__inner">';
 	echo '<div class="wrrapd-wrapstars-site-footer__brand">';
-	echo '<a href="https://wrrapd.com/"><img src="https://wrrapd.com/wp-content/uploads/2022/04/cropped-Wrrapd_f-Logo.png" width="240" height="137" alt="Wrrapd" loading="lazy" decoding="async" /></a>';
+	echo '<a href="https://wrrapd.com/"><img src="https://wrrapd.com/wp-content/uploads/2025/03/Wrrapd_f-Logo-800-x-458-px.png" width="800" height="458" alt="Wrrapd" loading="lazy" decoding="async" /></a>';
+	echo '<img class="wrrapd-wrapstars-site-footer__tagline" src="' . esc_url( wrrapd_wrapstars_brand_tagline_url() ) . '" width="344" height="65" alt="Wrapping Happiness" loading="lazy" decoding="async" />';
 	echo '<p class="wrrapd-wrapstars-site-footer__address">7901 4th St N, Ste 300<br />St. Petersburg, FL 33702</p>';
 	echo '<p class="wrrapd-wrapstars-site-footer__copy">© ' . esc_html( $year ) . ' Wrrapd Inc.; all rights reserved.</p>';
 	echo '</div>';

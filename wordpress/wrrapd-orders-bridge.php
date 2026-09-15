@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /** Bump when account UI / header polish changes — view-source should contain this string. */
-define( 'WRRAPD_MU_BUILD', '2026-09-12-footer-redesign' );
+define( 'WRRAPD_MU_BUILD', '2026-09-14-lost-page-brand' );
 
 $wrrapd_seasonal = dirname( __FILE__ ) . '/wrrapd-seasonal-campaigns.php';
 if ( is_readable( $wrrapd_seasonal ) ) {
@@ -1737,14 +1737,14 @@ function wrrapd_output_header_layout_css() {
 	echo '.elementor-location-header .elementor-element-6e478726{display:flex!important;flex-direction:column!important;align-items:flex-start!important;justify-content:center!important;align-self:stretch!important;flex:0 0 24%!important;max-width:24%!important;width:24%!important;min-width:0!important;gap:0!important;margin:0!important;padding:0!important;position:relative!important;z-index:3!important;}';
 	echo '.elementor-location-header .elementor-element-6e478726>*{flex:0 0 auto!important;}';
 	echo '.elementor-location-header .elementor-element-68a38868{margin:0!important;padding:0!important;line-height:0!important;}';
-	echo '.elementor-location-header .elementor-element-68a38868 img{max-width:min(12.4rem,38vw)!important;height:auto!important;width:auto!important;margin:0!important;transform:translate(-.45rem,0)!important;object-position:left center!important;}';
-	echo '.elementor-location-header .elementor-element-1c0d63ad{margin:-1.05rem 0 0!important;padding:0!important;line-height:0!important;transform:translate(-.3rem,0)!important;}';
-	echo '.elementor-location-header .elementor-element-1c0d63ad img{display:block!important;max-width:min(9.9rem,31vw)!important;margin:0!important;transform:none!important;}';
+	echo '.elementor-location-header .elementor-element-68a38868 img{max-width:min(16.2rem,48vw)!important;height:auto!important;width:auto!important;margin:0!important;transform:translate(-.45rem,0)!important;object-position:left center!important;}';
+	echo '.elementor-location-header .elementor-element-1c0d63ad{margin:-1.15rem 0 0!important;padding:0!important;line-height:0!important;transform:translate(-.3rem,0)!important;}';
+	echo '.elementor-location-header .elementor-element-1c0d63ad img{display:block!important;max-width:min(13.8rem,42vw)!important;max-height:none!important;margin:0!important;transform:none!important;}';
 	/* Customizer "Additional CSS" (wp-custom-css) still pins the guest-home logo to
 	   min(13.5rem,42vw) at (0,4,2). Match its shape and add .elementor-widget so this
 	   wins on specificity rather than on stylesheet order. */
-	echo 'body.home:not(.logged-in) .elementor-location-header .elementor-element-68a38868.elementor-widget img,body.page-id-4857:not(.logged-in) .elementor-location-header .elementor-element-68a38868.elementor-widget img{max-height:none!important;max-width:min(14.6rem,44vw)!important;width:auto!important;height:auto!important;}';
-	echo 'body.logged-in .elementor-location-header .elementor-element-68a38868.elementor-widget img{max-height:clamp(3.5rem,11vmin,5.25rem)!important;width:auto!important;height:auto!important;}';
+	echo 'body.home:not(.logged-in) .elementor-location-header .elementor-element-68a38868.elementor-widget img,body.page-id-4857:not(.logged-in) .elementor-location-header .elementor-element-68a38868.elementor-widget img{max-height:none!important;max-width:min(17.6rem,52vw)!important;width:auto!important;height:auto!important;}';
+	echo 'body.logged-in .elementor-location-header .elementor-element-68a38868.elementor-widget img{max-height:clamp(4.8rem,13vmin,6.6rem)!important;width:auto!important;height:auto!important;}';
 	/* Location */
 	echo '.elementor-location-header .elementor-element-1913a20{flex:0 0 19%!important;max-width:19%!important;min-width:0!important;align-self:center!important;margin:0!important;padding:0!important;transform:translateX(-.35rem)!important;position:relative!important;z-index:3!important;}';
 	echo '.elementor-location-header #wrrapd-location,.elementor-location-header #location-text,.elementor-location-header #location-text strong{font-size:clamp(.81rem,1.9vmin,.95rem)!important;line-height:1.25!important;}';
@@ -1773,9 +1773,9 @@ function wrrapd_output_header_layout_css() {
 	echo '@media(max-width:1100px),(hover:none) and (pointer:coarse){';
 	echo '.elementor-location-header .elementor-element-00ec9fc,.elementor-location-header .elementor-element-7f1bdc1{display:none!important;}';
 	echo '.elementor-location-header .elementor-element-6835e730{gap:0 .15rem!important;padding:.1rem .35rem .08rem!important;}';
-	echo '.elementor-location-header .elementor-element-68a38868 img{max-height:clamp(3.6rem,21vw,4.85rem)!important;transform:translate(-.3rem,0)!important;}';
-	echo '.elementor-location-header .elementor-element-1c0d63ad{margin:-.62rem 0 0!important;transform:translate(-.2rem,0)!important;}';
-	echo '.elementor-location-header .elementor-element-1c0d63ad img{max-height:clamp(1.15rem,6vw,1.4rem)!important;}';
+	echo '.elementor-location-header .elementor-element-68a38868 img{max-height:clamp(4.85rem,26vw,6.4rem)!important;transform:translate(-.3rem,0)!important;}';
+	echo '.elementor-location-header .elementor-element-1c0d63ad{margin:-.72rem 0 0!important;transform:translate(-.2rem,0)!important;}';
+	echo '.elementor-location-header .elementor-element-1c0d63ad img{max-height:clamp(1.9rem,10vw,2.5rem)!important;max-width:min(13rem,58vw)!important;}';
 	echo '.elementor-location-header .elementor-element-1913a20{transform:translateX(-.25rem)!important;}';
 	echo '.elementor-location-header .elementor-element-693b4ea7{flex:0 0 11rem!important;width:11rem!important;max-width:11rem!important;min-width:11rem!important;}';
 	echo '.elementor-location-header [data-id="5c54566"],.elementor-location-header .elementor-element-5c54566{flex:0 0 11rem!important;width:11rem!important;max-width:11rem!important;gap:.42rem!important;margin:0 0 0 auto!important;}';
@@ -1784,10 +1784,9 @@ function wrrapd_output_header_layout_css() {
 	echo '.elementor-location-header [data-id="69de726e"],.elementor-location-header [data-id="2ca99876"]{max-width:11rem!important;}';
 	echo '.elementor-location-header [data-id="69de726e"] .elementor-button,.elementor-location-header [data-id="2ca99876"] .elementor-button{font-size:clamp(.78rem,3.3vw,.92rem)!important;padding:.28rem .48rem!important;min-height:1.65rem!important;height:auto!important;}';
 	echo '.elementor-location-header #wrrapd-location,.elementor-location-header #location-text,.elementor-location-header #location-text strong{font-size:clamp(.92rem,3.5vw,1.12rem)!important;}';
-	echo 'body.logged-in .elementor-location-header .elementor-element-1c0d63ad{display:none!important;}';
 	echo '}';
 	echo '@media(max-width:393px){';
-	echo 'body.logged-in .elementor-location-header .elementor-element-68a38868 img{max-height:2.35rem!important;height:2.35rem!important;}';
+	echo 'body.logged-in .elementor-location-header .elementor-element-68a38868 img{max-height:3.6rem!important;height:auto!important;}';
 	echo '}';
 	echo '</style>';
 }
@@ -2107,6 +2106,76 @@ function wrrapd_site_footer_is_suppressed() {
 }
 
 /**
+ * Hello Elementor 404 dumps "Hello, User!" plus leftover homepage widgets.
+ * Keep the real header/footer; replace the middle with a branded lost-page.
+ */
+function wrrapd_output_not_found_css() {
+	if ( is_admin() || ! is_404() ) {
+		return;
+	}
+	echo '<style id="wrrapd-lost-page-css">';
+	echo 'body.error404 #content,body.error404 #primary,body.error404 .site-main,body.error404 main.site-main,body.error404 .page-header,body.error404 .page-content,body.error404 .entry-header,body.error404 .entry-content,body.error404 .elementor-location-single,body.error404 .elementor-location-archive,body.error404 .elementor-4857,body.error404 #wrrapd-seasonal-campaign-root,body.error404 .wrrapd-hot-gifts-rail,body.error404 .wrrapd-season-hero{display:none!important;}';
+	echo '.wrrapd-lost{background:linear-gradient(180deg,#faf8f4 0%,#fff 70%);padding:clamp(2.2rem,5vw,4.2rem) 1.25rem clamp(2.8rem,6vw,4.8rem);text-align:center;}';
+	echo '.wrrapd-lost__inner{max-width:36rem;margin:0 auto;}';
+	echo '.wrrapd-lost__stage{position:relative;width:8.5rem;height:7.6rem;margin:0 auto 1.35rem;}';
+	echo '.wrrapd-lost__box{position:absolute;left:50%;bottom:0;width:5.6rem;height:4.1rem;margin-left:-2.8rem;background:#c9a227;border-radius:.35rem .35rem .45rem .45rem;box-shadow:0 .55rem 1.2rem rgba(26,39,68,.18);animation:wrrapd-lost-bob 2.4s ease-in-out infinite;}';
+	echo '.wrrapd-lost__box:before{content:"";position:absolute;left:50%;top:0;bottom:0;width:.72rem;margin-left:-.36rem;background:#fff3a3;}';
+	echo '.wrrapd-lost__lid{position:absolute;left:-.28rem;right:-.28rem;top:-.72rem;height:.85rem;background:#1a3d2e;border-radius:.3rem;animation:wrrapd-lost-lid .9s ease-in-out infinite alternate;}';
+	echo '.wrrapd-lost__bow{position:absolute;left:50%;top:-1.55rem;width:1.7rem;height:1.15rem;margin-left:-.85rem;animation:wrrapd-lost-look 2.8s ease-in-out infinite;}';
+	echo '.wrrapd-lost__bow:before,.wrrapd-lost__bow:after{content:"";position:absolute;top:0;width:.95rem;height:.95rem;background:#e11d48;border-radius:50% 50% 50% 0;transform:rotate(-45deg);}';
+	echo '.wrrapd-lost__bow:before{left:0;}';
+	echo '.wrrapd-lost__bow:after{right:0;transform:rotate(45deg);}';
+	echo '.wrrapd-lost__sparkle{position:absolute;width:.38rem;height:.38rem;background:#f7ff00;transform:rotate(45deg);animation:wrrapd-lost-twinkle 1.6s ease-in-out infinite;}';
+	echo '.wrrapd-lost__sparkle--a{top:.15rem;left:.4rem;animation-delay:.1s;}';
+	echo '.wrrapd-lost__sparkle--b{top:.55rem;right:.2rem;animation-delay:.55s;}';
+	echo '.wrrapd-lost__sparkle--c{bottom:1.1rem;left:.15rem;animation-delay:1s;}';
+	echo '.wrrapd-lost h1{margin:0 0 .7rem;font-family:Fraunces,Georgia,serif;font-size:clamp(1.7rem,4.4vw,2.45rem);line-height:1.15;color:#0f172a;}';
+	echo '.wrrapd-lost p{margin:0 auto;max-width:32rem;font-size:1.05rem;line-height:1.5;color:#334155;}';
+	echo '.wrrapd-lost__actions{display:flex;flex-wrap:wrap;justify-content:center;gap:.7rem;margin:1.45rem 0 0;}';
+	echo '.wrrapd-lost__actions a{display:inline-flex;align-items:center;justify-content:center;min-height:2.7rem;padding:.65rem 1.15rem;border-radius:999px;font-size:.95rem;font-weight:800;text-decoration:none;}';
+	echo '.wrrapd-lost__actions a:first-child{background:#c9a227;color:#1a1a12;}';
+	echo '.wrrapd-lost__actions a:not(:first-child){background:#0f0351;color:#fff;}';
+	echo '@keyframes wrrapd-lost-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}';
+	echo '@keyframes wrrapd-lost-lid{from{transform:translateY(0) rotate(-2deg)}to{transform:translateY(-5px) rotate(3deg)}}';
+	echo '@keyframes wrrapd-lost-look{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(10deg)}}';
+	echo '@keyframes wrrapd-lost-twinkle{0%,100%{opacity:.25;transform:rotate(45deg) scale(.7)}50%{opacity:1;transform:rotate(45deg) scale(1.15)}}';
+	echo '@media(prefers-reduced-motion:reduce){.wrrapd-lost__box,.wrrapd-lost__lid,.wrrapd-lost__bow,.wrrapd-lost__sparkle{animation:none!important;}}';
+	echo '</style>';
+}
+add_action( 'wp_head', 'wrrapd_output_not_found_css', 9998 );
+
+function wrrapd_render_not_found_page() {
+	if ( is_admin() || ! is_404() ) {
+		return;
+	}
+	$home    = home_url( '/' );
+	$wrap    = 'https://apply.wrrapd.com/';
+	$ride    = 'https://apply.wrrapd.com/drive/';
+	$is_hire = ( function_exists( 'wrrapd_wrapstars_is_portal_host' ) && wrrapd_wrapstars_is_portal_host() )
+		|| ( function_exists( 'wrrapd_drivers_is_portal_host' ) && wrrapd_drivers_is_portal_host() );
+	echo '<section class="wrrapd-lost" role="region" aria-labelledby="wrrapd-lost-title">';
+	echo '<div class="wrrapd-lost__inner">';
+	echo '<div class="wrrapd-lost__stage" aria-hidden="true">';
+	echo '<span class="wrrapd-lost__sparkle wrrapd-lost__sparkle--a"></span>';
+	echo '<span class="wrrapd-lost__sparkle wrrapd-lost__sparkle--b"></span>';
+	echo '<span class="wrrapd-lost__sparkle wrrapd-lost__sparkle--c"></span>';
+	echo '<div class="wrrapd-lost__box"><span class="wrrapd-lost__lid"></span><span class="wrrapd-lost__bow"></span></div>';
+	echo '</div>';
+	echo '<h1 id="wrrapd-lost-title">' . esc_html__( 'This page isn’t wrapped yet', 'wrrapd' ) . '</h1>';
+	echo '<p>' . esc_html__( 'That link doesn’t go anywhere. Let’s get you back to something lovely.', 'wrrapd' ) . '</p>';
+	echo '<p class="wrrapd-lost__actions">';
+	echo '<a href="' . esc_url( $home ) . '">' . esc_html__( 'Home', 'wrrapd' ) . '</a>';
+	if ( ! $is_hire ) {
+		echo '<a href="' . esc_url( $wrap ) . '">' . esc_html__( 'Become a WrapStar', 'wrrapd' ) . '</a>';
+		echo '<a href="' . esc_url( $ride ) . '">' . esc_html__( 'Become a JoyRider', 'wrrapd' ) . '</a>';
+	} else {
+		echo '<a href="https://wrrapd.com/">' . esc_html__( 'Wrrapd.com', 'wrrapd' ) . '</a>';
+	}
+	echo '</p></div></section>';
+}
+add_action( 'wp_footer', 'wrrapd_render_not_found_page', 3 );
+
+/**
  * Footer link groups. The account column follows the login state so members never
  * see "Create an account". Every URL here is a published page — do not add /faq,
  * which 404s.
@@ -2189,6 +2258,7 @@ function wrrapd_render_site_footer() {
 	echo '<a class="wrrapd-footer__brand" href="' . esc_url( home_url( '/' ) ) . '" rel="home">';
 	echo '<img src="https://wrrapd.com/wp-content/uploads/2025/03/Wrrapd_f-Logo-800-x-458-px.png" width="800" height="458" alt="' . esc_attr__( 'Wrrapd', 'wrrapd' ) . '" loading="lazy" decoding="async" />';
 	echo '</a>';
+	echo '<img class="wrrapd-footer__tagline" src="https://wrrapd.com/wp-content/uploads/2025/03/WrappingHappiness-2.png" width="344" height="65" alt="' . esc_attr__( 'Wrapping Happiness', 'wrrapd' ) . '" loading="lazy" decoding="async" />';
 	echo '<p class="wrrapd-footer__mission">' . esc_html__( 'We’re on a mission to make every gift worth unwrapping.', 'wrrapd' ) . '</p>';
 	echo '</div>';
 
@@ -2244,8 +2314,9 @@ function wrrapd_output_site_footer_css() {
 	echo '.wrrapd-footer__inner{max-width:78rem;margin:0 auto;padding:clamp(2.25rem,4.5vw,3.5rem) clamp(1.25rem,4vw,3rem) clamp(1.1rem,2vw,1.6rem);}';
 	/* Lead: bigger logo, mission statement underneath — no address. */
 	echo '.wrrapd-footer__lead{margin:0 0 clamp(1.9rem,4vw,2.9rem);}';
-	echo '.wrrapd-footer__brand{display:inline-block;line-height:0;margin:0 0 clamp(.85rem,2vw,1.3rem);}';
-	echo '.wrrapd-footer__brand img{display:block;width:auto;height:auto;max-height:clamp(4.15rem,8.5vw,6.4rem);max-width:100%;}';
+	echo '.wrrapd-footer__brand{display:inline-block;line-height:0;margin:0 0 .35rem;}';
+	echo '.wrrapd-footer__brand img{display:block;width:auto;height:auto;max-height:clamp(5.5rem,11vw,8.1rem);max-width:100%;}';
+	echo '.wrrapd-footer__tagline{display:block;width:auto;height:auto;max-height:clamp(1.85rem,4.2vw,2.65rem);max-width:min(16rem,72vw);margin:0 0 clamp(.85rem,2vw,1.3rem);object-fit:contain;object-position:left center;}';
 	echo '.wrrapd-footer__mission{margin:0;font-family:"Fraunces","Playfair Display",Georgia,serif;font-weight:700;font-size:clamp(1.55rem,3.6vw,2.6rem);line-height:1.13;letter-spacing:-.015em;color:var(--wf-ink);max-width:24ch;text-wrap:balance;}';
 	/* Link groups */
 	echo '.wrrapd-footer__nav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:clamp(1.4rem,3vw,2.5rem);margin:0 0 clamp(1.75rem,3.5vw,2.5rem);}';

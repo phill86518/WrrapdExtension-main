@@ -1215,7 +1215,7 @@ function wrrapd_render_hot_gifts_rail_html( array $campaign, array $gifts, $vari
  * Front page + logged-in home: inject hero + hot gifts; hide stale Elementor seasonal widgets.
  */
 function wrrapd_should_output_seasonal_blocks() {
-	if ( is_admin() || is_paged() ) {
+	if ( is_admin() || is_paged() || is_404() ) {
 		return false;
 	}
 	return is_front_page() || is_home();
@@ -1271,7 +1271,7 @@ add_action( 'wp_head', 'wrrapd_output_seasonal_campaign_assets', 98 );
 
 function wrrapd_output_seasonal_campaign_blocks() {
 	static $done = false;
-	if ( $done || is_admin() ) {
+	if ( $done || is_admin() || is_404() ) {
 		return;
 	}
 	$c = wrrapd_active_campaign();

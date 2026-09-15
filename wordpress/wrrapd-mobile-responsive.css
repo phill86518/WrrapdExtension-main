@@ -701,14 +701,14 @@ a.wrrapd-ext-cta {
 
 	/* Header column tweaks for ≤393px handled in bridge header-layout-css */
 
-	/* Logged-in header — compact member cluster, hide tagline */
+	/* Logged-in header — keep Wrapping Happiness readable */
 	body.logged-in .elementor-6078 .elementor-element.elementor-element-1c0d63ad {
-		display: none !important;
+		display: block !important;
 	}
 
 	body.logged-in .elementor-6078 .elementor-element.elementor-element-68a38868 img {
-		height: 2rem !important;
-		max-height: 2rem !important;
+		height: auto !important;
+		max-height: 3.6rem !important;
 		width: auto !important;
 	}
 
