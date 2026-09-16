@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /** Bump when account UI / header polish changes — view-source should contain this string. */
-define( 'WRRAPD_MU_BUILD', '2026-09-14-header-location-clear' );
+define( 'WRRAPD_MU_BUILD', '2026-09-16-footer-mission-copy' );
 
 $wrrapd_seasonal = dirname( __FILE__ ) . '/wrrapd-seasonal-campaigns.php';
 if ( is_readable( $wrrapd_seasonal ) ) {
@@ -2263,7 +2263,7 @@ function wrrapd_render_site_footer() {
 	echo '<img src="https://wrrapd.com/wp-content/uploads/2025/03/Wrrapd_f-Logo-800-x-458-px.png" width="800" height="458" alt="' . esc_attr__( 'Wrrapd', 'wrrapd' ) . '" loading="lazy" decoding="async" />';
 	echo '</a>';
 	echo '<img class="wrrapd-footer__tagline" src="https://wrrapd.com/wp-content/uploads/2025/03/WrappingHappiness-2.png" width="344" height="65" alt="' . esc_attr__( 'Wrapping Happiness', 'wrrapd' ) . '" loading="lazy" decoding="async" />';
-	echo '<p class="wrrapd-footer__mission">' . esc_html__( 'We’re on a mission to make every gift worth unwrapping.', 'wrrapd' ) . '</p>';
+	echo '<p class="wrrapd-footer__mission">' . esc_html__( 'We strive to deliver bigger smiles and surprises!', 'wrrapd' ) . '</p>';
 	echo '</div>';
 
 	echo '<nav class="wrrapd-footer__nav" aria-label="' . esc_attr__( 'Footer', 'wrrapd' ) . '">';
