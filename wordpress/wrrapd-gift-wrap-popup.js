@@ -157,8 +157,8 @@
 		var letters = anythingEl.querySelectorAll('.wrrapd-gift-popup__letter');
 		letters.forEach(function (letter, i) {
 			letter.style.animation = 'none';
-			letter.style.opacity = '0';
-			letter.style.transform = 'translateY(0.14em) scale(0.88)';
+			letter.style.removeProperty('opacity');
+			letter.style.removeProperty('transform');
 			letter.style.animationDelay = (i * (LETTER_MS / 1000)) + 's';
 		});
 
