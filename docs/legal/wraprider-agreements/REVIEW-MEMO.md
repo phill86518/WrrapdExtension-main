@@ -13,7 +13,7 @@ This suite is a **merged** Technology Services Agreement plus companions that al
 
 - Public apply: `https://apply.wrrapd.com/wraprider/apply/`
 - Stored as its **own** WordPress post type `wrrapd_wraprider_app` (third hire track; separate from the WrapStar and JoyRider post types), with its own onboarding portal at `pros.wrrapd.com/wraprider-onboarding/`
-- On Command Center **Activate**, ops creates the WrapRider row (id prefix 6) plus hidden login rows on the WrapStar roster (prefix 8) and JoyRider roster (prefix 7) so both apps work
+- On Command Center **Activate**, ops creates the WrapRider row (id prefix 6) — the login identity for the WrapRider App (`wraprider.wrrapd.com`) — plus hidden *capacity* rows on the WrapStar roster (prefix 8) and JoyRider roster (prefix 7) so order allocation can assign wrap jobs and deliveries. Those capacity rows are not logins.
 - Login: same email/password on wrapstar.wrrapd.com **and** joyrider.wrrapd.com
 - Pay: WrapStar hourly + 12/hour pace for wrap windows; JoyRider hourly for delivery windows — see Compensation Schedule §5a
 - Age 21+ (JoyRider floor, not WrapStar’s 19)

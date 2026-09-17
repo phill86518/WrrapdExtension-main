@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
-import { requireWrapstarSession } from "@/lib/auth";
+import { requireWrapActor } from "@/lib/auth";
 import { startShift } from "@/lib/shift-store";
 
 export async function POST() {
-  const session = await requireWrapstarSession();
-  if (!session) {
+  const actor = await requireWrapActor();
+  if (!actor) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const result = await startShift(session.userId);
+  const result = await startShift(actor.wrapstarId);
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: 400 });
   }

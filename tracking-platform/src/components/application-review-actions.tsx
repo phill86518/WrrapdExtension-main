@@ -62,7 +62,7 @@ export function ApplicationReviewActions({
     role === "driver"
       ? "joyrider.wrrapd.com"
       : role === "wraprider"
-        ? "wrapstar.wrrapd.com + joyrider.wrrapd.com"
+        ? "wraprider.wrrapd.com"
         : "wrapstar.wrrapd.com";
   const onboardingComplete = onboardingTotal > 0 && onboardingDone >= onboardingTotal;
 

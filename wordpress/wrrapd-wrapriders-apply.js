@@ -3,7 +3,7 @@
 	var TIDBITS = [
 		'WrapRiders own both halves of an order: gifts and supplies are dropped at your space, you wrap them, then you deliver them yourself.',
 		'Being able to print custom wrapping paper lets you match a design to the occasion — a favorite of repeat customers.',
-		'After activation, one email and password open both the WrapStar app (wrapping) and the JoyRider app (deliveries).',
+		'After activation, your email and password open the WrapRider app — wrap jobs and deliveries in one place.',
 		'Double-check your answers below, then submit when you are ready.'
 	];
 

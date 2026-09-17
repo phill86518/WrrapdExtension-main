@@ -4,7 +4,7 @@ Counsel-ready production text for **WrapRider** (hybrid WrapStar + JoyRider) onb
 **Public name:** WrapRider. **Own WordPress post type** (`wrrapd_wraprider_app`) — a third hire track fully separate from the WrapStar and JoyRider CPTs. Apply URL: `/wraprider/apply/`. Onboarding: `pros.wrrapd.com/wraprider-onboarding/`. BoldSign constant: `WRRAPD_BOLDSIGN_WRAPRIDER_IC_TEMPLATE_ID`.  
 **Licensed Florida attorney should review before BoldSign go-live.**
 
-**Current scope:** WrapRiders wrap gifts **and** deliver them. They use **both** the WrapStar App and the JoyRider App. Age **21+**. Valid driver license. Legally required **auto insurance**. Hourly-by-ZIP pay: WrapStar rate + 12-gifts/hour pace for wrapping hours; JoyRider rate for delivery hours. Arbitration seat: **Jacksonville, Florida**.
+**Current scope:** WrapRiders wrap gifts **and** deliver them. They use their **own WrapRider App** (`wraprider.wrrapd.com`, own login) — not the WrapStar or JoyRider apps. Age **21+**. Valid driver license. Legally required **auto insurance**. Hourly-by-ZIP pay: a **WrapRider rate** of its own (third pay structure); the 12-gifts/hour pace applies to wrapping hours only. Arbitration seat: **Jacksonville, Florida**.
 
 This suite is **not** a stack of the WrapStar suite plus the JoyRider suite. Shared clauses appear once. Role-specific duties (wrapping location/handoff **and** driving/delivery) appear together in the TSA.
 

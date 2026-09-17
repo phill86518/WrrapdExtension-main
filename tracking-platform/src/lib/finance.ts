@@ -24,6 +24,7 @@ const DEFAULT_CONFIG: PayoutConfig = {
   platformTakeFlowersPercent: 15,
   wrapstarHourlyCents: 2500,
   joyriderHourlyCents: 2200,
+  wrapriderHourlyCents: 2400,
   wrapstarPaceGiftsPerHour: 12,
   hourlyByZip: [],
   updatedAt: new Date().toISOString(),

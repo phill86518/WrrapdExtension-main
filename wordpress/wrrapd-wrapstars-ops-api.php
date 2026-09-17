@@ -509,6 +509,8 @@ function wrrapd_wrapstars_ops_portal_resolve_active( $request ) {
 	if ( ! $user ) {
 		return new WP_REST_Response( array( 'ok' => false, 'error' => 'Account not found.' ), 404 );
 	}
+	// Strict per track: each contractor app resolves ONLY its own CPT. A WrapRider is never
+	// treated as a WrapStar or JoyRider here (and vice versa).
 	$app = null;
 	$ok  = false;
 	if ( $portal === 'wrapstar' ) {
@@ -517,16 +519,9 @@ function wrrapd_wrapstars_ops_portal_resolve_active( $request ) {
 	} elseif ( $portal === 'driver' ) {
 		$app = function_exists( 'wrrapd_drivers_get_application_by_user' ) ? wrrapd_drivers_get_application_by_user( $user->ID ) : null;
 		$ok  = $app && wrrapd_drivers_get_meta( $app->ID, 'status' ) === 'active' && wrrapd_drivers_get_meta( $app->ID, 'suspended' ) !== '1';
-	}
-	// WrapRiders (own CPT) use the wrapstar + joyrider apps with one account: when neither the
-	// WrapStar nor the JoyRider CPT has them, fall through to the WrapRider application.
-	if ( ! $ok && function_exists( 'wrrapd_wrapriders_get_application_by_user' ) ) {
-		$wr_app = wrrapd_wrapriders_get_application_by_user( $user->ID );
-		if ( $wr_app && wrrapd_wrapriders_get_meta( $wr_app->ID, 'status' ) === 'active' && wrrapd_wrapriders_get_meta( $wr_app->ID, 'suspended' ) !== '1' ) {
-			$app    = $wr_app;
-			$ok     = true;
-			$portal = 'wraprider';
-		}
+	} elseif ( $portal === 'wraprider' ) {
+		$app = function_exists( 'wrrapd_wrapriders_get_application_by_user' ) ? wrrapd_wrapriders_get_application_by_user( $user->ID ) : null;
+		$ok  = $app && wrrapd_wrapriders_get_meta( $app->ID, 'status' ) === 'active' && wrrapd_wrapriders_get_meta( $app->ID, 'suspended' ) !== '1';
 	}
 	if ( ! $ok ) {
 		return new WP_REST_Response( array( 'ok' => false, 'error' => 'This account is not active.' ), 403 );
@@ -731,19 +726,17 @@ function wrrapd_wrapstars_ops_portal_auth( $request ) {
 		}
 	}
 
-	// WrapRider — own CPT (wrrapd-wrapriders.php). One account signs in to BOTH contractor apps,
-	// so an active WrapRider also satisfies the "wrapstar" and "driver" role checks the apps make.
+	// WrapRider — own CPT (wrrapd-wrapriders.php), own app (wraprider.wrrapd.com). Reported ONLY
+	// in roles.wraprider; never mirrored into the wrapstar / driver slots.
 	if ( function_exists( 'wrrapd_wrapriders_get_application_by_user' ) ) {
 		$wr_app = wrrapd_wrapriders_get_application_by_user( $user->ID );
 		if ( $wr_app ) {
-			$wr_id     = (int) $wr_app->ID;
-			$wr_active = wrrapd_wrapriders_get_meta( $wr_id, 'status' ) === 'active' && wrrapd_wrapriders_get_meta( $wr_id, 'suspended' ) !== '1';
-			if ( $wr_active && ( $portal === '' || in_array( $portal, array( 'wrapstar', 'driver', 'wraprider' ), true ) ) ) {
+			$wr_id = (int) $wr_app->ID;
+			if ( ( $portal === '' || $portal === 'wraprider' ) && wrrapd_wrapriders_get_meta( $wr_id, 'status' ) === 'active' && wrrapd_wrapriders_get_meta( $wr_id, 'suspended' ) !== '1' ) {
 				wrrapd_wrapriders_set_meta( $wr_id, 'portal_last_login_at', $now );
 				wrrapd_wrapriders_set_meta( $wr_id, 'portal_login_count', (string) ( (int) wrrapd_wrapriders_get_meta( $wr_id, 'portal_login_count', '0' ) + 1 ) );
-				wrrapd_wrapriders_set_meta( $wr_id, 'portal_last_login_app', $portal !== '' ? $portal : 'unknown' );
 			}
-			$wr_role = array(
+			$roles['wraprider'] = array(
 				'applicationId' => $wr_id,
 				'status'        => (string) wrrapd_wrapriders_get_meta( $wr_id, 'status' ),
 				'suspended'     => wrrapd_wrapriders_get_meta( $wr_id, 'suspended' ) === '1',
@@ -753,13 +746,6 @@ function wrrapd_wrapstars_ops_portal_auth( $request ) {
 				'mustChangePassword' => function_exists( 'wrrapd_wrapriders_user_must_change_password' ) ? wrrapd_wrapriders_user_must_change_password( $user->ID ) : false,
 				'hireRole'      => 'wraprider',
 			);
-			$roles['wraprider'] = $wr_role;
-			if ( empty( $roles['wrapstar'] ) ) {
-				$roles['wrapstar'] = $wr_role;
-			}
-			if ( empty( $roles['driver'] ) ) {
-				$roles['driver'] = $wr_role;
-			}
 		}
 	}
 

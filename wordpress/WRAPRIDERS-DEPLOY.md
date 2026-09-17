@@ -71,9 +71,8 @@ Keep the WrapStars CSS in place too (`wrrapd-wrapstars.css`) — the WrapRider U
    Do not reuse the WrapStar or JoyRider template. */
 define( 'WRRAPD_BOLDSIGN_WRAPRIDER_IC_TEMPLATE_ID', 'paste-wraprider-ic-template-id' );
 
-/* Optional — both contractor apps the WrapRider signs in to (defaults shown) */
-define( 'WRRAPD_WRAPSTAR_APP_URL', 'https://wrapstar.wrrapd.com' );
-define( 'WRRAPD_COURIER_APP_URL', 'https://joyrider.wrrapd.com' );
+/* Optional — the WrapRider's OWN app (default shown). WrapRiders never sign in to the WrapStar or JoyRider apps. */
+define( 'WRRAPD_WRAPRIDER_APP_URL', 'https://wraprider.wrrapd.com' );
 ```
 
 Ops API key: reuse `WRRAPD_WRAPSTARS_OPS_API_KEY` (same `X-Wrrapd-Wrapstars-Ops-Key` header as the other tracks).
@@ -106,14 +105,16 @@ Until the BoldSign constant is set, the `agreement` step is a placeholder acknow
 ## Command Center / Cloud Run
 
 Deploy `tracking-platform` (see root [DEPLOYMENT.md](../DEPLOYMENT.md), step 4). No new env vars.
+Map the third portal host **`wraprider.wrrapd.com`** to the `wrrapd-tracking` Cloud Run service exactly like the other two (see [docs/CONTRACTOR-PORTALS.md](../docs/CONTRACTOR-PORTALS.md) §4).
 
 1. **Applications → WrapRiders** filter reads `/wraprider-applications` only.
 2. **Approve** → candidate email with username, temporary password, and the `wraprider-onboarding` link.
 3. **Approve onboarding (Activate)** → `syncActivatedApplicationToWrapriderRoster`:
    - creates / updates the **WrapRiders board row** (ID prefix **6**) — their home;
-   - creates hidden login rows on the WrapStar roster (8…) and DeliveryDriver roster (7…), both tagged `hireRole: "wraprider"`, so **wrapstar.wrrapd.com and joyrider.wrrapd.com accept the same email + password**. `/admin/wrapstars` and `/admin/drivers` filter these rows out;
-   - writes contractor records under all three ids.
-4. WordPress `portal-auth` mirrors an active WrapRider into `roles.wrapstar` and `roles.driver`, so neither app needs a WrapRider-specific login path.
+   - creates hidden **capacity** rows on the WrapStar roster (8…) and DeliveryDriver roster (7…), tagged `hireRole: "wraprider"`. These exist only so order allocation can hand the WrapRider wrap jobs and deliveries — they are **not logins** (the WrapStar and JoyRider apps refuse them) and `/admin/wrapstars` / `/admin/drivers` filter them out;
+   - writes the contractor record under the WrapRider id (`wraprider:6…`).
+4. **WrapRider App — `wraprider.wrrapd.com`** (`/wraprider`, `POST /api/wraprider/login`, session role `wraprider`). Own login: WordPress `portal-auth` with `portal=wraprider` checks the WrapRider CPT only and reports `roles.wraprider` only — nothing is mirrored into the WrapStar / JoyRider role slots. A WrapRider who tries wrapstar.wrrapd.com or joyrider.wrrapd.com is told to use wraprider.wrrapd.com, and vice versa.
+5. **Pay** — third pay structure: Command Center → Finance → Hourly rates has a **WrapRider default** and an optional 4th ZIP column (`ZIP WrapStar$ JoyRider$ WrapRider$`).
 
 ---
 

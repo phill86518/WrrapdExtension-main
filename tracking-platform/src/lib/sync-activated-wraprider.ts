@@ -19,11 +19,14 @@ import {
  * After Command Center "Approve onboarding" on a WrapRider application (WP `activate` on the
  * WrapRider CPT):
  *
- *  1. Put them on the WrapRiders board (own roster, IDs prefix 6) — their Command Center home.
- *  2. Create hidden login rows on the WrapStar roster (8…) and DeliveryDriver roster (7…), both
- *     tagged `hireRole: "wraprider"`, so wrapstar.wrrapd.com and joyrider.wrrapd.com accept the
- *     same email + password. `/admin/wrapstars` and `/admin/drivers` filter these rows out.
- *  3. Migrate the contractor record under all three ids so each app's Account tab works.
+ *  1. Put them on the WrapRiders board (own roster, IDs prefix 6) — their Command Center home and
+ *     the id their WrapRider App session (wraprider.wrrapd.com) is issued for.
+ *  2. Create hidden CAPACITY rows on the WrapStar roster (8…) and DeliveryDriver roster (7…), both
+ *     tagged `hireRole: "wraprider"`. These exist only so order allocation can hand them wrap
+ *     jobs and deliveries — they are NOT logins: the WrapStar and JoyRider apps refuse them, and
+ *     `/admin/wrapstars` / `/admin/drivers` filter them out.
+ *  3. Migrate the contractor record under the WrapRider id (`wraprider:6…`) — the only record the
+ *     WrapRider App reads.
  */
 export async function syncActivatedApplicationToWrapriderRoster(
   app: WrapriderApplication,
@@ -71,7 +74,7 @@ export async function syncActivatedApplicationToWrapriderRoster(
     wrapriderId = created.wraprider.id;
   }
 
-  // 2a. Wrap-app login row (WrapStar roster, hidden from /admin/wrapstars).
+  // 2a. Wrap CAPACITY row (WrapStar roster, hidden from /admin/wrapstars; not a login).
   let wrapstarId: string | undefined;
   try {
     const existingWs = await findWrapstarByEmail(app.email);
@@ -117,7 +120,7 @@ export async function syncActivatedApplicationToWrapriderRoster(
     console.error("[activate wraprider] wrap-app roster sync failed", err);
   }
 
-  // 2b. Courier-app login row (DeliveryDriver roster, hidden from /admin/drivers).
+  // 2b. Delivery CAPACITY row (DeliveryDriver roster, hidden from /admin/drivers; not a login).
   let courierDriverId: string | undefined;
   try {
     const existingDrv = await findDeliveryDriverByEmail(app.email);
@@ -163,22 +166,14 @@ export async function syncActivatedApplicationToWrapriderRoster(
     if (!linked.ok) console.error("[activate wraprider] link ids failed", linked.error);
   }
 
-  // 3. Contractor records under every id the apps may look up.
-  const targets: Array<["wraprider" | "wrapstar" | "driver", string | undefined]> = [
-    ["wraprider", wrapriderId],
-    ["wrapstar", wrapstarId],
-    ["driver", courierDriverId],
-  ];
-  for (const [role, rosterId] of targets) {
-    if (!rosterId) continue;
-    try {
-      const previous = await getContractorRecord(role, rosterId);
-      await saveContractorRecord(
-        contractorRecordFromWrapriderApplication(app, role, rosterId, wrapriderId, previous),
-      );
-    } catch (err) {
-      console.error(`[activate wraprider] contractor record (${role}) migration failed`, err);
-    }
+  // 3. Contractor record under the WrapRider's own id — what the WrapRider App shows.
+  try {
+    const previous = await getContractorRecord("wraprider", wrapriderId);
+    await saveContractorRecord(
+      contractorRecordFromWrapriderApplication(app, "wraprider", wrapriderId, wrapriderId, previous),
+    );
+  } catch (err) {
+    console.error("[activate wraprider] contractor record migration failed", err);
   }
 
   // Printer coverage follows the WrapStar roster row (same as wrap-only WrapStars).

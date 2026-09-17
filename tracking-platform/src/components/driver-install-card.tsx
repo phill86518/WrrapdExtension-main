@@ -14,19 +14,26 @@ function isIosSafari() {
 }
 
 type Props = {
-  /** wrapstar (legacy misuse on WrapStar page) or driver console */
-  variant?: "wrapstar" | "driver";
+  /** wrapstar app, driver (JoyRider) console, or the WrapRider app */
+  variant?: "wrapstar" | "driver" | "wraprider";
 };
 
 export function DriverInstallCard({ variant = "driver" }: Props) {
   const [installEvent, setInstallEvent] = useState<BeforeInstallPromptEvent | null>(null);
   const [hidden, setHidden] = useState(false);
   const ios = useMemo(() => isIosSafari(), []);
-  const title = variant === "wrapstar" ? "Install WrapStar App" : "Install Driver App";
+  const title =
+    variant === "wrapstar"
+      ? "Install WrapStar App"
+      : variant === "wraprider"
+        ? "Install WrapRider App"
+        : "Install Driver App";
   const flow =
     variant === "wrapstar"
       ? "WrapStar workflow"
-      : "Driver delivery workflow";
+      : variant === "wraprider"
+        ? "wrap + deliver workflow"
+        : "Driver delivery workflow";
 
   useEffect(() => {
     const handler = (event: Event) => {

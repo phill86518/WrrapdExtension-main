@@ -153,12 +153,11 @@ function wrrapd_wrapriders_run_admin_action( $app_id, $action, $opts = array() )
 			wrrapd_wrapriders_set_meta( $app_id, 'admin_notes', $notes );
 			wrrapd_wrapriders_set_meta( $app_id, 'notes_updated_at', gmdate( 'c' ) );
 		}
-		$wrap_url = wrrapd_wrapriders_wrap_app_url();
-		$ride_url = wrrapd_wrapriders_courier_app_url();
+		$app_url = wrrapd_wrapriders_app_url();
 		wrrapd_wrapriders_send_email(
 			$email,
 			"You're live as a WrapRider",
-			"Hi {$name},\n\nYour WrapRider account is activated. The same email and password you used for onboarding now open both apps:\n\nWrapStar app (wrapping): {$wrap_url}\nJoyRider app (deliveries): {$ride_url}\n\n— Team Wrrapd\n"
+			"Hi {$name},\n\nYour WrapRider account is activated. Sign in to the WrapRider app with the same email and password you used for onboarding:\n\n{$app_url}\n\n— Team Wrrapd\n"
 		);
 		return array( 'ok' => true, 'status' => 'active' );
 	}

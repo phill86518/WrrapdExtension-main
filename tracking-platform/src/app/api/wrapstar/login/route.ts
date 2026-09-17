@@ -10,8 +10,7 @@ import { getWrapstarProfile } from "@/lib/wrapstar-profiles";
  *
  * Primary: the WordPress onboarding email + password (one login everywhere). The account must be
  * an activated WrapStar ("Approve onboarding" in Command Center) and on the ops roster.
- * Activated WrapRiders (third hire track) also sign in here — WordPress mirrors them into
- * `roles.wrapstar` and activation gives them a hidden WrapStar roster row.
+ * WrapRiders are a separate role with their own app (wraprider.wrrapd.com) — refused here.
  * Fallback: legacy roster name / 10-digit ID + shared contractor passcode (founder + demo rows).
  */
 export async function POST(request: NextRequest) {
@@ -50,10 +49,10 @@ export async function POST(request: NextRequest) {
     }
     const role = auth.roles.wrapstar;
     if (!role) {
-      return NextResponse.json(
-        { ok: false, error: "This account is not a WrapStar. JoyRiders sign in at joyrider.wrrapd.com." },
-        { status: 403 },
-      );
+      const hint = auth.roles.wraprider
+        ? "This account is a WrapRider. Sign in at wraprider.wrrapd.com."
+        : "This account is not a WrapStar. JoyRiders sign in at joyrider.wrrapd.com.";
+      return NextResponse.json({ ok: false, error: hint }, { status: 403 });
     }
     if (role.suspended) {
       return NextResponse.json(
@@ -78,11 +77,14 @@ export async function POST(request: NextRequest) {
         { status: 409 },
       );
     }
-    void touchContractorLogin("wrapstar", roster.id).catch(() => undefined);
-    if (roster.hireRole === "wraprider" && roster.wrapriderId) {
-      // WrapRider (third hire track) — also stamp their own Command Center record.
-      void touchContractorLogin("wraprider", roster.wrapriderId).catch(() => undefined);
+    if (roster.hireRole === "wraprider") {
+      // Capacity row only — WrapRiders have their own app and login.
+      return NextResponse.json(
+        { ok: false, error: "This account is a WrapRider. Sign in at wraprider.wrrapd.com." },
+        { status: 403 },
+      );
     }
+    void touchContractorLogin("wrapstar", roster.id).catch(() => undefined);
     return issueSession(roster.id, roster.name);
   }
 

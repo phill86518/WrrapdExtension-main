@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
+import { getSession, isContractorRole } from "@/lib/auth";
 import { getContractorRecord, saveContractorRecord } from "@/lib/contractor-records";
 import { updatePortalContact, type PortalContactFields } from "@/lib/wp-portal-account";
 
@@ -21,7 +21,7 @@ const FIELDS: (keyof PortalContactFields)[] = [
  */
 export async function POST(request: NextRequest) {
   const session = await getSession();
-  if (!session || (session.role !== "wrapstar" && session.role !== "driver")) {
+  if (!session || !isContractorRole(session.role)) {
     return NextResponse.json({ ok: false, error: "Please sign in again." }, { status: 401 });
   }
   const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;

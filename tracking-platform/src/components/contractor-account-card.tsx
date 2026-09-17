@@ -10,7 +10,7 @@ function dateOnly(iso?: string): string {
 
 type Props = {
   record: ContractorRecord | null;
-  roleLabel: "WrapStar" | "JoyRider";
+  roleLabel: "WrapStar" | "JoyRider" | "WrapRider";
 };
 
 /**

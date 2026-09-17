@@ -9,11 +9,21 @@ import { SESSION_COOKIE_NAME, SESSION_MAX_AGE_SEC, getSessionSecretBytes } from 
 
 export { SESSION_COOKIE_NAME };
 
+/**
+ * Session roles — one per audience. `wraprider` is the THIRD contractor role (own app at
+ * wraprider.wrrapd.com, own login, own roster id 6…). It is never a wrapstar or driver session.
+ */
+export type SessionRole = "admin" | "wrapstar" | "driver" | "wraprider";
+
 export type Session = {
-  role: "admin" | "wrapstar" | "driver";
+  role: SessionRole;
   userId: string;
   name: string;
 };
+
+export function isContractorRole(role: string | undefined): role is "wrapstar" | "driver" | "wraprider" {
+  return role === "wrapstar" || role === "driver" || role === "wraprider";
+}
 
 const secret = getSessionSecretBytes();
 const dataDir = path.join(process.cwd(), ".data");
@@ -102,6 +112,48 @@ export async function requireCourierSession() {
   const session = await getSession();
   if (!session || session.role !== "driver") return null;
   return session;
+}
+
+/** WrapRider App only (role wraprider). */
+export async function requireWrapriderSession() {
+  const session = await getSession();
+  if (!session || session.role !== "wraprider") return null;
+  return session;
+}
+
+/**
+ * Who is doing wrap work in this request. A WrapStar session acts as itself; a WrapRider
+ * session acts through its linked wrap-capacity id (the 8… row that order allocation uses).
+ * The WrapRider stays a WrapRider — this only resolves which roster id the shift tooling keys on.
+ */
+export async function requireWrapActor(): Promise<{ session: Session; wrapstarId: string } | null> {
+  const session = await getSession();
+  if (!session) return null;
+  if (session.role === "wrapstar") return { session, wrapstarId: session.userId };
+  if (session.role === "wraprider") {
+    const { findWrapriderById } = await import("./wraprider-registry");
+    const wr = await findWrapriderById(session.userId);
+    if (!wr?.wrapstarId) return null;
+    return { session, wrapstarId: wr.wrapstarId };
+  }
+  return null;
+}
+
+/**
+ * Who is doing delivery work in this request. A JoyRider session acts as itself; a WrapRider
+ * session acts through its linked delivery-capacity id (the 7… row order allocation uses).
+ */
+export async function requireDeliveryActor(): Promise<{ session: Session; courierDriverId: string } | null> {
+  const session = await getSession();
+  if (!session) return null;
+  if (session.role === "driver") return { session, courierDriverId: session.userId };
+  if (session.role === "wraprider") {
+    const { findWrapriderById } = await import("./wraprider-registry");
+    const wr = await findWrapriderById(session.userId);
+    if (!wr?.courierDriverId) return null;
+    return { session, courierDriverId: wr.courierDriverId };
+  }
+  return null;
 }
 
 async function ensureAuthFile() {

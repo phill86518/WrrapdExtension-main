@@ -1,7 +1,13 @@
-# Contractor portals — wrapstar.wrrapd.com & joyrider.wrrapd.com
+# Contractor portals — wrapstar.wrrapd.com, joyrider.wrrapd.com & wraprider.wrrapd.com
 
-How activated WrapStars and JoyRiders sign in after onboarding, what "Approve onboarding" migrates,
-and the exact steps to point the two subdomains at the tracking app on Cloud Run.
+How activated WrapStars, JoyRiders, and WrapRiders sign in after onboarding, what "Approve onboarding"
+migrates, and the exact steps to point the three subdomains at the tracking app on Cloud Run.
+
+**Three roles, three apps, three logins.** Each app checks only its own track: a WrapStar account
+is refused on joyrider./wraprider., a JoyRider on wrapstar./wraprider., a WrapRider on
+wrapstar./joyrider. — with a one-line hint pointing at the right host. WrapRiders (hybrid
+wrap + deliver) get **`wraprider.wrrapd.com`** → `/wraprider`, session role `wraprider`, roster id
+6…, `POST /api/wraprider/login`. See `wordpress/WRAPRIDERS-DEPLOY.md` for their WordPress side.
 
 Public names: **WrapStar** (wrapper) and **JoyRider** (courier). Code, URLs, and the WordPress CPT
 still say `driver` / `courier` / `/drive/` — do not rename without a migration.
@@ -12,12 +18,12 @@ still say `driver` / `courier` / `/drive/` — do not rename without a migration
 
 | Stage | Where it happens | Credentials |
 |---|---|---|
-| Apply | `apply.wrrapd.com` (WrapStar) · `apply.wrrapd.com/drive/` (JoyRider) | none |
+| Apply | `apply.wrrapd.com` (WrapStar) · `apply.wrrapd.com/drive/` (JoyRider) · `apply.wrrapd.com/wraprider/` (WrapRider) | none |
 | Review → Approve for onboarding | Command Center → Applications | WordPress issues **username = email** + temporary password (email) |
 | Onboarding (agreements, W-9, insurance, ID, payout) | `pros.wrrapd.com/onboarding/` · `apply.wrrapd.com/drive/driver-onboarding/` | same WordPress login |
 | Profile (during onboarding) | `apply.wrrapd.com/profile/` or `pros.wrrapd.com/profile/` · `apply.wrrapd.com/drive/driver-profile/` | same login; change password here |
 | **Approve onboarding** (final hire step) | Command Center → application → **Approve onboarding → active WrapStar/JoyRider** | onboarding site **closes** for them (sessions signed out) |
-| Work | **`wrapstar.wrrapd.com`** (WrapStar App) · **`joyrider.wrrapd.com`** (JoyRider App) | **same email + password** as onboarding; contact details + password now edited **inside the app** |
+| Work | **`wrapstar.wrrapd.com`** (WrapStar App) · **`joyrider.wrrapd.com`** (JoyRider App) · **`wraprider.wrrapd.com`** (WrapRider App) | **same email + password** as that track's onboarding; contact details + password now edited **inside the app** |
 
 ### One login per stage — hard rules
 
@@ -118,14 +124,14 @@ exist yet, and `wrrapd.com` is **not yet verified** for `admin@wrrapd.com` (requ
 
    `wrrapd.com` must be listed.
 
-### Step B — remove SiteGround's records for the two subdomains
+### Step B — remove SiteGround's records for the three subdomains
 
 SiteGround created A records when the subdomains were added; they must go or the CNAME cannot be added.
 
-1. Site Tools → **Domain → Subdomains** → delete `wrapstar` and `joyrider` (this only removes the
-   SiteGround folder/placeholder; nothing of ours lives there).
+1. Site Tools → **Domain → Subdomains** → delete `wrapstar`, `joyrider`, and `wraprider` (this only
+   removes the SiteGround folder/placeholder; nothing of ours lives there).
 2. Site Tools → **Domain → DNS Zone Editor** → delete any remaining **A** (and AAAA) records whose
-   Name is `wrapstar` or `joyrider`.
+   Name is `wrapstar`, `joyrider`, or `wraprider`.
 
 ### Step C — create the Cloud Run domain mappings (on the VM)
 
@@ -137,6 +143,10 @@ gcloud beta run domain-mappings create \
 gcloud beta run domain-mappings create \
   --service wrrapd-tracking --domain joyrider.wrrapd.com \
   --region us-central1 --project wrrapd-chrome-extension --account admin@wrrapd.com
+
+gcloud beta run domain-mappings create \
+  --service wrrapd-tracking --domain wraprider.wrrapd.com \
+  --region us-central1 --project wrrapd-chrome-extension --account admin@wrrapd.com
 ```
 
 Each command prints the DNS record to add. For a subdomain it is always:
@@ -145,6 +155,7 @@ Each command prints the DNS record to add. For a subdomain it is always:
 |---|---|---|
 | CNAME | `wrapstar` | `ghs.googlehosted.com.` |
 | CNAME | `joyrider` | `ghs.googlehosted.com.` |
+| CNAME | `wraprider` | `ghs.googlehosted.com.` |
 
 ### Step D — add the CNAMEs at SiteGround
 
@@ -152,6 +163,7 @@ Site Tools → Domain → **DNS Zone Editor** → **CNAME** tab → Add:
 
 - Name `wrapstar` → Resolves to `ghs.googlehosted.com`
 - Name `joyrider` → Resolves to `ghs.googlehosted.com`
+- Name `wraprider` → Resolves to `ghs.googlehosted.com`
 
 ### Step E — wait for the certificate, then verify
 
@@ -168,17 +180,19 @@ curl -s https://wrapstar.wrrapd.com/api/tracking-build-info   # marker wrrapd-co
 ```
 
 `https://wrapstar.wrrapd.com/` shows the **WrapStar App Login**; `https://joyrider.wrrapd.com/` shows
-the **JoyRider App Login**. `/admin` on either host redirects to the app; Command Center stays on the
+the **JoyRider App Login**; `https://wraprider.wrrapd.com/` shows the **WrapRider App Login**. `/admin`
+on any of these hosts redirects to that host's app; Command Center stays on the
 run.app URL (map `track.wrrapd.com` the same way later if you want a friendly admin URL).
 
 ### Optional env overrides on Cloud Run (defaults already correct)
 
 Use `--update-env-vars` only (never `--set-env-vars`):
 
-- `WRAPSTAR_PORTAL_HOST=wrapstar.wrrapd.com` · `JOYRIDER_PORTAL_HOST=joyrider.wrrapd.com`
+- `WRAPSTAR_PORTAL_HOST=wrapstar.wrrapd.com` · `JOYRIDER_PORTAL_HOST=joyrider.wrrapd.com` · `WRAPRIDER_PORTAL_HOST=wraprider.wrrapd.com`
 
 WordPress overrides (`wp-config.php`, defaults already correct): `WRRAPD_WRAPSTARS_APP_URL`
-(`https://wrapstar.wrrapd.com/`), `WRRAPD_COURIER_APP_URL` (`https://joyrider.wrrapd.com`).
+(`https://wrapstar.wrrapd.com/`), `WRRAPD_COURIER_APP_URL` (`https://joyrider.wrrapd.com`),
+`WRRAPD_WRAPRIDER_APP_URL` (`https://wraprider.wrrapd.com`).
 
 ---
 

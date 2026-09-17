@@ -10,10 +10,11 @@ Effective: 2026-09-13 until superseded in Command Center → Finance → Hourly 
 
 ## 1. Form of pay
 
-Wrrapd pays WrapStars and JoyRiders an **hourly rate**. Wrrapd does **not** pay a
+Wrrapd pays WrapStars, JoyRiders, and WrapRiders an **hourly rate**. Wrrapd does **not** pay a
 per-order piece rate. Dollar amounts are published in Command Center and, once
 activated, in the contractor app. Amounts may differ by **ZIP code** (exact ZIP or
-3-digit prefix) and by role.
+3-digit prefix) and by role. Each role — WrapStar, JoyRider, WrapRider — has its own
+rate schedule.
 
 ## 2. ZIP lookup
 
@@ -46,6 +47,14 @@ A JoyRider’s hourly work includes: pickup of inbound items from a nearby Wrrap
 location (for example a PO Box); drop to assigned WrapStar(s); pickup of flowers
 and finished wraps; scan of each wrap barcode for address and flower pairing; and
 final delivery of gifts and/or flowers.
+
+## 5a. WrapRider work (both clocks)
+
+A WrapRider is engaged to wrap **and** deliver under a single **WrapRider hourly
+rate** (published in Command Center → Finance → Hourly rates, by ZIP). The
+12-gifts/hour pace applies to wrapping hours only; there is no pace on delivery
+hours. Materials rules in §4 apply to wrapping hours; vehicle/insurance rules in
+the WrapRider agreement apply to delivery hours.
 
 ## 6. Accrual and pay calendar
 

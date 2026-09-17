@@ -255,4 +255,4 @@ Then upload changed files to SiteGround (Part 3). **No PM2 or Cloud Run restart*
 
 Deploy guide: **[WRAPRIDERS-DEPLOY.md](./WRAPRIDERS-DEPLOY.md)**. Legal suite: `docs/legal/wraprider-agreements/` → BoldSign template → `WRRAPD_BOLDSIGN_WRAPRIDER_IC_TEMPLATE_ID`.
 
-`wrrapd-wrapstars-ops-api.php` still hosts the shared `portal-auth` / `portal-password` / `portal-contact` endpoints; those now resolve an active WrapRider (from the WrapRider CPT) so one email + password signs in to both contractor apps.
+`wrrapd-wrapstars-ops-api.php` hosts the `portal-auth` / `portal-password` / `portal-contact` endpoints for all three tracks, but each call names its track (`portal=wrapstar|driver|wraprider`) and resolves **only that CPT** — a WrapRider is never treated as a WrapStar or JoyRider. WrapRiders sign in to their own app, `wraprider.wrrapd.com`.

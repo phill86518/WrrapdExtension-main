@@ -445,6 +445,8 @@ export type HourlyZipRate = {
   zip: string;
   wrapstarCents: number;
   joyriderCents: number;
+  /** WrapRider (third hire track) hourly — own rate, not derived from the other two. Optional on legacy rows. */
+  wrapriderCents?: number;
 };
 
 export type PayoutConfig = {
@@ -461,6 +463,8 @@ export type PayoutConfig = {
   wrapstarHourlyCents: number;
   /** Default JoyRider hourly rate (cents). ZIP overrides win. */
   joyriderHourlyCents: number;
+  /** Default WrapRider hourly rate (cents) — third pay structure. ZIP overrides win. */
+  wrapriderHourlyCents?: number;
   /** Expected finished gifts per WrapStar hour. Reduction = (rate / this) per shortfall. */
   wrapstarPaceGiftsPerHour: number;
   /** Exact ZIP or 3-digit prefix overrides. */

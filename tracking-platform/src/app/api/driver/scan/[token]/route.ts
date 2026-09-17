@@ -3,10 +3,11 @@ import { getSession } from "@/lib/auth";
 import { listAllOrders } from "@/lib/data";
 import { buildDriverLabelPayload, verifyDriverLabelPayload } from "@/lib/driver-label-qr";
 import { findDeliveryDriverById } from "@/lib/driver-registry";
+import { actorIdsForSession } from "@/lib/order-access";
 
 /**
- * Designated Drivers + Admin only: resolve a wrap-label QR token to delivery details.
- * WrapStars cannot read these labels.
+ * Designated Drivers, WrapRiders (delivery side), + Admin only: resolve a wrap-label QR token
+ * to delivery details. WrapStars cannot read these labels.
  */
 export async function GET(
   _request: Request,
@@ -21,7 +22,8 @@ export async function GET(
     return NextResponse.json({ error: "Driver access only." }, { status: 403 });
   }
   if (session.role !== "admin") {
-    const courier = await findDeliveryDriverById(session.userId);
+    const { courierDriverId } = await actorIdsForSession(session);
+    const courier = courierDriverId ? await findDeliveryDriverById(courierDriverId) : undefined;
     if (!courier) {
       // Legacy WrapStar sessions used role "driver" — deny unless courier registry match.
       return NextResponse.json({ error: "Driver access only." }, { status: 403 });

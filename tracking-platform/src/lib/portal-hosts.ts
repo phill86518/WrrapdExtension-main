@@ -1,11 +1,12 @@
 /**
  * Contractor portal hostnames (Cloud Run domain mappings on the same `wrrapd-tracking` service).
  *
- *   wrapstar.wrrapd.com  → WrapStar App   (/wrapstar)
- *   joyrider.wrrapd.com  → JoyRider App   (/courier — code/URL slug still says courier/driver)
+ *   wrapstar.wrrapd.com   → WrapStar App   (/wrapstar)
+ *   joyrider.wrrapd.com   → JoyRider App   (/courier — code/URL slug still says courier/driver)
+ *   wraprider.wrrapd.com  → WrapRider App  (/wraprider — third hire track, own login)
  *
- * Override with WRAPSTAR_PORTAL_HOST / JOYRIDER_PORTAL_HOST (comma-separated aliases allowed).
- * Setup runbook: docs/CONTRACTOR-PORTALS.md
+ * Override with WRAPSTAR_PORTAL_HOST / JOYRIDER_PORTAL_HOST / WRAPRIDER_PORTAL_HOST
+ * (comma-separated aliases allowed). Setup runbook: docs/CONTRACTOR-PORTALS.md
  */
 
 function hostList(envValue: string | undefined, fallback: string): string[] {
@@ -24,8 +25,20 @@ export const JOYRIDER_PORTAL_HOSTS = hostList(
   process.env.JOYRIDER_PORTAL_HOST,
   "joyrider.wrrapd.com",
 );
+export const WRAPRIDER_PORTAL_HOSTS = hostList(
+  process.env.WRAPRIDER_PORTAL_HOST,
+  "wraprider.wrrapd.com",
+);
 
-export type PortalKind = "wrapstar" | "joyrider";
+export type PortalKind = "wrapstar" | "joyrider" | "wraprider";
+
+export type PortalHomePath = "/wrapstar" | "/courier" | "/wraprider";
+
+export const PORTAL_HOME_PATHS: Record<PortalKind, PortalHomePath> = {
+  wrapstar: "/wrapstar",
+  joyrider: "/courier",
+  wraprider: "/wraprider",
+};
 
 /** Strip port and pick the first forwarded host. */
 export function normalizeHost(host: string | null | undefined): string {
@@ -38,12 +51,20 @@ export function portalKindForHost(host: string | null | undefined): PortalKind |
   if (!h) return null;
   if (WRAPSTAR_PORTAL_HOSTS.includes(h)) return "wrapstar";
   if (JOYRIDER_PORTAL_HOSTS.includes(h)) return "joyrider";
+  if (WRAPRIDER_PORTAL_HOSTS.includes(h)) return "wraprider";
   return null;
 }
 
 /** App path the portal host should land on. */
-export function portalHomePath(kind: PortalKind): "/wrapstar" | "/courier" {
-  return kind === "wrapstar" ? "/wrapstar" : "/courier";
+export function portalHomePath(kind: PortalKind): PortalHomePath {
+  return PORTAL_HOME_PATHS[kind];
+}
+
+/** The other contractor app paths — redirected back home on a portal host. */
+export function otherPortalPaths(kind: PortalKind): PortalHomePath[] {
+  return (Object.keys(PORTAL_HOME_PATHS) as PortalKind[])
+    .filter((k) => k !== kind)
+    .map((k) => PORTAL_HOME_PATHS[k]);
 }
 
 /** Public URL for the WrapStar app (emails, links). */
@@ -54,4 +75,9 @@ export function wrapstarPortalUrl(): string {
 /** Public URL for the JoyRider app (emails, links). */
 export function joyriderPortalUrl(): string {
   return `https://${JOYRIDER_PORTAL_HOSTS[0]}/`;
+}
+
+/** Public URL for the WrapRider app (emails, links). */
+export function wrapriderPortalUrl(): string {
+  return `https://${WRAPRIDER_PORTAL_HOSTS[0]}/`;
 }

@@ -91,7 +91,8 @@ export default async function AdminFinancePage({
           <p className="text-xs uppercase text-slate-500">Hourly defaults</p>
           <p className="mt-1 text-2xl font-semibold">
             ${((config.wrapstarHourlyCents || 2500) / 100).toFixed(0)} WS · $
-            {((config.joyriderHourlyCents || 2200) / 100).toFixed(0)} JR
+            {((config.joyriderHourlyCents || 2200) / 100).toFixed(0)} JR · $
+            {((config.wrapriderHourlyCents || 2400) / 100).toFixed(0)} WR
           </p>
           <Link href="/admin/finance/rates" className="text-xs text-blue-700 underline">
             Edit hourly rates

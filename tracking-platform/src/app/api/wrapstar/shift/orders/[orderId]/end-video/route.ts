@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireWrapstarSession } from "@/lib/auth";
+import { requireWrapActor } from "@/lib/auth";
 import { endOrderVideo, getActiveShift, registerVideoSegment } from "@/lib/shift-store";
 import {
   createSignedVideoUploadUrl,
@@ -13,12 +13,12 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ orderId: string }> },
 ) {
-  const session = await requireWrapstarSession();
-  if (!session) {
+  const actor = await requireWrapActor();
+  if (!actor) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const { orderId } = await params;
-  const shift = await getActiveShift(session.userId);
+  const shift = await getActiveShift(actor.wrapstarId);
   if (!shift) {
     return NextResponse.json({ error: "No active shift." }, { status: 400 });
   }
@@ -82,7 +82,7 @@ export async function POST(
       await registerVideoSegment({
         shiftId: shift.id,
         orderId,
-        wrapstarId: session.userId,
+        wrapstarId: actor.wrapstarId,
         segmentIndex: Number(body.segmentIndex ?? 999),
         startedAt: order.wrapVideoStartedAt || new Date().toISOString(),
         endedAt: new Date().toISOString(),
@@ -96,7 +96,7 @@ export async function POST(
     }
   }
 
-  const result = await endOrderVideo(session.userId, orderId, { videoUrl, storagePath });
+  const result = await endOrderVideo(actor.wrapstarId, orderId, { videoUrl, storagePath });
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: 400 });
   }

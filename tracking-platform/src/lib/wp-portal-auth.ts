@@ -2,9 +2,10 @@
  * Verify a contractor's WordPress onboarding credentials (email + password) through the
  * WrapStars ops API (`POST /wrrapd/v1/portal-auth`, ops key, via the api.wrrapd.com bridge).
  *
- * One login everywhere: the username/password issued at approval on apply.wrrapd.com keeps
- * working on wrapstar.wrrapd.com and joyrider.wrrapd.com. WrapRiders (third hire track, own
- * CPT) get both apps with a single account — WordPress mirrors them into both role slots.
+ * The username/password issued at approval on apply.wrrapd.com is the login for that person's
+ * OWN app: WrapStars → wrapstar.wrrapd.com, JoyRiders → joyrider.wrrapd.com, WrapRiders →
+ * wraprider.wrrapd.com. Each app checks only its own role slot; WordPress never mirrors one
+ * track into another.
  */
 
 export type PortalAuthRole = {
@@ -15,11 +16,7 @@ export type PortalAuthRole = {
   greetingName?: string;
   activatedAt?: string;
   mustChangePassword?: boolean;
-  /**
-   * "wraprider" when this role entry was satisfied by an active WrapRider application (third
-   * hire track, own CPT). WordPress mirrors an active WrapRider into `roles.wrapstar` and
-   * `roles.driver` so one account signs in to both contractor apps.
-   */
+  /** Which CPT produced this entry — always matches the slot it sits in. */
   hireRole?: "wrapstar" | "driver" | "wraprider";
 };
 

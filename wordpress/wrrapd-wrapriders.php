@@ -6,8 +6,8 @@
  *
  * Distinct from the WrapStar CPT (wrrapd_wrapstar_app) and the JoyRider CPT (wrrapd_driver_app):
  * a WrapRider application never touches either of those tables. After Command Center activation
- * the WrapRider signs in to BOTH contractor apps (wrapstar.wrrapd.com + joyrider.wrrapd.com)
- * with the same email + password issued here.
+ * the WrapRider signs in to their OWN app (wraprider.wrrapd.com) with the email + password issued
+ * here. WrapRiders are refused on the WrapStar and JoyRider apps — third role, third login.
  *
  * Install alongside WrapStars / Drivers MU-plugins on the dedicated apply/pros WordPress:
  *   wp-content/mu-plugins/wrrapd-wrapriders.php
@@ -276,32 +276,28 @@ function wrrapd_wrapriders_onboarding_step_url( $step ) {
 }
 
 /**
- * Post-activation delivery app for WrapRiders (the JoyRider app, Cloud Run).
- * Override with WRRAPD_COURIER_APP_URL in wp-config.php.
+ * Post-activation WrapRider App (Cloud Run, wraprider.wrrapd.com) — the WrapRider's OWN app with
+ * its own login. WrapRiders do not sign in to the WrapStar or JoyRider apps.
+ * Override with WRRAPD_WRAPRIDER_APP_URL in wp-config.php.
  */
+function wrrapd_wrapriders_app_url() {
+	if ( defined( 'WRRAPD_WRAPRIDER_APP_URL' ) && WRRAPD_WRAPRIDER_APP_URL !== '' ) {
+		return rtrim( (string) WRRAPD_WRAPRIDER_APP_URL, '/' );
+	}
+	return 'https://wraprider.wrrapd.com';
+}
+
+/** Back-compat aliases — both the wrap and delivery sides live in the one WrapRider App. */
 function wrrapd_wrapriders_courier_app_url() {
-	if ( defined( 'WRRAPD_COURIER_APP_URL' ) && WRRAPD_COURIER_APP_URL !== '' ) {
-		return rtrim( (string) WRRAPD_COURIER_APP_URL, '/' );
-	}
-	return 'https://joyrider.wrrapd.com';
+	return wrrapd_wrapriders_app_url();
 }
-
-/**
- * Post-activation wrapping app for WrapRiders (the WrapStar app, Cloud Run).
- * Override with WRRAPD_WRAPSTAR_APP_URL in wp-config.php.
- */
 function wrrapd_wrapriders_wrap_app_url() {
-	if ( defined( 'WRRAPD_WRAPSTAR_APP_URL' ) && WRRAPD_WRAPSTAR_APP_URL !== '' ) {
-		return rtrim( (string) WRRAPD_WRAPSTAR_APP_URL, '/' );
-	}
-	return 'https://wrapstar.wrrapd.com';
+	return wrrapd_wrapriders_app_url();
 }
 
-/** "wrapstar.wrrapd.com and joyrider.wrrapd.com" for emails / copy. */
+/** "wraprider.wrrapd.com" for emails / copy. */
 function wrrapd_wrapriders_app_hosts_text() {
-	$wrap = preg_replace( '#^https?://#', '', wrrapd_wrapriders_wrap_app_url() );
-	$ride = preg_replace( '#^https?://#', '', wrrapd_wrapriders_courier_app_url() );
-	return $wrap . ' and ' . $ride;
+	return preg_replace( '#^https?://#', '', wrrapd_wrapriders_app_url() );
 }
 
 /** WrapRider profile page on the apply/pros WordPress. */
@@ -336,7 +332,7 @@ function wrrapd_wrapriders_set_user_role( $user_id, $role ) {
 
 /**
  * Once Command Center approves onboarding (status active) the onboarding portal is closed for
- * that WrapRider — they use joyrider.wrrapd.com from then on. Command Center can temporarily
+ * that WrapRider — they use wraprider.wrrapd.com from then on. Command Center can temporarily
  * reopen it (meta onboarding_reopened = 1) for the rare re-sign / re-upload case.
  *
  * @return bool
@@ -1445,7 +1441,7 @@ function wrrapd_wrapriders_render_step_welcome( $app_id ) {
 	<div class="wrrapd-wrapstars-card wrrapd-wrapstars-card--hero">
 		<p class="wrrapd-wrapstars-welcome__hello">Dear <?php echo esc_html( $greet === 'there' ? 'WrapRider' : $greet ); ?>,</p>
 		<p class="wrrapd-wrapstars-ob-lead">Welcome to the Wrrapd WrapRider network. This onboarding confirms your agreement, screening, vehicle insurance, wrapping space, tax, and payout details before you can accept wrap and delivery offers.</p>
-		<p class="wrrapd-wrapstars-ob-lead">Complete each step promptly so ops can activate your account. After activation the same email and password open both the WrapStar app (wrapping) and the JoyRider app (deliveries).</p>
+		<p class="wrrapd-wrapstars-ob-lead">Complete each step promptly so ops can activate your account. After activation the same email and password open the WrapRider app.</p>
 		<form method="post" class="wrrapd-wrapstars-ob-actions">
 			<?php wp_nonce_field( 'wrrapd_wr_onboarding', 'wrrapd_wr_nonce' ); ?>
 			<input type="hidden" name="wrrapd_wr_action" value="onboarding_step" />
@@ -1469,7 +1465,7 @@ function wrrapd_wrapriders_render_step_orientation( $app_id ) {
 			<label>How do you load delivery details for a gift you finished wrapping?
 				<select name="q1" required>
 					<option value="">Select…</option>
-					<option value="scan">Scan the box QR in the JoyRider app</option>
+					<option value="scan">Scan the box QR in the WrapRider app</option>
 					<option value="call">Call the customer for the address</option>
 					<option value="guess">Guess from the order number</option>
 				</select>
@@ -1563,20 +1559,15 @@ function wrrapd_wrapriders_render_step_workspace( $app_id ) {
 }
 
 function wrrapd_wrapriders_render_step_activation( $app_id ) {
-	$wrap_url = wrrapd_wrapriders_wrap_app_url();
-	$ride_url = wrrapd_wrapriders_courier_app_url();
+	$app_url = wrrapd_wrapriders_app_url();
 	?>
 	<div class="wrrapd-wrapstars-card">
-		<h2>Final review &amp; your two apps</h2>
-		<p class="wrrapd-wrapstars-ob-lead">You have completed onboarding. Our team now reviews your documents and activates your account. After activation, the same email and password you use here sign you in to both apps.</p>
+		<h2>Final review &amp; your WrapRider app</h2>
+		<p class="wrrapd-wrapstars-ob-lead">You have completed onboarding. Our team now reviews your documents and activates your account. After activation, the same email and password you use here sign you in to the WrapRider app.</p>
 		<div class="wrrapd-wrapriders-app-cta">
-			<p><strong>WrapStar app</strong> — wrap assignments, supplies, and hand-offs.</p>
-			<p><a class="wrrapd-wrapstars-btn" href="<?php echo esc_url( $wrap_url ); ?>" target="_blank" rel="noopener">Open the WrapStar app</a></p>
-		</div>
-		<div class="wrrapd-wrapriders-app-cta">
-			<p><strong>JoyRider app</strong> — delivery offers, routes, and proof of delivery.</p>
-			<p><a class="wrrapd-wrapstars-btn" href="<?php echo esc_url( $ride_url ); ?>" target="_blank" rel="noopener">Open the JoyRider app</a></p>
-			<p class="wrrapd-wrapstars-ob-note">App Store / Play Store links will appear here when the native apps are published. Until then use the web apps above.</p>
+			<p><strong>WrapRider app</strong> — your wrap jobs, shift tools, deliveries, and proof of delivery in one place.</p>
+			<p><a class="wrrapd-wrapstars-btn" href="<?php echo esc_url( $app_url ); ?>" target="_blank" rel="noopener">Open the WrapRider app</a></p>
+			<p class="wrrapd-wrapstars-ob-note">App Store / Play Store links will appear here when the native app is published. Until then use the web app above.</p>
 		</div>
 		<p class="wrrapd-wrapstars-ob-note">No further action is needed here — watch email from <?php echo esc_html( wrrapd_wrapriders_from_email_address() ); ?> for activation confirmation.</p>
 	</div>
@@ -1654,7 +1645,7 @@ function wrrapd_wrapriders_shortcode_landing() {
 			<section class="wrrapd-wrapstars-dasher-band">
 				<div class="wrrapd-wrapstars-dasher-band__item wrrapd-wrapstars-dasher-box">
 					<h2>Two roles, one login</h2>
-					<p>After activation the same email and password open the WrapStar app for wrapping and the JoyRider app for deliveries.</p>
+					<p>After activation the same email and password open the WrapRider app — wrap jobs and deliveries in one place.</p>
 				</div>
 				<div class="wrrapd-wrapstars-dasher-band__item wrrapd-wrapstars-dasher-box">
 					<h2>Wrap, then ride</h2>
@@ -1818,7 +1809,7 @@ function wrrapd_wrapriders_shortcode_onboarding( $atts ) {
 	if ( ! $app || (string) wrrapd_wrapriders_get_meta( $app->ID, 'status' ) !== 'approved' ) {
 		$status = $app ? wrrapd_wrapriders_get_meta( $app->ID, 'status' ) : '';
 		if ( $status === 'active' ) {
-			return '<div class="wrrapd-wrapstars-card"><p>Your WrapRider account is active. <a href="' . esc_url( wrrapd_wrapriders_wrap_app_url() ) . '">Open the WrapStar app</a> to wrap or <a href="' . esc_url( wrrapd_wrapriders_courier_app_url() ) . '">the JoyRider app</a> to deliver.</p></div>';
+			return '<div class="wrrapd-wrapstars-card"><p>Your WrapRider account is active. <a href="' . esc_url( wrrapd_wrapriders_app_url() ) . '">Open the WrapRider app</a>.</p></div>';
 		}
 		return '<p class="wrrapd-wrapstars-alert">Onboarding is available after approval.</p>';
 	}
@@ -1902,8 +1893,7 @@ function wrrapd_wrapriders_shortcode_profile() {
 	$pw_error = $GLOBALS['wrrapd_wr_profile_pw_error'] ?? '';
 	$full     = (string) wrrapd_wrapriders_get_meta( $id, 'full_name' );
 	$greet    = wrrapd_wrapriders_greeting_name( $id );
-	$app_url  = wrrapd_wrapriders_courier_app_url();
-	$wrap_url = wrrapd_wrapriders_wrap_app_url();
+	$app_url  = wrrapd_wrapriders_app_url();
 	$app_host = wrrapd_wrapriders_app_hosts_text();
 
 	$fmt = static function ( $iso, $with_time = false ) {
@@ -2010,7 +2000,7 @@ function wrrapd_wrapriders_shortcode_profile() {
 					<?php if ( wrrapd_wrapriders_get_meta( $id, 'delivery_experience' ) !== '' ) : ?><div class="is-wide"><dt>Delivery experience</dt><dd><?php echo esc_html( wrrapd_wrapriders_get_meta( $id, 'delivery_experience' ) ); ?></dd></div><?php endif; ?>
 				</dl>
 				<?php if ( $status === 'active' ) : ?>
-					<p class="wrrapd-ws-profile__app"><a class="wrrapd-wrapstars-btn" href="<?php echo esc_url( $wrap_url ); ?>">Open the WrapStar app</a> <a class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--ghost" href="<?php echo esc_url( $app_url ); ?>">Open the JoyRider app</a></p>
+					<p class="wrrapd-ws-profile__app"><a class="wrrapd-wrapstars-btn" href="<?php echo esc_url( $app_url ); ?>">Open the WrapRider app</a></p>
 				<?php endif; ?>
 			</section>
 
@@ -2097,9 +2087,9 @@ function wrrapd_wrapriders_shortcode_profile() {
 				<div><dt>Password</dt><dd>••••••••••<?php echo $pw_changed !== '' ? ' <span class="wrrapd-ws-profile__muted">· changed ' . esc_html( $pw_changed ) . '</span>' : ''; ?></dd></div>
 				<div class="is-wide"><dt>Where to sign in</dt><dd>
 					<?php if ( $status === 'active' ) : ?>
-						<a href="<?php echo esc_url( $wrap_url ); ?>">WrapStar app</a> (wrapping) and <a href="<?php echo esc_url( $app_url ); ?>">JoyRider app</a> (deliveries) — same email and password for both.
+						<a href="<?php echo esc_url( $app_url ); ?>">WrapRider app</a> — same email and password as here.
 					<?php else : ?>
-						<a href="<?php echo esc_url( wrrapd_wrapriders_pros_url( '/wraprider-onboarding/' ) ); ?>">Onboarding</a> for now. Once you are activated, the same email and password open both apps: <?php echo esc_html( $app_host ); ?>.
+						<a href="<?php echo esc_url( wrrapd_wrapriders_pros_url( '/wraprider-onboarding/' ) ); ?>">Onboarding</a> for now. Once you are activated, the same email and password open the WrapRider app: <?php echo esc_html( $app_host ); ?>.
 					<?php endif; ?>
 				</dd></div>
 			</dl>
@@ -2162,7 +2152,7 @@ function wrrapd_wrapriders_admin_page() {
 	);
 	echo '<div class="wrap"><h1>WrapRider Applications</h1>';
 	echo '<p>Day-to-day hiring: Command Center → Applications (WrapRider filter). This WP screen can also interview, skip interview, approve, or reject.</p>';
-	echo '<p>Portal: <strong>apply.wrrapd.com/wraprider/</strong> · onboarding <strong>pros.wrrapd.com/wraprider-onboarding/</strong> · after activation: wrapstar.wrrapd.com + joyrider.wrrapd.com</p>';
+	echo '<p>Portal: <strong>apply.wrrapd.com/wraprider/</strong> · onboarding <strong>pros.wrrapd.com/wraprider-onboarding/</strong> · after activation: wraprider.wrrapd.com (own app + login)</p>';
 	foreach ( $posts as $p ) {
 		$id     = (int) $p->ID;
 		$status = (string) wrrapd_wrapriders_get_meta( $id, 'status' );

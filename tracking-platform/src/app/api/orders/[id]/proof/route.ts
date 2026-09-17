@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
+import { getSession, isContractorRole } from "@/lib/auth";
 import { saveProofPhoto } from "@/lib/data";
 import { loadOrderIfMutable } from "@/lib/order-access";
 
@@ -8,7 +8,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const session = await getSession();
-  if (!session || (session.role !== "driver" && session.role !== "wrapstar")) {
+  if (!session || !isContractorRole(session.role)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const { id } = await params;

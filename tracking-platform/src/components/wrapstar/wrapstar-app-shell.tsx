@@ -7,6 +7,7 @@ import { WrrapdLogo } from "@/components/wrrapd-logo";
 export type WrapstarNavSection =
   | "today"
   | "shift"
+  | "deliveries"
   | "availability"
   | "earnings"
   | "account"
@@ -15,6 +16,7 @@ export type WrapstarNavSection =
 const NAV: { id: WrapstarNavSection; label: string }[] = [
   { id: "today", label: "Home / Today" },
   { id: "shift", label: "Start Shift" },
+  { id: "deliveries", label: "Deliveries" },
   { id: "availability", label: "Availability" },
   { id: "earnings", label: "Earnings" },
   { id: "account", label: "Account" },
@@ -27,11 +29,17 @@ type Props = {
   initialSection?: WrapstarNavSection;
   today: ReactNode;
   shift: ReactNode;
+  /** WrapRider app only — the delivery side. Omit for the WrapStar app (nav item hidden). */
+  deliveries?: ReactNode;
   availability: ReactNode;
   earnings: ReactNode;
   account: ReactNode;
   help: ReactNode;
   installCard?: ReactNode;
+  /** App branding — "WrapStar" (default) or "WrapRider" (third contractor app, same shell). */
+  appLabel?: "WrapStar" | "WrapRider";
+  /** Where Log out lands — defaults to the WrapStar app. */
+  logoutPath?: string;
 };
 
 export function WrapstarAppShell({
@@ -40,14 +48,18 @@ export function WrapstarAppShell({
   initialSection = "today",
   today,
   shift,
+  deliveries,
   availability,
   earnings,
   account,
   help,
   installCard,
+  appLabel = "WrapStar",
+  logoutPath = "/wrapstar",
 }: Props) {
   const [section, setSection] = useState<WrapstarNavSection>(initialSection);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const nav = deliveries === undefined ? NAV.filter((n) => n.id !== "deliveries") : NAV;
 
   function go(id: WrapstarNavSection) {
     setSection(id);
@@ -59,15 +71,17 @@ export function WrapstarAppShell({
       ? today
       : section === "shift"
         ? shift
-        : section === "availability"
-          ? availability
-          : section === "earnings"
-            ? earnings
-            : section === "account"
-              ? account
-              : help;
+        : section === "deliveries"
+          ? deliveries ?? today
+          : section === "availability"
+            ? availability
+            : section === "earnings"
+              ? earnings
+              : section === "account"
+                ? account
+                : help;
 
-  const title = NAV.find((n) => n.id === section)?.label ?? "WrapStar";
+  const title = nav.find((n) => n.id === section)?.label ?? appLabel;
 
   return (
     <div className="relative min-h-screen bg-slate-50">
@@ -88,12 +102,12 @@ export function WrapstarAppShell({
       >
         <div className="border-b border-white/10 px-4 py-5">
           <WrrapdLogo className="h-10 w-auto max-w-[180px] brightness-0 invert" />
-          <p className="mt-3 text-lg font-semibold tracking-tight">WrapStar</p>
+          <p className="mt-3 text-lg font-semibold tracking-tight">{appLabel}</p>
           <p className="mt-0.5 truncate text-sm text-slate-300">{wrapstarName}</p>
           <p className="mt-1 font-mono text-[11px] text-slate-500">ID {wrapstarId}</p>
         </div>
         <nav className="flex-1 overflow-y-auto px-2 py-3">
-          {NAV.map((item) => {
+          {nav.map((item) => {
             const active = section === item.id;
             return (
               <button
@@ -112,7 +126,7 @@ export function WrapstarAppShell({
           })}
         </nav>
         <div className="border-t border-white/10 p-3">
-          <LogoutButton redirectPath="/wrapstar" />
+          <LogoutButton redirectPath={logoutPath} />
         </div>
       </aside>
 
@@ -135,7 +149,7 @@ export function WrapstarAppShell({
         </button>
         <div className="min-w-0 flex-1">
           <p className="truncate text-base font-semibold text-slate-900">{title}</p>
-          <p className="truncate text-xs text-slate-500">WrapStar App</p>
+          <p className="truncate text-xs text-slate-500">{appLabel} App</p>
         </div>
       </header>
 

@@ -28,7 +28,7 @@ Resolution order for a given 5-digit US ZIP:
 
 1. Exact ZIP override in Command Center (`/admin/finance/rates`)
 2. 3-digit ZIP prefix override (covers a metro slice, e.g. `322` for Jacksonville)
-3. Role default (WrapStar default or JoyRider default)
+3. Role default (WrapStar, JoyRider, or WrapRider default — three separate pay structures)
 
 All amounts are stored in **cents**. Command Center edits them as dollars.
 
@@ -38,6 +38,7 @@ Starter defaults (edit before first live shift — these are placeholders, not a
 |---|---|
 | WrapStar | $25.00 |
 | JoyRider | $22.00 |
+| WrapRider | $24.00 (own rate — not derived from the other two) |
 
 Home ZIP on the application / roster row is the ZIP used unless ops sets a different
 work ZIP on the contractor record.

@@ -4,7 +4,7 @@
  * activation, so password + contact edits happen here.
  */
 
-/** WordPress resolves an active WrapRider automatically when the wrapstar/driver CPT has no row. */
+/** One value per contractor app / CPT. WordPress resolves strictly within the named track. */
 export type PortalKind = "wrapstar" | "driver" | "wraprider";
 
 export type PortalContactFields = {

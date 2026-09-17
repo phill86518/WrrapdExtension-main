@@ -6,10 +6,10 @@ import {
   SESSION_MAX_AGE_SEC,
   getSessionSecretBytes,
 } from "@/lib/session-constants";
-import { portalHomePath, portalKindForHost } from "@/lib/portal-hosts";
+import { otherPortalPaths, portalHomePath, portalKindForHost } from "@/lib/portal-hosts";
 
 type SessionPayload = {
-  role: "admin" | "wrapstar" | "driver";
+  role: "admin" | "wrapstar" | "driver" | "wraprider";
   userId: string;
   name: string;
 };
@@ -20,24 +20,23 @@ export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   /**
-   * Contractor portal hosts: wrapstar.wrrapd.com → /wrapstar, joyrider.wrrapd.com → /courier.
-   * The root of each host rewrites to its app (URL bar stays clean); the *other* contractor app
-   * and Command Center redirect away so one host = one audience.
+   * Contractor portal hosts: wrapstar.wrrapd.com → /wrapstar, joyrider.wrrapd.com → /courier,
+   * wraprider.wrrapd.com → /wraprider. The root of each host rewrites to its app (URL bar stays
+   * clean); the *other* contractor apps and Command Center redirect away so one host = one audience.
    */
   const portal = portalKindForHost(
     request.headers.get("x-forwarded-host") || request.headers.get("host"),
   );
   if (portal) {
     const home = portalHomePath(portal);
-    const other = portal === "wrapstar" ? "/courier" : "/wrapstar";
+    const others = otherPortalPaths(portal);
     if (pathname === "/" || pathname === "/platform") {
       const u = request.nextUrl.clone();
       u.pathname = home;
       return NextResponse.rewrite(u);
     }
     if (
-      pathname === other ||
-      pathname.startsWith(`${other}/`) ||
+      others.some((other) => pathname === other || pathname.startsWith(`${other}/`)) ||
       pathname === "/admin" ||
       pathname.startsWith("/admin/") ||
       pathname === "/driver" ||
@@ -68,6 +67,11 @@ export async function middleware(request: NextRequest) {
   if (pathname === "/Wrapstar" || pathname.startsWith("/Wrapstar/")) {
     const u = request.nextUrl.clone();
     u.pathname = `/wrapstar${pathname.slice("/Wrapstar".length)}`;
+    return NextResponse.redirect(u);
+  }
+  if (pathname === "/Wraprider" || pathname.startsWith("/Wraprider/")) {
+    const u = request.nextUrl.clone();
+    u.pathname = `/wraprider${pathname.slice("/Wraprider".length)}`;
     return NextResponse.redirect(u);
   }
 
@@ -105,6 +109,9 @@ export const config = {
     "/driver/:path*",
     "/courier/:path*",
     "/wrapstar/:path*",
+    "/wraprider/:path*",
+    "/Wraprider",
+    "/Wraprider/:path*",
     "/Admin",
     "/Admin/:path*",
     "/Driver",

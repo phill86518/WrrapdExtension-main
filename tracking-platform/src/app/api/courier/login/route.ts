@@ -17,8 +17,7 @@ import { touchContractorLogin } from "@/lib/contractor-records";
  *
  * Primary: WordPress onboarding email + password. Account must be an activated JoyRider
  * ("Approve onboarding" in Command Center) and on the DeliveryDriver roster.
- * Activated WrapRiders (third hire track) also sign in here — WordPress mirrors them into
- * `roles.driver` and activation gives them a hidden DeliveryDriver roster row.
+ * WrapRiders are a separate role with their own app (wraprider.wrrapd.com) — refused here.
  * Fallback: roster name / email / 10-digit ID (7…) + shared contractor passcode.
  */
 export async function POST(request: NextRequest) {
@@ -51,10 +50,10 @@ export async function POST(request: NextRequest) {
     if (auth.ok) {
       const role = auth.roles.driver;
       if (!role) {
-        return NextResponse.json(
-          { ok: false, error: "This account is not a JoyRider. WrapStars sign in at wrapstar.wrrapd.com." },
-          { status: 403 },
-        );
+        const hint = auth.roles.wraprider
+          ? "This account is a WrapRider. Sign in at wraprider.wrrapd.com."
+          : "This account is not a JoyRider. WrapStars sign in at wrapstar.wrrapd.com.";
+        return NextResponse.json({ ok: false, error: hint }, { status: 403 });
       }
       if (role.suspended) {
         return NextResponse.json(
@@ -82,11 +81,14 @@ export async function POST(request: NextRequest) {
       if (roster.status !== "approved") {
         return NextResponse.json({ ok: false, error: "JoyRider not approved" }, { status: 403 });
       }
-      void touchContractorLogin("driver", roster.id).catch(() => undefined);
-      if (roster.hireRole === "wraprider" && roster.wrapriderId) {
-        // WrapRider (third hire track) — also stamp their own Command Center record.
-        void touchContractorLogin("wraprider", roster.wrapriderId).catch(() => undefined);
+      if (roster.hireRole === "wraprider") {
+        // Capacity row only — WrapRiders have their own app and login.
+        return NextResponse.json(
+          { ok: false, error: "This account is a WrapRider. Sign in at wraprider.wrrapd.com." },
+          { status: 403 },
+        );
       }
+      void touchContractorLogin("driver", roster.id).catch(() => undefined);
       return issueSession(roster.id, roster.name);
     }
     // WordPress is the only authority for email logins — no shared-passcode fallback.

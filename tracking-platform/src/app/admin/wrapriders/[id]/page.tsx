@@ -63,20 +63,20 @@ export default async function AdminWrapriderDetailPage({
       <h1 className="mt-3 text-2xl font-semibold text-slate-900">{wraprider.name}</h1>
       <p className="font-mono text-sm text-slate-600">{wraprider.displayId || wraprider.id}</p>
       <p className="mt-1 text-xs text-slate-500">
-        {WRAPRIDER_LABEL} — wrap and deliver. Apps: wrapstar.wrrapd.com + joyrider.wrrapd.com
+        {WRAPRIDER_LABEL} — wrap and deliver. App: wraprider.wrrapd.com (own login)
       </p>
       <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-950">
         Open orders: <strong>{open.length}</strong> · lifetime unique: <strong>{orders.length}</strong>
         {wraprider.wrapstarId ? (
           <>
             {" "}
-            · wrap-app login <span className="font-mono">{wraprider.wrapstarId}</span>
+            · wrap capacity id <span className="font-mono">{wraprider.wrapstarId}</span>
           </>
         ) : null}
         {wraprider.courierDriverId ? (
           <>
             {" "}
-            · courier-app login <span className="font-mono">{wraprider.courierDriverId}</span>
+            · delivery capacity id <span className="font-mono">{wraprider.courierDriverId}</span>
           </>
         ) : null}
       </p>
