@@ -69,6 +69,7 @@ define( 'WRRAPD_WRAPSTARS_PROS_HOST', 'pros.wrrapd.com' );
 define( 'WRRAPD_BOLDSIGN_API_KEY', 'paste-api-key' );
 define( 'WRRAPD_BOLDSIGN_IC_TEMPLATE_ID', 'paste-ic-template-id' );
 define( 'WRRAPD_BOLDSIGN_W9_TEMPLATE_ID', 'paste-w9-template-id' );
+define( 'WRRAPD_BOLDSIGN_WRAPRIDER_IC_TEMPLATE_ID', 'paste-wraprider-ic-template-id' );
 
 /* Optional outbound email */
 define( 'WRRAPD_WRAPSTARS_FROM_EMAIL', 'wrapstars@wrrapd.com' );
@@ -206,6 +207,7 @@ Use **parent page** `onboarding` for child slugs in WordPress (Pages → Attribu
 1. **WP Admin → Performance → Purge All Caches** (if caching plugin installed)
 2. Confirm both URLs load:
    - `https://apply.wrrapd.com/apply/`
+   - `https://apply.wrrapd.com/wraprider/apply/`
    - `https://pros.wrrapd.com/onboarding/`
 3. Confirm `wrrapd.com` does **not** load WrapStars header (MU-plugin inactive there)
 
@@ -244,3 +246,13 @@ Then upload changed files to SiteGround (Part 3). **No PM2 or Cloud Run restart*
 - Applicant files stored in `wp-content/wrapstars-private/` (`.htaccess` deny all)
 - BoldSign API key server-side only
 - Background checks **not** implemented (insurance + video + contract mitigation instead)
+
+---
+
+## WrapRiders (third hire track — wrap + deliver)
+
+**Not part of this plugin.** WrapRiders have their **own** CPT (`wrrapd_wraprider_app`), apply form (`/wraprider/apply/`), onboarding portal (`pros.wrrapd.com/wraprider-onboarding/`), ops API (`/wraprider-applications`), WP Admin menu, and Command Center board (`/admin/wrapriders`, IDs prefix **6**). The WrapStar landing only links to them (`/wraprider/`), and `wrrapd-wrapstars.php` deliberately leaves every `/wraprider/*` path alone.
+
+Deploy guide: **[WRAPRIDERS-DEPLOY.md](./WRAPRIDERS-DEPLOY.md)**. Legal suite: `docs/legal/wraprider-agreements/` → BoldSign template → `WRRAPD_BOLDSIGN_WRAPRIDER_IC_TEMPLATE_ID`.
+
+`wrrapd-wrapstars-ops-api.php` still hosts the shared `portal-auth` / `portal-password` / `portal-contact` endpoints; those now resolve an active WrapRider (from the WrapRider CPT) so one email + password signs in to both contractor apps.

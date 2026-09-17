@@ -224,3 +224,17 @@ Parallel hire path under `/driver/` and `/driver-onboarding/`. Deploy: **[DRIVER
 | `wrrapd-drivers.css` | Yes |
 
 Elementor shortcodes: `docs/wordpress-snippets/wrrapd-drivers-elementor-pages.md` · Onboarding map: `docs/DRIVER-ONBOARDING-PORTAL.md`
+
+## WrapRiders portal (same apply + pros install) — third hire track
+
+Wrap **and** deliver. Own CPT, own apply (`/wraprider/apply/`), own onboarding (`/wraprider-onboarding/`), own ops API (`/wraprider-applications`), own Command Center board. Deploy: **[WRAPRIDERS-DEPLOY.md](./WRAPRIDERS-DEPLOY.md)**.
+
+| Repo file | SiteGround `mu-plugins/` |
+|-----------|--------------------------|
+| `wrrapd-wrapriders.php` | Yes |
+| `wrrapd-wrapriders-apply.php` | Yes |
+| `wrrapd-wrapriders-apply.js` | Yes |
+| `wrrapd-wrapriders-ops-api.php` | Yes |
+| `wrrapd-wrapriders.css` | Yes |
+
+All WrapRider URLs are served as virtual pages — no Elementor pages required.

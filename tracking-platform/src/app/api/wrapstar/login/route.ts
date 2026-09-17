@@ -10,6 +10,8 @@ import { getWrapstarProfile } from "@/lib/wrapstar-profiles";
  *
  * Primary: the WordPress onboarding email + password (one login everywhere). The account must be
  * an activated WrapStar ("Approve onboarding" in Command Center) and on the ops roster.
+ * Activated WrapRiders (third hire track) also sign in here — WordPress mirrors them into
+ * `roles.wrapstar` and activation gives them a hidden WrapStar roster row.
  * Fallback: legacy roster name / 10-digit ID + shared contractor passcode (founder + demo rows).
  */
 export async function POST(request: NextRequest) {
@@ -77,6 +79,10 @@ export async function POST(request: NextRequest) {
       );
     }
     void touchContractorLogin("wrapstar", roster.id).catch(() => undefined);
+    if (roster.hireRole === "wraprider" && roster.wrapriderId) {
+      // WrapRider (third hire track) — also stamp their own Command Center record.
+      void touchContractorLogin("wraprider", roster.wrapriderId).catch(() => undefined);
+    }
     return issueSession(roster.id, roster.name);
   }
 

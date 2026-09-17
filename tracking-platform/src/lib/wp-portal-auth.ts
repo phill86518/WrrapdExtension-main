@@ -3,7 +3,8 @@
  * WrapStars ops API (`POST /wrrapd/v1/portal-auth`, ops key, via the api.wrrapd.com bridge).
  *
  * One login everywhere: the username/password issued at approval on apply.wrrapd.com keeps
- * working on wrapstar.wrrapd.com and joyrider.wrrapd.com.
+ * working on wrapstar.wrrapd.com and joyrider.wrrapd.com. WrapRiders (third hire track, own
+ * CPT) get both apps with a single account — WordPress mirrors them into both role slots.
  */
 
 export type PortalAuthRole = {
@@ -14,6 +15,18 @@ export type PortalAuthRole = {
   greetingName?: string;
   activatedAt?: string;
   mustChangePassword?: boolean;
+  /**
+   * "wraprider" when this role entry was satisfied by an active WrapRider application (third
+   * hire track, own CPT). WordPress mirrors an active WrapRider into `roles.wrapstar` and
+   * `roles.driver` so one account signs in to both contractor apps.
+   */
+  hireRole?: "wrapstar" | "driver" | "wraprider";
+};
+
+export type PortalAuthRoles = {
+  wrapstar?: PortalAuthRole;
+  driver?: PortalAuthRole;
+  wraprider?: PortalAuthRole;
 };
 
 export type PortalAuthResult =
@@ -22,7 +35,7 @@ export type PortalAuthResult =
       userId: number;
       email: string;
       displayName: string;
-      roles: { wrapstar?: PortalAuthRole; driver?: PortalAuthRole };
+      roles: PortalAuthRoles;
     }
   | { ok: false; status: number; error: string };
 
@@ -41,7 +54,7 @@ export function looksLikeEmail(value: string): boolean {
 export async function verifyPortalCredentials(
   email: string,
   password: string,
-  portal: "wrapstar" | "driver",
+  portal: "wrapstar" | "driver" | "wraprider",
 ): Promise<PortalAuthResult> {
   const key = (process.env.WRRAPD_WRAPSTARS_OPS_API_KEY || "").trim();
   if (!key) {
@@ -69,7 +82,7 @@ export async function verifyPortalCredentials(
     }
     const roles =
       body.roles && typeof body.roles === "object"
-        ? (body.roles as { wrapstar?: PortalAuthRole; driver?: PortalAuthRole })
+        ? (body.roles as PortalAuthRoles)
         : {};
     return {
       ok: true,

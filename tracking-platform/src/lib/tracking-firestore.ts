@@ -5,6 +5,7 @@ import { getFirestoreDb } from "./firebase-admin";
 export const TRACKING_COLLECTIONS = {
   deliveryDrivers: "tracking_delivery_drivers",
   wrapstars: "tracking_wrapstars",
+  wrapriders: "tracking_wrapriders",
   wrapstarProfiles: "tracking_wrapstar_profiles",
   /** Legacy — still read during WrapStar migration */
   drivers: "tracking_drivers",
@@ -29,6 +30,11 @@ export function trackingContractorRecordsCollection(): CollectionReference | nul
 export function trackingWrapstarsCollection(): CollectionReference | null {
   const db = getFirestoreDb();
   return db ? db.collection(TRACKING_COLLECTIONS.wrapstars) : null;
+}
+
+export function trackingWrapridersCollection(): CollectionReference | null {
+  const db = getFirestoreDb();
+  return db ? db.collection(TRACKING_COLLECTIONS.wrapriders) : null;
 }
 
 export function trackingWrapstarProfilesCollection(): CollectionReference | null {

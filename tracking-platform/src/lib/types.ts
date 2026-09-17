@@ -262,6 +262,12 @@ export type WrapStar = {
   hasPrinter?: boolean;
   /** Printer size key from the apply form: under24 | 24 | 36 | 44plus */
   printerSize?: string;
+  /**
+   * WrapRiders are a third hire category. They still get a WrapStar roster row (prefix 8)
+   * so the wrap app and wrap allocation work — Command Center hides them from /admin/wrapstars.
+   */
+  hireRole?: "wrapstar" | "wraprider";
+  wrapriderId?: string;
 };
 
 /**
@@ -280,6 +286,32 @@ export type DeliveryDriver = {
   email?: string;
   phone?: string;
   notes?: string;
+  createdAt: string;
+  updatedAt: string;
+  hireRole?: "driver" | "wraprider";
+  wrapriderId?: string;
+};
+
+/**
+ * Hybrid wrap + deliver contractor — Command Center’s third ops category (IDs prefix 6).
+ * Linked wrapstarId / courierDriverId power the two contractor apps; ops monitors here.
+ */
+export type WrapRider = {
+  id: string;
+  displayId: string;
+  name: string;
+  homePostalCode: string;
+  metroId?: MetroId;
+  status: OnboardingStatus;
+  email?: string;
+  phone?: string;
+  notes?: string;
+  applicationId?: number;
+  wrapstarId?: string;
+  courierDriverId?: string;
+  vehicleType?: string;
+  hasPrinter?: boolean;
+  printerSize?: string;
   createdAt: string;
   updatedAt: string;
 };

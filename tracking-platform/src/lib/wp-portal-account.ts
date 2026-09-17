@@ -4,7 +4,8 @@
  * activation, so password + contact edits happen here.
  */
 
-export type PortalKind = "wrapstar" | "driver";
+/** WordPress resolves an active WrapRider automatically when the wrapstar/driver CPT has no row. */
+export type PortalKind = "wrapstar" | "driver" | "wraprider";
 
 export type PortalContactFields = {
   nickname?: string;

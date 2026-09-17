@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_DRIVERS_BUILD', '2026-09-13-hourly-pay' );
+define( 'WRRAPD_DRIVERS_BUILD', '2026-09-14-lost-page-brand' );
 define( 'WRRAPD_DRIVERS_INVITE_TTL_DAYS', 15 );
 define( 'WRRAPD_DRIVERS_CPT', 'wrrapd_driver_app' );
 
@@ -1553,7 +1553,7 @@ function wrrapd_drivers_shortcode_landing() {
 				</details>
 				<details class="wrrapd-wrapstars-faq-dd__item">
 					<summary>Looking to wrap instead?</summary>
-					<p><a href="<?php echo esc_url( wrrapd_drivers_apply_url( '/apply/' ) ); ?>">Apply to become a WrapStar</a>.</p>
+					<p><a href="<?php echo esc_url( wrrapd_drivers_apply_url( '/apply/' ) ); ?>">Apply to become a WrapStar</a>. Prefer to wrap <em>and</em> deliver? <a href="<?php echo esc_url( wrrapd_drivers_apply_url( '/wraprider/' ) ); ?>">Apply as a WrapRider</a>.</p>
 				</details>
 			</section>
 

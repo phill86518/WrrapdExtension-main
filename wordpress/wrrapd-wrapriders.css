@@ -1,0 +1,121 @@
+/* Wrrapd WrapRiders portal — hybrid wrap + deliver track. Layers on WrapStars tokens. */
+.wrrapd-wrapriders.wrrapd-wrapriders-flex,
+.wrrapd-wrapriders.wrrapd-wrapstars-dasher {
+	margin: 0 !important;
+	padding: 0 !important;
+}
+
+.wrrapd-wrapriders .wrrapd-wrapstars-cinema-hero {
+	margin-top: 0 !important;
+}
+
+/* Hybrid accent: logo gold on navy (never neon / plugin blue). */
+.wrrapd-wrapriders .wrrapd-wrapstars-cinema-hero__kicker {
+	color: #f6b933;
+}
+
+.wrrapd-wrapriders .wrrapd-wrapstars-cinema-hero .wrrapd-wrapstars-btn--hero {
+	background: #f6b933;
+	color: #0f0351 !important;
+	border-color: #f6b933;
+}
+
+.wrrapd-wrapriders .wrrapd-wrapstars-cinema-hero .wrrapd-wrapstars-btn--hero:hover {
+	background: #fff;
+	border-color: #fff;
+	color: #0f0351 !important;
+	filter: none;
+}
+
+.wrrapd-wrapriders-app-cta {
+	margin: 1rem 0;
+	padding: 1rem;
+	background: #fff8e6;
+	border-radius: 10px;
+	border: 1px solid #f6d68a;
+}
+
+.wrrapd-wrapriders-app-cta + .wrrapd-wrapriders-app-cta {
+	margin-top: 0.75rem;
+}
+
+.wrrapd-wrapriders .wrrapd-wrapstars-ob-nav__title {
+	font-weight: 700;
+}
+
+.wrrapd-wrapriders .wrrapd-wrapstars-fieldset {
+	border: 1px solid rgba(15, 23, 42, 0.12);
+	border-radius: 10px;
+	padding: 0.75rem 1rem;
+	margin: 0.75rem 0;
+}
+
+.wrrapd-wrapriders .wrrapd-wrapstars-fieldset legend {
+	font-weight: 600;
+	padding: 0 0.35rem;
+}
+
+/* WrapRider apply wizard — polish on top of shared WrapStars apply styles */
+.wrrapd-wrapriders-apply-root {
+	padding-bottom: 2.5rem;
+}
+
+.wrrapd-wrapriders-apply-kicker {
+	margin: 0.75rem 0 0;
+	font-size: 0.72rem;
+	font-weight: 800;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	color: #a16207;
+}
+
+.wrrapd-wrapriders-apply-root .wrrapd-apply-hero-title {
+	margin-top: 0.35rem;
+}
+
+.wrrapd-wrapriders-apply-root .wrrapd-apply-basics-nav {
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+}
+
+.wrrapd-wrapriders-apply-backlink {
+	font-size: 0.92rem;
+	font-weight: 600;
+	color: var(--ws-muted, #64748b);
+	text-decoration: none;
+}
+
+.wrrapd-wrapriders-apply-backlink:hover {
+	color: var(--ws-ink, #0f172a);
+	text-decoration: underline;
+}
+
+.wrrapd-wrapriders-apply-root .wrrapd-apply-wizard__tidbit {
+	background: #fff8e6;
+	border-color: #f6d68a;
+}
+
+.wrrapd-wrapriders-apply-root .wrrapd-apply-tidbit__label {
+	color: #a16207;
+}
+
+.wrrapd-wrapriders-apply-root .ws-optional {
+	font-weight: 500;
+	color: var(--ws-muted, #64748b);
+	font-size: 0.85em;
+}
+
+.wrrapd-wrapriders-apply-root .wrrapd-apply-submit {
+	margin-top: 0.5rem;
+	min-width: 14rem;
+}
+
+@media (max-width: 600px) {
+	.wrrapd-wrapriders-apply-root .wrrapd-apply-basics-nav {
+		flex-wrap: wrap;
+	}
+	.wrrapd-wrapriders-apply-root .wrrapd-apply-basics-nav .wrrapd-wrapstars-btn {
+		width: 100%;
+	}
+}

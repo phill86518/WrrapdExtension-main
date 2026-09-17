@@ -1,7 +1,7 @@
 import { stateNumberFromZip } from "./us-state-codes";
 
-/** WrapStar IDs begin with 8; courier Driver IDs begin with 7. */
-export type EmployeeRolePrefix = "8" | "7";
+/** WrapStar IDs begin with 8; courier Driver IDs begin with 7; WrapRider IDs begin with 6. */
+export type EmployeeRolePrefix = "8" | "7" | "6";
 
 /**
  * 10-digit employee ID:
@@ -31,7 +31,7 @@ export function buildEmployeeIdPrefix(
 export function isEmployeeIdFormat(id: string, role?: EmployeeRolePrefix): boolean {
   if (!/^\d{10}$/.test(id)) return false;
   if (role) return id.startsWith(role);
-  return id.startsWith("7") || id.startsWith("8");
+  return id.startsWith("6") || id.startsWith("7") || id.startsWith("8");
 }
 
 export function parseEmployeeId(id: string): {
@@ -43,7 +43,7 @@ export function parseEmployeeId(id: string): {
 } | null {
   if (!isEmployeeIdFormat(id)) return null;
   const role = id[0] as EmployeeRolePrefix;
-  if (role !== "7" && role !== "8") return null;
+  if (role !== "6" && role !== "7" && role !== "8") return null;
   return {
     role,
     year: id.slice(1, 3),
@@ -75,7 +75,7 @@ export function allocateEmployeeId(
   if (maxSerial >= 99) {
     return {
       ok: false,
-      error: `No serials left (01–99) for this ZIP under role ${role === "8" ? "WrapStar" : "Driver"}.`,
+      error: `No serials left (01–99) for this ZIP under role ${role === "8" ? "WrapStar" : role === "6" ? "WrapRider" : "Driver"}.`,
     };
   }
   const next = maxSerial + 1;
@@ -99,4 +99,6 @@ export const DEMO_EMPLOYEE_IDS = {
   driverMorgan: "7261090301",
   /** Riley — Driver, FL 32256, serial 01 → 7260965201 */
   driverRiley: "7260965201",
+  /** Alex — WrapRider, FL 32218, serial 01 → 6260981201 */
+  wrapriderAlex: "6260981201",
 } as const;

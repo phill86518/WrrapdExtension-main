@@ -43,6 +43,9 @@ export default async function AdminDriverDetailPage({
   const { id } = await params;
   const driver = await findDeliveryDriverById(id);
   if (!driver) notFound();
+  if (driver.hireRole === "wraprider") {
+    redirect(driver.wrapriderId ? `/admin/wrapriders/${driver.wrapriderId}` : "/admin/wrapriders");
+  }
   const metros = listMetros();
 
   return (

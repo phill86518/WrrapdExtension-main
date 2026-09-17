@@ -3,7 +3,15 @@ import { notFound } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { listWrapstarApplications } from "@/lib/wrapstar-applications-admin";
 import { listDriverApplications } from "@/lib/driver-applications-admin";
-import { hireRoleLabel, JOYRIDER_LABEL, JOYRIDER_LABEL_PLURAL } from "@/lib/role-labels";
+import { listWrapriderApplications } from "@/lib/wraprider-applications-admin";
+import {
+  hireRoleLabel,
+  JOYRIDER_LABEL,
+  JOYRIDER_LABEL_PLURAL,
+  WRAPRIDER_LABEL,
+  WRAPRIDER_LABEL_PLURAL,
+  type HireRole,
+} from "@/lib/role-labels";
 import { formatDateTimeNy } from "@/lib/ny-date";
 import { latestHireAction } from "@/lib/hire-timeline";
 
@@ -19,6 +27,7 @@ const ROLE_FILTERS = [
   { id: "all", label: "All roles" },
   { id: "wrapstar", label: "WrapStars" },
   { id: "driver", label: JOYRIDER_LABEL_PLURAL },
+  { id: "wraprider", label: WRAPRIDER_LABEL_PLURAL },
 ] as const;
 
 const FILTERS = [
@@ -45,7 +54,7 @@ function statusBadge(status: string) {
 
 type Row = {
   id: number;
-  role: "wrapstar" | "driver";
+  role: HireRole;
   fullName: string;
   email: string;
   city: string;
@@ -86,22 +95,34 @@ export default async function AdminApplicationsPage({
   try {
     const statusArg = status === "all" ? undefined : status;
     const qArg = q || undefined;
+    // Three distinct CPTs / ops routes — one per hire track.
     const wantWs = role === "all" || role === "wrapstar";
     const wantDrv = role === "all" || role === "driver";
+    const wantWr = role === "all" || role === "wraprider";
+    const onlyOne = role !== "all";
 
-    const [ws, drv] = await Promise.all([
+    const [ws, drv, wr] = await Promise.all([
       wantWs
         ? listWrapstarApplications(statusArg, qArg).catch((e) => {
-            if (!wantDrv) throw e;
+            if (onlyOne) throw e;
+            console.error("WrapStar applications load failed:", e);
             return [] as Awaited<ReturnType<typeof listWrapstarApplications>>;
           })
         : Promise.resolve([]),
       wantDrv
         ? listDriverApplications(statusArg, qArg).catch((e) => {
-            // Driver routes may not be deployed yet — don't blank WrapStars.
-            if (!wantWs) throw e;
-            console.error("Driver applications load failed:", e);
+            // JoyRider routes may not be deployed yet — don't blank the other tracks.
+            if (onlyOne) throw e;
+            console.error("JoyRider applications load failed:", e);
             return [] as Awaited<ReturnType<typeof listDriverApplications>>;
+          })
+        : Promise.resolve([]),
+      wantWr
+        ? listWrapriderApplications(statusArg, qArg).catch((e) => {
+            // WrapRider routes may not be deployed yet — don't blank the other tracks.
+            if (onlyOne) throw e;
+            console.error("WrapRider applications load failed:", e);
+            return [] as Awaited<ReturnType<typeof listWrapriderApplications>>;
           })
         : Promise.resolve([]),
     ]);
@@ -157,7 +178,33 @@ export default async function AdminApplicationsPage({
           canDeliver: "yes",
         }),
       ),
-    ].sort((a, b) => (b.submittedAt || b.createdAt || "").localeCompare(a.submittedAt || a.createdAt || ""));
+      ...wr.map(
+        (a): Row => ({
+          id: a.id,
+          role: "wraprider",
+          fullName: a.fullName,
+          email: a.email,
+          city: a.city,
+          state: a.state,
+          postalCode: a.postalCode,
+          status: a.status,
+          submittedAt: a.submittedAt,
+          createdAt: a.createdAt,
+          approvedAt: a.approvedAt,
+          interviewAt: a.interviewAt,
+          interviewSkippedAt: a.interviewSkippedAt,
+          activatedAt: a.activatedAt,
+          rejectedAt: a.rejectedAt,
+          declinedAt: a.declinedAt,
+          reinvitedAt: a.reinvitedAt,
+          inviteSentAt: a.inviteSentAt,
+          resetAt: a.resetAt,
+          vehicleType: a.vehicleType,
+          canDeliver: "yes",
+        }),
+      ),
+    ]
+      .sort((a, b) => (b.submittedAt || b.createdAt || "").localeCompare(a.submittedAt || a.createdAt || ""));
   } catch (e) {
     error = e instanceof Error ? e.message : String(e);
   }
@@ -175,8 +222,15 @@ export default async function AdminApplicationsPage({
     <div className="mx-auto max-w-6xl">
       <h1 className="text-2xl font-semibold text-slate-900">Applications</h1>
       <p className="mt-1 text-sm text-slate-600">
-        Hire pipeline from apply.wrrapd.com — WrapStars and {JOYRIDER_LABEL_PLURAL}. Approve to
-        email login credentials for pros.wrrapd.com onboarding.
+        Three separate hire tracks from apply.wrrapd.com — WrapStars (<code>/apply</code>),{" "}
+        {JOYRIDER_LABEL_PLURAL} (<code>/drive/driver-apply</code>), and {WRAPRIDER_LABEL_PLURAL} (
+        <code>/wraprider/apply</code>) — each with its own application record and its own
+        pros.wrrapd.com onboarding portal. Approve to email login credentials. Activated{" "}
+        {WRAPRIDER_LABEL_PLURAL} live on their own{" "}
+        <Link href="/admin/wrapriders" className="font-medium text-amber-800 underline">
+          WrapRiders
+        </Link>{" "}
+        board — not WrapStars or JoyRiders.
       </p>
 
       <form className="mt-4 flex flex-wrap items-end gap-2" method="get">
@@ -253,8 +307,10 @@ export default async function AdminApplicationsPage({
             </code>{" "}
             and matching{" "}
             <code className="rounded bg-red-100 px-1">WRRAPD_WRAPSTARS_OPS_API_KEY</code>. Deploy
-            JoyRider MU-plugins for{" "}
-            <code className="rounded bg-red-100 px-1">/driver-applications</code> routes.
+            the JoyRider MU-plugins for{" "}
+            <code className="rounded bg-red-100 px-1">/driver-applications</code> and the WrapRider
+            MU-plugins for{" "}
+            <code className="rounded bg-red-100 px-1">/wraprider-applications</code> routes.
           </p>
         </div>
       ) : (
@@ -277,7 +333,8 @@ export default async function AdminApplicationsPage({
                 <tr>
                   <td colSpan={8} className="px-3 py-8 text-center text-slate-500">
                     No applications in this view. Try <strong>All</strong>, clear search, or confirm
-                    WordPress JoyRider routes are deployed if filtering {JOYRIDER_LABEL_PLURAL}.
+                    the WordPress JoyRider / WrapRider routes are deployed if filtering{" "}
+                    {JOYRIDER_LABEL_PLURAL} or {WRAPRIDER_LABEL_PLURAL}.
                   </td>
                 </tr>
               ) : (
@@ -300,6 +357,10 @@ export default async function AdminApplicationsPage({
                         <span className="rounded-full bg-sky-100 px-2 py-0.5 text-xs text-sky-900">
                           {hireRoleLabel("driver")}
                         </span>
+                      ) : a.role === "wraprider" ? (
+                        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-900">
+                          {WRAPRIDER_LABEL}
+                        </span>
                       ) : (
                         <span className="rounded-full bg-violet-100 px-2 py-0.5 text-xs text-violet-900">
                           WrapStar
@@ -312,6 +373,10 @@ export default async function AdminApplicationsPage({
                     <td className="px-3 py-3">
                       {a.role === "driver" ? (
                         <span className="text-xs text-slate-600">{a.vehicleType || JOYRIDER_LABEL}</span>
+                      ) : a.role === "wraprider" ? (
+                        <span className="text-xs text-slate-600">
+                          wrap + deliver{a.vehicleType ? ` · ${a.vehicleType}` : ""}
+                        </span>
                       ) : (
                         <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-xs text-indigo-900">
                           wrap

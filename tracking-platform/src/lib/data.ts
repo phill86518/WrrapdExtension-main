@@ -208,8 +208,18 @@ export async function listWrapstars() {
   return listRegisteredWrapstars();
 }
 
+/** Wrap-only WrapStars for the WrapStars Command Center board (hides WrapRiders). */
+export async function listWrapstarsOpsExclusive() {
+  return (await listRegisteredWrapstars()).filter((w) => w.hireRole !== "wraprider");
+}
+
 export async function listCourierDrivers() {
   return listDeliveryDrivers();
+}
+
+/** JoyRiders-only for the JoyRiders Command Center board (hides WrapRiders). */
+export async function listCourierDriversOpsExclusive() {
+  return (await listDeliveryDrivers()).filter((d) => d.hireRole !== "wraprider");
 }
 
 export async function unassignDeletedWrapstarOrders(wrapstarId: string): Promise<void> {
@@ -885,6 +895,13 @@ export async function listOrdersForWrapstar(wrapstarId: string): Promise<Order[]
   const all = await listAllOrders();
   return all
     .filter((o) => isAllocationReleasedToModules(o) && orderWrapstarId(o) === wrapstarId)
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+}
+
+export async function listOrdersForCourier(courierDriverId: string): Promise<Order[]> {
+  const all = await listAllOrders();
+  return all
+    .filter((o) => isAllocationReleasedToModules(o) && o.courierDriverId === courierDriverId)
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 }
 

@@ -2,6 +2,7 @@ import { promises as fs } from "fs";
 import path from "path";
 import type { DriverApplication } from "./driver-applications-admin";
 import type { WrapstarApplication } from "./wrapstar-applications-admin";
+import type { WrapriderApplication } from "./wraprider-applications-admin";
 import { trackingContractorRecordsCollection } from "./tracking-firestore";
 
 /**
@@ -12,7 +13,7 @@ import { trackingContractorRecordsCollection } from "./tracking-firestore";
  * Sensitive payout data is summarised only (bank name, account type, last 4). Full routing/account
  * numbers stay in WordPress meta / GCS and are never copied here.
  */
-export type ContractorRole = "wrapstar" | "driver";
+export type ContractorRole = "wrapstar" | "driver" | "wraprider";
 
 export type ContractorDocument = {
   key: string;
@@ -28,8 +29,15 @@ export type ContractorRecord = {
   /** `${role}:${rosterId}` */
   id: string;
   role: ContractorRole;
-  /** Roster id (10-digit WrapStar 8… / JoyRider 7…) */
+  /** Roster id (10-digit WrapStar 8… / JoyRider 7… / WrapRider 6…) */
   rosterId: string;
+  /**
+   * Set when this record was migrated from a WrapRider application (third hire track). A WrapRider
+   * gets a `wraprider:6…` record plus mirrored `wrapstar:8…` / `driver:7…` records so both
+   * contractor apps' Account tabs work with one login.
+   */
+  hireRole?: "wrapstar" | "driver" | "wraprider";
+  wrapriderId?: string;
   /** WordPress application post id */
   applicationId: number;
   wpUserId: number;
@@ -247,6 +255,93 @@ export function contractorRecordFromWrapstarApplication(
       accountType: ob.payoutAccountType || undefined,
       accountLast4: ob.payoutAccountLast4 || undefined,
       submittedAt: ob.payoutSubmittedAt || undefined,
+    }),
+    timeline: clean({
+      submittedAt: app.submittedAt || undefined,
+      interviewAt: app.interviewAt || undefined,
+      approvedAt: app.approvedAt || undefined,
+      activatedAt: app.activatedAt || now,
+    }),
+    onboardingSteps: steps,
+    lastLoginAt: previous?.lastLoginAt,
+    loginCount: previous?.loginCount,
+    migratedAt: previous?.migratedAt || now,
+    updatedAt: now,
+  });
+}
+
+/**
+ * Build a contractor record from a WrapRider application (own CPT) at activation time.
+ * `role` selects which roster id this copy is filed under — the WrapRider's own `wraprider:6…`
+ * record, or the mirrored `wrapstar:8…` / `driver:7…` records the two contractor apps read.
+ */
+export function contractorRecordFromWrapriderApplication(
+  app: WrapriderApplication,
+  role: ContractorRole,
+  rosterId: string,
+  wrapriderId: string,
+  previous?: ContractorRecord | null,
+): ContractorRecord {
+  const now = new Date().toISOString();
+  const steps = app.onboardingStepsComplete ?? {};
+  const documents: ContractorDocument[] = [
+    doc("agreement", "WrapRider Independent Contractor Agreement", !!steps.agreement),
+    doc("policies", "Wrap & Delivery Standards", !!steps.policies),
+    doc(
+      "orientation",
+      "Orientation & Quiz",
+      !!steps.orientation,
+      undefined,
+      app.orientationScore ? `Score ${app.orientationScore}` : undefined,
+    ),
+    doc("background", "Background check", !!steps.background),
+    doc("insurance", "Vehicle insurance", !!steps.insurance || !!app.hasInsuranceFile),
+    doc("identity", "Identity & license", !!steps.identity || !!app.hasIdFile),
+    doc(
+      "workspace",
+      "Wrapping location",
+      !!steps.workspace || !!app.workspaceConfirmedAt,
+      app.workspaceConfirmedAt || undefined,
+    ),
+    doc("w9", "W-9", !!steps.w9),
+    doc("tax_1099", "Tax acknowledgments (1099)", !!steps.tax_1099),
+  ];
+  const attributes: Record<string, string> = {
+    "Hire track": "WrapRider (wrap + deliver)",
+    Vehicle: app.vehicleType || "",
+    "Has vehicle": yesNo(app.hasVehicle),
+    "Valid license": yesNo(app.hasValidLicense),
+    "Clean driving record": yesNo(app.cleanDrivingRecord),
+    "Delivery range": app.deliveryMaxDistance || "",
+    "Dedicated wrap workspace": yesNo(app.dedicatedWrapWorkspace),
+    "Large-format printer": yesNo(app.hasLargeFormatPrinter),
+    "Printer size": app.hasLargeFormatPrinter === "yes" ? app.printerSize || "" : "",
+    "Wrapping location": app.workspaceAddress || "",
+    Availability: app.availability || "",
+  };
+  for (const k of Object.keys(attributes)) if (!attributes[k]) delete attributes[k];
+
+  return clean({
+    id: contractorRecordId(role, rosterId),
+    role,
+    rosterId,
+    hireRole: "wraprider" as const,
+    wrapriderId,
+    applicationId: app.id,
+    wpUserId: app.userId,
+    fullName: app.fullName || app.email,
+    greetingName: app.greetingName || app.nickname || app.firstName || undefined,
+    email: app.email.toLowerCase(),
+    phoneMobile: app.phoneMobile || undefined,
+    addressLine1: app.addressLine1 || undefined,
+    addressLine2: app.addressLine2 || undefined,
+    city: app.city || undefined,
+    state: app.state || undefined,
+    postalCode: app.postalCode || undefined,
+    attributes,
+    documents,
+    payout: clean({
+      method: steps.bank_payout ? "connect" : undefined,
     }),
     timeline: clean({
       submittedAt: app.submittedAt || undefined,

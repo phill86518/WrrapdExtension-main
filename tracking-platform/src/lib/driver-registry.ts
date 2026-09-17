@@ -74,6 +74,7 @@ function normalizeDeliveryDriver(raw: Partial<DeliveryDriver> & { id?: string; n
     notes: raw.notes?.trim() || undefined,
     createdAt,
     updatedAt: raw.updatedAt || createdAt,
+    ...(raw.hireRole === "wraprider" ? { hireRole: "wraprider" as const, wrapriderId: raw.wrapriderId } : {}),
   };
 }
 
@@ -168,6 +169,8 @@ export async function addDeliveryDriver(input: {
   notes?: string;
   status?: OnboardingStatus;
   servicePostalCodes?: string[];
+  hireRole?: DeliveryDriver["hireRole"];
+  wrapriderId?: string;
 }): Promise<{ ok: true; driver: DeliveryDriver } | { ok: false; error: string }> {
   const clean = input.name.trim();
   if (!clean) return { ok: false, error: "Driver name is required." };
@@ -204,6 +207,9 @@ export async function addDeliveryDriver(input: {
     servicePostalCodes: input.servicePostalCodes,
     createdAt: ts,
     updatedAt: ts,
+    ...(input.hireRole === "wraprider"
+      ? { hireRole: "wraprider" as const, wrapriderId: input.wrapriderId }
+      : {}),
   };
 
   const col = trackingDeliveryDriversCollection();
@@ -220,7 +226,16 @@ export async function updateDeliveryDriver(
   patch: Partial<
     Pick<
       DeliveryDriver,
-      "name" | "homePostalCode" | "email" | "phone" | "notes" | "status" | "servicePostalCodes" | "metroId"
+      | "name"
+      | "homePostalCode"
+      | "email"
+      | "phone"
+      | "notes"
+      | "status"
+      | "servicePostalCodes"
+      | "metroId"
+      | "hireRole"
+      | "wrapriderId"
     >
   >,
 ): Promise<{ ok: true; driver: DeliveryDriver } | { ok: false; error: string }> {

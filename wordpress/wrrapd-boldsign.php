@@ -6,6 +6,7 @@
  *   define( 'WRRAPD_BOLDSIGN_API_KEY', '…' );
  *   define( 'WRRAPD_BOLDSIGN_IC_TEMPLATE_ID', '…' );           // WrapStar IC
  *   define( 'WRRAPD_BOLDSIGN_DRIVER_IC_TEMPLATE_ID', '…' );    // Driver / courier IC (optional)
+ *   define( 'WRRAPD_BOLDSIGN_WRAPRIDER_IC_TEMPLATE_ID', '…' ); // Hybrid WrapRider IC (optional)
  *   define( 'WRRAPD_BOLDSIGN_W9_TEMPLATE_ID', '…' );
  *   define( 'WRRAPD_BOLDSIGN_API_BASE', 'https://api.boldsign.com' ); // optional
  *
@@ -229,6 +230,14 @@ function wrrapd_boldsign_client() {
 function wrrapd_boldsign_driver_ic_template_id() {
 	if ( defined( 'WRRAPD_BOLDSIGN_DRIVER_IC_TEMPLATE_ID' ) && WRRAPD_BOLDSIGN_DRIVER_IC_TEMPLATE_ID !== '' ) {
 		return (string) WRRAPD_BOLDSIGN_DRIVER_IC_TEMPLATE_ID;
+	}
+	return '';
+}
+
+/** @return string WrapRider (hybrid) IC BoldSign template id. */
+function wrrapd_boldsign_wraprider_ic_template_id() {
+	if ( defined( 'WRRAPD_BOLDSIGN_WRAPRIDER_IC_TEMPLATE_ID' ) && WRRAPD_BOLDSIGN_WRAPRIDER_IC_TEMPLATE_ID !== '' ) {
+		return (string) WRRAPD_BOLDSIGN_WRAPRIDER_IC_TEMPLATE_ID;
 	}
 	return '';
 }

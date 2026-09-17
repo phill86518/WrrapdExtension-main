@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/auth";
 import {
   listOrdersForWrapstar,
-  listWrapstars,
+  listWrapstarsOpsExclusive,
   unassignDeletedWrapstarOrders,
 } from "@/lib/data";
 import {
@@ -84,7 +84,7 @@ export default async function AdminWrapstarsPage() {
   // Note: hire applicants live under /admin/applications — this page is the live ops roster only.
 
   const [wrapstars, profiles, allEarnings] = await Promise.all([
-    listWrapstars(),
+    listWrapstarsOpsExclusive(),
     readWrapstarProfiles(),
     listEarnings(),
   ]);
@@ -111,7 +111,11 @@ export default async function AdminWrapstarsPage() {
     <div className="mx-auto max-w-6xl">
       <h1 className="text-2xl font-semibold text-slate-900">WrapStars</h1>
       <p className="mt-1 text-sm text-slate-600">
-        Live ops roster (assignable WrapStars). New apply.wrrapd.com applicants are under{" "}
+        Live ops roster for <strong>wrap-only</strong> WrapStars. Wrap + deliver people are on{" "}
+        <Link href="/admin/wrapriders" className="font-medium text-amber-800 underline">
+          WrapRiders
+        </Link>
+        , not this board. New applicants are under{" "}
         <Link href="/admin/applications?status=all" className="font-medium text-blue-700 underline">
           Applications
         </Link>

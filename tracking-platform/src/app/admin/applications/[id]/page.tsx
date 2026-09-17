@@ -13,10 +13,16 @@ import {
   runDriverApplicationAction,
   type DriverApplication,
 } from "@/lib/driver-applications-admin";
+import {
+  getWrapriderApplication,
+  runWrapriderApplicationAction,
+  type WrapriderApplication,
+} from "@/lib/wraprider-applications-admin";
 import { syncActivatedApplicationToOpsRoster } from "@/lib/sync-activated-wrapstar";
 import { syncActivatedApplicationToDriverRoster } from "@/lib/sync-activated-driver";
+import { syncActivatedApplicationToWrapriderRoster } from "@/lib/sync-activated-wraprider";
 import { ApplicationReviewActions } from "@/components/application-review-actions";
-import { hireRoleLabel, WRAPSTAR_ONBOARDING_STEP_LABELS } from "@/lib/role-labels";
+import { hireRoleLabel, onboardingStepLabels, type HireRole } from "@/lib/role-labels";
 import { formatDateTimeNy } from "@/lib/ny-date";
 import { hireTimelineRows } from "@/lib/hire-timeline";
 
@@ -34,14 +40,21 @@ async function actionForm(formData: FormData) {
   if (!session || session.role !== "admin") return;
   const id = Number(formData.get("appId") || 0);
   const action = String(formData.get("action") || "") as ApplicationAction;
-  const role = String(formData.get("role") || "wrapstar") === "driver" ? "driver" : "wrapstar";
+  const rawRole = String(formData.get("role") || "wrapstar");
+  const role: HireRole =
+    rawRole === "driver" ? "driver" : rawRole === "wraprider" ? "wraprider" : "wrapstar";
   const adminNotes = String(formData.get("adminNotes") || "");
   const rejectReason = String(formData.get("rejectReason") || "");
   const bgStatus = String(formData.get("bgStatus") || "");
   if (!id || !action) return;
 
+  // Each hire track has its own CPT + ops routes — never cross-read.
   const current =
-    role === "driver" ? await getDriverApplication(id) : await getWrapstarApplication(id);
+    role === "driver"
+      ? await getDriverApplication(id)
+      : role === "wraprider"
+        ? await getWrapriderApplication(id)
+        : await getWrapstarApplication(id);
   const st = current.status;
   if (
     (action === "approve" || action === "approve_without_interview") &&
@@ -76,6 +89,14 @@ async function actionForm(formData: FormData) {
     if (action === "activate" && result.application) {
       await syncActivatedApplicationToDriverRoster(result.application);
     }
+  } else if (role === "wraprider") {
+    const result = await runWrapriderApplicationAction(id, action, {
+      adminNotes,
+      rejectReason: action === "reject" ? rejectReason : undefined,
+    });
+    if (action === "activate" && result.application) {
+      await syncActivatedApplicationToWrapriderRoster(result.application);
+    }
   } else {
     const result = await runWrapstarApplicationAction(id, action, {
       adminNotes,
@@ -91,6 +112,7 @@ async function actionForm(formData: FormData) {
   revalidatePath(`/admin/applications/${id}`);
   revalidatePath("/admin/wrapstars");
   revalidatePath("/admin/drivers");
+  revalidatePath("/admin/wrapriders");
   redirect(`/admin/applications/${id}?role=${role}&ok=${encodeURIComponent(action)}`);
 }
 
@@ -109,35 +131,38 @@ export default async function AdminApplicationDetailPage({
 
   const sp = await searchParams;
   const okFlash = typeof sp.ok === "string" ? sp.ok : undefined;
-  let role: "wrapstar" | "driver" =
-    pick(sp.role) === "driver" ? "driver" : "wrapstar";
+  let role: HireRole =
+    pick(sp.role) === "driver" ? "driver" : pick(sp.role) === "wraprider" ? "wraprider" : "wrapstar";
 
-  let app: WrapstarApplication | DriverApplication;
-  try {
-    if (role === "driver") {
-      app = await getDriverApplication(id);
-    } else {
-      app = await getWrapstarApplication(id);
-    }
-  } catch {
-    // ID may belong to the other CPT — try the other role once.
+  type AnyApplication = WrapstarApplication | DriverApplication | WrapriderApplication;
+  const loaders: Record<HireRole, () => Promise<AnyApplication>> = {
+    wrapstar: () => getWrapstarApplication(id),
+    driver: () => getDriverApplication(id),
+    wraprider: () => getWrapriderApplication(id),
+  };
+
+  // Each track is its own CPT; post ids are unique across the WordPress site, so if the
+  // requested track 404s we try the other two once and correct the role.
+  let app: AnyApplication | null = null;
+  const order: HireRole[] = [role, ...(["wrapstar", "driver", "wraprider"] as HireRole[]).filter((r) => r !== role)];
+  for (const r of order) {
     try {
-      if (role === "driver") {
-        app = await getWrapstarApplication(id);
-        role = "wrapstar";
-      } else {
-        app = await getDriverApplication(id);
-        role = "driver";
-      }
+      app = await loaders[r]();
+      role = r;
+      break;
     } catch {
-      notFound();
+      app = null;
     }
   }
+  if (!app) notFound();
 
   const isDriver = role === "driver";
+  const isWraprider = role === "wraprider";
   const driverApp = isDriver ? (app as DriverApplication) : null;
-  const wrapApp = !isDriver ? (app as WrapstarApplication) : null;
+  const wrapriderApp = isWraprider ? (app as WrapriderApplication) : null;
+  const wrapApp = !isDriver && !isWraprider ? (app as WrapstarApplication) : null;
   const steps = Object.entries(app.onboardingStepsComplete || {});
+  const stepLabels = onboardingStepLabels(role);
   const onboarding = wrapApp?.onboarding;
   const timeline = hireTimelineRows({
     submittedAt: app.submittedAt,
@@ -174,7 +199,9 @@ export default async function AdminApplicationDetailPage({
           className={
             isDriver
               ? "rounded-full bg-sky-100 px-2 py-0.5 text-xs font-medium text-sky-900"
-              : "rounded-full bg-violet-100 px-2 py-0.5 text-xs font-medium text-violet-900"
+              : isWraprider
+                ? "rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900"
+                : "rounded-full bg-violet-100 px-2 py-0.5 text-xs font-medium text-violet-900"
           }
         >
           {hireRoleLabel(role)}
@@ -202,7 +229,9 @@ export default async function AdminApplicationDetailPage({
           {okFlash === "activate"
             ? isDriver
               ? " — added/updated on the JoyRider ops roster for courier assignment."
-              : " — added/updated on WrapStars ops roster for Command Center assignment."
+              : isWraprider
+                ? " — added/updated on the WrapRiders board (their own Command Center category)."
+                : " — added/updated on WrapStars ops roster for Command Center assignment."
             : null}
           {okFlash === "reinvite"
             ? " — status set back to Approved; welcome email resent with fresh credentials."
@@ -254,7 +283,9 @@ export default async function AdminApplicationDetailPage({
           </p>
         </section>
         <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <h2 className="font-semibold">{isDriver ? "JoyRider profile" : "Wrap setup"}</h2>
+          <h2 className="font-semibold">
+            {isDriver ? "JoyRider profile" : isWraprider ? "Wrap + deliver setup" : "Wrap setup"}
+          </h2>
           {isDriver && driverApp ? (
             <>
               <p className="mt-2 text-sm">
@@ -267,19 +298,44 @@ export default async function AdminApplicationDetailPage({
               <p className="text-sm">Driving record: {driverApp.cleanDrivingRecord || "—"}</p>
               <p className="text-sm">Bank ready: {driverApp.bankAccountReady || "—"}</p>
             </>
-          ) : "dedicatedWrapWorkspace" in app ? (
+          ) : wrapriderApp ? (
             <>
-              <p className="mt-2 text-sm">
-                Workspace: <strong>{app.dedicatedWrapWorkspace || "—"}</strong>
+              <p className="mt-2 text-sm font-medium text-slate-800">Wrapping</p>
+              <p className="text-sm">
+                Dedicated workspace: <strong>{wrapriderApp.dedicatedWrapWorkspace || "—"}</strong>
               </p>
               <p className="text-sm">
-                Custom print: {app.hasLargeFormatPrinter || "—"}
-                {app.printerSize ? ` (${app.printerSize})` : ""}
+                Large-format printer: {wrapriderApp.hasLargeFormatPrinter || "—"}
+                {wrapriderApp.printerSize ? ` (${wrapriderApp.printerSize})` : ""}
               </p>
-              <p className="text-sm">Video documentation: {app.comfortableVideoMonitoring || "—"}</p>
-              <p className="text-sm">Finished-wrap photos: {app.deliveryProofReady || "—"}</p>
-              <p className="text-sm">Bank ready: {app.bankAccountReady || "—"}</p>
-              <p className="text-sm">Business: {app.businessStructure || "—"}</p>
+              <p className="text-sm">
+                Video documentation: {wrapriderApp.comfortableVideoMonitoring || "—"}
+              </p>
+              <p className="mt-3 text-sm font-medium text-slate-800">On the road</p>
+              <p className="text-sm">Age 21+: {wrapriderApp.age21 || "—"}</p>
+              <p className="text-sm">License: {wrapriderApp.hasValidLicense || "—"}</p>
+              <p className="text-sm">
+                Vehicle: {wrapriderApp.hasVehicle || "—"}
+                {wrapriderApp.vehicleType ? ` (${wrapriderApp.vehicleType})` : ""}
+              </p>
+              <p className="text-sm">Smartphone: {wrapriderApp.hasSmartphone || "—"}</p>
+              <p className="text-sm">Driving record: {wrapriderApp.cleanDrivingRecord || "—"}</p>
+              <p className="text-sm">Max distance: {wrapriderApp.deliveryMaxDistance || "—"}</p>
+              <p className="mt-3 text-sm">Bank ready: {wrapriderApp.bankAccountReady || "—"}</p>
+            </>
+          ) : wrapApp ? (
+            <>
+              <p className="mt-2 text-sm">
+                Workspace: <strong>{wrapApp.dedicatedWrapWorkspace || "—"}</strong>
+              </p>
+              <p className="text-sm">
+                Custom print: {wrapApp.hasLargeFormatPrinter || "—"}
+                {wrapApp.printerSize ? ` (${wrapApp.printerSize})` : ""}
+              </p>
+              <p className="text-sm">Video documentation: {wrapApp.comfortableVideoMonitoring || "—"}</p>
+              <p className="text-sm">Finished-wrap photos: {wrapApp.deliveryProofReady || "—"}</p>
+              <p className="text-sm">Bank ready: {wrapApp.bankAccountReady || "—"}</p>
+              <p className="text-sm">Business: {wrapApp.businessStructure || "—"}</p>
             </>
           ) : null}
         </section>
@@ -301,23 +357,47 @@ export default async function AdminApplicationDetailPage({
               <strong>Why:</strong> {driverApp.whyDrive || driverApp.whyWrapstar || "—"}
             </p>
           </>
-        ) : (
+        ) : wrapriderApp ? (
           <>
             <p className="mt-2 whitespace-pre-wrap text-sm text-slate-800">
-              {"giftWrappingExperience" in app ? app.giftWrappingExperience : ""}
+              {wrapriderApp.giftWrappingExperience || "—"}
             </p>
+            {wrapriderApp.availability ? (
+              <p className="mt-2 whitespace-pre-wrap text-sm text-slate-700">
+                <strong>Availability:</strong> {wrapriderApp.availability}
+              </p>
+            ) : null}
+            {wrapriderApp.deliveryExperience ? (
+              <p className="mt-2 whitespace-pre-wrap text-sm text-slate-700">
+                <strong>Delivery experience:</strong> {wrapriderApp.deliveryExperience}
+              </p>
+            ) : null}
             <p className="mt-3 text-sm">
-              <strong>Why:</strong> {"whyWrapstar" in app ? app.whyWrapstar : "—"}
+              <strong>Why:</strong> {wrapriderApp.whyWraprider || "—"}
             </p>
           </>
-        )}
+        ) : wrapApp ? (
+          <>
+            <p className="mt-2 whitespace-pre-wrap text-sm text-slate-800">
+              {wrapApp.giftWrappingExperience || ""}
+            </p>
+            <p className="mt-3 text-sm">
+              <strong>Why:</strong> {wrapApp.whyWrapstar || "—"}
+            </p>
+          </>
+        ) : null}
       </section>
 
       {app.status === "approved" || app.status === "active" ? (
         <section className="mt-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
           <h2 className="font-semibold">
             Onboarding progress (
-            {isDriver ? "pros.wrrapd.com/driver-onboarding" : "pros.wrrapd.com/onboarding"})
+            {isDriver
+              ? "pros.wrrapd.com/driver-onboarding"
+              : isWraprider
+                ? "pros.wrrapd.com/wraprider-onboarding"
+                : "pros.wrrapd.com/onboarding"}
+            )
           </h2>
           {app.status === "approved" && app.inviteExpiresAt ? (
             <p className="mt-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800">
@@ -327,11 +407,40 @@ export default async function AdminApplicationDetailPage({
           <ul className="mt-2 grid gap-1 text-sm sm:grid-cols-2">
             {steps.map(([step, done]) => (
               <li key={step} className={done ? "text-emerald-800" : "text-slate-500"}>
-                {done ? "✓" : "○"} {WRAPSTAR_ONBOARDING_STEP_LABELS[step] || step}
+                {done ? "✓" : "○"} {stepLabels[step] || step}
               </li>
             ))}
           </ul>
           <p className="mt-2 text-xs text-slate-500">Current step: {app.onboardingStep || "—"}</p>
+          {wrapriderApp ? (
+            <dl className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
+              <div>
+                <dt className="text-xs uppercase text-slate-500">Orientation</dt>
+                <dd>{wrapriderApp.orientationScore ? `${wrapriderApp.orientationScore}%` : "—"}</dd>
+              </div>
+              <div>
+                <dt className="text-xs uppercase text-slate-500">Vehicle insurance</dt>
+                <dd>{wrapriderApp.hasInsuranceFile ? "COI uploaded" : "no file"}</dd>
+              </div>
+              <div>
+                <dt className="text-xs uppercase text-slate-500">Identity & license</dt>
+                <dd>{wrapriderApp.hasIdFile ? "ID on file" : "no file"}</dd>
+              </div>
+              <div className="sm:col-span-2">
+                <dt className="text-xs uppercase text-slate-500">Wrapping location</dt>
+                <dd className="whitespace-pre-wrap">{wrapriderApp.workspaceAddress || "—"}</dd>
+                {wrapriderApp.workspaceNotes ? (
+                  <dd className="text-xs text-slate-600">{wrapriderApp.workspaceNotes}</dd>
+                ) : null}
+                {wrapriderApp.workspaceConfirmedAt ? (
+                  <dd className="text-xs text-slate-500">
+                    confirmed{" "}
+                    {formatDateTimeNy(wrapriderApp.workspaceConfirmedAt) || wrapriderApp.workspaceConfirmedAt}
+                  </dd>
+                ) : null}
+              </div>
+            </dl>
+          ) : null}
           {onboarding ? (
             <dl className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
               <div>
@@ -436,7 +545,7 @@ export default async function AdminApplicationDetailPage({
         onboardingTotal={steps.filter(([k]) => k !== "activation").length}
         onboardingOpen={steps
           .filter(([k, v]) => k !== "activation" && !v)
-          .map(([k]) => WRAPSTAR_ONBOARDING_STEP_LABELS[k] || k)}
+          .map(([k]) => stepLabels[k] || k)}
         portalLastLoginAt={app.portalLastLoginAt}
         portalLoginCount={app.portalLoginCount}
         onboardingReopened={!!app.onboardingReopened}

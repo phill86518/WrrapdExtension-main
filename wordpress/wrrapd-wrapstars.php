@@ -22,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_WRAPSTARS_BUILD', '2026-09-14-lost-page-brand' );
+define( 'WRRAPD_WRAPSTARS_BUILD', '2026-09-17-three-tracks' );
 /** Approval / re-invite onboarding credentials remain valid this many days. */
 define( 'WRRAPD_WRAPSTARS_INVITE_TTL_DAYS', 15 );
 
@@ -378,7 +378,11 @@ function wrrapd_wrapstars_social_card_for_path( $path, $title = '' ) {
 		'image'       => $wrap,
 	);
 
-	if ( preg_match( '#^/drive(/|$)#', $path ) || preg_match( '#^/driver#', $path ) ) {
+	if ( preg_match( '#^/wraprider(/|$)#', $path ) ) {
+		$card['title']       = 'Become a WrapRider';
+		$card['description'] = 'Wrap and deliver — apply as a WrapRider, the hybrid WrapStar + JoyRider role. Florida & Georgia.';
+		$card['image']       = $wrap;
+	} elseif ( preg_match( '#^/drive(/|$)#', $path ) || preg_match( '#^/driver#', $path ) ) {
 		$card['title']       = 'Become a JoyRider';
 		$card['description'] = 'Deliver wrapped gifts on your schedule. Apply to become a Wrrapd JoyRider — launching in Florida & Georgia.';
 		$card['image']       = $logo;
@@ -1361,7 +1365,7 @@ function wrrapd_wrapstars_host_routing() {
 	}
 
 	if ( wrrapd_wrapstars_is_pros_host() ) {
-		if ( preg_match( '#^/(apply|dashboard|thank-you|decline-offer)(/|$)#', $path ) ) {
+		if ( preg_match( '#^/(apply|dashboard|thank-you|decline-offer|wraprider)(/|$)#', $path ) ) {
 			wp_safe_redirect( wrrapd_wrapstars_apply_url( $path ) );
 			exit;
 		}
@@ -1401,6 +1405,10 @@ function wrrapd_wrapstars_force_path_shortcode_content( $content ) {
 		return $content;
 	}
 	$path = wrrapd_wrapstars_request_path();
+	// /wraprider/* is owned by wrrapd-wrapriders.php (own CPT + portal).
+	if ( preg_match( '#^/wraprider(/|$)#', $path ) ) {
+		return $content;
+	}
 	if ( preg_match( '#^/thank-you(/|$)#', $path ) ) {
 		return do_shortcode( '[wrrapd_wrapstar_thankyou]' );
 	}
@@ -1692,7 +1700,7 @@ function wrrapd_wrapstars_enqueue_assets() {
 
 	if ( wrrapd_wrapstars_is_portal_host() ) {
 		$uri = isset( $_SERVER['REQUEST_URI'] ) ? (string) $_SERVER['REQUEST_URI'] : '';
-		if ( str_contains( $uri, '/apply' ) ) {
+		if ( str_contains( $uri, '/apply' ) && ! preg_match( '#/wraprider(/|$)#', $uri ) ) {
 			$js = dirname( __FILE__ ) . '/wrrapd-wrapstars-apply.js';
 			if ( is_readable( $js ) ) {
 				$apply_js_ver = WRRAPD_WRAPSTARS_BUILD . '-' . (string) filemtime( $js );
@@ -3164,7 +3172,7 @@ function wrrapd_wrapstars_landing_content() {
 				),
 				array(
 					'q' => 'Looking to deliver instead?',
-					'a' => 'JoyRiders pick up and drop off gifts. <a href="https://apply.wrrapd.com/drive/">Apply to become a JoyRider</a>.',
+					'a' => 'JoyRiders pick up and drop off gifts. <a href="https://apply.wrrapd.com/drive/">Apply as a JoyRider</a>. Prefer to wrap <em>and</em> deliver? <a href="https://apply.wrrapd.com/wraprider/">Apply as a WrapRider</a>.',
 				),
 				array(
 					'q' => 'How quickly do orders need to be finished?',
@@ -3213,7 +3221,11 @@ function wrrapd_wrapstars_shortcode_landing() {
 				<h1><?php echo wp_kses_post( $c['hero']['title'] ); ?></h1>
 				<p class="wrrapd-wrapstars-cinema-hero__tagline"><?php echo wp_kses_post( $c['hero']['tagline'] ); ?></p>
 				<p class="wrrapd-wrapstars-cinema-hero__sub"><?php echo wp_kses_post( $c['hero']['sub'] ); ?></p>
-				<a class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--xl wrrapd-wrapstars-btn--hero" href="<?php echo esc_url( $apply ); ?>"><?php echo wp_kses_post( $c['hero']['cta'] ); ?></a>
+				<div class="wrrapd-wrapstars-hero-cta-row">
+					<a class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--xl wrrapd-wrapstars-btn--hero" href="<?php echo esc_url( $apply ); ?>">Apply as a WrapStar</a>
+					<a class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--xl wrrapd-wrapstars-btn--hero-alt" href="<?php echo esc_url( wrrapd_wrapstars_apply_url( '/drive/' ) ); ?>">Apply as a JoyRider</a>
+					<a class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--xl wrrapd-wrapstars-btn--hero-hybrid" href="<?php echo esc_url( wrrapd_wrapstars_apply_url( '/wraprider/' ) ); ?>">Apply as a WrapRider</a>
+				</div>
 				<?php if ( ! empty( $c['hero']['note'] ) ) : ?>
 					<p class="wrrapd-wrapstars-cinema-hero__note"><?php echo wp_kses_post( $c['hero']['note'] ); ?></p>
 				<?php endif; ?>
@@ -3286,9 +3298,12 @@ function wrrapd_wrapstars_shortcode_landing() {
 			</section>
 
 			<section class="wrrapd-wrapstars-dasher-box wrrapd-wrapstars-dasher-box--wide" style="text-align:center;">
-				<h2 class="wrrapd-wrapstars-section-title" style="margin-bottom:0.75rem;">Prefer to deliver?</h2>
-				<p style="margin:0 0 1.25rem;">JoyRiders pick up and drop off gifts. WrapStars wrap &mdash; JoyRiders bring the smile to the door.</p>
-				<a class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--xl" href="<?php echo esc_url( wrrapd_wrapstars_apply_url( '/drive/' ) ); ?>">Become a JoyRider</a>
+				<h2 class="wrrapd-wrapstars-section-title" style="margin-bottom:0.75rem;">Prefer to deliver &mdash; or do both?</h2>
+				<p style="margin:0 0 1.25rem;">JoyRiders pick up and drop off gifts. WrapRiders wrap <em>and</em> deliver.</p>
+				<p class="wrrapd-wrapstars-hero-cta-row" style="justify-content:center;">
+					<a class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--xl" href="<?php echo esc_url( wrrapd_wrapstars_apply_url( '/drive/' ) ); ?>">Become a JoyRider</a>
+					<a class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--xl wrrapd-wrapstars-btn--ghost" href="<?php echo esc_url( wrrapd_wrapstars_apply_url( '/wraprider/' ) ); ?>">Become a WrapRider</a>
+				</p>
 			</section>
 
 			<section class="wrrapd-wrapstars-dasher-cta wrrapd-wrapstars-dasher-box wrrapd-wrapstars-dasher-box--wide" aria-label="Gift-wrap trivia">

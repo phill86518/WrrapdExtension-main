@@ -94,8 +94,9 @@ no PM2 or Cloud Run restart.
 
 - **WrapStar** — independent gift-wrapper. Wraps at their own location. No customer contact. No tips (for now).
 - **JoyRider** — **public / Command Center name** (decided 2026-09-09) for the independent courier. Same person as the internal **Driver** role. PO Box collection, WrapStar drop/pickup, floral purchase, final delivery. Only customer-facing role.
+- **WrapRider** — **public / Command Center name** (decided 2026-09-16) for the **hybrid** contractor who both wraps and delivers. **Fully separate third hire track** (decided 2026-09-17): own WordPress CPT `wrrapd_wraprider_app` (`wordpress/wrrapd-wrapriders*.php`), own apply form `/wraprider/apply/`, own onboarding portal `pros.wrrapd.com/wraprider-onboarding/`, own ops API `/wraprider-applications`, own WP Admin menu, and **own Command Center category** at `/admin/wrapriders` (IDs prefix **6**). Never stored on the WrapStar or JoyRider CPT. Activate creates the WrapRider ops row first; tagged wrapstar (8) + courier (7) rows exist only so wrapstar.wrrapd.com and joyrider.wrrapd.com accept the same login — they are **hidden** from the WrapStars and JoyRiders boards. Legal suite: `docs/legal/wraprider-agreements/`. Deploy: `wordpress/WRAPRIDERS-DEPLOY.md`.
 - **Driver** — **code / URL / CPT name only** (`wrrapd-drivers.php`, `/drive/`, `wrrapd_driver_app`, `courierDriverId`, Command Center route `/admin/drivers`). Do not introduce a second CPT. When adding UI copy, say JoyRider.
-- **Command Center** — `tracking-platform` admin (Cloud Run). Applications, WrapStars, JoyRiders (`/admin/drivers`), Orders, Finance, Pricing.
+- **Command Center** — `tracking-platform` admin (Cloud Run). Applications, WrapStars, JoyRiders (`/admin/drivers`), WrapRiders (`/admin/wrapriders`), Orders, Finance, Pricing.
 - **WrapStar Console** — `tracking-platform` `/wrapstar` companion UI (queue, calendar, availability).
 - **JoyRider / courier app** — `tracking-platform` `/courier` (internal route may still say driver).
 - **Portal** — WordPress `apply.wrrapd.com` (public + apply) / `pros.wrrapd.com` (approved-only onboarding).

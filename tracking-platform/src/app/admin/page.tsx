@@ -34,17 +34,22 @@ const MODULES = [
   {
     href: "/admin/applications",
     title: "Applications",
-    body: "Review, interview, approve, and activate WrapStar and JoyRider applicants.",
+    body: "Review, interview, approve, and activate WrapStar, JoyRider, and WrapRider applicants.",
   },
   {
     href: "/admin/wrapstars",
     title: "WrapStars",
-    body: "Gift-wrappers (IDs start with 8). Demo: Roger 8260981201, Taylor 8260965201.",
+    body: "Wrap-only gift-wrappers (IDs start with 8). Demo: Roger 8260981201, Taylor 8260965201.",
   },
   {
     href: "/admin/drivers",
     title: "JoyRiders",
-    body: "Couriers (IDs start with 7). Demo: Devon 7260981201, Morgan 7261090301. App: /courier",
+    body: "Deliver-only couriers (IDs start with 7). Demo: Devon 7260981201, Morgan 7261090301. App: /courier",
+  },
+  {
+    href: "/admin/wrapriders",
+    title: "WrapRiders",
+    body: "Hybrid wrap + deliver (IDs start with 6). Own board — not listed with WrapStars or JoyRiders. Demo: Alex 6260981201.",
   },
   {
     href: "/admin/finance",

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
-import { hireRoleLabel } from "@/lib/role-labels";
+import { hireRoleLabel, type HireRole } from "@/lib/role-labels";
 
 const BTN =
   "rounded px-3 py-2 text-sm cursor-pointer transition disabled:cursor-not-allowed disabled:opacity-45 disabled:pointer-events-none";
@@ -25,8 +25,8 @@ type Props = {
   suspended: boolean;
   adminNotes: string;
   rejectReason: string;
-  /** Hire role — wrapstar (default) or driver */
-  role?: "wrapstar" | "driver";
+  /** Hire role — wrapstar, driver, or wraprider (hybrid) */
+  role?: HireRole;
   action: (formData: FormData) => Promise<void>;
   /** Onboarding progress (excluding the activation step) — drives the Approve onboarding button */
   onboardingDone?: number;
@@ -58,7 +58,12 @@ export function ApplicationReviewActions({
   const [pending, setPending] = useState<string | null>(null);
   const busy = pending !== null;
   const roleLabel = hireRoleLabel(role);
-  const portalHost = role === "driver" ? "joyrider.wrrapd.com" : "wrapstar.wrrapd.com";
+  const portalHost =
+    role === "driver"
+      ? "joyrider.wrrapd.com"
+      : role === "wraprider"
+        ? "wrapstar.wrrapd.com + joyrider.wrrapd.com"
+        : "wrapstar.wrrapd.com";
   const onboardingComplete = onboardingTotal > 0 && onboardingDone >= onboardingTotal;
 
   const pastInterview = ["interview", "approved", "active", "declined", "rejected"].includes(status);

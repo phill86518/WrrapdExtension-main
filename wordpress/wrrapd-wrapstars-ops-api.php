@@ -499,7 +499,7 @@ add_action( 'rest_api_init', 'wrrapd_wrapstars_ops_register_rest_routes' );
 function wrrapd_wrapstars_ops_portal_resolve_active( $request ) {
 	$email  = sanitize_email( (string) $request->get_param( 'email' ) );
 	$portal = sanitize_key( (string) $request->get_param( 'portal' ) );
-	if ( $email === '' || ! in_array( $portal, array( 'wrapstar', 'driver' ), true ) ) {
+	if ( $email === '' || ! in_array( $portal, array( 'wrapstar', 'driver', 'wraprider' ), true ) ) {
 		return new WP_REST_Response( array( 'ok' => false, 'error' => 'Email and portal are required.' ), 400 );
 	}
 	$user = get_user_by( 'email', $email );
@@ -509,17 +509,51 @@ function wrrapd_wrapstars_ops_portal_resolve_active( $request ) {
 	if ( ! $user ) {
 		return new WP_REST_Response( array( 'ok' => false, 'error' => 'Account not found.' ), 404 );
 	}
+	$app = null;
+	$ok  = false;
 	if ( $portal === 'wrapstar' ) {
 		$app = wrrapd_wrapstars_get_application_by_user( $user->ID );
 		$ok  = $app && wrrapd_wrapstars_get_meta( $app->ID, 'status' ) === 'active' && wrrapd_wrapstars_get_meta( $app->ID, 'suspended' ) !== '1';
-	} else {
+	} elseif ( $portal === 'driver' ) {
 		$app = function_exists( 'wrrapd_drivers_get_application_by_user' ) ? wrrapd_drivers_get_application_by_user( $user->ID ) : null;
 		$ok  = $app && wrrapd_drivers_get_meta( $app->ID, 'status' ) === 'active' && wrrapd_drivers_get_meta( $app->ID, 'suspended' ) !== '1';
+	}
+	// WrapRiders (own CPT) use the wrapstar + joyrider apps with one account: when neither the
+	// WrapStar nor the JoyRider CPT has them, fall through to the WrapRider application.
+	if ( ! $ok && function_exists( 'wrrapd_wrapriders_get_application_by_user' ) ) {
+		$wr_app = wrrapd_wrapriders_get_application_by_user( $user->ID );
+		if ( $wr_app && wrrapd_wrapriders_get_meta( $wr_app->ID, 'status' ) === 'active' && wrrapd_wrapriders_get_meta( $wr_app->ID, 'suspended' ) !== '1' ) {
+			$app    = $wr_app;
+			$ok     = true;
+			$portal = 'wraprider';
+		}
 	}
 	if ( ! $ok ) {
 		return new WP_REST_Response( array( 'ok' => false, 'error' => 'This account is not active.' ), 403 );
 	}
 	return array( 'user' => $user, 'portal' => $portal, 'app_id' => (int) $app->ID );
+}
+
+/** Meta setter for a resolved portal ctx ("wrapstar" | "driver" | "wraprider"). */
+function wrrapd_wrapstars_ops_portal_meta_setter( $portal ) {
+	if ( $portal === 'driver' ) {
+		return 'wrrapd_drivers_set_meta';
+	}
+	if ( $portal === 'wraprider' ) {
+		return 'wrrapd_wrapriders_set_meta';
+	}
+	return 'wrrapd_wrapstars_set_meta';
+}
+
+/** Meta getter for a resolved portal ctx ("wrapstar" | "driver" | "wraprider"). */
+function wrrapd_wrapstars_ops_portal_meta_getter( $portal ) {
+	if ( $portal === 'driver' ) {
+		return 'wrrapd_drivers_get_meta';
+	}
+	if ( $portal === 'wraprider' ) {
+		return 'wrrapd_wrapriders_get_meta';
+	}
+	return 'wrrapd_wrapstars_get_meta';
 }
 
 /**
@@ -550,6 +584,11 @@ function wrrapd_wrapstars_ops_portal_password( $request ) {
 	if ( $ctx['portal'] === 'wrapstar' ) {
 		wrrapd_wrapstars_set_meta( $ctx['app_id'], 'password_changed_at', $now );
 		wrrapd_wrapstars_set_must_change_password( $user->ID, $ctx['app_id'], false );
+	} elseif ( $ctx['portal'] === 'wraprider' ) {
+		wrrapd_wrapriders_set_meta( $ctx['app_id'], 'password_changed_at', $now );
+		if ( function_exists( 'wrrapd_wrapriders_set_must_change_password' ) ) {
+			wrrapd_wrapriders_set_must_change_password( $user->ID, $ctx['app_id'], false );
+		}
 	} else {
 		wrrapd_drivers_set_meta( $ctx['app_id'], 'password_changed_at', $now );
 		if ( function_exists( 'wrrapd_drivers_set_must_change_password' ) ) {
@@ -583,8 +622,8 @@ function wrrapd_wrapstars_ops_portal_contact( $request ) {
 		'state'        => 'state',
 		'postalCode'   => 'postal_code',
 	);
-	$set = $ctx['portal'] === 'wrapstar' ? 'wrrapd_wrapstars_set_meta' : 'wrrapd_drivers_set_meta';
-	$get = $ctx['portal'] === 'wrapstar' ? 'wrrapd_wrapstars_get_meta' : 'wrrapd_drivers_get_meta';
+	$set = wrrapd_wrapstars_ops_portal_meta_setter( $ctx['portal'] );
+	$get = wrrapd_wrapstars_ops_portal_meta_getter( $ctx['portal'] );
 	$saved = array();
 	foreach ( $map as $param => $meta_key ) {
 		$value = $request->get_param( $param );
@@ -627,7 +666,7 @@ function wrrapd_wrapstars_ops_portal_contact( $request ) {
 }
 
 /**
- * POST /wrrapd/v1/portal-auth  { email, password, portal?: "wrapstar"|"driver" }
+ * POST /wrrapd/v1/portal-auth  { email, password, portal?: "wrapstar"|"driver"|"wraprider" }
  *
  * Verifies WordPress credentials (server-to-server, ops key required) and returns which
  * hire roles this person holds plus their current status. Stamps portal_last_login_at.
@@ -689,6 +728,38 @@ function wrrapd_wrapstars_ops_portal_auth( $request ) {
 				'activatedAt'   => (string) wrrapd_drivers_get_meta( $drv_id, 'activated_at' ),
 				'mustChangePassword' => function_exists( 'wrrapd_drivers_user_must_change_password' ) ? wrrapd_drivers_user_must_change_password( $user->ID ) : false,
 			);
+		}
+	}
+
+	// WrapRider — own CPT (wrrapd-wrapriders.php). One account signs in to BOTH contractor apps,
+	// so an active WrapRider also satisfies the "wrapstar" and "driver" role checks the apps make.
+	if ( function_exists( 'wrrapd_wrapriders_get_application_by_user' ) ) {
+		$wr_app = wrrapd_wrapriders_get_application_by_user( $user->ID );
+		if ( $wr_app ) {
+			$wr_id     = (int) $wr_app->ID;
+			$wr_active = wrrapd_wrapriders_get_meta( $wr_id, 'status' ) === 'active' && wrrapd_wrapriders_get_meta( $wr_id, 'suspended' ) !== '1';
+			if ( $wr_active && ( $portal === '' || in_array( $portal, array( 'wrapstar', 'driver', 'wraprider' ), true ) ) ) {
+				wrrapd_wrapriders_set_meta( $wr_id, 'portal_last_login_at', $now );
+				wrrapd_wrapriders_set_meta( $wr_id, 'portal_login_count', (string) ( (int) wrrapd_wrapriders_get_meta( $wr_id, 'portal_login_count', '0' ) + 1 ) );
+				wrrapd_wrapriders_set_meta( $wr_id, 'portal_last_login_app', $portal !== '' ? $portal : 'unknown' );
+			}
+			$wr_role = array(
+				'applicationId' => $wr_id,
+				'status'        => (string) wrrapd_wrapriders_get_meta( $wr_id, 'status' ),
+				'suspended'     => wrrapd_wrapriders_get_meta( $wr_id, 'suspended' ) === '1',
+				'fullName'      => (string) wrrapd_wrapriders_get_meta( $wr_id, 'full_name' ),
+				'greetingName'  => wrrapd_wrapriders_greeting_name( $wr_id ),
+				'activatedAt'   => (string) wrrapd_wrapriders_get_meta( $wr_id, 'activated_at' ),
+				'mustChangePassword' => function_exists( 'wrrapd_wrapriders_user_must_change_password' ) ? wrrapd_wrapriders_user_must_change_password( $user->ID ) : false,
+				'hireRole'      => 'wraprider',
+			);
+			$roles['wraprider'] = $wr_role;
+			if ( empty( $roles['wrapstar'] ) ) {
+				$roles['wrapstar'] = $wr_role;
+			}
+			if ( empty( $roles['driver'] ) ) {
+				$roles['driver'] = $wr_role;
+			}
 		}
 	}
 

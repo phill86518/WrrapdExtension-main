@@ -70,6 +70,9 @@ export default async function AdminWrapstarDetailPage({
   const { id } = await params;
   const wrapstar = await findWrapstarById(id);
   if (!wrapstar) notFound();
+  if (wrapstar.hireRole === "wraprider") {
+    redirect(wrapstar.wrapriderId ? `/admin/wrapriders/${wrapstar.wrapriderId}` : "/admin/wrapriders");
+  }
 
   const [profile, orders, earnings, wallet, payouts, globalRates] = await Promise.all([
     getWrapstarProfile(id),

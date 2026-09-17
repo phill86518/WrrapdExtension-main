@@ -35,10 +35,11 @@ export default async function AdminFinanceRatesPage() {
       </Link>
       <h1 className="mt-3 text-2xl font-semibold">Hourly rates by ZIP</h1>
       <p className="mt-1 text-sm text-slate-600">
-        WrapStars and JoyRiders are paid hourly, not per order. Lookup: exact ZIP, then 3-digit
-        prefix, then the role default. WrapStar pace is {WRAPSTAR_PACE_GIFTS_PER_HOUR} gifts per
-        hour — shortfall reduces that hour by (rate ÷ {WRAPSTAR_PACE_GIFTS_PER_HOUR}) per unfinished
-        gift. Internal only.
+        WrapStars, JoyRiders, and WrapRiders (hybrid) are paid hourly, not per order. Lookup: exact
+        ZIP, then 3-digit prefix, then the role default. WrapRiders use the WrapStar rate for wrap
+        hours and the JoyRider rate for delivery hours. WrapStar pace is {WRAPSTAR_PACE_GIFTS_PER_HOUR}{" "}
+        gifts per hour — shortfall reduces that hour by (rate ÷ {WRAPSTAR_PACE_GIFTS_PER_HOUR}) per
+        unfinished gift. Internal only.
       </p>
       <form action={saveAction} className="mt-6 space-y-4 rounded-xl border bg-white p-4 shadow-sm">
         <label className="block text-sm">

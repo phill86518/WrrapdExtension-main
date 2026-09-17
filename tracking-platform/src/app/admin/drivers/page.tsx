@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/auth";
-import { listCourierDrivers, listWrapstars, unassignDeletedCourierDriverOrders } from "@/lib/data";
+import { listCourierDriversOpsExclusive, listWrapstars, unassignDeletedCourierDriverOrders } from "@/lib/data";
 import {
   addDeliveryDriver,
   deleteDeliveryDriver,
@@ -62,7 +62,7 @@ export default async function AdminDriversPage() {
   if (!session || session.role !== "admin") notFound();
 
   const [drivers, wrapstars, metros] = await Promise.all([
-    listCourierDrivers(),
+    listCourierDriversOpsExclusive(),
     listWrapstars(),
     Promise.resolve(listMetros()),
   ]);
@@ -78,8 +78,11 @@ export default async function AdminDriversPage() {
     <div className="mx-auto max-w-6xl">
       <h1 className="text-2xl font-semibold text-slate-900">Drivers</h1>
       <p className="mt-1 text-sm text-slate-600">
-        Courier Drivers for PO pickup and final mile. Separate from WrapStars who wrap (and may
-        self-deliver).
+        JoyRiders (deliver only). Wrap + deliver people are on{" "}
+        <Link href="/admin/wrapriders" className="font-medium text-amber-800 underline">
+          WrapRiders
+        </Link>
+        , not this board. Separate from wrap-only WrapStars.
       </p>
 
       <section className="mt-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">

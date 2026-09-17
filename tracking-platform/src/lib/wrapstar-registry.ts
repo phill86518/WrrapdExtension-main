@@ -89,6 +89,7 @@ function normalizeWrapStar(raw: Partial<WrapStar> & { id?: string; name?: string
     metroId: raw.metroId,
     ...(raw.hasPrinter === true || raw.hasPrinter === false ? { hasPrinter: raw.hasPrinter } : {}),
     ...(raw.printerSize ? { printerSize: String(raw.printerSize) } : {}),
+    ...(raw.hireRole === "wraprider" ? { hireRole: "wraprider" as const, wrapriderId: raw.wrapriderId } : {}),
   };
 }
 
@@ -258,6 +259,8 @@ export async function addWrapstar(input: {
   metroId?: WrapStar["metroId"];
   hasPrinter?: boolean;
   printerSize?: string;
+  hireRole?: WrapStar["hireRole"];
+  wrapriderId?: string;
 }): Promise<{ ok: true; wrapstar: WrapStar } | { ok: false; error: string }> {
   const clean = input.name.trim();
   if (!clean) return { ok: false, error: "WrapStar name is required." };
@@ -299,6 +302,9 @@ export async function addWrapstar(input: {
     metroId: input.metroId,
     ...(input.hasPrinter !== undefined ? { hasPrinter: input.hasPrinter } : {}),
     ...(input.hasPrinter && input.printerSize ? { printerSize: input.printerSize } : {}),
+    ...(input.hireRole === "wraprider"
+      ? { hireRole: "wraprider" as const, wrapriderId: input.wrapriderId }
+      : {}),
   };
 
   const col = trackingWrapstarsCollection();
@@ -330,6 +336,8 @@ export async function updateWrapstar(
       | "metroId"
       | "hasPrinter"
       | "printerSize"
+      | "hireRole"
+      | "wrapriderId"
     >
   >,
 ): Promise<{ ok: true; wrapstar: WrapStar } | { ok: false; error: string }> {
@@ -365,6 +373,8 @@ export async function updateWrapstar(
     ...(patch.metroId !== undefined ? { metroId: patch.metroId } : {}),
     ...(patch.hasPrinter !== undefined ? { hasPrinter: patch.hasPrinter } : {}),
     ...(patch.printerSize !== undefined ? { printerSize: patch.printerSize || undefined } : {}),
+    ...(patch.hireRole !== undefined ? { hireRole: patch.hireRole } : {}),
+    ...(patch.wrapriderId !== undefined ? { wrapriderId: patch.wrapriderId || undefined } : {}),
   };
   if (nextWs.hasPrinter === false) delete nextWs.printerSize;
   if (!nextWs.homePostalCode || nextWs.homePostalCode.length !== 5) {

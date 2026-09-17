@@ -17,6 +17,8 @@ import { touchContractorLogin } from "@/lib/contractor-records";
  *
  * Primary: WordPress onboarding email + password. Account must be an activated JoyRider
  * ("Approve onboarding" in Command Center) and on the DeliveryDriver roster.
+ * Activated WrapRiders (third hire track) also sign in here — WordPress mirrors them into
+ * `roles.driver` and activation gives them a hidden DeliveryDriver roster row.
  * Fallback: roster name / email / 10-digit ID (7…) + shared contractor passcode.
  */
 export async function POST(request: NextRequest) {
@@ -81,6 +83,10 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ ok: false, error: "JoyRider not approved" }, { status: 403 });
       }
       void touchContractorLogin("driver", roster.id).catch(() => undefined);
+      if (roster.hireRole === "wraprider" && roster.wrapriderId) {
+        // WrapRider (third hire track) — also stamp their own Command Center record.
+        void touchContractorLogin("wraprider", roster.wrapriderId).catch(() => undefined);
+      }
       return issueSession(roster.id, roster.name);
     }
     // WordPress is the only authority for email logins — no shared-passcode fallback.
