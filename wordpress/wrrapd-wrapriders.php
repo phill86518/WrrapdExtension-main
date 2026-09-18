@@ -23,7 +23,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_WRAPRIDERS_BUILD', '2026-09-18-landing-rewrite' );
+define( 'WRRAPD_WRAPRIDERS_BUILD', '2026-09-18-positive-strip' );
 define( 'WRRAPD_WRAPRIDERS_INVITE_TTL_DAYS', 15 );
 define( 'WRRAPD_WRAPRIDERS_CPT', 'wrrapd_wraprider_app' );
 
@@ -1643,7 +1643,7 @@ function wrrapd_wrapriders_shortcode_landing() {
 				<p class="wrrapd-wrapstars-cinema-hero__kicker">Now accepting applications · Florida &amp; Georgia</p>
 				<h1>Become a WrapRider</h1>
 				<p class="wrrapd-wrapstars-cinema-hero__tagline">Craft the gift. Carry the joy.</p>
-				<p class="wrrapd-wrapstars-cinema-hero__sub">WrapRiders are the rare ones who do both — turn an ordinary box into something unforgettable in your own space, then bring that finished surprise to the door yourself.</p>
+				<p class="wrrapd-wrapstars-cinema-hero__sub">Turn an ordinary box into something unforgettable in your own space, then bring that finished surprise to the door yourself.</p>
 				<a class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--xl wrrapd-wrapstars-btn--hero" href="<?php echo esc_url( $apply ); ?>">Start your application</a>
 			</div>
 		</section>
@@ -1666,15 +1666,15 @@ function wrrapd_wrapriders_shortcode_landing() {
 			<section class="wrrapd-wrapstars-dasher-band">
 				<div class="wrrapd-wrapstars-dasher-band__item wrrapd-wrapstars-dasher-box">
 					<h2>Ribbon to doorstep</h2>
-					<p>You are the craft and the courier — the same person who wraps it with care is the one who shows up with the finished surprise.</p>
+					<p>Wrap it with care, then show up with the finished surprise — you carry the gift from ribbon to doorstep.</p>
 				</div>
 				<div class="wrrapd-wrapstars-dasher-band__item wrrapd-wrapstars-dasher-box">
 					<h2>Your space. Your wheels.</h2>
-					<p>Gather what is coming in, wrap it beautifully where you work, then roll out and deliver it yourself. No middle handoff. No waiting on someone else.</p>
+					<p>Manage end-to-end, giftwrap items beautifully and deliver them yourself and brighten someone's special day!</p>
 				</div>
 				<div class="wrrapd-wrapstars-dasher-band__item wrrapd-wrapstars-dasher-box">
 					<h2>Make someone light up</h2>
-					<p>Most gigs end at a porch drop. You get the whole arc — the quiet art of wrapping, then the moment joy lands at the door.</p>
+					<p>Enjoy the whole arc — the quiet art of wrapping, then the moment joy lands at the door.</p>
 				</div>
 			</section>
 

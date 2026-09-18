@@ -3478,7 +3478,12 @@ body.wrrapd-wrapstars-onboarding-host .entry-title {
 	text-align: center;
 }
 
+/* No top pad on full-bleed cinema landings — that 1.5rem was the white strip under the navy header. */
 .wrrapd-virtual-page__main {
+	padding-top: 0;
+}
+
+.wrrapd-virtual-page__main:not(:has(.wrrapd-wrapstars-cinema-hero)) {
 	padding-top: 1.5rem;
 }
 
