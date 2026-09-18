@@ -22,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_WRAPSTARS_BUILD', '2026-09-17-three-tracks' );
+define( 'WRRAPD_WRAPSTARS_BUILD', '2026-09-18-hero-cta-split' );
 /** Approval / re-invite onboarding credentials remain valid this many days. */
 define( 'WRRAPD_WRAPSTARS_INVITE_TTL_DAYS', 15 );
 
@@ -3222,13 +3222,23 @@ function wrrapd_wrapstars_shortcode_landing() {
 				<p class="wrrapd-wrapstars-cinema-hero__tagline"><?php echo wp_kses_post( $c['hero']['tagline'] ); ?></p>
 				<p class="wrrapd-wrapstars-cinema-hero__sub"><?php echo wp_kses_post( $c['hero']['sub'] ); ?></p>
 				<div class="wrrapd-wrapstars-hero-cta-row">
-					<a class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--xl wrrapd-wrapstars-btn--hero" href="<?php echo esc_url( $apply ); ?>">Apply as a WrapStar</a>
-					<a class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--xl wrrapd-wrapstars-btn--hero-alt" href="<?php echo esc_url( wrrapd_wrapstars_apply_url( '/drive/' ) ); ?>">Apply as a JoyRider</a>
-					<a class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--xl wrrapd-wrapstars-btn--hero-hybrid" href="<?php echo esc_url( wrrapd_wrapstars_apply_url( '/wraprider/' ) ); ?>">Apply as a WrapRider</a>
+					<div class="wrrapd-wrapstars-hero-cta-primary">
+						<a class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--xl wrrapd-wrapstars-btn--hero" href="<?php echo esc_url( $apply ); ?>">Apply as a WrapStar</a>
+						<?php if ( ! empty( $c['hero']['note'] ) ) : ?>
+							<p class="wrrapd-wrapstars-cinema-hero__note"><?php echo wp_kses_post( $c['hero']['note'] ); ?></p>
+						<?php endif; ?>
+					</div>
+					<div class="wrrapd-wrapstars-hero-cta-alts" aria-label="Other ways to join Wrrapd">
+						<div class="wrrapd-wrapstars-hero-cta-alt">
+							<p class="wrrapd-wrapstars-hero-cta-alt__label">Drive and deliver gifts!</p>
+							<a class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--xl wrrapd-wrapstars-btn--hero-alt" href="<?php echo esc_url( wrrapd_wrapstars_apply_url( '/drive/' ) ); ?>">Apply as a JoyRider</a>
+						</div>
+						<div class="wrrapd-wrapstars-hero-cta-alt">
+							<p class="wrrapd-wrapstars-hero-cta-alt__label">Do both — wrap &amp; deliver!</p>
+							<a class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--xl wrrapd-wrapstars-btn--hero-hybrid" href="<?php echo esc_url( wrrapd_wrapstars_apply_url( '/wraprider/' ) ); ?>">Apply as a WrapRider</a>
+						</div>
+					</div>
 				</div>
-				<?php if ( ! empty( $c['hero']['note'] ) ) : ?>
-					<p class="wrrapd-wrapstars-cinema-hero__note"><?php echo wp_kses_post( $c['hero']['note'] ); ?></p>
-				<?php endif; ?>
 			</div>
 		</section>
 
