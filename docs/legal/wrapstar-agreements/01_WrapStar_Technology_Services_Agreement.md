@@ -5,10 +5,10 @@
 
 **Wrrapd, Inc.** — Gift Wrapping Network · WrapStar App
 
-**Status:** Production draft for licensed counsel review before BoldSign upload.  
+**Status:** Production draft for licensed counsel review before BoldSign upload (updated **2026-09-14** for JoyRider handoff model).  
 **BoldSign:** Place signer fields using the tags at the signature block below.  
 **Brand PDF/HTML:** Use files in `branded/` (logo header + Fraunces) for review and export.  
-**Scope note:** Under this Agreement, WrapStars provide **gift-wrapping services only** via the **WrapStar App**. Final-mile delivery and courier driving are separate functions performed by others and are **not** WrapStar duties under this Agreement.
+**Scope note:** Under this Agreement, WrapStars provide **gift-wrapping services only** via the **WrapStar App**. Packages are brought by **JoyRiders** and collected when wrapping is done. Final-mile delivery, PO Box collection, floral purchasing, and driving are **not** WrapStar duties.
 
 ---
 
@@ -20,9 +20,9 @@ By signing, Contractor acknowledges that Contractor has read, understands, and a
 
 ## 1. Purpose and Relationship
 
-1.1 Wrrapd operates a technology platform and related services that connect customers with independent contractors who provide professional **gift-wrapping** of merchandise, flowers (when ordered), and related items (the “**Services**”). Final-mile delivery, courier transport, and driving are **outside the scope** of the Services under this Agreement and are handled by Wrrapd, separate contractors, or common carriers.
+1.1 Wrrapd operates a technology platform and related services that connect customers with independent contractors who provide professional **gift-wrapping** of merchandise and related items (the “**Services**”). Final-mile delivery, courier transport, PO Box collection, floral purchasing, and driving are **outside the scope** of the Services under this Agreement and are performed by separate **JoyRider** contractors (or other Company designees), not by WrapStars.
 
-1.2 Contractor desires to provide the Services as an independent contractor using Wrrapd’s systems, including the dedicated **WrapStar mobile application** (the “**WrapStar App**”), related web or portal tools, order assignment and status tools, approved mailing addresses or PO Boxes, and related systems (collectively, the “**Platform**”). The WrapStar App is a contractor-facing application that is **separate from** any consumer-facing Wrrapd shopping or tracking application used by customers.
+1.2 Contractor desires to provide the Services as an independent contractor using Wrrapd’s systems, including the dedicated **WrapStar mobile application** (the “**WrapStar App**”), related web or portal tools, order assignment and status tools, Contractor’s approved **wrapping location**, and related systems (collectively, the “**Platform**”). The WrapStar App is a contractor-facing application that is **separate from** any consumer-facing Wrrapd application and from the **JoyRider App** used by courier contractors.
 
 1.3 Nothing in this Agreement creates an employment, partnership, joint venture, or general agency relationship. Contractor is not authorized to bind Wrrapd or to represent that Contractor is an employee of Wrrapd.
 
@@ -52,23 +52,23 @@ By signing, Contractor acknowledges that Contractor has read, understands, and a
 
 ## 4. Scope of Services (Wrapping Only)
 
-4.1 Contractor’s role is **gift wrapping only**. Contractor is not engaged under this Agreement as a delivery driver, courier, or final-mile carrier, and is not required to operate a vehicle for Wrrapd.
+4.1 Contractor’s role is **gift wrapping only**. Contractor is not engaged under this Agreement as a JoyRider, delivery driver, courier, or final-mile carrier, and is not required to operate a vehicle, collect packages from PO Boxes, purchase flowers, or meet customers or gift recipients.
 
 4.2 Contractor agrees to:
 
-(a) Receive or retrieve retailer or Company packages only at the mailing address, PO Box, workspace, or other location approved during onboarding (or as Wrrapd later directs in writing), including serving as a designee for a Wrrapd PO Box where applicable;
+(a) Maintain an approved **wrapping location** and agreed **handoff windows** so that a JoyRider (or other Company designee) may **drop inbound packages** and later **collect finished wrapped gifts**. Packages are brought to Contractor and collected when wrapping is done — Contractor does **not** pick up from PO Boxes or hand off to common carriers;
 
 (b) When beginning work on a package, inspect for visible damage, shortage, or suspected tampering, and report the same to Wrrapd promptly and in any event within the timeframe published in Platform standards (and no later than twenty-four (24) hours after discovery);
 
-(c) Professionally gift-wrap items to Wrrapd brand standards using approved materials, techniques, and any order-specific designs, messages, or add-ons (including flowers when selected);
+(c) Professionally gift-wrap items to Wrrapd brand standards using approved materials, techniques, and any order-specific designs or messages. If flowers are present on an order card for wrapping together with a gift, Contractor shall wrap or present them as the order instructions require; Contractor does **not** purchase flowers;
 
 (d) Record and upload clear **video and/or other proof** through the WrapStar App (or other Platform channel Wrrapd designates) as required by Section 6;
 
-(e) Affix the Platform barcode / delivery label to each finished gift and make wrapped orders available for pickup or release according to Platform / WrapStar App instructions (for example, staged for a separate courier). Contractor is **not** required to transport goods to a recipient’s address;
+(e) Affix the Platform **barcode / delivery label** to each finished gift, include the label in finished-wrap documentation, and stage wrapped orders for JoyRider pickup according to Platform / WrapStar App instructions. Contractor is **not** required to transport goods to a recipient’s address and shall **not** contact customers or giftees;
 
 (f) Maintain a clean, professional wrapping workspace; and
 
-(g) Install and use the WrapStar App on a compatible smartphone, keep the App reasonably up to date, and follow in-App workflows for order offers, status updates, communications, and proof uploads.
+(g) Install and use the WrapStar App on a compatible smartphone, keep the App reasonably up to date, and follow in-App workflows for availability, handoff windows, status updates, communications, and proof uploads.
 
 4.3 Wrrapd may update published wrapping standards and workflows prospectively via the Platform or email. Any future expansion of Contractor’s role to include delivery would require a separate written agreement (or amendment) expressly covering driving and delivery.
 
@@ -76,7 +76,7 @@ By signing, Contractor acknowledges that Contractor has read, understands, and a
 
 ## 5. Custody of Goods; Care of Merchandise
 
-5.1 From the time Contractor takes possession of customer merchandise, wrapping materials supplied for an order, flowers, or finished gifts until Contractor releases the goods in accordance with Platform instructions (for example, staged pickup by a Wrrapd-designated courier or carrier), Contractor shall exercise **reasonable care** as a bailee for the benefit of Wrrapd and its customers.
+5.1 From the time Contractor takes possession of customer merchandise, wrapping materials supplied for an order, or finished gifts until Contractor releases the goods to a JoyRider or other Company designee in accordance with Platform instructions, Contractor shall exercise **reasonable care** as a bailee for the benefit of Wrrapd and its customers.
 
 5.2 Contractor is responsible for loss, theft, damage, or destruction of goods in Contractor’s possession to the extent caused by Contractor’s **negligence, willful misconduct, unauthorized use, or failure to exercise reasonable care**. Contractor is **not** responsible for: (a) damage or shortage that existed upon receipt and that Contractor timely reported under Section 4.2(b); (b) loss or damage occurring after proper release per Platform instructions; or (c) loss caused by Wrrapd’s gross negligence or willful misconduct.
 
@@ -94,7 +94,7 @@ By signing, Contractor acknowledges that Contractor has read, understands, and a
 (b) **Wrapping process** — wrapping consistent with brand standards; and  
 (c) **Finished gift** — completed exterior wrap (and flowers or add-ons if applicable).
 
-6.2 Contractor is **not** required to video-record or photograph exchanges with drivers or couriers, including receipt of packages from a driver or handoff of wrapped gifts to a driver. Chain-of-custody at those transfer points is handled through Platform / WrapStar App status updates and any processes Wrrapd maintains with separate delivery or courier parties.
+6.2 Contractor is **not** required to video-record or photograph exchanges with JoyRiders or other couriers, including receipt of packages from a JoyRider or handoff of wrapped gifts to a JoyRider. Chain-of-custody at those transfer points is handled through Platform / WrapStar App status updates and JoyRider App processes.
 
 6.3 Failure to provide complete, timely, and authentic proof under Section 6.1 may result in non-payment for the affected order, chargeback or clawback of amounts already paid, immediate suspension, and/or termination.
 

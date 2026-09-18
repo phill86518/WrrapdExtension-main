@@ -39,13 +39,13 @@ By signing, Contractor agrees to follow this Code and Wrrapd’s published Platf
 
 ## 3. WrapStar App, Proof, and Honesty
 
-3.1 Use the **WrapStar App** as your primary tool for order offers, status updates, messages, and proof uploads. Keep the App reasonably up to date and do not share your login.
+3.1 Use the **WrapStar App** as your primary tool for availability, handoff windows, status updates, messages, and proof uploads. Keep the App reasonably up to date and do not share your login.
 
-3.2 Record and upload clear, authentic proof for every order as required by the Services Agreement—typically **unboxing/inspection**, **wrapping process**, and **finished gift**. You are **not** required to video-record receipt from or handoff to a driver.
+3.2 Record and upload clear, authentic proof for every order as required by the Services Agreement—typically **unboxing/inspection**, **wrapping process**, and **finished gift** (including barcode label). You are **not** required to video-record receipt from or handoff to a JoyRider.
 
 3.3 Never fabricate, edit misleadingly, reuse proof from another order, or misrepresent order status or completion in the App.
 
-3.4 Update order status truthfully and promptly in the WrapStar App, including when an order is ready for pickup or release. Do not use bots, scripts, or other unauthorized automation.
+3.4 Update order status truthfully and promptly in the WrapStar App, including when an order is ready for JoyRider pickup. Do not use bots, scripts, or other unauthorized automation. Affix the delivery barcode before staging for pickup.
 
 ---
 

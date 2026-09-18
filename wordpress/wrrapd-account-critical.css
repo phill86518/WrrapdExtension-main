@@ -130,18 +130,18 @@ body.wrrapd-account-page .user-registration-MyAccount-user [class*="avatar"],
 body.wrrapd-account-page .user-registration-MyAccount-user [class*="Avatar"],
 body.wrrapd-account-page .user-registration-MyAccount-user [class*="profile-img"],
 body.wrrapd-account-page .user-registration-MyAccount-user .ur-avatar {
-	background: linear-gradient(145deg, #f5e6a8, #c9a227) !important;
+	background: linear-gradient(145deg, #f8d56a, #f6b933) !important;
 	background-color: transparent !important;
 	color: #162a52 !important;
 	border-radius: 50% !important;
-	border: 2px solid rgba(245, 197, 24, 0.65) !important;
+	border: 2px solid rgba(246, 185, 51, 0.7) !important;
 	box-shadow: 0 4px 14px rgba(12, 18, 34, 0.18) !important;
 }
 
 body.wrrapd-account-page .user-registration-MyAccount-user a,
 body.wrrapd-account-page .user-registration-MyAccount-user .edit-profile,
 body.wrrapd-account-page .user-registration-MyAccount-user .user-registration-view-profile {
-	color: rgba(245, 197, 24, 0.95) !important;
+	color: #f6b933 !important;
 	text-decoration: none !important;
 	font-weight: 600 !important;
 	font-family: "Source Sans 3", system-ui, sans-serif !important;
@@ -180,9 +180,9 @@ body.wrrapd-account-page .user-registration-MyAccount-navigation li.is-active a,
 body.wrrapd-account-page .user-registration-MyAccount-navigation li.active a,
 body.wrrapd-account-page .user-registration-MyAccount-navigation a:hover,
 body.wrrapd-account-page .user-registration-MyAccount-navigation a:focus-visible {
-	background: rgba(245, 197, 24, 0.2) !important;
+	background: rgba(246, 185, 51, 0.22) !important;
 	color: #fff !important;
-	border-left: 3px solid #f5c518 !important;
+	border-left: 3px solid #f6b933 !important;
 }
 
 body.wrrapd-account-page .user-registration-MyAccount-content > h1,
@@ -232,9 +232,9 @@ body.wrrapd-account-page .user-registration-MyAccount-content .ur-button-contain
 	padding: 0.62rem 1.35rem !important;
 	border-radius: 999px !important;
 	border: 1px solid rgba(154, 118, 24, 0.35) !important;
-	background: linear-gradient(180deg, #f5e6a8, #c9a227) !important;
-	background-color: transparent !important;
-	color: #0c1222 !important;
+	background: #f6b933 !important;
+	background-color: #f6b933 !important;
+	color: #0f0351 !important;
 	font-family: "Source Sans 3", system-ui, sans-serif !important;
 	font-weight: 800 !important;
 	font-size: 0.92rem !important;

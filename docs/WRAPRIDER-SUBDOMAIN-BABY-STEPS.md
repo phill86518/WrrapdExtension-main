@@ -2,6 +2,8 @@
 
 **Goal:** make `https://wraprider.wrrapd.com` open the WrapRider App (same Cloud Run service that already powers wrapstar + joyrider).
 
+> **Update 2026-09-18:** Cloud Run domain mapping for `wraprider.wrrapd.com` was created on the VM. DNS CNAME was already present. Wait for `CertificateProvisioned` / `Ready` = True, then open https://wraprider.wrrapd.com/ . `ERR_CONNECTION_CLOSED` is normal until the cert is ready.
+
 **Good news:** `wrapstar.wrrapd.com` and `joyrider.wrrapd.com` are **already working**. You only need to add **wraprider**.
 
 **Where you work:**

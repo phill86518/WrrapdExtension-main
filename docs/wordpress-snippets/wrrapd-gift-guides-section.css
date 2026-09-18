@@ -90,10 +90,19 @@
 }
 
 .wrrapd-gift-guides__lede .wrrapd-ext-cta {
+	display: inline !important;
 	font-family: Fraunces, Georgia, serif !important;
 	font-weight: 560 !important;
 	font-size: inherit !important;
-	color: #0b1780;
+	color: #0b1780 !important;
+	white-space: normal !important;
+	max-width: 100% !important;
+	padding: 0 !important;
+	border: none !important;
+	border-radius: 0 !important;
+	background: none !important;
+	box-shadow: none !important;
+	animation: none !important;
 }
 
 .wrrapd-gift-guides__aff-note {

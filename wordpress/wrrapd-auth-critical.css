@@ -39,3 +39,72 @@ body.wrrapd-auth-page .elementor-location-header .gift-ideas-button,
 body.wrrapd-auth-page .elementor-location-header .elementor-button {
 	font-family: Fraunces, Georgia, serif !important;
 }
+
+/* Shopper auth/register — navy + logo gold (#f6b933 = p/d in the wordmark). No plugin blue. */
+body.wrrapd-auth-page,
+body.wrrapd-auth-page .site-main,
+body.wrrapd-auth-page #primary,
+body.wrrapd-auth-page .elementor-location-single,
+body.wrrapd-auth-page .elementor-location-single .e-con {
+	--wrrapd-logo-gold: #f6b933;
+	--wrrapd-navy: #0f0351;
+}
+
+body.wrrapd-auth-page .site-main,
+body.wrrapd-auth-page #primary {
+	background: linear-gradient(165deg, #fdfcfa 0%, #f4f0e8 46%, #ebe4d8 100%) !important;
+}
+
+body.wrrapd-auth-page .um,
+body.wrrapd-auth-page .um-form,
+body.wrrapd-auth-page .um .um-field-area,
+body.wrrapd-auth-page .eael-lr-form-wrapper,
+body.wrrapd-auth-page .eael-login-wrapper,
+body.wrrapd-auth-page .eael-register-wrapper {
+	background: #fff !important;
+	background-color: #fff !important;
+}
+
+body.wrrapd-auth-page .um-button,
+body.wrrapd-auth-page .um input[type="submit"].um-button,
+body.wrrapd-auth-page #um-submit-btn,
+body.wrrapd-auth-page .eael-lr-btn,
+body.wrrapd-auth-page .eael-lr-btn-block,
+body.wrrapd-auth-page button.eael-login-submit,
+body.wrrapd-auth-page button.eael-register-submit,
+body.wrrapd-auth-page #eael-login-submit,
+body.wrrapd-auth-page #eael-register-submit,
+body.wrrapd-auth-page #eael-lostpassword-submit,
+body.wrrapd-auth-page .user-registration .btn,
+body.wrrapd-auth-page .user-registration-Button,
+body.wrrapd-auth-page .ur-submit-button {
+	background: #f6b933 !important;
+	background-color: #f6b933 !important;
+	background-image: none !important;
+	color: #0f0351 !important;
+	border: 0 !important;
+	box-shadow: none !important;
+	font-weight: 700 !important;
+}
+
+body.wrrapd-auth-page .um-button:hover,
+body.wrrapd-auth-page .um-button:focus,
+body.wrrapd-auth-page .eael-lr-btn:hover,
+body.wrrapd-auth-page .eael-lr-btn:focus,
+body.wrrapd-auth-page #eael-login-submit:hover,
+body.wrrapd-auth-page #eael-register-submit:hover,
+body.wrrapd-auth-page #eael-lostpassword-submit:hover {
+	filter: brightness(0.96);
+	color: #0f0351 !important;
+}
+
+body.wrrapd-auth-page .um a:not(.um-button),
+body.wrrapd-auth-page .eael-lr-form-wrapper a:not(.eael-lr-btn) {
+	color: #162a52 !important;
+}
+
+body.wrrapd-auth-page .um .um-field-checkbox:checked,
+body.wrrapd-auth-page .um .um-field-radio:checked,
+body.wrrapd-auth-page .um .um-icon-android-checkbox-outline {
+	color: #f6b933 !important;
+}

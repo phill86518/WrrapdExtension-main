@@ -1,0 +1,34 @@
+---
+description: Wrrapd.com shopper color schema — logo gold on buttons, never neon yellow or plugin blue.
+alwaysApply: true
+---
+
+# Wrrapd.com color schema (shopper site)
+
+**Scope:** `wrrapd.com` shopper UI only (header, footer, account, login/register). Do **not** invent a new yellow. Contractor portals (`apply` / `pros`) keep their own CSS.
+
+## Logo gold (required for primary buttons)
+
+Sampled from the **p** and **d** in the Wrrapd wordmark (`Wrrapd_f-Logo`):
+
+| Token | Hex | Use |
+|---|---|---|
+| `WRRAPD_LOGO_GOLD` | **`#f6b933`** | Primary buttons, footer CTA, logged-in pills, auth submit |
+| Navy | **`#0f0351`** | Footer background, button text on gold |
+| Ink | **`#162a52`** | Secondary navy / links |
+
+PHP constant: `WRRAPD_LOGO_GOLD` in `wordpress/wrrapd-orders-bridge.php`.
+
+## Never use these on wrrapd.com shopper buttons
+
+- Neon / highlighter yellow: `#f7ff00`, `#fff300`, `#ff0`
+- Plugin default blue (Ultimate Member, Essential Addons, User Registration): `#3ba1da`, `#0693e3`, `#8ed1fc`, `#1877F2`
+
+If a plugin ships a blue or neon button, override it to `#f6b933` with `#0f0351` text.
+
+## Where it is wired
+
+- Footer CTA + headings: `wrrapd_output_site_footer_css()` (`--wf-gold`)
+- Logged-in header pills (Hot Gifts / Your orders): `wrrapd_output_header_member_css()`
+- Login / register / password reset: `wordpress/wrrapd-auth-critical.css`
+- Profile / My Account: `wordpress/wrrapd-account-critical.css`
