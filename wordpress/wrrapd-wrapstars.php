@@ -22,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_WRAPSTARS_BUILD', '2026-09-18-virtual-main-pad' );
+define( 'WRRAPD_WRAPSTARS_BUILD', '2026-09-18-inline-no-strip' );
 /** Approval / re-invite onboarding credentials remain valid this many days. */
 define( 'WRRAPD_WRAPSTARS_INVITE_TTL_DAYS', 15 );
 
@@ -3070,6 +3070,9 @@ function wrrapd_wrapstars_output_theme_cleanup_css() {
 	echo 'body.wrrapd-wrapstars-portal .wrrapd-wrapstars-site-header+.wp-site-blocks,body.wrrapd-wrapstars-portal .wrrapd-wrapstars-site-header~.wp-site-blocks,body.wrrapd-wrapstars-portal .wrrapd-wrapstars-site-header+.elementor,body.wrrapd-wrapstars-portal .wrrapd-wrapstars-site-header~.elementor{margin-top:0!important;padding-top:0!important;}';
 	echo 'body.wrrapd-wrapstars-portal .site,body.wrrapd-wrapstars-portal #page{margin:0!important;padding:0!important;}';
 	echo 'body.wrrapd-wrapstars-portal .wrrapd-wrapstars-cinema-hero{margin-top:0!important;}';
+	/* Virtual hire main: 1.5rem top pad painted a light strip under the navy header (CSS file may be CDN-cached). */
+	echo 'main.wrrapd-virtual-page__main{padding-top:0!important;margin-top:0!important;}';
+	echo 'main.wrrapd-virtual-page__main:has(.wrrapd-wrapstars-cinema-hero){background:#0a0a0a!important;}';
 	/* SiteGround AI Agent chat bubble (logged-in front-end) + leftover theme chrome */
 	echo '#sg-ai-studio-root,#sg-ai-studio,.sg-ai-studio,.sgai-widget,.sg-assistant,[class*="sg-ai"],[id*="sg-ai"],[class*="sgai-"],[id*="sgai-"],iframe[src*="ai-studio"],iframe[src*="sg-ai"]{display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important;height:0!important;width:0!important;overflow:hidden!important;}';
 	echo 'body.wrrapd-wrapstars-portal footer.wp-block-template-part,body.wrrapd-wrapstars-portal .wp-block-template-part[class*="footer"],body.wrrapd-wrapstars-portal .powered-by,body.wrrapd-wrapstars-portal .wp-block-site-tagline{display:none!important;height:0!important;margin:0!important;padding:0!important;overflow:hidden!important;}';

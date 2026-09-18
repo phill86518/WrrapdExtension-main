@@ -23,7 +23,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_WRAPRIDERS_BUILD', '2026-09-18-positive-strip' );
+define( 'WRRAPD_WRAPRIDERS_BUILD', '2026-09-18-inline-no-strip' );
 define( 'WRRAPD_WRAPRIDERS_INVITE_TTL_DAYS', 15 );
 define( 'WRRAPD_WRAPRIDERS_CPT', 'wrrapd_wraprider_app' );
 
@@ -229,6 +229,7 @@ function wrrapd_wrapriders_virtual_profile_page() {
 <?php endif; ?>
 <title><?php echo esc_html( $screen['title'] ); ?></title>
 <?php wp_head(); ?>
+<style id="wrrapd-virtual-no-strip">main.wrrapd-virtual-page__main{padding-top:0!important;margin:0!important}main.wrrapd-virtual-page__main:has(.wrrapd-wrapstars-cinema-hero){background:#0a0a0a!important}</style>
 </head>
 <body <?php body_class( 'wrrapd-virtual-page wrrapd-wrapriders-portal' ); ?>>
 <?php wp_body_open(); ?>
