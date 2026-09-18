@@ -19,7 +19,7 @@
 | WP Admin menu | WrapStars | Drivers | **WrapRiders** |
 | Command Center board | `/admin/wrapstars` (IDs 8…) | `/admin/drivers` (IDs 7…) | **`/admin/wrapriders` (IDs 6…)** |
 | Applications filter | WrapStars | JoyRiders | **WrapRiders** |
-| Contractor app after Activate | wrapstar.wrrapd.com | joyrider.wrrapd.com | **both**, one email + password |
+| Contractor app after Activate | wrapstar.wrrapd.com | joyrider.wrrapd.com | **wraprider.wrrapd.com only** |
 | IC agreement | `WRRAPD_BOLDSIGN_IC_TEMPLATE_ID` | `WRRAPD_BOLDSIGN_DRIVER_IC_TEMPLATE_ID` | **`WRRAPD_BOLDSIGN_WRAPRIDER_IC_TEMPLATE_ID`** |
 | Legal suite | `docs/legal/wrapstar-agreements/` | `docs/legal/joyrider-agreements/` | **`docs/legal/wraprider-agreements/`** |
 
@@ -115,18 +115,20 @@ Map the third portal host **`wraprider.wrrapd.com`** to the `wrrapd-tracking` Cl
    - writes the contractor record under the WrapRider id (`wraprider:6…`).
 4. **WrapRider App — `wraprider.wrrapd.com`** (`/wraprider`, `POST /api/wraprider/login`, session role `wraprider`). Own login: WordPress `portal-auth` with `portal=wraprider` checks the WrapRider CPT only and reports `roles.wraprider` only — nothing is mirrored into the WrapStar / JoyRider role slots. A WrapRider who tries wrapstar.wrrapd.com or joyrider.wrrapd.com is told to use wraprider.wrrapd.com, and vice versa.
 5. **Pay** — third pay structure: Command Center → Finance → Hourly rates has a **WrapRider default** and an optional 4th ZIP column (`ZIP WrapStar$ JoyRider$ WrapRider$`).
+6. **Move stream** — from a WrapRider application in Under review / Interview, Command Center can **Move this application to WrapStar** or **Move this application to JoyRider**. WordPress creates a new CPT in that stream with mapped fields, marks the WrapRider post `[Switched to …]`, and archives unused answers on the source. Hire then continues in the target stream only.
 
 ---
 
 ## Verify
 
-1. `https://apply.wrrapd.com/wraprider/` — WrapRider landing (gold-on-navy accent)
+1. `https://apply.wrrapd.com/wraprider/` — WrapRider landing (gold-on-navy accent); view-source includes `2026-09-18-move-stream` (or current `WRRAPD_WRAPRIDERS_BUILD`)
 2. Submit a test application → `/wraprider/thank-you/`
 3. **WP Admin → WrapRiders** shows the card; **Command Center → Applications → WrapRiders** shows `under_review`
-4. Approve → email → login at `/wraprider/login/` → `pros.wrrapd.com/wraprider-onboarding/`
+4. Approve → email → login at `/wraprider/login/` → `pros.wrrapd.com/wraprider-onboarding/` (requires `pros` host on the hire WordPress — see CURRENT-STATE)
 5. Walk the 12 steps (placeholders acknowledge until BoldSign / vendors are wired)
 6. Activate → appears under **Command Center → WrapRiders** (ID 6…), **not** on WrapStars or JoyRiders
-7. Sign in at **wrapstar.wrrapd.com** *and* **joyrider.wrrapd.com** with the same email + password
+7. Sign in at **`wraprider.wrrapd.com/wraprider`** with the same email + password. WrapStar / JoyRider apps must refuse this account and point them to wraprider.
+8. Optional: from a test WrapRider in Under review, **Move to WrapStar** / **Move to JoyRider** — source shows `[Switched to …]`; new app opens under review in that stream.
 
 ---
 
@@ -137,9 +139,10 @@ cd /home/phill/wrrapd-GCP
 git status
 git add wordpress/wrrapd-wrapriders*.php wordpress/wrrapd-wrapriders-apply.js wordpress/wrrapd-wrapriders.css \
         wordpress/wrrapd-wrapstars.php wordpress/wrrapd-wrapstars-ops-api.php wordpress/wrrapd-drivers.php \
-        wordpress/wrrapd-boldsign.php wordpress/WRAPRIDERS-DEPLOY.md tracking-platform/src
+        wordpress/wrrapd-boldsign.php wordpress/WRAPRIDERS-DEPLOY.md tracking-platform/src \
+        docs/CURRENT-STATE-2026-09-18.md
 git commit -m "WrapRiders: third hire track — own CPT, apply, onboarding, ops API, Command Center"
 git push origin main
 ```
 
-Then upload the MU-plugin files to SiteGround and deploy `tracking-platform` to Cloud Run. **No PM2 restart** — `WrrapdServer` is untouched.
+Then ensure SiteGround MU files are current (see CURRENT-STATE) and deploy `tracking-platform` to Cloud Run when Command Center code changes. **No PM2 restart** — `WrrapdServer` is untouched.
