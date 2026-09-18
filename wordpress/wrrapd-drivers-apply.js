@@ -1,7 +1,7 @@
-/* wrrapd-drivers-apply.js — multi-step Driver apply wizard (parity with WrapStars apply UX) */
+/* wrrapd-drivers-apply.js — multi-step JoyRider apply wizard (parity with WrapStars apply UX) */
 (function () {
 	var TIDBITS = [
-		'Wrrapd Drivers deliver finished wrap orders — WrapStars handle the wrapping, you bring the smile to the door.',
+		'Wrrapd JoyRiders deliver finished wrap orders — WrapStars handle the wrapping, you bring the smile to the door.',
 		'You see pickup and drop-off in the app. WrapStars wrap — you bring the gift to the door.',
 		'Double-check your answers below, then submit when you are ready.'
 	];

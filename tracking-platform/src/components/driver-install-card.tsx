@@ -27,13 +27,13 @@ export function DriverInstallCard({ variant = "driver" }: Props) {
       ? "Install WrapStar App"
       : variant === "wraprider"
         ? "Install WrapRider App"
-        : "Install Driver App";
+        : "Install JoyRider App";
   const flow =
     variant === "wrapstar"
       ? "WrapStar workflow"
       : variant === "wraprider"
         ? "wrap + deliver workflow"
-        : "Driver delivery workflow";
+        : "JoyRider delivery workflow";
 
   useEffect(() => {
     const handler = (event: Event) => {

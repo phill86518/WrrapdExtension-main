@@ -34,7 +34,7 @@ export default async function CourierPage() {
     return (
       <main className="mx-auto max-w-xl px-4 py-10">
         <p className="text-sm text-rose-700">
-          This account is not a registered courier Driver. Use the WrapStar app at{" "}
+          This account is not a registered JoyRider. Use the WrapStar app at{" "}
           <Link href="/wrapstar" className="underline">
             /wrapstar
           </Link>

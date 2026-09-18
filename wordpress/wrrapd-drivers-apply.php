@@ -1,6 +1,6 @@
 <?php
 /**
- * Driver application form + processing (loaded by wrrapd-drivers.php).
+ * JoyRider application form + processing (loaded by wrrapd-drivers.php).
  *
  * @package WrrapdDrivers
  */
@@ -104,7 +104,7 @@ function wrrapd_drivers_process_application() {
 		$errors[] = 'Please select your state.';
 	}
 	if ( $age_21 !== 'yes' ) {
-		$errors[] = 'Drivers must be 21 or older.';
+		$errors[] = 'JoyRiders must be 21 or older.';
 	}
 	if ( $has_license !== 'yes' ) {
 		$errors[] = 'A valid driver license is required.';
@@ -116,7 +116,7 @@ function wrrapd_drivers_process_application() {
 		$errors[] = 'Please select your vehicle type.';
 	}
 	if ( $has_phone !== 'yes' ) {
-		$errors[] = 'A smartphone is required for the Driver app.';
+		$errors[] = 'A smartphone is required for the JoyRider app.';
 	}
 	if ( ! in_array( $clean_record, array( 'yes', 'no', 'discuss' ), true ) ) {
 		$errors[] = 'Please answer the driving record question.';
@@ -209,13 +209,13 @@ function wrrapd_drivers_process_application() {
 	$candidate  = "Hi {$greet},\n\nThank you for applying to drive with Wrrapd!\n\n";
 	$candidate .= "Your application is under review. We'll be in touch within about 7 days.\n\n";
 	$candidate .= "If approved, you will receive login credentials from " . wrrapd_drivers_from_email_address() . ".\n\nTeam Wrrapd\n";
-	wrrapd_drivers_send_email( $email, 'Thank you — your Driver application is under review', $candidate );
+	wrrapd_drivers_send_email( $email, 'Thank you — your JoyRider application is under review', $candidate );
 
-	$admin  = "New Driver application.\n\nName: {$full_name}\nEmail: {$email}\nMobile: {$phone_mobile}\n";
+	$admin  = "New JoyRider application.\n\nName: {$full_name}\nEmail: {$email}\nMobile: {$phone_mobile}\n";
 	$admin .= "Location: {$address}" . ( $address2 !== '' ? ', ' . $address2 : '' ) . ", {$city}, {$state} {$zip}\n";
 	$admin .= "Vehicle: {$vehicle_type}\n";
-	$admin .= 'Command Center → Applications (Driver filter)' . "\n";
-	wrrapd_drivers_send_email( wrrapd_drivers_admin_notify_email(), 'New Driver application: ' . $full_name, $admin );
+	$admin .= 'Command Center → Applications (JoyRider filter)' . "\n";
+	wrrapd_drivers_send_email( wrrapd_drivers_admin_notify_email(), 'New JoyRider application: ' . $full_name, $admin );
 
 	wp_safe_redirect( wrrapd_drivers_apply_url( '/drive/driver-thank-you/' ) );
 	exit;
@@ -265,7 +265,7 @@ function wrrapd_drivers_shortcode_apply() {
 				<div class="wrrapd-apply-wizard__main">
 
 					<section class="wrrapd-apply-screen is-active" data-screen="0" data-step-label="" data-screen-type="basics">
-						<p class="wrrapd-drivers-apply-kicker">Driver application · ~5 minutes</p>
+						<p class="wrrapd-drivers-apply-kicker">JoyRider application · ~5 minutes</p>
 						<h1 class="wrrapd-apply-hero-title">Let's drive with Wrrapd!</h1>
 						<p class="wrrapd-apply-standards-intro">Have your driver license ready to upload. We'll start with your contact info.</p>
 
@@ -330,7 +330,7 @@ function wrrapd_drivers_shortcode_apply() {
 						</div>
 
 						<div class="wrrapd-apply-basics-nav">
-							<a class="wrrapd-drivers-apply-backlink" href="<?php echo esc_url( wrrapd_drivers_apply_url( '/drive/' ) ); ?>">← Drivers</a>
+							<a class="wrrapd-drivers-apply-backlink" href="<?php echo esc_url( wrrapd_drivers_apply_url( '/drive/' ) ); ?>">← JoyRiders</a>
 							<button type="button" class="wrrapd-wrapstars-btn wrrapd-apply-basics-next" id="wrrapd-drv-basics-next" disabled>Next</button>
 						</div>
 					</section>
@@ -377,7 +377,7 @@ function wrrapd_drivers_shortcode_apply() {
 						</div>
 						<div class="ws-field-row">
 							<div class="ws-field">
-								<label for="drv-smartphone">Smartphone for the Driver app?<?php echo $req; ?></label>
+								<label for="drv-smartphone">Smartphone for the JoyRider app?<?php echo $req; ?></label>
 								<select name="has_smartphone" id="drv-smartphone" required>
 									<option value="">Select…</option>
 									<option value="yes">Yes</option>
@@ -433,11 +433,11 @@ function wrrapd_drivers_shortcode_apply() {
 						<div class="wrrapd-apply-disclosure">
 							<h3>Acknowledgments</h3>
 							<label class="ws-check"><input type="checkbox" name="ack_age_vehicle" value="1" id="drv-ack-age" required /> <span><label for="drv-ack-age">I confirm I am 21+, hold a valid license, and have an eligible vehicle and smartphone.</label></span></label>
-							<label class="ws-check"><input type="checkbox" name="ack_background_check" value="1" id="drv-ack-bg" required /> <span><label for="drv-ack-bg">I authorize a background check as part of Driver onboarding.</label></span></label>
+							<label class="ws-check"><input type="checkbox" name="ack_background_check" value="1" id="drv-ack-bg" required /> <span><label for="drv-ack-bg">I authorize a background check as part of JoyRider onboarding.</label></span></label>
 							<label class="ws-check"><input type="checkbox" name="ack_contact" value="1" id="drv-ack-contact" required /> <span><label for="drv-ack-contact">Wrrapd may contact me by email or phone about this application.</label></span></label>
 						</div>
 
-						<button type="submit" class="wrrapd-wrapstars-btn wrrapd-apply-submit">Submit Driver application</button>
+						<button type="submit" class="wrrapd-wrapstars-btn wrrapd-apply-submit">Submit JoyRider application</button>
 					</section>
 
 					<div class="wrrapd-apply-wizard__nav" hidden>

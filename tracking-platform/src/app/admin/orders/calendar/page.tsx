@@ -163,7 +163,7 @@ export default async function AdminOrdersCalendarPage({
                 <th className="px-3 py-2">Status</th>
                 <th className="px-3 py-2">Wrap</th>
                 <th className="px-3 py-2">WrapStar</th>
-                <th className="px-3 py-2">Driver</th>
+                <th className="px-3 py-2">JoyRider</th>
               </tr>
             </thead>
             <tbody>

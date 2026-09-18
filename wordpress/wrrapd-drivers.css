@@ -1,4 +1,4 @@
-/* Wrrapd Drivers portal — Flex-inspired layers on WrapStars tokens */
+/* Wrrapd JoyRiders portal — Flex-inspired layers on WrapStars tokens */
 .wrrapd-drivers.wrrapd-drivers-flex,
 .wrrapd-drivers.wrrapd-wrapstars-dasher {
 	margin: 0 !important;
@@ -90,7 +90,7 @@
 	font-weight: 700;
 }
 
-/* Driver apply wizard — polish on top of shared WrapStars apply styles */
+/* JoyRider apply wizard — polish on top of shared WrapStars apply styles */
 .wrrapd-drivers-apply-root {
 	padding-bottom: 2.5rem;
 }

@@ -65,7 +65,7 @@ export async function assignStaffAction(formData: FormData) {
   if (wrapOnly && !courierRaw) {
     redirect(
       `/admin/orders?assignError=${encodeURIComponent(
-        "Wrap-only WrapStars need a courier Driver assigned.",
+        "Wrap-only WrapStars need a JoyRider assigned.",
       )}`,
     );
   }

@@ -6,7 +6,7 @@ import { findDeliveryDriverById } from "@/lib/driver-registry";
 import { actorIdsForSession } from "@/lib/order-access";
 
 /**
- * Designated Drivers, WrapRiders (delivery side), + Admin only: resolve a wrap-label QR token
+ * JoyRiders, WrapRiders (delivery side), + Admin only: resolve a wrap-label QR token
  * to delivery details. WrapStars cannot read these labels.
  */
 export async function GET(
@@ -19,14 +19,14 @@ export async function GET(
   }
 
   if (session.role === "wrapstar") {
-    return NextResponse.json({ error: "Driver access only." }, { status: 403 });
+    return NextResponse.json({ error: "JoyRider access only." }, { status: 403 });
   }
   if (session.role !== "admin") {
     const { courierDriverId } = await actorIdsForSession(session);
     const courier = courierDriverId ? await findDeliveryDriverById(courierDriverId) : undefined;
     if (!courier) {
       // Legacy WrapStar sessions used role "driver" — deny unless courier registry match.
-      return NextResponse.json({ error: "Driver access only." }, { status: 403 });
+      return NextResponse.json({ error: "JoyRider access only." }, { status: 403 });
     }
   }
 

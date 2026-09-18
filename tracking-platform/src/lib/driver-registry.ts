@@ -21,7 +21,7 @@ const DEFAULT_DELIVERY_DRIVERS: DeliveryDriver[] = [
     homePostalCode: "32218",
     metroId: "jacksonville",
     status: "approved",
-    notes: "Demo Driver — Jacksonville (7260981201)",
+    notes: "Demo JoyRider — Jacksonville (7260981201)",
     createdAt: "2026-01-01T00:00:00.000Z",
     updatedAt: "2026-01-01T00:00:00.000Z",
   },
@@ -32,7 +32,7 @@ const DEFAULT_DELIVERY_DRIVERS: DeliveryDriver[] = [
     homePostalCode: "30309",
     metroId: "atlanta",
     status: "approved",
-    notes: "Demo Driver — Atlanta (7261090301)",
+    notes: "Demo JoyRider — Atlanta (7261090301)",
     createdAt: "2026-01-01T00:00:00.000Z",
     updatedAt: "2026-01-01T00:00:00.000Z",
   },
@@ -43,7 +43,7 @@ const DEFAULT_DELIVERY_DRIVERS: DeliveryDriver[] = [
     homePostalCode: "32256",
     metroId: "jacksonville",
     status: "approved",
-    notes: "Demo Driver — Jacksonville Southside (7260965201)",
+    notes: "Demo JoyRider — Jacksonville Southside (7260965201)",
     createdAt: "2026-01-01T00:00:00.000Z",
     updatedAt: "2026-01-01T00:00:00.000Z",
   },
@@ -99,7 +99,7 @@ async function readLocal(): Promise<DeliveryDriver[]> {
   }
 }
 
-/** Ensure demo Drivers exist (idempotent). */
+/** Ensure demo JoyRiders exist (idempotent). */
 export async function ensureDemoDeliveryDrivers(): Promise<DeliveryDriver[]> {
   const existing = await listDeliveryDriversRaw();
   const byId = new Map(existing.map((d) => [d.id, d]));
@@ -173,7 +173,7 @@ export async function addDeliveryDriver(input: {
   wrapriderId?: string;
 }): Promise<{ ok: true; driver: DeliveryDriver } | { ok: false; error: string }> {
   const clean = input.name.trim();
-  if (!clean) return { ok: false, error: "Driver name is required." };
+  if (!clean) return { ok: false, error: "JoyRider name is required." };
   const zip = input.homePostalCode.replace(/\D/g, "").slice(0, 5);
   if (zip.length !== 5) return { ok: false, error: "A valid 5-digit home ZIP is required." };
   const metroId = input.metroId || metroForPostalCode(zip)?.id;
@@ -183,7 +183,7 @@ export async function addDeliveryDriver(input: {
 
   const all = await listDeliveryDrivers();
   if (all.some((d) => d.name.trim().toLowerCase() === clean.toLowerCase())) {
-    return { ok: false, error: "A Driver with this name already exists." };
+    return { ok: false, error: "A JoyRider with this name already exists." };
   }
 
   const idResult = allocateEmployeeId(
@@ -241,7 +241,7 @@ export async function updateDeliveryDriver(
 ): Promise<{ ok: true; driver: DeliveryDriver } | { ok: false; error: string }> {
   const all = await listDeliveryDrivers();
   const idx = all.findIndex((d) => d.id === driverId);
-  if (idx < 0) return { ok: false, error: "Driver not found." };
+  if (idx < 0) return { ok: false, error: "JoyRider not found." };
   const prev = all[idx]!;
   const zip = patch.homePostalCode
     ? patch.homePostalCode.replace(/\D/g, "").slice(0, 5)
@@ -280,10 +280,10 @@ export async function deleteDeliveryDriver(
     driverId === DEMO_EMPLOYEE_IDS.driverDevon ||
     driverId === DEMO_EMPLOYEE_IDS.driverMorgan
   ) {
-    return { ok: false, error: "Demo Drivers cannot be deleted." };
+    return { ok: false, error: "Demo JoyRiders cannot be deleted." };
   }
   const all = await listDeliveryDrivers();
-  if (!all.some((d) => d.id === driverId)) return { ok: false, error: "Driver not found." };
+  if (!all.some((d) => d.id === driverId)) return { ok: false, error: "JoyRider not found." };
   const next = all.filter((d) => d.id !== driverId);
   const col = trackingDeliveryDriversCollection();
   if (col) {

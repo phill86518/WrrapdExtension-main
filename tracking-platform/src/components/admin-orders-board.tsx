@@ -366,7 +366,7 @@ function BoardColumn({
                       {order.status}
                     </p>
                     <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-                      {fulfillmentMode === "self_delivery" ? "Hybrid self-delivery" : "Driver final-mile"}
+                      {fulfillmentMode === "self_delivery" ? "Hybrid self-delivery" : "JoyRider final-mile"}
                     </p>
                   </div>
                 </div>
@@ -374,10 +374,10 @@ function BoardColumn({
                   <p className="mt-2 rounded-lg bg-rose-100 px-2 py-1 text-xs font-bold text-rose-900">
                     Needs staffing —{" "}
                     {missingWs && missingCourier
-                      ? "WrapStar and Driver missing"
+                      ? "WrapStar and JoyRider missing"
                       : missingWs
                         ? "WrapStar missing"
-                        : "Driver (courier) missing"}
+                        : "JoyRider missing"}
                   </p>
                 ) : null}
                 <p className="mt-2 text-sm font-medium text-[#0f172a]">{order.recipientName}</p>
@@ -403,7 +403,7 @@ function BoardColumn({
                     <span className="ml-1 font-mono text-[10px] text-slate-500">{wsIdLabel}</span>
                   ) : null}
                   <span className="mx-2 text-slate-400">·</span>
-                  <span className="font-semibold text-[#0f172a]">Driver:</span> {driverName}
+                  <span className="font-semibold text-[#0f172a]">JoyRider:</span> {driverName}
                   {order.courierDriverId ? (
                     <span className="ml-1 font-mono text-[10px] text-slate-500">
                       {order.courierDriverId}
@@ -482,8 +482,8 @@ function BoardColumn({
                   </label>
                   <label className="block text-xs font-semibold uppercase tracking-wide text-[#1a2744]">
                     {needsCourier
-                      ? "Driver (courier) — required for wrap-only"
-                      : "Driver (courier) — optional for hybrid"}
+                      ? "JoyRider — required for wrap-only"
+                      : "JoyRider — optional for hybrid"}
                     <select
                       name="courierDriverId"
                       required={needsCourier}

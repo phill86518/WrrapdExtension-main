@@ -152,7 +152,7 @@ export default async function AdminWrapstarDetailPage({
               className="mt-1 w-full rounded border px-3 py-2"
             >
               <option value="yes">Yes (hybrid — self-delivery)</option>
-              <option value="no">No (wrap-only — needs Driver)</option>
+              <option value="no">No (wrap-only — needs JoyRider)</option>
             </select>
           </label>
           <label className="text-sm">
@@ -204,7 +204,7 @@ export default async function AdminWrapstarDetailPage({
             </select>
           </label>
           <label className="text-sm">
-            Assigned Driver ID (optional)
+            Assigned JoyRider ID (optional)
             <input
               name="assignedDriverId"
               defaultValue={wrapstar.assignedDriverId || ""}

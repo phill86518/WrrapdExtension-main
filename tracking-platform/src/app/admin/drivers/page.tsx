@@ -76,7 +76,7 @@ export default async function AdminDriversPage() {
 
   return (
     <div className="mx-auto max-w-6xl">
-      <h1 className="text-2xl font-semibold text-slate-900">Drivers</h1>
+      <h1 className="text-2xl font-semibold text-slate-900">JoyRiders</h1>
       <p className="mt-1 text-sm text-slate-600">
         JoyRiders (deliver only). Wrap + deliver people are on{" "}
         <Link href="/admin/wrapriders" className="font-medium text-amber-800 underline">
@@ -88,7 +88,7 @@ export default async function AdminDriversPage() {
       <section className="mt-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
         <h2 className="font-semibold text-slate-900">Metro readiness</h2>
         <p className="mt-1 text-xs text-slate-500">
-          Driver network unlocks when a metro has ≥3 wrap-only WrapStars (configurable per metro).
+          JoyRider network unlocks when a metro has ≥3 wrap-only WrapStars (configurable per metro).
         </p>
         <div className="mt-3 overflow-x-auto">
           <table className="min-w-full text-left text-sm">
@@ -97,7 +97,7 @@ export default async function AdminDriversPage() {
                 <th className="px-3 py-2">Metro</th>
                 <th className="px-3 py-2">Wrap-only</th>
                 <th className="px-3 py-2">Unlock</th>
-                <th className="px-3 py-2">Drivers</th>
+                <th className="px-3 py-2">JoyRiders</th>
               </tr>
             </thead>
             <tbody>
@@ -149,7 +149,7 @@ export default async function AdminDriversPage() {
         <input name="email" placeholder="Email" type="email" className="rounded border px-3 py-2 text-sm" />
         <input name="phone" placeholder="Phone" className="rounded border px-3 py-2 text-sm" />
         <button type="submit" className="rounded bg-slate-900 px-3 py-2 text-sm text-white">
-          Add Driver
+          Add JoyRider
         </button>
       </form>
 
@@ -169,7 +169,7 @@ export default async function AdminDriversPage() {
             {drivers.length === 0 ? (
               <tr>
                 <td colSpan={6} className="px-3 py-6 text-center text-slate-500">
-                  No Drivers yet — add one above when a metro unlocks.
+                  No JoyRiders yet — add one above when a metro unlocks.
                 </td>
               </tr>
             ) : (

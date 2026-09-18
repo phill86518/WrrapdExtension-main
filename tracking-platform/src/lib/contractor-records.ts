@@ -367,7 +367,7 @@ export function contractorRecordFromDriverApplication(
   const steps = app.onboardingStepsComplete ?? {};
   const documents: ContractorDocument[] = [
     doc("license", "Driver license", !!app.hasIdFile),
-    doc("agreement", "Driver Independent Contractor Agreement", !!steps.agreement),
+    doc("agreement", "JoyRider Independent Contractor Agreement", !!steps.agreement),
     doc("policies", "Policies & Safety", !!steps.policies),
     doc("orientation", "Orientation & Quiz", !!steps.orientation),
     doc("background", "Background check", !!steps.background),

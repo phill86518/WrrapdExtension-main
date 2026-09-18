@@ -1,6 +1,6 @@
 <?php
 /**
- * Drivers ops API — Command Center reviews Driver applications.
+ * JoyRiders ops API — Command Center reviews JoyRider applications.
  *
  * Auth: same key as WrapStars — X-Wrrapd-Wrapstars-Ops-Key / WRRAPD_WRAPSTARS_OPS_API_KEY
  * (also accepts X-Wrrapd-Drivers-Ops-Key / WRRAPD_DRIVERS_OPS_API_KEY if set).
@@ -80,8 +80,8 @@ function wrrapd_drivers_run_admin_action( $app_id, $action, $opts = array() ) {
 		}
 		wrrapd_drivers_send_email(
 			$email,
-			'Driver application — next step: interview',
-			"Hi {$name},\n\nThank you for applying to drive with Wrrapd. We'd like a brief conversation as the next step. We'll reach out by email or text.\n\n— Drivers Team\n"
+			'JoyRider application — next step: interview',
+			"Hi {$name},\n\nThank you for applying to drive with Wrrapd. We'd like a brief conversation as the next step. We'll reach out by email or text.\n\n— JoyRiders Team\n"
 		);
 		return array( 'ok' => true, 'status' => 'interview' );
 	}
@@ -127,7 +127,7 @@ function wrrapd_drivers_run_admin_action( $app_id, $action, $opts = array() ) {
 			wrrapd_drivers_set_meta( $app_id, 'notes_updated_at', gmdate( 'c' ) );
 		}
 		$body_reason = $reason !== '' ? $reason : 'We are unable to move forward with your application at this time.';
-		wrrapd_drivers_send_email( $email, 'Update on your Driver application', "Hi {$name},\n\n{$body_reason}\n" );
+		wrrapd_drivers_send_email( $email, 'Update on your JoyRider application', "Hi {$name},\n\n{$body_reason}\n" );
 		return array( 'ok' => true, 'status' => 'rejected' );
 	}
 

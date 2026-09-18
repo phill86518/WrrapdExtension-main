@@ -51,7 +51,7 @@ export default async function AdminDriverDetailPage({
   return (
     <div className="mx-auto max-w-3xl">
       <Link href="/admin/drivers" className="text-sm text-blue-700 underline">
-        Back to Drivers
+        Back to JoyRiders
       </Link>
       <h1 className="mt-3 text-2xl font-semibold text-slate-900">{driver.name}</h1>
       <p className="font-mono text-sm text-slate-600">
@@ -61,7 +61,7 @@ export default async function AdminDriverDetailPage({
         ) : null}
       </p>
       <p className="mt-1 text-xs text-slate-500">
-        Courier Driver (final-mile) — separate from WrapStars. App: /courier
+        JoyRider (final-mile courier) — separate from WrapStars. App: joyrider.wrrapd.com
       </p>
 
       <form action={updateAction} className="mt-6 space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -147,7 +147,7 @@ export default async function AdminDriverDetailPage({
           />
         </label>
         <button type="submit" className="rounded bg-slate-900 px-4 py-2 text-sm text-white">
-          Save Driver
+          Save JoyRider
         </button>
       </form>
     </div>

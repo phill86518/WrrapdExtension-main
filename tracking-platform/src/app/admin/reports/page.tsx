@@ -73,7 +73,7 @@ export default async function AdminReportsPage() {
     <div className="mx-auto max-w-5xl">
       <h1 className="text-3xl font-semibold">Delivery Reports</h1>
       <p className="mt-1 text-sm text-slate-600">
-        Daily summary for WrapStars (gift-wrap) and Drivers (courier).
+        Daily summary for WrapStars (gift-wrap) and JoyRiders (courier).
       </p>
       <a
         href="/api/admin/reports/daily.csv"
@@ -92,7 +92,7 @@ export default async function AdminReportsPage() {
               <th className="px-3 py-2 text-left">Open</th>
               <th className="px-3 py-2 text-left">Wraps complete</th>
               <th className="px-3 py-2 text-left">WrapStars used</th>
-              <th className="px-3 py-2 text-left">Drivers used</th>
+              <th className="px-3 py-2 text-left">JoyRiders used</th>
             </tr>
           </thead>
           <tbody>

@@ -100,6 +100,13 @@ onboarding, and the profile page.
 
 ## 4. EXACT steps — point the subdomains at Cloud Run
 
+**WrapRider only (simplest path today):** wrapstar + joyrider are already live. Follow the
+literal click-by-click checklist in **[WRAPRIDER-SUBDOMAIN-BABY-STEPS.md](./WRAPRIDER-SUBDOMAIN-BABY-STEPS.md)**.
+
+The longer block below is the full three-host version (useful if rebuilding from scratch).
+
+### Full three-host version (reference)
+
 Facts as of 2026‑09‑12: DNS for `wrrapd.com` is at **SiteGround** (`ns1/ns2.siteground.net`).
 `wrapstar.wrrapd.com` and `joyrider.wrrapd.com` currently resolve to SiteGround (`35.215.73.249`)
 and show SiteGround's placeholder page. `track.wrrapd.com` does not resolve; the tracking app is

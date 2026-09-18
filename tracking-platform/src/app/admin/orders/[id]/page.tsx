@@ -110,7 +110,7 @@ export default async function AdminOrderDetailPage({
         <section className="mt-6 rounded-xl border border-orange-200 bg-orange-50 p-4 shadow-sm">
           <h2 className="font-semibold text-orange-950">Flower pickup</h2>
           <p className="mt-1 text-sm text-orange-900">
-            Driver must pick up flowers before giftee delivery. Place the retailer order manually using the
+            JoyRider must pick up flowers before giftee delivery. Place the retailer order manually using the
             store details below.
           </p>
           {(order.flowerPickup || []).map((fp, i) => (
@@ -187,7 +187,7 @@ export default async function AdminOrderDetailPage({
                   : "rounded-full bg-indigo-100 px-2 py-0.5 text-sm text-indigo-900"
               }
             >
-              {mode === "self_delivery" ? "Self-delivery" : "Driver final-mile"}
+              {mode === "self_delivery" ? "Self-delivery" : "JoyRider final-mile"}
             </span>
           </p>
           {metro ? (
@@ -228,7 +228,7 @@ export default async function AdminOrderDetailPage({
             </p>
           ) : null}
           <p>
-            <span className="font-medium">Driver:</span>{" "}
+            <span className="font-medium">JoyRider:</span>{" "}
             {order.courierDriverId ? (
               <Link
                 href={`/admin/drivers/${order.courierDriverId}`}
@@ -314,7 +314,7 @@ export default async function AdminOrderDetailPage({
           <form action={assignCourierAction} className="flex items-end gap-2">
             <input type="hidden" name="orderId" value={order.id} />
             <label className="text-sm">
-              Assign Driver (courier)
+              Assign JoyRider
               <select
                 name="courierDriverId"
                 defaultValue={order.courierDriverId || ""}
@@ -329,7 +329,7 @@ export default async function AdminOrderDetailPage({
               </select>
             </label>
             <button type="submit" className="rounded bg-indigo-700 px-3 py-1.5 text-sm text-white">
-              Save Driver
+              Save JoyRider
             </button>
           </form>
         </div>
@@ -373,7 +373,7 @@ export default async function AdminOrderDetailPage({
             {order.fulfillmentMode === "self_delivery"
               ? "Hybrid self-delivery"
               : order.fulfillmentMode === "driver_final_mile"
-                ? "Driver final-mile"
+                ? "JoyRider final-mile"
                 : "—"}
           </p>
           <p>
@@ -403,12 +403,12 @@ export default async function AdminOrderDetailPage({
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           {order.driverLabelQrUrl || order.driverLabelToken ? (
             <div className="rounded-lg border border-slate-100 p-3">
-              <p className="text-sm font-semibold text-slate-900">Driver label QR</p>
+              <p className="text-sm font-semibold text-slate-900">JoyRider label QR</p>
               {order.driverLabelQrUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={order.driverLabelQrUrl}
-                  alt="Driver label QR"
+                  alt="JoyRider label QR"
                   className="mx-auto mt-2 w-full max-w-[200px]"
                 />
               ) : null}

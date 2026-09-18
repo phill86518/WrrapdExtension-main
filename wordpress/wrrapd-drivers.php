@@ -1,7 +1,7 @@
 <?php
 /**
- * Plugin Name: Wrrapd Drivers Portal (MU)
- * Description: Courier Driver application + onboarding on apply.wrrapd.com /drive and pros.wrrapd.com /driver-onboarding. Parallel to WrapStars.
+ * Plugin Name: Wrrapd JoyRiders Portal (MU)
+ * Description: JoyRider (courier) application + onboarding on apply.wrrapd.com /drive and pros.wrrapd.com /driver-onboarding. Parallel to WrapStars.
  * Author: Wrrapd
  *
  * Install alongside WrapStars MU-plugins on the dedicated apply/pros WordPress:
@@ -91,7 +91,7 @@ if ( is_readable( $wrrapd_drv_ops ) ) {
 function wrrapd_drivers_onboarding_steps() {
 	return array(
 		'welcome'     => 'Welcome & Overview',
-		'agreement'   => 'Driver Independent Contractor Agreement',
+		'agreement'   => 'JoyRider Independent Contractor Agreement',
 		'policies'    => 'Policies & Safety',
 		'orientation' => 'Orientation & Quiz',
 		'background'  => 'Background Check',
@@ -143,7 +143,7 @@ function wrrapd_drivers_force_thankyou_content( $content ) {
 	if ( is_admin() || ! wrrapd_drivers_is_portal_host() ) {
 		return $content;
 	}
-	// Existing WP page: ID 65, title "Driver Thank You", permalink /drive/driver-thank-you/.
+	// Existing WP page: ID 65, title "JoyRider Thank You", permalink /drive/driver-thank-you/.
 	if ( is_page( 65 ) || is_page( 'driver-thank-you' ) ) {
 		return do_shortcode( '[wrrapd_driver_thankyou]' );
 	}
@@ -252,18 +252,28 @@ function wrrapd_drivers_profile_url() {
 }
 
 function wrrapd_drivers_register_roles() {
-	if ( ! get_role( 'driver_applicant' ) ) {
-		add_role( 'driver_applicant', 'Driver Applicant', array( 'read' => true ) );
+	$labels = array(
+		'driver_applicant' => 'JoyRider Applicant',
+		'driver_approved'  => 'JoyRider Approved',
+		'driver_declined'  => 'JoyRider Declined Offer',
+		'driver_active'    => 'JoyRider Active',
+	);
+	global $wp_roles;
+	if ( ! isset( $wp_roles ) ) {
+		$wp_roles = new WP_Roles();
 	}
-	if ( ! get_role( 'driver_approved' ) ) {
-		add_role( 'driver_approved', 'Driver Approved', array( 'read' => true ) );
+	foreach ( $labels as $slug => $label ) {
+		if ( ! get_role( $slug ) ) {
+			add_role( $slug, $label, array( 'read' => true ) );
+			continue;
+		}
+		// Safe label pass: rename display name only (slug stays driver_*).
+		if ( isset( $wp_roles->roles[ $slug ] ) ) {
+			$wp_roles->roles[ $slug ]['name'] = $label;
+			$wp_roles->role_names[ $slug ]    = $label;
+		}
 	}
-	if ( ! get_role( 'driver_declined' ) ) {
-		add_role( 'driver_declined', 'Driver Declined Offer', array( 'read' => true ) );
-	}
-	if ( ! get_role( 'driver_active' ) ) {
-		add_role( 'driver_active', 'Driver Active', array( 'read' => true ) );
-	}
+	update_option( $wp_roles->role_key, $wp_roles->roles );
 }
 
 function wrrapd_drivers_user_has_role( $user_id, $role ) {
@@ -331,8 +341,8 @@ function wrrapd_drivers_register_cpt() {
 		WRRAPD_DRIVERS_CPT,
 		array(
 			'labels'          => array(
-				'name'          => 'Driver Applications',
-				'singular_name' => 'Driver Application',
+				'name'          => 'JoyRider Applications',
+				'singular_name' => 'JoyRider Application',
 			),
 			'public'          => false,
 			'show_ui'         => true,
@@ -688,7 +698,7 @@ function wrrapd_drivers_enqueue_assets() {
 			WRRAPD_DRIVERS_BUILD
 		);
 	}
-	// Multi-step Driver apply wizard (same UX family as WrapStars apply).
+	// Multi-step JoyRider apply wizard (same UX family as WrapStars apply).
 	if ( preg_match( '#/drive/driver-apply(/|$)#', $uri ) || preg_match( '#/driver-apply(/|$)#', $uri ) ) {
 		$js = dirname( __FILE__ ) . '/wrrapd-drivers-apply.js';
 		if ( is_readable( $js ) ) {
@@ -1088,13 +1098,13 @@ function wrrapd_drivers_send_approval_credentials_email( $app_id, $password, $co
 	$login   = wrrapd_drivers_portal_login_url( wrrapd_drivers_pros_url( '/driver-onboarding/' ), $greet );
 	$token   = (string) wrrapd_drivers_get_meta( $app_id, 'decline_token' );
 	$decline = $token !== '' ? wrrapd_drivers_decline_offer_url( $app_id, $token ) : wrrapd_drivers_apply_url( '/drive/decline-driver/' );
-	$subject = 'Congratulations — welcome to the Wrrapd Driver network';
-	$lead    = 'We are thrilled to welcome you as a Wrrapd Delivery Driver.';
+	$subject = 'Congratulations — welcome to the Wrrapd JoyRider network';
+	$lead    = 'We are thrilled to welcome you as a Wrrapd JoyRider.';
 	if ( $context === 'reinvite' ) {
-		$subject = 'Welcome back — your Wrrapd Driver invitation is open';
-		$lead    = 'We are delighted to reopen your Driver invitation.';
+		$subject = 'Welcome back — your Wrrapd JoyRider invitation is open';
+		$lead    = 'We are delighted to reopen your JoyRider invitation.';
 	} elseif ( $context === 'resend' ) {
-		$subject = 'Your Wrrapd Driver login details';
+		$subject = 'Your Wrrapd JoyRider login details';
 		$lead    = 'Here are fresh portal credentials. Earlier temporary passwords no longer work.';
 	}
 	$body  = "Hi {$greet},\n\n{$lead}\n\n";
@@ -1235,7 +1245,7 @@ function wrrapd_drivers_render_change_password_gate() {
 	<div class="wrrapd-wrapstars wrrapd-drivers">
 		<div class="wrrapd-wrapstars-card">
 			<h1>Choose your password</h1>
-			<p>For your security, set a new password before continuing Driver onboarding.</p>
+			<p>For your security, set a new password before continuing JoyRider onboarding.</p>
 			<?php if ( $err ) : ?>
 				<div class="wrrapd-wrapstars-alert wrrapd-wrapstars-alert--err"><?php echo esc_html( $err ); ?></div>
 			<?php endif; ?>
@@ -1267,10 +1277,10 @@ function wrrapd_drivers_placeholder_step_config( $step ) {
 		),
 		'policies'    => array(
 			'title' => 'Policies & safety',
-			'lead'  => 'Acknowledge Driver safety, package handling, and proof-of-delivery standards.',
-			'needs' => array( 'Driver handbook PDF', 'Safety / vehicle standards PDF' ),
+			'lead'  => 'Acknowledge JoyRider safety, package handling, and proof-of-delivery standards.',
+			'needs' => array( 'JoyRider handbook PDF', 'Safety / vehicle standards PDF' ),
 			'vendor'=> 'In-app PDF + checkbox.',
-			'ack'   => 'I will follow Wrrapd Driver safety and delivery standards when final policies are published.',
+			'ack'   => 'I will follow Wrrapd JoyRider safety and delivery standards when final policies are published.',
 		),
 		'background'  => array(
 			'title' => 'Background check',
@@ -1288,24 +1298,24 @@ function wrrapd_drivers_placeholder_step_config( $step ) {
 		),
 		'w9'          => array(
 			'title' => 'W-9 tax form',
-			'lead'  => 'E-sign W-9 via BoldSign (shared WrapStar W-9 template or Driver-specific when provided).',
+			'lead'  => 'E-sign W-9 via BoldSign (shared WrapStar W-9 template or JoyRider-specific when provided).',
 			'needs' => array( 'BoldSign W-9 template' ),
 			'vendor'=> 'BoldSign W-9.',
 			'ack'   => 'I will complete the W-9 when e-sign is enabled and confirm my tax details are accurate.',
 		),
 		'tax_1099'    => array(
 			'title' => '1099 & tax acknowledgments',
-			'lead'  => 'Acknowledge independent-contractor tax treatment for Driver earnings.',
+			'lead'  => 'Acknowledge independent-contractor tax treatment for JoyRider earnings.',
 			'needs' => array( '1099 acknowledgment PDF' ),
 			'vendor'=> 'Checkbox attestation.',
 			'ack'   => 'I understand I am an independent contractor and Wrrapd may issue a Form 1099 when required.',
 		),
 		'bank_payout' => array(
 			'title' => 'Connect bank / payouts',
-			'lead'  => 'Connect the account for Driver payouts (Stripe Connect later).',
+			'lead'  => 'Connect the account for JoyRider payouts (Stripe Connect later).',
 			'needs' => array( 'Stripe Connect' ),
 			'vendor'=> 'Stripe Connect Express.',
-			'ack'   => 'I have a US bank account ready for Driver payouts and will connect it when enabled.',
+			'ack'   => 'I have a US bank account ready for JoyRider payouts and will connect it when enabled.',
 		),
 	);
 	return $all[ $step ] ?? null;
@@ -1348,9 +1358,9 @@ function wrrapd_drivers_render_step_welcome( $app_id ) {
 	$greet = wrrapd_drivers_greeting_name( $app_id );
 	?>
 	<div class="wrrapd-wrapstars-card wrrapd-wrapstars-card--hero">
-		<p class="wrrapd-wrapstars-welcome__hello">Dear <?php echo esc_html( $greet === 'there' ? 'Driver' : $greet ); ?>,</p>
-		<p class="wrrapd-wrapstars-ob-lead">Welcome to the Wrrapd Driver network. This onboarding confirms agreements, screening, insurance, tax, and payout details before you can accept delivery offers in the Driver app.</p>
-		<p class="wrrapd-wrapstars-ob-lead">Complete each step promptly so ops can activate your account. After activation you will download the Driver app and start scheduling deliveries.</p>
+		<p class="wrrapd-wrapstars-welcome__hello">Dear <?php echo esc_html( $greet === 'there' ? 'JoyRider' : $greet ); ?>,</p>
+		<p class="wrrapd-wrapstars-ob-lead">Welcome to the Wrrapd JoyRider network. This onboarding confirms agreements, screening, insurance, tax, and payout details before you can accept delivery offers in the JoyRider app.</p>
+		<p class="wrrapd-wrapstars-ob-lead">Complete each step promptly so ops can activate your account. After activation you will open the JoyRider app and start scheduling deliveries.</p>
 		<form method="post" class="wrrapd-wrapstars-ob-actions">
 			<?php wp_nonce_field( 'wrrapd_drv_onboarding', 'wrrapd_drv_nonce' ); ?>
 			<input type="hidden" name="wrrapd_drv_action" value="onboarding_step" />
@@ -1374,7 +1384,7 @@ function wrrapd_drivers_render_step_orientation( $app_id ) {
 			<label>How do you load delivery details for a wrapped gift?
 				<select name="q1" required>
 					<option value="">Select…</option>
-					<option value="scan">Scan the box QR in the Driver app</option>
+					<option value="scan">Scan the box QR in the JoyRider app</option>
 					<option value="call">Call the customer for the address</option>
 					<option value="guess">Guess from the order number</option>
 				</select>
@@ -1390,8 +1400,8 @@ function wrrapd_drivers_render_step_orientation( $app_id ) {
 			<label>Who wraps the gift before your pickup?
 				<select name="q3" required>
 					<option value="">Select…</option>
-					<option value="wrapstar">A WrapStar (separate from Drivers)</option>
-					<option value="me">I wrap it myself as the Driver</option>
+					<option value="wrapstar">A WrapStar (separate from JoyRiders)</option>
+					<option value="me">I wrap it myself as the JoyRider</option>
 					<option value="customer">The customer wraps it</option>
 				</select>
 			</label>
@@ -1438,7 +1448,7 @@ function wrrapd_drivers_render_step_activation( $app_id ) {
 }
 
 /**
- * Full-bleed hero video for the Driver landing (same pattern as WrapStars Applications_Wrrapd.mp4).
+ * Full-bleed hero video for the JoyRider landing (same pattern as WrapStars Applications_Wrrapd.mp4).
  * Looks up Media Library attachment titled/filename containing "wrrapd-driver-ad".
  *
  * @return string Escaped URL or empty string.
@@ -1605,7 +1615,7 @@ function wrrapd_drivers_shortcode_login() {
 	?>
 	<div class="wrrapd-wrapstars wrrapd-drivers">
 		<div class="wrrapd-wrapstars-card wrrapd-wrapstars-login">
-			<h1>Driver portal login</h1>
+			<h1>JoyRider portal login</h1>
 			<?php if ( $greet ) : ?><p>Welcome, <?php echo esc_html( $greet ); ?>.</p><?php endif; ?>
 			<?php if ( $expired ) : ?><div class="wrrapd-wrapstars-alert wrrapd-wrapstars-alert--err">Your invitation expired. Contact us to resend.</div><?php endif; ?>
 			<?php if ( $err ) : ?><div class="wrrapd-wrapstars-alert wrrapd-wrapstars-alert--err"><?php echo esc_html( $err ); ?></div><?php endif; ?>
@@ -1631,13 +1641,13 @@ function wrrapd_drivers_shortcode_decline() {
 	?>
 	<div class="wrrapd-wrapstars wrrapd-drivers">
 		<div class="wrrapd-wrapstars-card">
-			<h1>Decline Driver offer</h1>
+			<h1>Decline JoyRider offer</h1>
 			<?php if ( is_array( $result ) && ! empty( $result['ok'] ) ) : ?>
 				<p>Your invitation has been declined. Thank you for letting us know.</p>
 			<?php elseif ( is_array( $result ) && empty( $result['ok'] ) ) : ?>
 				<div class="wrrapd-wrapstars-alert wrrapd-wrapstars-alert--err"><?php echo esc_html( $result['error'] ?? 'Could not decline.' ); ?></div>
 			<?php else : ?>
-				<p>If you have decided not to join as a Driver, you may decline below. No login required.</p>
+				<p>If you have decided not to join as a JoyRider, you may decline below. No login required.</p>
 				<form method="post" class="wrrapd-wrapstars-form">
 					<?php wp_nonce_field( 'wrrapd_drv_decline', 'wrrapd_drv_nonce' ); ?>
 					<input type="hidden" name="wrrapd_drv_action" value="decline_offer" />
@@ -1667,7 +1677,7 @@ function wrrapd_drivers_shortcode_onboarding( $atts ) {
 	if ( ! $app || (string) wrrapd_drivers_get_meta( $app->ID, 'status' ) !== 'approved' ) {
 		$status = $app ? wrrapd_drivers_get_meta( $app->ID, 'status' ) : '';
 		if ( $status === 'active' ) {
-			return '<div class="wrrapd-wrapstars-card"><p>Your Driver account is active. <a href="' . esc_url( wrrapd_drivers_courier_app_url() ) . '">Open the Driver app</a>.</p></div>';
+			return '<div class="wrrapd-wrapstars-card"><p>Your JoyRider account is active. <a href="' . esc_url( wrrapd_drivers_courier_app_url() ) . '">Open the JoyRider app</a>.</p></div>';
 		}
 		return '<p class="wrrapd-wrapstars-alert">Onboarding is available after approval.</p>';
 	}
@@ -1689,7 +1699,7 @@ function wrrapd_drivers_shortcode_onboarding( $atts ) {
 	?>
 	<div class="wrrapd-wrapstars wrrapd-drivers wrrapd-wrapstars-onboarding">
 		<aside class="wrrapd-wrapstars-ob-nav">
-			<p class="wrrapd-wrapstars-ob-nav__title">Driver onboarding</p>
+			<p class="wrrapd-wrapstars-ob-nav__title">JoyRider onboarding</p>
 			<ol>
 				<?php foreach ( $labels as $key => $label ) : ?>
 					<li class="<?php echo wrrapd_drivers_step_complete( $app->ID, $key ) ? 'is-done' : ( $key === $step ? 'is-current' : '' ); ?>">
@@ -1967,8 +1977,8 @@ function wrrapd_drivers_shortcode_profile() {
 
 function wrrapd_drivers_admin_menu() {
 	add_menu_page(
-		'Drivers',
-		'Drivers',
+		'JoyRiders',
+		'JoyRiders',
 		'manage_options',
 		'wrrapd-drivers',
 		'wrrapd_drivers_admin_page',

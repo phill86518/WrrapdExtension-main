@@ -456,7 +456,7 @@ export function ShiftModule() {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={barcodeDataUrl}
-                alt="Driver label QR"
+                alt="JoyRider label QR"
                 className="mx-auto mt-3 w-full max-w-xs"
               />
               <button

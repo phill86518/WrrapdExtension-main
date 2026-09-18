@@ -25,7 +25,7 @@ export function PlatformHub() {
             <p className="mt-2 text-sm text-slate-300">Gift-wrapping jobs, shifts, video proof, labels.</p>
           </Link>
           <Link href="/courier" className="rounded-xl border border-slate-700 bg-slate-900 p-5 hover:bg-slate-800">
-            <h2 className="text-xl font-medium">Driver App</h2>
+            <h2 className="text-xl font-medium">JoyRider App</h2>
             <p className="mt-2 text-sm text-slate-300">Courier pickup of wrap-complete gifts and scan labels.</p>
           </Link>
           <Link
