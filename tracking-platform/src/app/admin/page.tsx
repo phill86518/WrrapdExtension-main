@@ -5,6 +5,7 @@ import { WrrapdLogo } from "@/components/wrrapd-logo";
 import { getSession } from "@/lib/auth";
 import { listAllocationQueue, listOrdersByStatus } from "@/lib/data";
 import { ensureDemoStaffing } from "@/lib/demo-staffing";
+import { safeAdminNextPath } from "@/lib/url";
 
 export const dynamic = "force-dynamic";
 
@@ -80,6 +81,7 @@ export default async function AdminPage({
 }) {
   const raw = searchParams ? await searchParams : {};
   const query = { error: pickSearchParam(raw.error) };
+  const nextPath = safeAdminNextPath(pickSearchParam(raw.next));
   const session = await getSession();
 
   if (!session || session.role !== "admin") {
@@ -88,6 +90,11 @@ export default async function AdminPage({
         <WrrapdLogo className="h-10 w-auto max-w-[180px] object-contain object-left" />
         <h1 className="mt-4 text-3xl font-semibold">Admin Login</h1>
         <p className="mt-2 text-sm text-slate-600">Sign in to the command center.</p>
+        {nextPath ? (
+          <p className="mt-3 rounded border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            Your session ended. Sign in again to return to the page you were on.
+          </p>
+        ) : null}
         {query.error === "1" && (
           <p className="mt-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
             Incorrect admin password. It must match{" "}
@@ -100,6 +107,7 @@ export default async function AdminPage({
           <code className="rounded bg-slate-100 px-1">admin123</code> if unset).
         </p>
         <form action="/api/admin/login" method="post" className="mt-6 space-y-4 rounded-lg border p-6">
+          {nextPath ? <input type="hidden" name="next" value={nextPath} /> : null}
           <PasswordField name="password" placeholder="Admin password" autoComplete="current-password" />
           <button className="rounded bg-black px-4 py-2 text-white" type="submit">
             Sign in

@@ -152,6 +152,7 @@ export async function getDriverApplication(id: number): Promise<DriverApplicatio
   const r = await fetch(`${wpBase()}/wp-json/wrrapd/v1/driver-applications/${id}`, {
     headers: opsHeaders(),
     cache: "no-store",
+    signal: AbortSignal.timeout(20_000),
   });
   const body = await parseJson(r);
   if (!body.application || typeof body.application !== "object") {

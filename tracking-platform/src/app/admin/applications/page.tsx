@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { listWrapstarApplications } from "@/lib/wrapstar-applications-admin";
 import { listDriverApplications } from "@/lib/driver-applications-admin";
@@ -87,7 +87,10 @@ export default async function AdminApplicationsPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const session = await getSession();
-  if (!session || session.role !== "admin") notFound();
+  if (!session || session.role !== "admin") {
+    const next = "/admin/applications";
+    redirect(`/admin?next=${encodeURIComponent(next)}`);
+  }
 
   const sp = await searchParams;
   const status = pick(sp.status) || "all";

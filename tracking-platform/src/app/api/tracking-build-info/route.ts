@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 /** Plain Node handler — no RSC — so curl shows exactly what this Cloud Run revision runs. */
 export const dynamic = "force-dynamic";
 
-const DRIVER_UI_MARKER = "wrrapd-hourly-pay-2026-09-13";
+const DRIVER_UI_MARKER = "wrrapd-admin-session-2026-09-18";
 
 export async function GET() {
   return NextResponse.json({

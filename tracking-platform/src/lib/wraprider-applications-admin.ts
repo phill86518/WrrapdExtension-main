@@ -183,6 +183,7 @@ export async function getWrapriderApplication(id: number): Promise<WrapriderAppl
   const r = await fetch(`${wpBase()}/wp-json/wrrapd/v1/wraprider-applications/${id}`, {
     headers: opsHeaders(),
     cache: "no-store",
+    signal: AbortSignal.timeout(20_000),
   });
   const body = await parseJson(r);
   if (!body.application || typeof body.application !== "object") {

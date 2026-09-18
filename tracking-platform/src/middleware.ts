@@ -76,12 +76,47 @@ export async function middleware(request: NextRequest) {
   }
 
   const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
-  if (!token) return NextResponse.next();
+  let session: SessionPayload | null = null;
+  if (token) {
+    try {
+      const { payload } = await jwtVerify(token, secret, { clockTolerance: 300 });
+      const p = payload as SessionPayload;
+      if (p?.role && p.userId && p.name) session = p;
+    } catch {
+      session = null;
+    }
+  }
+
+  /**
+   * Deep Command Center URLs used to call notFound() when the session expired, which
+   * rendered a bare Next.js "404 This page could not be found" instead of the login form.
+   * Send expired tabs back to /admin?next=… so ops can sign in and return.
+   */
+  if (pathname.startsWith("/admin/") && session?.role !== "admin") {
+    const u = request.nextUrl.clone();
+    u.pathname = "/admin";
+    const next = `${pathname}${request.nextUrl.search || ""}`;
+    u.search = `?next=${encodeURIComponent(next)}`;
+    const res = NextResponse.redirect(u);
+    if (token && !session) {
+      res.cookies.set(SESSION_COOKIE_NAME, "", {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+        path: "/",
+        maxAge: 0,
+      });
+    }
+    return res;
+  }
+
+  if (!session) return NextResponse.next();
   try {
-    const { payload } = await jwtVerify(token, secret, { clockTolerance: 300 });
-    const p = payload as SessionPayload;
-    if (!p?.role || !p.userId || !p.name) return NextResponse.next();
-    const fresh = await new SignJWT({ role: p.role, userId: p.userId, name: p.name })
+    const fresh = await new SignJWT({
+      role: session.role,
+      userId: session.userId,
+      name: session.name,
+    })
       .setProtectedHeader({ alg: "HS256" })
       .setIssuedAt()
       .setExpirationTime(Math.floor(Date.now() / 1000) + SESSION_MAX_AGE_SEC)

@@ -148,12 +148,18 @@ export default async function AdminApplicationDetailPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const session = await getSession();
-  if (!session || session.role !== "admin") notFound();
   const { id: idStr } = await params;
   const id = Number(idStr);
+  const sp = await searchParams;
+  const returnTo = `/admin/applications/${idStr}${
+    typeof sp.role === "string" ? `?role=${encodeURIComponent(sp.role)}` : ""
+  }`;
+
+  if (!session || session.role !== "admin") {
+    redirect(`/admin?next=${encodeURIComponent(returnTo)}`);
+  }
   if (!Number.isFinite(id) || id <= 0) notFound();
 
-  const sp = await searchParams;
   const okFlash = typeof sp.ok === "string" ? sp.ok : undefined;
   let role: HireRole =
     pick(sp.role) === "driver" ? "driver" : pick(sp.role) === "wraprider" ? "wraprider" : "wrapstar";
@@ -168,17 +174,50 @@ export default async function AdminApplicationDetailPage({
   // Each track is its own CPT; post ids are unique across the WordPress site, so if the
   // requested track 404s we try the other two once and correct the role.
   let app: AnyApplication | null = null;
+  const fetchErrors: string[] = [];
+  let sawNotFound = false;
   const order: HireRole[] = [role, ...(["wrapstar", "driver", "wraprider"] as HireRole[]).filter((r) => r !== role)];
   for (const r of order) {
     try {
       app = await loaders[r]();
       role = r;
       break;
-    } catch {
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      fetchErrors.push(`${r}: ${msg}`);
+      if (/not found|HTTP 404/i.test(msg)) sawNotFound = true;
       app = null;
     }
   }
-  if (!app) notFound();
+  if (!app) {
+    // Transient WordPress / network failures used to fall through to Next.js notFound(),
+    // which looked like a dead page after AutoRefresh. Keep a real 404 only when WP said so.
+    if (sawNotFound && fetchErrors.every((e) => /not found|HTTP 404/i.test(e))) {
+      notFound();
+    }
+    return (
+      <div className="mx-auto max-w-xl px-4 py-16">
+        <h1 className="text-2xl font-semibold text-slate-900">Couldn’t load this application</h1>
+        <p className="mt-2 text-sm text-slate-600">
+          WordPress didn’t return application #{id}. This is often a short timeout or hiccup —
+          not a missing record. Refresh to try again.
+        </p>
+        {fetchErrors.length ? (
+          <pre className="mt-3 overflow-x-auto rounded border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">
+            {fetchErrors.join("\n")}
+          </pre>
+        ) : null}
+        <div className="mt-4 flex flex-wrap gap-3 text-sm">
+          <Link className="rounded bg-slate-900 px-3 py-2 text-white" href={returnTo}>
+            Retry
+          </Link>
+          <Link className="rounded border border-slate-300 px-3 py-2" href="/admin/applications">
+            Back to Applications
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   const isDriver = role === "driver";
   const isWraprider = role === "wraprider";
