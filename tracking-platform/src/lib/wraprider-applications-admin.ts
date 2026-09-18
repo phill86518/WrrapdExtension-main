@@ -15,6 +15,8 @@ export type WrapriderApplicationStatus =
   | "declined"
   | "rejected"
   | "active"
+  | "switched_to_wrapstar"
+  | "switched_to_joyrider"
   | string;
 
 export type WrapriderApplication = {
@@ -89,6 +91,10 @@ export type WrapriderApplication = {
   onboardingReopened?: boolean;
   onboardingReopenedAt?: string;
   onboardingClosedAt?: string;
+  switchedTo?: string;
+  switchedToLabel?: string;
+  switchedToAppId?: number;
+  switchedAt?: string;
   userId: number;
   createdAt: string;
   /** Compat with shared UI fields */
@@ -189,7 +195,13 @@ export async function runWrapriderApplicationAction(
   id: number,
   action: ApplicationAction,
   opts?: { adminNotes?: string; rejectReason?: string },
-): Promise<{ application: WrapriderApplication; passwordIssued?: boolean }> {
+): Promise<{
+  application: WrapriderApplication;
+  passwordIssued?: boolean;
+  newApplicationId?: number;
+  targetRole?: "wrapstar" | "driver";
+  targetLabel?: string;
+}> {
   const payload: Record<string, string> = { action };
   if (opts?.adminNotes !== undefined) payload.adminNotes = opts.adminNotes;
   if (opts?.rejectReason !== undefined) payload.rejectReason = opts.rejectReason;
@@ -204,9 +216,19 @@ export async function runWrapriderApplicationAction(
   if (!body.application || typeof body.application !== "object") {
     throw new Error("Action succeeded but application missing in response");
   }
-  const result = body.result as { passwordIssued?: boolean } | undefined;
+  const result = body.result as
+    | {
+        passwordIssued?: boolean;
+        newApplicationId?: number;
+        targetRole?: "wrapstar" | "driver";
+        targetLabel?: string;
+      }
+    | undefined;
   return {
     application: tag(body.application as WrapriderApplication),
     passwordIssued: result?.passwordIssued,
+    newApplicationId: result?.newApplicationId,
+    targetRole: result?.targetRole,
+    targetLabel: result?.targetLabel,
   };
 }

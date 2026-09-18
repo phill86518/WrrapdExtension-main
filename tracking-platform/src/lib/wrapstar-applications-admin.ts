@@ -210,7 +210,9 @@ export type ApplicationAction =
   | "reopen_onboarding"
   | "close_onboarding"
   | "save_notes"
-  | "save_bg_status";
+  | "save_bg_status"
+  | "move_to_wrapstar"
+  | "move_to_joyrider";
 
 export async function runWrapstarApplicationAction(
   id: number,

@@ -23,7 +23,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_WRAPRIDERS_BUILD', '2026-09-17-three-tracks' );
+define( 'WRRAPD_WRAPRIDERS_BUILD', '2026-09-18-move-stream' );
 define( 'WRRAPD_WRAPRIDERS_INVITE_TTL_DAYS', 15 );
 define( 'WRRAPD_WRAPRIDERS_CPT', 'wrrapd_wraprider_app' );
 

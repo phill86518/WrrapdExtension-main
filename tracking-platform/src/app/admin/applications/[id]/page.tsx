@@ -80,6 +80,18 @@ async function actionForm(formData: FormData) {
   ) {
     redirect(`/admin/applications/${id}?role=${role}&ok=reset_skipped`);
   }
+  if (
+    (action === "move_to_wrapstar" || action === "move_to_joyrider") &&
+    role !== "wraprider"
+  ) {
+    redirect(`/admin/applications/${id}?role=${role}&ok=move_wrong_role`);
+  }
+  if (
+    (action === "move_to_wrapstar" || action === "move_to_joyrider") &&
+    !["under_review", "interview"].includes(st)
+  ) {
+    redirect(`/admin/applications/${id}?role=${role}&ok=move_skipped`);
+  }
 
   if (role === "driver") {
     const result = await runDriverApplicationAction(id, action, {
@@ -96,6 +108,18 @@ async function actionForm(formData: FormData) {
     });
     if (action === "activate" && result.application) {
       await syncActivatedApplicationToWrapriderRoster(result.application);
+    }
+    if (
+      (action === "move_to_wrapstar" || action === "move_to_joyrider") &&
+      result.newApplicationId &&
+      result.targetRole
+    ) {
+      revalidatePath("/admin/applications");
+      revalidatePath(`/admin/applications/${id}`);
+      revalidatePath(`/admin/applications/${result.newApplicationId}`);
+      redirect(
+        `/admin/applications/${result.newApplicationId}?role=${result.targetRole}&ok=${encodeURIComponent(action)}`,
+      );
     }
   } else {
     const result = await runWrapstarApplicationAction(id, action, {
@@ -250,6 +274,31 @@ export default async function AdminApplicationDetailPage({
             ? " — onboarding site closed again and their onboarding sessions were signed out."
             : null}
           {okFlash === "not_active" ? " — skipped: only active contractors can have onboarding reopened or closed." : null}
+          {okFlash === "move_to_wrapstar"
+            ? " — WrapStar application created from a WrapRider. Continue review here in the WrapStar stream."
+            : null}
+          {okFlash === "move_to_joyrider"
+            ? " — JoyRider application created from a WrapRider. Continue review here in the JoyRider stream."
+            : null}
+        </p>
+      ) : null}
+
+      {isWraprider && wrapriderApp?.switchedToAppId ? (
+        <p className="mt-3 rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-800">
+          This WrapRider application is marked{" "}
+          <strong>
+            [Switched to {wrapriderApp.switchedToLabel || wrapriderApp.switchedTo || "another stream"}]
+          </strong>
+          . Continue hire on{" "}
+          <Link
+            className="underline"
+            href={`/admin/applications/${wrapriderApp.switchedToAppId}?role=${
+              wrapriderApp.switchedTo === "joyrider" ? "driver" : "wrapstar"
+            }`}
+          >
+            #{wrapriderApp.switchedToAppId}
+          </Link>
+          .
         </p>
       ) : null}
 

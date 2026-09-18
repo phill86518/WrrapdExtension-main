@@ -38,6 +38,8 @@ const FILTERS = [
   { id: "declined", label: "Declined offer" },
   { id: "active", label: "Active" },
   { id: "rejected", label: "Rejected" },
+  { id: "switched_to_wrapstar", label: "Switched → WrapStar" },
+  { id: "switched_to_joyrider", label: "Switched → JoyRider" },
 ] as const;
 
 function statusBadge(status: string) {
@@ -48,6 +50,8 @@ function statusBadge(status: string) {
     declined: "bg-orange-100 text-orange-900",
     active: "bg-emerald-100 text-emerald-900",
     rejected: "bg-rose-100 text-rose-900",
+    switched_to_wrapstar: "bg-violet-100 text-violet-900",
+    switched_to_joyrider: "bg-sky-100 text-sky-900",
   };
   return map[status] || "bg-slate-100 text-slate-700";
 }

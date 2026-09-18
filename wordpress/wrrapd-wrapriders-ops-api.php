@@ -240,7 +240,289 @@ function wrrapd_wrapriders_run_admin_action( $app_id, $action, $opts = array() )
 		}
 		return array( 'ok' => true, 'status' => 'under_review' );
 	}
+
+	// Reclassify a WrapRider applicant into WrapStar or JoyRider after review/interview.
+	if ( $action === 'move_to_wrapstar' || $action === 'move_to_joyrider' ) {
+		$target = $action === 'move_to_wrapstar' ? 'wrapstar' : 'joyrider';
+		$result = wrrapd_wrapriders_move_application_to_stream( $app_id, $target, $notes );
+		if ( empty( $result['ok'] ) ) {
+			return array(
+				'ok'     => false,
+				'error'  => $result['error'] ?? 'Could not move application.',
+				'status' => wrrapd_wrapriders_get_meta( $app_id, 'status' ),
+			);
+		}
+		return $result;
+	}
+
 	return array( 'ok' => false, 'error' => 'Unknown action.' );
+}
+
+/**
+ * Copy relevant WrapRider fields into a new WrapStar or JoyRider application, archive unused
+ * fields on the source, and mark the source “[Switched to …]”.
+ *
+ * @param int         $app_id WrapRider application ID.
+ * @param string      $target 'wrapstar' | 'joyrider'
+ * @param string|null $notes  Optional reviewer notes to append.
+ * @return array{ok:bool,error?:string,status?:string,newApplicationId?:int,targetRole?:string,targetLabel?:string}
+ */
+function wrrapd_wrapriders_move_application_to_stream( $app_id, $target, $notes = null ) {
+	$app_id = (int) $app_id;
+	$app    = get_post( $app_id );
+	if ( ! $app || $app->post_type !== WRRAPD_WRAPRIDERS_CPT ) {
+		return array( 'ok' => false, 'error' => 'Application not found.' );
+	}
+
+	$current = (string) wrrapd_wrapriders_get_meta( $app_id, 'status' );
+	if ( $current === 'switched' || strpos( $current, 'switched' ) === 0 ) {
+		return array( 'ok' => false, 'error' => 'This application was already switched.', 'status' => $current );
+	}
+	if ( ! in_array( $current, array( 'under_review', 'interview' ), true ) ) {
+		return array(
+			'ok'     => false,
+			'error'  => 'Move only from under_review or interview (current: “' . $current . '”).',
+			'status' => $current,
+		);
+	}
+
+	$target = $target === 'joyrider' ? 'joyrider' : 'wrapstar';
+	$label  = $target === 'joyrider' ? 'JoyRider' : 'WrapStar';
+
+	if ( $target === 'wrapstar' && ! function_exists( 'wrrapd_wrapstars_set_meta' ) ) {
+		return array( 'ok' => false, 'error' => 'WrapStar plugins are not loaded on this WordPress install.' );
+	}
+	if ( $target === 'joyrider' && ! function_exists( 'wrrapd_drivers_set_meta' ) ) {
+		return array( 'ok' => false, 'error' => 'JoyRider plugins are not loaded on this WordPress install.' );
+	}
+
+	$email = strtolower( trim( (string) wrrapd_wrapriders_get_meta( $app_id, 'email' ) ) );
+	if ( $email === '' || ! is_email( $email ) ) {
+		return array( 'ok' => false, 'error' => 'Source application is missing a valid email.' );
+	}
+
+	// Block duplicate open apps in the destination stream.
+	if ( $target === 'wrapstar' && function_exists( 'wrrapd_wrapstars_get_application_by_email' ) ) {
+		$existing = wrrapd_wrapstars_get_application_by_email( $email );
+		if ( $existing ) {
+			$ex_status = (string) wrrapd_wrapstars_get_meta( $existing->ID, 'status' );
+			if ( ! in_array( $ex_status, array( 'rejected', 'declined' ), true ) ) {
+				return array(
+					'ok'    => false,
+					'error' => 'A WrapStar application already exists for this email (#' . (int) $existing->ID . ', ' . $ex_status . ').',
+				);
+			}
+		}
+	}
+	if ( $target === 'joyrider' && function_exists( 'wrrapd_drivers_get_application_by_email' ) ) {
+		$existing = wrrapd_drivers_get_application_by_email( $email );
+		if ( $existing ) {
+			$ex_status = (string) wrrapd_drivers_get_meta( $existing->ID, 'status' );
+			if ( ! in_array( $ex_status, array( 'rejected', 'declined' ), true ) ) {
+				return array(
+					'ok'    => false,
+					'error' => 'A JoyRider application already exists for this email (#' . (int) $existing->ID . ', ' . $ex_status . ').',
+				);
+			}
+		}
+	}
+
+	$g = function ( $key, $default = '' ) use ( $app_id ) {
+		return wrrapd_wrapriders_get_meta( $app_id, $key, $default );
+	};
+
+	$shared = array(
+		'full_name'              => $g( 'full_name' ),
+		'first_name'             => $g( 'first_name' ),
+		'nickname'               => $g( 'nickname' ),
+		'middle_name'            => $g( 'middle_name' ),
+		'last_name'              => $g( 'last_name' ),
+		'email'                  => $email,
+		'phone'                  => $g( 'phone_mobile', $g( 'phone' ) ),
+		'phone_mobile'           => $g( 'phone_mobile', $g( 'phone' ) ),
+		'address_line1'          => $g( 'address_line1' ),
+		'address_line2'          => $g( 'address_line2' ),
+		'city'                   => $g( 'city' ),
+		'state'                  => $g( 'state' ),
+		'postal_code'            => $g( 'postal_code' ),
+		'bank_account_ready'     => $g( 'bank_account_ready' ),
+		'ack_background_check'   => $g( 'ack_background_check', '1' ),
+		'ack_contact'            => $g( 'ack_contact', '1' ),
+		'id_file'                => $g( 'id_file' ),
+		'age_21'                 => $g( 'age_21' ),
+		'has_valid_license'      => $g( 'has_valid_license' ),
+		'has_smartphone'         => $g( 'has_smartphone' ),
+	);
+
+	$wrap_fields = array(
+		'gift_wrapping_experience'     => $g( 'gift_wrapping_experience' ),
+		'dedicated_wrap_workspace'     => $g( 'dedicated_wrap_workspace' ),
+		'has_large_format_printer'     => $g( 'has_large_format_printer' ),
+		'printer_size'                 => $g( 'printer_size' ),
+		'comfortable_video_monitoring' => $g( 'comfortable_video_monitoring' ),
+		'why_wrapstar'                 => $g( 'why_wraprider' ),
+		'ack_video'                    => '1',
+		'ack_zoom_interview'           => '1',
+	);
+
+	$delivery_fields = array(
+		'has_vehicle'           => $g( 'has_vehicle' ),
+		'vehicle_type'          => $g( 'vehicle_type' ),
+		'clean_driving_record'  => $g( 'clean_driving_record' ),
+		'delivery_max_distance' => $g( 'delivery_max_distance' ),
+		'availability'          => $g( 'availability' ),
+		'why_drive'             => $g( 'why_wraprider' ),
+		'delivery_experience'   => $g( 'delivery_experience' ),
+		'ack_age_vehicle'       => $g( 'ack_age_vehicle', '1' ),
+	);
+
+	// Snapshot every WrapRider meta key for archival (unused + used).
+	$all_meta     = get_post_meta( $app_id );
+	$archive_raw  = array();
+	foreach ( $all_meta as $mk => $vals ) {
+		if ( strpos( (string) $mk, '_wrrapd_wr_' ) !== 0 ) {
+			continue;
+		}
+		$short               = substr( (string) $mk, strlen( '_wrrapd_wr_' ) );
+		$archive_raw[ $short ] = is_array( $vals ) ? ( $vals[0] ?? '' ) : $vals;
+	}
+
+	$mapped_keys = array_keys( $shared );
+	if ( $target === 'wrapstar' ) {
+		$mapped_keys = array_merge( $mapped_keys, array_keys( $wrap_fields ) );
+		// Keep a few delivery answers only as archive on WrapStar (not primary fields).
+	} else {
+		$mapped_keys = array_merge( $mapped_keys, array_keys( $delivery_fields ) );
+	}
+	$mapped_keys = array_unique( $mapped_keys );
+	$unused      = array();
+	foreach ( $archive_raw as $k => $v ) {
+		if ( in_array( $k, $mapped_keys, true ) ) {
+			continue;
+		}
+		if ( $v === '' || $v === null ) {
+			continue;
+		}
+		$unused[ $k ] = $v;
+	}
+	// For WrapStar move, delivery-only answers are unused; for JoyRider, wrap-only answers are unused.
+	if ( $target === 'wrapstar' ) {
+		foreach ( $delivery_fields as $k => $v ) {
+			if ( $v !== '' && $v !== null ) {
+				$unused[ $k ] = $v;
+			}
+		}
+	} else {
+		foreach ( $wrap_fields as $k => $v ) {
+			if ( $k === 'ack_video' || $k === 'ack_zoom_interview' ) {
+				continue;
+			}
+			if ( $v !== '' && $v !== null ) {
+				$unused[ $k ] = $v;
+			}
+		}
+	}
+
+	$full_name = (string) $shared['full_name'];
+	if ( $full_name === '' ) {
+		$full_name = trim( $shared['first_name'] . ' ' . $shared['last_name'] );
+	}
+	$post_title = $full_name . ' — ' . $email;
+
+	if ( $target === 'wrapstar' ) {
+		$new_id = wp_insert_post(
+			array(
+				'post_type'   => WRRAPD_WRAPSTARS_CPT,
+				'post_status' => 'publish',
+				'post_title'  => $post_title,
+			),
+			true
+		);
+		if ( is_wp_error( $new_id ) || ! $new_id ) {
+			return array( 'ok' => false, 'error' => 'Could not create WrapStar application.' );
+		}
+		$new_id = (int) $new_id;
+		$set    = 'wrrapd_wrapstars_set_meta';
+		foreach ( $shared as $k => $v ) {
+			call_user_func( $set, $new_id, $k, $v );
+		}
+		foreach ( $wrap_fields as $k => $v ) {
+			call_user_func( $set, $new_id, $k, $v );
+		}
+		call_user_func( $set, $new_id, 'status', 'under_review' );
+		call_user_func( $set, $new_id, 'user_id', 0 );
+		call_user_func( $set, $new_id, 'tier', 'new' );
+		call_user_func( $set, $new_id, 'submitted_at', gmdate( 'c' ) );
+		call_user_func( $set, $new_id, 'application_type', 'wrapstar' );
+		call_user_func( $set, $new_id, 'switched_from_wraprider_id', (string) $app_id );
+		call_user_func( $set, $new_id, 'switched_from_at', gmdate( 'c' ) );
+		call_user_func( $set, $new_id, 'imported_unused_fields', wp_json_encode( $unused ) );
+		$note_line = 'Moved from WrapRider application #' . $app_id . ' on ' . gmdate( 'Y-m-d' ) . ' UTC.';
+		$prev      = trim( (string) ( $notes !== null ? $notes : $g( 'admin_notes' ) ) );
+		call_user_func( $set, $new_id, 'admin_notes', $prev !== '' ? $prev . "\n" . $note_line : $note_line );
+		call_user_func( $set, $new_id, 'notes_updated_at', gmdate( 'c' ) );
+	} else {
+		$new_id = wp_insert_post(
+			array(
+				'post_type'   => WRRAPD_DRIVERS_CPT,
+				'post_status' => 'publish',
+				'post_title'  => $post_title,
+			),
+			true
+		);
+		if ( is_wp_error( $new_id ) || ! $new_id ) {
+			return array( 'ok' => false, 'error' => 'Could not create JoyRider application.' );
+		}
+		$new_id = (int) $new_id;
+		$set    = 'wrrapd_drivers_set_meta';
+		foreach ( $shared as $k => $v ) {
+			call_user_func( $set, $new_id, $k, $v );
+		}
+		foreach ( $delivery_fields as $k => $v ) {
+			call_user_func( $set, $new_id, $k, $v );
+		}
+		call_user_func( $set, $new_id, 'status', 'under_review' );
+		call_user_func( $set, $new_id, 'user_id', 0 );
+		call_user_func( $set, $new_id, 'submitted_at', gmdate( 'c' ) );
+		call_user_func( $set, $new_id, 'application_type', 'driver' );
+		call_user_func( $set, $new_id, 'switched_from_wraprider_id', (string) $app_id );
+		call_user_func( $set, $new_id, 'switched_from_at', gmdate( 'c' ) );
+		call_user_func( $set, $new_id, 'imported_unused_fields', wp_json_encode( $unused ) );
+		$note_line = 'Moved from WrapRider application #' . $app_id . ' on ' . gmdate( 'Y-m-d' ) . ' UTC.';
+		$prev      = trim( (string) ( $notes !== null ? $notes : $g( 'admin_notes' ) ) );
+		call_user_func( $set, $new_id, 'admin_notes', $prev !== '' ? $prev . "\n" . $note_line : $note_line );
+		call_user_func( $set, $new_id, 'notes_updated_at', gmdate( 'c' ) );
+	}
+
+	// Mark source WrapRider as switched — keep full archive, stop hire progress.
+	$switch_code = '[Switched to ' . $label . ']';
+	$new_title   = $switch_code . ' ' . $app->post_title;
+	wp_update_post(
+		array(
+			'ID'         => $app_id,
+			'post_title' => $new_title,
+		)
+	);
+	wrrapd_wrapriders_set_meta( $app_id, 'status', 'switched_to_' . ( $target === 'joyrider' ? 'joyrider' : 'wrapstar' ) );
+	wrrapd_wrapriders_set_meta( $app_id, 'switched_to', $target );
+	wrrapd_wrapriders_set_meta( $app_id, 'switched_to_label', $label );
+	wrrapd_wrapriders_set_meta( $app_id, 'switched_to_app_id', (string) $new_id );
+	wrrapd_wrapriders_set_meta( $app_id, 'switched_at', gmdate( 'c' ) );
+	wrrapd_wrapriders_set_meta( $app_id, 'switched_unused_fields', wp_json_encode( $unused ) );
+	wrrapd_wrapriders_set_meta( $app_id, 'switched_archive', wp_json_encode( $archive_raw ) );
+	if ( $notes !== null ) {
+		wrrapd_wrapriders_set_meta( $app_id, 'admin_notes', $notes );
+		wrrapd_wrapriders_set_meta( $app_id, 'notes_updated_at', gmdate( 'c' ) );
+	}
+
+	return array(
+		'ok'               => true,
+		'status'           => wrrapd_wrapriders_get_meta( $app_id, 'status' ),
+		'newApplicationId' => $new_id,
+		'targetRole'       => $target === 'joyrider' ? 'driver' : 'wrapstar',
+		'targetLabel'      => $label,
+		'switchCode'       => $switch_code,
+	);
 }
 
 function wrrapd_wrapriders_ops_serialize_application( $id ) {
@@ -327,6 +609,10 @@ function wrrapd_wrapriders_ops_serialize_application( $id ) {
 		'onboardingClosedAt'      => wrrapd_wrapriders_get_meta( $id, 'onboarding_closed_at' ),
 		'userId'                  => (int) wrrapd_wrapriders_get_meta( $id, 'user_id' ),
 		'createdAt'               => get_post_time( 'c', true, $app ),
+		'switchedTo'              => wrrapd_wrapriders_get_meta( $id, 'switched_to' ),
+		'switchedToLabel'         => wrrapd_wrapriders_get_meta( $id, 'switched_to_label' ),
+		'switchedToAppId'         => (int) wrrapd_wrapriders_get_meta( $id, 'switched_to_app_id', '0' ),
+		'switchedAt'              => wrrapd_wrapriders_get_meta( $id, 'switched_at' ),
 		// Compat fields for shared Admin UI.
 		'canDeliver'              => 'yes',
 		'fitScore'                => 0,

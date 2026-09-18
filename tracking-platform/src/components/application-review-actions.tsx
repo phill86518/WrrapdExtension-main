@@ -167,6 +167,16 @@ export function ApplicationReviewActions({
               return;
             }
           }
+          if (next === "move_to_wrapstar" || next === "move_to_joyrider") {
+            const dest = next === "move_to_wrapstar" ? "WrapStar" : "JoyRider";
+            const ok = window.confirm(
+              `Move this WrapRider application to ${dest}? Relevant answers will populate a new ${dest} application under review. This WrapRider file will be marked [Switched to ${dest}].`,
+            );
+            if (!ok) {
+              e.preventDefault();
+              return;
+            }
+          }
           setPending(next);
         }}
       >
@@ -279,6 +289,40 @@ export function ApplicationReviewActions({
                 {pending === "reject" ? "Rejecting…" : "Reject"}
               </button>
             </>
+          ) : null}
+
+          {role === "wraprider" && (status === "under_review" || status === "interview") ? (
+            <div className="mt-1 flex w-full flex-wrap gap-2 border-t border-slate-100 pt-3">
+              <p className="w-full text-xs text-slate-600">
+                Better fit for a single track? Move copies their relevant answers into a new
+                WrapStar or JoyRider application (under review). This WrapRider file is marked{" "}
+                <strong>[Switched to …]</strong> and unused answers are archived on it.
+              </p>
+              <button
+                type="submit"
+                name="action"
+                value="move_to_wrapstar"
+                disabled={busy}
+                className={`${BTN} bg-violet-700 font-semibold text-white hover:bg-violet-800`}
+                title="Create a WrapStar application from this WrapRider and mark this one switched"
+              >
+                {pending === "move_to_wrapstar" ? "Moving…" : "Move this application to WrapStar"}
+              </button>
+              <button
+                type="submit"
+                name="action"
+                value="move_to_joyrider"
+                disabled={busy}
+                className={`${BTN} bg-sky-700 font-semibold text-white hover:bg-sky-800`}
+                title="Create a JoyRider application from this WrapRider and mark this one switched"
+              >
+                {pending === "move_to_joyrider" ? "Moving…" : "Move this application to JoyRider"}
+              </button>
+            </div>
+          ) : null}
+
+          {role === "wraprider" && String(status).startsWith("switched") ? (
+            <Spent>✓ Switched — hire continues in the other stream</Spent>
           ) : null}
 
           {status === "declined" ? (
