@@ -22,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_WRAPSTARS_BUILD', '2026-09-18-hero-cta-split' );
+define( 'WRRAPD_WRAPSTARS_BUILD', '2026-09-18-no-lost-on-virtual' );
 /** Approval / re-invite onboarding credentials remain valid this many days. */
 define( 'WRRAPD_WRAPSTARS_INVITE_TTL_DAYS', 15 );
 
@@ -1459,6 +1459,11 @@ add_action( 'template_redirect', 'wrrapd_wrapstars_virtual_profile_page', 5 );
 
 function wrrapd_wrapstars_render_lost_page() {
 	if ( is_admin() || ! is_404() ) {
+		return;
+	}
+	// Virtual hire URLs still look like 404s to WordPress even after we render a real screen.
+	$path = isset( $_SERVER['REQUEST_URI'] ) ? (string) wp_parse_url( (string) $_SERVER['REQUEST_URI'], PHP_URL_PATH ) : '';
+	if ( preg_match( '#^/(wraprider|drive|apply|onboarding|driver-onboarding|wraprider-onboarding|thank-you|wrapstar-login|driver)(/|$)#', $path ) ) {
 		return;
 	}
 	if ( function_exists( 'wrrapd_render_not_found_page' ) ) {

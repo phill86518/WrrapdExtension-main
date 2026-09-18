@@ -23,7 +23,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_WRAPRIDERS_BUILD', '2026-09-18-move-stream' );
+define( 'WRRAPD_WRAPRIDERS_BUILD', '2026-09-18-landing-rewrite' );
 define( 'WRRAPD_WRAPRIDERS_INVITE_TTL_DAYS', 15 );
 define( 'WRRAPD_WRAPRIDERS_CPT', 'wrrapd_wraprider_app' );
 
@@ -208,6 +208,13 @@ function wrrapd_wrapriders_virtual_profile_page() {
 	$screen = wrrapd_wrapriders_screen_for_path( wrrapd_wrapriders_request_path() );
 	if ( ! $screen ) {
 		return;
+	}
+	// Virtual hire URLs are not real WP posts — clear the 404 flag so lost-page footers
+	// and error404 body styles never paint over a working WrapRider screen.
+	global $wp_query;
+	if ( $wp_query instanceof WP_Query ) {
+		$wp_query->is_404  = false;
+		$wp_query->is_page = true;
 	}
 	status_header( 200 );
 	nocache_headers();
@@ -1635,25 +1642,39 @@ function wrrapd_wrapriders_shortcode_landing() {
 			<div class="wrrapd-wrapstars-cinema-hero__content">
 				<p class="wrrapd-wrapstars-cinema-hero__kicker">Now accepting applications · Florida &amp; Georgia</p>
 				<h1>Become a WrapRider</h1>
-				<p class="wrrapd-wrapstars-cinema-hero__tagline">Wrap it. Deliver it. Own the whole gift.</p>
-				<p class="wrrapd-wrapstars-cinema-hero__sub">WrapRiders wrap beautifully from their own space, then take the finished gift to the door — one contractor, both halves of the order, on your schedule.</p>
+				<p class="wrrapd-wrapstars-cinema-hero__tagline">Craft the gift. Carry the joy.</p>
+				<p class="wrrapd-wrapstars-cinema-hero__sub">WrapRiders are the rare ones who do both — turn an ordinary box into something unforgettable in your own space, then bring that finished surprise to the door yourself.</p>
 				<a class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--xl wrrapd-wrapstars-btn--hero" href="<?php echo esc_url( $apply ); ?>">Start your application</a>
 			</div>
 		</section>
 
 		<div class="wrrapd-wrapstars-dasher-body">
+			<section class="wrrapd-wrapriders-spark" aria-hidden="true">
+				<div class="wrrapd-wrapriders-spark__stage">
+					<span class="wrrapd-wrapriders-spark__elf wrrapd-wrapriders-spark__elf--a"></span>
+					<span class="wrrapd-wrapriders-spark__elf wrrapd-wrapriders-spark__elf--b"></span>
+					<span class="wrrapd-wrapriders-spark__elf wrrapd-wrapriders-spark__elf--c"></span>
+					<span class="wrrapd-wrapriders-spark__star wrrapd-wrapriders-spark__star--1"></span>
+					<span class="wrrapd-wrapriders-spark__star wrrapd-wrapriders-spark__star--2"></span>
+					<span class="wrrapd-wrapriders-spark__star wrrapd-wrapriders-spark__star--3"></span>
+					<span class="wrrapd-wrapriders-spark__star wrrapd-wrapriders-spark__star--4"></span>
+					<span class="wrrapd-wrapriders-spark__gift"></span>
+				</div>
+				<p class="wrrapd-wrapriders-spark__line">Tiny hands. Big mileage. Pure delight.</p>
+			</section>
+
 			<section class="wrrapd-wrapstars-dasher-band">
 				<div class="wrrapd-wrapstars-dasher-band__item wrrapd-wrapstars-dasher-box">
-					<h2>Two roles, one login</h2>
-					<p>After activation the same email and password open the WrapRider app — wrap jobs and deliveries in one place.</p>
+					<h2>Ribbon to doorstep</h2>
+					<p>You are the craft and the courier — the same person who wraps it with care is the one who shows up with the finished surprise.</p>
 				</div>
 				<div class="wrrapd-wrapstars-dasher-band__item wrrapd-wrapstars-dasher-box">
-					<h2>Wrap, then ride</h2>
-					<p>Gifts and supplies are dropped at your wrapping space. You wrap to Wrrapd standards, load up, and deliver the smiles yourself.</p>
+					<h2>Your space. Your wheels.</h2>
+					<p>Gather what is coming in, wrap it beautifully where you work, then roll out and deliver it yourself. No middle handoff. No waiting on someone else.</p>
 				</div>
 				<div class="wrrapd-wrapstars-dasher-band__item wrrapd-wrapstars-dasher-box">
-					<h2>Clear stops</h2>
-					<p>See pickup and drop-off in the app. Simple, local, and on your schedule.</p>
+					<h2>Make someone light up</h2>
+					<p>Most gigs end at a porch drop. You get the whole arc — the quiet art of wrapping, then the moment joy lands at the door.</p>
 				</div>
 			</section>
 
@@ -1673,7 +1694,7 @@ function wrrapd_wrapriders_shortcode_landing() {
 					<div class="wrrapd-wrapstars-reqs-dd__item">
 						<span class="wrrapd-wrapstars-reqs-dd__num" aria-hidden="true">3</span>
 						<h3>A place to wrap</h3>
-						<p>A clean, dedicated space where gifts can be dropped off, wrapped, and stored safely until you deliver them.</p>
+						<p>A clean, dedicated space where you can wrap and hold finished gifts safely until you deliver them.</p>
 					</div>
 					<div class="wrrapd-wrapstars-reqs-dd__item">
 						<span class="wrrapd-wrapstars-reqs-dd__num" aria-hidden="true">4</span>
@@ -1702,7 +1723,7 @@ function wrrapd_wrapriders_shortcode_landing() {
 			<section class="wrrapd-wrapstars-dasher-box wrrapd-wrapstars-dasher-box--wide" style="text-align:center;">
 				<h2 class="wrrapd-wrapstars-section-title" style="margin-bottom:0.75rem;">Ready when you are</h2>
 				<p style="margin:0 0 1.25rem;">Start your WrapRider application today.</p>
-				<a class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--xl" href="<?php echo esc_url( $apply ); ?>">Start your application</a>
+				<p><a class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--xl" href="<?php echo esc_url( $apply ); ?>">Start your application</a></p>
 			</section>
 		</div>
 	</div>

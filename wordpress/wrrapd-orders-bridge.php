@@ -2132,6 +2132,10 @@ function wrrapd_output_not_found_css() {
 	if ( is_admin() || ! is_404() ) {
 		return;
 	}
+	$path = isset( $_SERVER['REQUEST_URI'] ) ? (string) wp_parse_url( (string) $_SERVER['REQUEST_URI'], PHP_URL_PATH ) : '';
+	if ( preg_match( '#^/(wraprider|drive|apply|onboarding|driver-onboarding|wraprider-onboarding|thank-you|wrapstar-login|driver)(/|$)#', $path ) ) {
+		return;
+	}
 	echo '<style id="wrrapd-lost-page-css">';
 	echo 'body.error404 #content,body.error404 #primary,body.error404 .site-main,body.error404 main.site-main,body.error404 .page-header,body.error404 .page-content,body.error404 .entry-header,body.error404 .entry-content,body.error404 .elementor-location-single,body.error404 .elementor-location-archive,body.error404 .elementor-4857,body.error404 #wrrapd-seasonal-campaign-root,body.error404 .wrrapd-hot-gifts-rail,body.error404 .wrrapd-season-hero{display:none!important;}';
 	echo '.wrrapd-lost{background:linear-gradient(180deg,#faf8f4 0%,#fff 70%);padding:clamp(2.2rem,5vw,4.2rem) 1.25rem clamp(2.8rem,6vw,4.8rem);text-align:center;}';
@@ -2165,6 +2169,10 @@ add_action( 'wp_head', 'wrrapd_output_not_found_css', 9998 );
 
 function wrrapd_render_not_found_page() {
 	if ( is_admin() || ! is_404() ) {
+		return;
+	}
+	$path = isset( $_SERVER['REQUEST_URI'] ) ? (string) wp_parse_url( (string) $_SERVER['REQUEST_URI'], PHP_URL_PATH ) : '';
+	if ( preg_match( '#^/(wraprider|drive|apply|onboarding|driver-onboarding|wraprider-onboarding|thank-you|wrapstar-login|driver)(/|$)#', $path ) ) {
 		return;
 	}
 	$home    = home_url( '/' );
