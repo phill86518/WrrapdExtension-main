@@ -23,7 +23,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_WRAPRIDERS_BUILD', '2026-09-18-inline-no-strip' );
+define( 'WRRAPD_WRAPRIDERS_BUILD', '2026-09-19-faq-reqs' );
 define( 'WRRAPD_WRAPRIDERS_INVITE_TTL_DAYS', 15 );
 define( 'WRRAPD_WRAPRIDERS_CPT', 'wrrapd_wraprider_app' );
 
@@ -1685,39 +1685,77 @@ function wrrapd_wrapriders_shortcode_landing() {
 					<div class="wrrapd-wrapstars-reqs-dd__item">
 						<span class="wrrapd-wrapstars-reqs-dd__num" aria-hidden="true">1</span>
 						<h3>Age &amp; license</h3>
-						<p>WrapRiders must be <strong>21 or older</strong> with a valid driver license.</p>
+						<p>WrapRiders must be <strong>21 or older</strong> and hold a valid U.S. driver license.</p>
 					</div>
 					<div class="wrrapd-wrapstars-reqs-dd__item">
 						<span class="wrrapd-wrapstars-reqs-dd__num" aria-hidden="true">2</span>
-						<h3>Vehicle &amp; phone</h3>
-						<p>An eligible personal vehicle, current insurance, and a smartphone for offers and navigation.</p>
+						<h3>Vehicle &amp; insurance</h3>
+						<p>An eligible personal vehicle in good working order, plus current auto insurance that meets your state requirements.</p>
 					</div>
 					<div class="wrrapd-wrapstars-reqs-dd__item">
 						<span class="wrrapd-wrapstars-reqs-dd__num" aria-hidden="true">3</span>
-						<h3>A place to wrap</h3>
-						<p>A clean, dedicated space where you can wrap and hold finished gifts safely until you deliver them.</p>
+						<h3>Driving record</h3>
+						<p>A clean driving record. We review motor-vehicle history as part of the application process.</p>
 					</div>
 					<div class="wrrapd-wrapstars-reqs-dd__item">
 						<span class="wrrapd-wrapstars-reqs-dd__num" aria-hidden="true">4</span>
+						<h3>Smartphone</h3>
+						<p>A modern smartphone with reliable data service for receiving offers, navigation, and delivery confirmation.</p>
+					</div>
+					<div class="wrrapd-wrapstars-reqs-dd__item">
+						<span class="wrrapd-wrapstars-reqs-dd__num" aria-hidden="true">5</span>
+						<h3>A place to wrap</h3>
+						<p>A clean, dedicated space where you can wrap gifts and hold finished orders safely until you deliver them.</p>
+					</div>
+					<div class="wrrapd-wrapstars-reqs-dd__item">
+						<span class="wrrapd-wrapstars-reqs-dd__num" aria-hidden="true">6</span>
 						<h3>Where we launch</h3>
-						<p>Starting in <strong>Florida</strong> and <strong>Georgia</strong>. Other areas may open as the network grows.</p>
+						<p>Currently accepting applicants in <strong>Florida</strong> and <strong>Georgia</strong>. Additional markets may open as the network grows.</p>
 					</div>
 				</div>
 			</section>
 
 			<section class="wrrapd-wrapstars-faq-dd">
-				<h2 class="wrrapd-wrapstars-section-title">Quick answers</h2>
+				<h2 class="wrrapd-wrapstars-section-title">Frequently asked questions</h2>
 				<details class="wrrapd-wrapstars-faq-dd__item">
-					<summary>How is this different from a WrapStar or a JoyRider?</summary>
-					<p>WrapStars only wrap. JoyRiders only deliver. WrapRiders do both on the same order — wrap it in your space, then drive it to the door.</p>
+					<summary>What does a WrapRider do?</summary>
+					<p>A WrapRider manages the gift end to end: you wrap each order in your own space, then deliver the finished surprise to the recipient yourself.</p>
 				</details>
 				<details class="wrrapd-wrapstars-faq-dd__item">
-					<summary>How long does applying take?</summary>
-					<p>About six minutes. We typically review within seven days.</p>
+					<summary>How long does the application process take?</summary>
+					<p>The online application usually takes about six minutes to complete. Our team typically reviews submissions within seven days and may invite you to a short interview before a final decision.</p>
 				</details>
 				<details class="wrrapd-wrapstars-faq-dd__item">
-					<summary>Only want to do one of the two?</summary>
-					<p><a href="<?php echo esc_url( wrrapd_wrapriders_apply_url( '/apply/' ) ); ?>">Apply to become a WrapStar</a> (wrap only) or <a href="<?php echo esc_url( wrrapd_wrapriders_apply_url( '/drive/' ) ); ?>">apply as a JoyRider</a> (deliver only).</p>
+					<summary>What are the driving and vehicle prerequisites?</summary>
+					<p>You must be at least 21 years old, hold a valid driver license, drive an eligible personal vehicle with current insurance, and maintain a clean driving record. A smartphone is required for offers and navigation.</p>
+				</details>
+				<details class="wrrapd-wrapstars-faq-dd__item">
+					<summary>How are WrapRiders paid?</summary>
+					<p>WrapRiders are independent contractors paid an hourly rate for active wrapping and delivery time. Starting rates in launch markets are typically around <strong>$24 per hour</strong>, and the exact rate for your ZIP code is confirmed when you are approved. Rates may vary by market.</p>
+				</details>
+				<details class="wrrapd-wrapstars-faq-dd__item">
+					<summary>Are there incentives or milestone bonuses?</summary>
+					<p>Yes. Milestone incentives may be offered for completing onboarding, finishing your first set of orders, and participating during peak gifting seasons. Details are shared during onboarding and may change as programs evolve.</p>
+				</details>
+				<details class="wrrapd-wrapstars-faq-dd__item">
+					<summary>When and how do I receive payouts?</summary>
+					<p>Approved earnings are paid on a regular schedule to the bank account you provide during onboarding. You can review activity and payout status in the WrapRider app after you are activated.</p>
+				</details>
+				<details class="wrrapd-wrapstars-faq-dd__item">
+					<summary>Do I need gift-wrapping experience?</summary>
+					<p>Prior professional experience is helpful but not required. We look for care, presentation, reliability, and a willingness to follow Wrrapd wrapping standards.</p>
+				</details>
+				<details class="wrrapd-wrapstars-faq-dd__item">
+					<summary>Is a background check required?</summary>
+					<p>Yes. Identity verification and a background check are part of the approval process before you receive access to live orders.</p>
+				</details>
+				<details class="wrrapd-wrapstars-faq-dd__item">
+					<summary>May I choose a wrap-only or delivery-only role instead?</summary>
+					<p>Yes. If you prefer to wrap gifts without delivering them, you may <a href="<?php echo esc_url( wrrapd_wrapriders_apply_url( '/apply/' ) ); ?>">apply to become a WrapStar</a>. If you prefer to deliver finished gifts only, you may <a href="<?php echo esc_url( wrrapd_wrapriders_apply_url( '/drive/' ) ); ?>">apply to become a JoyRider</a>.</p>
+				</details>
+				<details class="wrrapd-wrapstars-faq-dd__item">
+					<summary>Where is WrapRider currently available?</summary>
+					<p>We are launching in <strong>Florida</strong> and <strong>Georgia</strong>. Applicants elsewhere are welcome to apply; opportunities outside launch markets may be limited at first.</p>
 				</details>
 			</section>
 

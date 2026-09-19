@@ -1,4 +1,5 @@
-const WRRAPD_LOGO_URL = "https://pay.wrrapd.com/img/wrrapd-logo-1-small.png";
+const WRRAPD_LOGO_URL =
+  "https://wrrapd.com/wp-content/uploads/2025/03/Wrrapd_f-Logo-800-x-458-px.png";
 
 type Props = {
   className?: string;

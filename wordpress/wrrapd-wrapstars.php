@@ -22,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_WRAPSTARS_BUILD', '2026-09-18-inline-no-strip' );
+define( 'WRRAPD_WRAPSTARS_BUILD', '2026-09-19-faq-reqs' );
 /** Approval / re-invite onboarding credentials remain valid this many days. */
 define( 'WRRAPD_WRAPSTARS_INVITE_TTL_DAYS', 15 );
 
@@ -3085,8 +3085,9 @@ add_action( 'wp_footer', 'wrrapd_wrapstars_output_theme_cleanup_css', 1 );
  * All public copy for the apply.wrrapd.com landing page, in one place.
  *
  * Edit text here; `wrrapd_wrapstars_shortcode_landing()` only renders it.
- * Rules: see docs/WRAPSTARS-OPERATIONS-MODEL.md §2 — no pay mechanics, no tips,
- * no delivery/pickup by WrapStars, no description of how orders are routed.
+ * Rules: see docs/WRAPSTARS-OPERATIONS-MODEL.md §2 — no tips, no delivery/pickup by
+ * WrapStars, no description of how orders are routed. High-level hourly pay and
+ * milestone incentives may appear in FAQ when applicants ask about compensation.
  * Strings may contain <strong>/<em>; they are printed through wp_kses_post().
  *
  * @return array<string, mixed>
@@ -3153,6 +3154,21 @@ function wrrapd_wrapstars_landing_content() {
 					'text'  => 'A government-issued photo ID to apply. After approval you&rsquo;ll e-sign your agreement, complete orientation and tax forms, and verify insurance before your first order.',
 					'note'  => '',
 				),
+				array(
+					'title' => 'Identity verification',
+					'text'  => 'Identity verification and a background check are part of the approval process before you receive live wrapping orders.',
+					'note'  => '',
+				),
+				array(
+					'title' => 'Reliability',
+					'text'  => 'You must be able to complete orders within the wrapping window you accept and follow Wrrapd presentation standards.',
+					'note'  => '',
+				),
+				array(
+					'title' => 'Where we launch',
+					'text'  => 'Currently accepting applicants in <strong>Florida</strong> and <strong>Georgia</strong>. Additional markets may open as the network grows.',
+					'note'  => '',
+				),
 			),
 		),
 		'faq'       => array(
@@ -3160,35 +3176,47 @@ function wrrapd_wrapstars_landing_content() {
 			'items' => array(
 				array(
 					'q' => 'What does a WrapStar actually do?',
-					'a' => 'You wrap. Gifts arrive at your wrapping space with clear instructions; you wrap them beautifully, share a quick photo or short video of the finished work, and hand them back. No driving, no deliveries, no customer calls.',
+					'a' => 'You wrap gifts from your own space. Orders arrive with clear instructions; you wrap them beautifully, share a quick photo or short video of the finished work, and hand them back for delivery. Drop-offs and pickups are arranged for you.',
 				),
 				array(
-					'q' => 'Do I need to deliver anything or pick anything up?',
-					'a' => 'No. Drop-offs and pickups are handled for you. Your only job is to make each gift look incredible.',
+					'q' => 'How long does the application process take?',
+					'a' => 'The online application usually takes about five minutes to complete. We review submissions within about seven days and may invite you to a brief video conversation. After approval you complete onboarding — agreement, orientation, tax forms, and insurance — before receiving your first orders.',
+				),
+				array(
+					'q' => 'How are WrapStars paid?',
+					'a' => 'WrapStars are independent contractors paid an hourly rate for active wrapping time. Starting rates in launch markets are typically around <strong>$25 per hour</strong>, and the exact rate for your ZIP code is confirmed when you are approved. Rates may vary by market.',
+				),
+				array(
+					'q' => 'Are there incentives or milestone bonuses?',
+					'a' => 'Yes. Milestone incentives may be offered for completing onboarding, finishing your first set of orders, and participating during peak gifting seasons. Details are shared during onboarding and may change as programs evolve.',
+				),
+				array(
+					'q' => 'When and how do I receive payouts?',
+					'a' => 'Approved earnings are paid on a regular schedule to the bank account you provide during onboarding. You can review activity and payout status in the WrapStar app after you are activated.',
 				),
 				array(
 					'q' => 'Where is WrapStars available?',
 					'a' => 'We are launching in <strong>Florida</strong> and <strong>Georgia</strong>. Applicants in other states are welcome — opportunities may be limited at first as the network grows.',
 				),
 				array(
-					'q' => 'How long does it take to start?',
-					'a' => 'The application takes about five minutes. We review submissions within about seven days and may invite you to a brief video conversation. After approval you complete onboarding — agreement, orientation, tax forms, and insurance — before receiving your first orders.',
-				),
-				array(
 					'q' => 'What supplies do I need?',
 					'a' => 'Your own wrapping paper, small boxes when an item needs a box, scissors, cutters, tape, ribbon, tissue, and a neat space to work. During onboarding we walk you through Wrrapd presentation standards.',
 				),
 				array(
-					'q' => 'Looking to deliver instead?',
-					'a' => 'JoyRiders pick up and drop off gifts. <a href="https://apply.wrrapd.com/drive/">Apply as a JoyRider</a>. Prefer to wrap <em>and</em> deliver? <a href="https://apply.wrrapd.com/wraprider/">Apply as a WrapRider</a>.',
+					'q' => 'Is gift-wrapping experience required?',
+					'a' => 'Prior professional experience is helpful but not required. We look for care, presentation, and reliability — the qualities that make every unwrap feel special. A photo of something you have wrapped can help, but attitude and follow-through matter most.',
+				),
+				array(
+					'q' => 'Is a background check required?',
+					'a' => 'Yes. Identity verification and a background check are part of the approval process before you receive access to live orders.',
 				),
 				array(
 					'q' => 'How quickly do orders need to be finished?',
 					'a' => 'Gifting is time-sensitive, so most orders are wrapped the <strong>same day</strong> they arrive, within the window you have agreed to. You always know the window up front.',
 				),
 				array(
-					'q' => 'Is gift-wrapping experience required?',
-					'a' => 'Not necessarily. We look for care, presentation, and reliability — the qualities that make every unwrap feel special. A photo of something you have wrapped can help, but attitude and follow-through matter most.',
+					'q' => 'May I apply for a delivery role instead?',
+					'a' => 'Yes. If you prefer to deliver finished gifts, you may <a href="https://apply.wrrapd.com/drive/">apply to become a JoyRider</a>. If you prefer to wrap and deliver the same orders yourself, you may <a href="https://apply.wrrapd.com/wraprider/">apply to become a WrapRider</a>.',
 				),
 				array(
 					'q' => 'When will I hear back about my application?',

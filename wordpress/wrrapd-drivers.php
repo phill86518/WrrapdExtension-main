@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_DRIVERS_BUILD', '2026-09-14-lost-page-brand' );
+define( 'WRRAPD_DRIVERS_BUILD', '2026-09-19-faq-reqs' );
 define( 'WRRAPD_DRIVERS_INVITE_TTL_DAYS', 15 );
 define( 'WRRAPD_DRIVERS_CPT', 'wrrapd_driver_app' );
 
@@ -1536,34 +1536,73 @@ function wrrapd_drivers_shortcode_landing() {
 					<div class="wrrapd-wrapstars-reqs-dd__item">
 						<span class="wrrapd-wrapstars-reqs-dd__num" aria-hidden="true">1</span>
 						<h3>Age &amp; license</h3>
-						<p>JoyRiders must be <strong>21 or older</strong> with a valid driver license.</p>
+						<p>JoyRiders must be <strong>21 or older</strong> and hold a valid U.S. driver license.</p>
 					</div>
 					<div class="wrrapd-wrapstars-reqs-dd__item">
 						<span class="wrrapd-wrapstars-reqs-dd__num" aria-hidden="true">2</span>
-						<h3>Vehicle &amp; phone</h3>
-						<p>An eligible personal vehicle, current insurance, and a smartphone for offers and navigation.</p>
+						<h3>Vehicle &amp; insurance</h3>
+						<p>An eligible personal vehicle in good working order, plus current auto insurance that meets your state requirements.</p>
 					</div>
 					<div class="wrrapd-wrapstars-reqs-dd__item">
 						<span class="wrrapd-wrapstars-reqs-dd__num" aria-hidden="true">3</span>
+						<h3>Driving record</h3>
+						<p>A clean driving record. We review motor-vehicle history as part of the application process.</p>
+					</div>
+					<div class="wrrapd-wrapstars-reqs-dd__item">
+						<span class="wrrapd-wrapstars-reqs-dd__num" aria-hidden="true">4</span>
+						<h3>Smartphone</h3>
+						<p>A modern smartphone with reliable data service for receiving offers, navigation, and proof of delivery.</p>
+					</div>
+					<div class="wrrapd-wrapstars-reqs-dd__item">
+						<span class="wrrapd-wrapstars-reqs-dd__num" aria-hidden="true">5</span>
+						<h3>Background check</h3>
+						<p>Identity verification and a background check are required before you can accept live delivery offers.</p>
+					</div>
+					<div class="wrrapd-wrapstars-reqs-dd__item">
+						<span class="wrrapd-wrapstars-reqs-dd__num" aria-hidden="true">6</span>
 						<h3>Where we launch</h3>
-						<p>Starting in <strong>Florida</strong> and <strong>Georgia</strong>. Other areas may open as the network grows.</p>
+						<p>Currently accepting applicants in <strong>Florida</strong> and <strong>Georgia</strong>. Additional markets may open as the network grows.</p>
 					</div>
 				</div>
 			</section>
 
 			<section class="wrrapd-wrapstars-faq-dd">
-				<h2 class="wrrapd-wrapstars-section-title">Quick answers</h2>
+				<h2 class="wrrapd-wrapstars-section-title">Frequently asked questions</h2>
 				<details class="wrrapd-wrapstars-faq-dd__item">
-					<summary>Do I wrap the gifts?</summary>
-					<p>No — WrapStars wrap. JoyRiders pick up and deliver the finished gift.</p>
+					<summary>What does a JoyRider do?</summary>
+					<p>JoyRiders pick up finished, wrapped gifts from WrapStars and deliver them to recipients. You focus on careful final-mile delivery on a schedule that works for you.</p>
 				</details>
 				<details class="wrrapd-wrapstars-faq-dd__item">
-					<summary>How long does applying take?</summary>
-					<p>About five minutes. We typically review within seven days.</p>
+					<summary>How long does the application process take?</summary>
+					<p>The online application usually takes about five minutes to complete. Our team typically reviews submissions within seven days and may invite you to a short conversation before a final decision.</p>
 				</details>
 				<details class="wrrapd-wrapstars-faq-dd__item">
-					<summary>Looking to wrap instead?</summary>
-					<p><a href="<?php echo esc_url( wrrapd_drivers_apply_url( '/apply/' ) ); ?>">Apply to become a WrapStar</a>. Prefer to wrap <em>and</em> deliver? <a href="<?php echo esc_url( wrrapd_drivers_apply_url( '/wraprider/' ) ); ?>">Apply as a WrapRider</a>.</p>
+					<summary>What are the driving and vehicle prerequisites?</summary>
+					<p>You must be at least 21 years old, hold a valid driver license, drive an eligible personal vehicle with current insurance, and maintain a clean driving record. A smartphone is required for offers and navigation.</p>
+				</details>
+				<details class="wrrapd-wrapstars-faq-dd__item">
+					<summary>How are JoyRiders paid?</summary>
+					<p>JoyRiders are independent contractors paid an hourly rate for active delivery time. Starting rates in launch markets are typically around <strong>$22 per hour</strong>, and the exact rate for your ZIP code is confirmed when you are approved. Rates may vary by market.</p>
+				</details>
+				<details class="wrrapd-wrapstars-faq-dd__item">
+					<summary>Are there incentives or milestone bonuses?</summary>
+					<p>Yes. Milestone incentives may be offered for completing onboarding, completing your first deliveries, and participating during peak gifting seasons. Details are shared during onboarding and may change as programs evolve.</p>
+				</details>
+				<details class="wrrapd-wrapstars-faq-dd__item">
+					<summary>When and how do I receive payouts?</summary>
+					<p>Approved earnings are paid on a regular schedule to the bank account you provide during onboarding. You can review activity and payout status in the JoyRider app after you are activated.</p>
+				</details>
+				<details class="wrrapd-wrapstars-faq-dd__item">
+					<summary>Do JoyRiders wrap the gifts?</summary>
+					<p>Gift wrapping is handled by WrapStars. As a JoyRider, you pick up completed orders and deliver them to the door.</p>
+				</details>
+				<details class="wrrapd-wrapstars-faq-dd__item">
+					<summary>May I apply for a wrapping role instead?</summary>
+					<p>Yes. If you prefer to wrap gifts without delivering them, you may <a href="<?php echo esc_url( wrrapd_drivers_apply_url( '/apply/' ) ); ?>">apply to become a WrapStar</a>. If you prefer to wrap and deliver the same orders yourself, you may <a href="<?php echo esc_url( wrrapd_drivers_apply_url( '/wraprider/' ) ); ?>">apply to become a WrapRider</a>.</p>
+				</details>
+				<details class="wrrapd-wrapstars-faq-dd__item">
+					<summary>Where is JoyRider currently available?</summary>
+					<p>We are launching in <strong>Florida</strong> and <strong>Georgia</strong>. Applicants elsewhere are welcome to apply; opportunities outside launch markets may be limited at first.</p>
 				</details>
 			</section>
 

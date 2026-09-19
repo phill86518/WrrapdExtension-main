@@ -1674,8 +1674,16 @@ body.wrrapd-wrapstars-portal .wrrapd-wrapstars-portal-util span[aria-hidden="tru
 	margin-top: 2rem;
 }
 
+/* Exactly four items: 2×2 so the last cell is not left alone on a row. */
+.wrrapd-wrapstars-reqs-dd__grid:has(> :nth-child(4):last-child) {
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	max-width: 44rem;
+	margin-inline: auto;
+}
+
 @media (max-width: 900px) {
-	.wrrapd-wrapstars-reqs-dd__grid {
+	.wrrapd-wrapstars-reqs-dd__grid,
+	.wrrapd-wrapstars-reqs-dd__grid:has(> :nth-child(4):last-child) {
 		grid-template-columns: 1fr;
 		max-width: 28rem;
 		margin-inline: auto;

@@ -3,19 +3,20 @@ import { WrrapdLogo } from "@/components/wrrapd-logo";
 import { DEMO_CUSTOMER_TRACKING_TOKEN } from "@/lib/demo-orders";
 import { showPlatformLoginHints } from "@/lib/site";
 
-/** Ops landing: links to admin, WrapStar console, and demo tracking. */
+/** Ops landing: links to admin, WrapStar / JoyRider / WrapRider consoles, and demo tracking. */
 export function PlatformHub() {
   const hints = showPlatformLoginHints();
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
       <main className="mx-auto max-w-5xl px-6 py-14">
-        <WrrapdLogo className="h-12 w-auto max-w-[200px] brightness-0 invert" />
+        <WrrapdLogo className="h-14 w-auto max-w-[240px] object-contain object-left" />
         <h1 className="mt-4 text-4xl font-semibold">Delivery command platform</h1>
         <p className="mt-3 max-w-3xl text-slate-300">
-          Admin command center, WrapStar console, and customer tracking — same Next.js app as the public site.
+          Admin command center, WrapStar, JoyRider, and WrapRider apps, plus customer tracking —
+          same Next.js app as the public site.
         </p>
-        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <Link href="/admin" className="rounded-xl border border-slate-700 bg-slate-900 p-5 hover:bg-slate-800">
             <h2 className="text-xl font-medium">Command center</h2>
             <p className="mt-2 text-sm text-slate-300">Manage active, scheduled, and past deliveries.</p>
@@ -28,9 +29,13 @@ export function PlatformHub() {
             <h2 className="text-xl font-medium">JoyRider App</h2>
             <p className="mt-2 text-sm text-slate-300">Courier pickup of wrap-complete gifts and scan labels.</p>
           </Link>
+          <Link href="/wraprider" className="rounded-xl border border-slate-700 bg-slate-900 p-5 hover:bg-slate-800">
+            <h2 className="text-xl font-medium">WrapRider App</h2>
+            <p className="mt-2 text-sm text-slate-300">Hybrid wrap + deliver: wrap in your space, then take it to the door.</p>
+          </Link>
           <Link
             href={`/track/${DEMO_CUSTOMER_TRACKING_TOKEN}`}
-            className="rounded-xl border border-slate-700 bg-slate-900 p-5 hover:bg-slate-800"
+            className="rounded-xl border border-slate-700 bg-slate-900 p-5 hover:bg-slate-800 sm:col-span-2 lg:col-span-1"
           >
             <h2 className="text-xl font-medium">Customer tracking (demo)</h2>
             <p className="mt-2 text-sm text-slate-300">Live status, ETA, map, and final proof photo.</p>
