@@ -2674,6 +2674,74 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
         document.getElementById('wrrapd-address-gift-mismatch-overlay')?.remove();
     }
 
+    function wrrapdFindHubAddressControl() {
+        const controls = wrrapdCollectAddressRadioLikeControls();
+        for (const control of controls) {
+            if (wrrapdHubSignatureFromText(wrrapdGetAddressTextNearControl(control))) return control;
+        }
+        return null;
+    }
+
+    function wrrapdClickHubAddressControl(control) {
+        if (!control) return false;
+        try {
+            control.scrollIntoView({ block: 'center', behavior: 'instant' });
+        } catch (_) {
+            /* ignore */
+        }
+        try {
+            if ('checked' in control && control.type === 'radio') {
+                control.checked = true;
+                control.dispatchEvent(new Event('input', { bubbles: true }));
+                control.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+            control.click();
+        } catch (_) {
+            return false;
+        }
+        return true;
+    }
+
+    function wrrapdFindDeliverToThisAddressControl() {
+        return (
+            wrrapdFindMainColumnDeliverToAddressControl() ||
+            document.querySelector(
+                '#checkout-main input.a-button-input, #checkout-main .a-button-primary input, #checkout-experience-container .a-button-primary input',
+            )
+        );
+    }
+
+    async function wrrapdSelectHubThenDeliver({ userInitiated = false } = {}) {
+        wrrapdClickShowMoreAddressesIfPresent();
+        await new Promise((r) => setTimeout(r, 400));
+        let control = wrrapdFindHubAddressControl();
+        if (!control) {
+            wrrapdClickShowMoreAddressesIfPresent();
+            await new Promise((r) => setTimeout(r, 700));
+            control = wrrapdFindHubAddressControl();
+        }
+        if (control) wrrapdClickHubAddressControl(control);
+        await new Promise((r) => setTimeout(r, 350));
+        const deliver = wrrapdFindDeliverToThisAddressControl();
+        if (!control || !deliver) return { ok: false, deliver: deliver || null };
+        if (userInitiated || !wrrapdManualAddressTapsRequired()) {
+            try {
+                deliver.click();
+            } catch (_) {
+                return { ok: false, deliver };
+            }
+            try {
+                localStorage.setItem('wrrapd-addresses-changed', 'true');
+            } catch (_) {
+                /* ignore */
+            }
+            removeLoadingScreen();
+            return { ok: true, deliver, clicked: true };
+        }
+        wrrapdShowManualAddressHint(deliver, 'deliver');
+        return { ok: true, deliver, clicked: false };
+    }
+
     function wrrapdShowAddressGiftMismatchModal(bodyText, itemTitles) {
         wrrapdRemoveAddressGiftMismatchModal();
         const wrap = document.createElement('div');
@@ -2711,15 +2779,25 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
         }
         const p2 = document.createElement('p');
         p2.style.cssText = 'margin:0 0 16px;font-size:14px;color:#334155;';
-        p2.textContent =
-            'On Amazon, choose the Wrrapd hub for those lines, or go back and remove Wrrapd gift-wrap for anything shipping to your own address.';
+        p2.textContent = 'We’ll switch these gift-wrap items to the Wrrapd hub.';
         inner.appendChild(p2);
         const btn = document.createElement('button');
         btn.type = 'button';
-        btn.textContent = "OK — I'll fix it on Amazon";
+        btn.textContent = 'Deliver to this address';
         btn.style.cssText =
-            'padding:10px 18px;border-radius:8px;border:none;background:#1e293b;color:#fff;font-weight:600;cursor:pointer;font-size:14px;';
-        btn.addEventListener('click', () => wrrapdRemoveAddressGiftMismatchModal());
+            'padding:10px 18px;border-radius:8px;border:1px solid #fcd200;background:#ffd814;color:#0f1111;font-weight:700;cursor:pointer;font-size:14px;';
+        btn.addEventListener('click', async () => {
+            wrrapdRemoveAddressGiftMismatchModal();
+            showLoadingScreen('Setting up your Wrrapd hub address…');
+            const result = await wrrapdSelectHubThenDeliver({ userInitiated: true });
+            if (result.ok) return;
+            try {
+                isHandlingWrrapdAddressSelection = false;
+                await handleWrrapdAddressSelection();
+            } catch (_) {
+                removeLoadingScreen();
+            }
+        });
         inner.appendChild(btn);
         wrap.appendChild(inner);
         document.body.appendChild(wrap);
@@ -2858,13 +2936,27 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
         return '';
     }
 
-    function wrrapdMaybeShowSingleAddressGiftWrapMismatch(allItems) {
+    let wrrapdHubDeliverRecoverAttempts = 0;
+
+    async function wrrapdMaybeShowSingleAddressGiftWrapMismatch(allItems) {
         if (!hasAnyWrrapdGiftWrapInCart(allItems)) return;
         const blob = wrrapdGetDisplayedSingleAddressSelectionText();
-        if (!blob || blob.replace(/\s+/g, ' ').trim().length < 24) return;
-        if (wrrapdHubSignatureFromText(blob)) return;
+        if (blob && wrrapdHubSignatureFromText(blob)) {
+            wrrapdHubDeliverRecoverAttempts = 0;
+            return;
+        }
+        if (wrrapdHubDeliverRecoverAttempts >= 2) {
+            wrrapdShowAddressGiftMismatchModal(
+                'Gift-wrap items need to ship to the Wrrapd hub.',
+                wrrapdListTitlesWithAnyWrrapdGiftWrap(allItems),
+            );
+            return;
+        }
+        wrrapdHubDeliverRecoverAttempts += 1;
+        const result = await wrrapdSelectHubThenDeliver({ userInitiated: false });
+        if (result.ok) return;
         wrrapdShowAddressGiftMismatchModal(
-            'The address currently selected on Amazon does not look like the Wrrapd gift-wrap hub. Wrrapd-wrapped items must ship to the hub.',
+            'Gift-wrap items need to ship to the Wrrapd hub.',
             wrrapdListTitlesWithAnyWrrapdGiftWrap(allItems),
         );
     }
@@ -8192,11 +8284,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             });
             if (hasAnyWrrapdGiftWrapInCart(getAllItemsFromLocalStorage())) {
                 setTimeout(() => {
-                    try {
-                        wrrapdMaybeShowSingleAddressGiftWrapMismatch(getAllItemsFromLocalStorage());
-                    } catch (_) {
-                        /* ignore */
-                    }
+                    wrrapdMaybeShowSingleAddressGiftWrapMismatch(getAllItemsFromLocalStorage()).catch(() => {});
                 }, 3200);
             }
             return;
