@@ -193,38 +193,78 @@ import { formatUsd } from '../shared/wrrapd-unit-pricing.js';
     /**
      * Compact cart for server-side PaymentIntent amount (must mirror checkout math).
      */
-    function buildPricingCartForPayment(addressObject) {
-        const itemsInCurrentCheckout = collectWrrapdItemsForCheckout();
-        const items = Object.values(itemsInCurrentCheckout).map((item) => ({
-            options: Array.isArray(item.options)
-                ? item.options.map((o) => ({
-                      checkbox_wrrapd: o.checkbox_wrrapd === true,
+    const WRRAPD_PRICING_CART_CACHE_KEY = 'wrrapd-amazon-pricing-cart-v1';
+
+    function pricingItemsFromCheckoutItems(itemsInCurrentCheckout) {
+        return Object.values(itemsInCurrentCheckout || {})
+            .filter((item) => item && Array.isArray(item.options))
+            .map((item) => ({
+                options: item.options.map((o) => ({
+                      checkbox_wrrapd: wrrapdOptionHasGiftWrap(o),
                       selected_wrapping_option: o.selected_wrapping_option || null,
-                      checkbox_flowers: o.checkbox_flowers === true,
-                      flower_offer_id: o.checkbox_flowers ? o.flower_offer_id || null : null,
-                      flower_amount: o.checkbox_flowers
+                      checkbox_flowers:
+                          o.checkbox_flowers === true ||
+                          o.checkbox_flowers === 1 ||
+                          o.checkbox_flowers === 'true' ||
+                          o.checkbox_flowers === '1',
+                      flower_offer_id: wrrapdOptionHasWrrapdCharges(o)
+                          ? o.flower_offer_id || null
+                          : null,
+                      flower_amount:
+                          o.checkbox_flowers === true ||
+                          o.checkbox_flowers === 1 ||
+                          o.checkbox_flowers === 'true' ||
+                          o.checkbox_flowers === '1'
                           ? resolveFlowerChargeDollars({
                                 flowerAmount: o.flower_amount,
                                 flowerOfferId: o.flower_offer_id,
                                 unitFallback: getActiveCheckoutUnitPrices().flowers,
                             }) || null
                           : null,
-                  }))
-                : [],
-        }));
+                  })),
+            }))
+            .filter((item) => item.options.some((o) => o.checkbox_wrrapd || o.checkbox_flowers));
+    }
+
+    function cachePricingCart(cart) {
+        if (!cart || !Array.isArray(cart.items) || cart.items.length === 0) return;
+        try {
+            sessionStorage.setItem(WRRAPD_PRICING_CART_CACHE_KEY, JSON.stringify(cart));
+        } catch (_) {
+            /* ignore */
+        }
+    }
+
+    function readCachedPricingCart() {
+        try {
+            const parsed = JSON.parse(sessionStorage.getItem(WRRAPD_PRICING_CART_CACHE_KEY) || 'null');
+            if (parsed && Array.isArray(parsed.items) && parsed.items.length > 0) return parsed;
+        } catch (_) {
+            /* ignore */
+        }
+        return null;
+    }
+
+    function buildPricingCartForPayment(addressObject) {
+        const itemsInCurrentCheckout = collectWrrapdItemsForCheckout();
+        const freshItems = pricingItemsFromCheckoutItems(itemsInCurrentCheckout);
+        const cached = freshItems.length === 0 ? readCachedPricingCart() : null;
+        const items = freshItems.length > 0 ? freshItems : cached?.items || [];
         const ao = addressObject && typeof addressObject === 'object' ? addressObject : {};
         // Always price + tax from the giftee ZIP (modal), never the Wrrapd warehouse
         // address Amazon ships to. Warehouse 32218 + Miami wrap prices is what
         // blew up "Total does not match server pricing".
         const gifteeZip = amazonGifteeZipForPricing();
         const postalCode = gifteeZip || String(ao.postalCode || '').replace(/\D/g, '').slice(0, 5);
-        return {
+        const cart = {
             items,
             taxRatePercent: getWrrapdGifteeTaxRatePercent(),
             ...(postalCode ? { postalCode } : {}),
             country: 'US',
             retailer: 'amazon',
         };
+        cachePricingCart(cart);
+        return cart;
     }
 
     /**
@@ -845,11 +885,19 @@ import { formatUsd } from '../shared/wrrapd-unit-pricing.js';
                     // checkIfWrrapdSelected(allItems);
                 }
     
-                // Cart page
-                if (currentURL.includes('amazon.com/gp/cart/view.html') ||
-                    currentURL.includes('amazon.com/cart') ||
-                    currentURL.includes('/cart') ||
-                    currentURL.match(/amazon\.com\/.*cart/)) {
+                // Cart page. Check the pathname only: checkout URLs contain
+                // `cartItemCount` in the query string and must never reset wrrapd-items.
+                let isAmazonCartPage = false;
+                try {
+                    const currentPath = new URL(currentURL).pathname.toLowerCase().replace(/\/+$/, '');
+                    isAmazonCartPage =
+                        currentPath === '/gp/cart/view.html' ||
+                        currentPath === '/cart' ||
+                        currentPath === '/gp/aw/c';
+                } catch (_) {
+                    isAmazonCartPage = false;
+                }
+                if (isAmazonCartPage) {
                     // Start button detection immediately, don't wait for page ready
                     overrideProceedToCheckoutButton().catch(err => {
                         console.error("[monitorURLChanges] Error in immediate overrideProceedToCheckoutButton:", err);
@@ -957,6 +1005,16 @@ import { formatUsd } from '../shared/wrrapd-unit-pricing.js';
      * cartPage - Called when user is on the Amazon cart page
      ************************************************************/
     function cartPage() {
+        // Defensive guard: never clear checkout state because a query parameter
+        // happens to contain the word "cart" (for example `cartItemCount`).
+        try {
+            const path = window.location.pathname.toLowerCase().replace(/\/+$/, '');
+            if (path !== '/gp/cart/view.html' && path !== '/cart' && path !== '/gp/aw/c') {
+                return;
+            }
+        } catch (_) {
+            return;
+        }
         if (!wrrapdIsAmazonAccountSignedInSafe()) {
             console.log('[cartPage] Amazon session not signed in — skip Wrrapd cart flow.');
             try {
@@ -975,6 +1033,11 @@ import { formatUsd } from '../shared/wrrapd-unit-pricing.js';
 
         // We remove all previously stored items from localStorage to start fresh
         removeAllItemsFromLocalStorage();
+        try {
+            sessionStorage.removeItem(WRRAPD_PRICING_CART_CACHE_KEY);
+        } catch (_) {
+            /* ignore */
+        }
 
         // Disable checkout buttons immediately until script is ready
         disableCheckoutButtons();
@@ -12047,6 +12110,18 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                     // payload.gifteeOriginalAddress: intended recipient (before Wrrapd warehouse) for checkout UI.
                     // ====================================================================================
                     const pricingCart = buildPricingCartForPayment(addressObject);
+                    if (!pricingCart || !Array.isArray(pricingCart.items) || pricingCart.items.length === 0) {
+                        payBtn.dataset.wrrapdPayInFlight = '0';
+                        payBtn.disabled = false;
+                        payBtn.removeAttribute('aria-disabled');
+                        payBtn.style.cursor = '';
+                        payBtn.style.opacity = '';
+                        payBtn.style.backgroundColor = '#f0c14b';
+                        payBtn.style.color = 'black';
+                        payBtn.textContent = 'Pay Wrrapd';
+                        alert('Please return to your cart and choose Wrrapd again.');
+                        return;
+                    }
                     const payload = {
                         total: Math.round(Number(total) * 100),
                         address: addressObject, // Current/default Amazon address (often Wrrapd warehouse when selected)
@@ -12699,6 +12774,9 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                 console.log("[updateWrrapdSummary] No items in current checkout. Keeping painted summary.");
                 return total;
             }
+            // Preserve the exact option matrix used to paint this summary. Amazon's
+            // SPA can mutate checkout storage before the shopper clicks Pay.
+            buildPricingCartForPayment(null);
 
             console.log("[updateWrrapdSummary] Found summary containers. Clearing previous content.");
 
