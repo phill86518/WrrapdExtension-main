@@ -14,11 +14,16 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /** Bump when account UI / header polish changes — view-source should contain this string. */
-define( 'WRRAPD_MU_BUILD', '2026-09-18-orders-reminder-row' );
+define( 'WRRAPD_MU_BUILD', '2026-09-19-header-careers-fraunces' );
 
 /** Wordmark gold — letters “p” and “d” in the Wrrapd logo. Never neon #f7ff00 / #fff300. */
 if ( ! defined( 'WRRAPD_LOGO_GOLD' ) ) {
 	define( 'WRRAPD_LOGO_GOLD', '#f6b933' );
+}
+
+/** Header / footer chrome — deep navy, slightly lifted from #060014 so it does not read as black. */
+if ( ! defined( 'WRRAPD_NAVY_DEEP' ) ) {
+	define( 'WRRAPD_NAVY_DEEP', '#0c0638' );
 }
 
 $wrrapd_seasonal = dirname( __FILE__ ) . '/wrrapd-seasonal-campaigns.php';
@@ -163,6 +168,67 @@ function wrrapd_body_class_site_pages( $classes ) {
 	return $classes;
 }
 add_filter( 'body_class', 'wrrapd_body_class_site_pages' );
+
+/**
+ * Public URL for the red-W / gold-bow favicon pack in mu-plugins/icons/favicon/.
+ *
+ * @param string $file Filename inside that folder.
+ * @return string
+ */
+function wrrapd_brand_favicon_url( $file = 'icon-192.png' ) {
+	$file  = ltrim( (string) $file, '/' );
+	$local = dirname( __FILE__ ) . '/icons/favicon/' . $file;
+	if ( is_readable( $local ) ) {
+		return content_url( 'mu-plugins/icons/favicon/' . $file );
+	}
+	return 'https://wrrapd.com/wp-content/mu-plugins/icons/favicon/' . $file;
+}
+
+/**
+ * Shopper-site tab icons. Hire hosts print their own links in wrapstars.php.
+ */
+function wrrapd_output_site_favicons() {
+	if ( is_admin() ) {
+		return;
+	}
+	if ( function_exists( 'wrrapd_wrapstars_is_portal_host' ) && wrrapd_wrapstars_is_portal_host() ) {
+		return;
+	}
+	if ( ! is_readable( dirname( __FILE__ ) . '/icons/favicon/favicon.ico' ) ) {
+		return;
+	}
+	$ico = wrrapd_brand_favicon_url( 'favicon.ico' );
+	$p32 = wrrapd_brand_favicon_url( 'icon-32.png' );
+	$p192 = wrrapd_brand_favicon_url( 'icon-192.png' );
+	$p180 = wrrapd_brand_favicon_url( 'icon-180.png' );
+	echo '<link rel="icon" href="' . esc_url( $ico ) . '" sizes="any" />' . "\n";
+	echo '<link rel="icon" type="image/png" href="' . esc_url( $p32 ) . '" sizes="32x32" />' . "\n";
+	echo '<link rel="icon" type="image/png" href="' . esc_url( $p192 ) . '" sizes="192x192" />' . "\n";
+	echo '<link rel="apple-touch-icon" href="' . esc_url( $p180 ) . '" />' . "\n";
+}
+add_action( 'wp_head', 'wrrapd_output_site_favicons', 2 );
+
+/**
+ * Point WordPress Site Icon (admin bar, apple-touch fallback) at the new pack.
+ *
+ * @param string $url  Current icon URL.
+ * @param int    $size Requested pixel size.
+ * @return string
+ */
+function wrrapd_filter_site_icon_url( $url, $size ) {
+	if ( ! is_readable( dirname( __FILE__ ) . '/icons/favicon/icon-192.png' ) ) {
+		return $url;
+	}
+	$size = (int) $size;
+	if ( $size > 0 && $size <= 32 ) {
+		return wrrapd_brand_favicon_url( 'icon-32.png' );
+	}
+	if ( $size > 0 && $size <= 192 ) {
+		return wrrapd_brand_favicon_url( 'icon-192.png' );
+	}
+	return wrrapd_brand_favicon_url( 'icon-512.png' );
+}
+add_filter( 'get_site_icon_url', 'wrrapd_filter_site_icon_url', 20, 2 );
 
 /**
  * Compact header + logged-in member cluster (overrides legacy inline greeting styles).
@@ -1715,6 +1781,10 @@ function wrrapd_output_home_section_tighten_css() {
 	echo '.wrrapd-hot-gifts-rail,.wrrapd-hot-gifts-rail--below-ticker,.wrrapd-hot-gifts-rail--in-ticker-shell{margin-top:0!important;margin-bottom:0!important;padding-top:0!important;padding-bottom:0!important;}';
 	echo '.wrrapd-hot-gifts-rail__head{margin-bottom:0.08rem!important;}';
 	echo '.elementor-4857 .elementor-element-5601b5d{margin-top:0.15rem!important;margin-bottom:0.15rem!important;}';
+	/* Landing content — Fraunces for body copy, cards, and guides (not script promo accents). */
+	/* Beat Customizer wp-custom-css (.elementor-widget-html .wrrapd-top-gifts … Source Sans). */
+	echo 'body.home .elementor-4857,body.page-id-4857 .elementor-4857,body.home .elementor-widget-html .wrrapd-top-gifts,body.page-id-4857 .elementor-widget-html .wrrapd-top-gifts,body.home .elementor-widget-html .wrrapd-gift-guides,body.page-id-4857 .elementor-widget-html .wrrapd-gift-guides,body.home .wrrapd-hot-gifts-rail,body.page-id-4857 .wrrapd-hot-gifts-rail,body.home .occasion-ticker-shell,body.page-id-4857 .occasion-ticker-shell{font-family:Fraunces,Georgia,"Times New Roman",serif!important;}';
+	echo 'body.home .elementor-4857 .elementor-heading-title,body.page-id-4857 .elementor-4857 .elementor-heading-title,body.home .elementor-4857 p,body.page-id-4857 .elementor-4857 p,body.home .elementor-4857 li,body.page-id-4857 .elementor-4857 li,body.home .elementor-widget-html .wrrapd-top-gifts,body.page-id-4857 .elementor-widget-html .wrrapd-top-gifts,body.home .elementor-widget-html .wrrapd-top-gifts p,body.page-id-4857 .elementor-widget-html .wrrapd-top-gifts p,body.home .elementor-widget-html .wrrapd-top-gifts li,body.page-id-4857 .elementor-widget-html .wrrapd-top-gifts li,body.home .elementor-widget-html .wrrapd-top-gifts a,body.page-id-4857 .elementor-widget-html .wrrapd-top-gifts a,body.home .elementor-widget-html .wrrapd-top-gifts a.wrrapd-top-gifts__pill,body.page-id-4857 .elementor-widget-html .wrrapd-top-gifts a.wrrapd-top-gifts__pill,body.home .elementor-widget-html .wrrapd-gift-guides,body.page-id-4857 .elementor-widget-html .wrrapd-gift-guides,body.home .elementor-widget-html .wrrapd-gift-guides *:not(.wrrapd-gift-guides__card-logo),body.page-id-4857 .elementor-widget-html .wrrapd-gift-guides *:not(.wrrapd-gift-guides__card-logo){font-family:Fraunces,Georgia,"Times New Roman",serif!important;}';
 	echo '</style>';
 }
 
@@ -1749,11 +1819,24 @@ function wrrapd_output_header_layout_css() {
 	}
 	echo '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,560;9..144,700&amp;display=swap" />';
 	echo '<style id="wrrapd-header-layout-css">';
+	/* Header chrome navy — every structural surface, including Register/Login.
+	   Elementor still stores leftover #0f0351 on 1112277b .elementor-widget-container;
+	   this token always wins so auth chrome cannot drift from the header. */
+	echo '.elementor-location-header,.elementor-location-header .elementor-section,.elementor-location-header [data-elementor-type="header"],.elementor-location-header .e-con,.elementor-location-header .elementor-element-6835e730{background:' . WRRAPD_NAVY_DEEP . '!important;background-color:' . WRRAPD_NAVY_DEEP . '!important;}';
+	echo '.elementor-location-header .elementor-element,.elementor-location-header .elementor-widget,.elementor-location-header .elementor-widget-container,.elementor-location-header .elementor-nav-menu--main,.elementor-location-header .elementor-nav-menu--dropdown,.elementor-location-header .elementor-nav-menu,.elementor-location-header .elementor-nav-menu li,.elementor-location-header .elementor-nav-menu .elementor-item{background:' . WRRAPD_NAVY_DEEP . '!important;background-color:' . WRRAPD_NAVY_DEEP . '!important;}';
+	echo '.elementor.elementor-location-header .elementor-element.elementor-element-1112277b,.elementor.elementor-location-header .elementor-element.elementor-element-1112277b>.elementor-widget-container,.elementor-location-header [data-id="1112277b"],.elementor-location-header [data-id="1112277b"] .elementor-widget-container,.elementor-location-header [data-id="1112277b"] .elementor-item{background:' . WRRAPD_NAVY_DEEP . '!important;background-color:' . WRRAPD_NAVY_DEEP . '!important;}';
+	/* Keep branded header buttons — do not inherit chrome navy. */
+	echo '.elementor-location-header [data-id="69de726e"] .elementor-widget-container,.elementor-location-header .elementor-element-69de726e .elementor-widget-container{background:transparent!important;background-color:transparent!important;}';
+	echo '.elementor-location-header [data-id="69de726e"] .elementor-button,.elementor-location-header .elementor-element-69de726e .elementor-button{background:#fff!important;background-color:#fff!important;}';
+	echo '.elementor-location-header [data-id="2ca99876"],.elementor-location-header .elementor-element-2ca99876,.elementor-location-header [data-id="2ca99876"] .elementor-widget-container,.elementor-location-header [data-id="2ca99876"] .elementor-button{background:#f9d027!important;background-color:#f9d027!important;}';
+	echo '.elementor-location-header .elementor-element-7f1bdc1 .elementor-widget-container,.elementor-location-header .elementor-element-00ec9fc .elementor-widget-container{background:transparent!important;background-color:transparent!important;}';
+	echo '.elementor-location-header .elementor-element-7f1bdc1 .elementor-button,.elementor-element-eb0b235 .elementor-button{background:linear-gradient(180deg,#e85d04,#d14900)!important;color:#fff!important;}';
+	echo '.elementor-location-header .gift-ideas-button{background-color:' . WRRAPD_LOGO_GOLD . '!important;color:#0f0351!important;}';
 	/* Row: brand | location | spacer | auth — CTA is page-centered (desktop) */
 	echo '.elementor-location-header .elementor-section,.elementor-location-header [data-elementor-type="header"] .e-con{min-height:0!important;--min-height:0!important;padding-block:0!important;}';
 	echo '.elementor-location-header .elementor-element-6835e730{position:relative!important;display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;align-items:stretch!important;justify-content:space-between!important;gap:0 .35rem!important;padding-block:clamp(.06rem,.2vmin,.14rem)!important;min-height:0!important;width:100%!important;max-width:100%!important;box-sizing:border-box!important;}';
-	/* Brand LEFT */
-	echo '.elementor-location-header .elementor-element-6e478726{display:flex!important;flex-direction:column!important;align-items:flex-start!important;justify-content:center!important;align-self:stretch!important;flex:0 0 24%!important;max-width:24%!important;width:24%!important;min-width:0!important;gap:0!important;margin:0!important;padding:0!important;position:relative!important;z-index:3!important;}';
+	/* Brand LEFT — 20% (was 24%) so Delivering-to has room before the centered CTA. */
+	echo '.elementor-location-header .elementor-element-6e478726{display:flex!important;flex-direction:column!important;align-items:flex-start!important;justify-content:center!important;align-self:stretch!important;flex:0 0 20%!important;max-width:20%!important;width:20%!important;min-width:0!important;gap:0!important;margin:0!important;padding:0!important;position:relative!important;z-index:3!important;}';
 	echo '.elementor-location-header .elementor-element-6e478726>*{flex:0 0 auto!important;}';
 	echo '.elementor-location-header .elementor-element-68a38868{margin:0!important;padding:0!important;line-height:0!important;}';
 	echo '.elementor-location-header .elementor-element-68a38868 img{max-width:min(16.2rem,48vw)!important;height:auto!important;width:auto!important;margin:0!important;transform:translate(-.45rem,0)!important;object-position:left center!important;}';
@@ -1764,15 +1847,16 @@ function wrrapd_output_header_layout_css() {
 	   wins on specificity rather than on stylesheet order. */
 	echo 'body.home:not(.logged-in) .elementor-location-header .elementor-element-68a38868.elementor-widget img,body.page-id-4857:not(.logged-in) .elementor-location-header .elementor-element-68a38868.elementor-widget img{max-height:none!important;max-width:min(17.6rem,52vw)!important;width:auto!important;height:auto!important;}';
 	echo 'body.logged-in .elementor-location-header .elementor-element-68a38868.elementor-widget img{max-height:clamp(4.8rem,13vmin,6.6rem)!important;width:auto!important;height:auto!important;}';
-	/* Location */
-	echo '.elementor-location-header .elementor-element-1913a20{flex:0 0 19%!important;max-width:19%!important;min-width:0!important;align-self:center!important;margin:0!important;padding:0!important;transform:translateX(-.35rem)!important;position:relative!important;z-index:3!important;}';
-	echo '.elementor-location-header #wrrapd-location,.elementor-location-header #location-text,.elementor-location-header #location-text strong{font-family:Fraunces,Georgia,"Times New Roman",serif!important;font-optical-sizing:auto!important;font-weight:560!important;font-size:clamp(.81rem,1.9vmin,.95rem)!important;line-height:1.25!important;}';
-	/* Auth column = Register/Login + Google/Amazon only (far right). CTA is NOT in this flex fight. */
+	/* Location — capped width + under the CTA in paint order so it cannot cover the button. */
+	echo '.elementor-location-header .elementor-element-1913a20{flex:0 1 8.75rem!important;max-width:8.75rem!important;width:auto!important;min-width:0!important;align-self:center!important;margin:0!important;padding:0!important;transform:none!important;position:relative!important;z-index:1!important;overflow:hidden!important;}';
+	echo '.elementor-location-header #wrrapd-location,.elementor-location-header #location-text{max-width:100%!important;overflow:hidden!important;}';
+	echo '.elementor-location-header #wrrapd-location,.elementor-location-header #location-text,.elementor-location-header #location-text strong{font-family:Fraunces,Georgia,"Times New Roman",serif!important;font-optical-sizing:auto!important;font-weight:560!important;font-size:clamp(.78rem,1.7vmin,.9rem)!important;line-height:1.25!important;white-space:nowrap!important;text-overflow:ellipsis!important;overflow:hidden!important;display:block!important;max-width:100%!important;}';
+	/* Auth column = Register/Login + Google/Amazon + Careers (far right). CTA is NOT in this flex fight. */
 	echo '.elementor-location-header .elementor-element-693b4ea7{flex:0 0 12.5rem!important;max-width:12.5rem!important;width:12.5rem!important;min-width:12.5rem!important;margin-left:auto!important;display:flex!important;flex-direction:column!important;justify-content:center!important;align-items:stretch!important;align-self:stretch!important;padding:.08rem 0!important;gap:0!important;position:relative!important;z-index:4!important;background:transparent!important;}';
 	echo '.elementor-location-header .elementor-element-2b05a213{display:flex!important;flex-direction:row!important;align-items:center!important;justify-content:flex-end!important;width:100%!important;max-width:100%!important;margin:0!important;padding:0!important;gap:0!important;min-height:0!important;}';
-	/* Desktop: Chrome CTA truly page-centered on the header row */
+	/* Desktop: Chrome CTA truly page-centered on the header row (above Delivering-to). */
 	echo '@media(min-width:1101px){';
-	echo '.elementor-location-header .elementor-element-00ec9fc{position:absolute!important;left:50%!important;top:50%!important;transform:translate(-50%,-50%)!important;z-index:2!important;flex:0 0 auto!important;width:auto!important;max-width:none!important;display:flex!important;align-items:center!important;justify-content:center!important;margin:0!important;pointer-events:auto!important;}';
+	echo '.elementor-location-header .elementor-element-00ec9fc{position:absolute!important;left:50%!important;top:50%!important;transform:translate(-50%,-50%)!important;z-index:3!important;flex:0 0 auto!important;width:auto!important;max-width:none!important;display:flex!important;align-items:center!important;justify-content:center!important;margin:0!important;pointer-events:auto!important;}';
 	echo '.elementor-location-header .elementor-element-7f1bdc1{width:auto!important;max-width:none!important;flex:0 0 auto!important;align-self:center!important;margin:0!important;}';
 	echo '.elementor-location-header .elementor-element-7f1bdc1 .elementor-widget-container,.elementor-location-header .elementor-element-7f1bdc1 .elementor-button-wrapper{display:flex!important;align-items:center!important;justify-content:center!important;width:auto!important;max-width:none!important;overflow:visible!important;}';
 	echo '.elementor-location-header .elementor-element-7f1bdc1 .elementor-button{display:inline-flex!important;align-items:center!important;justify-content:center!important;white-space:nowrap!important;width:auto!important;min-width:0!important;max-width:none!important;overflow:visible!important;font-size:clamp(.8rem,1.6vmin,.98rem)!important;line-height:1.15!important;padding:.55rem 1.55rem!important;min-height:2.55rem!important;height:auto!important;text-align:center!important;}';
@@ -1829,6 +1913,33 @@ function wrrapd_output_occasion_ticker_label_patch_script() {
 add_action( 'wp_footer', 'wrrapd_output_occasion_ticker_label_patch_script', 22 );
 
 /**
+ * Keep Chrome CTA copy aligned when Elementor HTML still has the old sentence.
+ */
+function wrrapd_output_chrome_cta_copy_patch_script() {
+	if ( is_admin() ) {
+		return;
+	}
+	echo '<script id="wrrapd-chrome-cta-copy-patch">';
+	echo '(function(){var want="Gift-wrap with your FREE Chrome extension today";function setText(el){if(!el)return;if(el.classList&&el.classList.contains("elementor-button")&&el.querySelector(".elementor-button-text")){el.querySelector(".elementor-button-text").textContent=want;return;}el.textContent=want;}function patch(){document.querySelectorAll(".elementor-element-eb0b235 .elementor-button-text,.elementor-element-eb0b235 .elementor-button,.wrrapd-footer__cta a").forEach(function(el){var t=(el.textContent||"").replace(/\\s+/g," ").trim();if(/Add your FREE Chrome extension today/i.test(t)||/^Add the free Chrome extension!?$/i.test(t))setText(el);});}document.addEventListener("DOMContentLoaded",patch);window.addEventListener("load",patch);})();';
+	echo '</script>';
+}
+add_action( 'wp_footer', 'wrrapd_output_chrome_cta_copy_patch_script', 23 );
+
+/**
+ * Stamp header chrome (Register/Login widget-container, nav wrappers) with the
+ * live header background so leftover Elementor #0f0351 cannot persist.
+ */
+function wrrapd_output_header_chrome_paint_script() {
+	if ( is_admin() ) {
+		return;
+	}
+	echo '<script id="wrrapd-header-chrome-paint">';
+	echo '(function(){function paint(){var header=document.querySelector(".elementor-location-header");if(!header)return;var navy=getComputedStyle(header).backgroundColor;if(!navy||navy==="transparent"||navy==="rgba(0, 0, 0, 0)")return;var skip="[data-id=\\"69de726e\\"],.elementor-element-69de726e,[data-id=\\"2ca99876\\"],.elementor-element-2ca99876,.elementor-element-7f1bdc1,.elementor-element-00ec9fc,.gift-ideas-button,.wrrapd-careers,.wrrapd-careers__btn,.wrrapd-careers__menu";header.querySelectorAll(".elementor-widget-container,.elementor-nav-menu--main,.elementor-nav-menu li,.elementor-nav-menu .elementor-item").forEach(function(el){if(el.closest(skip))return;el.style.setProperty("background",navy,"important");el.style.setProperty("background-color",navy,"important");el.style.setProperty("background-image","none","important");});}document.addEventListener("DOMContentLoaded",paint);window.addEventListener("load",paint);setTimeout(paint,300);setTimeout(paint,1200);})();';
+	echo '</script>';
+}
+add_action( 'wp_footer', 'wrrapd_output_header_chrome_paint_script', 24 );
+
+/**
  * Desktop: reparent Chrome CTA onto the header row for true page centering.
  * Always: Register/Login above Google/Amazon in the right stack.
  */
@@ -1842,6 +1953,73 @@ function wrrapd_output_header_auth_stack_script() {
 }
 add_action( 'wp_footer', 'wrrapd_output_header_auth_stack_script', 21 );
 
+/**
+ * Career portal entry URLs for the header Careers menu.
+ *
+ * @return list<array{label:string,url:string}>
+ */
+function wrrapd_header_careers_links() {
+	$wrapstar  = function_exists( 'wrrapd_wrapstars_apply_url' ) ? wrrapd_wrapstars_apply_url( '/' ) : 'https://apply.wrrapd.com/';
+	$joyrider  = function_exists( 'wrrapd_drivers_apply_url' ) ? wrrapd_drivers_apply_url( '/drive/' ) : 'https://apply.wrrapd.com/drive/';
+	$wraprider = function_exists( 'wrrapd_wrapriders_apply_url' ) ? wrrapd_wrapriders_apply_url( '/wraprider/' ) : 'https://apply.wrrapd.com/wraprider/';
+	return array(
+		array(
+			'label' => __( 'WrapStar (Gift-Wrapper)', 'wrrapd' ),
+			'url'   => $wrapstar,
+		),
+		array(
+			'label' => __( 'JoyRider (Delivery-Driver)', 'wrrapd' ),
+			'url'   => $joyrider,
+		),
+		array(
+			'label' => __( 'WrapRider (Hybrid)', 'wrrapd' ),
+			'url'   => $wraprider,
+		),
+	);
+}
+
+/**
+ * Careers control under Sign in with Amazon — hover (and tap) opens the three hire tracks.
+ */
+function wrrapd_output_header_careers_menu() {
+	if ( is_admin() ) {
+		return;
+	}
+	if ( function_exists( 'wrrapd_site_footer_is_suppressed' ) && wrrapd_site_footer_is_suppressed() ) {
+		return;
+	}
+
+	$links = wrrapd_header_careers_links();
+	echo '<style id="wrrapd-header-careers-css">';
+	echo '.wrrapd-careers{position:relative;width:100%;max-width:12rem;margin:.35rem 0 0;z-index:6;}';
+	echo '.wrrapd-careers__btn{display:inline-flex;align-items:center;justify-content:center;width:100%;box-sizing:border-box;min-height:1.55rem;padding:.22rem .55rem;border:1px solid rgba(255,255,255,.45);border-radius:.35rem;background:transparent;color:#fff;font-family:Fraunces,Georgia,serif;font-weight:700;font-size:.82rem;line-height:1.15;letter-spacing:.02em;cursor:pointer;text-decoration:none;}';
+	echo '.wrrapd-careers__btn:hover,.wrrapd-careers__btn:focus-visible,.wrrapd-careers.is-open .wrrapd-careers__btn{background:' . WRRAPD_LOGO_GOLD . ';color:#0f0351;border-color:' . WRRAPD_LOGO_GOLD . ';}';
+	echo '.wrrapd-careers__menu{display:none;position:absolute;top:calc(100% + .28rem);right:0;left:0;min-width:100%;margin:0;padding:.35rem 0;list-style:none;background:#0f0351;border:1px solid rgba(255,255,255,.22);border-radius:.45rem;box-shadow:0 .55rem 1.25rem rgba(0,0,0,.35);z-index:20;}';
+	echo '.wrrapd-careers:hover .wrrapd-careers__menu,.wrrapd-careers:focus-within .wrrapd-careers__menu,.wrrapd-careers.is-open .wrrapd-careers__menu{display:block;}';
+	echo '.wrrapd-careers__menu a{display:block;padding:.48rem .7rem;color:#fff;font-family:Fraunces,Georgia,serif;font-size:.78rem;font-weight:600;line-height:1.25;text-decoration:none;white-space:nowrap;}';
+	echo '.wrrapd-careers__menu a:hover,.wrrapd-careers__menu a:focus-visible{background:rgba(246,185,51,.22);color:' . WRRAPD_LOGO_GOLD . ';}';
+	echo '@media(max-width:1100px),(hover:none) and (pointer:coarse){';
+	echo '.wrrapd-careers{max-width:9.4rem;margin-top:.28rem;}';
+	echo '.wrrapd-careers__btn{font-size:clamp(.72rem,3.1vw,.86rem);min-height:1.65rem;padding:.28rem .42rem;}';
+	echo '.wrrapd-careers__menu{left:auto;right:0;min-width:13.5rem;}';
+	echo '.wrrapd-careers__menu a{white-space:normal;}';
+	echo '}';
+	echo '</style>';
+
+	echo '<div id="wrrapd-careers-mount" hidden>';
+	echo '<div class="wrrapd-careers" data-wrrapd-careers>';
+	echo '<button type="button" class="wrrapd-careers__btn" aria-haspopup="true" aria-expanded="false">' . esc_html__( 'Careers', 'wrrapd' ) . '</button>';
+	echo '<ul class="wrrapd-careers__menu" role="menu">';
+	foreach ( $links as $link ) {
+		echo '<li role="none"><a role="menuitem" href="' . esc_url( (string) $link['url'] ) . '" target="_blank" rel="noopener">' . esc_html( (string) $link['label'] ) . '</a></li>';
+	}
+	echo '</ul></div></div>';
+
+	echo '<script id="wrrapd-header-careers-js">';
+	echo '(function(){function place(){var mount=document.getElementById("wrrapd-careers-mount");if(!mount)return;var node=mount.querySelector("[data-wrrapd-careers]");if(!node)return;var header=document.querySelector(".elementor-location-header");if(!header)return;if(header.contains(node))return;var stack=header.querySelector(\'[data-id="5c54566"]\')||header.querySelector(".elementor-element-5c54566");var amazon=header.querySelector(\'[data-id="2ca99876"]\')||header.querySelector(".elementor-element-2ca99876");var auth=header.querySelector(".elementor-element-693b4ea7")||header.querySelector(\'[data-id="693b4ea7"]\');var host=stack||auth;if(!host)return;if(amazon&&amazon.parentElement===host){if(amazon.nextSibling)host.insertBefore(node,amazon.nextSibling);else host.appendChild(node);}else{host.appendChild(node);}mount.remove();}function wire(){var el=document.querySelector("[data-wrrapd-careers]");if(!el||el.getAttribute("data-wired"))return;el.setAttribute("data-wired","1");var btn=el.querySelector(".wrrapd-careers__btn");if(!btn)return;btn.addEventListener("click",function(e){e.preventDefault();var open=!el.classList.contains("is-open");el.classList.toggle("is-open",open);btn.setAttribute("aria-expanded",open?"true":"false");});document.addEventListener("click",function(e){if(!el.contains(e.target)){el.classList.remove("is-open");btn.setAttribute("aria-expanded","false");}});document.addEventListener("keydown",function(e){if(e.key==="Escape"){el.classList.remove("is-open");btn.setAttribute("aria-expanded","false");}});}function run(){place();wire();}document.addEventListener("DOMContentLoaded",run);window.addEventListener("load",run);window.addEventListener("resize",place);setTimeout(run,400);})();';
+	echo '</script>';
+}
+add_action( 'wp_footer', 'wrrapd_output_header_careers_menu', 22 );
 
 /**
  * Kill horizontal page squeeze on phones (Chrome shrink-to-fit from nowrap CTAs / tickers).
@@ -2307,7 +2485,7 @@ function wrrapd_render_site_footer() {
 	}
 	echo '</nav>';
 
-	echo '<p class="wrrapd-footer__cta"><a href="' . esc_url( wrrapd_chrome_extension_install_url() ) . '" target="_blank" rel="noopener">' . esc_html__( 'Add the free Chrome extension', 'wrrapd' ) . '</a></p>';
+	echo '<p class="wrrapd-footer__cta"><a href="' . esc_url( wrrapd_chrome_extension_install_url() ) . '" target="_blank" rel="noopener">' . esc_html__( 'Gift-wrap with your FREE Chrome extension today', 'wrrapd' ) . '</a></p>';
 
 	echo '<div class="wrrapd-footer__bar">';
 	echo '<ul class="wrrapd-footer__social">';
@@ -2340,25 +2518,25 @@ function wrrapd_output_site_footer_css() {
 
 	echo '<style id="wrrapd-site-footer-css">';
 	echo '.elementor-location-footer,[data-elementor-type="footer"]{display:none!important;}';
-	echo '.wrrapd-footer{--wf-ink:#fff;--wf-gold:' . WRRAPD_LOGO_GOLD . ';background:#0f0351;color:var(--wf-ink);margin-top:auto;width:100%;box-sizing:border-box;font-family:"Source Sans 3","Roboto",system-ui,-apple-system,"Segoe UI",sans-serif;}';
+	echo '.wrrapd-footer{--wf-ink:#fff;--wf-gold:' . WRRAPD_LOGO_GOLD . ';background:' . WRRAPD_NAVY_DEEP . ';color:var(--wf-ink);margin-top:auto;width:100%;box-sizing:border-box;font-family:Fraunces,Georgia,"Times New Roman",serif;}';
 	echo '.wrrapd-footer *{box-sizing:border-box;}';
 	echo '.wrrapd-footer__inner{max-width:78rem;margin:0 auto;padding:clamp(2.25rem,4.5vw,3.5rem) clamp(1.25rem,4vw,3rem) clamp(1.1rem,2vw,1.6rem);}';
 	/* Lead: bigger logo, mission statement underneath — no address. */
 	echo '.wrrapd-footer__lead{margin:0 0 clamp(1.9rem,4vw,2.9rem);}';
-	echo '.wrrapd-footer__brand{display:inline-block;line-height:0;margin:0 0 .35rem;}';
+	echo '.wrrapd-footer__brand{display:inline-block;line-height:0;margin:0;}';
 	echo '.wrrapd-footer__brand img{display:block;width:auto;height:auto;max-height:clamp(5.5rem,11vw,8.1rem);max-width:100%;}';
-	echo '.wrrapd-footer__tagline{display:block;width:auto;height:auto;max-height:clamp(1.85rem,4.2vw,2.65rem);max-width:min(16rem,72vw);margin:0 0 clamp(.85rem,2vw,1.3rem);object-fit:contain;object-position:left center;}';
-	echo '.wrrapd-footer__mission{margin:0;font-family:"Fraunces","Playfair Display",Georgia,serif;font-weight:700;font-size:clamp(1.55rem,3.6vw,2.6rem);line-height:1.13;letter-spacing:-.015em;color:var(--wf-ink);max-width:24ch;text-wrap:balance;}';
+	echo '.wrrapd-footer__tagline{display:block;width:auto;height:auto;max-height:clamp(1.85rem,4.2vw,2.65rem);max-width:min(16rem,72vw);margin:-1.85rem 0 .45rem;object-fit:contain;object-position:left center;}';
+	echo '.wrrapd-footer__mission{margin:0;font-family:inherit;font-weight:700;font-size:clamp(1.55rem,3.6vw,2.6rem);line-height:1.13;letter-spacing:-.015em;color:var(--wf-ink);max-width:24ch;text-wrap:balance;}';
 	/* Link groups */
 	echo '.wrrapd-footer__nav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:clamp(1.4rem,3vw,2.5rem);margin:0 0 clamp(1.75rem,3.5vw,2.5rem);}';
 	echo '.wrrapd-footer__heading{margin:0 0 .95rem;font-family:inherit;font-size:.95rem;font-weight:800;line-height:1.2;color:var(--wf-gold);text-transform:none;}';
 	echo '.wrrapd-footer__list{list-style:none;margin:0;padding:0;}';
 	echo '.wrrapd-footer__list li{margin:0 0 .62rem;}';
-	echo '.wrrapd-footer__list a{display:inline-block;color:var(--wf-ink);font-size:.93rem;font-weight:600;line-height:1.35;text-decoration:none;border-bottom:1px solid transparent;transition:color .15s ease,border-color .15s ease;}';
+	echo '.wrrapd-footer__list a{display:inline-block;color:var(--wf-ink);font-family:inherit;font-size:.93rem;font-weight:600;line-height:1.35;text-decoration:none;border-bottom:1px solid transparent;transition:color .15s ease,border-color .15s ease;}';
 	echo '.wrrapd-footer__list a:hover,.wrrapd-footer__list a:focus-visible{color:var(--wf-gold);border-bottom-color:var(--wf-gold);}';
 	/* Extension CTA sits where Etsy puts its app badges. */
 	echo '.wrrapd-footer__cta{margin:0 0 clamp(1.5rem,3vw,2.1rem);}';
-	echo '.wrrapd-footer__cta a{display:inline-flex;align-items:center;gap:.5rem;background:var(--wf-gold);color:#0f0351;font-size:.93rem;font-weight:800;line-height:1;text-decoration:none;padding:.78rem 1.35rem;border-radius:999px;transition:transform .15s ease,box-shadow .15s ease;}';
+	echo '.wrrapd-footer__cta a{display:inline-flex;align-items:center;gap:.5rem;background:linear-gradient(180deg,#e85d04,#d14900);color:#fff;font-family:inherit;font-size:.93rem;font-weight:800;line-height:1;text-decoration:none;padding:.78rem 1.35rem;border-radius:999px;transition:transform .15s ease,box-shadow .15s ease;}';
 	echo '.wrrapd-footer__cta a:hover,.wrrapd-footer__cta a:focus-visible{transform:translateY(-1px);box-shadow:0 .5rem 1.1rem rgba(0,0,0,.28);}';
 	/* Hide the whole row, not just the button, so its margin does not leave a gap. */
 	echo 'html.wrrapd-ext-installed .wrrapd-footer__cta{display:none!important;}';
@@ -2368,13 +2546,14 @@ function wrrapd_output_site_footer_css() {
 	echo '.wrrapd-footer__social a{display:inline-flex;align-items:center;justify-content:center;width:2.15rem;height:2.15rem;border-radius:50%;background:rgba(255,255,255,.12);color:var(--wf-ink);transition:background .15s ease,color .15s ease;}';
 	echo '.wrrapd-footer__social a:hover,.wrrapd-footer__social a:focus-visible{background:var(--wf-gold);color:#0f0351;}';
 	echo '.wrrapd-footer__social svg{width:1.02rem;height:1.02rem;fill:currentColor;}';
-	echo '.wrrapd-footer__copy{margin:0;font-size:.82rem;font-weight:600;line-height:1.4;color:rgba(255,255,255,.72);}';
+	echo '.wrrapd-footer__copy{margin:0;font-family:inherit;font-size:.82rem;font-weight:600;line-height:1.4;color:rgba(255,255,255,.72);}';
 	/* Tablet: two columns, still comfortable. */
 	echo '@media(max-width:900px){';
 	echo '.wrrapd-footer__nav{grid-template-columns:repeat(2,minmax(0,1fr));gap:1.5rem 1.75rem;}';
 	echo '}';
 	echo '@media(max-width:560px){';
 	echo '.wrrapd-footer__inner{padding:1.9rem 1.15rem 1.1rem;}';
+	echo '.wrrapd-footer__tagline{margin-top:-1.4rem;}';
 	echo '.wrrapd-footer__mission{font-size:1.42rem;max-width:26ch;}';
 	echo '.wrrapd-footer__nav{gap:1.35rem 1.1rem;}';
 	echo '.wrrapd-footer__heading{font-size:.88rem;margin-bottom:.7rem;}';
