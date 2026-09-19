@@ -77,7 +77,19 @@ import { formatUsd } from '../shared/wrrapd-unit-pricing.js';
     let wrrapdCheckoutGifteeTaxPercent = null;
 
     function getActiveCheckoutUnitPrices() {
-        return wrrapdCheckoutUnitPriceOverride || WRRAPD_CHECKOUT_UNIT_PRICES_FALLBACK;
+        const fallback = WRRAPD_CHECKOUT_UNIT_PRICES_FALLBACK;
+        const override = wrrapdCheckoutUnitPriceOverride;
+        if (!override || typeof override !== 'object') return fallback;
+        const pick = (key) => {
+            const n = Number(override[key]);
+            return Number.isFinite(n) && n >= 0 && n < 100000 ? n : fallback[key];
+        };
+        return {
+            giftWrapBase: pick('giftWrapBase'),
+            customDesignAi: pick('customDesignAi'),
+            customDesignUpload: pick('customDesignUpload'),
+            flowers: pick('flowers'),
+        };
     }
 
     function amazonGifteeZipForPricing() {
@@ -182,8 +194,7 @@ import { formatUsd } from '../shared/wrrapd-unit-pricing.js';
      * Compact cart for server-side PaymentIntent amount (must mirror checkout math).
      */
     function buildPricingCartForPayment(addressObject) {
-        const allItems = getAllItemsFromLocalStorage();
-        const itemsInCurrentCheckout = filterItemsInCurrentCheckout(allItems);
+        const itemsInCurrentCheckout = collectWrrapdItemsForCheckout();
         const items = Object.values(itemsInCurrentCheckout).map((item) => ({
             options: Array.isArray(item.options)
                 ? item.options.map((o) => ({
@@ -2648,16 +2659,22 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
     function wrrapdHubSignatureFromText(raw) {
         const t = String(raw || '')
             .toUpperCase()
+            .replace(/\u00A0/g, ' ')
+            .replace(/\./g, '')
             .replace(/\s+/g, ' ')
             .trim();
         if (!t) return false;
+        const compact = t.replace(/[^A-Z0-9]/g, '');
         const hasBrand = t.includes('WRRAPD');
-        const hasPo = (t.includes('PO BOX') || t.includes('P.O. BOX')) && t.includes('26067');
+        const hasPo =
+            (t.includes('PO BOX') || compact.includes('POBOX') || compact.includes('BOX26067')) &&
+            compact.includes('26067');
         const hasJax = t.includes('JACKSONVILLE');
         const hasZip = t.includes('32218') || t.includes('32226');
-        const hasFl = t.includes(' FL ') || t.endsWith(' FL') || t.includes(', FL,') || t.includes('FLORIDA');
+        const hasFl = t.includes(' FL ') || t.endsWith(' FL') || t.includes(', FL') || t.includes('FLORIDA');
         if (hasBrand && (hasJax || hasZip || hasPo || hasFl)) return true;
-        if (hasPo && (hasJax || hasZip || hasFl)) return true;
+        if (hasPo && (hasJax || hasZip || hasFl || hasBrand)) return true;
+        if (compact.includes('26067') && (hasBrand || hasJax || hasZip)) return true;
         return false;
     }
 
@@ -2711,6 +2728,42 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
         );
     }
 
+    function wrrapdHubControlIsSelected(control) {
+        if (!control) return false;
+        if ('checked' in control && control.checked) return true;
+        try {
+            if (control.getAttribute && control.getAttribute('aria-checked') === 'true') return true;
+        } catch (_) {
+            /* ignore */
+        }
+        return false;
+    }
+
+    function wrrapdPageAlreadyShowsHubAddress() {
+        const selectors = [
+            '.list-address-selected',
+            '[class*="address"]',
+            '[id*="address"]',
+            '[data-testid*="address"]',
+            '.displayAddressDiv',
+        ];
+        const seen = new Set();
+        for (const sel of selectors) {
+            document.querySelectorAll(sel).forEach((el) => {
+                if (!el || seen.has(el) || wrrapdIsInCheckoutOrderSummaryRail(el)) return;
+                seen.add(el);
+            });
+        }
+        for (const el of seen) {
+            if (wrrapdHubSignatureFromText(el.textContent)) return true;
+        }
+        const root =
+            document.getElementById('checkout-main') ||
+            document.querySelector('[data-checkout-page]') ||
+            document.getElementById('checkout-experience-container');
+        return !!(root && wrrapdHubSignatureFromText(root.textContent));
+    }
+
     async function wrrapdSelectHubThenDeliver({ userInitiated = false } = {}) {
         wrrapdClickShowMoreAddressesIfPresent();
         await new Promise((r) => setTimeout(r, 400));
@@ -2720,15 +2773,22 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
             await new Promise((r) => setTimeout(r, 700));
             control = wrrapdFindHubAddressControl();
         }
-        if (control) wrrapdClickHubAddressControl(control);
-        await new Promise((r) => setTimeout(r, 350));
+        const alreadyOnHub =
+            wrrapdPageAlreadyShowsHubAddress() ||
+            wrrapdHubSignatureFromText(wrrapdGetDisplayedSingleAddressSelectionText()) ||
+            wrrapdHubControlIsSelected(control);
+        if (control && !wrrapdHubControlIsSelected(control)) {
+            wrrapdClickHubAddressControl(control);
+            await new Promise((r) => setTimeout(r, 350));
+        }
         const deliver = wrrapdFindDeliverToThisAddressControl();
-        if (!control || !deliver) return { ok: false, deliver: deliver || null };
+        if (!control && !alreadyOnHub) return { ok: false, deliver: deliver || null };
+        if (!deliver) return { ok: alreadyOnHub, deliver: null };
         if (userInitiated || !wrrapdManualAddressTapsRequired()) {
             try {
                 deliver.click();
             } catch (_) {
-                return { ok: false, deliver };
+                return { ok: alreadyOnHub, deliver };
             }
             try {
                 localStorage.setItem('wrrapd-addresses-changed', 'true');
@@ -2919,46 +2979,45 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
     }
 
     function wrrapdGetDisplayedSingleAddressSelectionText() {
+        const chunks = [];
         const sel = document.querySelector('.list-address-selected');
-        if (sel && (sel.textContent || '').replace(/\s+/g, ' ').trim().length > 12) {
-            return sel.textContent || '';
-        }
+        if (sel) chunks.push(sel.textContent || '');
         const checked = document.querySelector(
-            'input[type="radio"][name*="shipTo"]:checked, input[type="radio"][name*="ShipTo"]:checked, input[type="radio"]:checked',
+            'input[type="radio"][name*="shipTo"]:checked, input[type="radio"][name*="ShipTo"]:checked, input[type="radio"][name*="address"]:checked, input[type="radio"][name*="Address"]:checked',
         );
-        if (checked) {
+        if (checked && !wrrapdIsInCheckoutOrderSummaryRail(checked)) {
             const box =
                 checked.closest(
                     '.a-box, .a-box-inner, .a-row, li, label, .a-radio, [data-testid*="address"]',
                 ) || checked.parentElement;
-            return (box && box.textContent) || '';
+            if (box) chunks.push(box.textContent || '');
         }
-        return '';
+        const hubControl = wrrapdFindHubAddressControl();
+        if (wrrapdHubControlIsSelected(hubControl)) {
+            chunks.push(wrrapdGetAddressTextNearControl(hubControl));
+        }
+        return chunks.join('\n');
     }
-
-    let wrrapdHubDeliverRecoverAttempts = 0;
 
     async function wrrapdMaybeShowSingleAddressGiftWrapMismatch(allItems) {
         if (!hasAnyWrrapdGiftWrapInCart(allItems)) return;
-        const blob = wrrapdGetDisplayedSingleAddressSelectionText();
-        if (blob && wrrapdHubSignatureFromText(blob)) {
-            wrrapdHubDeliverRecoverAttempts = 0;
+        if (
+            wrrapdPageAlreadyShowsHubAddress() ||
+            wrrapdHubSignatureFromText(wrrapdGetDisplayedSingleAddressSelectionText())
+        ) {
+            const control = wrrapdFindHubAddressControl();
+            if (control && !wrrapdHubControlIsSelected(control)) {
+                wrrapdClickHubAddressControl(control);
+            }
             return;
         }
-        if (wrrapdHubDeliverRecoverAttempts >= 2) {
-            wrrapdShowAddressGiftMismatchModal(
-                'Gift-wrap items need to ship to the Wrrapd hub.',
-                wrrapdListTitlesWithAnyWrrapdGiftWrap(allItems),
-            );
+        wrrapdClickShowMoreAddressesIfPresent();
+        await new Promise((r) => setTimeout(r, 400));
+        const existing = wrrapdFindHubAddressControl();
+        if (existing) {
+            if (!wrrapdHubControlIsSelected(existing)) wrrapdClickHubAddressControl(existing);
             return;
         }
-        wrrapdHubDeliverRecoverAttempts += 1;
-        const result = await wrrapdSelectHubThenDeliver({ userInitiated: false });
-        if (result.ok) return;
-        wrrapdShowAddressGiftMismatchModal(
-            'Gift-wrap items need to ship to the Wrrapd hub.',
-            wrrapdListTitlesWithAnyWrrapdGiftWrap(allItems),
-        );
     }
 
     /**
@@ -8279,14 +8338,13 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             const mainCol = wrrapdFindMainColumnDeliverToAddressControl();
             const target =
                 mainCol && mainCol.isConnected ? mainCol : anchorElement;
+            const hub = wrrapdFindHubAddressControl();
+            if (hub && !wrrapdHubControlIsSelected(hub)) {
+                wrrapdClickHubAddressControl(hub);
+            }
             showWrrapdManualDeliverGuidanceOverlay(target, {
                 refit: () => wrrapdFindMainColumnDeliverToAddressControl(),
             });
-            if (hasAnyWrrapdGiftWrapInCart(getAllItemsFromLocalStorage())) {
-                setTimeout(() => {
-                    wrrapdMaybeShowSingleAddressGiftWrapMismatch(getAllItemsFromLocalStorage()).catch(() => {});
-                }, 3200);
-            }
             return;
         }
 
@@ -9511,26 +9569,34 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             await new Promise((r) => setTimeout(r, 900));
             ({ found: wrrapdAddressFound, control: wrrapdAddressRadio } = findWrrapdAddressControl());
         }
+        if (!wrrapdAddressFound && wrrapdPageAlreadyShowsHubAddress()) {
+            wrrapdAddressFound = true;
+            wrrapdAddressRadio = wrrapdFindHubAddressControl();
+        }
         
         // Step 3: Handle based on whether Wrrapd address was found
-        if (wrrapdAddressFound && wrrapdAddressRadio) {
+        if (wrrapdAddressFound) {
             // CRITICAL: Use common function to ensure identifier mapping exists (even if address is already present)
             // This ensures the multi-address page can correctly identify and fix addresses
             await ensureCorrectAddressesForAllItems(allItems);
             
             if (allItemsWrrapd) {
-                // All items are Wrrapd - select Wrrapd radio button and click "Deliver to this address"
-                try {
-                    wrrapdAddressRadio.scrollIntoView({ block: 'center', behavior: 'instant' });
-                } catch (_) {
-                    /* ignore */
+                // All items are Wrrapd — select the existing hub (if a control exists) then Deliver.
+                if (wrrapdAddressRadio) {
+                    try {
+                        wrrapdAddressRadio.scrollIntoView({ block: 'center', behavior: 'instant' });
+                    } catch (_) {
+                        /* ignore */
+                    }
+                    if (!wrrapdHubControlIsSelected(wrrapdAddressRadio)) {
+                        if ('checked' in wrrapdAddressRadio && wrrapdAddressRadio.type === 'radio') {
+                            wrrapdAddressRadio.checked = true;
+                            wrrapdAddressRadio.dispatchEvent(new Event('change', { bubbles: true }));
+                        }
+                        wrrapdAddressRadio.click();
+                        await new Promise(r => setTimeout(r, 1000));
+                    }
                 }
-                if ('checked' in wrrapdAddressRadio && wrrapdAddressRadio.type === 'radio') {
-                    wrrapdAddressRadio.checked = true;
-                    wrrapdAddressRadio.dispatchEvent(new Event('change', { bubbles: true }));
-                }
-                wrrapdAddressRadio.click();
-                await new Promise(r => setTimeout(r, 1000));
                 
                 const deliverButton = await findElementWithFallback(
                     'Deliver to this address button on Amazon address selection page',
@@ -9560,6 +9626,12 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                 } else {
                     console.error("[handleWrrapdAddressSelection] Could not find 'Deliver to this address' button.");
                     removeLoadingScreen();
+                    const fallbackDeliver = wrrapdFindDeliverToThisAddressControl();
+                    if (fallbackDeliver) {
+                        wrrapdShowManualAddressHint(fallbackDeliver, 'deliver');
+                        return;
+                    }
+                    if (wrrapdPageAlreadyShowsHubAddress()) return;
                     wrrapdShowAddressGiftMismatchModal(
                         'Amazon did not expose the usual “Deliver to this address” control while Wrrapd gift-wrap is in your cart. Scroll to the primary yellow button, or refresh and try again.',
                         wrrapdListTitlesWithAnyWrrapdGiftWrap(allItems),
@@ -11047,51 +11119,100 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
     /**
      * Filters items from localStorage to only include those actually on the current checkout page
      */
+    function wrrapdOptionHasGiftWrap(opt) {
+        if (!opt || typeof opt !== 'object') return false;
+        const v = opt.checkbox_wrrapd;
+        return v === true || v === 1 || v === 'true' || v === '1';
+    }
+
+    function wrrapdOptionHasWrrapdCharges(opt) {
+        if (!opt || typeof opt !== 'object') return false;
+        if (wrrapdOptionHasGiftWrap(opt)) return true;
+        const flowers = opt.checkbox_flowers;
+        return flowers === true || flowers === 1 || flowers === 'true' || flowers === '1';
+    }
+
+    function wrrapdItemsWithCharges(allItems) {
+        const out = {};
+        for (const [title, item] of Object.entries(allItems || {})) {
+            if (item?.options?.some((opt) => wrrapdOptionHasWrrapdCharges(opt))) out[title] = item;
+        }
+        return out;
+    }
+
+    function collectWrrapdItemsForCheckout() {
+        let allItems = {};
+        try {
+            allItems = getAllItemsFromLocalStorage() || {};
+        } catch (_) {
+            allItems = {};
+        }
+        const filtered = filterItemsInCurrentCheckout(allItems);
+        if (Object.keys(filtered).length) return filtered;
+        const charged = wrrapdItemsWithCharges(allItems);
+        if (Object.keys(charged).length) return charged;
+        return allItems;
+    }
+
+    function readPaintedWrrapdSummaryTotal() {
+        const el = document.querySelector('#wrrapd-summary-total') || document.querySelector('#wrrapd-summary');
+        if (!el) return 0;
+        const matches = String(el.textContent || '').match(/\$\s*([0-9]+(?:\.[0-9]{1,2})?)/g);
+        if (!matches || !matches.length) return 0;
+        const last = parseFloat(matches[matches.length - 1].replace(/[^0-9.]/g, ''));
+        return Number.isFinite(last) && last > 0 ? last : 0;
+    }
+
+    function resolveWrrapdPayTotalDollars() {
+        const items = collectWrrapdItemsForCheckout();
+        if (Object.keys(items).length) {
+            const br = computeWrrapdCheckoutBreakdown(items);
+            if (Number.isFinite(br.total) && br.total > 0) return br.total;
+        }
+        const painted = readPaintedWrrapdSummaryTotal();
+        if (painted > 0) return painted;
+        return 0;
+    }
+
     function filterItemsInCurrentCheckout(allItems) {
         console.log("[filterItemsInCurrentCheckout] Filtering items to only include those in current checkout...");
         
         const itemsInCheckout = {};
+        const source = allItems && typeof allItems === 'object' ? allItems : {};
         const currentURL = window.location.href;
         const isPaymentPage =
             wrrapdUrlLooksLikeAmazonPaymentStep(currentURL) || wrrapdDomLooksLikeAmazonPaymentStep();
 
-        // On payment page, be more lenient - check if items have Wrrapd selected
-        // On other pages, check if items appear on the page
-        if (isPaymentPage) {
-            console.log("[filterItemsInCurrentCheckout] Payment page detected - using Wrrapd selection as filter criteria");
-            // On payment page, include items that have Wrrapd selected
-            for (const [title, item] of Object.entries(allItems)) {
-                if (item.options && item.options.some(opt => opt.checkbox_wrrapd)) {
+        const takeCharged = () => {
+            for (const [title, item] of Object.entries(source)) {
+                if (item?.options?.some((opt) => wrrapdOptionHasWrrapdCharges(opt))) {
                     itemsInCheckout[title] = item;
-                    console.log(`[filterItemsInCurrentCheckout] Item "${title.substring(0, 40)}..." has Wrrapd selected - including in checkout.`);
-                } else {
-                    console.log(`[filterItemsInCurrentCheckout] Item "${title.substring(0, 40)}..." does not have Wrrapd selected - filtering out.`);
                 }
             }
-        } else {
-            // On other pages (gift options, address selection), check if item appears on page
+        };
+
+        // On payment / SPC, prefer Wrrapd-selected lines. If that filter is empty
+        // (Chewbacca often drops checkbox_wrrapd), fall back to page text then any charged items.
+        if (isPaymentPage) {
+            console.log("[filterItemsInCurrentCheckout] Payment page detected - using Wrrapd selection as filter criteria");
+            takeCharged();
+        }
+        if (Object.keys(itemsInCheckout).length === 0) {
             const pageText = document.body.textContent || '';
-            
-            for (const [title, item] of Object.entries(allItems)) {
-                // Use ASIN if available, otherwise use title
-                const searchKey = item.asin || title;
-                
-                // Check if this item appears on the current page
-                // Look for ASIN in page, or title substring
-                const titleSubstring = title.substring(0, 50); // Use first 50 chars for matching
-                const asinInPage = item.asin && pageText.includes(item.asin);
-                const titleInPage = pageText.includes(titleSubstring);
-                
+            for (const [title, item] of Object.entries(source)) {
+                const titleSubstring = String(title || '').substring(0, 50);
+                const asinInPage = item?.asin && pageText.includes(item.asin);
+                const titleInPage = titleSubstring && pageText.includes(titleSubstring);
                 if (asinInPage || titleInPage) {
                     itemsInCheckout[title] = item;
-                    console.log(`[filterItemsInCurrentCheckout] Item "${title.substring(0, 40)}..." found in current checkout.`);
-                } else {
-                    console.log(`[filterItemsInCurrentCheckout] Item "${title.substring(0, 40)}..." NOT in current checkout - filtering out.`);
                 }
             }
         }
+        if (Object.keys(itemsInCheckout).length === 0) {
+            takeCharged();
+        }
         
-        console.log(`[filterItemsInCurrentCheckout] Found ${Object.keys(itemsInCheckout).length} items in current checkout out of ${Object.keys(allItems).length} total items.`);
+        console.log(`[filterItemsInCurrentCheckout] Found ${Object.keys(itemsInCheckout).length} items in current checkout out of ${Object.keys(source).length} total items.`);
         return itemsInCheckout;
     }
 
@@ -11876,8 +11997,14 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                             modalZip || gifteeOriginalAddress.postalCode || addressObject.postalCode,
                         );
                     }
-                    total = updateWrrapdSummary();
-                    if (!total || total <= 0) {
+                    total = resolveWrrapdPayTotalDollars();
+                    try {
+                        const painted = updateWrrapdSummary();
+                        if (Number.isFinite(painted) && painted > 0) total = painted;
+                    } catch (_) {
+                        /* keep resolveWrrapdPayTotalDollars */
+                    }
+                    if (!Number.isFinite(total) || total <= 0) {
                         payBtn.dataset.wrrapdPayInFlight = '0';
                         payBtn.disabled = false;
                         payBtn.removeAttribute('aria-disabled');
@@ -12360,7 +12487,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                 let customDesignAi = 0;
                 let customDesignUpload = 0;
                 let flowers = 0;
-                if (option.checkbox_wrrapd) {
+                if (wrrapdOptionHasGiftWrap(option)) {
                     giftWrapBase = p.giftWrapBase;
                     giftWrapTotal += p.giftWrapBase;
                     qtyGiftWrap += 1;
@@ -12433,8 +12560,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
     /** Same dollar math as updateWrrapdSummary — sent to process-payment (legacy lines + complete matrix with zeros). */
     function buildCheckoutInvoiceSnapshotForServer() {
         try {
-            const allItems = getAllItemsFromLocalStorage();
-            const itemsInCurrentCheckout = filterItemsInCurrentCheckout(allItems);
+            const itemsInCurrentCheckout = collectWrrapdItemsForCheckout();
             if (Object.keys(itemsInCurrentCheckout).length === 0) {
                 return null;
             }
@@ -12560,20 +12686,18 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
         const wrrapdSummaryItems = document.querySelector('#wrrapd-summary-items');
         const wrrapdSummaryTotal = document.querySelector('#wrrapd-summary-total');
 
+        const itemsInCurrentCheckout = collectWrrapdItemsForCheckout();
         let total = 0;
+        if (Object.keys(itemsInCurrentCheckout).length) {
+            const brEarly = computeWrrapdCheckoutBreakdown(itemsInCurrentCheckout);
+            if (Number.isFinite(brEarly.total) && brEarly.total > 0) total = brEarly.total;
+        }
+        if (!total) total = readPaintedWrrapdSummaryTotal();
 
         if (wrrapdSummaryItems && wrrapdSummaryTotal) {
-            const allItems = getAllItemsFromLocalStorage();
-            // CRITICAL: Only use items that are actually in the current checkout
-            const itemsInCurrentCheckout = filterItemsInCurrentCheckout(allItems);
-            
             if (Object.keys(itemsInCurrentCheckout).length === 0) {
-                console.log("[updateWrrapdSummary] No items in current checkout. Removing summary.");
-                const existingSummary = document.querySelector('#wrrapd-summary');
-                if (existingSummary) {
-                    existingSummary.remove();
-                }
-                return 0;
+                console.log("[updateWrrapdSummary] No items in current checkout. Keeping painted summary.");
+                return total;
             }
 
             console.log("[updateWrrapdSummary] Found summary containers. Clearing previous content.");
