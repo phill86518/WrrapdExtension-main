@@ -194,7 +194,7 @@ export function isKohlsCartEmpty(root = document) {
     root.querySelector("main, [role='main'], #main-content")?.textContent?.slice(0, 1200) || "",
   );
   if (/your (shopping )?(bag|cart) is empty/i.test(pageText)) return true;
-  return extractKohlsItems(root).length === 0;
+  return false;
 }
 
 export function extractKohlsCartSnapshot(root = document) {

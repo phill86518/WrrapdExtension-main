@@ -283,8 +283,7 @@ export function isBestbuyCartEmpty(root = document) {
     ".fluid-large-view__main-content, main[data-testid='cart-root'], main",
   );
   const text = normalizeWhitespace(main?.textContent?.slice(0, 800) || "");
-  if (/your cart is empty/i.test(text)) return true;
-  return extractBestbuyItems(root).length === 0;
+  return /your cart is empty/i.test(text);
 }
 
 export function getBestbuyCartSnapshotSafe(root = document) {

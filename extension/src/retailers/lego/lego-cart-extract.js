@@ -113,7 +113,12 @@ export function readLegoCartSnapshot() {
 }
 
 export function getLegoCartSnapshotFromDocument() {
-  const lines = extractLegoCartProductLines();
+  let lines = extractLegoCartProductLines();
+  if (lines.length) {
+    snapshotLegoCartToSession();
+  } else {
+    lines = readLegoCartSnapshot();
+  }
   return {
     itemCount: lines.length,
     items: lines.map((line) => ({

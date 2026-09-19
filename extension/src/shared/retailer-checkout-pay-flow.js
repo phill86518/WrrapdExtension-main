@@ -167,7 +167,8 @@ async function ensureUnitPrices(state, geo, retailer, sessionPrefix) {
 function computeServiceSubtotalCents(state, prefix) {
   const p = getActiveUnitPrices(state);
   const choices = readItemChoices(prefix);
-  const n = Math.max(1, choices.length);
+  const n = choices.length;
+  if (n <= 0) return 0;
   let dollars = p.giftWrapBase * n;
   for (const ch of choices) {
     if (ch.wrapPref === "ai") dollars += p.customDesignAi;
@@ -260,32 +261,23 @@ function buildPricingCart(state, prefix, retailer) {
   const zipForTax = taxPostalForPricing(gifteeZip5(prefix));
   const taxRatePercent = resolveTaxRatePercent(state.taxPercent);
   const p = getActiveUnitPrices(state);
-  const items =
-    choices.length > 0
-      ? choices.map((ch) => ({
-          options: [
-            {
-              checkbox_wrrapd: true,
-              selected_wrapping_option: ch.wrapPref || "wrrapd",
-              checkbox_flowers: ch.flowers === true,
-              flower_offer_id: ch.flowers ? ch.flowerOfferId || null : null,
-              flower_amount: ch.flowers
-                ? resolveFlowerChargeDollars({
-                    flowerPrice: ch.flowerPrice,
-                    flowerOfferId: ch.flowerOfferId,
-                    unitFallback: p.flowers,
-                  }) || null
-                : null,
-            },
-          ],
-        }))
-      : [
-          {
-            options: [
-              { checkbox_wrrapd: true, selected_wrapping_option: "wrrapd", checkbox_flowers: false },
-            ],
-          },
-        ];
+  const items = choices.map((ch) => ({
+    options: [
+      {
+        checkbox_wrrapd: true,
+        selected_wrapping_option: ch.wrapPref || "wrrapd",
+        checkbox_flowers: ch.flowers === true,
+        flower_offer_id: ch.flowers ? ch.flowerOfferId || null : null,
+        flower_amount: ch.flowers
+          ? resolveFlowerChargeDollars({
+              flowerPrice: ch.flowerPrice,
+              flowerOfferId: ch.flowerOfferId,
+              unitFallback: p.flowers,
+            }) || null
+          : null,
+      },
+    ],
+  }));
   return {
     items,
     taxRatePercent,
@@ -520,14 +512,21 @@ async function openPaymentPopup(config, state) {
     alert("Wrrapd pricing is still loading. Please wait a moment and try again.");
     return null;
   }
+  const choices = readItemChoices(config.sessionPrefix);
+  const pricingCart = buildPricingCart(state, config.sessionPrefix, config.payRoute);
   const { totalCents } = computeTotalBreakdown(state, config.sessionPrefix);
-  if (!totalCents || totalCents < 50) {
+  if (
+    !choices.length ||
+    !pricingCart?.items?.length ||
+    !totalCents ||
+    totalCents < 50
+  ) {
     try {
       popup.close();
     } catch {
       /* ignore */
     }
-    alert("We couldn't calculate your Wrrapd total. Please refresh the page and try again.");
+    alert("Please return to your cart and choose Wrrapd again.");
     return null;
   }
   // Reuse the order number created during the wizard (e.g. when an AI design was
@@ -544,7 +543,7 @@ async function openPaymentPopup(config, state) {
     address: hubAsPaymentAddress(),
     gifteeOriginalAddress: gifteeStub(config.sessionPrefix),
     orderNumber,
-    pricingCart: buildPricingCart(state, config.sessionPrefix, config.payRoute),
+    pricingCart,
     retailer: config.retailerName,
     name_of_retailer: config.retailerName,
   };
@@ -631,6 +630,15 @@ export function initRetailerCheckoutPayFlow(config) {
 
   /** Full gift flow complete — required for Pay Wrrapd panel, not for hiding retailer Checkout. */
   const giftFlowReady = () => {
+    if (
+      !wrrapdYesSelected() ||
+      !readGiftChoicesSaved(config.sessionPrefix) ||
+      !readGiftLegalTermsAccepted(config.sessionPrefix)
+    ) {
+      return false;
+    }
+    const choices = readItemChoices(config.sessionPrefix);
+    if (!choices.length) return false;
     const snap = config.getCartSnapshot?.();
     const count =
       snap && typeof snap === "object"
@@ -640,14 +648,9 @@ export function initRetailerCheckoutPayFlow(config) {
             ? snap.items.length
             : 0
         : 0;
-    if (count <= 0) return false;
-    const choices = readItemChoices(config.sessionPrefix);
-    if (choices.length !== count) return false;
-    return (
-      wrrapdYesSelected() &&
-      readGiftChoicesSaved(config.sessionPrefix) &&
-      readGiftLegalTermsAccepted(config.sessionPrefix)
-    );
+    // Checkout pages often scrape 0 lines; keep the saved choices instead of blocking pay.
+    if (count > 0 && choices.length !== count) return false;
+    return true;
   };
 
   const syncCartGiftState = () => {

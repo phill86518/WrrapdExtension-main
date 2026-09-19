@@ -234,7 +234,8 @@ function persistGifteeAddressFromPayMessage(eventData) {
 function computeServiceSubtotalCents() {
   const p = getActiveCheckoutUnitPrices();
   const allChoices = readLegoItemChoices();
-  const n = Math.max(1, allChoices.length);
+  const n = allChoices.length;
+  if (n <= 0) return 0;
   let dollars = p.giftWrapBase * n;
   for (const ch of allChoices) {
     if (ch.wrapPref === "ai") dollars += p.customDesignAi;
@@ -272,23 +273,21 @@ function buildLegoPricingCart() {
   const allChoices = readLegoItemChoices();
   const zipForTax = taxPostalForPricing(gifteeZip5());
   const tr = resolveTaxRatePercent(legoPreviewTaxPercent);
-  const items = allChoices.length > 0
-    ? allChoices.map((ch) => ({
-        options: [{
-          checkbox_wrrapd: true,
-          selected_wrapping_option: ch.wrapPref || "wrrapd",
-          checkbox_flowers: ch.flowers === true,
-          flower_offer_id: ch.flowers ? ch.flowerOfferId || null : null,
-          flower_amount: ch.flowers
-            ? resolveFlowerChargeDollars({
-                flowerPrice: ch.flowerPrice,
-                flowerOfferId: ch.flowerOfferId,
-                unitFallback: getActiveCheckoutUnitPrices().flowers,
-              }) || null
-            : null,
-        }],
-      }))
-    : [{ options: [{ checkbox_wrrapd: true, selected_wrapping_option: "wrrapd", checkbox_flowers: false }] }];
+  const items = allChoices.map((ch) => ({
+    options: [{
+      checkbox_wrrapd: true,
+      selected_wrapping_option: ch.wrapPref || "wrrapd",
+      checkbox_flowers: ch.flowers === true,
+      flower_offer_id: ch.flowers ? ch.flowerOfferId || null : null,
+      flower_amount: ch.flowers
+        ? resolveFlowerChargeDollars({
+            flowerPrice: ch.flowerPrice,
+            flowerOfferId: ch.flowerOfferId,
+            unitFallback: getActiveCheckoutUnitPrices().flowers,
+          }) || null
+        : null,
+    }],
+  }));
   return {
     items,
     taxRatePercent: tr,
@@ -758,8 +757,9 @@ async function openLegoPaymentPopup() {
   await refreshCheckoutUnitPricesFromServer(geo);
   const br = computeLegoTotalBreakdown();
   const totalCents = br.totalCents;
-  if (!totalCents || totalCents < 50) {
-    alert("Invalid Wrrapd total. Please refresh and try again.");
+  const pricingCart = buildLegoPricingCart();
+  if (!readLegoItemChoices().length || !pricingCart?.items?.length || !totalCents || totalCents < 50) {
+    alert("Please return to your cart and choose Wrrapd again.");
     return;
   }
   const orderNumber = generateLegoOrderNumber();
@@ -773,7 +773,7 @@ async function openLegoPaymentPopup() {
     address: hubAsPaymentAddress(),
     gifteeOriginalAddress: gifteeStubFromSession(),
     orderNumber,
-    pricingCart: buildLegoPricingCart(),
+    pricingCart,
     retailer: "Lego",
     name_of_retailer: "Lego",
   };

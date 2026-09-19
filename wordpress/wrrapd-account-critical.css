@@ -206,7 +206,7 @@ body.wrrapd-account-page .user-registration-MyAccount-content .ur-label {
 body.wrrapd-account-page .user-registration-MyAccount-content input[type="text"],
 body.wrrapd-account-page .user-registration-MyAccount-content input[type="email"],
 body.wrrapd-account-page .user-registration-MyAccount-content input[type="password"],
-body.wrrapd-account-page .user-registration-MyAccount-content select,
+body.wrrapd-account-page .user-registration-MyAccount-content select:not(.wrrapd-legacy-month):not(.wrrapd-legacy-day):not(.wrrapd-legacy-rem-days):not(.wrrapd-amz-f-month):not(.wrrapd-amz-f-day):not(.wrrapd-amz-f-rem-days),
 body.wrrapd-account-page .user-registration-MyAccount-content textarea {
 	width: 100% !important;
 	border: 1px solid rgba(12, 18, 34, 0.14) !important;

@@ -152,6 +152,16 @@ export function notifyCartSyncChange(prefix, detail = {}) {
 }
 
 /**
+ * Checkout pages often omit cart-line markup. Treating a blank scrape as
+ * "cart emptied" wipes saved gift choices and breaks Pay Wrrapd.
+ */
+export function isUnreliableEmptyCartSnapshot(cartSnapshot, prevChoices) {
+  const items = Array.isArray(cartSnapshot?.items) ? cartSnapshot.items : [];
+  if (items.length > 0) return false;
+  return Array.isArray(prevChoices) && prevChoices.length > 0;
+}
+
+/**
  * @param {object} session
  * @param {string} session.prefix
  * @param {() => Array} session.readChoices
@@ -163,14 +173,23 @@ export function notifyCartSyncChange(prefix, detail = {}) {
  * @param {() => boolean} [session.readWasComplete]
  */
 export function syncGiftSessionWithCart(session, cartSnapshot, makeEmptyChoice) {
-  const fingerprint = buildCartFingerprint(cartSnapshot);
+  const prev = session.readChoices();
   const prevFp = session.readFingerprint();
+  if (isUnreliableEmptyCartSnapshot(cartSnapshot, prev)) {
+    return {
+      changed: false,
+      requiresReview: false,
+      fingerprint: prevFp,
+      skippedEmptyScrape: true,
+    };
+  }
+
+  const fingerprint = buildCartFingerprint(cartSnapshot);
 
   if (fingerprint === prevFp) {
     return { changed: false, requiresReview: false, fingerprint };
   }
 
-  const prev = session.readChoices();
   const { next, requiresReview, hadAdditions, hadRemovals } = reconcileChoicesToCartLines(
     prev,
     cartSnapshot?.items,
