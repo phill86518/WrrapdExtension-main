@@ -263,6 +263,11 @@ export type WrapStar = {
   /** Printer size key from the apply form: under24 | 24 | 36 | 44plus */
   printerSize?: string;
   /**
+   * Person-specific hourly rate (cents). Set at Approve onboarding (or edited on roster).
+   * Wins over ZIP table and role default when present.
+   */
+  hourlyRateCents?: number;
+  /**
    * WrapRiders are a third hire category. They still get a WrapStar roster row (prefix 8)
    * so the wrap app and wrap allocation work — Command Center hides them from /admin/wrapstars.
    */
@@ -288,6 +293,8 @@ export type DeliveryDriver = {
   notes?: string;
   createdAt: string;
   updatedAt: string;
+  /** Person-specific hourly rate (cents). Set at activation; wins over ZIP / role default. */
+  hourlyRateCents?: number;
   hireRole?: "driver" | "wraprider";
   wrapriderId?: string;
 };
@@ -312,6 +319,8 @@ export type WrapRider = {
   vehicleType?: string;
   hasPrinter?: boolean;
   printerSize?: string;
+  /** Person-specific hourly rate (cents). Set at activation; wins over ZIP / role default. */
+  hourlyRateCents?: number;
   createdAt: string;
   updatedAt: string;
 };

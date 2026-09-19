@@ -49,7 +49,7 @@ export default async function AdminFinanceRatesPage() {
             type="number"
             step="0.01"
             min={0}
-            defaultValue={((config.wrapstarHourlyCents || 2500) / 100).toFixed(2)}
+            defaultValue={((config.wrapstarHourlyCents || 3000) / 100).toFixed(2)}
             className="mt-1 w-full rounded border px-3 py-2"
           />
         </label>
@@ -60,7 +60,7 @@ export default async function AdminFinanceRatesPage() {
             type="number"
             step="0.01"
             min={0}
-            defaultValue={((config.joyriderHourlyCents || 2200) / 100).toFixed(2)}
+            defaultValue={((config.joyriderHourlyCents || 3000) / 100).toFixed(2)}
             className="mt-1 w-full rounded border px-3 py-2"
           />
         </label>
@@ -71,7 +71,7 @@ export default async function AdminFinanceRatesPage() {
             type="number"
             step="0.01"
             min={0}
-            defaultValue={((config.wrapriderHourlyCents || 2400) / 100).toFixed(2)}
+            defaultValue={((config.wrapriderHourlyCents || 3000) / 100).toFixed(2)}
             className="mt-1 w-full rounded border px-3 py-2"
           />
         </label>
@@ -81,7 +81,7 @@ export default async function AdminFinanceRatesPage() {
             name="hourlyByZip"
             rows={8}
             defaultValue={formatHourlyZipTable(config.hourlyByZip)}
-            placeholder={"32218 26.00 23.00 25.00\n322 25.00 22.00 24.00\n303 27.00 24.00 26.00"}
+            placeholder={"32218 30.00 30.00 30.00\n322 30.00 30.00 30.00\n303 30.00 30.00 30.00"}
             className="mt-1 w-full rounded border px-3 py-2 font-mono text-sm"
           />
         </label>

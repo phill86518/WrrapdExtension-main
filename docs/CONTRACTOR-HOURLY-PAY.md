@@ -36,9 +36,13 @@ Starter defaults (edit before first live shift — these are placeholders, not a
 
 | Role | Default hourly |
 |---|---|
-| WrapStar | $25.00 |
-| JoyRider | $22.00 |
-| WrapRider | $24.00 (own rate — not derived from the other two) |
+| WrapStar | $30.00 |
+| JoyRider | $30.00 |
+| WrapRider | $30.00 (own rate — not derived from the other two) |
+
+Person-specific override: when Command Center **Approve onboarding** runs, admin sets (or
+keeps) an hourly rate for that hire. That value is stored on the roster row and **wins** over
+ZIP table and role default. Public / apply pages must never show dollar amounts.
 
 Home ZIP on the application / roster row is the ZIP used unless ops sets a different
 work ZIP on the contractor record.

@@ -23,7 +23,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_WRAPRIDERS_BUILD', '2026-09-19-faq-reqs' );
+define( 'WRRAPD_WRAPRIDERS_BUILD', '2026-09-19-no-public-rates' );
 define( 'WRRAPD_WRAPRIDERS_INVITE_TTL_DAYS', 15 );
 define( 'WRRAPD_WRAPRIDERS_CPT', 'wrrapd_wraprider_app' );
 
@@ -1731,7 +1731,7 @@ function wrrapd_wrapriders_shortcode_landing() {
 				</details>
 				<details class="wrrapd-wrapstars-faq-dd__item">
 					<summary>How are WrapRiders paid?</summary>
-					<p>WrapRiders are independent contractors paid an hourly rate for active wrapping and delivery time. Starting rates in launch markets are typically around <strong>$24 per hour</strong>, and the exact rate for your ZIP code is confirmed when you are approved. Rates may vary by market.</p>
+					<p>WrapRiders are independent contractors paid an hourly rate for active wrapping and delivery time. Your personal rate is confirmed when you are approved and may vary by market.</p>
 				</details>
 				<details class="wrrapd-wrapstars-faq-dd__item">
 					<summary>Are there incentives or milestone bonuses?</summary>

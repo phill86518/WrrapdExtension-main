@@ -74,6 +74,9 @@ function normalizeDeliveryDriver(raw: Partial<DeliveryDriver> & { id?: string; n
     notes: raw.notes?.trim() || undefined,
     createdAt,
     updatedAt: raw.updatedAt || createdAt,
+    ...(typeof raw.hourlyRateCents === "number" && raw.hourlyRateCents > 0
+      ? { hourlyRateCents: Math.round(raw.hourlyRateCents) }
+      : {}),
     ...(raw.hireRole === "wraprider" ? { hireRole: "wraprider" as const, wrapriderId: raw.wrapriderId } : {}),
   };
 }
@@ -171,6 +174,7 @@ export async function addDeliveryDriver(input: {
   servicePostalCodes?: string[];
   hireRole?: DeliveryDriver["hireRole"];
   wrapriderId?: string;
+  hourlyRateCents?: number;
 }): Promise<{ ok: true; driver: DeliveryDriver } | { ok: false; error: string }> {
   const clean = input.name.trim();
   if (!clean) return { ok: false, error: "JoyRider name is required." };
@@ -210,6 +214,9 @@ export async function addDeliveryDriver(input: {
     ...(input.hireRole === "wraprider"
       ? { hireRole: "wraprider" as const, wrapriderId: input.wrapriderId }
       : {}),
+    ...(typeof input.hourlyRateCents === "number" && input.hourlyRateCents > 0
+      ? { hourlyRateCents: Math.round(input.hourlyRateCents) }
+      : {}),
   };
 
   const col = trackingDeliveryDriversCollection();
@@ -236,6 +243,7 @@ export async function updateDeliveryDriver(
       | "metroId"
       | "hireRole"
       | "wrapriderId"
+      | "hourlyRateCents"
     >
   >,
 ): Promise<{ ok: true; driver: DeliveryDriver } | { ok: false; error: string }> {

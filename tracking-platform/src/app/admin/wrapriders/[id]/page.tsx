@@ -17,6 +17,8 @@ async function updateAction(formData: FormData) {
   const session = await getSession();
   if (!session || session.role !== "admin") return;
   const id = String(formData.get("wrapriderId") || "");
+  const { parseHourlyRateDollarsInput } = await import("@/lib/hourly-rates");
+  const rateCents = parseHourlyRateDollarsInput(formData.get("hourlyRateDollars"));
   await updateWraprider(id, {
     name: String(formData.get("name") || ""),
     homePostalCode: String(formData.get("homePostalCode") || ""),
@@ -26,6 +28,7 @@ async function updateAction(formData: FormData) {
     phone: String(formData.get("phone") || ""),
     notes: String(formData.get("notes") || ""),
     vehicleType: String(formData.get("vehicleType") || "") || undefined,
+    ...(rateCents ? { hourlyRateCents: rateCents } : {}),
   });
   revalidatePath(`/admin/wrapriders/${id}`);
   revalidatePath("/admin/wrapriders");
@@ -141,6 +144,22 @@ export default async function AdminWrapriderDetailPage({
             defaultValue={wraprider.vehicleType || ""}
             className="mt-1 w-full rounded border px-3 py-2"
           />
+        </label>
+        <label className="block text-sm">
+          Hourly rate ($ / hour)
+          <input
+            name="hourlyRateDollars"
+            type="number"
+            step="0.01"
+            min={1}
+            defaultValue={
+              wraprider.hourlyRateCents ? (wraprider.hourlyRateCents / 100).toFixed(2) : "30.00"
+            }
+            className="mt-1 w-full rounded border px-3 py-2"
+          />
+          <span className="mt-1 block text-xs text-slate-500">
+            Person rate set at onboarding. Change here to override for this WrapRider.
+          </span>
         </label>
         <label className="block text-sm">
           Notes

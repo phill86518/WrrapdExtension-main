@@ -22,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_WRAPSTARS_BUILD', '2026-09-19-faq-reqs' );
+define( 'WRRAPD_WRAPSTARS_BUILD', '2026-09-19-no-public-rates' );
 /** Approval / re-invite onboarding credentials remain valid this many days. */
 define( 'WRRAPD_WRAPSTARS_INVITE_TTL_DAYS', 15 );
 
@@ -3184,7 +3184,7 @@ function wrrapd_wrapstars_landing_content() {
 				),
 				array(
 					'q' => 'How are WrapStars paid?',
-					'a' => 'WrapStars are independent contractors paid an hourly rate for active wrapping time. Starting rates in launch markets are typically around <strong>$25 per hour</strong>, and the exact rate for your ZIP code is confirmed when you are approved. Rates may vary by market.',
+					'a' => 'WrapStars are independent contractors paid an hourly rate for active wrapping time. Your personal rate is confirmed when you are approved and may vary by market.',
 				),
 				array(
 					'q' => 'Are there incentives or milestone bonuses?',

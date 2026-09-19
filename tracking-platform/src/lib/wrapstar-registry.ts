@@ -89,6 +89,9 @@ function normalizeWrapStar(raw: Partial<WrapStar> & { id?: string; name?: string
     metroId: raw.metroId,
     ...(raw.hasPrinter === true || raw.hasPrinter === false ? { hasPrinter: raw.hasPrinter } : {}),
     ...(raw.printerSize ? { printerSize: String(raw.printerSize) } : {}),
+    ...(typeof raw.hourlyRateCents === "number" && raw.hourlyRateCents > 0
+      ? { hourlyRateCents: Math.round(raw.hourlyRateCents) }
+      : {}),
     ...(raw.hireRole === "wraprider" ? { hireRole: "wraprider" as const, wrapriderId: raw.wrapriderId } : {}),
   };
 }
@@ -261,6 +264,7 @@ export async function addWrapstar(input: {
   printerSize?: string;
   hireRole?: WrapStar["hireRole"];
   wrapriderId?: string;
+  hourlyRateCents?: number;
 }): Promise<{ ok: true; wrapstar: WrapStar } | { ok: false; error: string }> {
   const clean = input.name.trim();
   if (!clean) return { ok: false, error: "WrapStar name is required." };
@@ -305,6 +309,9 @@ export async function addWrapstar(input: {
     ...(input.hireRole === "wraprider"
       ? { hireRole: "wraprider" as const, wrapriderId: input.wrapriderId }
       : {}),
+    ...(typeof input.hourlyRateCents === "number" && input.hourlyRateCents > 0
+      ? { hourlyRateCents: Math.round(input.hourlyRateCents) }
+      : {}),
   };
 
   const col = trackingWrapstarsCollection();
@@ -338,6 +345,7 @@ export async function updateWrapstar(
       | "printerSize"
       | "hireRole"
       | "wrapriderId"
+      | "hourlyRateCents"
     >
   >,
 ): Promise<{ ok: true; wrapstar: WrapStar } | { ok: false; error: string }> {
@@ -375,8 +383,17 @@ export async function updateWrapstar(
     ...(patch.printerSize !== undefined ? { printerSize: patch.printerSize || undefined } : {}),
     ...(patch.hireRole !== undefined ? { hireRole: patch.hireRole } : {}),
     ...(patch.wrapriderId !== undefined ? { wrapriderId: patch.wrapriderId || undefined } : {}),
+    ...(patch.hourlyRateCents !== undefined
+      ? {
+          hourlyRateCents:
+            typeof patch.hourlyRateCents === "number" && patch.hourlyRateCents > 0
+              ? Math.round(patch.hourlyRateCents)
+              : undefined,
+        }
+      : {}),
   };
   if (nextWs.hasPrinter === false) delete nextWs.printerSize;
+  if (nextWs.hourlyRateCents === undefined) delete nextWs.hourlyRateCents;
   if (!nextWs.homePostalCode || nextWs.homePostalCode.length !== 5) {
     return { ok: false, error: "A valid 5-digit home ZIP is required." };
   }

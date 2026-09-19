@@ -28,6 +28,8 @@ async function updateProfileAction(formData: FormData) {
   const vehicleRaw = String(formData.get("hasVehicle") || "");
   const printerRaw = String(formData.get("hasPrinter") || "");
   const printerSize = String(formData.get("printerSize") || "");
+  const { parseHourlyRateDollarsInput } = await import("@/lib/hourly-rates");
+  const rateCents = parseHourlyRateDollarsInput(formData.get("hourlyRateDollars"));
   await updateWrapstar(id, {
     name: String(formData.get("name") || ""),
     homePostalCode: String(formData.get("homePostalCode") || ""),
@@ -40,6 +42,7 @@ async function updateProfileAction(formData: FormData) {
     assignedDriverId: String(formData.get("assignedDriverId") || "") || undefined,
     ...(printerRaw === "yes" || printerRaw === "no" ? { hasPrinter: printerRaw === "yes" } : {}),
     ...(printerRaw === "yes" ? { printerSize } : printerRaw === "no" ? { printerSize: "" } : {}),
+    ...(rateCents ? { hourlyRateCents: rateCents } : {}),
   });
   // Home ZIP / printer changes move custom-design coverage on api.wrrapd.com.
   await trySyncRosterPrinterSites(`profile ${id}`);
@@ -83,7 +86,12 @@ export default async function AdminWrapstarDetailPage({
     getPayoutConfig(),
   ]);
   const myPayouts = payouts.filter((p) => p.wrapstarId === id);
-  const hourly = hourlyRateCents(globalRates, "wrapstar", wrapstar.homePostalCode || "");
+  const hourly = hourlyRateCents(
+    globalRates,
+    "wrapstar",
+    wrapstar.homePostalCode || "",
+    wrapstar.hourlyRateCents,
+  );
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -203,7 +211,7 @@ export default async function AdminWrapstarDetailPage({
               ))}
             </select>
           </label>
-          <label className="text-sm">
+          <label className="text-sm md:col-span-2">
             Assigned JoyRider ID (optional)
             <input
               name="assignedDriverId"
@@ -212,6 +220,24 @@ export default async function AdminWrapstarDetailPage({
               className="mt-1 w-full rounded border px-3 py-2 font-mono text-xs"
             />
           </label>
+          <label className="text-sm">
+            Hourly rate ($ / hour)
+            <input
+              name="hourlyRateDollars"
+              type="number"
+              step="0.01"
+              min={1}
+              defaultValue={
+                wrapstar.hourlyRateCents
+                  ? (wrapstar.hourlyRateCents / 100).toFixed(2)
+                  : (hourly / 100).toFixed(2)
+              }
+              className="mt-1 w-full rounded border px-3 py-2"
+            />
+            <span className="mt-1 block text-xs text-slate-500">
+              Person rate wins over ZIP table. Leave as-is to keep the current effective rate.
+            </span>
+          </label>
           <button type="submit" className="rounded bg-slate-900 px-3 py-2 text-sm text-white md:col-span-2 md:w-fit">
             Save profile
           </button>
@@ -219,10 +245,13 @@ export default async function AdminWrapstarDetailPage({
       </section>
 
       <section className="mt-6 rounded-xl border bg-white p-4 shadow-sm">
-        <h2 className="font-semibold">Hourly rate (this WrapStar)</h2>
+        <h2 className="font-semibold">Effective hourly rate</h2>
         <p className="mt-1 text-sm text-slate-600">
-          ${(hourly / 100).toFixed(2)} / hour for ZIP {wrapstar.homePostalCode || "—"} · pace{" "}
-          {WRAPSTAR_PACE_GIFTS_PER_HOUR} gifts/hour. Change defaults and ZIP table in{" "}
+          ${(hourly / 100).toFixed(2)} / hour
+          {wrapstar.hourlyRateCents
+            ? " (person override)"
+            : ` for ZIP ${wrapstar.homePostalCode || "—"}`}{" "}
+          · pace {WRAPSTAR_PACE_GIFTS_PER_HOUR} gifts/hour. Role defaults and ZIP table:{" "}
           <Link href="/admin/finance/rates" className="text-blue-700 underline">
             Finance → Hourly rates
           </Link>

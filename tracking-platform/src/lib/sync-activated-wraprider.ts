@@ -30,12 +30,17 @@ import {
  */
 export async function syncActivatedApplicationToWrapriderRoster(
   app: WrapriderApplication,
+  opts?: { hourlyRateCents?: number },
 ): Promise<{ ok: true; wrapriderId: string } | { ok: false; error: string }> {
   const metro = metroForPostalCode(app.postalCode);
   const hasVehicle = app.hasVehicle === "yes";
   const hasPrinter = app.hasLargeFormatPrinter === "yes";
   const printerSize = hasPrinter ? app.printerSize || undefined : undefined;
   const notes = `Activated from WrapRider application #${app.id}`;
+  const rate =
+    typeof opts?.hourlyRateCents === "number" && opts.hourlyRateCents > 0
+      ? Math.round(opts.hourlyRateCents)
+      : undefined;
 
   // 1. WrapRiders board row (prefix 6).
   let wrapriderId: string;
@@ -53,6 +58,7 @@ export async function syncActivatedApplicationToWrapriderRoster(
       hasPrinter,
       printerSize,
       notes: existingWr.notes ? `${existingWr.notes} · ${notes}` : notes,
+      ...(rate ? { hourlyRateCents: rate } : {}),
     });
     if (!updated.ok) return updated;
     wrapriderId = existingWr.id;
@@ -69,6 +75,7 @@ export async function syncActivatedApplicationToWrapriderRoster(
       hasPrinter,
       printerSize,
       notes,
+      ...(rate ? { hourlyRateCents: rate } : {}),
     });
     if (!created.ok) return created;
     wrapriderId = created.wraprider.id;
@@ -93,6 +100,7 @@ export async function syncActivatedApplicationToWrapriderRoster(
         printerSize: printerSize ?? "",
         hireRole: "wraprider",
         wrapriderId,
+        ...(rate ? { hourlyRateCents: rate } : {}),
       });
       if (r.ok) wrapstarId = existingWs.id;
       else console.error("[activate wraprider] wrap-app row update failed", r.error);
@@ -111,6 +119,7 @@ export async function syncActivatedApplicationToWrapriderRoster(
         printerSize,
         hireRole: "wraprider",
         wrapriderId,
+        ...(rate ? { hourlyRateCents: rate } : {}),
       });
       if (r.ok) wrapstarId = r.wrapstar.id;
       else console.error("[activate wraprider] wrap-app row create failed", r.error);
@@ -135,6 +144,7 @@ export async function syncActivatedApplicationToWrapriderRoster(
         hireRole: "wraprider",
         wrapriderId,
         notes: existingDrv.notes ? `${existingDrv.notes} · ${notes}` : notes,
+        ...(rate ? { hourlyRateCents: rate } : {}),
       });
       if (r.ok) courierDriverId = existingDrv.id;
       else console.error("[activate wraprider] courier-app row update failed", r.error);
@@ -149,6 +159,7 @@ export async function syncActivatedApplicationToWrapriderRoster(
         hireRole: "wraprider",
         wrapriderId,
         notes,
+        ...(rate ? { hourlyRateCents: rate } : {}),
       });
       if (r.ok) courierDriverId = r.driver.id;
       else console.error("[activate wraprider] courier-app row create failed", r.error);

@@ -10,3 +10,4 @@ alwaysApply: true
 - Prefer labels like "Giftee / gift-recipient's zip code:" and brief lines like "This helps us with a faster checkout!" — not explanations about delivery areas, price refresh, or backend validation.
 - Status text should be minimal or empty on success; apologize politely when delivery is unavailable without naming internal systems.
 - Save long explanations for admin consoles, docs, and code comments — never for the shopper UI.
+- **Never publish specific dollar amounts** (hourly rates, bonuses, payout figures) on `wrrapd.com`, `apply.wrrapd.com`, `pros.wrrapd.com`, or any applicant-/shopper-facing string. Say that pay is hourly and confirmed at approval; keep numbers in Command Center and contractor apps only.

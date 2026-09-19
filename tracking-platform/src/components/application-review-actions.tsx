@@ -339,6 +339,23 @@ export function ApplicationReviewActions({
 
           {status === "approved" ? (
             <>
+              <label className="flex w-full flex-col gap-1 rounded-lg border border-emerald-200 bg-emerald-50/60 px-3 py-2 text-sm text-slate-800">
+                <span className="font-semibold text-emerald-900">
+                  Hourly rate for this {roleLabel} ($ / hour)
+                </span>
+                <input
+                  name="hourlyRateDollars"
+                  type="number"
+                  step="0.01"
+                  min={1}
+                  defaultValue="30.00"
+                  required
+                  className="max-w-[10rem] rounded border border-emerald-300 bg-white px-2 py-1.5"
+                />
+                <span className="text-xs text-slate-600">
+                  Default is $30.00. Change only if this hire is approved at a different rate.
+                </span>
+              </label>
               <button
                 type="submit"
                 name="action"

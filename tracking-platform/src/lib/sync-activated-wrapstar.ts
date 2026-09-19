@@ -16,6 +16,7 @@ import {
  */
 export async function syncActivatedApplicationToOpsRoster(
   app: WrapstarApplication,
+  opts?: { hourlyRateCents?: number },
 ): Promise<{ ok: true; wrapstarId: string } | { ok: false; error: string }> {
   const canDeliver = app.canDeliver === "yes";
   const hasVehicle = app.hasVehicle === "yes";
@@ -23,6 +24,10 @@ export async function syncActivatedApplicationToOpsRoster(
   const printerSize = hasPrinter ? app.printerSize || undefined : undefined;
   const metro = metroForPostalCode(app.postalCode);
   const existing = await findWrapstarByEmail(app.email);
+  const rate =
+    typeof opts?.hourlyRateCents === "number" && opts.hourlyRateCents > 0
+      ? Math.round(opts.hourlyRateCents)
+      : undefined;
 
   let wrapstarId: string;
   if (existing) {
@@ -38,6 +43,7 @@ export async function syncActivatedApplicationToOpsRoster(
       metroId: metro?.id,
       hasPrinter,
       printerSize: printerSize ?? "",
+      ...(rate ? { hourlyRateCents: rate } : {}),
     });
     if (!updated.ok) return updated;
     await setOnboardingStatus(existing.id, "approved", `Activated from application #${app.id}`);
@@ -55,6 +61,7 @@ export async function syncActivatedApplicationToOpsRoster(
       metroId: metro?.id,
       hasPrinter,
       printerSize,
+      ...(rate ? { hourlyRateCents: rate } : {}),
     });
     if (!created.ok) return created;
     await setOnboardingStatus(created.wrapstar.id, "approved", `Activated from application #${app.id}`);

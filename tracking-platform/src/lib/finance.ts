@@ -22,13 +22,28 @@ const DEFAULT_CONFIG: PayoutConfig = {
   platformFeeCents: 0,
   platformTakeWrapPercent: 28,
   platformTakeFlowersPercent: 15,
-  wrapstarHourlyCents: 2500,
-  joyriderHourlyCents: 2200,
-  wrapriderHourlyCents: 2400,
+  wrapstarHourlyCents: 3000,
+  joyriderHourlyCents: 3000,
+  wrapriderHourlyCents: 3000,
   wrapstarPaceGiftsPerHour: 12,
   hourlyByZip: [],
   updatedAt: new Date().toISOString(),
 };
+
+/** Old starter placeholders → current $30/hr default (only when still at retired amounts). */
+function migrateRetiredHourlyDefaults(cfg: PayoutConfig): PayoutConfig {
+  const next = { ...cfg };
+  if (next.wrapstarHourlyCents === 2500) next.wrapstarHourlyCents = 3000;
+  if (next.joyriderHourlyCents === 2200) next.joyriderHourlyCents = 3000;
+  if (
+    next.wrapriderHourlyCents == null ||
+    next.wrapriderHourlyCents === 0 ||
+    next.wrapriderHourlyCents === 2400
+  ) {
+    next.wrapriderHourlyCents = 3000;
+  }
+  return next;
+}
 
 async function ensureDir() {
   await fs.mkdir(DATA_DIR, { recursive: true });
@@ -38,13 +53,15 @@ export async function getPayoutConfig(): Promise<PayoutConfig> {
   const ref = trackingPayoutConfigDoc();
   if (ref) {
     const snap = await ref.get();
-    if (snap.exists) return { ...DEFAULT_CONFIG, ...(snap.data() as PayoutConfig) };
+    if (snap.exists) {
+      return migrateRetiredHourlyDefaults({ ...DEFAULT_CONFIG, ...(snap.data() as PayoutConfig) });
+    }
     await ref.set(DEFAULT_CONFIG);
     return DEFAULT_CONFIG;
   }
   try {
     const raw = await fs.readFile(CONFIG_FILE, "utf8");
-    return { ...DEFAULT_CONFIG, ...(JSON.parse(raw) as PayoutConfig) };
+    return migrateRetiredHourlyDefaults({ ...DEFAULT_CONFIG, ...(JSON.parse(raw) as PayoutConfig) });
   } catch {
     await ensureDir();
     await fs.writeFile(CONFIG_FILE, JSON.stringify(DEFAULT_CONFIG, null, 2));

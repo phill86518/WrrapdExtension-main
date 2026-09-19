@@ -1,10 +1,10 @@
 import type { HourlyZipRate, PayoutConfig } from "./types";
 import { getPayoutConfig } from "./finance";
 
-export const DEFAULT_WRAPSTAR_HOURLY_CENTS = 2500;
-export const DEFAULT_JOYRIDER_HOURLY_CENTS = 2200;
+export const DEFAULT_WRAPSTAR_HOURLY_CENTS = 3000;
+export const DEFAULT_JOYRIDER_HOURLY_CENTS = 3000;
 /** WrapRider — third hire track with its own hourly rate (not a blend of the other two). */
-export const DEFAULT_WRAPRIDER_HOURLY_CENTS = 2400;
+export const DEFAULT_WRAPRIDER_HOURLY_CENTS = 3000;
 export const WRAPSTAR_PACE_GIFTS_PER_HOUR = 12;
 
 /** Three distinct pay structures — one per hire track. */
@@ -30,14 +30,24 @@ function rowCents(row: HourlyZipRate, role: ContractorPayRole): number | undefin
 }
 
 /**
- * Resolve hourly rate in cents: exact ZIP → 3-digit prefix → role default.
+ * Resolve hourly rate in cents:
+ * person override → exact ZIP → 3-digit prefix → role default ($30/hr unless Finance changed it).
  * See docs/CONTRACTOR-HOURLY-PAY.md.
  */
 export function hourlyRateCents(
   cfg: PayoutConfig,
   role: ContractorPayRole,
   postalCode: string,
+  personOverrideCents?: number | null,
 ): number {
+  if (
+    typeof personOverrideCents === "number" &&
+    Number.isFinite(personOverrideCents) &&
+    personOverrideCents > 0
+  ) {
+    return Math.round(personOverrideCents);
+  }
+
   const zip = digitsZip(postalCode);
   const rows = Array.isArray(cfg.hourlyByZip) ? cfg.hourlyByZip : [];
 
@@ -70,9 +80,19 @@ export function wrapstarPaceReductionCents(
 export async function hourlyRateCentsForZip(
   role: ContractorPayRole,
   postalCode: string,
+  personOverrideCents?: number | null,
 ): Promise<number> {
   const cfg = await getPayoutConfig();
-  return hourlyRateCents(cfg, role, postalCode);
+  return hourlyRateCents(cfg, role, postalCode, personOverrideCents);
+}
+
+/** Parse dollars from an admin form field; empty/invalid → null (use default resolution). */
+export function parseHourlyRateDollarsInput(raw: FormDataEntryValue | null | undefined): number | null {
+  const s = String(raw ?? "").trim();
+  if (!s) return null;
+  const n = Number(s);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return Math.round(n * 100);
 }
 
 /**

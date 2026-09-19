@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_DRIVERS_BUILD', '2026-09-19-faq-reqs' );
+define( 'WRRAPD_DRIVERS_BUILD', '2026-09-19-no-public-rates' );
 define( 'WRRAPD_DRIVERS_INVITE_TTL_DAYS', 15 );
 define( 'WRRAPD_DRIVERS_CPT', 'wrrapd_driver_app' );
 
@@ -1582,7 +1582,7 @@ function wrrapd_drivers_shortcode_landing() {
 				</details>
 				<details class="wrrapd-wrapstars-faq-dd__item">
 					<summary>How are JoyRiders paid?</summary>
-					<p>JoyRiders are independent contractors paid an hourly rate for active delivery time. Starting rates in launch markets are typically around <strong>$22 per hour</strong>, and the exact rate for your ZIP code is confirmed when you are approved. Rates may vary by market.</p>
+					<p>JoyRiders are independent contractors paid an hourly rate for active delivery time. Your personal rate is confirmed when you are approved and may vary by market.</p>
 				</details>
 				<details class="wrrapd-wrapstars-faq-dd__item">
 					<summary>Are there incentives or milestone bonuses?</summary>

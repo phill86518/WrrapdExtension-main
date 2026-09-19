@@ -46,6 +46,13 @@ async function actionForm(formData: FormData) {
   const adminNotes = String(formData.get("adminNotes") || "");
   const rejectReason = String(formData.get("rejectReason") || "");
   const bgStatus = String(formData.get("bgStatus") || "");
+  const { parseHourlyRateDollarsInput, DEFAULT_WRAPSTAR_HOURLY_CENTS } = await import(
+    "@/lib/hourly-rates"
+  );
+  const parsedRate = parseHourlyRateDollarsInput(formData.get("hourlyRateDollars"));
+  /** At activate: form default is $30/hr; empty → system default; admin may override. */
+  const activateHourlyCents =
+    action === "activate" ? parsedRate ?? DEFAULT_WRAPSTAR_HOURLY_CENTS : undefined;
   if (!id || !action) return;
 
   // Each hire track has its own CPT + ops routes — never cross-read.
@@ -99,7 +106,9 @@ async function actionForm(formData: FormData) {
       rejectReason: action === "reject" ? rejectReason : undefined,
     });
     if (action === "activate" && result.application) {
-      await syncActivatedApplicationToDriverRoster(result.application);
+      await syncActivatedApplicationToDriverRoster(result.application, {
+        hourlyRateCents: activateHourlyCents,
+      });
     }
   } else if (role === "wraprider") {
     const result = await runWrapriderApplicationAction(id, action, {
@@ -107,7 +116,9 @@ async function actionForm(formData: FormData) {
       rejectReason: action === "reject" ? rejectReason : undefined,
     });
     if (action === "activate" && result.application) {
-      await syncActivatedApplicationToWrapriderRoster(result.application);
+      await syncActivatedApplicationToWrapriderRoster(result.application, {
+        hourlyRateCents: activateHourlyCents,
+      });
     }
     if (
       (action === "move_to_wrapstar" || action === "move_to_joyrider") &&
@@ -128,7 +139,9 @@ async function actionForm(formData: FormData) {
       bgStatus: action === "save_bg_status" ? bgStatus : undefined,
     });
     if (action === "activate" && result.application) {
-      await syncActivatedApplicationToOpsRoster(result.application);
+      await syncActivatedApplicationToOpsRoster(result.application, {
+        hourlyRateCents: activateHourlyCents,
+      });
     }
   }
 

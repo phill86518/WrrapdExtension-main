@@ -49,6 +49,9 @@ function normalizeWrapRider(raw: Partial<WrapRider> & { id?: string; name?: stri
     vehicleType: raw.vehicleType || undefined,
     hasPrinter: raw.hasPrinter,
     printerSize: raw.printerSize || undefined,
+    ...(typeof raw.hourlyRateCents === "number" && raw.hourlyRateCents > 0
+      ? { hourlyRateCents: Math.round(raw.hourlyRateCents) }
+      : {}),
     createdAt,
     updatedAt: raw.updatedAt || createdAt,
   };
@@ -147,6 +150,7 @@ export async function addWraprider(input: {
   vehicleType?: string;
   hasPrinter?: boolean;
   printerSize?: string;
+  hourlyRateCents?: number;
 }): Promise<{ ok: true; wraprider: WrapRider } | { ok: false; error: string }> {
   const clean = input.name.trim();
   if (!clean) return { ok: false, error: "WrapRider name is required." };
@@ -188,6 +192,9 @@ export async function addWraprider(input: {
     vehicleType: input.vehicleType,
     hasPrinter: input.hasPrinter,
     printerSize: input.printerSize,
+    ...(typeof input.hourlyRateCents === "number" && input.hourlyRateCents > 0
+      ? { hourlyRateCents: Math.round(input.hourlyRateCents) }
+      : {}),
     createdAt: ts,
     updatedAt: ts,
   };
@@ -219,6 +226,7 @@ export async function updateWraprider(
       | "vehicleType"
       | "hasPrinter"
       | "printerSize"
+      | "hourlyRateCents"
     >
   >,
 ): Promise<{ ok: true; wraprider: WrapRider } | { ok: false; error: string }> {

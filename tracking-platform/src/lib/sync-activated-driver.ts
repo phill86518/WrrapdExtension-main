@@ -17,10 +17,15 @@ import {
  */
 export async function syncActivatedApplicationToDriverRoster(
   app: DriverApplication,
+  opts?: { hourlyRateCents?: number },
 ): Promise<{ ok: true; driverId: string } | { ok: false; error: string }> {
   const metro = metroForPostalCode(app.postalCode);
   const existing = await findDeliveryDriverByEmail(app.email);
   const notes = `Activated from JoyRider application #${app.id}`;
+  const rate =
+    typeof opts?.hourlyRateCents === "number" && opts.hourlyRateCents > 0
+      ? Math.round(opts.hourlyRateCents)
+      : undefined;
 
   let driverId: string;
   if (existing) {
@@ -32,6 +37,7 @@ export async function syncActivatedApplicationToDriverRoster(
       metroId: metro?.id,
       status: "approved",
       notes: existing.notes ? `${existing.notes} · ${notes}` : notes,
+      ...(rate ? { hourlyRateCents: rate } : {}),
     });
     if (!updated.ok) return updated;
     driverId = existing.id;
@@ -44,6 +50,7 @@ export async function syncActivatedApplicationToDriverRoster(
       metroId: metro?.id,
       status: "approved",
       notes,
+      ...(rate ? { hourlyRateCents: rate } : {}),
     });
     if (!created.ok) return created;
     driverId = created.driver.id;
