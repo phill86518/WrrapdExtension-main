@@ -1,0 +1,36 @@
+---
+description: Latest Golden snapshots (2026-09-19) — Extension 3.0.10, wrrapd.com website, and Command Center admin. Restore these when the user says latest golden.
+alwaysApply: true
+---
+
+# Latest Golden versions — 2026-09-19
+
+When the user says **latest golden**, **EXTENSION LATEST GOLDEN**, **WEBSITE LATEST GOLDEN**, or **ADMIN LATEST GOLDEN**, use this snapshot. Do **not** invent a newer baseline.
+
+Full inventory: [GOLDEN-VERSIONS-2026-09-19.md](../../GOLDEN-VERSIONS-2026-09-19.md)
+
+| Name | Git tag | What it freezes |
+|---|---|---|
+| **EXTENSION LATEST GOLDEN VERSION** | `golden-extension-2026-09-19` | Chrome extension **3.0.10** (working Amazon + other-retailer pay) |
+| **WEBSITE LATEST GOLDEN VERSION** | `golden-website-2026-09-19` | wrrapd.com shopper site + MU plugins (header, orders, legal, auth) |
+| **ADMIN LATEST GOLDEN VERSION** | `golden-admin-2026-09-19` | Tracking Command Center (`tracking-platform/`) — happy with it; not fully tested |
+| Umbrella | `golden-latest-2026-09-19` | All three on the same commit |
+
+**Code commit:** `b9bc9f2` (extension 3.0.10) plus the docs commit on `main` that added this file. Tags point at the docs commit on `origin/main`.
+
+The older homepage-only tag `golden-homepage-2026-09-08` is **historical**. Use it only if the user asks for that 2026-09-08 homepage snapshot.
+
+## Restore (GCP VM — never `git pull`)
+
+```bash
+cd /home/phill/wrrapd-GCP
+git fetch origin --tags
+# Extension:
+git checkout golden-extension-2026-09-19 -- extension/
+# Website MU / shopper CSS+PHP:
+git checkout golden-website-2026-09-19 -- wordpress/ .cursor/rules/wrrapd-latest-golden-versions.mdc GOLDEN-VERSIONS-2026-09-19.md
+# Admin / Command Center:
+git checkout golden-admin-2026-09-19 -- tracking-platform/
+```
+
+Then: push is already on GitHub; Windows rebuilds the extension; SiteGround gets MU copies + W3 purge; Cloud Run only if tracking files changed.

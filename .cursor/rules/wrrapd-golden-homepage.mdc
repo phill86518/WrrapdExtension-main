@@ -3,14 +3,16 @@ description: Golden homepage snapshot (header + seasonal featured gifts) — res
 alwaysApply: true
 ---
 
-# Golden homepage version (FINAL for now)
+# Golden homepage version (historical — 2026-09-08)
+
+**Superseded for “latest golden”:** use [wrrapd-latest-golden-versions.mdc](./wrrapd-latest-golden-versions.mdc) and `GOLDEN-VERSIONS-2026-09-19.md` (2026-09-19). This file is the **older homepage-only** snapshot.
 
 **Tag / build:** `2026-09-08-golden`  
 **Git tag:** `golden-homepage-2026-09-08`  
-**Commit:** current `main` after desktop CTA page-center + hot-gifts rail fixes (approved working header).  
+**Commit:** `main` after desktop CTA page-center + hot-gifts rail fixes (approved working header).  
 **Committed on:** GCP VM (`/home/phill/wrrapd-GCP`), pushed to `origin/main`.
 
-When the user says **restore / refer to the golden version**, use this snapshot — do not invent a different baseline.
+When the user says **restore the 2026-09-08 homepage golden** (not “latest”), use this snapshot.
 
 ## What “golden” covers
 
