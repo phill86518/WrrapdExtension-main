@@ -1,7 +1,7 @@
 /**
  * Wrrapd sitewide mobile / touch layout (rem-based).
  * Header layout lives in wrrapd-orders-bridge.php (wrrapd-header-layout-css) — do not duplicate here.
- * Build: 2026-09-08-gift-journal
+ * Build: 2026-09-18-orders-home
  */
 
 html {
@@ -26,6 +26,10 @@ html {
 
 	.wrrapd-wrap-promo {
 		display: flex !important;
+	}
+
+	.wrrapd-wrap-promo--bestbuy {
+		display: none !important;
 	}
 
 	.wrrapd-wheel-mobile-stack {
@@ -905,12 +909,21 @@ a.wrrapd-ext-cta {
 		margin-top: auto !important;
 	}
 
-	/* Retailer wheel — bullets below logos only on narrowest iPhones */
+	/* Keep the logo row flush with the ticker — no stacked-feature white band. */
 	.wrrapd-wrap-promo--bestbuy {
 		display: none !important;
 	}
 
 	.wrrapd-wrap-promo-mobile__features.wrrapd-wrap-promo-mobile__features--stack {
-		display: block !important;
+		display: none !important;
+		height: 0 !important;
+		margin: 0 !important;
+		padding: 0 !important;
+		overflow: hidden !important;
+	}
+
+	#wrrapd-retailer-wheels-row {
+		margin-bottom: 0 !important;
+		padding-bottom: 0 !important;
 	}
 }

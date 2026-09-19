@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /** Bump when account UI / header polish changes — view-source should contain this string. */
-define( 'WRRAPD_MU_BUILD', '2026-09-17-cta-restore' );
+define( 'WRRAPD_MU_BUILD', '2026-09-18-orders-home' );
 
 /** Wordmark gold — letters “p” and “d” in the Wrrapd logo. Never neon #f7ff00 / #fff300. */
 if ( ! defined( 'WRRAPD_LOGO_GOLD' ) ) {
@@ -1541,7 +1541,7 @@ function wrrapd_output_retailer_wheel_strip() {
 	echo '.wrrapd-wrap-promo__arrow--left::before{background:linear-gradient(90deg,#162a52,#c9a227);}';
 	echo '.wrrapd-wrap-promo__arrow--left::after{content:"";position:absolute;top:50%;left:0;width:.5rem;height:.5rem;border-bottom:2.5px solid #162a52;border-left:2.5px solid #162a52;transform:translateY(-50%) rotate(45deg);}';
 	echo '@media(max-width:960px),(hover:none) and (pointer:coarse){.wrrapd-wrap-promo-mobile,.wrrapd-wrap-promo-mobile--tagline,.wrrapd-wrap-promo-mobile__features--stack{display:none!important;}.wrrapd-wheel-mobile-stack{display:block;width:100%;}.wrrapd-wrap-promo{display:flex!important;}.wrrapd-wrap-promo--ulta{flex:0 0 auto;max-width:min(5.5rem,22vw)!important;margin:0!important;align-items:center!important;}.wrrapd-wrap-promo--bestbuy{flex:0 0 auto;max-width:min(6.25rem,26vw)!important;margin:0!important;align-items:flex-start!important;}.wrrapd-wrap-promo__line{font-size:clamp(.52rem,2.4vw,.68rem)!important;white-space:normal!important;line-height:1.05!important;}.wrrapd-wrap-promo__line--premium{font-size:clamp(.58rem,2.6vw,.74rem)!important;}.wrrapd-wrap-promo__line--mid,.wrrapd-wrap-promo__line--for{font-size:clamp(.5rem,2.2vw,.64rem)!important;}.wrrapd-wrap-promo__arrow{width:.85rem!important;height:.85rem!important;flex-shrink:0!important;}.wrrapd-wrap-promo__bullet{font-size:clamp(.44rem,2vw,.54rem)!important;line-height:1.12!important;margin:.04rem 0!important;}.wrrapd-wrap-promo__copy--right{text-align:right!important;}#wrrapd-retailer-wheels-row .wrrapd-retailer-wheels{display:flex!important;flex-wrap:nowrap!important;align-items:center!important;justify-content:space-between!important;overflow-x:hidden!important;gap:.1rem!important;padding:.35rem!important;}.wrrapd-retailer-wheels__item{flex:1 1 0!important;min-width:0!important;max-width:none!important;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:.06rem!important;}.wrrapd-retailer-wheels__badge{width:1.12rem!important;height:1.12rem!important;}.wrrapd-retailer-wheels__title{display:block!important;font-size:.42rem!important;line-height:1.1!important;text-align:center!important;font-weight:600!important;color:#334155!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;max-width:100%!important;}}';
-	echo '@media(max-width:393px){.wrrapd-wrap-promo--bestbuy{display:none!important;}.wrrapd-wrap-promo-mobile__features.wrrapd-wrap-promo-mobile__features--stack{display:block!important;}}';
+	echo '@media(max-width:393px){.wrrapd-wrap-promo--bestbuy{display:none!important;}.wrrapd-wrap-promo-mobile__features.wrrapd-wrap-promo-mobile__features--stack{display:none!important;height:0!important;margin:0!important;padding:0!important;overflow:hidden!important;}}';
 	echo '@media(prefers-reduced-motion:reduce){.wrrapd-wrap-promo__line--blink,.wrrapd-wrap-promo-mobile__blink{animation:none!important;opacity:1!important;}.wrrapd-retailer-wheels__item{animation:none;opacity:1;}}';
 	echo '</style>';
 	echo '<div id="wrrapd-retailer-wheels-row" class="wrrapd-retailer-wheels-row">';
@@ -1621,7 +1621,7 @@ function wrrapd_output_extension_detection_script() {
 		return;
 	}
 	$cws             = wrrapd_chrome_extension_install_url();
-	$latest_version  = '2.0.16';
+	$latest_version  = '3.0.8';
 
 	echo '<style id="wrrapd-ext-detected-css">';
 	echo 'html.wrrapd-ext-installed .elementor-element-7f1bdc1,html.wrrapd-ext-installed .elementor-element-eb0b235,html.wrrapd-ext-installed .elementor-location-header a.elementor-button[href*="chromewebstore"]{display:none!important;}';
@@ -1706,6 +1706,9 @@ function wrrapd_output_home_section_tighten_css() {
 	echo '.elementor-4857 .elementor-element-df1501e>.elementor-container{gap:clamp(0.35rem,1.2vw,0.65rem)!important;}';
 	echo '.elementor-4857 .elementor-element-6466f5b.wrrapd-season-headline-injected h1,.elementor-4857 .elementor-element-6466f5b.wrrapd-season-headline-injected h1 strong{margin-bottom:0.2rem!important;}';
 	echo '.elementor-4857 .wrrapd-season-hero-body,.elementor-4857 .wrrapd-season-hero-body span{margin-bottom:0.25rem!important;}';
+	echo '#wrrapd-retailer-wheels-row{margin-bottom:0!important;padding-bottom:0!important;border-bottom:none!important;}';
+	echo '#wrrapd-retailer-wheels-row .wrrapd-retailer-wheels{padding-bottom:.4rem!important;}';
+	echo '.wrrapd-wrap-promo-mobile__features--stack{display:none!important;margin:0!important;padding:0!important;height:0!important;overflow:hidden!important;}';
 	echo '.occasion-ticker-shell{margin-top:0!important;margin-bottom:0!important;}';
 	echo '.occasion-ticker-bar{padding-top:0.1rem!important;padding-bottom:0.1rem!important;gap:.28rem!important;}';
 	echo '.occasion-ticker-panel .ticker-container{padding-top:0.06rem!important;padding-bottom:0.06rem!important;}';
@@ -1744,6 +1747,7 @@ function wrrapd_output_header_layout_css() {
 	if ( is_admin() ) {
 		return;
 	}
+	echo '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,560;9..144,700&amp;display=swap" />';
 	echo '<style id="wrrapd-header-layout-css">';
 	/* Row: brand | location | spacer | auth — CTA is page-centered (desktop) */
 	echo '.elementor-location-header .elementor-section,.elementor-location-header [data-elementor-type="header"] .e-con{min-height:0!important;--min-height:0!important;padding-block:0!important;}';
@@ -1762,7 +1766,7 @@ function wrrapd_output_header_layout_css() {
 	echo 'body.logged-in .elementor-location-header .elementor-element-68a38868.elementor-widget img{max-height:clamp(4.8rem,13vmin,6.6rem)!important;width:auto!important;height:auto!important;}';
 	/* Location */
 	echo '.elementor-location-header .elementor-element-1913a20{flex:0 0 19%!important;max-width:19%!important;min-width:0!important;align-self:center!important;margin:0!important;padding:0!important;transform:translateX(-.35rem)!important;position:relative!important;z-index:3!important;}';
-	echo '.elementor-location-header #wrrapd-location,.elementor-location-header #location-text,.elementor-location-header #location-text strong{font-size:clamp(.81rem,1.9vmin,.95rem)!important;line-height:1.25!important;}';
+	echo '.elementor-location-header #wrrapd-location,.elementor-location-header #location-text,.elementor-location-header #location-text strong{font-family:Fraunces,Georgia,"Times New Roman",serif!important;font-optical-sizing:auto!important;font-weight:560!important;font-size:clamp(.81rem,1.9vmin,.95rem)!important;line-height:1.25!important;}';
 	/* Auth column = Register/Login + Google/Amazon only (far right). CTA is NOT in this flex fight. */
 	echo '.elementor-location-header .elementor-element-693b4ea7{flex:0 0 12.5rem!important;max-width:12.5rem!important;width:12.5rem!important;min-width:12.5rem!important;margin-left:auto!important;display:flex!important;flex-direction:column!important;justify-content:center!important;align-items:stretch!important;align-self:stretch!important;padding:.08rem 0!important;gap:0!important;position:relative!important;z-index:4!important;background:transparent!important;}';
 	echo '.elementor-location-header .elementor-element-2b05a213{display:flex!important;flex-direction:row!important;align-items:center!important;justify-content:flex-end!important;width:100%!important;max-width:100%!important;margin:0!important;padding:0!important;gap:0!important;min-height:0!important;}';
@@ -1795,7 +1799,7 @@ function wrrapd_output_header_layout_css() {
 	echo '.elementor-location-header .elementor-element-1c0d63ad img{max-height:clamp(1.55rem,8vw,2.15rem)!important;max-width:100%!important;}';
 	echo '.elementor-location-header .elementor-element-1913a20{flex:1 1 auto!important;width:auto!important;max-width:none!important;min-width:0!important;transform:none!important;margin:0 0 0 .15rem!important;padding:0 .15rem 0 0!important;align-self:center!important;z-index:2!important;}';
 	echo '.elementor-location-header #wrrapd-location,.elementor-location-header #location-text{white-space:normal!important;text-align:left!important;max-width:100%!important;}';
-	echo '.elementor-location-header #wrrapd-location,.elementor-location-header #location-text,.elementor-location-header #location-text strong{font-size:clamp(.72rem,3.1vw,.95rem)!important;line-height:1.2!important;}';
+	echo '.elementor-location-header #wrrapd-location,.elementor-location-header #location-text,.elementor-location-header #location-text strong{font-family:Fraunces,Georgia,"Times New Roman",serif!important;font-weight:560!important;font-size:clamp(.72rem,3.1vw,.95rem)!important;line-height:1.2!important;}';
 	echo '.elementor-location-header .elementor-element-693b4ea7{flex:0 0 auto!important;width:auto!important;max-width:9.4rem!important;min-width:0!important;}';
 	echo '.elementor-location-header [data-id="5c54566"],.elementor-location-header .elementor-element-5c54566{flex:0 0 auto!important;width:auto!important;max-width:9.4rem!important;gap:.42rem!important;margin:0 0 0 auto!important;}';
 	echo '.elementor-location-header [data-id="1112277b"],.elementor-location-header .elementor-element-1112277b{max-width:9.4rem!important;}';
@@ -2766,6 +2770,68 @@ function wrrapd_render_orders_cards( array $orders ) {
 }
 
 /**
+ * Parse a stored gift date into annual month/day (year is ignored).
+ *
+ * @return array{0:int,1:int} Month 1–12 and day 1–31, or 0/0 if empty.
+ */
+function wrrapd_parse_annual_md( $gift_date ) {
+	$raw = trim( (string) $gift_date );
+	$m   = 0;
+	$d   = 0;
+	if ( preg_match( '/^(?:\d{4}-)?(\d{1,2})-(\d{1,2})$/', $raw, $mm ) ) {
+		$m = (int) $mm[1];
+		$d = (int) $mm[2];
+	}
+	if ( $m < 1 || $m > 12 ) {
+		$m = 0;
+	}
+	if ( $d < 1 || $d > 31 ) {
+		$d = 0;
+	}
+	return array( $m, $d );
+}
+
+/**
+ * Month + day dropdowns for an annual reminder (no year).
+ *
+ * @param string $gift_date Stored YYYY-MM-DD or MM-DD.
+ * @param string $month_id
+ * @param string $day_id
+ * @param string $month_class
+ * @param string $day_class
+ */
+function wrrapd_render_annual_md_selects( $gift_date, $month_id, $day_id, $month_class, $day_class ) {
+	list( $m, $d ) = wrrapd_parse_annual_md( $gift_date );
+	$months        = array(
+		1  => __( 'January', 'wrrapd' ),
+		2  => __( 'February', 'wrrapd' ),
+		3  => __( 'March', 'wrrapd' ),
+		4  => __( 'April', 'wrrapd' ),
+		5  => __( 'May', 'wrrapd' ),
+		6  => __( 'June', 'wrrapd' ),
+		7  => __( 'July', 'wrrapd' ),
+		8  => __( 'August', 'wrrapd' ),
+		9  => __( 'September', 'wrrapd' ),
+		10 => __( 'October', 'wrrapd' ),
+		11 => __( 'November', 'wrrapd' ),
+		12 => __( 'December', 'wrrapd' ),
+	);
+	echo '<div class="wrrapd-annual-md">';
+	echo '<select class="' . esc_attr( $month_class ) . '" id="' . esc_attr( $month_id ) . '" aria-label="' . esc_attr__( 'Month', 'wrrapd' ) . '">';
+	echo '<option value="">' . esc_html__( 'Month', 'wrrapd' ) . '</option>';
+	foreach ( $months as $n => $lab ) {
+		echo '<option value="' . (int) $n . '"' . selected( $m, $n, false ) . '>' . esc_html( $lab ) . '</option>';
+	}
+	echo '</select>';
+	echo '<select class="' . esc_attr( $day_class ) . '" id="' . esc_attr( $day_id ) . '" aria-label="' . esc_attr__( 'Day', 'wrrapd' ) . '">';
+	echo '<option value="">' . esc_html__( 'Day', 'wrrapd' ) . '</option>';
+	for ( $i = 1; $i <= 31; $i++ ) {
+		echo '<option value="' . (int) $i . '"' . selected( $d, $i, false ) . '>' . esc_html( (string) $i ) . '</option>';
+	}
+	echo '</select></div>';
+}
+
+/**
  * Legacy “card” layout (historical Elementor HTML widget) — server-rendered from API orders, no fetch/CORS.
  * Use: [wrrapd_review_orders layout="legacy-cards"]
  *
@@ -2781,26 +2847,27 @@ function wrrapd_render_orders_legacy_cards( array $orders, array $overlays ) {
 	$def_img = 'https://www.publicdomainpictures.net/pictures/30000/velka/christmas-wrapping-paper.jpg';
 
 	ob_start();
-	echo '<link rel="preconnect" href="https://fonts.googleapis.com" /><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin /><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&amp;display=swap" />';
+	echo '<link rel="preconnect" href="https://fonts.googleapis.com" /><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin /><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,560;9..144,700&amp;family=Source+Sans+3:wght@400;600;700&amp;display=swap" />';
 	echo '<div id="' . esc_attr( $wrap_id ) . '" class="wrrapd-legacy-cards-root" data-ajax-url="' . esc_url( $ajax ) . '" data-nonce="' . esc_attr( $nonce ) . '">';
 	echo '<style>
-.wrrapd-legacy-cards-root{--wr-amber:#ea580c;--wr-amber-deep:#c2410c;--wr-navy:#162a52;font-family:Roboto,system-ui,sans-serif;font-size:.875rem;max-width:100%;padding:.85rem;box-sizing:border-box;color:#1a1a1a;line-height:1.35;}
+.wrrapd-legacy-cards-root{--wr-amber:#ea580c;--wr-amber-deep:#c2410c;--wr-navy:#162a52;--wr-display:Fraunces,Georgia,serif;font-family:"Source Sans 3",system-ui,sans-serif;font-size:.875rem;max-width:100%;padding:.85rem;box-sizing:border-box;color:#1a1a1a;line-height:1.35;}
 .wrrapd-legacy-cards-root *,.wrrapd-legacy-cards-root *::before,.wrrapd-legacy-cards-root *::after{box-sizing:border-box;}
-.wrrapd-legacy-cards-root h2{font-size:1.2rem;margin:0 0 1.1rem;font-weight:700;}
+.wrrapd-legacy-cards-root h2{font-family:var(--wr-display);font-size:1.35rem;margin:0 0 1.1rem;font-weight:700;letter-spacing:-.015em;color:#162a52;}
 .wrrapd-legacy-cards-root .order-card{display:flex;flex-direction:column;border:1px solid #c5c5c5;padding:.85rem 1rem;border-radius:.65rem;box-shadow:0 .12rem .35rem rgba(0,0,0,.06);margin-bottom:1.15rem;background:#fff;}
 .wrrapd-legacy-cards-root .order-content{display:grid;grid-template-columns:minmax(260px,1fr) minmax(240px,400px) minmax(260px,1fr);gap:1.35rem;align-items:flex-start;}
 .wrrapd-legacy-cards-root .order-details{min-width:0;}
 .wrrapd-legacy-cards-root .order-meta{margin-bottom:.65rem;font-size:.8rem;color:#333;}
-.wrrapd-legacy-cards-root .order-meta strong{display:block;font-weight:600;margin-bottom:.15rem;}
+.wrrapd-legacy-cards-root .order-meta strong{display:block;font-family:var(--wr-display);font-weight:700;margin-bottom:.15rem;font-size:.95rem;color:#162a52;}
 .wrrapd-legacy-cards-root .order-items{display:flex;flex-direction:column;gap:.65rem;}
-.wrrapd-legacy-cards-root .order-item{display:grid;grid-template-columns:4.25rem 4.25rem minmax(0,1fr);gap:.62rem;padding:.45rem 0;border-bottom:1px solid #eee;align-items:start;}
+.wrrapd-legacy-cards-root .order-item{display:grid;grid-template-columns:4.5rem minmax(0,1fr);gap:.7rem;padding:.55rem 0;border-bottom:1px solid #eee;align-items:start;}
+.wrrapd-legacy-cards-root .order-item.has-wrap{grid-template-columns:4.5rem 2.35rem minmax(0,1fr);}
 .wrrapd-legacy-cards-root .order-item:last-child{border-bottom:none;}
-.wrrapd-legacy-cards-root .order-item img{width:4.25rem;height:4.25rem;object-fit:cover;border-radius:.45rem;border:1px solid #ccc;background:#fff;}
-.wrrapd-legacy-cards-root .order-item .wrrapd-legacy-wrap-preview.is-empty{width:4.25rem;height:4.25rem;border-radius:.45rem;border:1px dashed #94a3b8;background:#f8fafc;}
+.wrrapd-legacy-cards-root .order-item > img.wrrapd-legacy-item-photo{width:4.5rem;height:4.5rem;object-fit:cover;border-radius:.55rem;border:1px solid #d6dbe3;background:#fff;box-shadow:0 1px 4px rgba(15,23,42,.08);}
+.wrrapd-legacy-cards-root .order-item .wrrapd-legacy-wrap-preview{width:2.35rem;height:2.35rem;object-fit:cover;border-radius:.4rem;border:1px solid #d6dbe3;background:#fff;}
 .wrrapd-legacy-cards-root .item-details{flex:1;min-width:0;font-size:.8rem;}
-.wrrapd-legacy-cards-root .wrrapd-legacy-retail-row{display:flex;align-items:center;gap:.3rem;font-weight:700;color:#0f172a;margin-bottom:.08rem;}
+.wrrapd-legacy-cards-root .wrrapd-legacy-retail-row{display:flex;align-items:center;gap:.32rem;font-weight:700;color:#0f172a;margin-bottom:.1rem;font-family:var(--wr-display);}
 .wrrapd-legacy-cards-root .wrrapd-legacy-item-id{font-size:.72rem;color:#334155;font-weight:700;line-height:1.2;margin-bottom:.08rem;}
-.wrrapd-legacy-cards-root .wrrapd-legacy-item-title{font-size:.78rem;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:.1rem;}
+.wrrapd-legacy-cards-root .wrrapd-legacy-item-title{font-family:var(--wr-display);font-size:.86rem;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:.1rem;}
 .wrrapd-legacy-cards-root .wrrapd-legacy-design-choice{font-size:.74rem;font-weight:700;color:#0f172a;line-height:1.22;margin-bottom:.08rem;}
 .wrrapd-legacy-cards-root .wrrapd-legacy-flowers-line{font-size:.74rem;line-height:1.22;margin-bottom:.06rem;}
 .wrrapd-legacy-cards-root .wrrapd-legacy-msg-line{font-size:.74rem;line-height:1.28;color:#1f2937;}
@@ -2809,14 +2876,17 @@ function wrrapd_render_orders_legacy_cards( array $orders, array $overlays ) {
 .wrrapd-legacy-cards-root .info-box{background:transparent;padding:0;border-radius:0;border:none;margin-bottom:.38rem;}
 .wrrapd-legacy-cards-root .info-box label{display:block;margin-bottom:.35rem;font-size:.72rem;font-weight:600;color:#333;}
 .wrrapd-legacy-cards-root .info-box input[type=text],.wrrapd-legacy-cards-root .info-box input[type=date]{width:100%;padding:.32rem .4rem;font-size:.78rem;border:1px solid #bbb;border-radius:.3rem;}
-.wrrapd-legacy-cards-root .wrrapd-legacy-giftee-readonly{width:100%;padding:.38rem .52rem;border-radius:6px;background:linear-gradient(180deg,#7f1d1d,#5c1a2e);color:#fff5f5;font-weight:700;font-size:.78rem;line-height:1.35;box-shadow:inset 0 1px 0 rgba(255,255,255,.12);}
+.wrrapd-legacy-cards-root .wrrapd-legacy-giftee-readonly{width:100%;padding:.38rem .52rem;border-radius:6px;background:linear-gradient(180deg,#7f1d1d,#5c1a2e);color:#fff5f5;font-family:var(--wr-display);font-weight:700;font-size:.86rem;line-height:1.35;box-shadow:inset 0 1px 0 rgba(255,255,255,.12);}
 .wrrapd-legacy-cards-root .wrrapd-legacy-orange-select select{width:100%;padding:.32rem .45rem;font-size:.78rem;border-radius:6px;border:2px solid var(--wr-navy);background:linear-gradient(180deg,var(--wr-amber),var(--wr-amber-deep));color:#fff7ed;line-height:1.25;box-shadow:inset 0 1px 0 rgba(255,255,255,.2);cursor:pointer;}
 .wrrapd-legacy-cards-root .wrrapd-legacy-orange-select select:focus{outline:2px solid #f5c518;outline-offset:1px;}
 .wrrapd-legacy-cards-root .wrrapd-legacy-orange-select select option{background:#fff;color:#0f172a;}
 .wrrapd-legacy-cards-root .wrrapd-legacy-rem-date-box{background:transparent;padding:0;}
 .wrrapd-legacy-cards-root .wrrapd-legacy-rem-date-row{display:flex;flex-direction:row;flex-wrap:nowrap;align-items:center;justify-content:flex-start;gap:.45rem;margin-top:.05rem;}
-.wrrapd-legacy-cards-root .wrrapd-legacy-date-block{flex:0 1 8.3rem;min-width:8.3rem;}
-.wrrapd-legacy-cards-root .wrrapd-legacy-date-block input[type=date]{width:100%;padding:.28rem .35rem;font-size:.74rem;border:1px solid #bbb;border-radius:.3rem;background:#fff;line-height:1.25;}
+.wrrapd-legacy-cards-root .wrrapd-legacy-date-block{flex:0 1 auto;min-width:0;}
+.wrrapd-legacy-cards-root .wrrapd-annual-md{display:flex;flex-direction:row;flex-wrap:nowrap;align-items:center;gap:.32rem;}
+.wrrapd-legacy-cards-root .wrrapd-annual-md select{padding:.28rem .35rem;font-size:.74rem;border:1px solid #bbb;border-radius:.35rem;background:#fff;line-height:1.25;font-family:"Source Sans 3",system-ui,sans-serif;}
+.wrrapd-legacy-cards-root .wrrapd-legacy-month{min-width:7.4rem;}
+.wrrapd-legacy-cards-root .wrrapd-legacy-day{min-width:4.2rem;}
 .wrrapd-legacy-cards-root .wrrapd-legacy-rem-block{flex:0 1 auto;min-width:0;display:flex;flex-wrap:nowrap;align-items:center;gap:.35rem;font-size:.68rem;}
 .wrrapd-legacy-cards-root .wrrapd-legacy-rem-block > label{display:inline-flex;align-items:center;gap:.28rem;margin:0;font-weight:600;white-space:nowrap;}
 .wrrapd-legacy-cards-root .wrrapd-legacy-rem-block input[type=checkbox]{width:14px;height:14px;margin:0;accent-color:var(--wr-amber-deep);}
@@ -2843,9 +2913,9 @@ function wrrapd_render_orders_legacy_cards( array $orders, array $overlays ) {
 .wrrapd-legacy-cards-root .wrrapd-legacy-order-foot .wrrapd-amz-inv-row--grand{font-size:.92rem;}
 .wrrapd-legacy-cards-root .wrrapd-legacy-order-foot .wrrapd-amz-inv-sub{font-size:.74rem;}
 .wrrapd-legacy-cards-root .wrrapd-legacy-order-foot .wrrapd-amz-inv-note{font-size:.68rem;font-style:italic;opacity:.9;}
-.wrrapd-legacy-cards-root .wrrapd-amz-inv-lab .wrrapd-retailer-brand{display:inline-flex;align-items:center;gap:.28rem;vertical-align:middle;}
-.wrrapd-legacy-cards-root .wrrapd-retailer-logo{flex:0 0 auto;display:block;border-radius:50%;object-fit:cover;}
-.wrrapd-legacy-cards-root .wrrapd-retailer-name{font-weight:700;}
+.wrrapd-legacy-cards-root .wrrapd-amz-inv-lab .wrrapd-retailer-brand,.wrrapd-legacy-cards-root .wrrapd-legacy-retail-row .wrrapd-retailer-brand{display:inline-flex;align-items:center;gap:.32rem;vertical-align:middle;}
+.wrrapd-legacy-cards-root .wrrapd-retailer-logo{flex:0 0 auto;display:block;width:1.35rem!important;height:1.35rem!important;border-radius:50%;object-fit:cover;box-shadow:0 1px 3px rgba(15,23,42,.16);}
+.wrrapd-legacy-cards-root .wrrapd-retailer-name{font-weight:700;font-family:var(--wr-display);}
 @media(max-width:980px){.wrrapd-legacy-cards-root .order-content{grid-template-columns:1fr;}}
 @media(max-width:560px){.wrrapd-legacy-cards-root .wrrapd-legacy-rem-date-row{flex-wrap:wrap;}.wrrapd-legacy-cards-root .wrrapd-legacy-date-block,.wrrapd-legacy-cards-root .wrrapd-legacy-rem-block{flex:1 1 100%;min-width:0;}}
 </style>';
@@ -2929,12 +2999,10 @@ function wrrapd_render_orders_legacy_cards( array $orders, array $overlays ) {
 			}
 			$retailer_html = wrrapd_order_retailer_label_html( $order );
 
-			echo '<div class="order-item">';
-			echo '<img src="' . esc_url( $img_u ) . '" alt="" loading="lazy" decoding="async" />';
+			echo '<div class="order-item' . ( $wrap_u !== '' ? ' has-wrap' : '' ) . '">';
+			echo '<img class="wrrapd-legacy-item-photo" src="' . esc_url( $img_u ) . '" alt="" loading="lazy" decoding="async" />';
 			if ( $wrap_u !== '' ) {
 				echo '<img class="wrrapd-legacy-wrap-preview" src="' . esc_url( $wrap_u ) . '" alt="" loading="lazy" decoding="async" />';
-			} else {
-				echo '<div class="wrrapd-legacy-wrap-preview is-empty" aria-hidden="true"></div>';
 			}
 			echo '<div class="item-details">';
 			echo '<div class="wrrapd-legacy-retail-row">' . wp_kses_post( $retailer_html ) . '<span>' . esc_html__( 'order', 'wrrapd' ) . '</span></div>';
@@ -3015,10 +3083,11 @@ function wrrapd_render_orders_legacy_cards( array $orders, array $overlays ) {
 			echo '<div class="info-box wrrapd-legacy-rem-date-box">';
 			echo '<div class="wrrapd-legacy-rem-date-row">';
 			echo '<div class="wrrapd-legacy-date-block">';
-			echo '<input type="date" class="wrrapd-legacy-date" id="' . esc_attr( $wrap_id . '-d-' . $id_sfx ) . '" value="' . esc_attr( $gdate ) . '" aria-label="' . esc_attr__( 'Date', 'wrrapd' ) . '" /></div>';
+			wrrapd_render_annual_md_selects( $gdate, $wrap_id . '-mo-' . $id_sfx, $wrap_id . '-dy-' . $id_sfx, 'wrrapd-legacy-month', 'wrrapd-legacy-day' );
+			echo '</div>';
 			echo '<div class="wrrapd-legacy-rem-block">';
 			echo '<label for="' . esc_attr( $wrap_id . '-m-' . $id_sfx ) . '"><input type="checkbox" class="wrrapd-legacy-rem" id="' . esc_attr( $wrap_id . '-m-' . $id_sfx ) . '"' . ( $rem ? ' checked' : '' ) . ' /> ';
-			echo '<span>' . esc_html__( 'Set reminder', 'wrrapd' ) . '</span></label>';
+			echo '<span>' . esc_html__( 'Set annual reminder', 'wrrapd' ) . '</span></label>';
 			echo '<span class="wrrapd-legacy-days-inline">';
 			echo '<select class="wrrapd-legacy-rem-days" id="' . esc_attr( $wrap_id . '-md-' . $id_sfx ) . '" aria-label="' . esc_attr__( 'Days before the date', 'wrrapd' ) . '"' . ( $rem ? '' : ' disabled' ) . '>';
 			for ( $rd = 1; $rd <= 7; $rd++ ) {
@@ -3071,7 +3140,7 @@ function wrrapd_render_orders_legacy_cards( array $orders, array $overlays ) {
 	echo '<div class="wrrapd-legacy-modal" id="' . esc_attr( $wrap_id ) . '-delivery-modal" aria-hidden="true"><div class="wrrapd-legacy-modal-card" role="dialog" aria-modal="true" aria-label="' . esc_attr__( 'Delivery details', 'wrrapd' ) . '"><h3>' . esc_html__( 'Delivery details', 'wrrapd' ) . '</h3><div class="wrrapd-legacy-modal-copy"></div><div class="wrrapd-legacy-modal-actions"><button type="button" class="wrrapd-legacy-modal-close">' . esc_html__( 'Close', 'wrrapd' ) . '</button></div></div></div>';
 
 	$wrap_json = wp_json_encode( $wrap_id );
-	echo '<script>(function(){var root=document.getElementById(' . $wrap_json . ');if(!root)return;var ajax=root.getAttribute("data-ajax-url");var nonce=root.getAttribute("data-nonce");root.querySelectorAll(".wrrapd-legacy-rem").forEach(function(cb){var line=cb.closest(".wrrapd-legacy-line");if(!line)return;var sd=line.querySelector(".wrrapd-legacy-rem-days");function sync(){if(sd)sd.disabled=!cb.checked;}sync();cb.addEventListener("change",sync);});root.querySelectorAll(".wrrapd-legacy-save").forEach(function(btn){btn.addEventListener("click",function(){var line=btn.closest(".wrrapd-legacy-line");if(!line)return;var fd=new FormData();fd.append("action","wrrapd_save_order_line_overlay");fd.append("nonce",nonce);fd.append("orderNumber",line.getAttribute("data-order")||"");fd.append("lineIndex",line.getAttribute("data-line")||"0");var g=line.querySelector(".wrrapd-legacy-giftee");fd.append("giftee",g?g.value:"");var rel=line.querySelector(".wrrapd-legacy-rel");fd.append("relationship",rel?rel.value:"");var occ=line.querySelector(".wrrapd-legacy-occ");fd.append("occasion_pick",occ?occ.value:"");var dt=line.querySelector(".wrrapd-legacy-date");fd.append("gift_date",dt?dt.value:"");var rcb=line.querySelector(".wrrapd-legacy-rem");var ron=rcb&&rcb.checked;fd.append("reminder_next_year",ron?"1":"");var rdp=line.querySelector(".wrrapd-legacy-rem-days");fd.append("reminder_days_prior",ron&&rdp&&!rdp.disabled?(rdp.value||"1"):"");var cm=line.querySelector(".wrrapd-legacy-comment");fd.append("comment",cm?cm.value:"");btn.disabled=true;fetch(ajax,{method:"POST",body:fd,credentials:"same-origin"}).then(function(r){return r.json();}).then(function(j){btn.disabled=false;if(j&&j.success){btn.style.boxShadow="0 0 0 2px rgba(34,197,94,.6)";window.setTimeout(function(){btn.style.boxShadow="";},650);}else{btn.style.opacity="0.65";window.setTimeout(function(){btn.style.opacity="";},800);}}).catch(function(){btn.disabled=false;});});});})();</script>';
+	echo '<script>(function(){var root=document.getElementById(' . $wrap_json . ');if(!root)return;var ajax=root.getAttribute("data-ajax-url");var nonce=root.getAttribute("data-nonce");root.querySelectorAll(".wrrapd-legacy-rem").forEach(function(cb){var line=cb.closest(".wrrapd-legacy-line");if(!line)return;var sd=line.querySelector(".wrrapd-legacy-rem-days");function sync(){if(sd)sd.disabled=!cb.checked;}sync();cb.addEventListener("change",sync);});root.querySelectorAll(".wrrapd-legacy-save").forEach(function(btn){btn.addEventListener("click",function(){var line=btn.closest(".wrrapd-legacy-line");if(!line)return;var fd=new FormData();fd.append("action","wrrapd_save_order_line_overlay");fd.append("nonce",nonce);fd.append("orderNumber",line.getAttribute("data-order")||"");fd.append("lineIndex",line.getAttribute("data-line")||"0");var g=line.querySelector(".wrrapd-legacy-giftee");fd.append("giftee",g?g.value:"");var rel=line.querySelector(".wrrapd-legacy-rel");fd.append("relationship",rel?rel.value:"");var occ=line.querySelector(".wrrapd-legacy-occ");fd.append("occasion_pick",occ?occ.value:"");var mo=line.querySelector(".wrrapd-legacy-month");var dy=line.querySelector(".wrrapd-legacy-day");var mv=mo?parseInt(mo.value,10)||0:0;var dv=dy?parseInt(dy.value,10)||0:0;fd.append("gift_date",(mv&&dv)?("2000-"+String(mv).padStart(2,"0")+"-"+String(dv).padStart(2,"0")):"");var rcb=line.querySelector(".wrrapd-legacy-rem");var ron=rcb&&rcb.checked;fd.append("reminder_next_year",ron?"1":"");var rdp=line.querySelector(".wrrapd-legacy-rem-days");fd.append("reminder_days_prior",ron&&rdp&&!rdp.disabled?(rdp.value||"1"):"");var cm=line.querySelector(".wrrapd-legacy-comment");fd.append("comment",cm?cm.value:"");btn.disabled=true;fetch(ajax,{method:"POST",body:fd,credentials:"same-origin"}).then(function(r){return r.json();}).then(function(j){btn.disabled=false;if(j&&j.success){btn.style.boxShadow="0 0 0 2px rgba(34,197,94,.6)";window.setTimeout(function(){btn.style.boxShadow="";},650);}else{btn.style.opacity="0.65";window.setTimeout(function(){btn.style.opacity="";},800);}}).catch(function(){btn.disabled=false;});});});})();</script>';
 	echo '<script>(function(){var root=document.getElementById(' . $wrap_json . ');if(!root)return;var modal=document.getElementById(root.id+"-delivery-modal");if(!modal)return;var body=modal.querySelector(".wrrapd-legacy-modal-copy");function closeModal(){modal.classList.remove("wrrapd-legacy-modal--open");modal.setAttribute("aria-hidden","true");}root.querySelectorAll(".wrrapd-legacy-delivery").forEach(function(btn){btn.addEventListener("click",function(){if(body)body.textContent=btn.getAttribute("data-delivery")||"";modal.classList.add("wrrapd-legacy-modal--open");modal.setAttribute("aria-hidden","false");});});modal.addEventListener("click",function(e){if(e.target===modal||e.target.closest(".wrrapd-legacy-modal-close"))closeModal();});document.addEventListener("keydown",function(e){if(e.key==="Escape"&&modal.classList.contains("wrrapd-legacy-modal--open"))closeModal();});})();</script>';
 
 	echo '</div>';
@@ -3389,7 +3458,7 @@ function wrrapd_order_retailer_label_html( array $order ) {
 	if ( $row !== null ) {
 		$src = esc_url( wrrapd_mu_logo_url_for_slug( $row['slug'], $row['domain'] ) );
 		return '<span class="wrrapd-retailer-brand">'
-			. '<img class="wrrapd-retailer-logo" src="' . $src . '" width="14" height="14" decoding="async" alt="' . esc_attr( $row['label'] ) . '" />'
+			. '<img class="wrrapd-retailer-logo" src="' . $src . '" width="22" height="22" decoding="async" alt="' . esc_attr( $row['label'] ) . '" />'
 			. '<span class="wrrapd-retailer-name">' . esc_html( $row['label'] ) . '</span></span>';
 	}
 	return '<span class="wrrapd-retailer-brand wrrapd-retailer-brand--text-only"><span class="wrrapd-retailer-name">'
@@ -3574,9 +3643,9 @@ function wrrapd_render_orders_studio( array $orders, array $overlays ) {
 .wrrapd-amz-inv-row--stack{align-items:flex-start;}
 .wrrapd-amz-inv-left{flex:1;min-width:0;}
 .wrrapd-amz-inv-lab{color:#0f172a;font-weight:600;word-break:break-word;}
-.wrrapd-amz-inv-lab .wrrapd-retailer-brand{display:inline-flex;align-items:center;gap:.28rem;vertical-align:middle;}
-.wrrapd-retailer-logo{flex:0 0 auto;display:block;border-radius:50%;object-fit:cover;}
-.wrrapd-retailer-name{font-weight:700;}
+.wrrapd-amz-inv-lab .wrrapd-retailer-brand{display:inline-flex;align-items:center;gap:.32rem;vertical-align:middle;}
+.wrrapd-retailer-logo{flex:0 0 auto;display:block;width:1.35rem;height:1.35rem;border-radius:50%;object-fit:cover;box-shadow:0 1px 3px rgba(15,23,42,.16);}
+.wrrapd-retailer-name{font-weight:700;font-family:var(--wr-display);}
 .wrrapd-amz-inv-sub{display:block;margin-top:.06rem;font-size:.56rem;color:#475569;font-weight:500;line-height:1.3;word-break:break-word;}
 .wrrapd-amz-inv-amt{flex:0 0 auto;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;color:#0f172a;font-weight:600;}
 .wrrapd-amz-inv-note{margin-top:.12rem;font-size:.52rem;color:#64748b;line-height:1.3;}
@@ -3606,23 +3675,26 @@ function wrrapd_render_orders_studio( array $orders, array $overlays ) {
 .wrrapd-amz-occ-date-row{display:flex;flex-direction:row;align-items:flex-end;flex-wrap:nowrap;gap:.28rem;width:100%;max-width:min(100%,13.5rem);margin-left:auto;margin-right:0;}
 .wrrapd-amz-occ-date-row .wrrapd-amz-f{flex:1 1 auto;min-width:0;margin:0;max-width:none;}
 .wrrapd-amz-occ-date-row .wrrapd-amz-f-occwrap{flex:1 1 58%;min-width:0;}
-.wrrapd-amz-occ-date-row .wrrapd-amz-f-datewrap{flex:0 1 40%;min-width:7.25rem;max-width:none;}
+.wrrapd-amz-occ-date-row .wrrapd-amz-f-datewrap{flex:0 1 46%;min-width:8.4rem;max-width:none;}
 .wrrapd-amz-f-datewrap{margin:0;text-align:left;}
+.wrrapd-amz-root .wrrapd-annual-md{display:flex;flex-direction:row;flex-wrap:nowrap;align-items:center;gap:.22rem;width:100%;}
+.wrrapd-amz-root .wrrapd-annual-md select{flex:1 1 auto;min-width:0;min-height:1.35rem;padding:.12rem .2rem;border-radius:6px;border:2px solid var(--bx);font-size:.58rem;font-family:var(--wr-font);background:#fff;color:var(--ink);}
+.wrrapd-amz-root .wrrapd-amz-f-month{flex:1.4 1 auto;}
+.wrrapd-amz-root .wrrapd-amz-f-day{flex:0 1 4.2rem;}
 .wrrapd-amz-rem-inline-row{display:flex;flex-direction:row;align-items:center;flex-wrap:wrap;gap:.16rem .22rem;width:100%;max-width:min(100%,13.5rem);margin-left:auto;margin-right:0;padding:.12rem 0 .08rem;color:#0f172a;}
 .wrrapd-amz-rem-inline-row .wrrapd-amz-f-rem-days{flex:0 0 auto;width:auto;min-width:1.75rem;max-width:2.2rem;padding:.08rem .16rem;border-radius:5px;border:2px solid #334155;font-size:.58rem;font-family:var(--wr-font);background:#fff;color:#0f172a;line-height:1.25;font-weight:700;}
 .wrrapd-amz-f-rem-days:disabled{opacity:.45;cursor:not-allowed;}
 .wrrapd-amz-f label{display:block;font-size:.48rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--wr-navy);margin-bottom:.05rem;font-family:var(--wr-font);width:100%;text-align:left;}
-.wrrapd-amz-f input[type=text],.wrrapd-amz-f select:not(.wrrapd-amz-f-rem-days){width:100%;max-width:100%;min-height:1.35rem;padding:.14rem .32rem;border-radius:6px;border:2px solid var(--bx);font-size:.62rem;font-family:var(--wr-font);background:linear-gradient(180deg,var(--wr-field-hi),var(--wr-field));line-height:1.25;color:var(--wr-field-ink);box-shadow:inset 0 1px 0 rgba(255,255,255,.2),inset 0 -1px 0 rgba(0,0,0,.12);transition:border-color .15s ease,box-shadow .15s ease;}
+.wrrapd-amz-f input[type=text],.wrrapd-amz-f select:not(.wrrapd-amz-f-rem-days):not(.wrrapd-amz-f-month):not(.wrrapd-amz-f-day){width:100%;max-width:100%;min-height:1.35rem;padding:.14rem .32rem;border-radius:6px;border:2px solid var(--bx);font-size:.62rem;font-family:var(--wr-font);background:linear-gradient(180deg,var(--wr-field-hi),var(--wr-field));line-height:1.25;color:var(--wr-field-ink);box-shadow:inset 0 1px 0 rgba(255,255,255,.2),inset 0 -1px 0 rgba(0,0,0,.12);transition:border-color .15s ease,box-shadow .15s ease;}
 .wrrapd-amz-f--select select{color:var(--ink);}
 .wrrapd-amz-f--select select option{color:var(--ink);background:#fff;}
 .wrrapd-amz-f input[type=text]::placeholder{color:rgba(255,247,237,.78);}
 .wrrapd-amz-f select:not(.wrrapd-amz-f-rem-days){cursor:pointer;accent-color:var(--wr-gold-deep);}
 .wrrapd-amz-f select option{background:#fff;color:var(--ink);}
 .wrrapd-amz-f select:not(.wrrapd-amz-f-rem-days):focus,.wrrapd-amz-f input[type=text]:focus{outline:none;border-color:var(--wr-gold-deep);box-shadow:inset 0 1px 0 rgba(255,255,255,.22),inset 0 -1px 0 rgba(0,0,0,.1),0 0 0 3px rgba(245,197,24,.35);}
-.wrrapd-amz-f-datewrap input[type=date]{width:100%;max-width:100%;min-width:6.5rem;padding:.12rem .2rem;border-radius:6px;border:2px solid var(--bx);font-size:.54rem;font-family:var(--wr-font);background:#fff;color:var(--ink);accent-color:var(--wr-navy-mid);box-sizing:border-box;}
-.wrrapd-amz-f-datewrap input[type=date]:focus{outline:none;border-color:var(--wr-gold-deep);box-shadow:0 0 0 3px rgba(245,197,24,.3);}
+.wrrapd-amz-root .wrrapd-annual-md select:focus{outline:none;border-color:var(--wr-gold-deep);box-shadow:0 0 0 3px rgba(245,197,24,.3);}
 .wrrapd-amz-f-hint{font-size:.5rem;color:var(--muted);margin-top:.04rem;line-height:1.2;max-width:100%;text-align:left;}
-.wrrapd-amz-giftee-readonly{width:100%;padding:.2rem .42rem;border-radius:6px;background:linear-gradient(180deg,#7f1d1d,#5c1a2e);color:#fff5f5;font-weight:700;font-size:.76rem;line-height:1.35;box-shadow:inset 0 1px 0 rgba(255,255,255,.12);}
+.wrrapd-amz-giftee-readonly{width:100%;padding:.2rem .42rem;border-radius:6px;background:linear-gradient(180deg,#7f1d1d,#5c1a2e);color:#fff5f5;font-family:var(--wr-display);font-weight:700;font-size:.78rem;line-height:1.35;box-shadow:inset 0 1px 0 rgba(255,255,255,.12);}
 .wrrapd-amz-f input.wrrapd-amz-f-giftee[type=hidden]{display:none;}
 .wrrapd-amz-f-commentplain{background:#fff!important;color:#0f172a!important;border:1px solid #94a3b8!important;box-shadow:none!important;background-image:none!important;}
 .wrrapd-amz-f input.wrrapd-amz-f-commentplain::placeholder{color:#475569;font-weight:500;}
@@ -3830,7 +3902,7 @@ function wrrapd_render_orders_studio( array $orders, array $overlays ) {
 			}
 			echo '</select></div>';
 			echo '<div class="wrrapd-amz-f wrrapd-amz-f-datewrap">';
-			echo '<input type="date" class="wrrapd-amz-f-date" id="' . esc_attr( $wrap_id . '-d-' . $id_sfx ) . '" value="' . esc_attr( $gdate ) . '" aria-label="' . esc_attr__( 'Date', 'wrrapd' ) . '" />';
+			wrrapd_render_annual_md_selects( $gdate, $wrap_id . '-mo-' . $id_sfx, $wrap_id . '-dy-' . $id_sfx, 'wrrapd-amz-f-month', 'wrrapd-amz-f-day' );
 			echo '</div></div>';
 
 			if ( $gm_show !== '' ) {
@@ -3841,7 +3913,7 @@ function wrrapd_render_orders_studio( array $orders, array $overlays ) {
 			echo '<div class="wrrapd-amz-rem-inline-row">';
 			echo '<label class="wrrapd-amz-rowcheck wrrapd-amz-rowcheck--rem" for="' . esc_attr( $wrap_id . '-m-' . $id_sfx ) . '">';
 			echo '<input type="checkbox" class="wrrapd-amz-f-rem" id="' . esc_attr( $wrap_id . '-m-' . $id_sfx ) . '"' . ( $rem ? ' checked' : '' ) . ' />';
-			echo '<span>' . esc_html__( 'Set reminder', 'wrrapd' ) . '</span></label>';
+			echo '<span>' . esc_html__( 'Set annual reminder', 'wrrapd' ) . '</span></label>';
 			echo '<select class="wrrapd-amz-f-rem-days" id="' . esc_attr( $wrap_id . '-md-' . $id_sfx ) . '" aria-label="' . esc_attr__( 'Days before the date', 'wrrapd' ) . '"' . ( $rem ? '' : ' disabled' ) . '>';
 			for ( $rd = 1; $rd <= 7; $rd++ ) {
 				echo '<option value="' . (int) $rd . '"' . selected( $rem_prior, $rd, false ) . '>' . esc_html( (string) (int) $rd ) . '</option>';
@@ -3850,11 +3922,11 @@ function wrrapd_render_orders_studio( array $orders, array $overlays ) {
 			echo '<span class="wrrapd-amz-rem-tail">' . esc_html__( 'days prior.', 'wrrapd' ) . '</span>';
 			echo '</div>';
 
-			echo '<div class="wrrapd-amz-prod-after-rem">';
 			if ( $prod_lb_src !== '' ) {
+				echo '<div class="wrrapd-amz-prod-after-rem">';
 				echo '<button type="button" class="wrrapd-amz-prod-thumb" data-wrrapd-lb-type="img" data-wrrapd-lb-src="' . esc_attr( $prod_lb_src ) . '" aria-label="' . esc_attr__( 'Enlarge item image', 'wrrapd' ) . '"><img src="' . $img . '" alt="" loading="lazy" decoding="async" /></button>';
+				echo '</div>';
 			}
-			echo '</div>';
 
 			echo '<div class="wrrapd-amz-f">';
 			echo '<input type="text" class="wrrapd-amz-f-comment wrrapd-amz-f-commentplain" id="' . esc_attr( $wrap_id . '-c-' . $id_sfx ) . '" maxlength="4000" value="' . esc_attr( $comment ) . '" placeholder="' . esc_attr__( 'Additional comments', 'wrrapd' ) . '" aria-label="' . esc_attr__( 'Additional comments', 'wrrapd' ) . '" /></div>';
@@ -3877,7 +3949,7 @@ function wrrapd_render_orders_studio( array $orders, array $overlays ) {
 	$search_json = wp_json_encode( $search_id );
 	$lb_json     = wp_json_encode( $wrap_id . '-lb' );
 	echo '<div class="wrrapd-amz-lightbox" id="' . esc_attr( $wrap_id ) . '-lb" role="dialog" aria-modal="true" aria-hidden="true"><button type="button" class="wrrapd-amz-lb-close" aria-label="' . esc_attr__( 'Close', 'wrrapd' ) . '">&times;</button><div class="wrrapd-amz-lb-inner"></div></div>';
-	echo '<script>(function(){var root=document.getElementById(' . $wrap_json . ');if(!root)return;function wrrapdHideNoOrderMsg(el){if(!el||el===document.body)return;el.style.display="none";el.style.visibility="hidden";el.style.height="0";el.style.maxHeight="0";el.style.overflow="hidden";el.style.margin="0";el.style.padding="0";el.style.border="none";el.setAttribute("aria-hidden","true");}function wrrapdRmNoOrderFiles(){var re=/no\\s+order\\s+files?\\s*found\\.?/i;var strip=function(t){return t.replace(/no\\s+order\\s+files?\\s*found\\.?/gi,"").replace(/[\\s\\u00a0.,;…·\\-–—]+/g,"").trim();};var sels=".elementor-widget,.elementor-element,.elementor-widget-wrap,.e-con,.e-con-inner,.jet-listing-grid,.elementor-section,.elementor-widget-text-editor,.elementor-widget-heading,.widget,.wp-block-column,.wp-block-group";try{document.querySelectorAll(sels).forEach(function(el){var t=(el.textContent||"").replace(/\\s+/g," ").trim();if(!re.test(t))return;if(strip(t).length>80)return;wrrapdHideNoOrderMsg(el);});}catch(e){}try{var tw=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT,null,false);var tn;while(tn=tw.nextNode()){if(!re.test(tn.nodeValue||""))continue;var p=tn.parentElement;while(p&&p!==document.body){var pt=(p.textContent||"").replace(/\\s+/g," ").trim();if(re.test(pt)&&strip(pt).length<=2){wrrapdHideNoOrderMsg(p);break;}p=p.parentElement;}}}catch(e){}}if(!window.__wrrapdNoOrdObs){var _tmo;window.__wrrapdNoOrdObs=new MutationObserver(function(){clearTimeout(_tmo);_tmo=setTimeout(function(){wrrapdRmNoOrderFiles();},90);});try{window.__wrrapdNoOrdObs.observe(document.body,{childList:true,subtree:true});}catch(e){}}wrrapdRmNoOrderFiles();window.addEventListener("load",function(){wrrapdRmNoOrderFiles();});[80,200,500,1200,2400,4800,9000].forEach(function(ms){setTimeout(wrrapdRmNoOrderFiles,ms);});var lb=document.getElementById(' . $lb_json . ');var q=document.getElementById(' . $search_json . ');function norm(s){return(s||"").toLowerCase().trim();}function filterOrders(){var needle=norm(q?q.value:"");root.querySelectorAll(".wrrapd-amz-order").forEach(function(ord){if(!needle){ord.style.display="";return;}var hay=norm(ord.getAttribute("data-wrrapd-search"));var hit=hay.indexOf(needle)!==-1;if(!hit){ord.querySelectorAll(".wrrapd-amz-line").forEach(function(ln){if(norm(ln.getAttribute("data-wrrapd-search")).indexOf(needle)!==-1)hit=true;});}ord.style.display=hit?"":"none";});}if(q){q.addEventListener("input",filterOrders);q.addEventListener("search",filterOrders);}function openLb(t,src){if(!lb)return;var inner=lb.querySelector(".wrrapd-amz-lb-inner");inner.innerHTML="";if(t==="img"&&src){var im=document.createElement("img");im.src=src;im.alt="";im.decoding="async";inner.appendChild(im);}else{var d=document.createElement("div");d.className="wrrapd-amz-lb-paper";inner.appendChild(d);}lb.classList.add("wrrapd-amz-lightbox--open");lb.setAttribute("aria-hidden","false");}function closeLb(){if(!lb)return;lb.classList.remove("wrrapd-amz-lightbox--open");lb.setAttribute("aria-hidden","true");}root.addEventListener("click",function(e){var b=e.target.closest(".wrrapd-amz-wrap-thumb,.wrrapd-amz-prod-thumb");if(b){openLb(b.getAttribute("data-wrrapd-lb-type")||"paper",b.getAttribute("data-wrrapd-lb-src")||"");return;}if(!lb||!lb.classList.contains("wrrapd-amz-lightbox--open"))return;if(e.target.classList.contains("wrrapd-amz-lb-close")||e.target===lb)closeLb();});document.addEventListener("keydown",function(e){if(e.key!=="Escape"||!lb||!lb.classList.contains("wrrapd-amz-lightbox--open"))return;closeLb();});var ajax=root.getAttribute("data-ajax-url");var nonce=root.getAttribute("data-nonce");root.querySelectorAll(".wrrapd-amz-f-rem").forEach(function(cb){function snc(){var ln=cb.closest(".wrrapd-amz-line");if(!ln)return;var sd=ln.querySelector(".wrrapd-amz-f-rem-days");if(sd)sd.disabled=!cb.checked;}cb.addEventListener("change",snc);snc();});root.querySelectorAll(".wrrapd-amz-save").forEach(function(btn){btn.addEventListener("click",function(){var line=btn.closest(".wrrapd-amz-line");if(!line)return;var fd=new FormData();fd.append("action","wrrapd_save_order_line_overlay");fd.append("nonce",nonce);fd.append("orderNumber",line.getAttribute("data-order")||"");fd.append("lineIndex",line.getAttribute("data-line")||"0");fd.append("giftee",line.querySelector(".wrrapd-amz-f-giftee")?line.querySelector(".wrrapd-amz-f-giftee").value:"");fd.append("relationship",line.querySelector(".wrrapd-amz-f-rel")?line.querySelector(".wrrapd-amz-f-rel").value:"");fd.append("occasion_pick",line.querySelector(".wrrapd-amz-f-occ")?line.querySelector(".wrrapd-amz-f-occ").value:"");fd.append("gift_date",line.querySelector(".wrrapd-amz-f-date")?line.querySelector(".wrrapd-amz-f-date").value:"");var rcb=line.querySelector(".wrrapd-amz-f-rem");var ron=rcb&&rcb.checked;fd.append("reminder_next_year",ron?"1":"");var rdp=line.querySelector(".wrrapd-amz-f-rem-days");fd.append("reminder_days_prior",ron&&rdp&&!rdp.disabled?(rdp.value||"1"):"");fd.append("comment",line.querySelector(".wrrapd-amz-f-comment")?line.querySelector(".wrrapd-amz-f-comment").value:"");btn.disabled=true;fetch(ajax,{method:"POST",body:fd,credentials:"same-origin"}).then(function(r){return r.json();}).then(function(j){btn.disabled=false;if(j&&j.success){btn.style.boxShadow="0 0 0 2px rgba(107,114,128,.85)";window.setTimeout(function(){btn.style.boxShadow="";},650);}else{btn.style.opacity="0.65";window.setTimeout(function(){btn.style.opacity="";},900);}}).catch(function(){btn.disabled=false;});});});})();</script>';
+	echo '<script>(function(){var root=document.getElementById(' . $wrap_json . ');if(!root)return;function wrrapdHideNoOrderMsg(el){if(!el||el===document.body)return;el.style.display="none";el.style.visibility="hidden";el.style.height="0";el.style.maxHeight="0";el.style.overflow="hidden";el.style.margin="0";el.style.padding="0";el.style.border="none";el.setAttribute("aria-hidden","true");}function wrrapdRmNoOrderFiles(){var re=/no\\s+order\\s+files?\\s*found\\.?/i;var strip=function(t){return t.replace(/no\\s+order\\s+files?\\s*found\\.?/gi,"").replace(/[\\s\\u00a0.,;…·\\-–—]+/g,"").trim();};var sels=".elementor-widget,.elementor-element,.elementor-widget-wrap,.e-con,.e-con-inner,.jet-listing-grid,.elementor-section,.elementor-widget-text-editor,.elementor-widget-heading,.widget,.wp-block-column,.wp-block-group";try{document.querySelectorAll(sels).forEach(function(el){var t=(el.textContent||"").replace(/\\s+/g," ").trim();if(!re.test(t))return;if(strip(t).length>80)return;wrrapdHideNoOrderMsg(el);});}catch(e){}try{var tw=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT,null,false);var tn;while(tn=tw.nextNode()){if(!re.test(tn.nodeValue||""))continue;var p=tn.parentElement;while(p&&p!==document.body){var pt=(p.textContent||"").replace(/\\s+/g," ").trim();if(re.test(pt)&&strip(pt).length<=2){wrrapdHideNoOrderMsg(p);break;}p=p.parentElement;}}}catch(e){}}if(!window.__wrrapdNoOrdObs){var _tmo;window.__wrrapdNoOrdObs=new MutationObserver(function(){clearTimeout(_tmo);_tmo=setTimeout(function(){wrrapdRmNoOrderFiles();},90);});try{window.__wrrapdNoOrdObs.observe(document.body,{childList:true,subtree:true});}catch(e){}}wrrapdRmNoOrderFiles();window.addEventListener("load",function(){wrrapdRmNoOrderFiles();});[80,200,500,1200,2400,4800,9000].forEach(function(ms){setTimeout(wrrapdRmNoOrderFiles,ms);});var lb=document.getElementById(' . $lb_json . ');var q=document.getElementById(' . $search_json . ');function norm(s){return(s||"").toLowerCase().trim();}function filterOrders(){var needle=norm(q?q.value:"");root.querySelectorAll(".wrrapd-amz-order").forEach(function(ord){if(!needle){ord.style.display="";return;}var hay=norm(ord.getAttribute("data-wrrapd-search"));var hit=hay.indexOf(needle)!==-1;if(!hit){ord.querySelectorAll(".wrrapd-amz-line").forEach(function(ln){if(norm(ln.getAttribute("data-wrrapd-search")).indexOf(needle)!==-1)hit=true;});}ord.style.display=hit?"":"none";});}if(q){q.addEventListener("input",filterOrders);q.addEventListener("search",filterOrders);}function openLb(t,src){if(!lb)return;var inner=lb.querySelector(".wrrapd-amz-lb-inner");inner.innerHTML="";if(t==="img"&&src){var im=document.createElement("img");im.src=src;im.alt="";im.decoding="async";inner.appendChild(im);}else{var d=document.createElement("div");d.className="wrrapd-amz-lb-paper";inner.appendChild(d);}lb.classList.add("wrrapd-amz-lightbox--open");lb.setAttribute("aria-hidden","false");}function closeLb(){if(!lb)return;lb.classList.remove("wrrapd-amz-lightbox--open");lb.setAttribute("aria-hidden","true");}root.addEventListener("click",function(e){var b=e.target.closest(".wrrapd-amz-wrap-thumb,.wrrapd-amz-prod-thumb");if(b){openLb(b.getAttribute("data-wrrapd-lb-type")||"paper",b.getAttribute("data-wrrapd-lb-src")||"");return;}if(!lb||!lb.classList.contains("wrrapd-amz-lightbox--open"))return;if(e.target.classList.contains("wrrapd-amz-lb-close")||e.target===lb)closeLb();});document.addEventListener("keydown",function(e){if(e.key!=="Escape"||!lb||!lb.classList.contains("wrrapd-amz-lightbox--open"))return;closeLb();});var ajax=root.getAttribute("data-ajax-url");var nonce=root.getAttribute("data-nonce");root.querySelectorAll(".wrrapd-amz-f-rem").forEach(function(cb){function snc(){var ln=cb.closest(".wrrapd-amz-line");if(!ln)return;var sd=ln.querySelector(".wrrapd-amz-f-rem-days");if(sd)sd.disabled=!cb.checked;}cb.addEventListener("change",snc);snc();});root.querySelectorAll(".wrrapd-amz-save").forEach(function(btn){btn.addEventListener("click",function(){var line=btn.closest(".wrrapd-amz-line");if(!line)return;var fd=new FormData();fd.append("action","wrrapd_save_order_line_overlay");fd.append("nonce",nonce);fd.append("orderNumber",line.getAttribute("data-order")||"");fd.append("lineIndex",line.getAttribute("data-line")||"0");fd.append("giftee",line.querySelector(".wrrapd-amz-f-giftee")?line.querySelector(".wrrapd-amz-f-giftee").value:"");fd.append("relationship",line.querySelector(".wrrapd-amz-f-rel")?line.querySelector(".wrrapd-amz-f-rel").value:"");fd.append("occasion_pick",line.querySelector(".wrrapd-amz-f-occ")?line.querySelector(".wrrapd-amz-f-occ").value:"");var mo=line.querySelector(".wrrapd-amz-f-month");var dy=line.querySelector(".wrrapd-amz-f-day");var mv=mo?parseInt(mo.value,10)||0:0;var dv=dy?parseInt(dy.value,10)||0:0;fd.append("gift_date",(mv&&dv)?("2000-"+String(mv).padStart(2,"0")+"-"+String(dv).padStart(2,"0")):"");var rcb=line.querySelector(".wrrapd-amz-f-rem");var ron=rcb&&rcb.checked;fd.append("reminder_next_year",ron?"1":"");var rdp=line.querySelector(".wrrapd-amz-f-rem-days");fd.append("reminder_days_prior",ron&&rdp&&!rdp.disabled?(rdp.value||"1"):"");fd.append("comment",line.querySelector(".wrrapd-amz-f-comment")?line.querySelector(".wrrapd-amz-f-comment").value:"");btn.disabled=true;fetch(ajax,{method:"POST",body:fd,credentials:"same-origin"}).then(function(r){return r.json();}).then(function(j){btn.disabled=false;if(j&&j.success){btn.style.boxShadow="0 0 0 2px rgba(107,114,128,.85)";window.setTimeout(function(){btn.style.boxShadow="";},650);}else{btn.style.opacity="0.65";window.setTimeout(function(){btn.style.opacity="";},900);}}).catch(function(){btn.disabled=false;});});});})();</script>';
 
 	echo '</div>';
 	return (string) ob_get_clean();
@@ -3964,6 +4036,9 @@ function wrrapd_ajax_save_order_line_overlay() {
 	}
 
 	$gift_date = isset( $_POST['gift_date'] ) ? sanitize_text_field( wp_unslash( $_POST['gift_date'] ) ) : '';
+	if ( $gift_date !== '' && preg_match( '/^(\d{2})-(\d{2})$/', $gift_date, $gmd ) ) {
+		$gift_date = '2000-' . $gmd[1] . '-' . $gmd[2];
+	}
 	if ( $gift_date !== '' && ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $gift_date ) ) {
 		wp_send_json_error( array( 'message' => __( 'Invalid date.', 'wrrapd' ) ), 400 );
 	}
