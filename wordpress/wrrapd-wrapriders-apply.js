@@ -12,7 +12,6 @@
 
 	var screens = Array.prototype.slice.call(form.querySelectorAll('.wrrapd-apply-screen'));
 	var tidbitEl = document.getElementById('wrrapd-wr-apply-tidbit');
-	var visualEl = document.getElementById('wrrapd-wr-apply-visual');
 	var progressWrap = form.querySelector('.wrrapd-apply-wizard__progress');
 	var progressFill = document.getElementById('wrrapd-wr-progress-fill');
 	var progressLabel = document.getElementById('wrrapd-wr-progress-label');
@@ -54,7 +53,6 @@
 		var inWizard = wizardStarted && !isBasicsScreen(index);
 		if (progressWrap) progressWrap.hidden = !inWizard;
 		if (tidbitEl) tidbitEl.hidden = !inWizard;
-		if (visualEl) visualEl.hidden = !isBasicsScreen(index);
 		if (navWrap) navWrap.hidden = isBasicsScreen(index) || isReviewScreen(index);
 
 		if (inWizard) {
@@ -133,8 +131,7 @@
 			['Delivery experience', fieldValue('delivery_experience'), 'delivery_experience'],
 			['Why WrapRider', fieldValue('why_wraprider'), 'why_wraprider'],
 			['Bank ready', selectLabel('bank_account_ready'), 'bank_account_ready'],
-			['ID upload', fieldValue('gov_id'), 'gov_id'],
-			['Driving record / abstract', fieldValue('driving_abstract'), 'driving_abstract']
+			['ID upload', fieldValue('gov_id'), 'gov_id']
 		];
 		var html = '<dl>';
 		rows.forEach(function (row) {

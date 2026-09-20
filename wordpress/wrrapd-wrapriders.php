@@ -23,7 +23,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_WRAPRIDERS_BUILD', '2026-09-20-apply-visual' );
+define( 'WRRAPD_WRAPRIDERS_BUILD', '2026-09-20-landing-visual' );
 define( 'WRRAPD_WRAPRIDERS_INVITE_TTL_DAYS', 15 );
 define( 'WRRAPD_WRAPRIDERS_CPT', 'wrrapd_wraprider_app' );
 
@@ -1625,28 +1625,76 @@ function wrrapd_wrapriders_hero_video_url() {
 	return $cached;
 }
 
+/**
+ * Top-right landing photo (WrapRider_001). Prefers Media Library, then wrrapd.com upload.
+ *
+ * @return string Escaped absolute URL.
+ */
+function wrrapd_wrapriders_landing_visual_url() {
+	if ( defined( 'WRRAPD_WRAPRIDERS_LANDING_VISUAL' ) && WRRAPD_WRAPRIDERS_LANDING_VISUAL !== '' ) {
+		return esc_url( WRRAPD_WRAPRIDERS_LANDING_VISUAL );
+	}
+	static $cached = null;
+	if ( $cached !== null ) {
+		return $cached;
+	}
+	$cached      = '';
+	$attachments = get_posts(
+		array(
+			'post_type'      => 'attachment',
+			'post_mime_type' => 'image',
+			'posts_per_page' => 40,
+			'post_status'    => 'inherit',
+			'orderby'        => 'date',
+			'order'          => 'DESC',
+		)
+	);
+	foreach ( $attachments as $att ) {
+		$title = strtolower( (string) $att->post_title );
+		$file  = strtolower( (string) basename( (string) get_attached_file( $att->ID ) ) );
+		$slug  = strtolower( (string) $att->post_name );
+		if (
+			strpos( $title, 'wraprider_001' ) !== false
+			|| strpos( $file, 'wraprider_001' ) !== false
+			|| strpos( $slug, 'wraprider_001' ) !== false
+		) {
+			$url = wp_get_attachment_url( $att->ID );
+			if ( $url ) {
+				$cached = esc_url( $url );
+				break;
+			}
+		}
+	}
+	if ( $cached === '' ) {
+		$cached = 'https://wrrapd.com/wp-content/uploads/2026/09/WrapRider_001.jpg';
+	}
+	return $cached;
+}
+
 function wrrapd_wrapriders_shortcode_landing() {
-	$video = wrrapd_wrapriders_hero_video_url();
-	$apply = wrrapd_wrapriders_apply_url( '/wraprider/apply/' );
+	$visual = wrrapd_wrapriders_landing_visual_url();
+	$apply  = wrrapd_wrapriders_apply_url( '/wraprider/apply/' );
 	ob_start();
 	?>
 	<div class="wrrapd-wrapstars wrrapd-wrapstars-dasher wrrapd-wrapriders wrrapd-wrapriders-flex">
-		<section class="wrrapd-wrapstars-cinema-hero">
-			<div class="wrrapd-wrapstars-cinema-hero__media" aria-hidden="true">
-				<?php if ( $video !== '' ) : ?>
-					<video class="wrrapd-wrapstars-cinema-hero__video" src="<?php echo esc_url( $video ); ?>" autoplay muted loop playsinline preload="metadata"></video>
-				<?php else : ?>
-					<div class="wrrapd-wrapstars-cinema-hero__fallback"></div>
-				<?php endif; ?>
-			</div>
-			<div class="wrrapd-wrapstars-cinema-hero__scrim" aria-hidden="true"></div>
-			<div class="wrrapd-wrapstars-cinema-hero__content">
-				<p class="wrrapd-wrapstars-cinema-hero__kicker">Now accepting applications · Florida &amp; Georgia</p>
+		<section class="wrrapd-wrapriders-landing-hero">
+			<div class="wrrapd-wrapriders-landing-hero__copy">
+				<p class="wrrapd-wrapriders-landing-hero__kicker">Now accepting applications · Florida &amp; Georgia</p>
 				<h1>Become a WrapRider</h1>
-				<p class="wrrapd-wrapstars-cinema-hero__tagline">Craft the gift. Carry the joy.</p>
-				<p class="wrrapd-wrapstars-cinema-hero__sub">Turn an ordinary box into something unforgettable in your own space, then bring that finished surprise to the door yourself.</p>
+				<p class="wrrapd-wrapriders-landing-hero__tagline">Craft the gift. Carry the joy.</p>
+				<p class="wrrapd-wrapriders-landing-hero__sub">Turn an ordinary box into something unforgettable in your own space, then bring that finished surprise to the door yourself.</p>
 				<a class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--xl wrrapd-wrapstars-btn--hero" href="<?php echo esc_url( $apply ); ?>">Start your application</a>
 			</div>
+			<figure class="wrrapd-wrapriders-landing-hero__visual">
+				<img
+					src="<?php echo esc_url( $visual ); ?>"
+					alt=""
+					width="1712"
+					height="1152"
+					decoding="async"
+					fetchpriority="high"
+				/>
+			</figure>
 		</section>
 
 		<div class="wrrapd-wrapstars-dasher-body">

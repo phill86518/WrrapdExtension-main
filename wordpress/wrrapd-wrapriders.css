@@ -30,7 +30,8 @@ body.wrrapd-virtual-page .wrrapd-virtual-page__main {
 	padding-top: 0 !important;
 }
 
-body.wrrapd-virtual-page .wrrapd-virtual-page__main:has(.wrrapd-wrapstars-cinema-hero) {
+body.wrrapd-virtual-page .wrrapd-virtual-page__main:has(.wrrapd-wrapstars-cinema-hero),
+body.wrrapd-virtual-page .wrrapd-virtual-page__main:has(.wrrapd-wrapriders-landing-hero) {
 	background: #0a0a0a;
 }
 
@@ -44,6 +45,111 @@ body.wrrapd-virtual-page .wrrapd-wrapstars-site-footer {
 
 .wrrapd-wrapriders .wrrapd-wrapstars-cinema-hero {
 	margin-top: 0 !important;
+}
+
+/* Landing hero: copy left, WrapRider_001 photo right */
+.wrrapd-wrapriders-landing-hero {
+	display: grid;
+	grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+	gap: clamp(1.25rem, 3vw, 2.5rem);
+	align-items: center;
+	margin: 0;
+	padding: clamp(1.75rem, 4vw, 3.25rem) clamp(1.25rem, 4vw, 3rem);
+	background:
+		radial-gradient(ellipse 70% 80% at 12% 20%, rgba(246, 185, 51, 0.18), transparent 55%),
+		linear-gradient(135deg, #0c0638 0%, #0f0351 48%, #1a0a4a 100%);
+	color: #fff;
+	min-height: min(32rem, 78vh);
+}
+
+.wrrapd-wrapriders-landing-hero__copy {
+	max-width: 34rem;
+}
+
+.wrrapd-wrapriders-landing-hero__kicker {
+	margin: 0 0 0.85rem;
+	font-size: 0.82rem;
+	font-weight: 700;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: #f6b933;
+}
+
+.wrrapd-wrapriders-landing-hero h1 {
+	margin: 0 0 0.65rem;
+	font-size: clamp(2.1rem, 4.2vw, 3.35rem);
+	line-height: 1.08;
+	font-weight: 800;
+	color: #fff;
+}
+
+.wrrapd-wrapriders-landing-hero__tagline {
+	margin: 0 0 0.85rem;
+	font-size: clamp(1.2rem, 2.2vw, 1.55rem);
+	font-weight: 600;
+	color: #fde68a;
+}
+
+.wrrapd-wrapriders-landing-hero__sub {
+	margin: 0 0 1.5rem;
+	font-size: 1.05rem;
+	line-height: 1.55;
+	color: rgba(255, 255, 255, 0.88);
+	max-width: 32rem;
+}
+
+.wrrapd-wrapriders-landing-hero .wrrapd-wrapstars-btn--hero {
+	box-shadow: 0 12px 28px -12px rgba(246, 185, 51, 0.65);
+}
+
+.wrrapd-wrapriders-landing-hero__visual {
+	margin: 0;
+	justify-self: end;
+	width: 100%;
+	max-width: 34rem;
+	overflow: hidden;
+	border-radius: 1.25rem;
+	background: linear-gradient(160deg, #fff8e6 0%, #fde68a 40%, #f6b933 100%);
+	box-shadow:
+		0 1px 0 rgba(255, 255, 255, 0.55) inset,
+		0 28px 55px -22px rgba(0, 0, 0, 0.65);
+	aspect-ratio: 4 / 3;
+}
+
+.wrrapd-wrapriders-landing-hero__visual img {
+	display: block;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	object-position: center;
+}
+
+@media (max-width: 860px) {
+	.wrrapd-wrapriders-landing-hero {
+		grid-template-columns: 1fr;
+		min-height: 0;
+		padding-top: 1.5rem;
+		padding-bottom: 2rem;
+		text-align: center;
+	}
+
+	.wrrapd-wrapriders-landing-hero__copy {
+		max-width: none;
+		order: 2;
+	}
+
+	.wrrapd-wrapriders-landing-hero__sub {
+		margin-left: auto;
+		margin-right: auto;
+	}
+
+	.wrrapd-wrapriders-landing-hero__visual {
+		order: 1;
+		justify-self: center;
+		max-width: 28rem;
+		aspect-ratio: 16 / 10;
+		border-radius: 1rem;
+	}
 }
 
 /* Playful spark strip — tiny elves + gift energy between hero and story cards */
@@ -305,59 +411,6 @@ body.wrrapd-virtual-page .wrrapd-wrapstars-site-footer {
 
 .wrrapd-wrapriders-apply-root .wrrapd-apply-tidbit__label {
 	color: #a16207;
-}
-
-/* Top-right apply visual (WrapRider_001) — basics screen only */
-.wrrapd-wrapriders-apply-root .wrrapd-wrapriders-apply-layout:has(.wrrapd-wrapriders-apply-visual:not([hidden])) {
-	grid-template-columns: minmax(0, 1fr) minmax(15rem, 22rem);
-	gap: clamp(1.25rem, 3vw, 2rem);
-	align-items: start;
-}
-
-.wrrapd-wrapriders-apply-visual {
-	margin: 0;
-}
-
-.wrrapd-wrapriders-apply-visual[hidden] {
-	display: none !important;
-}
-
-.wrrapd-wrapriders-apply-visual__frame {
-	margin: 0;
-	position: sticky;
-	top: 1rem;
-	overflow: hidden;
-	border-radius: 1.15rem;
-	background: linear-gradient(160deg, #fff8e6 0%, #fde68a 45%, #f6b933 100%);
-	box-shadow:
-		0 1px 0 rgba(255, 255, 255, 0.65) inset,
-		0 18px 40px -18px rgba(15, 3, 81, 0.45);
-	aspect-ratio: 4 / 3;
-}
-
-.wrrapd-wrapriders-apply-visual__frame img {
-	display: block;
-	width: 100%;
-	height: 100%;
-	object-fit: cover;
-	object-position: center;
-}
-
-@media (max-width: 860px) {
-	.wrrapd-wrapriders-apply-root .wrrapd-wrapriders-apply-layout:has(.wrrapd-wrapriders-apply-visual:not([hidden])) {
-		grid-template-columns: 1fr;
-	}
-
-	.wrrapd-wrapriders-apply-visual {
-		order: -1;
-	}
-
-	.wrrapd-wrapriders-apply-visual__frame {
-		position: static;
-		max-height: 14rem;
-		aspect-ratio: 16 / 9;
-		border-radius: 0.95rem;
-	}
 }
 
 .wrrapd-wrapriders-apply-root .ws-optional {

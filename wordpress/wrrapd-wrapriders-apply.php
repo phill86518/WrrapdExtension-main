@@ -266,14 +266,6 @@ function wrrapd_wrapriders_process_application() {
 	}
 	wrrapd_wrapriders_set_meta( $post_id, 'id_file', $upload['path'] );
 
-	$abstract = wrrapd_wrapriders_handle_upload( $post_id, 'driving_abstract' );
-	if ( ! $abstract['ok'] ) {
-		wp_delete_post( $post_id, true );
-		$GLOBALS['wrrapd_wr_form_errors'] = array( $abstract['error'] );
-		return;
-	}
-	wrrapd_wrapriders_set_meta( $post_id, 'driving_abstract_file', $abstract['path'] );
-
 	$greet = $nickname !== '' ? $nickname : $first_name;
 	if ( $greet === '' ) {
 		$greet = 'there';
@@ -306,53 +298,6 @@ function wrrapd_wrapriders_apply_required_mark() {
 	return '<span class="ws-required" aria-hidden="true">*</span>';
 }
 
-/**
- * Hero photo for the WrapRider apply basics screen (right column).
- * Prefers Media Library title/file "WrapRider_001", then the wrrapd.com upload.
- *
- * @return string Escaped absolute URL.
- */
-function wrrapd_wrapriders_apply_visual_url() {
-	if ( defined( 'WRRAPD_WRAPRIDERS_APPLY_VISUAL' ) && WRRAPD_WRAPRIDERS_APPLY_VISUAL !== '' ) {
-		return esc_url( WRRAPD_WRAPRIDERS_APPLY_VISUAL );
-	}
-	static $cached = null;
-	if ( $cached !== null ) {
-		return $cached;
-	}
-	$cached      = '';
-	$attachments = get_posts(
-		array(
-			'post_type'      => 'attachment',
-			'post_mime_type' => 'image',
-			'posts_per_page' => 40,
-			'post_status'    => 'inherit',
-			'orderby'        => 'date',
-			'order'          => 'DESC',
-		)
-	);
-	foreach ( $attachments as $att ) {
-		$title = strtolower( (string) $att->post_title );
-		$file  = strtolower( (string) basename( (string) get_attached_file( $att->ID ) ) );
-		$slug  = strtolower( (string) $att->post_name );
-		if (
-			strpos( $title, 'wraprider_001' ) !== false
-			|| strpos( $file, 'wraprider_001' ) !== false
-			|| strpos( $slug, 'wraprider_001' ) !== false
-		) {
-			$url = wp_get_attachment_url( $att->ID );
-			if ( $url ) {
-				$cached = esc_url( $url );
-				break;
-			}
-		}
-	}
-	if ( $cached === '' ) {
-		$cached = 'https://wrrapd.com/wp-content/uploads/2026/09/WrapRider_001.jpg';
-	}
-	return $cached;
-}
-
 function wrrapd_wrapriders_shortcode_apply() {
 	if ( ! wrrapd_wrapriders_is_apply_host() ) {
 		return '<p class="wrrapd-wrapstars-alert">Apply at <a href="' . esc_url( wrrapd_wrapriders_apply_url( '/wraprider/apply/' ) ) . '">apply.wrrapd.com/wraprider/apply/</a>.</p>';
@@ -363,7 +308,6 @@ function wrrapd_wrapriders_shortcode_apply() {
 	$distances = wrrapd_wrapriders_delivery_distance_options();
 	$printers  = wrrapd_wrapriders_printer_size_options();
 	$req       = wrrapd_wrapriders_apply_required_mark();
-	$visual    = wrrapd_wrapriders_apply_visual_url();
 	ob_start();
 	?>
 	<div class="wrrapd-wrapstars wrrapd-wrapstars-dasher wrrapd-wrapriders wrrapd-apply-wizard-root wrrapd-wrapriders-apply-root">
@@ -384,7 +328,7 @@ function wrrapd_wrapriders_shortcode_apply() {
 				<p class="wrrapd-apply-wizard__progress-label" id="wrrapd-wr-progress-label"></p>
 			</div>
 
-			<div class="wrrapd-apply-wizard__layout wrrapd-wrapriders-apply-layout">
+			<div class="wrrapd-apply-wizard__layout">
 				<div class="wrrapd-apply-wizard__main">
 
 					<section class="wrrapd-apply-screen is-active" data-screen="0" data-step-label="" data-screen-type="basics">
@@ -576,7 +520,7 @@ function wrrapd_wrapriders_shortcode_apply() {
 
 					<section class="wrrapd-apply-screen" data-screen="3" data-step-label="Step 3 of 4">
 						<h2>About you</h2>
-						<p class="wrrapd-apply-standards-intro">Tell us when you can work — and upload your ID and driving record.</p>
+						<p class="wrrapd-apply-standards-intro">Tell us when you can work — and upload a photo of your ID.</p>
 						<div class="ws-field">
 							<label for="wr-availability">Typical availability<?php echo $req; ?></label>
 							<textarea name="availability" id="wr-availability" rows="3" required placeholder="Evenings, weekends, weekdays…"></textarea>
@@ -602,11 +546,6 @@ function wrrapd_wrapriders_shortcode_apply() {
 							<input type="file" id="wr-gov-id" name="gov_id" accept=".pdf,.jpg,.jpeg,.png" required />
 							<p class="wrrapd-apply-field-hint">PDF, JPG, or PNG.</p>
 						</div>
-						<div class="ws-field">
-							<label for="wr-driving-abstract">Driving record / abstract<?php echo $req; ?></label>
-							<input type="file" id="wr-driving-abstract" name="driving_abstract" accept=".pdf,.jpg,.jpeg,.png" required />
-							<p class="wrrapd-apply-field-hint">Official copy from your state. PDF, JPG, or PNG.</p>
-						</div>
 					</section>
 
 					<section class="wrrapd-apply-screen" data-screen="4" data-step-label="Step 4 of 4">
@@ -630,18 +569,6 @@ function wrrapd_wrapriders_shortcode_apply() {
 					</div>
 				</div>
 
-				<aside class="wrrapd-wrapriders-apply-visual" id="wrrapd-wr-apply-visual" aria-hidden="true">
-					<figure class="wrrapd-wrapriders-apply-visual__frame">
-						<img
-							src="<?php echo esc_url( $visual ); ?>"
-							alt=""
-							width="1712"
-							height="1152"
-							decoding="async"
-							fetchpriority="high"
-						/>
-					</figure>
-				</aside>
 				<aside class="wrrapd-apply-wizard__tidbit" id="wrrapd-wr-apply-tidbit" aria-live="polite" hidden></aside>
 			</div>
 		</form>
