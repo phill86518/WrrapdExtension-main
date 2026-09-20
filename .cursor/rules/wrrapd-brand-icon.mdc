@@ -1,0 +1,22 @@
+---
+description: Canonical Wrrapd brand icon — centered grounded red-W + gold bow (icon-focus), never the floating-W pack.
+alwaysApply: true
+---
+
+# Wrrapd brand icon (canonical)
+
+**Always use** the centered, grounded red-W + gold-bow mark — **never** the older floating-W icon.
+
+| Asset | Path |
+|---|---|
+| Source of truth | `wordpress/icons/favicon/icon-focus-512.png` |
+| Derived sizes | `wordpress/icons/favicon/icon-{16,32,48,64,96,128,180,192,256,512,1024,2048}.png`, `favicon.ico` |
+| Live MU path | `wp-content/mu-plugins/icons/favicon/` |
+| Media Library (Site Icon) | `wrrapd-bow-favicon-180.png` (from focus pack) |
+
+## Rules for agents
+
+- When adding favicons, PWA icons, apple-touch icons, admin/chrome marks, or any square Wrrapd “app icon,” use the **focus** pack above.
+- Do **not** resurrect or link the pre-focus floating-W PNGs.
+- Full wordmark (`Wrrapd_f-Logo-800-x-458-px.png`) is separate — use for header/footer **word** branding only; square icon contexts use the focus W.
+- After regenerating sizes from `icon-focus-512.png`, redeploy `wordpress/icons/favicon/` to SiteGround `mu-plugins/icons/favicon/`.

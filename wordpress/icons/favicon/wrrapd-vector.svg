@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <g transform="translate(512,518) scale(0.90)">
+    <line x1="-400" y1="-228" x2="-142" y2="176"
+          stroke="#C40509" stroke-width="138" stroke-linecap="round"/>
+    <line x1="400" y1="-228" x2="142" y2="176"
+          stroke="#C40509" stroke-width="138" stroke-linecap="round"/>
+
+    <!-- gift box between the arms -->
+    <rect x="-128" y="6" width="256" height="176" rx="3" fill="#8B0306"/>
+
+    <path fill="#F6B933" fill-rule="evenodd" d="
+      M -214,-16
+      a 118,108 0 1 0 236,0
+      a 118,108 0 1 0 -236,0
+      z
+      M -116,-24
+      a 20,40 0 1 0 40,0
+      a 20,40 0 1 0 -40,0
+      z
+    "/>
+    <path fill="#F6B933" fill-rule="evenodd" d="
+      M -22,-16
+      a 118,108 0 1 0 236,0
+      a 118,108 0 1 0 -236,0
+      z
+      M 76,-24
+      a 20,40 0 1 0 40,0
+      a 20,40 0 1 0 -40,0
+      z
+    "/>
+
+    <!-- left ribbon: swallowtail V-cut -->
+    <path fill="#F6B933" d="
+      M -28,28
+      L -158,186
+      L -94,154
+      L -30,198
+      L -8,96
+      L 0,40
+      Z
+    "/>
+    <!-- right ribbon: swallowtail V-cut -->
+    <path fill="#F6B933" d="
+      M 28,28
+      L 158,186
+      L 94,154
+      L 30,198
+      L 8,96
+      L 0,40
+      Z
+    "/>
+  </g>
+</svg>

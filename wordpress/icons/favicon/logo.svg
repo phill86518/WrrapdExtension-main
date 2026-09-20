@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- LEFT ARM \  top-left to bottom-center -->
+  <rect x="-72" y="-310" width="144" height="620" rx="72"
+        fill="#C40509"
+        transform="translate(318 500) rotate(-31)"/>
+
+  <!-- RIGHT ARM /  top-right to bottom-center -->
+  <rect x="-72" y="-310" width="144" height="620" rx="72"
+        fill="#C40509"
+        transform="translate(706 500) rotate(31)"/>
+
+  <!-- CENTER BLOCK between the lower inner edges -->
+  <rect x="404" y="488" width="216" height="168" rx="2" fill="#C40509"/>
+
+  <!-- BOW -->
+  <g fill="#F6B933">
+    <ellipse cx="430" cy="418" rx="102" ry="92"/>
+    <ellipse cx="594" cy="418" rx="102" ry="92"/>
+    <polygon points="470,480 422,640 508,555 512,488"/>
+    <polygon points="554,480 602,640 516,555 512,488"/>
+  </g>
+</svg>
