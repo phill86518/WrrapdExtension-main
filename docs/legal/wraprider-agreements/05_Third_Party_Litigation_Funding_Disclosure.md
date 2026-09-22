@@ -3,13 +3,13 @@
 **Wrrapd, Inc.** — WrapRider Independent Contractor Network  
 **Companion document** to the WrapRider Independent Contractor Technology Services Agreement (the “**Services Agreement**”) and Mutual Arbitration Agreement
 
-**Status:** Production draft for licensed counsel review before BoldSign upload.
+**Notice / legal address:** 7901 4th Street N, Ste. 300, St. Petersburg, FL 33702-4399
 
 ---
 
 ## 1. Purpose
 
-Wrrapd requires transparency regarding third-party funding of disputes. This disclosure helps Wrrapd manage conflicts, settlement authority, and procedural fairness in any Dispute (as defined in the Mutual Arbitration Agreement) between Contractor and Wrrapd, including Disputes relating to the WrapStar App, the JoyRider App, or the Platform.
+Wrrapd requires transparency regarding third-party funding of disputes. This disclosure helps Wrrapd manage conflicts, settlement authority, and procedural fairness in any Dispute (as defined in the Mutual Arbitration Agreement) between Contractor and Wrrapd, including Disputes relating to the WrapRider App or the Platform.
 
 ---
 
@@ -25,8 +25,13 @@ Third-Party Litigation Funding includes, without limitation, litigation finance 
 
 Contractor represents and warrants that, as of the date of signature, one of the following is true (check one):
 
-- `{{text|no_funding}}` Contractor has **no** Third-Party Litigation Funding related to any Dispute with Wrrapd.  
-- `{{text|has_funding}}` Contractor **does** have Third-Party Litigation Funding. Funder name and a brief description: `{{text|funder_detail}}`
+[ ] **No funding.** Contractor has **no** Third-Party Litigation Funding related to any Dispute with Wrrapd.
+
+[ ] **Funding exists.** Contractor **does** have Third-Party Litigation Funding. Funder name and a brief description:
+
+________________________________  
+________________________________  
+________________________________
 
 ---
 
@@ -42,5 +47,6 @@ Failure to disclose as required may be a material breach of the Services Agreeme
 
 ---
 
-**Signature:** `{{sign|contractor_sign}}`  **Date:** `{{date|contractor_date}}`  
-Legal name: `{{text|legal_name}}`
+---
+
+**Electronic acceptance.** This document is accepted electronically with the Services Agreement via **I Accept** in the Wrrapd onboarding Platform (ESIGN Act). No Company countersignature is required on the applicant’s copy.

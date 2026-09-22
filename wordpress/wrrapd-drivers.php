@@ -18,6 +18,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+$wrrapd_esign = dirname( __FILE__ ) . '/wrrapd-esign-agreements.php';
+if ( file_exists( $wrrapd_esign ) ) {
+	require_once $wrrapd_esign;
+}
+
 define( 'WRRAPD_DRIVERS_BUILD', '2026-09-19-no-public-rates' );
 define( 'WRRAPD_DRIVERS_INVITE_TTL_DAYS', 15 );
 define( 'WRRAPD_DRIVERS_CPT', 'wrrapd_driver_app' );
@@ -91,7 +96,7 @@ if ( is_readable( $wrrapd_drv_ops ) ) {
 function wrrapd_drivers_onboarding_steps() {
 	return array(
 		'welcome'     => 'Welcome & Overview',
-		'agreement'   => 'JoyRider Independent Contractor Agreement',
+		'agreement'   => 'Contractor Agreements',
 		'policies'    => 'Policies & Safety',
 		'orientation' => 'Orientation & Quiz',
 		'background'  => 'Background Check',
@@ -969,10 +974,31 @@ function wrrapd_drivers_process_onboarding_step() {
 	if ( ! wrrapd_drivers_can_access_step( $app->ID, $step ) ) {
 		return;
 	}
-	$placeholders = array( 'policies', 'background', 'identity', 'tax_1099', 'bank_payout', 'agreement', 'w9' );
+	$placeholders = array( 'policies', 'background', 'identity', 'tax_1099', 'bank_payout', 'w9' );
 	if ( $step === 'welcome' ) {
 		wrrapd_drivers_mark_step_complete( $app->ID, 'welcome' );
 		wp_safe_redirect( wrrapd_drivers_onboarding_step_url( 'agreement' ) );
+		exit;
+	}
+	if ( $step === 'agreement' ) {
+		if ( ! function_exists( 'wrrapd_esign_validate_acceptance' ) ) {
+			$GLOBALS['wrrapd_drv_ob_error'] = 'Agreement module missing. Contact support.';
+			return;
+		}
+		$esign = wrrapd_esign_validate_acceptance( 'joyrider' );
+		if ( empty( $esign['ok'] ) ) {
+			$GLOBALS['wrrapd_drv_ob_error'] = $esign['error'] ?? 'Please accept the agreements to continue.';
+			return;
+		}
+		wrrapd_esign_store_meta(
+			static function ( $k, $v ) use ( $app ) {
+				wrrapd_drivers_set_meta( $app->ID, $k, $v );
+			},
+			$esign['meta']
+		);
+		wrrapd_drivers_set_meta( $app->ID, 'ic_signed_at', $esign['meta']['esign_accepted_at'] );
+		wrrapd_drivers_mark_step_complete( $app->ID, 'agreement' );
+		wp_safe_redirect( wrrapd_drivers_onboarding_step_url( wrrapd_drivers_next_onboarding_step( 'agreement' ) ) );
 		exit;
 	}
 	if ( in_array( $step, $placeholders, true ) ) {
@@ -1358,8 +1384,8 @@ function wrrapd_drivers_render_step_welcome( $app_id ) {
 	$greet = wrrapd_drivers_greeting_name( $app_id );
 	?>
 	<div class="wrrapd-wrapstars-card wrrapd-wrapstars-card--hero">
-		<p class="wrrapd-wrapstars-welcome__hello">Dear <?php echo esc_html( $greet === 'there' ? 'JoyRider' : $greet ); ?>,</p>
-		<p class="wrrapd-wrapstars-ob-lead">Welcome to the Wrrapd JoyRider network. This onboarding confirms agreements, screening, insurance, tax, and payout details before you can accept delivery offers in the JoyRider app.</p>
+		<p class="wrrapd-wrapstars-welcome__hello">Dear <?php echo esc_html( $greet === 'there' ? 'there' : $greet ); ?>,</p>
+		<p class="wrrapd-wrapstars-ob-lead">Congratulations on being invited to continue. You are an <strong>applicant</strong> completing onboarding for the logistics / delivery contractor track. You are not engaged as a JoyRider until Wrrapd activates you. This flow covers agreements, screening, insurance, tax, and payout setup.</p>
 		<p class="wrrapd-wrapstars-ob-lead">Complete each step promptly so ops can activate your account. After activation you will open the JoyRider app and start scheduling deliveries.</p>
 		<form method="post" class="wrrapd-wrapstars-ob-actions">
 			<?php wp_nonce_field( 'wrrapd_drv_onboarding', 'wrrapd_drv_nonce' ); ?>
@@ -1738,7 +1764,7 @@ function wrrapd_drivers_shortcode_onboarding( $atts ) {
 	?>
 	<div class="wrrapd-wrapstars wrrapd-drivers wrrapd-wrapstars-onboarding">
 		<aside class="wrrapd-wrapstars-ob-nav">
-			<p class="wrrapd-wrapstars-ob-nav__title">JoyRider onboarding</p>
+			<p class="wrrapd-wrapstars-ob-nav__title">Onboarding</p>
 			<ol>
 				<?php foreach ( $labels as $key => $label ) : ?>
 					<li class="<?php echo wrrapd_drivers_step_complete( $app->ID, $key ) ? 'is-done' : ( $key === $step ? 'is-current' : '' ); ?>">
@@ -1756,6 +1782,21 @@ function wrrapd_drivers_shortcode_onboarding( $atts ) {
 			<?php
 			if ( $step === 'welcome' ) {
 				wrrapd_drivers_render_step_welcome( $app->ID );
+			} elseif ( $step === 'agreement' ) {
+				if ( function_exists( 'wrrapd_esign_render_clickwrap' ) ) {
+					wrrapd_esign_render_clickwrap(
+						array(
+							'suite'        => 'joyrider',
+							'nonce_action' => 'wrrapd_drv_onboarding',
+							'nonce_field'  => 'wrrapd_drv_nonce',
+							'action_name'  => 'wrrapd_drv_action',
+							'action_value' => 'onboarding_step',
+							'step'         => 'agreement',
+						)
+					);
+				} else {
+					echo '<div class="wrrapd-wrapstars-alert wrrapd-wrapstars-alert--err">Agreement module missing.</div>';
+				}
 			} elseif ( $step === 'orientation' ) {
 				wrrapd_drivers_render_step_orientation( $app->ID );
 			} elseif ( $step === 'insurance' ) {
@@ -1914,6 +1955,11 @@ function wrrapd_drivers_shortcode_profile() {
 						<span class="wrrapd-ws-profile__mark" aria-hidden="true"><?php echo wrrapd_drivers_get_meta( $id, 'id_file' ) !== '' ? '✓' : '○'; ?></span>
 						<span class="wrrapd-ws-profile__doclabel">Driver license</span>
 						<span class="wrrapd-ws-profile__docval"><?php echo wrrapd_drivers_get_meta( $id, 'id_file' ) !== '' ? 'On file' : 'Not uploaded'; ?></span>
+					</li>
+					<li class="<?php echo wrrapd_drivers_get_meta( $id, 'driving_abstract_file' ) !== '' ? 'is-ok' : 'is-open'; ?>">
+						<span class="wrrapd-ws-profile__mark" aria-hidden="true"><?php echo wrrapd_drivers_get_meta( $id, 'driving_abstract_file' ) !== '' ? '✓' : '○'; ?></span>
+						<span class="wrrapd-ws-profile__doclabel">Driving record / abstract</span>
+						<span class="wrrapd-ws-profile__docval"><?php echo wrrapd_drivers_get_meta( $id, 'driving_abstract_file' ) !== '' ? 'On file' : 'Not uploaded'; ?></span>
 					</li>
 					<?php foreach ( $docs as $doc ) : ?>
 						<li class="<?php echo $doc['ok'] ? 'is-ok' : 'is-open'; ?>">

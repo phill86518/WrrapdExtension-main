@@ -1,27 +1,25 @@
-# WrapRider suite — review memo (internal)
+# WrapRider Agreement Suite — Internal Ops Memo
 
-**Date:** 2026-09-16  
-**Audience:** Florida counsel + ops. Not for applicants.
+**Date:** 2026-09-16; **updated 2026-09-22**.  
+**Audience:** Internal ops only — not for applicants.
 
 ## Why a third suite
 
-A WrapRider is one contractor doing **two** jobs: gift wrapping (WrapStar scope) and logistics/final-mile (JoyRider scope). Signing **both** existing suites would duplicate arbitration, background, litigation-funding, and IC boilerplate and would leave conflicts (WrapStar TSA says “no driving”; JoyRider TSA says “no wrapping”).
+A WrapRider does **both** gift wrapping and logistics/final-mile. Signing both WrapStar and JoyRider suites would duplicate arbitration, background, litigation-funding, and IC boilerplate and leave conflicts (WrapStar says “no driving”; JoyRider says “no wrapping”).
 
-This suite is a **merged** Technology Services Agreement plus companions that already include MVR + auto insurance (JoyRider) and wrapping location / proof / barcode (WrapStar).
+This suite is a **merged** Technology Services Agreement plus companions that include MVR + auto insurance and wrapping location / proof / barcode.
 
-## Product facts counsel should assume
+## Product facts
 
 - Public apply: `https://apply.wrrapd.com/wraprider/apply/`
-- Stored as its **own** WordPress post type `wrrapd_wraprider_app` (third hire track; separate from the WrapStar and JoyRider post types), with its own onboarding portal at `pros.wrrapd.com/wraprider-onboarding/`
-- On Command Center **Activate**, ops creates the WrapRider row (id prefix 6) — the login identity for the WrapRider App (`wraprider.wrrapd.com`) — plus hidden *capacity* rows on the WrapStar roster (prefix 8) and JoyRider roster (prefix 7) so order allocation can assign wrap jobs and deliveries. Those capacity rows are not logins.
-- Login: same email/password on wrapstar.wrrapd.com **and** joyrider.wrrapd.com
-- Pay: WrapStar hourly + 12/hour pace for wrap windows; JoyRider hourly for delivery windows — see Compensation Schedule §5a
-- Age 21+ (JoyRider floor, not WrapStar’s 19)
-- Counsel must still review before BoldSign go-live
+- WordPress post type `wrrapd_wraprider_app`; onboarding at `pros.wrrapd.com/wraprider-onboarding/`
+- On Activate: WrapRider login row (prefix 6) plus capacity rows on WrapStar (8) and JoyRider (7) rosters for allocation
+- App: `wraprider.wrrapd.com`
+- Pay: WrapStar hourly + 12/hour pace for wrap windows; JoyRider hourly for delivery — Compensation Schedule §5a
+- Age 21+; Duval County, FL arbitration; blank signature / initials lines in each PDF
 
-## Open items for counsel
+## Open ops items
 
-1. Confirm dual-app access language is enough vs. two separate agreements.
-2. Confirm auto-insurance mandate vs. WrapStar TSA (which has no commercial insurance mandate).
-3. Confirm Jacksonville, FL arbitration seat (same as other suites).
-4. Entity name: Wrrapd, Inc. vs LLC.
+1. Dual-app access language vs two separate agreements — currently one merged suite.  
+2. Auto-insurance mandate (required for WrapRider; WrapStar suite has none).  
+3. Entity name: Wrrapd, Inc. vs LLC.

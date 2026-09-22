@@ -202,6 +202,14 @@ function wrrapd_drivers_process_application() {
 	}
 	wrrapd_drivers_set_meta( $post_id, 'id_file', $upload['path'] );
 
+	$abstract = wrrapd_drivers_handle_upload( $post_id, 'driving_abstract' );
+	if ( ! $abstract['ok'] ) {
+		wp_delete_post( $post_id, true );
+		$GLOBALS['wrrapd_drv_form_errors'] = array( $abstract['error'] );
+		return;
+	}
+	wrrapd_drivers_set_meta( $post_id, 'driving_abstract_file', $abstract['path'] );
+
 	$greet = $nickname !== '' ? $nickname : $first_name;
 	if ( $greet === '' ) {
 		$greet = 'there';
@@ -406,7 +414,7 @@ function wrrapd_drivers_shortcode_apply() {
 
 					<section class="wrrapd-apply-screen" data-screen="2" data-step-label="Step 2 of 3">
 						<h2>About you</h2>
-						<p class="wrrapd-apply-standards-intro">Tell us when you can drive — and upload a photo of your ID.</p>
+						<p class="wrrapd-apply-standards-intro">Tell us when you can drive — and upload your ID and driving record.</p>
 						<div class="ws-field">
 							<label for="drv-availability">Typical availability<?php echo $req; ?></label>
 							<textarea name="availability" id="drv-availability" rows="3" required placeholder="Evenings, weekends, weekdays…"></textarea>
@@ -423,6 +431,11 @@ function wrrapd_drivers_shortcode_apply() {
 							<label for="drv-gov-id">Government photo ID (driver license preferred)<?php echo $req; ?></label>
 							<input type="file" id="drv-gov-id" name="gov_id" accept=".pdf,.jpg,.jpeg,.png" required />
 							<p class="wrrapd-apply-field-hint">PDF, JPG, or PNG.</p>
+						</div>
+						<div class="ws-field">
+							<label for="drv-driving-abstract">Driving record / abstract<?php echo $req; ?></label>
+							<input type="file" id="drv-driving-abstract" name="driving_abstract" accept=".pdf,.jpg,.jpeg,.png" required />
+							<p class="wrrapd-apply-field-hint">Official copy from your state. PDF, JPG, or PNG.</p>
 						</div>
 					</section>
 

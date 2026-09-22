@@ -3,17 +3,15 @@
 **Wrrapd, Inc.** and WrapRider Contractor  
 **Companion document** to the WrapRider Independent Contractor Technology Services Agreement
 
-**Status:** Production draft for licensed counsel review before BoldSign upload.
-
 ---
 
-This Mutual Arbitration Agreement (the “**Arbitration Agreement**”) is entered into by and between **Wrrapd, Inc.** (“**Wrrapd**”) and the undersigned individual or entity (“**Contractor**”). It forms part of, and is incorporated into, the WrapRider Independent Contractor Technology Services Agreement between the Parties (the “**Services Agreement**”). Capitalized terms not defined here have the meanings given in the Services Agreement.
+This Mutual Arbitration Agreement (the “**Arbitration Agreement**”) is entered into by and between **Wrrapd, Inc.**, with notice and legal address at **7901 4th Street N, Ste. 300, St. Petersburg, FL 33702-4399** (“**Wrrapd**”) and the undersigned individual or entity (“**Contractor**”). It forms part of, and is incorporated into, the WrapRider Independent Contractor Technology Services Agreement between the Parties (the “**Services Agreement**”). Capitalized terms not defined here have the meanings given in the Services Agreement.
 
 ---
 
 ## 1. Mutual Agreement to Arbitrate
 
-1.1 Except as expressly provided in Section 5 (Carve-Outs), **Wrrapd and Contractor mutually agree** that any and all disputes, claims, or controversies arising out of or relating to: (a) the Services Agreement or any Companion Document; (b) Contractor’s application, onboarding, screening, engagement, compensation, suspension, or termination; (c) the Platform, the **WrapStar App**, the **JoyRider App**, or the Services; (d) download, access, use, or unavailability of either App; or (e) any other aspect of the relationship between Contractor and Wrrapd—whether based in contract, tort, statute, fraud, misrepresentation, or any other legal theory (each, a “**Dispute**”)—shall be resolved exclusively by **binding individual arbitration**, and not by court or jury trial (except as Section 5 allows).
+1.1 Except as expressly provided in Section 5 (Carve-Outs), **Wrrapd and Contractor mutually agree** that any and all disputes, claims, or controversies arising out of or relating to: (a) the Services Agreement or any Companion Document; (b) Contractor’s application, onboarding, screening, engagement, compensation, suspension, or termination; (c) the Platform, the **WrapRider App**, or the Services; (d) download, access, use, or unavailability of the WrapRider App; or (e) any other aspect of the relationship between Contractor and Wrrapd—whether based in contract, tort, statute, fraud, misrepresentation, or any other legal theory (each, a “**Dispute**”)—shall be resolved exclusively by **binding individual arbitration**, and not by court or jury trial (except as Section 5 allows).
 
 1.2 This Arbitration Agreement is mutual: both Parties are bound to arbitrate Disputes on the terms set forth herein.
 
@@ -25,11 +23,11 @@ This Mutual Arbitration Agreement (the “**Arbitration Agreement**”) is enter
 
 2.1 This Arbitration Agreement and any arbitration hereunder shall be governed by the laws of the **State of Florida**, without regard to conflict-of-law principles that would defeat the Parties’ choice of Florida law or the seat specified herein, except where the Federal Arbitration Act controls.
 
-2.2 The **seat of arbitration** shall be **Jacksonville, Duval County, State of Florida**.
+2.2 The **seat of arbitration** shall be **Duval County, State of Florida**.
 
-2.3 Hearings may be conducted in Jacksonville, Florida, or, by agreement of the Parties or order of the arbitrator, by videoconference or other remote means, provided that the legal seat remains Jacksonville, Florida.
+2.3 Hearings may be conducted in Duval County, Florida, or, by agreement of the Parties or order of the arbitrator, by videoconference or other remote means, provided that the legal seat remains Duval County, Florida.
 
-2.4 If any Dispute proceeds in court notwithstanding this Arbitration Agreement (including under Section 5 or upon a final determination that a claim is non-arbitrable), the Parties consent to the **exclusive jurisdiction and venue** of the state or federal courts located in **Duval County / Jacksonville, Florida**, and waive any objection based on inconvenient forum.
+2.4 If any Dispute proceeds in court notwithstanding this Arbitration Agreement (including under Section 5 or upon a final determination that a claim is non-arbitrable), the Parties consent to the **exclusive jurisdiction and venue** of the state or federal courts located in **Duval County, Florida**, and waive any objection based on inconvenient forum.
 
 ---
 
@@ -53,7 +51,7 @@ This Mutual Arbitration Agreement (the “**Arbitration Agreement**”) is enter
 
 ## 5. Carve-Outs
 
-Either Party may seek temporary or preliminary injunctive relief in a court of competent jurisdiction (see Section 2.4) to protect confidential information, intellectual property, or Platform security, or to enforce Section 4, without waiving the right to arbitrate the remainder of the Dispute. Claims that applicable law makes non-arbitrable are excluded.
+Either Party may seek temporary or preliminary injunctive relief in a court of competent jurisdiction (see Section 2.4) to protect confidential information, intellectual property, Platform security, or customer goods (including claims relating to theft, conversion, or unauthorized retention of goods), or to enforce Section 4, without waiving the right to arbitrate the remainder of the Dispute. Claims that applicable law makes non-arbitrable are excluded.
 
 ---
 
@@ -65,7 +63,10 @@ Either Party may seek temporary or preliminary injunctive relief in a court of c
 
 ---
 
-**Signature block (BoldSign tags)**
+---
 
-Contractor: `{{sign|contractor_sign}}`  Date: `{{date|contractor_date}}`  
-Wrrapd, Inc.: `{{sign|wrrapd_sign}}`  Date: `{{date|wrrapd_date}}`
+---
+
+## Electronic Acceptance
+
+This Arbitration Agreement is accepted electronically together with the Services Agreement under the ESIGN Act. No Company countersignature on Contractor’s individual copy is required. Contractor’s **I Accept** (or equivalent electronic assent) in the Wrrapd onboarding Platform binds Contractor; Wrrapd’s assent is manifested by presenting these terms and by activating Platform access.

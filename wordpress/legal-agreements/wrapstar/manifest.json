@@ -1,0 +1,35 @@
+{
+  "version": "44b4e28138fe",
+  "docs": [
+    {
+      "file": "01_WrapStar_Technology_Services_Agreement.html",
+      "title": "WRAPSTAR INDEPENDENT CONTRACTOR",
+      "sha256_16": "09a44e37bb90dbf8"
+    },
+    {
+      "file": "02_Mutual_Arbitration_Agreement.html",
+      "title": "MUTUAL ARBITRATION AGREEMENT",
+      "sha256_16": "943735c3cdbd68d2"
+    },
+    {
+      "file": "03_Background_Check_Authorization.html",
+      "title": "BACKGROUND CHECK DISCLOSURE AND AUTHORIZATION",
+      "sha256_16": "167eb37ebfb53d11"
+    },
+    {
+      "file": "04_WrapStar_Code_of_Conduct.html",
+      "title": "WRAPSTAR CODE OF CONDUCT",
+      "sha256_16": "c56e3db8d64a8765"
+    },
+    {
+      "file": "05_Third_Party_Litigation_Funding_Disclosure.html",
+      "title": "THIRD-PARTY LITIGATION FUNDING DISCLOSURE",
+      "sha256_16": "d2ea5f61375d5b1c"
+    },
+    {
+      "file": "contractor-compensation-schedule.html",
+      "title": "WrapStar Compensation Schedule",
+      "sha256_16": "9953c5bb4e506a19"
+    }
+  ]
+}

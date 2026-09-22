@@ -5,8 +5,7 @@
 **Wrrapd, Inc.** — WrapStar Independent Contractor Network  
 **Companion document** to the WrapStar Independent Contractor Technology Services Agreement (the “**Services Agreement**”) and Mutual Arbitration Agreement
 
-**Status:** Production draft for licensed counsel review before BoldSign upload.  
-**Brand PDF/HTML:** Use files in `branded/` (logo header + Fraunces) for review and export.
+**Notice / legal address:** 7901 4th Street N, Ste. 300, St. Petersburg, FL 33702-4399
 
 ---
 
@@ -28,11 +27,13 @@ Third-Party Litigation Funding includes, without limitation, litigation finance 
 
 Contractor represents and warrants that, as of the date of signature, one of the following is true (check one):
 
-☐ **No funding.** Contractor has no Third-Party Litigation Funding arrangement related to any potential, threatened, or actual Dispute with Wrrapd.
+[ ] **No funding.** Contractor has no Third-Party Litigation Funding arrangement related to any potential, threatened, or actual Dispute with Wrrapd.
 
-☐ **Funding exists.** Contractor has a Third-Party Litigation Funding arrangement related to a potential, threatened, or actual Dispute with Wrrapd. Summary of material terms (funder identity, date, and nature of interest in proceeds or control rights):
+[ ] **Funding exists.** Contractor has a Third-Party Litigation Funding arrangement related to a potential, threatened, or actual Dispute with Wrrapd. Summary of material terms (funder identity, date, and nature of interest in proceeds or control rights):
 
-{{text|1| |Signer|funding_details}}
+________________________________  
+________________________________  
+________________________________
 
 ---
 
@@ -48,7 +49,7 @@ Contractor represents and warrants that, as of the date of signature, one of the
 
 5.1 False, incomplete, or untimely disclosure under this document is a **material breach** of the Services Agreement and may result in suspension or termination of Platform access, in addition to any other remedies available at law or equity.
 
-5.2 Nothing in this document waives any defense, privilege, or procedural right of either Party. Disputes arising under or relating to this disclosure are subject to the **Mutual Arbitration Agreement**, including its seat in **Jacksonville, Florida**.
+5.2 Nothing in this document waives any defense, privilege, or procedural right of either Party. Disputes arising under or relating to this disclosure are subject to the **Mutual Arbitration Agreement**, including its seat in **Duval County, Florida**.
 
 ---
 
@@ -58,12 +59,6 @@ Contractor acknowledges that Wrrapd is relying on this disclosure in connection 
 
 ---
 
-**BY SIGNING BELOW, CONTRACTOR CERTIFIES THAT THE DISCLOSURE ABOVE IS TRUE AND COMPLETE AND AGREES TO THE ONGOING DUTY TO UPDATE.**
+---
 
-### CONTRACTOR / WRAPSTAR
-
-Legal name: {{text|1|*|Signer|name}}  
-Signature: {{sign|1|*|Signer|signature}}  
-Date: {{date|1|*|Signer|date}}
-
-**Selected disclosure (type “No funding” or “Funding exists”):** {{text|1|*|Signer|funding_choice}}
+**Electronic acceptance.** This document is accepted electronically with the Services Agreement via **I Accept** in the Wrrapd onboarding Platform (ESIGN Act). No Company countersignature is required on the applicant’s copy.

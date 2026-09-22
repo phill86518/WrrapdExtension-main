@@ -90,6 +90,8 @@ Never commit real API keys to Git.
 | `wordpress/wrrapd-wrapstars-apply.js` | `mu-plugins/wrrapd-wrapstars-apply.js` |
 | `wordpress/wrrapd-wrapstars-ops-api.php` | `mu-plugins/wrrapd-wrapstars-ops-api.php` |
 | `wordpress/wrrapd-boldsign.php` | `mu-plugins/wrrapd-boldsign.php` |
+| `wordpress/wrrapd-esign-agreements.php` | `mu-plugins/wrrapd-esign-agreements.php` |
+| `wordpress/legal-agreements/` (whole folder) | `mu-plugins/legal-agreements/` |
 | `wordpress/wrrapd-wrapstars.css` | `mu-plugins/wrrapd-wrapstars.css` |
 
 **SSH copy-paste** (adjust `WP_ROOT`):

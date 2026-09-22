@@ -6,8 +6,7 @@
 **Wrrapd, Inc.** — WrapStar Independent Contractor Network (Gift Wrapping Only · WrapStar App)  
 **Companion document** to the WrapStar Independent Contractor Technology Services Agreement (the “**Services Agreement**”)
 
-**Status:** Production draft for licensed counsel review before BoldSign upload.  
-**Brand PDF/HTML:** Use files in `branded/` (logo header + Fraunces) for review and export.
+**Notice / legal address:** 7901 4th Street N, Ste. 300, St. Petersburg, FL 33702-4399
 
 ---
 
@@ -19,7 +18,7 @@ By signing, Contractor agrees to follow this Code and Wrrapd’s published Platf
 
 ## 1. Professionalism and Respect
 
-1.1 Treat Wrrapd personnel, couriers or carriers who pick up staged orders (if you encounter them), and any other persons you meet in connection with wrapping work with courtesy and respect.
+1.1 Treat Wrrapd personnel, persons Wrrapd assigns for drop-off and collection, and any other persons you meet in connection with wrapping work with courtesy and respect.
 
 1.2 Maintain a clean, organized wrapping workspace.
 
@@ -37,15 +36,19 @@ By signing, Contractor agrees to follow this Code and Wrrapd’s published Platf
 
 ---
 
-## 3. WrapStar App, Proof, and Honesty
+## 3. WrapStar App, Live Session, Proof, and Honesty
 
-3.1 Use the **WrapStar App** as your primary tool for availability, handoff windows, status updates, messages, and proof uploads. Keep the App reasonably up to date and do not share your login.
+3.1 Use the **WrapStar App** as your primary tool for availability, handoff windows, status updates, messages, live session, and proof uploads. Keep the App reasonably up to date and do not share your login.
 
-3.2 Record and upload clear, authentic proof for every order as required by the Services Agreement—typically **unboxing/inspection**, **wrapping process**, and **finished gift** (including barcode label). You are **not** required to video-record receipt from or handoff to a JoyRider.
+3.2 Start a live session before unboxing. Keep the camera on the gift. If the live link drops, stop wrapping and restart. Record and upload clear, authentic proof for every order as required by the Services Agreement—typically **unboxing/inspection**, **wrapping process**, and **finished gift** (including barcode label). You are **not** required to video-record receipt from or handoff to the person Wrrapd assigns for collection.
 
 3.3 Never fabricate, edit misleadingly, reuse proof from another order, or misrepresent order status or completion in the App.
 
-3.4 Update order status truthfully and promptly in the WrapStar App, including when an order is ready for JoyRider pickup. Do not use bots, scripts, or other unauthorized automation. Affix the delivery barcode before staging for pickup.
+3.4 Update order status truthfully and promptly in the WrapStar App, including when an order is ready for collection. Do not use bots, scripts, or other unauthorized automation. Affix the delivery barcode before staging for pickup.
+
+3.5 If you will not wrap an accepted order, say so in the App immediately and stage every item for pickup within the published window. You have no right to keep goods for a pay dispute.
+
+3.6 Cancel an accepted window as soon as you know you cannot work, and no later than four (4) hours before start.
 
 ---
 
@@ -58,6 +61,8 @@ By signing, Contractor agrees to follow this Code and Wrrapd’s published Platf
 4.3 Never use, consume, gift, sell, or keep customer merchandise or flowers for personal purposes.
 
 4.4 Report damage, shortage, suspected tampering, or loss to Wrrapd promptly in accordance with the Services Agreement and Platform instructions.
+
+4.5 Stage goods at the door or wrapping entrance when Wrrapd demands return. Do not require anyone to enter your home.
 
 ---
 
@@ -89,7 +94,7 @@ By signing, Contractor agrees to follow this Code and Wrrapd’s published Platf
 
 7.2 Cooperate reasonably with Wrrapd investigations of quality, loss, or customer complaints.
 
-7.3 Respond to Wrrapd communications (including in-App notifications and messages) within published timeframes when you have active or assigned orders or have indicated availability in the App.
+7.3 Respond to Wrrapd communications (including in-App notifications and messages) within published timeframes when you have active or assigned orders or have indicated availability in the App. Submit next-week availability by **Friday 6:00 p.m. Eastern**. If you cannot work because of illness, bereavement, or emergency, notify Wrrapd **immediately** and stage all goods for backup pickup within two hours.
 
 ---
 
@@ -98,9 +103,10 @@ By signing, Contractor agrees to follow this Code and Wrrapd’s published Platf
 The following may result in immediate suspension or removal from the Platform and termination of the Services Agreement:
 
 - Discrimination, harassment, violence, or threats;  
-- Theft, conversion, or personal appropriation of customer goods;  
-- Failure to provide required proof, or submission of false proof;  
+- Theft, conversion, detention of goods, or personal appropriation of customer merchandise;  
+- Failure to provide required live session or proof, or submission of false proof;  
 - Sharing WrapStar App credentials or allowing others to operate your account;  
+- Silent no-show or repeated late cancels of accepted windows;  
 - Chronic poor quality, missed timeframes, or ratings below Wrrapd’s published standards;  
 - Unauthorized disclosure of customer or order information;  
 - Circumventing the Platform or misusing the WrapStar App in violation of the Services Agreement; or  
@@ -118,10 +124,6 @@ The following may result in immediate suspension or removal from the Platform an
 
 ---
 
-**BY SIGNING BELOW, CONTRACTOR ACKNOWLEDGES THAT CONTRACTOR HAS READ, UNDERSTANDS, AND AGREES TO FOLLOW THIS CODE OF CONDUCT AND PLATFORM GUIDELINES.**
+---
 
-### CONTRACTOR / WRAPSTAR
-
-Legal name: {{text|1|*|Signer|name}}  
-Signature: {{sign|1|*|Signer|signature}}  
-Date: {{date|1|*|Signer|date}}
+**Electronic acceptance.** This document is accepted electronically with the Services Agreement via **I Accept** in the Wrrapd onboarding Platform (ESIGN Act). No Company countersignature is required on the applicant’s copy.

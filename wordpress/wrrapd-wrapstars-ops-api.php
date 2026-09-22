@@ -377,6 +377,16 @@ function wrrapd_wrapstars_ops_serialize_application( $id ) {
 		'onboarding'                 => array(
 			'policiesSignedAt'    => wrrapd_wrapstars_get_meta( $id, 'policies_ack_at' ),
 			'policiesSignature'   => wrrapd_wrapstars_get_meta( $id, 'policies_signature' ),
+			// ESIGN clickwrap (Uber-style I Accept) for the full contractor agreement suite.
+			'esignSuite'          => wrrapd_wrapstars_get_meta( $id, 'esign_suite' ),
+			'esignVersion'        => wrrapd_wrapstars_get_meta( $id, 'esign_version' ),
+			'esignAcceptedAt'     => wrrapd_wrapstars_get_meta( $id, 'esign_accepted_at' ),
+			'esignTypedName'      => wrrapd_wrapstars_get_meta( $id, 'esign_typed_name' ),
+			'esignIp'             => wrrapd_wrapstars_get_meta( $id, 'esign_ip' ),
+			'esignUa'             => wrrapd_wrapstars_get_meta( $id, 'esign_ua' ),
+			'esignDocs'           => wrrapd_wrapstars_get_meta( $id, 'esign_docs' ),
+			'esignMethod'         => wrrapd_wrapstars_get_meta( $id, 'esign_method' ),
+			'icSignedAt'          => wrrapd_wrapstars_get_meta( $id, 'ic_signed_at' ),
 			'orientationScore'    => wrrapd_wrapstars_get_meta( $id, 'orientation_score' ),
 			'bgLegalName'         => wrrapd_wrapstars_get_meta( $id, 'bg_legal_name' ),
 			'bgOtherNames'        => wrrapd_wrapstars_get_meta( $id, 'bg_other_names' ),

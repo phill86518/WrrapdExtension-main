@@ -1218,6 +1218,16 @@ function wrrapd_should_output_seasonal_blocks() {
 	if ( is_admin() || is_paged() || is_404() ) {
 		return false;
 	}
+	// Hire / onboarding hosts share WP front-page flags — never inject shopper seasonal UI there.
+	if ( function_exists( 'wrrapd_wrapstars_is_portal_host' ) && wrrapd_wrapstars_is_portal_host() ) {
+		return false;
+	}
+	if ( function_exists( 'wrrapd_drivers_is_portal_host' ) && wrrapd_drivers_is_portal_host() ) {
+		return false;
+	}
+	if ( function_exists( 'wrrapd_wrapriders_is_portal_host' ) && wrrapd_wrapriders_is_portal_host() ) {
+		return false;
+	}
 	return is_front_page() || is_home();
 }
 

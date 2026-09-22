@@ -105,7 +105,8 @@
 			['Availability', fieldValue('availability')],
 			['Experience', fieldValue('delivery_experience')],
 			['Why Wrrapd', fieldValue('why_drive')],
-			['ID upload', fieldValue('gov_id')]
+			['ID upload', fieldValue('gov_id')],
+			['Driving record / abstract', fieldValue('driving_abstract')]
 		];
 		var html = '<dl>';
 		rows.forEach(function (row, idx) {

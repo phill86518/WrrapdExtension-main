@@ -146,3 +146,16 @@ git push origin main
 ```
 
 Then ensure SiteGround MU files are current (see CURRENT-STATE) and deploy `tracking-platform` to Cloud Run when Command Center code changes. **No PM2 restart** — `WrrapdServer` is untouched.
+
+## ESIGN click-to-accept (required for Agreements step)
+
+Also deploy:
+
+| Repo | SiteGround `mu-plugins/` |
+|------|--------------------------|
+| `wordpress/wrrapd-esign-agreements.php` | `wrrapd-esign-agreements.php` |
+| `wordpress/legal-agreements/` | `legal-agreements/` (entire folder) |
+| `wordpress/wrrapd-wrapstars.css` | `wrrapd-wrapstars.css` (ESIGN styles) |
+
+The Agreements onboarding step is Uber-style **I Accept** (ESIGN Act). BoldSign is no longer used for the IC packet (W-9 may still use BoldSign when configured).
+

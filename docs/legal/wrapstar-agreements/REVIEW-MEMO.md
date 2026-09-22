@@ -1,31 +1,32 @@
-# WrapStar Agreement Suite — Legal-Ops Review Memo
+# WrapStar Agreement Suite — Internal Ops Memo
 
-**Date:** July 15–18, 2026; **updated September 14, 2026** for current aggregator + JoyRider logistics model.  
-**Status:** Counsel-ready operational drafts for licensed Florida attorney final review. Not a substitute for legal advice.  
-**Aligned to:** `docs/WRAPSTARS-OPERATIONS-MODEL.md`, `docs/CONTRACTOR-HOURLY-PAY.md`, `docs/JOYRIDER-BARCODE-DELIVERY.md` (2026-09-13).
+**Date:** July 15–18, 2026; **updated September 22, 2026**.  
+**Audience:** Internal ops only — not for applicants.
+
+**Aligned to:** `docs/WRAPSTARS-OPERATIONS-MODEL.md`, `docs/CONTRACTOR-HOURLY-PAY.md`, `docs/JOYRIDER-BARCODE-DELIVERY.md`.
 
 ---
 
-## 1. Executive posture (Sep 2026)
+## 1. Executive posture
 
 | Topic | Production position |
 |-------|---------------------|
 | WrapStar role | **Gift wrapping only** — no driving, no PO Box pickup, no giftee contact |
-| Inbound / outbound | **JoyRider** drops packages and collects finished wraps at Contractor’s wrapping location / handoff windows |
-| Technology | **WrapStar App** (separate from consumer apps and JoyRider App) |
-| Proof | Unboxing / wrapping / finished gift + **barcode label**; **no** JoyRider handoff video |
-| Pay | **Hourly by ZIP** + **12 gifts/hour** pace (Compensation Schedule) |
+| Inbound / outbound | **JoyRider** drops packages and collects finished wraps at wrapping location |
+| Technology | **WrapStar App** |
+| Proof | Unboxing / wrapping / finished gift + **barcode label** |
+| Pay | **Hourly by ZIP** + **12 gifts/hour** pace |
 | Tips | **Not** part of WrapStar pay unless Schedule later changes |
-| Insurance | **No commercial mandate** in TSA §10 (product COI step may still conflict — align) |
-| Confidentiality | TSA §12 comprehensive (customer/gift/wrap + business/tech); indefinite survival for personal/gift data |
-| Arbitration seat | **Jacksonville, Duval County, Florida** |
-| Brand presentation | `branded/` — Wrrapd logo header + **Fraunces** |
+| Insurance | **No commercial mandate** in TSA §10 |
+| Confidentiality | TSA §12; indefinite survival for personal/gift data |
+| Arbitration seat | **Duval County, Florida** |
+| Signing | Blank signature / initials lines in each PDF (wet-ink or in-document e-sign) |
 
 ---
 
-## 2. Entity-name flag
+## 2. Entity name
 
-**Drafting default:** **Wrrapd, Inc.** Confirm vs LLC with counsel.
+**Drafting default:** **Wrrapd, Inc.** (confirm vs LLC if entity papers differ).
 
 ---
 
@@ -34,35 +35,19 @@
 | File | Role |
 |------|------|
 | `01_WrapStar_Technology_Services_Agreement.md` | Master IC — wrap-only |
-| `02_Mutual_Arbitration_Agreement.md` | Jacksonville / FL arbitration |
+| `02_Mutual_Arbitration_Agreement.md` | Duval County, FL arbitration |
 | `03_Background_Check_Authorization.md` | FCRA (no routine MVR) |
 | `04_WrapStar_Code_of_Conduct.md` | Behavioral guidelines |
 | `05_Third_Party_Litigation_Funding_Disclosure.md` | Funding disclosure |
-| `../contractor-compensation-schedule.md` | Shared hourly schedule |
+| `contractor-compensation-schedule.md` | Role pay schedule |
 | `../joyrider-agreements/` | Parallel JoyRider suite |
 
 ---
 
 ## 4. Sep 2026 amendments vs July drafts
 
-1. Replaced WrapStar PO Box / designee receive language with **JoyRider drop + pickup** at wrapping location.  
-2. Named **JoyRider** as the logistics counterpart; clarified flowers are purchased by JoyRiders.  
-3. Required **barcode** on finished gifts; finished = wrap + proof + barcode + ready for pickup.  
-4. Confirmed hourly ZIP + pace already in §8; tips still off by default.  
-5. Code of Conduct updated for JoyRider handoff / barcode language.
-
----
-
-## 5. Remaining product ↔ legal gap
-
-- Onboarding **insurance** step / orientation may still require $1M GL + bailee while TSA §10 says no commercial mandate. **Pick one** before BoldSign go-live.
-
----
-
-## 6. Counsel checklist
-
-- [ ] Confirm entity name and registered address  
-- [ ] Resolve insurance mandate vs product COI step  
-- [ ] Confirm FCRA CRA vendor insert  
-- [ ] Confirm AAA vs JAMS  
-- [ ] Align BoldSign envelope with onboarding UX  
+1. Replaced WrapStar PO Box / designee receive language with **JoyRider drop + pickup**.  
+2. Named **JoyRider** as logistics counterpart.  
+3. Required **barcode** on finished gifts.  
+4. Confirmed hourly ZIP + pace; tips off by default.  
+5. Availability / illness return-of-goods language in §16A.

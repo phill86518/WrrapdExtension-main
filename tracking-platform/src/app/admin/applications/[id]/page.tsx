@@ -397,6 +397,9 @@ export default async function AdminApplicationDetailPage({
               <p className="text-sm">Type: {driverApp.vehicleType || "—"}</p>
               <p className="text-sm">Smartphone: {driverApp.hasSmartphone || "—"}</p>
               <p className="text-sm">Driving record: {driverApp.cleanDrivingRecord || "—"}</p>
+              <p className="text-sm">
+                Driving abstract: {driverApp.hasDrivingAbstractFile ? "on file" : "no file"}
+              </p>
               <p className="text-sm">Bank ready: {driverApp.bankAccountReady || "—"}</p>
             </>
           ) : wrapriderApp ? (
@@ -421,6 +424,9 @@ export default async function AdminApplicationDetailPage({
               </p>
               <p className="text-sm">Smartphone: {wrapriderApp.hasSmartphone || "—"}</p>
               <p className="text-sm">Driving record: {wrapriderApp.cleanDrivingRecord || "—"}</p>
+              <p className="text-sm">
+                Driving abstract: {wrapriderApp.hasDrivingAbstractFile ? "on file" : "no file"}
+              </p>
               <p className="text-sm">Max distance: {wrapriderApp.deliveryMaxDistance || "—"}</p>
               <p className="mt-3 text-sm">Bank ready: {wrapriderApp.bankAccountReady || "—"}</p>
             </>
@@ -513,6 +519,43 @@ export default async function AdminApplicationDetailPage({
             ))}
           </ul>
           <p className="mt-2 text-xs text-slate-500">Current step: {app.onboardingStep || "—"}</p>
+          {(() => {
+            const esignAt =
+              onboarding?.esignAcceptedAt ||
+              driverApp?.esignAcceptedAt ||
+              wrapriderApp?.esignAcceptedAt ||
+              onboarding?.icSignedAt ||
+              driverApp?.icSignedAt ||
+              wrapriderApp?.icSignedAt;
+            const esignName =
+              onboarding?.esignTypedName ||
+              driverApp?.esignTypedName ||
+              wrapriderApp?.esignTypedName ||
+              onboarding?.policiesSignature;
+            const esignVersion =
+              onboarding?.esignVersion || driverApp?.esignVersion || wrapriderApp?.esignVersion;
+            const esignSuite =
+              onboarding?.esignSuite || driverApp?.esignSuite || wrapriderApp?.esignSuite;
+            const esignIp = onboarding?.esignIp || driverApp?.esignIp || wrapriderApp?.esignIp;
+            const esignMethod =
+              onboarding?.esignMethod || driverApp?.esignMethod || wrapriderApp?.esignMethod;
+            if (!esignAt && !esignName && !esignVersion) return null;
+            return (
+              <dl className="mt-4 grid gap-2 rounded-lg border border-emerald-200 bg-emerald-50/60 p-3 text-sm sm:grid-cols-2">
+                <div className="sm:col-span-2">
+                  <dt className="text-xs uppercase text-emerald-800">Agreements (ESIGN I Accept)</dt>
+                  <dd className="text-emerald-950">
+                    {formatDateTimeNy(esignAt) || esignAt || "—"}
+                    {esignName ? ` · ${esignName}` : ""}
+                    {esignVersion ? ` · packet ${esignVersion}` : ""}
+                    {esignSuite ? ` · ${esignSuite}` : ""}
+                    {esignMethod ? ` · ${esignMethod}` : ""}
+                    {esignIp ? ` · IP ${esignIp}` : ""}
+                  </dd>
+                </div>
+              </dl>
+            );
+          })()}
           {wrapriderApp ? (
             <dl className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
               <div>
@@ -526,6 +569,10 @@ export default async function AdminApplicationDetailPage({
               <div>
                 <dt className="text-xs uppercase text-slate-500">Identity & license</dt>
                 <dd>{wrapriderApp.hasIdFile ? "ID on file" : "no file"}</dd>
+              </div>
+              <div>
+                <dt className="text-xs uppercase text-slate-500">Driving abstract</dt>
+                <dd>{wrapriderApp.hasDrivingAbstractFile ? "on file" : "no file"}</dd>
               </div>
               <div className="sm:col-span-2">
                 <dt className="text-xs uppercase text-slate-500">Wrapping location</dt>

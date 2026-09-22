@@ -30,6 +30,10 @@ $wrrapd_boldsign = dirname( __FILE__ ) . '/wrrapd-boldsign.php';
 if ( is_readable( $wrrapd_boldsign ) ) {
 	require_once $wrrapd_boldsign;
 }
+$wrrapd_esign = dirname( __FILE__ ) . '/wrrapd-esign-agreements.php';
+if ( file_exists( $wrrapd_esign ) ) {
+	require_once $wrrapd_esign;
+}
 $wrrapd_apply = dirname( __FILE__ ) . '/wrrapd-wrapstars-apply.php';
 if ( is_readable( $wrrapd_apply ) ) {
 	require_once $wrrapd_apply;
@@ -127,7 +131,7 @@ define( 'WRRAPD_WRAPSTARS_CPT', 'wrrapd_wrapstar_app' );
  * shown to the WrapStar), path (URL under pros host), group (rail section header).
  *
  * Renderers: `wrrapd_wrapstars_render_step_<key>()`; submit handlers live in
- * `wrrapd_wrapstars_process_onboarding_step()`. BoldSign e-sign: agreement, w9.
+ * `wrrapd_wrapstars_process_onboarding_step()`. ESIGN clickwrap: agreement suite. BoldSign: w9 (when configured).
  * Legacy key `po_box` is an alias of `workspace` (meta `step_po_box` still counts).
  *
  * Full map + edit guide: docs/WRAPSTAR-ONBOARDING-PORTAL.md
@@ -137,8 +141,8 @@ define( 'WRRAPD_WRAPSTARS_CPT', 'wrrapd_wrapstar_app' );
 function wrrapd_wrapstars_onboarding_step_registry() {
 	return array(
 		'welcome'     => array( 'label' => 'Welcome', 'short' => 'What to expect', 'minutes' => 2, 'path' => '/onboarding/', 'group' => 'Get started' ),
-		'agreement'   => array( 'label' => 'Independent Contractor Agreement', 'short' => 'Review & e-sign', 'minutes' => 8, 'path' => '/onboarding/agreement/', 'group' => 'Agreements' ),
-		'policies'    => array( 'label' => 'WrapStar Standards & Policies', 'short' => 'Read & acknowledge', 'minutes' => 6, 'path' => '/onboarding/policies/', 'group' => 'Agreements' ),
+		'agreement'   => array( 'label' => 'Contractor Agreements', 'short' => 'Review & I Accept', 'minutes' => 12, 'path' => '/onboarding/agreement/', 'group' => 'Agreements' ),
+		'policies'    => array( 'label' => 'Standards & Policies', 'short' => 'Read & acknowledge', 'minutes' => 6, 'path' => '/onboarding/policies/', 'group' => 'Agreements' ),
 		'orientation' => array( 'label' => 'Orientation & Quiz', 'short' => 'Learn the workflow', 'minutes' => 10, 'path' => '/onboarding/orientation/', 'group' => 'Training' ),
 		'background'  => array( 'label' => 'Background Check', 'short' => 'Authorize screening', 'minutes' => 3, 'path' => '/onboarding/background/', 'group' => 'Verification' ),
 		'insurance'   => array( 'label' => 'Proof of Insurance', 'short' => 'Upload your certificate', 'minutes' => 5, 'path' => '/onboarding/insurance/', 'group' => 'Verification' ),
@@ -2003,6 +2007,28 @@ function wrrapd_wrapstars_process_onboarding_step() {
 			$done( 'welcome' );
 			break;
 
+		case 'agreement':
+			if ( ! function_exists( 'wrrapd_esign_validate_acceptance' ) ) {
+				$fail( 'Agreement module missing. Contact support.' );
+				return;
+			}
+			$esign = wrrapd_esign_validate_acceptance( 'wrapstar' );
+			if ( empty( $esign['ok'] ) ) {
+				$fail( $esign['error'] ?? 'Please accept the agreements to continue.' );
+				return;
+			}
+			wrrapd_esign_store_meta(
+				static function ( $k, $v ) use ( $app_id ) {
+					wrrapd_wrapstars_set_meta( $app_id, $k, $v );
+				},
+				$esign['meta']
+			);
+			// Mirror legacy fields Command Center may show.
+			wrrapd_wrapstars_set_meta( $app_id, 'policies_signature', $esign['meta']['esign_typed_name'] );
+			wrrapd_wrapstars_set_meta( $app_id, 'ic_signed_at', $esign['meta']['esign_accepted_at'] );
+			$done( 'agreement' );
+			break;
+
 		case 'policies':
 			$sections = array_keys( wrrapd_wrapstars_policy_sections() );
 			$acks     = isset( $_POST['policy_ack'] ) && is_array( $_POST['policy_ack'] ) ? array_map( 'sanitize_key', wp_unslash( $_POST['policy_ack'] ) ) : array();
@@ -3639,7 +3665,20 @@ function wrrapd_wrapstars_shortcode_onboarding( $atts ) {
 			wrrapd_wrapstars_render_step_welcome( $app->ID );
 			break;
 		case 'agreement':
-			echo do_shortcode( '[wrrapd_wrapstar_sign doc="ic_agreement"]' );
+			if ( function_exists( 'wrrapd_esign_render_clickwrap' ) ) {
+				wrrapd_esign_render_clickwrap(
+					array(
+						'suite'         => 'wrapstar',
+						'nonce_action'  => 'wrrapd_ws_onboarding',
+						'nonce_field'   => 'wrrapd_ws_nonce',
+						'action_name'   => 'wrrapd_ws_action',
+						'action_value'  => 'onboarding_step',
+						'step'          => 'agreement',
+					)
+				);
+			} else {
+				echo '<div class="wrrapd-wrapstars-alert wrrapd-wrapstars-alert--err">Agreement module missing.</div>';
+			}
 			break;
 		case 'policies':
 			wrrapd_wrapstars_render_step_policies( $app->ID );
@@ -3737,8 +3776,8 @@ function wrrapd_wrapstars_render_step_welcome( $app_id ) {
 	}
 	?>
 	<div class="wrrapd-wrapstars-card wrrapd-wrapstars-card--hero wrrapd-wrapstars-welcome">
-		<p class="wrrapd-wrapstars-welcome__hello">Welcome, <?php echo esc_html( $greet === 'there' ? 'WrapStar' : $greet ); ?>!</p>
-		<p class="wrrapd-wrapstars-ob-lead">You&rsquo;re in. We&rsquo;re thrilled to have you join the founding network of WrapStars. This short onboarding takes care of the agreements, verification, and setup details we need before your first gifts arrive.</p>
+		<p class="wrrapd-wrapstars-welcome__hello">Welcome, <?php echo esc_html( $greet === 'there' ? 'there' : $greet ); ?>!</p>
+		<p class="wrrapd-wrapstars-ob-lead">Congratulations on being invited to continue. You are an <strong>applicant</strong> completing onboarding for the gift-wrapping contractor track. You are not engaged as a WrapStar until Wrrapd activates you after this process. This short flow covers agreements, verification, and setup.</p>
 		<p class="wrrapd-wrapstars-ob-lead">It takes about <strong><?php echo esc_html( (string) $total ); ?> minutes</strong> in total. You can stop at any point — every step is saved as soon as you finish it.</p>
 
 		<div class="wrrapd-wrapstars-ob-overview">
@@ -3773,7 +3812,7 @@ function wrrapd_wrapstars_render_step_policies( $app_id ) {
 	$sections = wrrapd_wrapstars_policy_sections();
 	?>
 	<div class="wrrapd-wrapstars-card">
-		<p class="wrrapd-wrapstars-ob-lead">These are the standards every WrapStar works to. Read each section and tick the box to acknowledge it, then sign at the bottom.</p>
+		<p class="wrrapd-wrapstars-ob-lead">These are the standards every gift-wrapping contractor on this track works to. Read each section and tick the box to acknowledge it, then sign at the bottom.</p>
 		<form method="post" class="wrrapd-wrapstars-form wrrapd-wrapstars-ob-actions">
 			<?php wp_nonce_field( 'wrrapd_ws_onboarding', 'wrrapd_ws_nonce' ); ?>
 			<input type="hidden" name="wrrapd_ws_action" value="onboarding_step" />
@@ -3805,7 +3844,7 @@ function wrrapd_wrapstars_render_step_orientation( $app_id ) {
 	$modules   = wrrapd_wrapstars_orientation_modules();
 	?>
 	<div class="wrrapd-wrapstars-card">
-		<p class="wrrapd-wrapstars-ob-lead">Here is exactly how a WrapStar order flows, start to finish. Read the four short modules, then pass the quiz with <strong>80% or higher</strong> (you can retake it).</p>
+		<p class="wrrapd-wrapstars-ob-lead">Here is exactly how a gift-wrapping order flows on this track, start to finish. Read the four short modules, then pass the quiz with <strong>80% or higher</strong> (you can retake it).</p>
 		<div class="wrrapd-wrapstars-ob-modules">
 			<?php foreach ( $modules as $module ) : ?>
 				<details class="wrrapd-wrapstars-ob-module" open>

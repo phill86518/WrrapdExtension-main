@@ -24,7 +24,7 @@ export function hireRoleLabelPlural(role: HireRole): string {
 
 export const WRAPSTAR_ONBOARDING_STEP_LABELS: Record<string, string> = {
   welcome: "Welcome",
-  agreement: "IC Agreement",
+  agreement: "Agreements (ESIGN I Accept)",
   policies: "Standards & Policies",
   orientation: "Orientation & Quiz",
   background: "Background Check",
@@ -41,7 +41,7 @@ export const WRAPSTAR_ONBOARDING_STEP_LABELS: Record<string, string> = {
 /** WrapRider onboarding (pros.wrrapd.com/wraprider-onboarding) — see wrrapd_wrapriders_onboarding_steps(). */
 export const WRAPRIDER_ONBOARDING_STEP_LABELS: Record<string, string> = {
   welcome: "Welcome & Overview",
-  agreement: "WrapRider IC Agreement",
+  agreement: "Agreements (ESIGN I Accept)",
   policies: "Wrap & Delivery Standards",
   orientation: "Orientation & Quiz",
   background: "Background Check",

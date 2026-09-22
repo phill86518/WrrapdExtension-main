@@ -6,8 +6,7 @@
 **Wrrapd, Inc.** — JoyRider Independent Contractor Network (Logistics · JoyRider App)  
 **Companion document** to the JoyRider Independent Contractor Agreement (the “**Services Agreement**”)
 
-**Status:** Production draft for licensed counsel review before BoldSign upload.  
-**Brand PDF/HTML:** Use files in `branded/` (logo header + Fraunces) for review and export.
+**Notice / legal address:** 7901 4th Street N, Ste. 300, St. Petersburg, FL 33702-4399
 
 ---
 
@@ -19,7 +18,7 @@ By signing, Contractor agrees to follow this Code and Wrrapd’s published Platf
 
 ## 1. Professionalism and Respect
 
-1.1 Treat WrapStars, Wrrapd personnel, giftees, and members of the public with courtesy and respect.
+1.1 Treat wrapping-location contacts, Wrrapd personnel, giftees, and members of the public with courtesy and respect.
 
 1.2 Maintain a clean, roadworthy vehicle and professional presentation when making deliveries.
 
@@ -41,11 +40,15 @@ By signing, Contractor agrees to follow this Code and Wrrapd’s published Platf
 
 3.1 Use the **JoyRider App** as your primary tool for work windows, navigation aids, barcode scans, status updates, messages, and delivery proof. Keep the App reasonably up to date and do not share your login.
 
-3.2 Scan each gift barcode before final delivery as the App requires. Never fabricate scans, scan the wrong gift to conceal a miss, or misrepresent delivery completion.
+3.2 Before leaving for the giftee, scan **every** expected barcode for that stop. Never fabricate scans, scan the wrong gift to conceal a miss, or misrepresent delivery completion. A wrong-route scan means check the label — do not proceed on that stop.
 
-3.3 Capture required delivery proof (for example, a photo) honestly and promptly.
+3.3 Capture required delivery proof (for example, a door scan and a photo) honestly and promptly.
 
 3.4 Do not use bots, scripts, or other unauthorized automation.
+
+3.5 If you accept a load and then will not deliver it, say so in the App immediately and stage every item for pickup. You have no right to keep goods for a pay dispute.
+
+3.6 Cancel an accepted window as soon as you know you cannot work, and no later than four (4) hours before start.
 
 ---
 
@@ -59,13 +62,15 @@ By signing, Contractor agrees to follow this Code and Wrrapd’s published Platf
 
 4.4 Report damage, shortage, suspected tampering, or loss to Wrrapd promptly per Platform instructions.
 
+4.5 Stage goods at the curb, wrapping entrance, or hub Wrrapd designates when Wrrapd demands return.
+
 ---
 
-## 5. Customer and WrapStar Interactions
+## 5. Customer and Wrapping-Location Interactions
 
-5.1 Interact with giftees only as needed to complete delivery. Do not solicit personal contact information for non-delivery purposes.
+5.1 Interact with giftees only as needed to complete delivery. Do not solicit personal contact information for non-delivery purposes. Do not enter a home.
 
-5.2 At WrapStar handoffs, be punctual for agreed windows, be courteous, and do not pressure WrapStars to skip documentation or labeling.
+5.2 At wrapping-location handoffs, be punctual for agreed windows, be courteous, and do not pressure anyone to skip documentation or labeling.
 
 5.3 Do not discuss gift contents, who is gifting to whom, PO Box details, or Wrrapd methods with unauthorized persons.
 
@@ -73,7 +78,7 @@ By signing, Contractor agrees to follow this Code and Wrrapd’s published Platf
 
 ## 6. Confidentiality and Privacy (Conduct Reminder)
 
-6.1 Treat addresses, recipient names, barcode data, WrapStar locations, PO Box / hub designations, and App screens as **strictly confidential**.
+6.1 Treat addresses, recipient names, barcode data, wrapping locations, PO Box / hub designations, and App screens as **strictly confidential**.
 
 6.2 Do not post delivery photos that identify a recipient or home in a way that discloses private information beyond what Wrrapd’s proof process requires.
 
@@ -91,11 +96,11 @@ By signing, Contractor agrees to follow this Code and Wrrapd’s published Platf
 
 ## 8. Compliance and Cooperation
 
-8.1 Comply with all applicable laws and with Wrrapd’s onboarding, screening, license, vehicle-insurance, and tax requirements.
+8.1 Comply with all applicable laws and with Wrrapd’s onboarding, screening, license, vehicle-insurance, driving-abstract, and tax requirements.
 
 8.2 Cooperate reasonably with Wrrapd investigations of quality, loss, safety, or customer complaints.
 
-8.3 Respond to Wrrapd communications (including in-App notifications) within published timeframes when you have active or accepted windows.
+8.3 Respond to Wrrapd communications (including in-App notifications) within published timeframes when you have active or accepted windows. Submit next-week availability by **Friday 6:00 p.m. Eastern**. If you cannot work because of illness, bereavement, or emergency, notify Wrrapd **immediately** and make all packages available for backup pickup within two hours.
 
 ---
 
@@ -105,13 +110,14 @@ The following may result in immediate suspension or removal from the Platform an
 
 - Discrimination, harassment, violence, or threats;  
 - Unsafe or impaired driving;  
-- Theft, conversion, or personal appropriation of customer goods;  
+- Theft, conversion, detention of goods, or personal appropriation of customer merchandise;  
 - Failed or fabricated scans or delivery proof;  
 - Sharing JoyRider App credentials or allowing others to operate your account;  
 - Opening finished wraps without authorization;  
+- Silent no-show or repeated late cancels of accepted windows;  
 - Unauthorized disclosure of customer, gift, or logistics information;  
 - Circumventing the Platform or misusing the JoyRider App; or  
-- Any conduct that materially harms customers, WrapStars, or Wrrapd’s reputation or operations.
+- Any conduct that materially harms customers or Wrrapd’s reputation or operations.
 
 ---
 
@@ -125,10 +131,6 @@ The following may result in immediate suspension or removal from the Platform an
 
 ---
 
-**BY SIGNING BELOW, CONTRACTOR ACKNOWLEDGES THAT CONTRACTOR HAS READ, UNDERSTANDS, AND AGREES TO FOLLOW THIS CODE OF CONDUCT AND SAFETY GUIDELINES.**
+---
 
-### CONTRACTOR / JOYRIDER
-
-Legal name: {{text|1|*|Signer|name}}  
-Signature: {{sign|1|*|Signer|signature}}  
-Date: {{date|1|*|Signer|date}}
+**Electronic acceptance.** This document is accepted electronically with the Services Agreement via **I Accept** in the Wrrapd onboarding Platform (ESIGN Act). No Company countersignature is required on the applicant’s copy.

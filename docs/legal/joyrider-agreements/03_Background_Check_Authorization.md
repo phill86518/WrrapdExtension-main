@@ -6,8 +6,8 @@
 **Wrrapd, Inc.** — JoyRider Independent Contractor Screening (Logistics / Delivery Role)  
 **Companion document** to the JoyRider Independent Contractor Agreement
 
-**Status:** Production draft for licensed counsel review before BoldSign upload.  
-**Brand PDF/HTML:** Use files in `branded/` (logo header + Fraunces) for review and export.  
+**Notice / legal address:** 7901 4th Street N, Ste. 300, St. Petersburg, FL 33702-4399
+
 **Important:** Part A is a standalone disclosure. Part B is a separate authorization. Do not merge these parts when converting to PDF for FCRA compliance.
 
 ---
@@ -29,7 +29,7 @@ An **investigative consumer report** is a consumer report in which information a
 
 Wrrapd may obtain such reports **before** you begin providing services and **periodically during** your engagement, consistent with applicable law.
 
-**Note:** The JoyRider role includes driving. Wrrapd routinely may obtain motor vehicle records for JoyRiders. If your role changes, Wrrapd may provide an updated disclosure before obtaining additional categories of reports.
+**Note:** The JoyRider role includes driving. Wrrapd routinely may obtain motor vehicle records for JoyRiders. Applicants also upload an official driving record / abstract with the application. If your role changes, Wrrapd may provide an updated disclosure before obtaining additional categories of reports.
 
 Wrrapd will use a third-party consumer reporting agency (the “**Agency**”). When Wrrapd designates an Agency, Wrrapd will provide the Agency’s name, address, and telephone number in the Platform, onboarding materials, or a supplemental notice. You may contact the Agency regarding your report as permitted by the FCRA.
 
@@ -57,7 +57,7 @@ I understand that:
 - I may dispute inaccurate or incomplete information with the Agency as provided by the FCRA; and  
 - This authorization remains in effect during my application and engagement unless revoked in writing, except that Wrrapd may retain reports and related records as required by law or for legitimate business purposes.
 
-I certify that the identifying information I provide for screening (including full legal name, date of birth, addresses, driver’s license information, and government identification as requested) is true and complete.
+I certify that the identifying information I provide for screening (including full legal name, date of birth, addresses, driver’s license information, driving abstract, and government identification as requested) is true and complete.
 
 I consent to background checks, motor vehicle record checks, and lawful ongoing monitoring as a condition of my application and engagement as a JoyRider.
 
@@ -65,18 +65,24 @@ I consent to background checks, motor vehicle record checks, and lawful ongoing 
 
 **Applicant / Contractor identifying information (for screening):**
 
-Full legal name: {{text|1|*|Signer|name}}  
-Other names used (if any): {{text|1| |Signer|aka}}  
-Date of birth (MM/DD/YYYY): {{text|1|*|Signer|dob}}  
-Driver’s license number / state: {{text|1|*|Signer|dl}}  
-Last four digits of SSN (if requested by Agency): {{text|1| |Signer|ssn4}}  
-Current address: {{text|1|*|Signer|address}}  
-Email: {{text|1|*|Signer|email}}  
-Phone: {{text|1|*|Signer|phone}}
+Full legal name: ________________________________  
+Other names used (if any): ______________________________________  
+Date of birth (MM/DD/YYYY): ____________________  
+Driver’s license number / state: ________________________________  
+Last four digits of SSN (if requested by Agency): ________  
+Current address: ________________________________  
+Email: ________________________________  
+Phone: ________________________________
 
-**Signature (authorization):** {{sign|1|*|Signer|signature}}  
-**Date:** {{date|1|*|Signer|date}}
+
+<div class="sig-block">
+<p class="sig-line">_______________________________</p>
+<p class="sig-under">Signature (authorization)</p>
+<p class="sig-spacer">&nbsp;</p>
+<p class="sig-line sig-line--date">____________________</p>
+<p class="sig-date-label">date</p>
+</div>
 
 ---
 
-*Wrrapd, Inc. does not require a Company signature on this authorization. Retain with Contractor’s onboarding file.*
+**Electronic acceptance.** This document is accepted electronically with the Services Agreement via **I Accept** in the Wrrapd onboarding Platform (ESIGN Act). No Company countersignature is required on the applicant’s copy.

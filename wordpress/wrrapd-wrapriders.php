@@ -23,6 +23,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+$wrrapd_esign = dirname( __FILE__ ) . '/wrrapd-esign-agreements.php';
+if ( file_exists( $wrrapd_esign ) ) {
+	require_once $wrrapd_esign;
+}
+
 define( 'WRRAPD_WRAPRIDERS_BUILD', '2026-09-20-apply-contrast' );
 define( 'WRRAPD_WRAPRIDERS_INVITE_TTL_DAYS', 15 );
 define( 'WRRAPD_WRAPRIDERS_CPT', 'wrrapd_wraprider_app' );
@@ -96,7 +101,7 @@ if ( is_readable( $wrrapd_wr_ops ) ) {
 function wrrapd_wrapriders_onboarding_steps() {
 	return array(
 		'welcome'     => 'Welcome & Overview',
-		'agreement'   => 'WrapRider Independent Contractor Agreement',
+		'agreement'   => 'Contractor Agreements',
 		'policies'    => 'Wrap & Delivery Standards',
 		'orientation' => 'Orientation & Quiz',
 		'background'  => 'Background Check',
@@ -156,7 +161,7 @@ function wrrapd_wrapriders_request_path() {
 function wrrapd_wrapriders_screen_for_path( $path ) {
 	$path = (string) $path;
 	if ( preg_match( '#^/wraprider-onboarding(/|$)#', $path ) ) {
-		return array( 'shortcode' => '[wrrapd_wraprider_onboarding]', 'title' => 'WrapRider onboarding · Wrrapd', 'noindex' => true );
+		return array( 'shortcode' => '[wrrapd_wraprider_onboarding]', 'title' => 'Onboarding · Wrrapd', 'noindex' => true );
 	}
 	if ( preg_match( '#^/wraprider/apply(/|$)#', $path ) ) {
 		return array( 'shortcode' => '[wrrapd_wraprider_apply]', 'title' => 'Apply to become a WrapRider · Wrrapd', 'noindex' => false );
@@ -1022,10 +1027,31 @@ function wrrapd_wrapriders_process_onboarding_step() {
 	if ( ! wrrapd_wrapriders_can_access_step( $app->ID, $step ) ) {
 		return;
 	}
-	$placeholders = array( 'policies', 'background', 'identity', 'tax_1099', 'bank_payout', 'agreement', 'w9' );
+	$placeholders = array( 'policies', 'background', 'identity', 'tax_1099', 'bank_payout', 'w9' );
 	if ( $step === 'welcome' ) {
 		wrrapd_wrapriders_mark_step_complete( $app->ID, 'welcome' );
 		wp_safe_redirect( wrrapd_wrapriders_onboarding_step_url( 'agreement' ) );
+		exit;
+	}
+	if ( $step === 'agreement' ) {
+		if ( ! function_exists( 'wrrapd_esign_validate_acceptance' ) ) {
+			$GLOBALS['wrrapd_wr_ob_error'] = 'Agreement module missing. Contact support.';
+			return;
+		}
+		$esign = wrrapd_esign_validate_acceptance( 'wraprider' );
+		if ( empty( $esign['ok'] ) ) {
+			$GLOBALS['wrrapd_wr_ob_error'] = $esign['error'] ?? 'Please accept the agreements to continue.';
+			return;
+		}
+		wrrapd_esign_store_meta(
+			static function ( $k, $v ) use ( $app ) {
+				wrrapd_wrapriders_set_meta( $app->ID, $k, $v );
+			},
+			$esign['meta']
+		);
+		wrrapd_wrapriders_set_meta( $app->ID, 'ic_signed_at', $esign['meta']['esign_accepted_at'] );
+		wrrapd_wrapriders_mark_step_complete( $app->ID, 'agreement' );
+		wp_safe_redirect( wrrapd_wrapriders_onboarding_step_url( wrrapd_wrapriders_next_onboarding_step( 'agreement' ) ) );
 		exit;
 	}
 	if ( in_array( $step, $placeholders, true ) ) {
@@ -1334,7 +1360,7 @@ function wrrapd_wrapriders_render_change_password_gate() {
 	<div class="wrrapd-wrapstars wrrapd-wrapriders">
 		<div class="wrrapd-wrapstars-card">
 			<h1>Choose your password</h1>
-			<p>For your security, set a new password before continuing WrapRider onboarding.</p>
+			<p>For your security, set a new password before continuing Onboarding.</p>
 			<?php if ( $err ) : ?>
 				<div class="wrrapd-wrapstars-alert wrrapd-wrapstars-alert--err"><?php echo esc_html( $err ); ?></div>
 			<?php endif; ?>
@@ -1447,8 +1473,8 @@ function wrrapd_wrapriders_render_step_welcome( $app_id ) {
 	$greet = wrrapd_wrapriders_greeting_name( $app_id );
 	?>
 	<div class="wrrapd-wrapstars-card wrrapd-wrapstars-card--hero">
-		<p class="wrrapd-wrapstars-welcome__hello">Dear <?php echo esc_html( $greet === 'there' ? 'WrapRider' : $greet ); ?>,</p>
-		<p class="wrrapd-wrapstars-ob-lead">Welcome to the Wrrapd WrapRider network. This onboarding confirms your agreement, screening, vehicle insurance, wrapping space, tax, and payout details before you can accept wrap and delivery offers.</p>
+		<p class="wrrapd-wrapstars-welcome__hello">Dear <?php echo esc_html( $greet === 'there' ? 'there' : $greet ); ?>,</p>
+		<p class="wrrapd-wrapstars-ob-lead">Congratulations on being invited to continue. You are an <strong>applicant</strong> completing onboarding for the wrap-and-deliver contractor track. You are not engaged as a WrapRider until Wrrapd activates you. </p>
 		<p class="wrrapd-wrapstars-ob-lead">Complete each step promptly so ops can activate your account. After activation the same email and password open the WrapRider app.</p>
 		<form method="post" class="wrrapd-wrapstars-ob-actions">
 			<?php wp_nonce_field( 'wrrapd_wr_onboarding', 'wrrapd_wr_nonce' ); ?>
@@ -1832,7 +1858,7 @@ function wrrapd_wrapriders_shortcode_thankyou() {
 				<li>Your application is <strong>under review</strong>.</li>
 				<li>Decisions are typically made within <strong>about 7 days</strong>.</li>
 				<li>We may contact you for a brief interview.</li>
-				<li>If approved, you will receive login credentials to start WrapRider onboarding.</li>
+				<li>If approved, you will receive login credentials to start Onboarding.</li>
 			</ul>
 			<p class="wrrapd-wrapstars-dasher-thanks__note">There is no login until you are approved — we will email you when it is time.</p>
 			<div class="wrrapd-wrapstars-thanks-actions">
@@ -1939,7 +1965,7 @@ function wrrapd_wrapriders_shortcode_onboarding( $atts ) {
 	?>
 	<div class="wrrapd-wrapstars wrrapd-wrapriders wrrapd-wrapstars-onboarding">
 		<aside class="wrrapd-wrapstars-ob-nav">
-			<p class="wrrapd-wrapstars-ob-nav__title">WrapRider onboarding</p>
+			<p class="wrrapd-wrapstars-ob-nav__title">Onboarding</p>
 			<ol>
 				<?php foreach ( $labels as $key => $label ) : ?>
 					<li class="<?php echo wrrapd_wrapriders_step_complete( $app->ID, $key ) ? 'is-done' : ( $key === $step ? 'is-current' : '' ); ?>">
@@ -1957,6 +1983,21 @@ function wrrapd_wrapriders_shortcode_onboarding( $atts ) {
 			<?php
 			if ( $step === 'welcome' ) {
 				wrrapd_wrapriders_render_step_welcome( $app->ID );
+			} elseif ( $step === 'agreement' ) {
+				if ( function_exists( 'wrrapd_esign_render_clickwrap' ) ) {
+					wrrapd_esign_render_clickwrap(
+						array(
+							'suite'        => 'wraprider',
+							'nonce_action' => 'wrrapd_wr_onboarding',
+							'nonce_field'  => 'wrrapd_wr_nonce',
+							'action_name'  => 'wrrapd_wr_action',
+							'action_value' => 'onboarding_step',
+							'step'         => 'agreement',
+						)
+					);
+				} else {
+					echo '<div class="wrrapd-wrapstars-alert wrrapd-wrapstars-alert--err">Agreement module missing.</div>';
+				}
 			} elseif ( $step === 'orientation' ) {
 				wrrapd_wrapriders_render_step_orientation( $app->ID );
 			} elseif ( $step === 'insurance' ) {

@@ -57,6 +57,16 @@ export type WrapstarApplication = {
   onboarding?: {
     policiesSignedAt?: string;
     policiesSignature?: string;
+    /** ESIGN clickwrap (full contractor agreement suite) */
+    esignSuite?: string;
+    esignVersion?: string;
+    esignAcceptedAt?: string;
+    esignTypedName?: string;
+    esignIp?: string;
+    esignUa?: string;
+    esignDocs?: string;
+    esignMethod?: string;
+    icSignedAt?: string;
     orientationScore?: string;
     bgLegalName?: string;
     bgOtherNames?: string;

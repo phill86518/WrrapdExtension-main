@@ -18,6 +18,7 @@ DOCS = [
     "03_Background_Check_Authorization.md",
     "04_WrapStar_Code_of_Conduct.md",
     "05_Third_Party_Litigation_Funding_Disclosure.md",
+    "contractor-compensation-schedule.md",
 ]
 
 
@@ -112,6 +113,49 @@ def md_to_html_body(md: str) -> str:
             i += 1
             continue
 
+
+        # Pass through raw HTML blocks (signature tables, etc.)
+        if stripped.startswith("<"):
+            close_lists()
+            chunk = [lines[i]]
+            i += 1
+            # gather until blank line after a closing tag, or until we leave HTML
+            open_depth = stripped.count("<") - stripped.count("</") - stripped.count("/>")
+            # simpler: accumulate while lines look like HTML or are inside a known block
+            while i < len(lines):
+                nxt_raw = lines[i]
+                nxt = nxt_raw.strip()
+                if not nxt:
+                    # keep blank lines inside HTML only if still in tag content
+                    if chunk and chunk[-1].strip().startswith("</"):
+                        break
+                    chunk.append(nxt_raw)
+                    i += 1
+                    continue
+                if nxt.startswith("<") or nxt.startswith("&") or (
+                    chunk and not chunk[-1].strip().startswith("</div>")
+                    and not re.match(r"^#{1,3} ", nxt)
+                    and nxt != "---"
+                ):
+                    # stop if we hit a new markdown heading/hr after closed block
+                    if nxt.startswith("#") or nxt == "---":
+                        break
+                    if (
+                        nxt.startswith("**")
+                        and chunk
+                        and any(c.strip().startswith("</div>") for c in chunk[-3:])
+                    ):
+                        break
+                    chunk.append(nxt_raw)
+                    i += 1
+                    if nxt.startswith("</div>") or nxt == "</div>":
+                        # peek: if next non-empty is markdown, stop after this
+                        break
+                    continue
+                break
+            out.append("\n".join(chunk))
+            continue
+
         close_lists()
         # Collect consecutive paragraph lines
         para = [stripped]
@@ -129,6 +173,14 @@ def md_to_html_body(md: str) -> str:
     close_lists()
     return "\n".join(out)
 
+
+
+def resolve_sig_src() -> str:
+    """Relative path for browser HTML; absolute file URI also works."""
+    local = Path(__file__).resolve().parent / "rp-signature.png"
+    if local.is_file():
+        return "rp-signature.png"
+    return "../samples/RP_signatures.jpg"
 
 def wrap_document(filename: str, body: str) -> str:
     title = filename.replace(".md", "").replace("_", " ")
@@ -160,7 +212,7 @@ def wrap_document(filename: str, body: str) -> str:
 {body}
     </main>
     <footer class="doc-footer">
-      © Wrrapd, Inc. · WrapStar contractor documentation · Jacksonville, Florida
+      © 2026 Wrrapd Inc. · WrapStar contractor documentation · Duval County, Florida
     </footer>
   </article>
 </body>
@@ -174,6 +226,7 @@ def main() -> None:
         src = ROOT / name
         md = src.read_text(encoding="utf-8")
         body = md_to_html_body(md)
+        body = body.replace("SIG_IMG_SRC", resolve_sig_src())
         html_doc = wrap_document(name, body)
         dest = OUT / name.replace(".md", ".html")
         dest.write_text(html_doc, encoding="utf-8")

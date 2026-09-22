@@ -69,7 +69,18 @@ export type WrapriderApplication = {
   mustChangePassword?: boolean;
   onboardingStep: string;
   onboardingStepsComplete: Record<string, boolean>;
+  /** ESIGN clickwrap acceptance (WrapRider agreement suite) */
+  esignSuite?: string;
+  esignVersion?: string;
+  esignAcceptedAt?: string;
+  esignTypedName?: string;
+  esignIp?: string;
+  esignUa?: string;
+  esignDocs?: string;
+  esignMethod?: string;
+  icSignedAt?: string;
   hasIdFile: boolean;
+  hasDrivingAbstractFile?: boolean;
   submittedAt: string;
   approvedAt: string;
   inviteSentAt?: string;

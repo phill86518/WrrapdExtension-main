@@ -11,6 +11,8 @@
 	line-height: 1.2 !important;
 	letter-spacing: -0.02em !important;
 	margin: 0 0 0.2rem !important;
+	/* Elementor widget 6466f5b text_color — do not let theme h1 { #333 } win */
+	color: #C40410 !important;
 }
 
 .elementor-element-6466f5b.wrrapd-season-headline-injected .wrrapd-season-hero-body,
@@ -777,7 +779,7 @@ body.wrrapd-season-july-fourth .wrrapd-hot-gifts-rail__card-title {
 	--wj-navy-2: #1b1466;
 	--wj-gold: #c9a227;
 	--wj-gold-soft: rgba(201, 162, 39, 0.35);
-	--wj-yellow: #fff300;
+	--wj-yellow: #f6b933;
 	--wj-ink: #1f1f33;
 	--wj-muted: #4f5566;
 	--wj-cream: #faf7f0;
@@ -1174,17 +1176,17 @@ body.wrrapd-season-july-fourth .wrrapd-hot-gifts-rail__card-title {
 	width: 100%;
 	margin: 0.85rem 0 0;
 	padding: 0.6rem 1rem;
-	border: 1px solid #000;
+	border: 1px solid #0f0351;
 	border-radius: 999px;
-	background: var(--wj-yellow);
-	color: #000 !important;
+	background: #f6b933;
+	color: #0f0351 !important;
 	font-size: 0.9rem;
-	box-shadow: 0 2px 0 rgba(0, 0, 0, 0.25);
+	box-shadow: 0 2px 0 rgba(15, 3, 81, 0.2);
 }
 
 .wrrapd-wj__cta--panel:hover {
-	background: #fff8a8;
-	border-color: #000;
+	background: #f8c44a;
+	border-color: #0f0351;
 }
 
 /* ---- Supporting guides ---------------------------------------------------- */
@@ -1402,19 +1404,19 @@ body.wrrapd-season-july-fourth .wrrapd-hot-gifts-rail__card-title {
 	align-items: center;
 	gap: 0.35rem;
 	padding: 0.55rem 1.25rem;
-	border: 1px solid #000;
+	border: 1px solid #0f0351;
 	border-radius: 999px;
-	background: var(--wj-yellow);
-	color: #000 !important;
+	background: #f6b933;
+	color: #0f0351 !important;
 	font-family: var(--wj-sans);
 	font-size: 0.88rem;
 	font-weight: 700;
 	text-decoration: none !important;
-	box-shadow: 0 2px 0 rgba(0, 0, 0, 0.25);
+	box-shadow: 0 2px 0 rgba(15, 3, 81, 0.2);
 }
 
 .wrrapd-wj__all:hover {
-	background: #fff8a8;
+	background: #f8c44a;
 }
 
 /* ---- Page-level hooks ----------------------------------------------------- */
@@ -1425,6 +1427,58 @@ body.wrrapd-season-july-fourth .wrrapd-hot-gifts-rail__card-title {
 body.page-id-5576 .elementor-element-c481830,
 body.page-id-5576 .elementor-element-3247e24 {
 	display: none !important;
+}
+
+/* Welcome intro — sit just above journal size, tighter leading. */
+body.page-id-5576 .elementor-element-5c3b382b,
+body.page-id-5576 .elementor-element-4c98976c,
+body.page-id-5576 .elementor-element-556f615d,
+body.page-id-5576 .elementor-element-4b38cef {
+	margin-top: 0 !important;
+	margin-bottom: 0 !important;
+}
+
+body.page-id-5576 .elementor-element-5c3b382b .elementor-heading-title {
+	font-family: Fraunces, Georgia, serif !important;
+	font-size: clamp(1.12rem, 2vw, 1.28rem) !important;
+	font-weight: 560 !important;
+	line-height: 1.2 !important;
+	margin: 0 0 0.2rem !important;
+}
+
+body.page-id-5576 .elementor-element-14df44c3,
+body.page-id-5576 .elementor-element-14df44c3 p,
+body.page-id-5576 .elementor-element-14df44c3 a {
+	font-family: Fraunces, Georgia, serif !important;
+	font-size: clamp(1.02rem, 1.55vw, 1.1rem) !important;
+	line-height: 1.32 !important;
+}
+
+body.page-id-5576 .elementor-element-14df44c3 p {
+	margin: 0 0 0.32rem !important;
+}
+
+body.page-id-5576 .elementor-element-14df44c3 p:last-child {
+	margin-bottom: 0.4rem !important;
+}
+
+body.page-id-5576 .elementor-element-4b38cef {
+	gap: 0.45rem !important;
+	margin-top: 0.15rem !important;
+	margin-bottom: 0.55rem !important;
+}
+
+body.page-id-5576 .elementor-element-eb0b795 .elementor-button,
+body.page-id-5576 .elementor-element-61e09db .elementor-button {
+	background: #f6b933 !important;
+	background-image: none !important;
+	background-color: #f6b933 !important;
+	color: #0f0351 !important;
+	font-size: 0.9rem !important;
+	font-weight: 700 !important;
+	line-height: 1.2 !important;
+	padding: 0.42rem 0.95rem !important;
+	min-height: 0 !important;
 }
 
 /* ---- Responsive ----------------------------------------------------------- */

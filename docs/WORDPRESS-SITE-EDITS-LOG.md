@@ -8,6 +8,13 @@ WordPress + Elementor + Hello theme content mostly lives **in the production dat
 
 ## Recent changes
 
+### 2026-09-20 — Chrome Web Store live listing (new extension id)
+
+- **Listing:** [Wrrapd on the Chrome Web Store](https://chromewebstore.google.com/detail/wrrapd/kdfcahdcgpaoohpgagpmpbgcmkdbocbg) — item id **`kdfcahdcgpaoohpgagpmpbgcmkdbocbg`** (public 3.0.10).
+- **MU plugin:** `WRRAPD_CHROME_EXTENSION_ID`, `wrrapd_chrome_extension_install_url()`, extension probe `EXT_ID`, footer CTA, wheel wrap promos, gift-wrap popup fallbacks. Build: **`2026-09-20-cws-live-listing`**.
+- **DB:** Replaced legacy item ids (`eampapdp…`, `gapdndgn…`, `ljpcgk…`) in **`dfy_posts.post_content`** and **`dfy_postmeta`** (Elementor `_elementor_data`, HTML widgets). Key pages: homepage **4857**, header **6078**, welcome **5576**.
+- **Deploy:** Upload `wrrapd-orders-bridge.php` (+ `wrrapd-gift-wrap-popup.php` if used) to SiteGround `mu-plugins/`, purge W3 cache. Re-paste gift-guides snippet if homepage HTML widget is not DB-driven.
+
 ### 2026-09-14 — Legal pages match affiliate disclosure layout
 
 - **Privacy (`/privacy/`, page 6772)** and **Ecomms (`/ecomms-policy/`, page 6889)** rebuilt with the same `wrrapd-page-shell` / cream card / Fraunces headings as Affiliate Disclosure. Template: `elementor_header_footer`. Legal wording unchanged.
@@ -100,7 +107,7 @@ WordPress + Elementor + Hello theme content mostly lives **in the production dat
 
 ### 2026-04 — Chrome Web Store: wire CTAs + welcome “here” link
 
-- **Listing:** [Wrrapd on the Chrome Web Store](https://chromewebstore.google.com/detail/wrrapd/eampapdpkmnnbfdojhmbpckpljnbpapo)
+- **Listing (superseded Sep 2026):** [Wrrapd on the Chrome Web Store](https://chromewebstore.google.com/detail/wrrapd/kdfcahdcgpaoohpgagpmpbgcmkdbocbg)
 - **Elementor:** Homepage **4857** button widget **`eb0b235`** and Theme Builder header **6078** button **`7f1bdc1`** — set **`settings.link.url`** to that listing (`is_external` true). Cleared Elementor cache for **4857** and **6078**.
 - **Welcome page 5576:** Replaced mistaken `chromewebstore.google.com/category/extensions` “here” link with the **direct Wrrapd listing** URL in `_elementor_data` and synced **`post_content`**.
 - **Homepage 4857 `post_content`:** Replaced placeholder **`href="#"`** on the FREE extension CTA with the listing URL (Elementor HTML cache).

@@ -3716,3 +3716,58 @@ body.wrrapd-drivers-portal.error404 .page-content {
 		animation: none !important;
 	}
 }
+
+/* --- ESIGN click-to-accept (Uber-style) --- */
+.wrrapd-esign__version { font-size: 0.85rem; color: #64748b; margin: 0 0 1rem; }
+.wrrapd-esign__docs { display: flex; flex-direction: column; gap: 0.65rem; margin: 0 0 1.5rem; }
+.wrrapd-esign__doc {
+  border: 1px solid #c5c9d1;
+  border-radius: 10px;
+  background: #fff;
+  overflow: hidden;
+}
+.wrrapd-esign__doc > summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  font-weight: 600;
+  color: #0c0638;
+  background: #f8fafc;
+}
+.wrrapd-esign__doc > summary::-webkit-details-marker { display: none; }
+.wrrapd-esign__doc-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 999px;
+  background: #f6b933;
+  color: #0f0351;
+  font-size: 0.8rem;
+  flex: 0 0 auto;
+}
+.wrrapd-esign__doc-body {
+  max-height: 22rem;
+  overflow: auto;
+  padding: 1rem 1.1rem 1.25rem;
+  border-top: 1px solid #e2e8f0;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  background: #fff;
+}
+.wrrapd-esign__doc-body h1 { font-size: 1.15rem; margin: 0 0 0.75rem; }
+.wrrapd-esign__doc-body h2 { font-size: 1.02rem; margin: 1.1rem 0 0.45rem; }
+.wrrapd-esign__form .ws-check { display: flex; gap: 0.65rem; align-items: flex-start; margin: 0 0 0.85rem; }
+.wrrapd-esign__accept {
+  width: 100%;
+  margin-top: 0.5rem;
+  background: #f6b933 !important;
+  color: #0f0351 !important;
+  border: none;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}

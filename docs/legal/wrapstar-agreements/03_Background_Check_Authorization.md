@@ -5,8 +5,8 @@
 **Wrrapd, Inc.** — WrapStar Independent Contractor Screening (Gift Wrapping Role)  
 **Companion document** to the WrapStar Independent Contractor Technology Services Agreement
 
-**Status:** Production draft for licensed counsel review before BoldSign upload.  
-**Brand PDF/HTML:** Use files in `branded/` (logo header + Fraunces) for review and export.  
+**Notice / legal address:** 7901 4th Street N, Ste. 300, St. Petersburg, FL 33702-4399
+
 **Important:** Part A is a standalone disclosure. Part B is a separate authorization. Do not merge these parts when converting to PDF for FCRA compliance.
 
 ---
@@ -63,17 +63,23 @@ I consent to background checks and lawful ongoing monitoring as a condition of m
 
 **Applicant / Contractor identifying information (for screening):**
 
-Full legal name: {{text|1|*|Signer|name}}  
-Other names used (if any): {{text|1| |Signer|aka}}  
-Date of birth (MM/DD/YYYY): {{text|1|*|Signer|dob}}  
-Last four digits of SSN (if requested by Agency): {{text|1| |Signer|ssn4}}  
-Current address: {{text|1|*|Signer|address}}  
-Email: {{text|1|*|Signer|email}}  
-Phone: {{text|1|*|Signer|phone}}
+Full legal name: ________________________________  
+Other names used (if any): ______________________________________  
+Date of birth (MM/DD/YYYY): ____________________  
+Last four digits of SSN (if requested by Agency): ________  
+Current address: ________________________________  
+Email: ________________________________  
+Phone: ________________________________
 
-**Signature (authorization):** {{sign|1|*|Signer|signature}}  
-**Date:** {{date|1|*|Signer|date}}
+
+<div class="sig-block">
+<p class="sig-line">_______________________________</p>
+<p class="sig-under">Signature (authorization)</p>
+<p class="sig-spacer">&nbsp;</p>
+<p class="sig-line sig-line--date">____________________</p>
+<p class="sig-date-label">date</p>
+</div>
 
 ---
 
-*Wrrapd, Inc. does not require a Company signature on this authorization. Retain with Contractor’s onboarding file.*
+**Electronic acceptance.** This document is accepted electronically with the Services Agreement via **I Accept** in the Wrrapd onboarding Platform (ESIGN Act). No Company countersignature is required on the applicant’s copy.

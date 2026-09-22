@@ -5,7 +5,7 @@
 > rates, per-order pay, pace, penalties, ZIP pricing, or how a contractor is paid.
 > See `docs/WRAPSTARS-OPERATIONS-MODEL.md` §2.
 
-Last updated: 2026-09-13.
+Last updated: 2026-09-22.
 
 ---
 
@@ -65,40 +65,33 @@ stock a WrapStar’s studio. Minimum kit:
 Ribbon, tissue, and tags follow the order card; if an order specifies a material Wrrapd
 will supply, that is called out on the order. Otherwise the WrapStar supplies it.
 
-### Pace (very important)
+### Pace, floor, and fractional hours (very important)
 
-Expected pace: **12 finished gifts per hour**.
+Conversion rate: **12 finished gifts = 1 paid hour**.
 
-If a WrapStar finishes fewer than 12 gifts in a paid hour, pay for that hour is reduced
-by:
+For each accepted wrap window with at least one finished gift (or other recorded
+wrapping work), paid hours = the **greater of**:
 
-```
-shortfall × (hourly_rate ÷ 12)
-```
+1. **1 hour** (floor — e.g. 4 gifts still pay 1 full hour), or  
+2. **finished gifts ÷ 12** (fractional hours allowed — e.g. 37 gifts = 3 + 1/12 hours).
 
-`shortfall` = `12 − gifts_finished_in_that_hour` (never below 0).
+A gift counts as finished only when it is wrapped to standard, documented (live session
+and proof), sealed/labeled (including delivery barcode), and ready for JoyRider pickup.
+Damaged / flagged items that should not be wrapped do not count as unfinished.
 
-**Example.** Rate $24.00/hour. WrapStar finishes 9 gifts in the hour.
+### Incentive / bonus pay
 
-- Unit value = 24 / 12 = $2.00
-- Shortfall = 3
-- Reduction = $6.00
-- Hour pay = $18.00
-
-A gift counts as finished only when it is wrapped to standard, documented (photo/video),
-sealed/labeled, and ready for JoyRider pickup. Damaged / flagged items that should not
-be wrapped do not count as unfinished.
-
-Wrrapd may waive a reduction for a window (materials delay, missing inbound package,
-documented exception). Waiver is an ops decision, not a public promise.
+From time to time — especially higher-demand periods — Wrrapd may publish
+**discretionary incentive or bonus compensation** (e.g. extra pay for wrapping above
+12 gifts/hour, peak-period bonuses). Terms apply only for the stated period.
 
 ### How hours are counted
 
-Hours are the **offered / accepted wrap windows** on the roster (the same windows the
-JoyRider uses for drop-off and pickup), not “time the app was open.” Partial windows
-are prorated to the nearest 15 minutes. The ledger implementation (time clock →
-earnings row) follows this doc; until that ledger ships, Command Center still holds
-the rates and ops can compute a batch by hand.
+Wrapping pay follows the floor + gifts÷12 rule above for accepted wrap windows (the
+same windows the JoyRider uses for drop-off and pickup), not “time the app was open.”
+The ledger implementation (finished gifts → paid hours → earnings row) follows this
+doc; until that ledger ships, Command Center still holds the rates and ops can compute
+a batch by hand.
 
 ---
 

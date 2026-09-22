@@ -73,3 +73,16 @@ No new bridge env vars. After deploying tracking-platform:
 5. Complete onboarding placeholders on pros `/driver-onboarding/`
 6. Activate → appears under Admin → Drivers
 7. `/courier` login with activated name + passcode
+
+## ESIGN click-to-accept (required for Agreements step)
+
+Also deploy:
+
+| Repo | SiteGround `mu-plugins/` |
+|------|--------------------------|
+| `wordpress/wrrapd-esign-agreements.php` | `wrrapd-esign-agreements.php` |
+| `wordpress/legal-agreements/` | `legal-agreements/` (entire folder) |
+| `wordpress/wrrapd-wrapstars.css` | `wrrapd-wrapstars.css` (ESIGN styles) |
+
+The Agreements onboarding step is Uber-style **I Accept** (ESIGN Act). BoldSign is no longer used for the IC packet (W-9 may still use BoldSign when configured).
+

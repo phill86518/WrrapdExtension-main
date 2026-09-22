@@ -1590,6 +1590,16 @@ function wrrapd_output_retailer_wheel_strip() {
 	if ( is_admin() || is_paged() ) {
 		return;
 	}
+	// Hire / onboarding hosts must never get the shopper retailer strip.
+	if ( function_exists( 'wrrapd_wrapstars_is_portal_host' ) && wrrapd_wrapstars_is_portal_host() ) {
+		return;
+	}
+	if ( function_exists( 'wrrapd_drivers_is_portal_host' ) && wrrapd_drivers_is_portal_host() ) {
+		return;
+	}
+	if ( function_exists( 'wrrapd_wrapriders_is_portal_host' ) && wrrapd_wrapriders_is_portal_host() ) {
+		return;
+	}
 	if ( ! is_front_page() && ! is_home() ) {
 		return;
 	}
@@ -1806,6 +1816,15 @@ function wrrapd_output_home_section_tighten_css() {
 	if ( is_admin() || is_paged() ) {
 		return;
 	}
+	if ( function_exists( 'wrrapd_wrapstars_is_portal_host' ) && wrrapd_wrapstars_is_portal_host() ) {
+		return;
+	}
+	if ( function_exists( 'wrrapd_drivers_is_portal_host' ) && wrrapd_drivers_is_portal_host() ) {
+		return;
+	}
+	if ( function_exists( 'wrrapd_wrapriders_is_portal_host' ) && wrrapd_wrapriders_is_portal_host() ) {
+		return;
+	}
 	if ( ! is_front_page() && ! is_home() ) {
 		return;
 	}
@@ -1947,6 +1966,16 @@ add_action( 'wp_head', 'wrrapd_output_header_layout_css', 9997 );
  */
 function wrrapd_output_occasion_ticker_ensure() {
 	if ( is_admin() ) {
+		return;
+	}
+	// Hire / onboarding hosts (apply / pros) — never inject shopper occasion ticker.
+	if ( function_exists( 'wrrapd_wrapstars_is_portal_host' ) && wrrapd_wrapstars_is_portal_host() ) {
+		return;
+	}
+	if ( function_exists( 'wrrapd_drivers_is_portal_host' ) && wrrapd_drivers_is_portal_host() ) {
+		return;
+	}
+	if ( function_exists( 'wrrapd_wrapriders_is_portal_host' ) && wrrapd_wrapriders_is_portal_host() ) {
 		return;
 	}
 	$on_home    = is_front_page() || is_home();

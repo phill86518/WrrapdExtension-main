@@ -4,14 +4,11 @@
 
 **Wrrapd, Inc.** — Gift Wrapping Network · JoyRider App
 
-**Status:** Production draft for licensed counsel review before BoldSign upload.  
-**BoldSign:** Place signer fields using the tags at the signature block below.  
-**Brand PDF/HTML:** Use files in `branded/` (logo header + Fraunces) for review and export.  
-**Scope note:** Under this Agreement, JoyRiders provide **logistics and final-mile delivery** via the **JoyRider App**. Gift wrapping is a separate **WrapStar** function and is **not** a JoyRider duty.
+**Scope note:** Under this Agreement, JoyRiders provide **logistics and final-mile delivery** via the **JoyRider App**. Gift wrapping is **not** a JoyRider duty.
 
 ---
 
-This JoyRider Independent Contractor Agreement (the “**Agreement**”) is entered into by and between **Wrrapd, Inc.**, a company doing business as Wrrapd (“**Wrrapd**” or the “**Company**”), and the undersigned individual or business entity (“**Contractor**” or “**JoyRider**”). Wrrapd and Contractor are each a “**Party**” and together the “**Parties**.”
+This JoyRider Independent Contractor Agreement (the “**Agreement**”) is entered into by and between **Wrrapd, Inc.**, a company doing business as Wrrapd, with notice and legal address at **7901 4th Street N, Ste. 300, St. Petersburg, FL 33702-4399** (“**Wrrapd**” or the “**Company**”), and the undersigned individual or business entity (“**Contractor**” or “**JoyRider**”). Wrrapd and Contractor are each a “**Party**” and together the “**Parties**.”
 
 By signing, Contractor acknowledges that Contractor has read, understands, and agrees to be bound by this Agreement and by the concurrently executed Mutual Arbitration Agreement, Background Check and Motor Vehicle Record Authorization, JoyRider Code of Conduct and Safety Guidelines, and Third-Party Litigation Funding Disclosure (collectively, the “**Companion Documents**”), and by the then-current **Compensation Schedule**.
 
@@ -19,9 +16,9 @@ By signing, Contractor acknowledges that Contractor has read, understands, and a
 
 ## 1. Purpose and Relationship
 
-1.1 Wrrapd operates a technology platform that arranges professional gift wrapping and delivery. Contractor provides **courier and logistics Services**—including inbound package collection, transfers to and from WrapStars, floral pickup when assigned, barcode scanning, and final-mile delivery—(the “**Services**”) as an independent contractor using the dedicated **JoyRider mobile application** (the “**JoyRider App**”) and related tools (collectively, the “**Platform**”).
+1.1 Wrrapd operates a technology platform that arranges professional gift wrapping and delivery. Contractor provides **courier and logistics Services**—including inbound package collection, transfers to and from wrapping locations, floral pickup when assigned, barcode scanning, and final-mile delivery—(the “**Services**”) as an independent contractor using the dedicated **JoyRider mobile application** (the “**JoyRider App**”) and related tools (collectively, the “**Platform**”).
 
-1.2 The JoyRider App is a contractor-facing application that is **separate from** any consumer-facing Wrrapd application and from the **WrapStar App**. Gift wrapping is performed solely by WrapStars under a separate agreement.
+1.2 The JoyRider App is a contractor-facing application that is **separate from** any consumer-facing Wrrapd application. Gift wrapping is performed by persons Wrrapd assigns under a separate arrangement and is outside the Services.
 
 1.3 Nothing in this Agreement creates an employment, partnership, joint venture, or general agency relationship. Contractor is not authorized to bind Wrrapd or to represent that Contractor is an employee of Wrrapd.
 
@@ -43,7 +40,7 @@ By signing, Contractor acknowledges that Contractor has read, understands, and a
 
 ## 3. Eligibility; Capacity; Representations
 
-3.1 Contractor represents and warrants that: (a) if an individual, Contractor is at least **twenty-one (21)** years of age; (b) Contractor holds a valid U.S. driver’s license and is legally authorized to drive and to work in the United States in the areas where Contractor operates; (c) Contractor will maintain vehicle insurance required by applicable law; (d) if an entity, the person signing has full authority to bind the entity; (e) all application, W-9, license, and onboarding information is true and complete; and (f) Contractor is not subject to any agreement that would conflict with this Agreement.
+3.1 Contractor represents and warrants that: (a) if an individual, Contractor is at least **twenty-one (21)** years of age; (b) Contractor holds a valid U.S. driver’s license and is legally authorized to drive and to work in the United States in the areas where Contractor operates; (c) Contractor will maintain vehicle insurance required by applicable law; (d) if an entity, the person signing has full authority to bind the entity; (e) all application, W-9, license, driving-abstract, and onboarding information is true and complete; and (f) Contractor is not subject to any agreement that would conflict with this Agreement.
 
 3.2 Contractor shall promptly update Wrrapd if any representation in this Section 3 becomes inaccurate (including license suspension or insurance lapse).
 
@@ -57,19 +54,19 @@ By signing, Contractor acknowledges that Contractor has read, understands, and a
 
 **(a) Inbound pickup.** Collect retailer or Company packages from a nearby Wrrapd location (including a PO Box, hub, or other address Wrrapd designates);
 
-**(b) WrapStar drop.** Deliver those packages to the assigned WrapStar(s) during the agreed handoff window;
+**(b) Drop at wrapping location.** Deliver those packages to the wrapping location and person Wrrapd assigns during the agreed handoff window;
 
-**(c) Flowers and finished wraps.** When an order requires flowers, obtain them as the App instructs; collect finished wrapped gifts from the WrapStar(s);
+**(c) Flowers and finished wraps.** When an order requires flowers, obtain them as the App instructs; collect finished wrapped gifts from the wrapping location;
 
-**(d) Barcode scan.** Before final delivery, scan the barcode on each wrapped gift (and any flower-only label). The App will display the delivery address and whether flowers accompany that gift;
+**(d) Completeness scan.** Before leaving for the giftee, scan the barcode on **each** expected wrap unit (and any flower-only label). The App will show progress (for example, 2 of 3 gifts plus flowers) and, after a valid scan, the delivery address and whether flowers accompany that gift. Contractor shall not mark en-route until every expected code for that stop is scanned;
 
-**(e) Final delivery.** Deliver gifts and/or flowers to the giftee and capture any required delivery proof (for example, a photo); and
+**(e) Final delivery.** Deliver gifts and/or flowers to the giftee, scan again at the door as the App requires, and capture any required delivery proof (for example, a photo); and
 
 **(f) Care.** Exercise reasonable care as a bailee from pickup until delivery or return to a Wrrapd location.
 
 4.3 Contractor shall not contact customers or giftees except as the JoyRider App requires for a delivery attempt (for example, a brief arrival or access message).
 
-4.4 Contractor shall not video-record WrapStar handoffs unless the Platform expressly requests a specific proof format for a particular exception; routine chain-of-custody uses App status and scans.
+4.4 Contractor shall not video-record handoffs at a wrapping location unless the Platform expressly requests a specific proof format for a particular exception; routine chain-of-custody uses App status and scans.
 
 ---
 
@@ -85,11 +82,27 @@ By signing, Contractor acknowledges that Contractor has read, understands, and a
 
 ---
 
+## 5A. Refusal, Detention, and Demand-for-Return
+
+5A.1 **Duty to perform or release.** If Contractor accepts a load and then will not deliver it, will not complete required scans, or will not return undelivered goods, Contractor shall say so in the JoyRider App **immediately** and shall make every item available for pickup by the person Wrrapd assigns within **two (2) hours** of that notice (or the shorter window then published in the App).
+
+5A.2 **No lien.** Contractor has **no right** to hold, detain, hide, or condition the return of goods for unpaid compensation or any other claim against Wrrapd.
+
+5A.3 **Demand.** Wrrapd may demand return of any goods at any time. Contractor shall stage the goods at a location Wrrapd designates (vehicle curb, wrapping entrance, or Wrrapd hub). Failure to make the goods available by the stated deadline is **conversion** and unauthorized detention. Wrrapd may report the matter to law enforcement, withhold or claw back pay, charge replacement cost of goods plus makeup delivery, and terminate immediately.
+
+5A.4 **Access.** Contractor has no right to enter a giftee’s home. Delivery is at the door or as the App instructs. Contractor has no right to require anyone to enter Contractor’s vehicle or home to retrieve detained goods — Contractor must stage them.
+
+5A.5 This Section 5A is a material term. Breach is grounds for immediate suspension and termination, in addition to any civil or criminal remedies.
+
+---
+
 ## 6. Delivery Proof and Scan Integrity (Non-Negotiable)
 
-6.1 Contractor shall complete barcode scans and upload delivery proof in the format(s) required by the JoyRider App. Failed or fabricated scans or proof, or scanning the wrong gift to conceal a miss, may result in non-payment, clawback, suspension, and/or termination.
+6.1 Contractor shall complete barcode scans and upload delivery proof in the format(s) required by the JoyRider App. Failed or fabricated scans or proof, or scanning the wrong gift to conceal a miss, may result in non-payment, clawback, suspension, and/or termination. A scan that does not match the current route shall be treated as a wrong gift — Contractor shall check the label and not proceed on that stop.
 
-6.2 Contractor grants Wrrapd a perpetual, worldwide, royalty-free license to use proof media for quality assurance, customer support, dispute resolution, claims handling, training, legal compliance, and Platform operation.
+6.2 Contractor is **not** required to livestream wrapping. Delivery proof is scan plus photo (or other format the App publishes).
+
+6.3 Contractor grants Wrrapd a perpetual, worldwide, royalty-free license to use proof media for quality assurance, customer support, dispute resolution, claims handling, training, legal compliance, and Platform operation.
 
 ---
 
@@ -109,7 +122,7 @@ By signing, Contractor acknowledges that Contractor has read, understands, and a
 
 7.7 **App data.** Data collected through the JoyRider App may be used by Wrrapd to operate the Platform, assign and fulfill work, pay Contractor, ensure safety and quality, prevent fraud, comply with law, and improve the Services, consistent with applicable law and any published contractor privacy notice.
 
-7.8 **End of access.** Upon termination or request, Contractor shall cease use of the JoyRider App, delete local Confidential Information where feasible, and return Wrrapd property (including unused labels).
+7.8 **End of access.** Upon termination or request, Contractor shall cease use of the JoyRider App, delete local Confidential Information where feasible, and return Wrrapd property (including unused labels and any goods in custody).
 
 ---
 
@@ -117,19 +130,19 @@ By signing, Contractor acknowledges that Contractor has read, understands, and a
 
 8.1 Contractor is paid an **hourly rate**, not a per-order piece rate. The rate is determined by the **Compensation Schedule** then published in Command Center / the JoyRider App, which may vary by **ZIP code** (exact ZIP or 3-digit prefix) or use the JoyRider default.
 
-8.2 Hours accrue for accepted windows actually worked, as recorded in the JoyRider App, prorated to fifteen (15) minutes. Wrrapd does not guarantee hours. The WrapStar twelve-gifts-per-hour pace rule does **not** apply to JoyRiders.
+8.2 Hours accrue for accepted windows actually worked, as recorded in the JoyRider App, with a **minimum of one (1) hour** for each accepted window actually commenced. Wrrapd does not guarantee volume. A wrapping-pace rule does **not** apply to JoyRiders.
 
-8.3 Tips, if ever enabled for JoyRiders, follow the then-current Compensation Schedule.
+8.3 **Incentive compensation.** From time to time — particularly during higher-demand periods — Wrrapd may offer **discretionary incentive or bonus compensation** (for example, peak-period or completion bonuses) as published in the Compensation Schedule, Command Center, or JoyRider App. Incentive terms apply only for the periods stated and create no ongoing entitlement afterward.
 
-8.4 Wrrapd may withhold, offset, or claw back compensation for fraud, failed or fabricated proof, failed scans used to conceal a miss, chargebacks, negligence under Section 5, overpayments, or other amounts Contractor owes Wrrapd.
+8.4 Tips, if ever enabled for JoyRiders, follow the then-current Compensation Schedule.
 
-8.5 Contractor shall complete Form W-9 (or equivalent) before payouts. Material changes to compensation methodology will be communicated via the JoyRider App or email and apply prospectively.
+8.5 Wrrapd may withhold, offset, or claw back compensation for fraud, failed or fabricated proof, failed scans used to conceal a miss, chargebacks, negligence under Section 5 or 5A, overpayments, no-show costs under Section 16A, or other amounts Contractor owes Wrrapd.
 
----
+8.6 Contractor shall complete Form W-9 (or equivalent) before payouts. Material changes to compensation methodology will be communicated via the JoyRider App or email and apply prospectively.
 
 ## 9. Background Checks and Onboarding
 
-9.1 As a condition of engagement and continued access to the JoyRider App, Contractor agrees to complete required onboarding, including tax forms, identity and license verification, orientation, vehicle insurance confirmation, and the separate **Background Check and Motor Vehicle Record Authorization**.
+9.1 As a condition of engagement and continued access to the JoyRider App, Contractor agrees to complete required onboarding, including tax forms, identity and license verification, upload of an official **driving record / abstract**, orientation, vehicle insurance confirmation, and the separate **Background Check and Motor Vehicle Record Authorization**.
 
 9.2 Wrrapd may condition activation or continued engagement on satisfactory screening results consistent with applicable law.
 
@@ -145,7 +158,7 @@ By signing, Contractor acknowledges that Contractor has read, understands, and a
 
 ## 11. Indemnification
 
-11.1 Contractor shall indemnify, defend, and hold harmless Wrrapd and its officers, directors, members, managers, employees, agents, and affiliates from and against any claims, damages, losses, liabilities, penalties, and expenses (including reasonable attorneys’ fees) arising out of or relating to: (a) Contractor’s negligence or willful misconduct in performing the Services or using the JoyRider App; (b) loss, theft, damage, misdelivery, or unauthorized use of goods to the extent Contractor is responsible under Section 5; (c) injury to persons or property caused by Contractor (including while driving); (d) Contractor’s breach of law or this Agreement; (e) Contractor’s misuse of personal data, Confidential Information, or the JoyRider App; or (f) any claim that Contractor is an employee of Wrrapd to the extent based on Contractor’s acts or omissions—except to the extent caused by Wrrapd’s gross negligence or willful misconduct.
+11.1 Contractor shall indemnify, defend, and hold harmless Wrrapd and its officers, directors, members, managers, employees, agents, and affiliates from and against any claims, damages, losses, liabilities, penalties, and expenses (including reasonable attorneys’ fees) arising out of or relating to: (a) Contractor’s negligence or willful misconduct in performing the Services or using the JoyRider App; (b) loss, theft, damage, misdelivery, or unauthorized use of goods to the extent Contractor is responsible under Section 5 or 5A; (c) injury to persons or property caused by Contractor (including while driving); (d) Contractor’s breach of law or this Agreement; (e) Contractor’s misuse of personal data, Confidential Information, or the JoyRider App; or (f) any claim that Contractor is an employee of Wrrapd to the extent based on Contractor’s acts or omissions—except to the extent caused by Wrrapd’s gross negligence or willful misconduct.
 
 ---
 
@@ -155,7 +168,7 @@ By signing, Contractor acknowledges that Contractor has read, understands, and a
 
 **(a) Customer and recipient data** — names, addresses, phone numbers, email addresses, access codes, and other personal information;  
 **(b) Gift and order data** — gift identity, barcode payloads, flower pairing, order references, delivery instructions, and proof media;  
-**(c) Logistics and location data** — PO Box / hub addresses designated by Wrrapd, WrapStar wrapping locations and handoff windows, route information, and scan results;  
+**(c) Logistics and location data** — PO Box / hub addresses designated by Wrrapd, wrapping locations and handoff windows, route information, and scan results;  
 **(d) Wrrapd business and technical information** — business models, pricing and Compensation Schedules (except for Contractor’s own tax records), allocation methods, operational playbooks, trade secrets, techniques, methods, systems, JoyRider App architecture, security controls, credentials, and non-public partner terms; and  
 **(e) Derivatives** of any of the foregoing.
 
@@ -167,7 +180,7 @@ Exclusions for publicly available information, prior rightful possession, and in
 
 12.4 Contractor shall protect Confidential Information with reasonable care, notify Wrrapd within twenty-four (24) hours of any suspected breach, and upon termination return or delete Confidential Information (except proof already uploaded to Wrrapd).
 
-12.5 Unauthorized disclosure may cause irreparable harm. Wrrapd may seek injunctive relief in Jacksonville / Duval County, Florida, as provided in the Mutual Arbitration Agreement, without waiving arbitration of damages claims.
+12.5 Unauthorized disclosure may cause irreparable harm. Wrrapd may seek injunctive relief in Duval County, Florida, as provided in the Mutual Arbitration Agreement, without waiving arbitration of damages claims.
 
 12.6 This Section 12 survives termination **indefinitely** as to trade secrets and customer/gift/recipient data, and for no less than **five (5) years** as to other Confidential Information.
 
@@ -175,13 +188,13 @@ Exclusions for publicly available information, prior rightful possession, and in
 
 ## 13. Intellectual Property
 
-13.1 Wrrapd owns the Platform, JoyRider App, trademarks, and related materials. Contractor grants Wrrapd the license in Section 6.2 as to proof media. Contractor shall not use Wrrapd marks except as authorized to perform the Services.
+13.1 Wrrapd owns the Platform, JoyRider App, trademarks, and related materials. Contractor grants Wrrapd the license in Section 6.3 as to proof media. Contractor shall not use Wrrapd marks except as authorized to perform the Services.
 
 ---
 
 ## 14. Non-Circumvention
 
-14.1 During the term and for **six (6)** months thereafter, Contractor shall not knowingly use recipient or WrapStar location information obtained through the Platform to solicit delivery or logistics work that bypasses Wrrapd for engagements that originated on the Platform.
+14.1 During the term and for **six (6)** months thereafter, Contractor shall not knowingly use recipient or wrapping-location information obtained through the Platform to solicit delivery or logistics work that bypasses Wrrapd for engagements that originated on the Platform.
 
 14.2 This Section does not prohibit unrelated services for persons who independently contact Contractor without Platform-sourced information.
 
@@ -199,13 +212,27 @@ While Contractor has active or accepted windows, or has indicated availability i
 
 ---
 
+## 16A. Weekly Availability; Unavailability; Cancellation; Return of Goods
+
+16A.1 **Weekly availability (required).** Contractor shall submit Contractor’s availability for the **following calendar week** (Monday through Sunday) through the JoyRider App **no later than Friday at 6:00 p.m. Eastern Time** of the week before that work week. Availability is used to allocate logistics and delivery work. Failure to submit by the deadline may result in Contractor being treated as **unavailable** for that week (unless Wrrapd overrides in Command Center), with no guaranteed hours.
+
+16A.2 **Immediate notice — illness, bereavement, emergency.** If Contractor cannot work an accepted delivery window, or any portion of a submitted available day, because of sudden illness, bereavement, emergency, or any other unforeseen cause, Contractor shall notify Wrrapd **immediately** through the JoyRider App (or the then-published emergency contact channel) — and in any event **as soon as Contractor knows**, and **no later than four (4) hours before** the published start of the affected window. Silence is a material breach.
+
+16A.3 **Return of deliverable materials.** Upon any such notice (or upon Wrrapd’s demand), Contractor shall make **all** packages, wrapped gifts, flowers, labels, and related deliverable materials in Contractor’s possession or vehicle available for pickup by a **backup JoyRider or other person Wrrapd assigns** within **two (2) hours** (or the shorter window then published), consistent with Section 5A. Contractor shall not detain goods.
+
+16A.4 **Personal liability for delay or detention.** If Contractor fails to give immediate notice under Section 16A.2, fails to return or stage goods under Section 16A.3 / Section 5A, or otherwise causes delay, missed customer promises, or reassignment cost: (a) the missed window is unpaid; (b) Wrrapd may withhold, offset, or claw back compensation and recover reasonable last-minute reassignment, replacement, and makeup-delivery costs from amounts otherwise owed to Contractor; (c) Contractor remains personally responsible under Sections 5 and 5A for loss, damage, misdelivery, or detention of goods; and (d) repeated late cancels or no-shows are grounds for immediate termination.
+
+16A.5 Illness, bereavement, or emergency does **not** excuse the notice or return duties in this Section 16A. Wrrapd’s use of backup contractors is an operations matter and does not create a right to keep goods or to be paid for a missed window.
+
+---
+
 ## 17. Term and Termination
 
 17.1 This Agreement begins on Contractor’s signature (or electronic acceptance) and continues until terminated.
 
 17.2 Either Party may terminate at any time, with or without cause, by written, in-App, or Platform notice. Wrrapd may suspend access immediately for material breach, safety concerns, suspected fraud, license/insurance issues, or legal compliance reasons.
 
-17.3 Upon termination, Contractor shall complete or safely return goods in custody as Wrrapd directs, cease App use, and cooperate in wind-down. Sections 5, 6.2, 7.7, 8.4, 11, 12, 13, 14, 18, 19, and 20 survive termination.
+17.3 Upon termination, Contractor shall complete or safely return goods in custody as Wrrapd directs (including under Section 5A), cease App use, and cooperate in wind-down. Sections 5, 5A, 6.3, 7.7, 8.5, 11, 12, 13, 14, 16A, 18, 19, and 20 survive termination.
 
 ---
 
@@ -227,24 +254,14 @@ While Contractor has active or accepted windows, or has indicated availability i
 
 ---
 
-## 20. Electronic Signatures; Counterparts
+## 20. Electronic Acceptance; ESIGN
 
-Electronic signatures and acceptances (including via BoldSign, the JoyRider App, or the Platform) are valid and binding. This Agreement may be executed in counterparts.
+20.1 This Agreement and the Companion Documents are standard-form services agreements offered on a take-it-or-leave-it basis. They are not negotiated individually.
 
----
+20.2 Applicant / Contractor accepts by electronic click-to-accept (for example, tapping or clicking **I Accept**) in the Wrrapd onboarding Platform, or by another electronic signature method Wrrapd provides. Acceptance under the federal Electronic Signatures in Global and National Commerce Act (ESIGN) and applicable state law has the same legal effect as a handwritten signature.
 
-**BY SIGNING BELOW, CONTRACTOR ACKNOWLEDGES THAT CONTRACTOR HAS READ, UNDERSTANDS, AND AGREES TO THIS AGREEMENT (LOGISTICS AND DELIVERY SERVICES ONLY).**
+20.3 **No Company countersignature is required** on Contractor’s individual packet. Wrrapd’s assent is manifested by presenting this Agreement in the Platform and by activating Contractor’s account / App access (or otherwise confirming engagement) after onboarding. Contractor’s electronic acceptance is the final trigger that binds Contractor.
 
-### WRRAPD, INC.
+20.4 Continued use of the Platform or Apps after Wrrapd publishes an updated Agreement or Compensation Schedule (with notice via the App, email, or Platform) constitutes acceptance of the updated terms to the extent permitted by law, unless Contractor declines and ceases use as instructed.
 
-Authorized Signature: {{sign|2|*|Company|signature}}  
-Printed Name: {{text|2|*|Company|name}}  
-Title: {{text|2| |Company|title}}  
-Date: {{date|2|*|Company|date}}
-
-### CONTRACTOR / JOYRIDER
-
-Legal name of individual or entity: {{text|1|*|Signer|name}}  
-Entity type (if applicable): {{text|1| |Signer|entity}}  
-Signature: {{sign|1|*|Signer|signature}}  
-Date: {{date|1|*|Signer|date}}
+20.5 Wrrapd may retain records of acceptance including typed name, timestamp, IP address, user agent, and packet version.

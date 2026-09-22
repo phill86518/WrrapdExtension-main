@@ -1,30 +1,21 @@
-# JoyRider Agreement Suite (Production Drafts)
+# JoyRider Agreement Suite
 
-Counsel-ready production text for **JoyRider** (courier / logistics) onboarding.  
-**Public name:** JoyRider. Code/URLs may still say `driver` / `/drive/` — do not rename the CPT without migration.  
-**Licensed Florida attorney should review before BoldSign go-live.**
+JoyRider (courier / logistics) onboarding agreements. Signature / initials fields are blank lines for wet-ink or in-document e-sign.  
+**Public name:** JoyRider. Code/URLs may still say `driver` / `/drive/`.
 
-**Current scope:** JoyRiders = PO Box/hub inbound → WrapStar drop/pickup → floral hops when assigned → barcode scan → final delivery via the **JoyRider App**. **No wrapping.** Age **21+**. Legally required **auto insurance**. Hourly-by-ZIP pay (see Compensation Schedule). Arbitration seat: **Jacksonville, Florida**.
+**Current scope:** PO Box/hub inbound → drop/pickup at wrapping location → floral hops when assigned → barcode scan → final delivery via the **JoyRider App**. **No wrapping.** Age **21+**. Legally required **auto insurance**. Hourly-by-ZIP pay. Arbitration: **Duval County, Florida**.
 
 ## Documents
 
-| # | Document | File |
-|---|----------|------|
-| — | Review memo | [REVIEW-MEMO.md](./REVIEW-MEMO.md) |
-| 01 | Independent Contractor Agreement | [01_JoyRider_Independent_Contractor_Agreement.md](./01_JoyRider_Independent_Contractor_Agreement.md) |
-| 02 | Mutual Arbitration (Jacksonville, FL) | [02_Mutual_Arbitration_Agreement.md](./02_Mutual_Arbitration_Agreement.md) |
-| 03 | Background Check & MVR Authorization | [03_Background_Check_Authorization.md](./03_Background_Check_Authorization.md) |
-| 04 | Code of Conduct & Safety Guidelines | [04_JoyRider_Code_of_Conduct.md](./04_JoyRider_Code_of_Conduct.md) |
-| 05 | Third-Party Litigation Funding Disclosure | [05_Third_Party_Litigation_Funding_Disclosure.md](./05_Third_Party_Litigation_Funding_Disclosure.md) |
-| — | Shared Compensation Schedule | [../contractor-compensation-schedule.md](../contractor-compensation-schedule.md) |
-| — | Branded HTML (logo + Fraunces) | [branded/](./branded/) |
+| Document | Markdown | PDF |
+|----------|----------|-----|
+| 01 Independent Contractor Agreement | [01_….md](./01_JoyRider_Independent_Contractor_Agreement.md) | [01_….pdf](./01_JoyRider_Independent_Contractor_Agreement.pdf) |
+| 02 Mutual Arbitration | [02_….md](./02_Mutual_Arbitration_Agreement.md) | [02_….pdf](./02_Mutual_Arbitration_Agreement.pdf) |
+| 03 Background Check & MVR | [03_….md](./03_Background_Check_Authorization.md) | [03_….pdf](./03_Background_Check_Authorization.pdf) |
+| 04 Code of Conduct & Safety | [04_….md](./04_JoyRider_Code_of_Conduct.md) | [04_….pdf](./04_JoyRider_Code_of_Conduct.pdf) |
+| 05 Litigation Funding | [05_….md](./05_Third_Party_Litigation_Funding_Disclosure.md) | [05_….pdf](./05_Third_Party_Litigation_Funding_Disclosure.pdf) |
+| Compensation Schedule | [contractor-compensation-schedule.md](./contractor-compensation-schedule.md) | [contractor-compensation-schedule.pdf](./contractor-compensation-schedule.pdf) |
 
-WrapStar suite (separate role): [`../wrapstar-agreements/`](../wrapstar-agreements/).
+Branded HTML: [`branded/`](./branded/). Regenerate PDFs: `python3 docs/legal/render_agreement_pdfs.py`.
 
-**BoldSign:** `WRRAPD_BOLDSIGN_DRIVER_IC_TEMPLATE_ID` (and companion template IDs when ready). Signer tags use `{{sign|…}}`, `{{date|…}}`, `{{text|…}}`.
-
-Regenerate branded HTML:
-
-```bash
-python3 docs/legal/joyrider-agreements/branded/render_branded_html.py
-```
+Related: [WrapStar](../wrapstar-agreements/) · [WrapRider](../wraprider-agreements/).

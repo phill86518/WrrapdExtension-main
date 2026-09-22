@@ -183,7 +183,17 @@ export function contractorRecordFromWrapstarApplication(
   const steps = app.onboardingStepsComplete ?? {};
   const bgClear = ob.bgStatus === "clear";
   const documents: ContractorDocument[] = [
-    doc("agreement", "Independent Contractor Agreement", !!steps.agreement),
+    doc(
+      "agreement",
+      "Independent Contractor Agreement (ESIGN)",
+      !!steps.agreement || !!ob.esignAcceptedAt || !!ob.icSignedAt,
+      ob.esignAcceptedAt || ob.icSignedAt,
+      ob.esignTypedName
+        ? `Accepted as ${ob.esignTypedName}${ob.esignVersion ? ` · v${ob.esignVersion}` : ""}`
+        : ob.esignVersion
+          ? `Packet v${ob.esignVersion}`
+          : undefined,
+    ),
     doc(
       "policies",
       "WrapStar Standards & Policies",
@@ -285,7 +295,15 @@ export function contractorRecordFromWrapriderApplication(
   const now = new Date().toISOString();
   const steps = app.onboardingStepsComplete ?? {};
   const documents: ContractorDocument[] = [
-    doc("agreement", "WrapRider Independent Contractor Agreement", !!steps.agreement),
+    doc(
+      "agreement",
+      "WrapRider Independent Contractor Agreement (ESIGN)",
+      !!steps.agreement || !!app.esignAcceptedAt || !!app.icSignedAt,
+      app.esignAcceptedAt || app.icSignedAt,
+      app.esignTypedName
+        ? `Accepted as ${app.esignTypedName}${app.esignVersion ? ` · v${app.esignVersion}` : ""}`
+        : undefined,
+    ),
     doc("policies", "Wrap & Delivery Standards", !!steps.policies),
     doc(
       "orientation",
@@ -297,6 +315,7 @@ export function contractorRecordFromWrapriderApplication(
     doc("background", "Background check", !!steps.background),
     doc("insurance", "Vehicle insurance", !!steps.insurance || !!app.hasInsuranceFile),
     doc("identity", "Identity & license", !!steps.identity || !!app.hasIdFile),
+    doc("driving_abstract", "Driving abstract", !!app.hasDrivingAbstractFile),
     doc(
       "workspace",
       "Wrapping location",
@@ -367,7 +386,16 @@ export function contractorRecordFromDriverApplication(
   const steps = app.onboardingStepsComplete ?? {};
   const documents: ContractorDocument[] = [
     doc("license", "Driver license", !!app.hasIdFile),
-    doc("agreement", "JoyRider Independent Contractor Agreement", !!steps.agreement),
+    doc("driving_abstract", "Driving abstract", !!app.hasDrivingAbstractFile),
+    doc(
+      "agreement",
+      "JoyRider Independent Contractor Agreement (ESIGN)",
+      !!steps.agreement || !!app.esignAcceptedAt || !!app.icSignedAt,
+      app.esignAcceptedAt || app.icSignedAt,
+      app.esignTypedName
+        ? `Accepted as ${app.esignTypedName}${app.esignVersion ? ` · v${app.esignVersion}` : ""}`
+        : undefined,
+    ),
     doc("policies", "Policies & Safety", !!steps.policies),
     doc("orientation", "Orientation & Quiz", !!steps.orientation),
     doc("background", "Background check", !!steps.background),
