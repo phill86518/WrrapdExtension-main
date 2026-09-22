@@ -448,15 +448,18 @@ function wrrapd_onboarding_login_shortcode() {
 	if ( $greet === '' && ! empty( $_POST['greet'] ) ) {
 		$greet = sanitize_text_field( wp_unslash( $_POST['greet'] ) );
 	}
-
-	$wrapstar_portal  = wrrapd_onboarding_login_role_portal_url( 'wrapstar' );
-	$wraprider_portal = wrrapd_onboarding_login_role_portal_url( 'wraprider' );
-	$joyrider_portal  = wrrapd_onboarding_login_role_portal_url( 'joyrider' );
+	$welcome = $greet !== '' && strcasecmp( $greet, 'there' ) !== 0
+		? 'Welcome to your onboarding, ' . $greet . '!'
+		: 'Welcome to your onboarding!';
 
 	ob_start();
 	?>
 	<div class="wrrapd-wrapstars wrrapd-wrapstars-login wrrapd-onboarding-login">
 		<div class="wrrapd-onboarding-login__stage">
+			<section class="wrrapd-wrapstars-login__head wrrapd-onboarding-login__intro">
+				<p class="wrrapd-wrapstars-login__eyebrow">Onboarding</p>
+				<h1><?php echo esc_html( $welcome ); ?></h1>
+			</section>
 			<?php if ( $error ) : ?>
 				<div class="wrrapd-wrapstars-alert wrrapd-wrapstars-alert--err"><?php echo esc_html( $error ); ?></div>
 			<?php endif; ?>
@@ -476,7 +479,6 @@ function wrrapd_onboarding_login_shortcode() {
 					<button type="submit" class="wrrapd-wrapstars-btn">Log in</button>
 				</div>
 			</form>
-			<p class="wrrapd-wrapstars-form-foot wrrapd-onboarding-login__foot">Already fully approved? Use your <a href="<?php echo esc_url( $wrapstar_portal ); ?>">WrapStar</a>, <a href="<?php echo esc_url( $wraprider_portal ); ?>">WrapRider</a>, or <a href="<?php echo esc_url( $joyrider_portal ); ?>">JoyRider</a> portal login.</p>
 		</div>
 	</div>
 	<?php
