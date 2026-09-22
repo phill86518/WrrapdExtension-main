@@ -1332,9 +1332,10 @@ function wrrapd_wrapstars_host_routing() {
 	}
 
 	if ( wrrapd_wrapstars_unified_host() ) {
-		if ( preg_match( '#^/onboarding#', $path ) ) {
+		// Exact /onboarding/ is the shared login door — do not bounce it into itself.
+		if ( preg_match( '#^/onboarding#', $path ) && ! ( function_exists( 'wrrapd_onboarding_login_is_login_path' ) && wrrapd_onboarding_login_is_login_path( $path ) ) ) {
 			if ( ! is_user_logged_in() || ! wrrapd_wrapstars_is_onboarding_eligible_user( get_current_user_id() ) ) {
-				wp_safe_redirect( wrrapd_wrapstars_portal_login_url( wrrapd_wrapstars_apply_url( $path ) ) );
+				wp_safe_redirect( wrrapd_wrapstars_portal_login_url( wrrapd_wrapstars_pros_url( $path ) ) );
 				exit;
 			}
 			if ( wrrapd_wrapstars_enforce_active_invite_or_logout( get_current_user_id() ) ) {
@@ -1342,7 +1343,7 @@ function wrrapd_wrapstars_host_routing() {
 					add_query_arg(
 						'invite_expired',
 						'1',
-						wrrapd_wrapstars_portal_login_url( wrrapd_wrapstars_apply_url( $path ) )
+						wrrapd_wrapstars_portal_login_url( wrrapd_wrapstars_pros_url( $path ) )
 					)
 				);
 				exit;
@@ -1356,7 +1357,7 @@ function wrrapd_wrapstars_host_routing() {
 					);
 					exit;
 				}
-				wp_safe_redirect( wrrapd_wrapstars_portal_redirect_for_user( get_current_user_id() ) );
+				wp_safe_redirect( wrrapd_wrapstars_portal_login_url( wrrapd_wrapstars_pros_url( '/onboarding/' ) ) );
 				exit;
 			}
 		}
