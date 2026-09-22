@@ -1219,6 +1219,9 @@ function wrrapd_should_output_seasonal_blocks() {
 		return false;
 	}
 	// Hire / onboarding hosts share WP front-page flags — never inject shopper seasonal UI there.
+	if ( function_exists( 'wrrapd_is_hire_portal_host' ) && wrrapd_is_hire_portal_host() ) {
+		return false;
+	}
 	if ( function_exists( 'wrrapd_wrapstars_is_portal_host' ) && wrrapd_wrapstars_is_portal_host() ) {
 		return false;
 	}

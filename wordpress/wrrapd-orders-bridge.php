@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /** Bump when account UI / header polish changes — view-source should contain this string. */
-define( 'WRRAPD_MU_BUILD', '2026-09-22-contact-patent-pending' );
+define( 'WRRAPD_MU_BUILD', '2026-09-22-hire-chrome-gate' );
 
 /** Published Chrome Web Store item id (Wrrapd 3.0.10+). */
 if ( ! defined( 'WRRAPD_CHROME_EXTENSION_ID' ) ) {
@@ -30,6 +30,77 @@ if ( ! defined( 'WRRAPD_LOGO_GOLD' ) ) {
 if ( ! defined( 'WRRAPD_NAVY_DEEP' ) ) {
 	define( 'WRRAPD_NAVY_DEEP', '#0c0638' );
 }
+
+/**
+ * Hire / onboarding hosts (apply + pros). Prefer HTTP_HOST so shopper chrome never
+ * depends on WrapStars MU load order — false negatives were leaking ticker/wheels onto apply.
+ *
+ * @return bool
+ */
+function wrrapd_is_hire_portal_host() {
+	static $cached = null;
+	if ( $cached !== null ) {
+		return $cached;
+	}
+	$host = isset( $_SERVER['HTTP_HOST'] ) ? strtolower( (string) $_SERVER['HTTP_HOST'] ) : '';
+	$host = preg_replace( '/:\d+$/', '', $host );
+	$hire_hosts = array( 'apply.wrrapd.com', 'pros.wrrapd.com' );
+	if ( defined( 'WRRAPD_WRAPSTARS_APPLY_HOST' ) && WRRAPD_WRAPSTARS_APPLY_HOST !== '' ) {
+		$hire_hosts[] = strtolower( (string) WRRAPD_WRAPSTARS_APPLY_HOST );
+	}
+	if ( defined( 'WRRAPD_WRAPSTARS_PROS_HOST' ) && WRRAPD_WRAPSTARS_PROS_HOST !== '' ) {
+		$hire_hosts[] = strtolower( (string) WRRAPD_WRAPSTARS_PROS_HOST );
+	}
+	$hire_hosts = array_values( array_unique( $hire_hosts ) );
+	if ( in_array( $host, $hire_hosts, true ) ) {
+		$cached = true;
+		return true;
+	}
+	if ( function_exists( 'wrrapd_wrapstars_is_portal_host' ) && wrrapd_wrapstars_is_portal_host() ) {
+		$cached = true;
+		return true;
+	}
+	if ( function_exists( 'wrrapd_drivers_is_portal_host' ) && wrrapd_drivers_is_portal_host() ) {
+		$cached = true;
+		return true;
+	}
+	if ( function_exists( 'wrrapd_wrapriders_is_portal_host' ) && wrrapd_wrapriders_is_portal_host() ) {
+		$cached = true;
+		return true;
+	}
+	$cached = false;
+	return false;
+}
+
+/**
+ * Front-end fingerprint so SiteGround deploys are verifiable in view-source.
+ */
+function wrrapd_output_mu_build_comment() {
+	if ( is_admin() ) {
+		return;
+	}
+	echo '<!-- WRRAPD_MU_BUILD ' . esc_html( WRRAPD_MU_BUILD ) . ' -->' . "\n";
+	if ( wrrapd_is_hire_portal_host() ) {
+		echo '<!-- wrrapd-hire-portal-host: shopper ticker/wheels suppressed -->' . "\n";
+	}
+}
+add_action( 'wp_head', 'wrrapd_output_mu_build_comment', 0 );
+
+/**
+ * Nuclear CSS: if any shopper chrome still leaks onto hire hosts, hide it.
+ */
+function wrrapd_output_hire_portal_shopper_chrome_kill() {
+	if ( is_admin() || ! wrrapd_is_hire_portal_host() ) {
+		return;
+	}
+	echo '<style id="wrrapd-hire-no-shopper-chrome">';
+	echo '#wrrapd-retailer-wheels-row,.wrrapd-retailer-wheels-row,#wrrapd-retailer-wheels-strip,.wrrapd-retailer-wheels,';
+	echo '.occasion-ticker-shell,#occasionTickerShell,#occasionTickerContainer,.occasion-ticker-panel,.occasion-ticker,';
+	echo '.wrrapd-hot-gifts-rail,.wrrapd-hot-gifts-rail--below-ticker,.wrrapd-hot-gifts-rail--in-ticker-shell,';
+	echo '.elementor-location-header{display:none!important;visibility:hidden!important;height:0!important;max-height:0!important;overflow:hidden!important;margin:0!important;padding:0!important;border:0!important;}';
+	echo '</style>';
+}
+add_action( 'wp_head', 'wrrapd_output_hire_portal_shopper_chrome_kill', 1 );
 
 $wrrapd_seasonal = dirname( __FILE__ ) . '/wrrapd-seasonal-campaigns.php';
 if ( is_readable( $wrrapd_seasonal ) ) {
@@ -1591,13 +1662,7 @@ function wrrapd_output_retailer_wheel_strip() {
 		return;
 	}
 	// Hire / onboarding hosts must never get the shopper retailer strip.
-	if ( function_exists( 'wrrapd_wrapstars_is_portal_host' ) && wrrapd_wrapstars_is_portal_host() ) {
-		return;
-	}
-	if ( function_exists( 'wrrapd_drivers_is_portal_host' ) && wrrapd_drivers_is_portal_host() ) {
-		return;
-	}
-	if ( function_exists( 'wrrapd_wrapriders_is_portal_host' ) && wrrapd_wrapriders_is_portal_host() ) {
+	if ( function_exists( 'wrrapd_is_hire_portal_host' ) && wrrapd_is_hire_portal_host() ) {
 		return;
 	}
 	if ( ! is_front_page() && ! is_home() ) {
@@ -1816,13 +1881,7 @@ function wrrapd_output_home_section_tighten_css() {
 	if ( is_admin() || is_paged() ) {
 		return;
 	}
-	if ( function_exists( 'wrrapd_wrapstars_is_portal_host' ) && wrrapd_wrapstars_is_portal_host() ) {
-		return;
-	}
-	if ( function_exists( 'wrrapd_drivers_is_portal_host' ) && wrrapd_drivers_is_portal_host() ) {
-		return;
-	}
-	if ( function_exists( 'wrrapd_wrapriders_is_portal_host' ) && wrrapd_wrapriders_is_portal_host() ) {
+	if ( function_exists( 'wrrapd_is_hire_portal_host' ) && wrrapd_is_hire_portal_host() ) {
 		return;
 	}
 	if ( ! is_front_page() && ! is_home() ) {
@@ -1969,13 +2028,7 @@ function wrrapd_output_occasion_ticker_ensure() {
 		return;
 	}
 	// Hire / onboarding hosts (apply / pros) — never inject shopper occasion ticker.
-	if ( function_exists( 'wrrapd_wrapstars_is_portal_host' ) && wrrapd_wrapstars_is_portal_host() ) {
-		return;
-	}
-	if ( function_exists( 'wrrapd_drivers_is_portal_host' ) && wrrapd_drivers_is_portal_host() ) {
-		return;
-	}
-	if ( function_exists( 'wrrapd_wrapriders_is_portal_host' ) && wrrapd_wrapriders_is_portal_host() ) {
+	if ( function_exists( 'wrrapd_is_hire_portal_host' ) && wrrapd_is_hire_portal_host() ) {
 		return;
 	}
 	$on_home    = is_front_page() || is_home();
@@ -2193,6 +2246,9 @@ function wrrapd_output_hero_mobile_layout_script() {
 	if ( is_admin() || ( ! is_front_page() && ! is_home() ) ) {
 		return;
 	}
+	if ( function_exists( 'wrrapd_is_hire_portal_host' ) && wrrapd_is_hire_portal_host() ) {
+		return;
+	}
 	echo '<script id="wrrapd-hero-mobile-layout">';
 	echo '(function(){function matchHeights(imgCol,copyCol){if(!imgCol||!copyCol)return;var h=copyCol.getBoundingClientRect().height;if(h>0){imgCol.style.minHeight=h+"px";var img=imgCol.querySelector("img");if(img){img.style.height="100%";img.style.minHeight=h+"px";}}}function needLayout(){return window.matchMedia("(max-width:1100px), (hover: none) and (pointer: coarse)").matches;}function run(){var sec=document.querySelector(".elementor-element-df1501e");if(sec){var cont=sec.querySelector(".elementor-container");if(cont){cont.classList.add("wrrapd-hero-row-mobile");var imgCol=sec.querySelector(".elementor-element-efd024d");var copyCol=sec.querySelector(".elementor-element-2d48b08");if(imgCol)imgCol.classList.add("wrrapd-hero-photo-col");if(copyCol)copyCol.classList.add("wrrapd-hero-copy-col");if(needLayout())matchHeights(imgCol,copyCol);return;}}if(!needLayout())return;var row=document.querySelector(".elementor-element-f68c5e7");if(!row)return;var imgCol=null,copyCol=null;row.querySelectorAll(":scope > .e-con").forEach(function(c){if(c.querySelector(".elementor-widget-image"))imgCol=c;if(c.querySelector(".elementor-element-6466f5b"))copyCol=c;});if(!imgCol||!copyCol)return;row.classList.add("wrrapd-hero-row-mobile");imgCol.classList.add("wrrapd-hero-photo-col");copyCol.classList.add("wrrapd-hero-copy-col");matchHeights(imgCol,copyCol);}document.addEventListener("DOMContentLoaded",run);window.addEventListener("load",function(){run();setTimeout(run,500);setTimeout(run,1500);});window.addEventListener("resize",function(){setTimeout(run,100);});})();';
 	echo '</script>';
@@ -2224,6 +2280,9 @@ function wrrapd_output_home_gift_guides_reposition_script() {
 		return;
 	}
 	if ( is_admin() || is_paged() ) {
+		return;
+	}
+	if ( function_exists( 'wrrapd_is_hire_portal_host' ) && wrrapd_is_hire_portal_host() ) {
 		return;
 	}
 	if ( ! is_front_page() && ! is_home() ) {
