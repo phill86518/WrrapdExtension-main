@@ -22,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_WRAPSTARS_BUILD', '2026-09-22-onboarding-login-chrome-2' );
+define( 'WRRAPD_WRAPSTARS_BUILD', '2026-09-22-footer-mission-welcome-nowrap' );
 /** Approval / re-invite onboarding credentials remain valid this many days. */
 define( 'WRRAPD_WRAPSTARS_INVITE_TTL_DAYS', 15 );
 
@@ -1882,9 +1882,15 @@ function wrrapd_wrapstars_output_portal_footer() {
 	echo '<footer class="wrrapd-wrapstars-site-footer" role="contentinfo">';
 	echo '<div class="wrrapd-wrapstars-site-footer__inner">';
 	echo '<div class="wrrapd-wrapstars-site-footer__brand">';
-	echo '<a href="https://wrrapd.com/"><img src="https://wrrapd.com/wp-content/uploads/2025/03/Wrrapd_f-Logo-800-x-458-px.png" width="800" height="458" alt="Wrrapd" loading="lazy" decoding="async" /></a>';
+	echo '<div class="wrrapd-wrapstars-site-footer__intro">';
+	echo '<div class="wrrapd-wrapstars-site-footer__brand-stack">';
+	echo '<a class="wrrapd-wrapstars-site-footer__logo" href="https://wrrapd.com/" rel="home">';
+	echo '<img src="https://wrrapd.com/wp-content/uploads/2025/03/Wrrapd_f-Logo-800-x-458-px.png" width="800" height="458" alt="Wrrapd" loading="lazy" decoding="async" />';
+	echo '</a>';
 	echo '<img class="wrrapd-wrapstars-site-footer__tagline" src="' . esc_url( wrrapd_wrapstars_brand_tagline_url() ) . '" width="344" height="65" alt="Wrapping Happiness" loading="lazy" decoding="async" />';
-	echo '<p class="wrrapd-wrapstars-site-footer__address">7901 4th St N, Ste 300<br />St. Petersburg, FL 33702</p>';
+	echo '</div>';
+	echo '<p class="wrrapd-wrapstars-site-footer__mission">We strive to deliver bigger smiles and surprises!</p>';
+	echo '</div>';
 	echo '<p class="wrrapd-wrapstars-site-footer__copy">© ' . esc_html( $year ) . ' Wrrapd Inc.; all rights reserved. Patent pending.</p>';
 	echo '</div>';
 	echo '<div class="wrrapd-wrapstars-site-footer__social" aria-label="Social links">';
