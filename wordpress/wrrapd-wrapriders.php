@@ -159,7 +159,7 @@ function wrrapd_wrapriders_screen_for_path( $path ) {
 		return array( 'shortcode' => '[wrrapd_wraprider_onboarding]', 'title' => 'WrapRider onboarding · Wrrapd', 'noindex' => true );
 	}
 	if ( preg_match( '#^/wraprider/apply(/|$)#', $path ) ) {
-		return array( 'shortcode' => '[wrrapd_wraprider_apply]', 'title' => 'Apply as a WrapRider · Wrrapd', 'noindex' => false );
+		return array( 'shortcode' => '[wrrapd_wraprider_apply]', 'title' => 'Apply to become a WrapRider · Wrrapd', 'noindex' => false );
 	}
 	if ( preg_match( '#^/wraprider/thank-you(/|$)#', $path ) ) {
 		return array( 'shortcode' => '[wrrapd_wraprider_thankyou]', 'title' => 'Thank you · WrapRider · Wrrapd', 'noindex' => true );
@@ -2119,6 +2119,11 @@ function wrrapd_wrapriders_shortcode_profile() {
 						<span class="wrrapd-ws-profile__mark" aria-hidden="true"><?php echo wrrapd_wrapriders_get_meta( $id, 'id_file' ) !== '' ? '✓' : '○'; ?></span>
 						<span class="wrrapd-ws-profile__doclabel">Driver license</span>
 						<span class="wrrapd-ws-profile__docval"><?php echo wrrapd_wrapriders_get_meta( $id, 'id_file' ) !== '' ? 'On file' : 'Not uploaded'; ?></span>
+					</li>
+					<li class="<?php echo wrrapd_wrapriders_get_meta( $id, 'driving_abstract_file' ) !== '' ? 'is-ok' : 'is-open'; ?>">
+						<span class="wrrapd-ws-profile__mark" aria-hidden="true"><?php echo wrrapd_wrapriders_get_meta( $id, 'driving_abstract_file' ) !== '' ? '✓' : '○'; ?></span>
+						<span class="wrrapd-ws-profile__doclabel">Driving record / abstract</span>
+						<span class="wrrapd-ws-profile__docval"><?php echo wrrapd_wrapriders_get_meta( $id, 'driving_abstract_file' ) !== '' ? 'On file' : 'Not uploaded'; ?></span>
 					</li>
 					<?php foreach ( $docs as $doc ) : ?>
 						<li class="<?php echo $doc['ok'] ? 'is-ok' : 'is-open'; ?>">

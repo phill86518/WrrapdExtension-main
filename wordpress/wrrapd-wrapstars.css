@@ -108,11 +108,12 @@
 	display: flex;
 	flex-direction: column;
 	align-items: flex-start;
-	gap: 0.4rem;
+	justify-content: flex-end;
+	gap: 0;
 }
 
 .wrrapd-wrapstars-hero-cta-primary .wrrapd-wrapstars-cinema-hero__note {
-	margin: 0;
+	display: none;
 }
 
 .wrrapd-wrapstars-hero-cta-alts {
@@ -127,6 +128,7 @@
 	display: flex;
 	flex-direction: column;
 	align-items: center;
+	justify-content: flex-end;
 	gap: 0.4rem;
 	min-width: 0;
 }

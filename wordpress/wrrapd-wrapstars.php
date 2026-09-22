@@ -22,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_WRAPSTARS_BUILD', '2026-09-19-no-public-rates' );
+define( 'WRRAPD_WRAPSTARS_BUILD', '2026-09-22-cta-become' );
 /** Approval / re-invite onboarding credentials remain valid this many days. */
 define( 'WRRAPD_WRAPSTARS_INVITE_TTL_DAYS', 15 );
 
@@ -380,7 +380,7 @@ function wrrapd_wrapstars_social_card_for_path( $path, $title = '' ) {
 
 	if ( preg_match( '#^/wraprider(/|$)#', $path ) ) {
 		$card['title']       = 'Become a WrapRider';
-		$card['description'] = 'Wrap and deliver — apply as a WrapRider, the hybrid WrapStar + JoyRider role. Florida & Georgia.';
+		$card['description'] = 'Wrap and deliver — apply to become a WrapRider, the hybrid WrapStar + JoyRider role. Florida & Georgia.';
 		$card['image']       = $wrap;
 	} elseif ( preg_match( '#^/drive(/|$)#', $path ) || preg_match( '#^/driver#', $path ) ) {
 		$card['title']       = 'Become a JoyRider';
@@ -1749,18 +1749,26 @@ function wrrapd_wrapstars_brand_icon_url() {
 	if ( defined( 'WRRAPD_WRAPSTARS_ICON_URL' ) && WRRAPD_WRAPSTARS_ICON_URL !== '' ) {
 		return (string) WRRAPD_WRAPSTARS_ICON_URL;
 	}
-	return 'https://wrrapd.com/wp-content/uploads/2023/02/ms-icon-144x144-1.png';
+	if ( function_exists( 'wrrapd_brand_favicon_url' ) ) {
+		return wrrapd_brand_favicon_url( 'icon-192.png' );
+	}
+	return 'https://wrrapd.com/wp-content/mu-plugins/icons/favicon/icon-192.png';
 }
 
 function wrrapd_wrapstars_output_favicon() {
 	if ( is_admin() ) {
 		return;
 	}
-	$icon_32 = 'https://wrrapd.com/wp-content/uploads/2023/02/ms-icon-144x144-1-100x100.png';
+	$icon_32 = function_exists( 'wrrapd_brand_favicon_url' )
+		? wrrapd_brand_favicon_url( 'icon-32.png' )
+		: 'https://wrrapd.com/wp-content/mu-plugins/icons/favicon/icon-32.png';
 	$icon    = wrrapd_wrapstars_brand_icon_url();
-	echo '<link rel="icon" href="' . esc_url( $icon_32 ) . '" sizes="32x32" />' . "\n";
-	echo '<link rel="icon" href="' . esc_url( $icon ) . '" sizes="192x192" />' . "\n";
-	echo '<link rel="apple-touch-icon" href="' . esc_url( $icon ) . '" />' . "\n";
+	$apple   = function_exists( 'wrrapd_brand_favicon_url' )
+		? wrrapd_brand_favicon_url( 'icon-180.png' )
+		: 'https://wrrapd.com/wp-content/mu-plugins/icons/favicon/icon-180.png';
+	echo '<link rel="icon" type="image/png" href="' . esc_url( $icon_32 ) . '" sizes="32x32" />' . "\n";
+	echo '<link rel="icon" type="image/png" href="' . esc_url( $icon ) . '" sizes="192x192" />' . "\n";
+	echo '<link rel="apple-touch-icon" href="' . esc_url( $apple ) . '" />' . "\n";
 }
 
 function wrrapd_wrapstars_output_portal_header() {
@@ -1801,7 +1809,7 @@ function wrrapd_wrapstars_output_portal_footer() {
 	echo '<a href="https://wrrapd.com/"><img src="https://wrrapd.com/wp-content/uploads/2025/03/Wrrapd_f-Logo-800-x-458-px.png" width="800" height="458" alt="Wrrapd" loading="lazy" decoding="async" /></a>';
 	echo '<img class="wrrapd-wrapstars-site-footer__tagline" src="' . esc_url( wrrapd_wrapstars_brand_tagline_url() ) . '" width="344" height="65" alt="Wrapping Happiness" loading="lazy" decoding="async" />';
 	echo '<p class="wrrapd-wrapstars-site-footer__address">7901 4th St N, Ste 300<br />St. Petersburg, FL 33702</p>';
-	echo '<p class="wrrapd-wrapstars-site-footer__copy">© ' . esc_html( $year ) . ' Wrrapd Inc.; all rights reserved.</p>';
+	echo '<p class="wrrapd-wrapstars-site-footer__copy">© ' . esc_html( $year ) . ' Wrrapd Inc.; all rights reserved. Patent pending.</p>';
 	echo '</div>';
 	echo '<div class="wrrapd-wrapstars-site-footer__social" aria-label="Social links">';
 	echo '<a href="https://www.facebook.com/wrrapd" target="_blank" rel="noopener noreferrer" aria-label="Facebook">';
@@ -3100,7 +3108,7 @@ function wrrapd_wrapstars_landing_content() {
 			'tagline' => 'Turn your gift-wrapping talent into something people remember.',
 			'sub'     => 'Wrap beautiful gifts from your own space, on your own schedule. We bring the packages to you and collect them when you&rsquo;re done — you bring the magic.',
 			'cta'     => 'Start your application',
-			'note'    => 'Takes about five minutes',
+			'note'    => '',
 		),
 		'band'      => array(
 			array(
@@ -3259,19 +3267,16 @@ function wrrapd_wrapstars_shortcode_landing() {
 				<p class="wrrapd-wrapstars-cinema-hero__sub"><?php echo wp_kses_post( $c['hero']['sub'] ); ?></p>
 				<div class="wrrapd-wrapstars-hero-cta-row">
 					<div class="wrrapd-wrapstars-hero-cta-primary">
-						<a class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--xl wrrapd-wrapstars-btn--hero" href="<?php echo esc_url( $apply ); ?>">Apply as a WrapStar</a>
-						<?php if ( ! empty( $c['hero']['note'] ) ) : ?>
-							<p class="wrrapd-wrapstars-cinema-hero__note"><?php echo wp_kses_post( $c['hero']['note'] ); ?></p>
-						<?php endif; ?>
+						<a class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--xl wrrapd-wrapstars-btn--hero" href="<?php echo esc_url( $apply ); ?>">Apply to become a WrapStar</a>
 					</div>
 					<div class="wrrapd-wrapstars-hero-cta-alts" aria-label="Other ways to join Wrrapd">
 						<div class="wrrapd-wrapstars-hero-cta-alt">
 							<p class="wrrapd-wrapstars-hero-cta-alt__label">Drive and deliver gifts!</p>
-							<a class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--xl wrrapd-wrapstars-btn--hero-alt" href="<?php echo esc_url( wrrapd_wrapstars_apply_url( '/drive/' ) ); ?>">Apply as a JoyRider</a>
+							<a class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--xl wrrapd-wrapstars-btn--hero-alt" href="<?php echo esc_url( wrrapd_wrapstars_apply_url( '/drive/' ) ); ?>">Apply to become a JoyRider</a>
 						</div>
 						<div class="wrrapd-wrapstars-hero-cta-alt">
 							<p class="wrrapd-wrapstars-hero-cta-alt__label">Do both — wrap &amp; deliver!</p>
-							<a class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--xl wrrapd-wrapstars-btn--hero-hybrid" href="<?php echo esc_url( wrrapd_wrapstars_apply_url( '/wraprider/' ) ); ?>">Apply as a WrapRider</a>
+							<a class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--xl wrrapd-wrapstars-btn--hero-hybrid" href="<?php echo esc_url( wrrapd_wrapstars_apply_url( '/wraprider/' ) ); ?>">Apply to become a WrapRider</a>
 						</div>
 					</div>
 				</div>
