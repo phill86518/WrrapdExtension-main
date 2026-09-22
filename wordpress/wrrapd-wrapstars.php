@@ -22,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_WRAPSTARS_BUILD', '2026-09-22-cta-become' );
+define( 'WRRAPD_WRAPSTARS_BUILD', '2026-09-22-focus-favicon' );
 /** Approval / re-invite onboarding credentials remain valid this many days. */
 define( 'WRRAPD_WRAPSTARS_INVITE_TTL_DAYS', 15 );
 
@@ -1744,11 +1744,12 @@ function wrrapd_wrapstars_brand_tagline_url() {
 	return 'https://wrrapd.com/wp-content/uploads/2025/03/WrappingHappiness-2.png';
 }
 
-/** @return string */
+/**
+ * Square brand mark — centered focus-W only (never floating-W / ms-icon uploads).
+ *
+ * @return string
+ */
 function wrrapd_wrapstars_brand_icon_url() {
-	if ( defined( 'WRRAPD_WRAPSTARS_ICON_URL' ) && WRRAPD_WRAPSTARS_ICON_URL !== '' ) {
-		return (string) WRRAPD_WRAPSTARS_ICON_URL;
-	}
 	if ( function_exists( 'wrrapd_brand_favicon_url' ) ) {
 		return wrrapd_brand_favicon_url( 'icon-192.png' );
 	}
@@ -1759,13 +1760,20 @@ function wrrapd_wrapstars_output_favicon() {
 	if ( is_admin() ) {
 		return;
 	}
+	$base = 'https://wrrapd.com/wp-content/mu-plugins/icons/favicon/';
 	$icon_32 = function_exists( 'wrrapd_brand_favicon_url' )
 		? wrrapd_brand_favicon_url( 'icon-32.png' )
-		: 'https://wrrapd.com/wp-content/mu-plugins/icons/favicon/icon-32.png';
+		: $base . 'icon-32.png';
 	$icon    = wrrapd_wrapstars_brand_icon_url();
 	$apple   = function_exists( 'wrrapd_brand_favicon_url' )
 		? wrrapd_brand_favicon_url( 'icon-180.png' )
-		: 'https://wrrapd.com/wp-content/mu-plugins/icons/favicon/icon-180.png';
+		: $base . 'icon-180.png';
+	$ico     = function_exists( 'wrrapd_brand_favicon_url' )
+		? wrrapd_brand_favicon_url( 'favicon.ico' )
+		: $base . 'favicon.ico';
+	// Drop WordPress Site Icon / Customizer links that still point at old floating-W uploads.
+	remove_action( 'wp_head', 'wp_site_icon', 99 );
+	echo '<link rel="icon" href="' . esc_url( $ico ) . '" sizes="any" />' . "\n";
 	echo '<link rel="icon" type="image/png" href="' . esc_url( $icon_32 ) . '" sizes="32x32" />' . "\n";
 	echo '<link rel="icon" type="image/png" href="' . esc_url( $icon ) . '" sizes="192x192" />' . "\n";
 	echo '<link rel="apple-touch-icon" href="' . esc_url( $apple ) . '" />' . "\n";

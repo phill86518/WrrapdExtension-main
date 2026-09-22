@@ -14,7 +14,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /** Bump when account UI / header polish changes — view-source should contain this string. */
-define( 'WRRAPD_MU_BUILD', '2026-09-19-header-taller-careers-gold' );
+define( 'WRRAPD_MU_BUILD', '2026-09-22-contact-patent-pending' );
+
+/** Published Chrome Web Store item id (Wrrapd 3.0.10+). */
+if ( ! defined( 'WRRAPD_CHROME_EXTENSION_ID' ) ) {
+	define( 'WRRAPD_CHROME_EXTENSION_ID', 'kdfcahdcgpaoohpgagpmpbgcmkdbocbg' );
+}
 
 /** Wordmark gold — letters “p” and “d” in the Wrrapd logo. Never neon #f7ff00 / #fff300. */
 if ( ! defined( 'WRRAPD_LOGO_GOLD' ) ) {
@@ -159,6 +164,9 @@ function wrrapd_body_class_site_pages( $classes ) {
 	if ( is_page( 4548 ) || is_page( 'about-us' ) ) {
 		$classes[] = 'wrrapd-about-polish';
 	}
+	if ( is_page( 131 ) || is_page( 'contact' ) ) {
+		$classes[] = 'wrrapd-contact-page';
+	}
 	if ( is_page( 'my-orders' ) ) {
 		$classes[] = 'wrrapd-orders-page';
 	}
@@ -185,6 +193,36 @@ function wrrapd_brand_favicon_url( $file = 'icon-192.png' ) {
 }
 
 /**
+ * Public URL for a file in mu-plugins/icons/ (career role marks, etc.).
+ *
+ * @param string $file Filename in that folder.
+ * @return string
+ */
+function wrrapd_mu_icon_url( $file ) {
+	$file  = ltrim( (string) $file, '/' );
+	$local = dirname( __FILE__ ) . '/icons/' . $file;
+	if ( is_readable( $local ) ) {
+		return content_url( 'mu-plugins/icons/' . $file );
+	}
+	return 'https://wrrapd.com/wp-content/mu-plugins/icons/' . $file;
+}
+
+/**
+ * Prefer an inline data URI so career icons never 404 on hosts without /icons.
+ *
+ * @param string $file Filename in wordpress/icons/.
+ * @return string
+ */
+function wrrapd_mu_icon_src( $file ) {
+	$file  = ltrim( (string) $file, '/' );
+	$local = dirname( __FILE__ ) . '/icons/' . $file;
+	if ( is_readable( $local ) ) {
+		return 'data:image/png;base64,' . base64_encode( (string) file_get_contents( $local ) );
+	}
+	return wrrapd_mu_icon_url( $file );
+}
+
+/**
  * Shopper-site tab icons. Hire hosts print their own links in wrapstars.php.
  */
 function wrrapd_output_site_favicons() {
@@ -197,6 +235,8 @@ function wrrapd_output_site_favicons() {
 	if ( ! is_readable( dirname( __FILE__ ) . '/icons/favicon/favicon.ico' ) ) {
 		return;
 	}
+	// Kill core Site Icon tags so old Media Library / floating-W uploads cannot win.
+	remove_action( 'wp_head', 'wp_site_icon', 99 );
 	$ico = wrrapd_brand_favicon_url( 'favicon.ico' );
 	$p32 = wrrapd_brand_favicon_url( 'icon-32.png' );
 	$p192 = wrrapd_brand_favicon_url( 'icon-192.png' );
@@ -1456,7 +1496,7 @@ function wrrapd_home_retailer_wheel_brands() {
  * Chrome Web Store — gift-wrap promo links here.
  */
 function wrrapd_chrome_extension_install_url() {
-	return 'https://chromewebstore.google.com/detail/wrrapd/gapdndgnpolhcknconognpnjecfppddb';
+	return 'https://chromewebstore.google.com/detail/wrrapd/' . WRRAPD_CHROME_EXTENSION_ID;
 }
 
 /**
@@ -1687,6 +1727,7 @@ function wrrapd_output_extension_detection_script() {
 		return;
 	}
 	$cws             = wrrapd_chrome_extension_install_url();
+	$ext_id          = WRRAPD_CHROME_EXTENSION_ID;
 	$latest_version  = '3.0.10';
 
 	echo '<style id="wrrapd-ext-detected-css">';
@@ -1706,7 +1747,7 @@ function wrrapd_output_extension_detection_script() {
 
 	echo '<script id="wrrapd-ext-detect-js">';
 	echo '(function(){';
-	echo 'var EXT_ID="gapdndgnpolhcknconognpnjecfppddb",LATEST=' . wp_json_encode( $latest_version ) . ',cws=' . wp_json_encode( $cws ) . ',MARKER="wrrapd_ext_detected",OUTDATED="wrrapd_ext_outdated_dismissed";';
+	echo 'var EXT_ID=' . wp_json_encode( $ext_id ) . ',LATEST=' . wp_json_encode( $latest_version ) . ',cws=' . wp_json_encode( $cws ) . ',MARKER="wrrapd_ext_detected",OUTDATED="wrrapd_ext_outdated_dismissed";';
 	echo 'var extInstalled=false,extVersion="";';
 	echo 'function parseVersion(v){return(v||"").split(".").map(function(n){return parseInt(n,10)||0;});}';
 	echo 'function versionLt(a,b){var x=parseVersion(a),y=parseVersion(b),i;for(i=0;i<Math.max(x.length,y.length);i++){var d=(x[i]||0)-(y[i]||0);if(d!==0)return d<0;}return false;}';
@@ -1770,11 +1811,14 @@ function wrrapd_output_home_section_tighten_css() {
 	}
 	echo '<style id="wrrapd-home-top-tighten">';
 	echo '.elementor-4857 .elementor-element-df1501e>.elementor-container{gap:clamp(0.35rem,1.2vw,0.65rem)!important;}';
-	echo '.elementor-4857 .elementor-element-6466f5b.wrrapd-season-headline-injected h1,.elementor-4857 .elementor-element-6466f5b.wrrapd-season-headline-injected h1 strong{margin-bottom:0.2rem!important;}';
+	echo '.elementor-4857 .elementor-element-6466f5b h1,.elementor-4857 .elementor-element-6466f5b h1 strong,.elementor-4857 .elementor-element-6466f5b.wrrapd-season-headline-injected h1,.elementor-4857 .elementor-element-6466f5b.wrrapd-season-headline-injected h1 strong{margin-bottom:0.2rem!important;color:#C40410!important;}';
 	echo '.elementor-4857 .wrrapd-season-hero-body,.elementor-4857 .wrrapd-season-hero-body span{margin-bottom:0.25rem!important;}';
 	echo '#wrrapd-retailer-wheels-row{margin-bottom:0!important;padding-bottom:0!important;border-bottom:none!important;}';
-	echo '#wrrapd-retailer-wheels-row .wrrapd-retailer-wheels{padding-bottom:.4rem!important;}';
+	echo '#wrrapd-retailer-wheels-row .wrrapd-retailer-wheels{padding-top:.28rem!important;padding-bottom:0!important;}';
 	echo '.wrrapd-wrap-promo-mobile__features--stack{display:none!important;margin:0!important;padding:0!important;height:0!important;overflow:hidden!important;}';
+	/* Empty Elementor divider box 7a8bd00 was leaving a white band between retailer logos and the ticker. */
+	echo '.elementor-4857 .elementor-element-7a8bd00{display:none!important;height:0!important;min-height:0!important;margin:0!important;padding:0!important;overflow:hidden!important;}';
+	echo '.elementor-4857 .elementor-element-0a7e92b{padding-top:0!important;margin-top:0!important;}';
 	echo '.occasion-ticker-shell{margin-top:0!important;margin-bottom:0!important;}';
 	echo '.occasion-ticker-bar{padding-top:0.1rem!important;padding-bottom:0.1rem!important;gap:.28rem!important;}';
 	echo '.occasion-ticker-panel .ticker-container{padding-top:0.06rem!important;padding-bottom:0.06rem!important;}';
@@ -1782,7 +1826,7 @@ function wrrapd_output_home_section_tighten_css() {
 	echo '.wrrapd-hot-gifts-rail__head{margin-bottom:0.08rem!important;}';
 	echo '.elementor-4857 .elementor-element-5601b5d{margin-top:0.15rem!important;margin-bottom:0.15rem!important;}';
 	/* Text only — never set font on the whole homepage container (that can collapse image widgets). */
-	echo 'body.home .elementor-4857 .elementor-heading-title,body.page-id-4857 .elementor-4857 .elementor-heading-title,body.home .elementor-4857 p,body.page-id-4857 .elementor-4857 p,body.home .elementor-widget-html .wrrapd-top-gifts p,body.page-id-4857 .elementor-widget-html .wrrapd-top-gifts p,body.home .elementor-widget-html .wrrapd-top-gifts a,body.page-id-4857 .elementor-widget-html .wrrapd-top-gifts a,body.home .elementor-widget-html .wrrapd-gift-guides h2,body.page-id-4857 .elementor-widget-html .wrrapd-gift-guides h2,body.home .elementor-widget-html .wrrapd-gift-guides h3,body.page-id-4857 .elementor-widget-html .wrrapd-gift-guides h3,body.home .elementor-widget-html .wrrapd-gift-guides p,body.page-id-4857 .elementor-widget-html .wrrapd-gift-guides p,body.home .wrrapd-hot-gifts-rail__title,body.page-id-4857 .wrrapd-hot-gifts-rail__title,body.home .occasion-ticker-bar,body.page-id-4857 .occasion-ticker-bar{font-family:Fraunces,Georgia,"Times New Roman",serif!important;}';
+	echo 'body.home .elementor-4857 .elementor-heading-title,body.page-id-4857 .elementor-4857 .elementor-heading-title,body.home .elementor-4857 p,body.page-id-4857 .elementor-4857 p,body.home .elementor-widget-html .wrrapd-top-gifts p,body.page-id-4857 .elementor-widget-html .wrrapd-top-gifts p,body.home .elementor-widget-html .wrrapd-top-gifts a,body.page-id-4857 .elementor-widget-html .wrrapd-top-gifts a,body.home .elementor-widget-html .wrrapd-gift-guides h2,body.page-id-4857 .elementor-widget-html .wrrapd-gift-guides h2,body.home .elementor-widget-html .wrrapd-gift-guides h3,body.page-id-4857 .elementor-widget-html .wrrapd-gift-guides h3,body.home .elementor-widget-html .wrrapd-gift-guides p,body.page-id-4857 .elementor-widget-html .wrrapd-gift-guides p,body.home .wrrapd-hot-gifts-rail__title,body.page-id-4857 .wrrapd-hot-gifts-rail__title,body.home .occasion-ticker-bar,body.page-id-4857 .occasion-ticker-bar,body.home .wrrapd-howto-kicker,body.page-id-4857 .wrrapd-howto-kicker,body.home .wrrapd-howto-stepheading,body.page-id-4857 .wrrapd-howto-stepheading,body.home .wrrapd-howto-copy p,body.page-id-4857 .wrrapd-howto-copy p,body.home .wrrapd-howto-copy,body.page-id-4857 .wrrapd-howto-copy{font-family:Fraunces,Georgia,"Times New Roman",serif!important;}';
 	echo '</style>';
 }
 
@@ -1898,17 +1942,70 @@ function wrrapd_output_header_layout_css() {
 add_action( 'wp_head', 'wrrapd_output_header_layout_css', 9997 );
 
 /**
- * Patch occasion ticker label when Elementor HTML still has the old copy.
+ * Occasion ticker + Hide dates — homepage and logged-in /welcome/.
+ * Welcome still has the old Elementor ticker (no hide button); upgrade it in place.
  */
-function wrrapd_output_occasion_ticker_label_patch_script() {
+function wrrapd_output_occasion_ticker_ensure() {
 	if ( is_admin() ) {
 		return;
 	}
-	echo '<script id="wrrapd-occasion-ticker-label-patch">';
-	echo '(function(){function patch(){var bar=document.querySelector(".occasion-ticker-bar");if(!bar)return;var label=bar.querySelector("span:not(.occasion-ticker-toggle *)");if(!label){var spans=bar.querySelectorAll(":scope > span");if(spans.length)label=spans[0];}if(label&&/Gifting occasions/i.test(label.textContent||""))label.textContent="Next gifting occasion...";}document.addEventListener("DOMContentLoaded",patch);window.addEventListener("load",patch);})();';
-	echo '</script>';
+	$on_home    = is_front_page() || is_home();
+	$on_welcome = is_page( array( 5576, 'welcome' ) );
+	if ( ! $on_home && ! $on_welcome ) {
+		return;
+	}
+	echo '<style id="wrrapd-occasion-ticker-ensure-css">';
+	echo 'body.logged-in .occasion-ticker-shell,body.page-id-5576 .occasion-ticker-shell,body.home .occasion-ticker-shell,body.page-id-4857 .occasion-ticker-shell{display:block!important;visibility:visible!important;height:auto!important;max-height:none!important;overflow:visible!important;margin:0!important;}';
+	echo 'body.logged-in .occasion-ticker-shell.is-collapsed .occasion-ticker-panel,body.page-id-5576 .occasion-ticker-shell.is-collapsed .occasion-ticker-panel{display:none!important;}';
+	echo 'body.page-id-5576 .ticker-message{display:none!important;}';
+	echo '.occasion-ticker-bar{display:flex!important;align-items:center!important;justify-content:space-between!important;}';
+	echo '.occasion-ticker-toggle{display:inline-flex!important;visibility:visible!important;}';
+	echo '</style>';
+	$js = <<<'JS'
+(function(){
+	var STORAGE='wrrapd-occasion-ticker-collapsed';
+	var MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+	function sod(d){return new Date(d.getFullYear(),d.getMonth(),d.getDate());}
+	function fmt(d){return d.getDate()+'-'+MONTHS[d.getMonth()]+'-'+String(d.getFullYear()).slice(-2);}
+	var today=sod(new Date());
+	function nthWeekday(year,month0,weekday,n){var c=0;for(var day=1;day<=31;day++){var dt=new Date(year,month0,day);if(dt.getMonth()!==month0)break;if(dt.getDay()===weekday){c++;if(c===n)return sod(dt);}}return null;}
+	function easter(y){var a=y%19,b=Math.floor(y/100),c=y%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451),month=Math.floor((h+l-7*m+114)/31),day=((h+l-7*m+114)%31)+1;return sod(new Date(y,month-1,day));}
+	function nextFixed(month0,day){return function(){for(var i=0;i<=30;i++){var d=sod(new Date(today.getFullYear()+i,month0,day));if(d>=today)return d;}};}
+	function nextFromFn(fn){return function(){for(var i=0;i<=30;i++){var d=fn(today.getFullYear()+i);if(d&&d>=today)return d;}};}
+	var CNY={2026:[1,17],2027:[1,6],2028:[0,26],2029:[1,13],2030:[1,3],2031:[0,23],2032:[1,11],2033:[0,31],2034:[1,19],2035:[1,8]};
+	var HAN={2026:[11,4],2027:[11,23],2028:[11,12],2029:[11,2],2030:[11,20],2031:[11,9],2032:[11,27],2033:[11,16],2034:[11,5],2035:[11,23]};
+	function mapYear(tbl){return function(y){var p=tbl[y];return p?sod(new Date(y,p[0],p[1])):null;};}
+	var defs=[
+		{name:'Chinese New Year',emoji:'🏮',url:'https://www.amazon.com/s?k=chinese+new+year+gift+ideas',next:nextFromFn(mapYear(CNY))},
+		{name:"Valentine's Day",emoji:'💖',url:"https://www.amazon.com/s?k=valentine%27s+day+gifts",next:nextFixed(1,14)},
+		{name:"St. Patrick's Day",emoji:'🎉',url:"https://www.amazon.com/s?k=st.+patrick%27s+day",next:nextFixed(2,17)},
+		{name:'Easter',emoji:'🐣',url:'https://www.amazon.com/s?k=easter',next:nextFromFn(easter)},
+		{name:"Mother's Day",emoji:'🌸',url:"https://www.amazon.com/s?k=birthday+for+mother%27s+day+gift+ideas",next:nextFromFn(function(y){return nthWeekday(y,4,0,2);})},
+		{name:'Graduation',emoji:'🎓',url:'https://www.amazon.com/s?k=graduation+gift+ideas',next:null},
+		{name:"Father's Day",emoji:'🎩',url:"https://www.amazon.com/s?k=birthday+for+father%27s+day+gift+ideas",next:nextFromFn(function(y){return nthWeekday(y,5,0,3);})},
+		{name:'Fourth of July',emoji:'🇺🇸',url:'https://www.amazon.com/s?k=fourth+of+july+gifts',next:nextFixed(6,4)},
+		{name:'Bridal Shower',emoji:'👰',url:'https://www.amazon.com/s?k=bridal+shower+gifts',next:null},
+		{name:'Wedding',emoji:'💍',url:'https://www.amazon.com/s?k=wedding+gifts',next:null},
+		{name:'Baby Shower',emoji:'🍼',url:'https://www.amazon.com/s?k=baby+shower+gifts',next:null},
+		{name:"Kids' Birthday",emoji:'🎈',url:'https://www.amazon.com/s?k=birthday+for+kids+gift+ideas',next:null},
+		{name:'Thanksgiving',emoji:'🦃',url:'https://www.amazon.com/s?k=thanksgiving+day+gifts',next:nextFromFn(function(y){return nthWeekday(y,10,4,4);})},
+		{name:'Corporate Gifts',emoji:'🏢',url:'https://www.amazon.com/s?k=corporate+gift+ideas',next:null},
+		{name:'Hanukkah',emoji:'🕎',url:'https://www.amazon.com/s?k=hannukah+gift+ideas',next:nextFromFn(mapYear(HAN))},
+		{name:'Christmas',emoji:'🎄',url:'https://www.amazon.com/s?k=christmas+gift+ideas',next:nextFixed(11,25)},
+		{name:"New Year's",emoji:'🎆',url:"https://www.amazon.com/s?k=new+year%27s+gift+ideas",next:nextFixed(0,1)}
+	];
+	function fill(el){if(!el||el.getAttribute('data-wrrapd-filled')||el.children.length)return;var html='';defs.forEach(function(occ){var dt=occ.next?occ.next():null;var dateStr=dt?fmt(dt):'';html+='<a href="'+occ.url+'" target="_blank" rel="noopener noreferrer">'+occ.emoji+' '+occ.name+'<br><span class="date '+(dateStr?'':'hide-date')+'">'+dateStr+'</span></a>';});el.innerHTML=html+html;el.setAttribute('data-wrrapd-filled','1');}
+	function setCollapsed(shell,toggle,collapsed){if(!shell||!toggle)return;shell.classList.toggle('is-collapsed',collapsed);toggle.setAttribute('aria-expanded',collapsed?'false':'true');toggle.textContent=collapsed?'Show dates':'Hide dates';}
+	function wire(shell){if(!shell||shell.getAttribute('data-wrrapd-ticker-wired'))return;var toggle=shell.querySelector('.occasion-ticker-toggle')||document.getElementById('occasionTickerToggle');if(!toggle)return;shell.setAttribute('data-wrrapd-ticker-wired','1');setCollapsed(shell,toggle,localStorage.getItem(STORAGE)==='1');toggle.addEventListener('click',function(){var collapsed=!shell.classList.contains('is-collapsed');setCollapsed(shell,toggle,collapsed);try{localStorage.setItem(STORAGE,collapsed?'1':'0');}catch(e){}});}
+	function buildShell(){var shell=document.createElement('div');shell.className='occasion-ticker-shell';shell.id='occasionTickerShell';shell.innerHTML='<div class="occasion-ticker-bar"><span>Next gifting occasion...</span><button type="button" class="occasion-ticker-toggle" id="occasionTickerToggle" aria-expanded="true" aria-controls="occasionTickerPanel">Hide dates</button></div><div class="occasion-ticker-panel" id="occasionTickerPanel"><div class="ticker-container occasion-ticker" id="occasionTickerContainerLive"><div class="ticker-wrap"><div class="ticker" id="occasionTickerLive"></div></div></div></div>';return shell;}
+	function reveal(el){if(!el)return;el.classList.remove('elementor-hidden','elementor-hidden-desktop','elementor-hidden-tablet','elementor-hidden-mobile');el.style.setProperty('display','block','important');el.style.setProperty('visibility','visible','important');el.style.setProperty('height','auto','important');}
+	function place(){var shell=document.getElementById('occasionTickerShell');var old=document.getElementById('occasionTickerContainer');var msg=document.querySelector('.ticker-message');if(msg)msg.style.display='none';var built=false;if(!shell){built=true;shell=buildShell();if(old&&old.parentNode){old.style.display='none';old.parentNode.insertBefore(shell,old);}else{var wheels=document.getElementById('wrrapd-retailer-wheels-row');var hub=document.getElementById('wrrapd-welcome-hub');var header=document.querySelector('.elementor-location-header');if(wheels&&wheels.parentNode)wheels.insertAdjacentElement('afterend',shell);else if(hub&&hub.parentNode)hub.parentNode.insertBefore(shell,hub);else if(header&&header.parentNode)header.insertAdjacentElement('afterend',shell);else document.body.insertBefore(shell,document.body.firstChild);}}reveal(shell);reveal(shell.parentElement);['.elementor-element-1ffb475','.elementor-element-0a7e92b','.elementor-element-1ab723a','.elementor-element-cb1c231'].forEach(function(sel){reveal(document.querySelector(sel));});var bar=shell.querySelector('.occasion-ticker-bar span');if(bar&&/Gifting occasions/i.test(bar.textContent||''))bar.textContent='Next gifting occasion...';var ticker=shell.querySelector('#occasionTickerLive')||shell.querySelector('#occasionTicker')||shell.querySelector('.ticker');fill(ticker);if(built)wire(shell);else{var toggle=shell.querySelector('.occasion-ticker-toggle');if(toggle)toggle.style.display='inline-flex';}var wrap=shell.querySelector('.ticker-wrap');if(wrap&&!wrap.getAttribute('data-wrrapd-pause')){wrap.setAttribute('data-wrrapd-pause','1');wrap.addEventListener('mouseenter',function(){wrap.style.animationPlayState='paused';});wrap.addEventListener('mouseleave',function(){wrap.style.animationPlayState='running';});}}
+	document.addEventListener('DOMContentLoaded',place);window.addEventListener('load',function(){place();setTimeout(place,400);setTimeout(place,1400);});
+})();
+JS;
+	echo '<script id="wrrapd-occasion-ticker-ensure">' . $js . '</script>';
 }
-add_action( 'wp_footer', 'wrrapd_output_occasion_ticker_label_patch_script', 22 );
+add_action( 'wp_footer', 'wrrapd_output_occasion_ticker_ensure', 22 );
 
 /**
  * Keep Chrome CTA copy aligned when Elementor HTML still has the old sentence.
@@ -1964,14 +2061,17 @@ function wrrapd_header_careers_links() {
 		array(
 			'label' => __( 'WrapStar (Gift-Wrapper)', 'wrrapd' ),
 			'url'   => $wrapstar,
+			'icon'  => 'GiftWrap_001-32.png',
 		),
 		array(
 			'label' => __( 'JoyRider (Delivery-Driver)', 'wrrapd' ),
 			'url'   => $joyrider,
+			'icon'  => 'DeliveryIcon_001-32-gold.png',
 		),
 		array(
 			'label' => __( 'WrapRider (Hybrid)', 'wrrapd' ),
 			'url'   => $wraprider,
+			'icon'  => 'HybridRole_001-32.png',
 		),
 	);
 }
@@ -1992,14 +2092,15 @@ function wrrapd_output_header_careers_menu() {
 	echo '.wrrapd-careers{position:relative;width:100%;max-width:12rem;margin:.35rem 0 0;z-index:6;}';
 	echo '.wrrapd-careers__btn{display:inline-flex;align-items:center;justify-content:center;width:100%;box-sizing:border-box;min-height:1.7rem;padding:.28rem .55rem;border:1px solid ' . WRRAPD_LOGO_GOLD . ';border-radius:.4rem;background:' . WRRAPD_LOGO_GOLD . ';color:#0f0351;font-family:Fraunces,Georgia,serif;font-weight:700;font-size:.86rem;line-height:1.15;letter-spacing:.02em;cursor:pointer;text-decoration:none;}';
 	echo '.wrrapd-careers__btn:hover,.wrrapd-careers__btn:focus-visible,.wrrapd-careers.is-open .wrrapd-careers__btn{background:linear-gradient(180deg,#e85d04,#d14900);color:#fff;border-color:#d14900;}';
-	echo '.wrrapd-careers__menu{display:none;position:absolute;top:calc(100% + .28rem);right:0;left:0;min-width:100%;margin:0;padding:.35rem 0;list-style:none;background:#0f0351;border:1px solid rgba(255,255,255,.22);border-radius:.45rem;box-shadow:0 .55rem 1.25rem rgba(0,0,0,.35);z-index:20;}';
+	echo '.wrrapd-careers__menu{display:none;position:absolute;top:calc(100% + .28rem);right:0;left:auto;width:max-content;min-width:0;margin:0;padding:.35rem 0;list-style:none;background:#0f0351;border:1px solid rgba(255,255,255,.22);border-radius:.45rem;box-shadow:0 .55rem 1.25rem rgba(0,0,0,.35);z-index:20;}';
 	echo '.wrrapd-careers:hover .wrrapd-careers__menu,.wrrapd-careers:focus-within .wrrapd-careers__menu,.wrrapd-careers.is-open .wrrapd-careers__menu{display:block;}';
-	echo '.wrrapd-careers__menu a{display:block;padding:.48rem .7rem;color:#fff;font-family:Fraunces,Georgia,serif;font-size:.78rem;font-weight:600;line-height:1.25;text-decoration:none;white-space:nowrap;}';
+	echo '.wrrapd-careers__menu a{display:flex;align-items:center;gap:.48rem;padding:.42rem .65rem;color:#fff;font-family:Fraunces,Georgia,serif;font-size:.78rem;font-weight:600;line-height:1.25;text-decoration:none;white-space:nowrap;width:auto;}';
+	echo '.wrrapd-careers__icon{display:block;width:1.15rem;height:1.15rem;object-fit:contain;flex:0 0 1.15rem;}';
 	echo '.wrrapd-careers__menu a:hover,.wrrapd-careers__menu a:focus-visible{background:rgba(246,185,51,.22);color:' . WRRAPD_LOGO_GOLD . ';}';
 	echo '@media(max-width:1100px),(hover:none) and (pointer:coarse){';
 	echo '.wrrapd-careers{max-width:9.4rem;margin-top:.28rem;}';
 	echo '.wrrapd-careers__btn{font-size:clamp(.72rem,3.1vw,.86rem);min-height:1.65rem;padding:.28rem .42rem;}';
-	echo '.wrrapd-careers__menu{left:auto;right:0;min-width:13.5rem;}';
+	echo '.wrrapd-careers__menu{left:auto;right:0;width:max-content;min-width:0;}';
 	echo '.wrrapd-careers__menu a{white-space:normal;}';
 	echo '}';
 	echo '</style>';
@@ -2009,7 +2110,12 @@ function wrrapd_output_header_careers_menu() {
 	echo '<button type="button" class="wrrapd-careers__btn" aria-haspopup="true" aria-expanded="false">' . esc_html__( 'Careers', 'wrrapd' ) . '</button>';
 	echo '<ul class="wrrapd-careers__menu" role="menu">';
 	foreach ( $links as $link ) {
-		echo '<li role="none"><a role="menuitem" href="' . esc_url( (string) $link['url'] ) . '" target="_blank" rel="noopener">' . esc_html( (string) $link['label'] ) . '</a></li>';
+		$icon = ! empty( $link['icon'] ) ? wrrapd_mu_icon_src( (string) $link['icon'] ) : '';
+		echo '<li role="none"><a role="menuitem" href="' . esc_url( (string) $link['url'] ) . '" target="_blank" rel="noopener">';
+		if ( $icon !== '' ) {
+			echo '<img class="wrrapd-careers__icon" src="' . esc_url( $icon ) . '" width="18" height="18" alt="" decoding="async" />';
+		}
+		echo '<span>' . esc_html( (string) $link['label'] ) . '</span></a></li>';
 	}
 	echo '</ul></div></div>';
 
@@ -2407,7 +2513,6 @@ function wrrapd_site_footer_columns() {
 			'links' => array(
 				array( 'label' => __( 'Top gifting choices', 'wrrapd' ), 'url' => home_url( '/top-gifting-choices/' ) ),
 				array( 'label' => __( 'Stores we wrap for', 'wrrapd' ), 'url' => home_url( '/#wrrapd-retailer-wheels-row' ) ),
-				array( 'label' => __( 'Get the Chrome extension', 'wrrapd' ), 'url' => wrrapd_chrome_extension_install_url(), 'blank' => true ),
 			),
 		),
 		array(
@@ -2461,12 +2566,18 @@ function wrrapd_render_site_footer() {
 	echo '<footer class="wrrapd-footer" role="contentinfo">';
 	echo '<div class="wrrapd-footer__inner">';
 
+	echo '<div class="wrrapd-footer__top">';
 	echo '<div class="wrrapd-footer__lead">';
+	echo '<div class="wrrapd-footer__intro">';
+	echo '<div class="wrrapd-footer__brand-stack">';
 	echo '<a class="wrrapd-footer__brand" href="' . esc_url( home_url( '/' ) ) . '" rel="home">';
 	echo '<img src="https://wrrapd.com/wp-content/uploads/2025/03/Wrrapd_f-Logo-800-x-458-px.png" width="800" height="458" alt="' . esc_attr__( 'Wrrapd', 'wrrapd' ) . '" loading="lazy" decoding="async" />';
 	echo '</a>';
 	echo '<img class="wrrapd-footer__tagline" src="https://wrrapd.com/wp-content/uploads/2025/03/WrappingHappiness-2.png" width="344" height="65" alt="' . esc_attr__( 'Wrapping Happiness', 'wrrapd' ) . '" loading="lazy" decoding="async" />';
+	echo '</div>';
 	echo '<p class="wrrapd-footer__mission">' . esc_html__( 'We strive to deliver bigger smiles and surprises!', 'wrrapd' ) . '</p>';
+	echo '</div>';
+	echo '<p class="wrrapd-footer__cta"><a href="' . esc_url( wrrapd_chrome_extension_install_url() ) . '" target="_blank" rel="noopener">' . esc_html__( 'Gift-wrap with your FREE Chrome extension today', 'wrrapd' ) . '</a></p>';
 	echo '</div>';
 
 	echo '<nav class="wrrapd-footer__nav" aria-label="' . esc_attr__( 'Footer', 'wrrapd' ) . '">';
@@ -2482,8 +2593,7 @@ function wrrapd_render_site_footer() {
 		echo '</div>';
 	}
 	echo '</nav>';
-
-	echo '<p class="wrrapd-footer__cta"><a href="' . esc_url( wrrapd_chrome_extension_install_url() ) . '" target="_blank" rel="noopener">' . esc_html__( 'Gift-wrap with your FREE Chrome extension today', 'wrrapd' ) . '</a></p>';
+	echo '</div>';
 
 	echo '<div class="wrrapd-footer__bar">';
 	echo '<ul class="wrrapd-footer__social">';
@@ -2493,7 +2603,7 @@ function wrrapd_render_site_footer() {
 		echo '</a></li>';
 	}
 	echo '</ul>';
-	echo '<p class="wrrapd-footer__copy">© ' . esc_html( (string) gmdate( 'Y' ) ) . ' ' . esc_html__( 'Wrrapd Inc.; all rights reserved.', 'wrrapd' ) . '</p>';
+	echo '<p class="wrrapd-footer__copy">© ' . esc_html( (string) gmdate( 'Y' ) ) . ' ' . esc_html__( 'Wrrapd Inc.; all rights reserved. Patent pending.', 'wrrapd' ) . '</p>';
 	echo '</div>';
 
 	echo '</div>';
@@ -2518,39 +2628,43 @@ function wrrapd_output_site_footer_css() {
 	echo '.elementor-location-footer,[data-elementor-type="footer"]{display:none!important;}';
 	echo '.wrrapd-footer{--wf-ink:#fff;--wf-gold:' . WRRAPD_LOGO_GOLD . ';background:' . WRRAPD_NAVY_DEEP . ';color:var(--wf-ink);margin-top:auto;width:100%;box-sizing:border-box;font-family:Fraunces,Georgia,"Times New Roman",serif;}';
 	echo '.wrrapd-footer *{box-sizing:border-box;}';
-	echo '.wrrapd-footer__inner{max-width:78rem;margin:0 auto;padding:clamp(2.25rem,4.5vw,3.5rem) clamp(1.25rem,4vw,3rem) clamp(1.1rem,2vw,1.6rem);}';
-	/* Lead: bigger logo, mission statement underneath — no address. */
-	echo '.wrrapd-footer__lead{margin:0 0 clamp(1.9rem,4vw,2.9rem);}';
+	echo '.wrrapd-footer__inner{max-width:78rem;margin:0 auto;padding:clamp(1.45rem,2.8vw,2.1rem) clamp(1.25rem,4vw,3rem) 2.35rem;}';
+	echo '.wrrapd-footer__top{display:grid;grid-template-columns:minmax(22rem,1.35fr) minmax(0,2.1fr);align-items:stretch;gap:clamp(1.25rem,3vw,2.25rem);margin:0 0 .7rem;}';
+	/* Lead stretches with the link columns so the CTA sits on the SMS Consent baseline. */
+	echo '.wrrapd-footer__lead{display:flex;flex-direction:column;align-items:flex-start;margin:0;min-height:100%;}';
+	echo '.wrrapd-footer__intro{display:flex;flex-direction:row;align-items:flex-end;gap:clamp(.7rem,1.6vw,1.15rem);width:100%;}';
+	echo '.wrrapd-footer__brand-stack{flex:0 0 auto;}';
 	echo '.wrrapd-footer__brand{display:inline-block;line-height:0;margin:0;}';
-	echo '.wrrapd-footer__brand img{display:block;width:auto;height:auto;max-height:clamp(5.5rem,11vw,8.1rem);max-width:100%;}';
-	echo '.wrrapd-footer__tagline{display:block;width:auto;height:auto;max-height:clamp(1.85rem,4.2vw,2.65rem);max-width:min(16rem,72vw);margin:-1.85rem 0 .45rem;object-fit:contain;object-position:left center;}';
-	echo '.wrrapd-footer__mission{margin:0;font-family:inherit;font-weight:700;font-size:clamp(1.55rem,3.6vw,2.6rem);line-height:1.13;letter-spacing:-.015em;color:var(--wf-ink);max-width:24ch;text-wrap:balance;}';
-	/* Link groups */
-	echo '.wrrapd-footer__nav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:clamp(1.4rem,3vw,2.5rem);margin:0 0 clamp(1.75rem,3.5vw,2.5rem);}';
+	echo '.wrrapd-footer__brand img{display:block;width:auto;height:auto;max-height:clamp(4.6rem,9vw,6.4rem);max-width:100%;}';
+	echo '.wrrapd-footer__tagline{display:block;width:auto;height:auto;max-height:clamp(1.45rem,3.4vw,2.1rem);max-width:min(14rem,68vw);margin:-1.35rem 0 0;object-fit:contain;object-position:left center;}';
+	echo '.wrrapd-footer__mission{margin:0;font-family:inherit;font-weight:700;font-size:clamp(1.05rem,2.1vw,1.35rem);line-height:1.18;letter-spacing:-.015em;color:var(--wf-ink);max-width:16ch;text-wrap:balance;}';
+	echo '.wrrapd-footer__nav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:clamp(1.15rem,2.4vw,1.75rem);margin:0;}';
 	echo '.wrrapd-footer__heading{margin:0 0 .95rem;font-family:inherit;font-size:.95rem;font-weight:800;line-height:1.2;color:var(--wf-gold);text-transform:none;}';
 	echo '.wrrapd-footer__list{list-style:none;margin:0;padding:0;}';
 	echo '.wrrapd-footer__list li{margin:0 0 .62rem;}';
+	echo '.wrrapd-footer__list li:last-child{margin-bottom:0;}';
 	echo '.wrrapd-footer__list a{display:inline-block;color:var(--wf-ink);font-family:inherit;font-size:.93rem;font-weight:600;line-height:1.35;text-decoration:none;border-bottom:1px solid transparent;transition:color .15s ease,border-color .15s ease;}';
 	echo '.wrrapd-footer__list a:hover,.wrrapd-footer__list a:focus-visible{color:var(--wf-gold);border-bottom-color:var(--wf-gold);}';
-	/* Extension CTA sits where Etsy puts its app badges. */
-	echo '.wrrapd-footer__cta{margin:0 0 clamp(1.5rem,3vw,2.1rem);}';
-	echo '.wrrapd-footer__cta a{display:inline-flex;align-items:center;gap:.5rem;background:linear-gradient(180deg,#e85d04,#d14900);color:#fff;font-family:inherit;font-size:.93rem;font-weight:800;line-height:1;text-decoration:none;padding:.78rem 1.35rem;border-radius:999px;transition:transform .15s ease,box-shadow .15s ease;}';
+	echo '.wrrapd-footer__cta{margin:auto 0 0;padding-top:.85rem;width:100%;}';
+	echo '.wrrapd-footer__cta a{display:flex;align-items:center;justify-content:center;width:100%;box-sizing:border-box;gap:.5rem;background:linear-gradient(180deg,#e85d04,#d14900);color:#fff;font-family:inherit;font-size:.86rem;font-weight:800;line-height:1.2;text-align:center;text-decoration:none;white-space:nowrap;padding:.78rem 1.1rem;border-radius:999px;transition:transform .15s ease,box-shadow .15s ease;}';
 	echo '.wrrapd-footer__cta a:hover,.wrrapd-footer__cta a:focus-visible{transform:translateY(-1px);box-shadow:0 .5rem 1.1rem rgba(0,0,0,.28);}';
-	/* Hide the whole row, not just the button, so its margin does not leave a gap. */
 	echo 'html.wrrapd-ext-installed .wrrapd-footer__cta{display:none!important;}';
-	/* Bottom bar */
-	echo '.wrrapd-footer__bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.9rem 1.5rem;border-top:1px solid rgba(255,255,255,.18);padding-top:clamp(.95rem,2vw,1.3rem);}';
+	echo '.wrrapd-footer__list a[href*="chromewebstore.google.com"]{display:none!important;}';
+	echo '.wrrapd-footer__bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.65rem 1.5rem;border-top:1px solid rgba(255,255,255,.18);padding-top:.7rem;}';
 	echo '.wrrapd-footer__social{display:flex;align-items:center;gap:.55rem;list-style:none;margin:0;padding:0;}';
 	echo '.wrrapd-footer__social a{display:inline-flex;align-items:center;justify-content:center;width:2.15rem;height:2.15rem;border-radius:50%;background:rgba(255,255,255,.12);color:var(--wf-ink);transition:background .15s ease,color .15s ease;}';
 	echo '.wrrapd-footer__social a:hover,.wrrapd-footer__social a:focus-visible{background:var(--wf-gold);color:#0f0351;}';
 	echo '.wrrapd-footer__social svg{width:1.02rem;height:1.02rem;fill:currentColor;}';
 	echo '.wrrapd-footer__copy{margin:0;font-family:inherit;font-size:.82rem;font-weight:600;line-height:1.4;color:rgba(255,255,255,.72);}';
-	/* Tablet: two columns, still comfortable. */
 	echo '@media(max-width:900px){';
+	echo '.wrrapd-footer__top{grid-template-columns:1fr;gap:1.15rem;}';
+	echo '.wrrapd-footer__intro{flex-direction:column;align-items:flex-start;}';
+	echo '.wrrapd-footer__cta{margin-top:.75rem;padding-top:0;}';
+	echo '.wrrapd-footer__cta a{white-space:normal;}';
 	echo '.wrrapd-footer__nav{grid-template-columns:repeat(2,minmax(0,1fr));gap:1.5rem 1.75rem;}';
 	echo '}';
 	echo '@media(max-width:560px){';
-	echo '.wrrapd-footer__inner{padding:1.9rem 1.15rem 1.1rem;}';
+	echo '.wrrapd-footer__inner{padding:1.55rem 1.15rem 1.85rem;}';
 	echo '.wrrapd-footer__tagline{margin-top:-1.4rem;}';
 	echo '.wrrapd-footer__mission{font-size:1.42rem;max-width:26ch;}';
 	echo '.wrrapd-footer__nav{gap:1.35rem 1.1rem;}';
@@ -2558,7 +2672,7 @@ function wrrapd_output_site_footer_css() {
 	echo '.wrrapd-footer__list a{font-size:.86rem;}';
 	echo '.wrrapd-footer__list li{margin-bottom:.5rem;}';
 	echo '.wrrapd-footer__cta a{width:100%;justify-content:center;}';
-	echo '.wrrapd-footer__bar{justify-content:center;text-align:center;}';
+	echo '.wrrapd-footer__bar{justify-content:center;text-align:center;padding-top:.55rem;}';
 	echo '.wrrapd-footer__copy{width:100%;text-align:center;}';
 	echo '}';
 	echo '@media(prefers-reduced-motion:reduce){';
@@ -2568,6 +2682,55 @@ function wrrapd_output_site_footer_css() {
 	echo '</style>';
 }
 add_action( 'wp_head', 'wrrapd_output_site_footer_css', 9998 );
+
+/**
+ * Shopper legal pages — Terms, Privacy, Affiliate Disclosure, e-comms, SMS consent.
+ *
+ * @return array{ids:list<int>,slugs:list<string>}
+ */
+function wrrapd_legal_page_refs() {
+	return array(
+		'ids'   => array( 5209, 6772, 6930, 6889, 6202 ),
+		'slugs' => array( 'terms', 'privacy', 'affiliate-disclosure', 'ecomms-policy', 'sms-consent' ),
+	);
+}
+
+/**
+ * Whether the current request is a published legal/policy page.
+ */
+function wrrapd_is_legal_page() {
+	if ( is_admin() ) {
+		return false;
+	}
+	$refs = wrrapd_legal_page_refs();
+	return is_page( $refs['ids'] ) || is_page( $refs['slugs'] );
+}
+
+/**
+ * Fraunces on legal page body copy (wins over Elementor / Customizer Source Sans).
+ */
+function wrrapd_output_legal_page_css() {
+	if ( ! wrrapd_is_legal_page() ) {
+		return;
+	}
+	echo '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,560;0,9..144,700;1,9..144,560&amp;display=swap" />';
+	echo '<style id="wrrapd-legal-fraunces">';
+	echo 'body.page-id-5209,body.page-id-6772,body.page-id-6930,body.page-id-6889,body.page-id-6202,';
+	echo 'body.page-id-5209 .elementor-widget-text-editor,body.page-id-6772 .elementor-widget-text-editor,body.page-id-6930 .elementor-widget-text-editor,body.page-id-6889 .elementor-widget-text-editor,body.page-id-6202 .elementor-widget-text-editor,';
+	echo 'body.page-id-5209 .elementor-heading-title,body.page-id-6772 .elementor-heading-title,body.page-id-6930 .elementor-heading-title,body.page-id-6889 .elementor-heading-title,body.page-id-6202 .elementor-heading-title,';
+	echo 'body.page-id-5209 h1,body.page-id-6772 h1,body.page-id-6930 h1,body.page-id-6889 h1,body.page-id-6202 h1,';
+	echo 'body.page-id-5209 h2,body.page-id-6772 h2,body.page-id-6930 h2,body.page-id-6889 h2,body.page-id-6202 h2,';
+	echo 'body.page-id-5209 h3,body.page-id-6772 h3,body.page-id-6930 h3,body.page-id-6889 h3,body.page-id-6202 h3,';
+	echo 'body.page-id-5209 p,body.page-id-6772 p,body.page-id-6930 p,body.page-id-6889 p,body.page-id-6202 p,';
+	echo 'body.page-id-5209 li,body.page-id-6772 li,body.page-id-6930 li,body.page-id-6889 li,body.page-id-6202 li,';
+	echo 'body.page-id-5209 a,body.page-id-6772 a,body.page-id-6930 a,body.page-id-6889 a,body.page-id-6202 a,';
+	echo 'body.page-id-5209 .wrrapd-page-shell,body.page-id-6772 .wrrapd-page-shell,body.page-id-6930 .wrrapd-page-shell,body.page-id-6889 .wrrapd-page-shell,body.page-id-6202 .wrrapd-page-shell,';
+	echo 'body.page-id-5209 .wrrapd-legal-card,body.page-id-6772 .wrrapd-legal-card,body.page-id-6930 .wrrapd-legal-card,body.page-id-6889 .wrrapd-legal-card,body.page-id-6202 .wrrapd-legal-card';
+	echo '{font-family:Fraunces,Georgia,"Times New Roman",serif!important;}';
+	echo '</style>';
+	echo '<!-- ' . esc_html( WRRAPD_MU_BUILD ) . ' -->';
+}
+add_action( 'wp_footer', 'wrrapd_output_legal_page_css', 9999 );
 
 /**
  * Keep footer year current and absorb dead Amazon callback route into home.
