@@ -22,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_WRAPSTARS_BUILD', '2026-09-22-focus-favicon' );
+define( 'WRRAPD_WRAPSTARS_BUILD', '2026-09-22-shared-onboarding-login' );
 /** Approval / re-invite onboarding credentials remain valid this many days. */
 define( 'WRRAPD_WRAPSTARS_INVITE_TTL_DAYS', 15 );
 
@@ -33,6 +33,10 @@ if ( is_readable( $wrrapd_boldsign ) ) {
 $wrrapd_esign = dirname( __FILE__ ) . '/wrrapd-esign-agreements.php';
 if ( file_exists( $wrrapd_esign ) ) {
 	require_once $wrrapd_esign;
+}
+$wrrapd_ob_login = dirname( __FILE__ ) . '/wrrapd-onboarding-login.php';
+if ( is_readable( $wrrapd_ob_login ) ) {
+	require_once $wrrapd_ob_login;
 }
 $wrrapd_apply = dirname( __FILE__ ) . '/wrrapd-wrapstars-apply.php';
 if ( is_readable( $wrrapd_apply ) ) {
@@ -240,16 +244,33 @@ function wrrapd_wrapstars_pros_url( $path = '/' ) {
 	return 'https://' . wrrapd_wrapstars_pros_host() . $path;
 }
 
-/** Front-end WrapStar login (approved only — not wp-login.php). */
+/**
+ * Onboarding-era login door (shared across WrapStar / WrapRider / JoyRider).
+ * Post-activation contractors use /wrapstar-login/ (role portal), not this URL.
+ */
 function wrrapd_wrapstars_portal_login_url( $redirect = '', $greet = '' ) {
-	$url = wrrapd_wrapstars_apply_url( '/wrapstar-login/' );
+	if ( function_exists( 'wrrapd_onboarding_login_url' ) ) {
+		if ( $redirect === '' ) {
+			$redirect = wrrapd_wrapstars_pros_url( '/onboarding/' );
+		}
+		return wrrapd_onboarding_login_url( $redirect, $greet );
+	}
+	$url = wrrapd_wrapstars_apply_url( '/onboarding/' );
 	if ( $redirect !== '' ) {
-		// add_query_arg encodes — do not rawurlencode twice.
 		$url = add_query_arg( 'redirect_to', $redirect, $url );
 	}
 	$greet = trim( (string) $greet );
 	if ( $greet !== '' && strcasecmp( $greet, 'there' ) !== 0 ) {
 		$url = add_query_arg( 'greet', $greet, $url );
+	}
+	return $url;
+}
+
+/** Post-activation WrapStar role portal login (not onboarding). */
+function wrrapd_wrapstars_role_portal_login_url( $redirect = '' ) {
+	$url = wrrapd_wrapstars_apply_url( '/wrapstar-login/' );
+	if ( $redirect !== '' ) {
+		$url = add_query_arg( 'redirect_to', $redirect, $url );
 	}
 	return $url;
 }
@@ -1347,7 +1368,9 @@ function wrrapd_wrapstars_host_routing() {
 	}
 
 	if ( wrrapd_wrapstars_is_apply_host() ) {
-		if ( preg_match( '#^/onboarding#', $path ) ) {
+		// Exact /onboarding/ is the shared onboarding login (see wrrapd-onboarding-login.php).
+		// Deeper /onboarding/... paths are WrapStar steps → send to pros.
+		if ( preg_match( '#^/onboarding/.+#', $path ) ) {
 			wp_safe_redirect( wrrapd_wrapstars_pros_url( $path ) );
 			exit;
 		}
@@ -1358,7 +1381,8 @@ function wrrapd_wrapstars_host_routing() {
 				);
 				exit;
 			}
-			wp_safe_redirect( wrrapd_wrapstars_portal_redirect_for_user( get_current_user_id() ) );
+			// Still onboarding → shared login door routes them to pros steps.
+			wp_safe_redirect( wrrapd_wrapstars_portal_login_url( wrrapd_wrapstars_pros_url( '/onboarding/' ) ) );
 			exit;
 		}
 		if ( preg_match( '#^/dashboard(/|$)#', $path ) ) {
@@ -1374,7 +1398,7 @@ function wrrapd_wrapstars_host_routing() {
 			exit;
 		}
 		if ( preg_match( '#^/(wrapstar-login|login)(/|$)#', $path ) ) {
-			wp_safe_redirect( wrrapd_wrapstars_apply_url( '/wrapstar-login/' ) );
+			wp_safe_redirect( wrrapd_wrapstars_role_portal_login_url() );
 			exit;
 		}
 		if ( preg_match( '#^/onboarding#', $path ) ) {
@@ -1958,11 +1982,10 @@ function wrrapd_wrapstars_process_portal_login() {
 		return;
 	}
 	if ( wrrapd_wrapstars_onboarding_closed_for_user( $user->ID ) ) {
-		// Onboarding approved in Command Center → this portal is closed; the WrapStar app takes over.
-		wp_logout();
-		$app_host = function_exists( 'wrrapd_wrapstars_app_url' ) ? wp_parse_url( wrrapd_wrapstars_app_url(), PHP_URL_HOST ) : 'wrapstar.wrrapd.com';
-		$GLOBALS['wrrapd_ws_login_error'] = 'Your onboarding is complete. Sign in at ' . $app_host . ' with this same email and password.';
-		return;
+		wp_set_current_user( $user->ID );
+		wp_set_auth_cookie( $user->ID, ! empty( $_POST['remember'] ) );
+		wp_safe_redirect( wrrapd_wrapstars_app_url() );
+		exit;
 	}
 	if ( ! wrrapd_wrapstars_is_onboarding_eligible_user( $user->ID ) ) {
 		wp_logout();
@@ -1970,7 +1993,7 @@ function wrrapd_wrapstars_process_portal_login() {
 		return;
 	}
 
-	// First login after approval always starts with password change (then onboarding).
+	// Still onboarding — send to shared onboarding destination (pros steps).
 	wp_safe_redirect( wrrapd_wrapstars_portal_redirect_for_user( $user->ID ) );
 	exit;
 }
@@ -3436,32 +3459,27 @@ function wrrapd_wrapstars_shortcode_status() {
 }
 
 function wrrapd_wrapstars_shortcode_login() {
-	$redirect = isset( $_GET['redirect_to'] ) ? esc_url_raw( wp_unslash( $_GET['redirect_to'] ) ) : '';
+	$ob_url   = wrrapd_wrapstars_portal_login_url( wrrapd_wrapstars_pros_url( '/onboarding/' ) );
+	$redirect = isset( $_GET['redirect_to'] ) ? esc_url_raw( wp_unslash( $_GET['redirect_to'] ) ) : wrrapd_wrapstars_app_url();
 	$error    = $GLOBALS['wrrapd_ws_login_error'] ?? '';
 	if ( $error === '' && ! empty( $_GET['invite_expired'] ) ) {
 		$error = 'This onboarding invitation expired after 15 days. Email us and we will send you a fresh welcome email.';
 	}
-	$greet    = isset( $_GET['greet'] ) ? sanitize_text_field( wp_unslash( $_GET['greet'] ) ) : '';
+	$greet = isset( $_GET['greet'] ) ? sanitize_text_field( wp_unslash( $_GET['greet'] ) ) : '';
 	if ( $greet === '' && ! empty( $_POST['greet'] ) ) {
 		$greet = sanitize_text_field( wp_unslash( $_POST['greet'] ) );
 	}
-	if ( $greet === '' && ! empty( $_POST['email'] ) ) {
-		$app = wrrapd_wrapstars_get_application_by_email( sanitize_email( wp_unslash( $_POST['email'] ) ) );
-		if ( $app ) {
-			$greet = wrrapd_wrapstars_greeting_name( $app->ID );
-		}
-	}
 	$welcome = $greet !== '' && strcasecmp( $greet, 'there' ) !== 0
-		? 'Welcome to your onboarding, ' . $greet . '!'
-		: 'Welcome to your onboarding!';
+		? 'Welcome back, ' . $greet . '!'
+		: 'WrapStar portal login';
 
 	ob_start();
 	?>
 	<div class="wrrapd-wrapstars wrrapd-wrapstars-login">
 		<section class="wrrapd-wrapstars-login__head">
-			<p class="wrrapd-wrapstars-login__eyebrow">WrapStar onboarding</p>
+			<p class="wrrapd-wrapstars-login__eyebrow">WrapStar portal</p>
 			<h1><?php echo esc_html( $welcome ); ?></h1>
-			<p class="wrrapd-wrapstars-login__lead">We are honored you are here. Please sign in to continue — you will choose your own password before onboarding begins.</p>
+			<p class="wrrapd-wrapstars-login__lead">For activated WrapStars. Still finishing onboarding? <a href="<?php echo esc_url( $ob_url ); ?>">Sign in to onboarding</a>.</p>
 		</section>
 		<?php if ( $error ) : ?>
 			<div class="wrrapd-wrapstars-alert wrrapd-wrapstars-alert--err"><?php echo esc_html( $error ); ?></div>
@@ -3482,7 +3500,6 @@ function wrrapd_wrapstars_shortcode_login() {
 				<button type="submit" class="wrrapd-wrapstars-btn">Log in</button>
 			</div>
 		</form>
-		<p class="wrrapd-wrapstars-form-foot">Not yet approved? <a href="<?php echo esc_url( wrrapd_wrapstars_apply_url( '/apply/' ) ); ?>">Apply to become a WrapStar</a></p>
 	</div>
 	<?php
 	return ob_get_clean();

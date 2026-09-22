@@ -27,6 +27,12 @@ $wrrapd_esign = dirname( __FILE__ ) . '/wrrapd-esign-agreements.php';
 if ( file_exists( $wrrapd_esign ) ) {
 	require_once $wrrapd_esign;
 }
+if ( ! function_exists( 'wrrapd_onboarding_login_url' ) ) {
+	$wrrapd_ob_login = dirname( __FILE__ ) . '/wrrapd-onboarding-login.php';
+	if ( is_readable( $wrrapd_ob_login ) ) {
+		require_once $wrrapd_ob_login;
+	}
+}
 
 define( 'WRRAPD_WRAPRIDERS_BUILD', '2026-09-20-apply-contrast' );
 define( 'WRRAPD_WRAPRIDERS_INVITE_TTL_DAYS', 15 );
@@ -258,13 +264,28 @@ function wrrapd_wrapriders_pros_url( $path = '/' ) {
 }
 
 function wrrapd_wrapriders_portal_login_url( $redirect = '', $greet = '' ) {
-	$url = wrrapd_wrapriders_apply_url( '/wraprider/login/' );
+	if ( function_exists( 'wrrapd_onboarding_login_url' ) ) {
+		if ( $redirect === '' ) {
+			$redirect = wrrapd_wrapriders_pros_url( '/wraprider-onboarding/' );
+		}
+		return wrrapd_onboarding_login_url( $redirect, $greet );
+	}
+	$url = wrrapd_wrapriders_apply_url( '/onboarding/' );
 	if ( $redirect !== '' ) {
 		$url = add_query_arg( 'redirect_to', $redirect, $url );
 	}
 	$greet = trim( (string) $greet );
 	if ( $greet !== '' && strcasecmp( $greet, 'there' ) !== 0 ) {
 		$url = add_query_arg( 'greet', $greet, $url );
+	}
+	return $url;
+}
+
+/** Post-activation WrapRider role portal login. */
+function wrrapd_wrapriders_role_portal_login_url( $redirect = '' ) {
+	$url = wrrapd_wrapriders_apply_url( '/wraprider/login/' );
+	if ( $redirect !== '' ) {
+		$url = add_query_arg( 'redirect_to', $redirect, $url );
 	}
 	return $url;
 }
@@ -808,12 +829,17 @@ function wrrapd_wrapriders_host_routing() {
 			wp_safe_redirect( wrrapd_wrapriders_pros_url( $path ) );
 			exit;
 		}
+		// Onboarding applicants use shared /onboarding/; this URL is the post-activation portal.
+		if ( $is_login && ! is_user_logged_in() ) {
+			// Allow the role-portal form to render; onboarders are steered in the shortcode.
+			return;
+		}
 		if ( $is_login && is_user_logged_in() && wrrapd_wrapriders_is_onboarding_eligible_user( get_current_user_id() ) ) {
 			if ( wrrapd_wrapriders_enforce_active_invite_or_logout( get_current_user_id() ) ) {
 				wp_safe_redirect( add_query_arg( 'invite_expired', '1', wrrapd_wrapriders_portal_login_url() ) );
 				exit;
 			}
-			wp_safe_redirect( wrrapd_wrapriders_portal_redirect_for_user( get_current_user_id() ) );
+			wp_safe_redirect( wrrapd_wrapriders_portal_login_url( wrrapd_wrapriders_pros_url( '/wraprider-onboarding/' ) ) );
 			exit;
 		}
 		return;
@@ -961,32 +987,22 @@ function wrrapd_wrapriders_process_portal_login() {
 		return;
 	}
 	if ( wrrapd_wrapriders_onboarding_closed_for_user( $user->ID ) ) {
-		// Onboarding approved in Command Center → this portal is closed; the two contractor apps take over.
-		$GLOBALS['wrrapd_wr_login_error'] = 'Your onboarding is complete. Sign in at ' . wrrapd_wrapriders_app_hosts_text() . ' with this same email and password.';
-		return;
+		// Activated → role app.
+		wp_set_current_user( $user->ID );
+		wp_set_auth_cookie( $user->ID, true );
+		$app_url = function_exists( 'wrrapd_wrapriders_app_url' ) ? wrrapd_wrapriders_app_url() : 'https://wraprider.wrrapd.com/';
+		wp_safe_redirect( $app_url );
+		exit;
 	}
-	if ( ! wrrapd_wrapriders_is_onboarding_eligible_user( $user->ID ) ) {
-		$GLOBALS['wrrapd_wr_login_error'] = 'This login is for approved WrapRiders only.';
-		return;
+	if ( wrrapd_wrapriders_is_onboarding_eligible_user( $user->ID ) ) {
+		// Still onboarding → shared door / onboarding destination.
+		wp_set_current_user( $user->ID );
+		wp_set_auth_cookie( $user->ID, true );
+		wp_safe_redirect( wrrapd_wrapriders_portal_redirect_for_user( $user->ID ) );
+		exit;
 	}
-	$app = wrrapd_wrapriders_get_application_by_user( $user->ID );
-	if ( $app && (string) wrrapd_wrapriders_get_meta( $app->ID, 'status' ) === 'declined' ) {
-		$GLOBALS['wrrapd_wr_login_error'] = 'This invitation was declined.';
-		return;
-	}
-	if ( $app && wrrapd_wrapriders_invite_is_expired( $app->ID ) ) {
-		wrrapd_wrapriders_invalidate_expired_invite( $app->ID );
-		$GLOBALS['wrrapd_wr_login_error'] = 'Your invitation has expired. Contact us to resend.';
-		return;
-	}
-	wp_set_current_user( $user->ID );
-	wp_set_auth_cookie( $user->ID, true );
-	$redirect = isset( $_POST['redirect_to'] ) ? esc_url_raw( wp_unslash( $_POST['redirect_to'] ) ) : '';
-	if ( $redirect === '' || strpos( $redirect, 'wraprider-onboarding' ) === false ) {
-		$redirect = wrrapd_wrapriders_portal_redirect_for_user( $user->ID );
-	}
-	wp_safe_redirect( $redirect );
-	exit;
+	$GLOBALS['wrrapd_wr_login_error'] = 'This login is for approved WrapRiders only.';
+	return;
 }
 
 function wrrapd_wrapriders_process_change_password() {
@@ -1873,15 +1889,24 @@ function wrrapd_wrapriders_shortcode_thankyou() {
 }
 
 function wrrapd_wrapriders_shortcode_login() {
-	$err   = $GLOBALS['wrrapd_wr_login_error'] ?? '';
+	// While still in onboarding, send people to the shared door.
+	$err_hint = '';
+	if ( ! empty( $_GET['use_onboarding'] ) ) {
+		$err_hint = 'Use the shared onboarding login to continue setup.';
+	}
+	$err   = $GLOBALS['wrrapd_wr_login_error'] ?? $err_hint;
 	$greet = isset( $_GET['greet'] ) ? sanitize_text_field( wp_unslash( $_GET['greet'] ) ) : '';
-	$redir = isset( $_GET['redirect_to'] ) ? esc_url_raw( wp_unslash( $_GET['redirect_to'] ) ) : wrrapd_wrapriders_pros_url( '/wraprider-onboarding/' );
+	$redir = isset( $_GET['redirect_to'] ) ? esc_url_raw( wp_unslash( $_GET['redirect_to'] ) ) : ( function_exists( 'wrrapd_wrapriders_app_url' ) ? wrrapd_wrapriders_app_url() : '' );
 	$expired = isset( $_GET['invite_expired'] );
+	$ob_url  = function_exists( 'wrrapd_onboarding_login_url' )
+		? wrrapd_onboarding_login_url( wrrapd_wrapriders_pros_url( '/wraprider-onboarding/' ) )
+		: wrrapd_wrapriders_portal_login_url();
 	ob_start();
 	?>
 	<div class="wrrapd-wrapstars wrrapd-wrapriders">
 		<div class="wrrapd-wrapstars-card wrrapd-wrapstars-login">
 			<h1>WrapRider portal login</h1>
+			<p>For activated WrapRiders. Still finishing onboarding? <a href="<?php echo esc_url( $ob_url ); ?>">Sign in to onboarding</a>.</p>
 			<?php if ( $greet ) : ?><p>Welcome, <?php echo esc_html( $greet ); ?>.</p><?php endif; ?>
 			<?php if ( $expired ) : ?><div class="wrrapd-wrapstars-alert wrrapd-wrapstars-alert--err">Your invitation expired. Contact us to resend.</div><?php endif; ?>
 			<?php if ( $err ) : ?><div class="wrrapd-wrapstars-alert wrrapd-wrapstars-alert--err"><?php echo esc_html( $err ); ?></div><?php endif; ?>
