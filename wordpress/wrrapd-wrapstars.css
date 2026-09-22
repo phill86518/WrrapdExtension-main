@@ -3771,3 +3771,195 @@ body.wrrapd-drivers-portal.error404 .page-content {
   font-weight: 700;
   letter-spacing: 0.02em;
 }
+
+/* Shared onboarding login door (apply.wrrapd.com/onboarding/) — hire portal chrome, not step chrome */
+body.wrrapd-onboarding-login-host {
+	background:
+		radial-gradient(ellipse 90% 55% at 50% -10%, rgba(246, 185, 51, 0.18), transparent 55%),
+		linear-gradient(165deg, #f7f4ef 0%, #eef1f7 42%, #e8ecf4 100%) !important;
+	background-attachment: fixed !important;
+	min-height: 100vh;
+}
+
+body.wrrapd-onboarding-login-host .wrrapd-wrapstars-site-header {
+	display: block !important;
+}
+
+body.wrrapd-onboarding-login-host .wrrapd-wrapstars-site-footer {
+	display: block !important;
+	background: #0f0351 !important;
+	border-radius: 0 !important;
+	margin-top: 0 !important;
+	max-width: none !important;
+}
+
+body.wrrapd-onboarding-login-host .wrrapd-wrapstars-site-footer__inner {
+	background: transparent !important;
+	border-radius: 0 !important;
+	max-width: 100rem !important;
+	margin: 0 auto !important;
+	padding: 0 !important;
+	color: #fff !important;
+}
+
+body.wrrapd-onboarding-login-host .wp-block-post-title,
+body.wrrapd-onboarding-login-host .entry-header,
+body.wrrapd-onboarding-login-host h1.wp-block-post-title,
+body.wrrapd-onboarding-login-host .wp-block-navigation,
+body.wrrapd-onboarding-login-host header.wp-block-template-part,
+body.wrrapd-onboarding-login-host footer.wp-block-template-part {
+	display: none !important;
+	height: 0 !important;
+	margin: 0 !important;
+	padding: 0 !important;
+	overflow: hidden !important;
+}
+
+.wrrapd-onboarding-login {
+	max-width: none;
+	margin: 0;
+	padding: 0;
+}
+
+.wrrapd-onboarding-login__stage {
+	width: min(28.5rem, calc(100% - 2rem));
+	margin: 0 auto;
+	padding: clamp(1.75rem, 5vw, 3.25rem) 0 clamp(2.5rem, 6vw, 4rem);
+}
+
+.wrrapd-onboarding-login__intro {
+	text-align: center;
+	margin-bottom: 1.35rem;
+}
+
+.wrrapd-onboarding-login__intro .wrrapd-wrapstars-login__eyebrow {
+	color: #0f0351;
+}
+
+.wrrapd-onboarding-login__intro h1 {
+	color: #0f0351;
+	letter-spacing: -0.02em;
+}
+
+.wrrapd-onboarding-login__intro .wrrapd-wrapstars-login__lead {
+	max-width: 26rem;
+	margin-left: auto;
+	margin-right: auto;
+	color: #3d4663;
+}
+
+.wrrapd-onboarding-login__tracks {
+	list-style: none;
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	gap: 0.45rem;
+	margin: 1.1rem 0 0;
+	padding: 0;
+}
+
+.wrrapd-onboarding-login__track {
+	display: inline-block;
+	padding: 0.28rem 0.7rem;
+	border-radius: 999px;
+	font-size: 0.72rem;
+	font-weight: 700;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	border: 1px solid transparent;
+}
+
+.wrrapd-onboarding-login__track--wrapstar {
+	background: #0f0351;
+	color: #f6b933;
+	border-color: #0f0351;
+}
+
+.wrrapd-onboarding-login__track--wraprider {
+	background: #fff;
+	color: #0f0351;
+	border-color: #c9b27a;
+}
+
+.wrrapd-onboarding-login__track--joyrider {
+	background: #fff;
+	color: #0f0351;
+	border-color: #9aa8c7;
+}
+
+.wrrapd-onboarding-login__form {
+	margin: 0 auto 1rem;
+	padding: 1.5rem 1.35rem 1.25rem;
+	border-radius: 1rem;
+	border: 1px solid rgba(15, 3, 81, 0.08);
+	box-shadow: 0 18px 40px rgba(15, 3, 81, 0.08);
+	background: #fff;
+}
+
+.wrrapd-onboarding-login__form label {
+	margin-bottom: 0.85rem;
+}
+
+.wrrapd-onboarding-login__form input[type="email"],
+.wrrapd-onboarding-login__form input[type="password"] {
+	width: 100%;
+	margin-top: 0.35rem;
+	padding: 0.7rem 0.85rem;
+	border-radius: 0.55rem;
+	border: 1px solid #d5dbe8;
+	background: #fbfcff;
+	font-size: 1rem;
+}
+
+.wrrapd-onboarding-login__form input[type="email"]:focus,
+.wrrapd-onboarding-login__form input[type="password"]:focus {
+	outline: 2px solid rgba(246, 185, 51, 0.55);
+	outline-offset: 1px;
+	border-color: #0f0351;
+	background: #fff;
+}
+
+.wrrapd-onboarding-login__form .wrrapd-wrapstars-login__actions {
+	justify-content: stretch;
+	margin-top: 0.85rem;
+}
+
+.wrrapd-onboarding-login__form .wrrapd-wrapstars-btn {
+	width: 100%;
+	background: #f6b933 !important;
+	color: #0f0351 !important;
+	border: none;
+	font-weight: 700;
+	padding: 0.85rem 1rem;
+	border-radius: 0.65rem;
+	cursor: pointer;
+}
+
+.wrrapd-onboarding-login__form .wrrapd-wrapstars-btn:hover {
+	filter: brightness(0.97);
+}
+
+.wrrapd-onboarding-login__foot {
+	text-align: center;
+	margin: 0;
+	color: #5c6370;
+	font-size: 0.92rem;
+	line-height: 1.5;
+}
+
+.wrrapd-onboarding-login__foot a {
+	color: #0f0351;
+	font-weight: 700;
+	text-decoration: underline;
+	text-underline-offset: 0.15em;
+}
+
+@media (max-width: 480px) {
+	.wrrapd-onboarding-login__stage {
+		width: min(100%, calc(100% - 1.25rem));
+		padding-top: 1.35rem;
+	}
+	.wrrapd-onboarding-login__form {
+		padding: 1.25rem 1rem 1.1rem;
+	}
+}

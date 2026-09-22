@@ -22,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_WRAPSTARS_BUILD', '2026-09-22-shared-onboarding-login' );
+define( 'WRRAPD_WRAPSTARS_BUILD', '2026-09-22-onboarding-login-chrome' );
 /** Approval / re-invite onboarding credentials remain valid this many days. */
 define( 'WRRAPD_WRAPSTARS_INVITE_TTL_DAYS', 15 );
 
@@ -1554,8 +1554,16 @@ function wrrapd_wrapstars_body_class( $classes ) {
 	if ( wrrapd_wrapstars_is_pros_host() ) {
 		$classes[] = 'wrrapd-wrapstars-pros-host';
 	}
-	$uri = isset( $_SERVER['REQUEST_URI'] ) ? (string) $_SERVER['REQUEST_URI'] : '';
-	if ( str_contains( $uri, '/onboarding' ) ) {
+	$uri  = isset( $_SERVER['REQUEST_URI'] ) ? (string) $_SERVER['REQUEST_URI'] : '';
+	$path = '/' . trim( (string) strtok( $uri, '?' ), '/' );
+	// Exact /onboarding/ is the shared login door — keep the hire portal header/footer.
+	// Deeper /onboarding/... paths use the onboarding-step chrome (header hidden, sage bg).
+	$is_shared_login = function_exists( 'wrrapd_wrapstars_is_shared_onboarding_login_path' )
+		? wrrapd_wrapstars_is_shared_onboarding_login_path( $path )
+		: (bool) preg_match( '#^/onboarding/?$#', $path );
+	if ( $is_shared_login ) {
+		$classes[] = 'wrrapd-onboarding-login-host';
+	} elseif ( str_contains( $uri, '/onboarding' ) ) {
 		$classes[] = 'wrrapd-wrapstars-onboarding-host';
 	}
 	if ( preg_match( '#/(thank-you|driver-thank-you)(/|$)#', $uri ) ) {
@@ -3175,6 +3183,9 @@ function wrrapd_wrapstars_output_theme_cleanup_css() {
 	/* SiteGround AI Agent chat bubble (logged-in front-end) + leftover theme chrome */
 	echo '#sg-ai-studio-root,#sg-ai-studio,.sg-ai-studio,.sgai-widget,.sg-assistant,[class*="sg-ai"],[id*="sg-ai"],[class*="sgai-"],[id*="sgai-"],iframe[src*="ai-studio"],iframe[src*="sg-ai"]{display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important;height:0!important;width:0!important;overflow:hidden!important;}';
 	echo 'body.wrrapd-wrapstars-portal footer.wp-block-template-part,body.wrrapd-wrapstars-portal .wp-block-template-part[class*="footer"],body.wrrapd-wrapstars-portal .powered-by,body.wrrapd-wrapstars-portal .wp-block-site-tagline{display:none!important;height:0!important;margin:0!important;padding:0!important;overflow:hidden!important;}';
+	/* Shared onboarding login door: keep hire header/footer (never hide like step chrome). */
+	echo 'body.wrrapd-onboarding-login-host .wrrapd-wrapstars-site-header,body.wrrapd-onboarding-login-host .wrrapd-wrapstars-site-footer{display:block!important;visibility:visible!important;height:auto!important;max-height:none!important;overflow:visible!important;}';
+	echo 'body.wrrapd-onboarding-login-host .wp-block-post-title,body.wrrapd-onboarding-login-host .entry-header,body.wrrapd-onboarding-login-host h1.wp-block-post-title{display:none!important;}';
 	echo '</style>';
 }
 add_action( 'wp_head', 'wrrapd_wrapstars_output_theme_cleanup_css', 0 );
