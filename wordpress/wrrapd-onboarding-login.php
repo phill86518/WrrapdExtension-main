@@ -448,9 +448,6 @@ function wrrapd_onboarding_login_shortcode() {
 	if ( $greet === '' && ! empty( $_POST['greet'] ) ) {
 		$greet = sanitize_text_field( wp_unslash( $_POST['greet'] ) );
 	}
-	$welcome = $greet !== '' && strcasecmp( $greet, 'there' ) !== 0
-		? 'Welcome, ' . $greet . '!'
-		: 'Welcome to onboarding';
 
 	$wrapstar_portal  = wrrapd_onboarding_login_role_portal_url( 'wrapstar' );
 	$wraprider_portal = wrrapd_onboarding_login_role_portal_url( 'wraprider' );
@@ -460,16 +457,6 @@ function wrrapd_onboarding_login_shortcode() {
 	?>
 	<div class="wrrapd-wrapstars wrrapd-wrapstars-login wrrapd-onboarding-login">
 		<div class="wrrapd-onboarding-login__stage">
-			<section class="wrrapd-wrapstars-login__head wrrapd-onboarding-login__intro">
-				<p class="wrrapd-wrapstars-login__eyebrow">Wrrapd onboarding</p>
-				<h1><?php echo esc_html( $welcome ); ?></h1>
-				<p class="wrrapd-wrapstars-login__lead">Sign in with the email and temporary password from your approval message. We&rsquo;ll open the right portal for your role.</p>
-				<ul class="wrrapd-onboarding-login__tracks" aria-label="Onboarding roles">
-					<li><span class="wrrapd-onboarding-login__track wrrapd-onboarding-login__track--wrapstar">WrapStar</span></li>
-					<li><span class="wrrapd-onboarding-login__track wrrapd-onboarding-login__track--wraprider">WrapRider</span></li>
-					<li><span class="wrrapd-onboarding-login__track wrrapd-onboarding-login__track--joyrider">JoyRider</span></li>
-				</ul>
-			</section>
 			<?php if ( $error ) : ?>
 				<div class="wrrapd-wrapstars-alert wrrapd-wrapstars-alert--err"><?php echo esc_html( $error ); ?></div>
 			<?php endif; ?>
@@ -486,7 +473,7 @@ function wrrapd_onboarding_login_shortcode() {
 				<label>Password <input type="password" name="password" required autocomplete="current-password" /></label>
 				<label class="ws-check"><input type="checkbox" name="remember" value="1" /> <span>Keep me signed in</span></label>
 				<div class="wrrapd-wrapstars-login__actions">
-					<button type="submit" class="wrrapd-wrapstars-btn">Log in to onboarding</button>
+					<button type="submit" class="wrrapd-wrapstars-btn">Log in</button>
 				</div>
 			</form>
 			<p class="wrrapd-wrapstars-form-foot wrrapd-onboarding-login__foot">Already fully approved? Use your <a href="<?php echo esc_url( $wrapstar_portal ); ?>">WrapStar</a>, <a href="<?php echo esc_url( $wraprider_portal ); ?>">WrapRider</a>, or <a href="<?php echo esc_url( $joyrider_portal ); ?>">JoyRider</a> portal login.</p>
