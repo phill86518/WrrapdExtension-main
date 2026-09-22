@@ -3851,22 +3851,24 @@ body.wrrapd-onboarding-login-host footer.wp-block-template-part {
 .wrrapd-onboarding-login__tracks {
 	list-style: none;
 	display: flex;
-	flex-wrap: wrap;
+	flex-wrap: nowrap;
 	justify-content: center;
-	gap: 0.45rem;
+	align-items: center;
+	gap: 0.4rem;
 	margin: 1.1rem 0 0;
 	padding: 0;
 }
 
 .wrrapd-onboarding-login__track {
 	display: inline-block;
-	padding: 0.28rem 0.7rem;
+	padding: 0.22rem 0.55rem;
 	border-radius: 999px;
-	font-size: 0.72rem;
+	font-size: 0.65rem;
 	font-weight: 700;
-	letter-spacing: 0.06em;
+	letter-spacing: 0.05em;
 	text-transform: uppercase;
 	border: 1px solid transparent;
+	white-space: nowrap;
 }
 
 .wrrapd-onboarding-login__track--wrapstar {
