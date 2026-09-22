@@ -245,6 +245,29 @@ function wrrapd_wrapstars_pros_url( $path = '/' ) {
 }
 
 /**
+ * Exact apply.wrrapd.com/onboarding/ is the shared onboarding login door
+ * (not a WrapStar step). On unified hosts this collides with the welcome step path.
+ *
+ * @param string $path Request path.
+ * @return bool
+ */
+function wrrapd_wrapstars_is_shared_onboarding_login_path( $path ) {
+	$path = '/' . trim( (string) $path, '/' );
+	if ( $path === '//' || $path === '' ) {
+		$path = '/';
+	}
+	if ( ! preg_match( '#^/onboarding/?$#', $path ) ) {
+		return false;
+	}
+	$host = wrrapd_wrapstars_current_host();
+	if ( wrrapd_wrapstars_unified_host() || $host === wrrapd_wrapstars_apply_host() ) {
+		return true;
+	}
+	// Hard fallback — never treat the public apply login door as a WrapStar step.
+	return in_array( $host, array( 'apply.wrrapd.com', 'www.apply.wrrapd.com' ), true );
+}
+
+/**
  * Onboarding-era login door (shared across WrapStar / WrapRider / JoyRider).
  * Post-activation contractors use /wrapstar-login/ (role portal), not this URL.
  */
@@ -253,11 +276,19 @@ function wrrapd_wrapstars_portal_login_url( $redirect = '', $greet = '' ) {
 		if ( $redirect === '' ) {
 			$redirect = wrrapd_wrapstars_pros_url( '/onboarding/' );
 		}
+		// Never attach redirect_to pointing at the login door itself (unified-host loop).
+		$rpath = (string) wp_parse_url( $redirect, PHP_URL_PATH );
+		if ( wrrapd_wrapstars_is_shared_onboarding_login_path( $rpath ) ) {
+			$redirect = '';
+		}
 		return wrrapd_onboarding_login_url( $redirect, $greet );
 	}
 	$url = wrrapd_wrapstars_apply_url( '/onboarding/' );
 	if ( $redirect !== '' ) {
-		$url = add_query_arg( 'redirect_to', $redirect, $url );
+		$rpath = (string) wp_parse_url( $redirect, PHP_URL_PATH );
+		if ( ! wrrapd_wrapstars_is_shared_onboarding_login_path( $rpath ) ) {
+			$url = add_query_arg( 'redirect_to', $redirect, $url );
+		}
 	}
 	$greet = trim( (string) $greet );
 	if ( $greet !== '' && strcasecmp( $greet, 'there' ) !== 0 ) {
@@ -1332,8 +1363,8 @@ function wrrapd_wrapstars_host_routing() {
 	}
 
 	if ( wrrapd_wrapstars_unified_host() ) {
-		// Exact /onboarding/ is the shared login door — do not bounce it into itself.
-		if ( preg_match( '#^/onboarding#', $path ) && ! ( function_exists( 'wrrapd_onboarding_login_is_login_path' ) && wrrapd_onboarding_login_is_login_path( $path ) ) ) {
+		// Exact /onboarding/ = shared login door on apply/unified — never bounce it into itself.
+		if ( preg_match( '#^/onboarding#', $path ) && ! wrrapd_wrapstars_is_shared_onboarding_login_path( $path ) ) {
 			if ( ! is_user_logged_in() || ! wrrapd_wrapstars_is_onboarding_eligible_user( get_current_user_id() ) ) {
 				wp_safe_redirect( wrrapd_wrapstars_portal_login_url( wrrapd_wrapstars_pros_url( $path ) ) );
 				exit;
@@ -1357,7 +1388,7 @@ function wrrapd_wrapstars_host_routing() {
 					);
 					exit;
 				}
-				wp_safe_redirect( wrrapd_wrapstars_portal_login_url( wrrapd_wrapstars_pros_url( '/onboarding/' ) ) );
+				wp_safe_redirect( wrrapd_wrapstars_portal_redirect_for_user( get_current_user_id() ) );
 				exit;
 			}
 		}
@@ -1382,8 +1413,7 @@ function wrrapd_wrapstars_host_routing() {
 				);
 				exit;
 			}
-			// Still onboarding → shared login door routes them to pros steps.
-			wp_safe_redirect( wrrapd_wrapstars_portal_login_url( wrrapd_wrapstars_pros_url( '/onboarding/' ) ) );
+			wp_safe_redirect( wrrapd_wrapstars_portal_redirect_for_user( get_current_user_id() ) );
 			exit;
 		}
 		if ( preg_match( '#^/dashboard(/|$)#', $path ) ) {
@@ -1402,7 +1432,8 @@ function wrrapd_wrapstars_host_routing() {
 			wp_safe_redirect( wrrapd_wrapstars_role_portal_login_url() );
 			exit;
 		}
-		if ( preg_match( '#^/onboarding#', $path ) ) {
+		// Pros-only: /onboarding* are WrapStar steps (login door is on apply).
+		if ( preg_match( '#^/onboarding#', $path ) && ! wrrapd_wrapstars_is_shared_onboarding_login_path( $path ) ) {
 			if ( ! is_user_logged_in() || ! wrrapd_wrapstars_is_onboarding_eligible_user( get_current_user_id() ) ) {
 				wp_safe_redirect( wrrapd_wrapstars_portal_login_url( wrrapd_wrapstars_pros_url( $path ) ) );
 				exit;

@@ -237,6 +237,15 @@ function wrrapd_onboarding_login_filter_content( $content ) {
 	if ( ! in_the_loop() || ! is_main_query() ) {
 		return $content;
 	}
+	// Logged-in eligible applicants: keep WrapStar welcome content on unified hosts
+	// (login door and welcome share /onboarding/). Closed/activated users see the login gate message.
+	if ( is_user_logged_in() ) {
+		$uid    = get_current_user_id();
+		$tracks = wrrapd_onboarding_login_eligible_tracks( $uid );
+		if ( $tracks ) {
+			return $content;
+		}
+	}
 	return wrrapd_onboarding_login_shortcode();
 }
 
@@ -278,15 +287,26 @@ function wrrapd_onboarding_login_routing() {
 					}
 				}
 				$redirect = isset( $_GET['redirect_to'] ) ? esc_url_raw( wp_unslash( $_GET['redirect_to'] ) ) : '';
-				wp_safe_redirect( wrrapd_onboarding_login_resolve_destination( $uid, $redirect ) );
+				// Never redirect back onto the login door itself.
+				if ( $redirect !== '' && wrrapd_onboarding_login_is_login_path( (string) wp_parse_url( $redirect, PHP_URL_PATH ) ) ) {
+					$redirect = '';
+				}
+				$dest = wrrapd_onboarding_login_resolve_destination( $uid, $redirect );
+				$dest_path = (string) wp_parse_url( $dest, PHP_URL_PATH );
+				// Unified host: login door === WrapStar welcome — stay put and render steps.
+				if ( wrrapd_onboarding_login_is_login_path( $dest_path ) ) {
+					return;
+				}
+				wp_safe_redirect( $dest );
 				exit;
 			}
 		}
 		return;
 	}
 
-	// Pros host: logged-out visitors hitting any onboarding tree go to the shared login.
-	if ( $is_pros && ! is_user_logged_in() ) {
+	// Pros-only host: logged-out visitors hitting onboarding trees go to the shared apply login.
+	// Skip when this request is already the apply login door (unified apply===pros).
+	if ( $is_pros && ! $is_apply && ! is_user_logged_in() ) {
 		if ( preg_match( '#^/(onboarding|wraprider-onboarding|driver-onboarding)(/|$)#', $path ) ) {
 			$dest = function_exists( 'wrrapd_wrapstars_pros_url' )
 				? wrrapd_wrapstars_pros_url( $path )
