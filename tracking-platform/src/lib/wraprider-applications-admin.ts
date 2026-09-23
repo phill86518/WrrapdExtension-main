@@ -117,7 +117,6 @@ export type WrapriderApplication = {
   createdAt: string;
   /** Compat with shared UI fields */
   canDeliver?: string;
-  fitScore?: number;
   whyWrapstar?: string;
   whyDrive?: string;
 };

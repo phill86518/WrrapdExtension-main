@@ -90,7 +90,6 @@ export type DriverApplication = {
   createdAt: string;
   /** Compat with WrapStar UI fields */
   canDeliver?: string;
-  fitScore?: number;
   whyWrapstar?: string;
 };
 
