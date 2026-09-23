@@ -654,8 +654,8 @@
 }
 
 .wrrapd-wrapstars-ob-stepmark {
-	flex: 0 0 1.55rem;
-	width: 1.55rem;
+	flex: 0 0 1.85rem;
+	width: 1.85rem;
 	height: 1.55rem;
 	border-radius: 999px;
 	display: inline-flex;
@@ -754,6 +754,24 @@
 	letter-spacing: 0.14em;
 	text-transform: uppercase;
 	color: #475569;
+	display: flex;
+	align-items: center;
+	gap: 0.55rem;
+}
+
+.wrrapd-wrapstars-ob-stage__letter {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 1.7rem;
+	height: 1.7rem;
+	padding: 0 0.35rem;
+	border-radius: 999px;
+	background: #0f0351;
+	color: #f6b933;
+	font-size: 0.95rem;
+	letter-spacing: 0;
+	line-height: 1;
 }
 
 .wrrapd-wrapstars-ob-stage__title {
@@ -2005,13 +2023,12 @@ body.wrrapd-wrapstars-portal .wp-site-blocks {
 	flex: 0 0 auto;
 }
 
-.wrrapd-wrapstars-site-footer__brand img,
 .wrrapd-wrapstars-site-footer__logo img {
 	display: block;
 	width: auto;
 	height: auto;
-	max-height: clamp(4.6rem, 9vw, 6.4rem);
-	max-width: 100%;
+	max-height: clamp(5.4rem, 10vw, 7.2rem);
+	max-width: min(20rem, 70vw);
 	margin: 0;
 	object-fit: contain;
 	object-position: left bottom;
@@ -2021,9 +2038,9 @@ body.wrrapd-wrapstars-portal .wp-site-blocks {
 	display: block;
 	width: auto;
 	height: auto;
-	max-height: clamp(1.45rem, 3.4vw, 2.1rem);
-	max-width: min(14rem, 68vw);
-	margin: -1.35rem 0 0;
+	max-height: 1.35rem;
+	max-width: min(11.5rem, 58vw);
+	margin: -0.85rem 0 0 0.15rem;
 	object-fit: contain;
 	object-position: left center;
 }
@@ -2063,7 +2080,8 @@ body.wrrapd-wrapstars-portal .wp-site-blocks {
 	}
 
 	.wrrapd-wrapstars-site-footer__tagline {
-		margin-top: -1.4rem;
+		margin-top: -0.7rem;
+		max-height: 1.2rem;
 	}
 
 	.wrrapd-wrapstars-site-footer__mission {
@@ -3799,14 +3817,27 @@ body.wrrapd-drivers-portal.error404 .page-content {
 .wrrapd-esign__doc-body h1 { font-size: 1.15rem; margin: 0 0 0.75rem; }
 .wrrapd-esign__doc-body h2 { font-size: 1.02rem; margin: 1.1rem 0 0.45rem; }
 .wrrapd-esign__form .ws-check { display: flex; gap: 0.65rem; align-items: flex-start; margin: 0 0 0.85rem; }
+.wrrapd-esign__doc-ack {
+	display: flex;
+	gap: 0.65rem;
+	align-items: flex-start;
+	margin: 0.85rem 1rem 1rem;
+	font-size: 0.92rem;
+}
+
 .wrrapd-esign__accept {
-  width: 100%;
-  margin-top: 0.5rem;
-  background: #f6b933 !important;
-  color: #0f0351 !important;
-  border: none;
-  font-weight: 700;
-  letter-spacing: 0.02em;
+	width: 100%;
+	margin-top: 0.5rem;
+	background: #f6b933 !important;
+	color: #0f0351 !important;
+	border: none;
+	font-weight: 700;
+	letter-spacing: 0.02em;
+}
+
+.wrrapd-esign__accept:disabled {
+	opacity: 0.45;
+	cursor: not-allowed;
 }
 
 /* Shared onboarding login door (apply.wrrapd.com/onboarding/) — hire portal chrome, not step chrome */

@@ -22,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_WRAPSTARS_BUILD', '2026-09-22-footer-mission-welcome-nowrap' );
+define( 'WRRAPD_WRAPSTARS_BUILD', '2026-09-23-esign-letters-footer' );
 /** Approval / re-invite onboarding credentials remain valid this many days. */
 define( 'WRRAPD_WRAPSTARS_INVITE_TTL_DAYS', 15 );
 
@@ -1472,6 +1472,11 @@ function wrrapd_wrapstars_force_path_shortcode_content( $content ) {
 	if ( preg_match( '#^/thank-you(/|$)#', $path ) ) {
 		return do_shortcode( '[wrrapd_wrapstar_thankyou]' );
 	}
+	// Step URLs such as /onboarding/policies/ are real WP pages with theme art and no shortcode.
+	// Exact /onboarding/ stays the shared login door.
+	if ( preg_match( '#^/onboarding/.+#', $path ) ) {
+		return do_shortcode( '[wrrapd_wrapstar_onboarding]' );
+	}
 	// /profile/ was a bare WP page (theme placeholder + featured image). Always render the profile.
 	if ( preg_match( '#^/profile(/|$)#', $path ) && is_main_query() ) {
 		if ( function_exists( 'wrrapd_wrapstars_shortcode_profile' ) ) {
@@ -2077,6 +2082,10 @@ function wrrapd_wrapstars_process_onboarding_step() {
 			break;
 
 		case 'agreement':
+			if ( wrrapd_wrapstars_step_complete( $app_id, 'agreement' ) ) {
+				$fail( 'These agreements are already accepted.' );
+				return;
+			}
 			if ( ! function_exists( 'wrrapd_esign_validate_acceptance' ) ) {
 				$fail( 'Agreement module missing. Contact support.' );
 				return;
@@ -3606,7 +3615,8 @@ function wrrapd_wrapstars_shortcode_onboarding( $atts ) {
 	if ( $step_index === false ) {
 		$step_index = 0;
 	}
-	$step_num   = $step_index + 1;
+	$step_num    = $step_index + 1;
+	$step_letter = $step_num >= 1 && $step_num <= 26 ? chr( 64 + $step_num ) : (string) $step_num;
 	$done_count = 0;
 	$minutes_left = 0;
 	foreach ( $step_keys as $key ) {
@@ -3638,7 +3648,7 @@ function wrrapd_wrapstars_shortcode_onboarding( $atts ) {
 	echo '<button type="button" class="wrrapd-wrapstars-ob-menu-btn" data-ws-ob-nav-open aria-controls="wrrapd-ws-ob-nav" aria-expanded="false">Steps</button>';
 	echo '<div class="wrrapd-wrapstars-ob-topbar__center">';
 	echo '<span class="wrrapd-wrapstars-ob-topbar__eyebrow">WrapStar onboarding</span>';
-	echo '<strong class="wrrapd-wrapstars-ob-topbar__step">' . esc_html( $current_label ) . '</strong>';
+	echo '<strong class="wrrapd-wrapstars-ob-topbar__step">' . esc_html( $step_letter . '. ' . $current_label ) . '</strong>';
 	echo '</div>';
 	echo '<a class="wrrapd-wrapstars-ob-topbar__logout" href="' . esc_url( wp_logout_url( home_url( '/' ) ) ) . '">Log out</a>';
 	echo '</header>';
@@ -3690,7 +3700,8 @@ function wrrapd_wrapstars_shortcode_onboarding( $atts ) {
 			$cls .= ' is-active';
 		}
 		$can_open = wrrapd_wrapstars_can_access_step( $app->ID, $key );
-		$mark     = $is_done ? '✓' : (string) $i;
+		$letter   = $i >= 1 && $i <= 26 ? chr( 64 + $i ) : (string) $i;
+		$mark     = $is_done ? '✓' : $letter . '.';
 		echo '<li class="' . esc_attr( $cls ) . '">';
 		$inner  = '<span class="wrrapd-wrapstars-ob-stepmark" aria-hidden="true">' . esc_html( $mark ) . '</span>';
 		$inner .= '<span class="wrrapd-wrapstars-ob-steplabel"><span class="wrrapd-wrapstars-ob-steplabel__name">' . esc_html( $meta['label'] ) . '</span>';
@@ -3715,7 +3726,7 @@ function wrrapd_wrapstars_shortcode_onboarding( $atts ) {
 	echo '<div class="wrrapd-wrapstars-onboarding-main">';
 	echo '<div class="wrrapd-wrapstars-ob-stage">';
 	echo '<header class="wrrapd-wrapstars-ob-stage__header">';
-	echo '<p class="wrrapd-wrapstars-ob-stage__kicker">' . esc_html( $current['group'] ) . ' · Step ' . esc_html( (string) $step_num ) . ' of ' . esc_html( (string) $step_total );
+	echo '<p class="wrrapd-wrapstars-ob-stage__kicker"><span class="wrrapd-wrapstars-ob-stage__letter">' . esc_html( $step_letter ) . '</span> ' . esc_html( $current['group'] );
 	if ( (int) $current['minutes'] > 0 ) {
 		echo ' · about ' . esc_html( (string) $current['minutes'] ) . ' min';
 	}
@@ -3742,6 +3753,8 @@ function wrrapd_wrapstars_shortcode_onboarding( $atts ) {
 						'action_name'   => 'wrrapd_ws_action',
 						'action_value'  => 'onboarding_step',
 						'step'          => 'agreement',
+						'accepted'      => wrrapd_wrapstars_step_complete( $app->ID, 'agreement' ),
+						'signed_name'   => (string) wrrapd_wrapstars_get_meta( $app->ID, 'esign_typed_name' ),
 					)
 				);
 			} else {

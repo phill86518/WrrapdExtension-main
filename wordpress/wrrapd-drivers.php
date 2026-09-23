@@ -998,6 +998,10 @@ function wrrapd_drivers_process_onboarding_step() {
 		exit;
 	}
 	if ( $step === 'agreement' ) {
+		if ( wrrapd_drivers_step_complete( $app->ID, 'agreement' ) ) {
+			$GLOBALS['wrrapd_drv_ob_error'] = 'These agreements are already accepted.';
+			return;
+		}
 		if ( ! function_exists( 'wrrapd_esign_validate_acceptance' ) ) {
 			$GLOBALS['wrrapd_drv_ob_error'] = 'Agreement module missing. Contact support.';
 			return;
@@ -1813,6 +1817,8 @@ function wrrapd_drivers_shortcode_onboarding( $atts ) {
 							'action_name'  => 'wrrapd_drv_action',
 							'action_value' => 'onboarding_step',
 							'step'         => 'agreement',
+							'accepted'     => wrrapd_drivers_step_complete( $app->ID, 'agreement' ),
+							'signed_name'  => (string) wrrapd_drivers_get_meta( $app->ID, 'esign_typed_name' ),
 						)
 					);
 				} else {

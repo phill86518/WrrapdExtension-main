@@ -1050,6 +1050,10 @@ function wrrapd_wrapriders_process_onboarding_step() {
 		exit;
 	}
 	if ( $step === 'agreement' ) {
+		if ( wrrapd_wrapriders_step_complete( $app->ID, 'agreement' ) ) {
+			$GLOBALS['wrrapd_wr_ob_error'] = 'These agreements are already accepted.';
+			return;
+		}
 		if ( ! function_exists( 'wrrapd_esign_validate_acceptance' ) ) {
 			$GLOBALS['wrrapd_wr_ob_error'] = 'Agreement module missing. Contact support.';
 			return;
@@ -2018,6 +2022,8 @@ function wrrapd_wrapriders_shortcode_onboarding( $atts ) {
 							'action_name'  => 'wrrapd_wr_action',
 							'action_value' => 'onboarding_step',
 							'step'         => 'agreement',
+							'accepted'     => wrrapd_wrapriders_step_complete( $app->ID, 'agreement' ),
+							'signed_name'  => (string) wrrapd_wrapriders_get_meta( $app->ID, 'esign_typed_name' ),
 						)
 					);
 				} else {

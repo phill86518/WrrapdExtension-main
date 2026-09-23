@@ -94,9 +94,15 @@ function wrrapd_esign_render_clickwrap( $args ) {
 	$step         = (string) ( $args['step'] ?? 'agreement' );
 	$track        = wrrapd_esign_track_label( $suite );
 	$version      = (string) $man['version'];
+	$accepted     = ! empty( $args['accepted'] );
+	$signed_name  = (string) ( $args['signed_name'] ?? '' );
 	?>
-	<div class="wrrapd-wrapstars-card wrrapd-esign">
-		<p class="wrrapd-wrapstars-ob-lead">Please review each agreement below. This is a standard form packet (not negotiated). By tapping <strong>I Accept</strong>, you electronically sign and agree to every document listed, under the federal ESIGN Act and applicable state law. Wrrapd does <strong>not</strong> countersign your individual packet — your acceptance is the binding trigger, the same way major gig platforms use click-to-accept.</p>
+	<div class="wrrapd-wrapstars-card wrrapd-esign<?php echo $accepted ? ' wrrapd-esign--accepted' : ''; ?>">
+		<?php if ( $accepted ) : ?>
+			<div class="wrrapd-wrapstars-alert wrrapd-wrapstars-alert--info">You already accepted this packet. It cannot be accepted again.</div>
+		<?php else : ?>
+			<p class="wrrapd-wrapstars-ob-lead">Please review each agreement below. Initial every document before you accept the packet.</p>
+		<?php endif; ?>
 		<p class="wrrapd-wrapstars-ob-note">You are an <strong>applicant</strong> completing onboarding for the <?php echo esc_html( $track ); ?> track. You are <strong>not</strong> engaged until Wrrapd activates you after this process.</p>
 		<p class="wrrapd-esign__version">Packet version <code><?php echo esc_html( $version ); ?></code></p>
 
@@ -104,6 +110,7 @@ function wrrapd_esign_render_clickwrap( $args ) {
 			<?php foreach ( $man['docs'] as $i => $doc ) :
 				$html = wrrapd_esign_doc_html( $suite, $doc['file'] );
 				$fid  = 'esign-doc-' . (int) $i;
+				$file = (string) ( $doc['file'] ?? '' );
 				?>
 				<details class="wrrapd-esign__doc" <?php echo $i === 0 ? 'open' : ''; ?>>
 					<summary>
@@ -116,11 +123,15 @@ function wrrapd_esign_render_clickwrap( $args ) {
 						echo $html;
 						?>
 					</div>
+					<label class="ws-check wrrapd-esign__doc-ack">
+						<input type="checkbox" name="esign_doc_ack[]" value="<?php echo esc_attr( $file ); ?>" <?php checked( $accepted ); ?> <?php disabled( $accepted ); ?> <?php echo $accepted ? '' : 'required'; ?> />
+						<span>I agree with the Terms and Conditions laid out in the document above.</span>
+					</label>
 				</details>
 			<?php endforeach; ?>
 		</div>
 
-		<form method="post" class="wrrapd-wrapstars-form wrrapd-wrapstars-ob-actions wrrapd-esign__form" id="wrrapd-esign-form">
+		<form method="post" class="wrrapd-wrapstars-form wrrapd-wrapstars-ob-actions wrrapd-esign__form" id="wrrapd-esign-form" <?php echo $accepted ? 'data-accepted="1"' : ''; ?>>
 			<?php if ( $nonce_action && $nonce_field ) : ?>
 				<?php wp_nonce_field( $nonce_action, $nonce_field ); ?>
 			<?php endif; ?>
@@ -138,27 +149,50 @@ function wrrapd_esign_render_clickwrap( $args ) {
 			?>
 
 			<label class="ws-check wrrapd-esign__read-all">
-				<input type="checkbox" name="esign_read_all" value="1" required />
-				<span>I have opened and read <strong>every</strong> document in this packet (including the Compensation Schedule).</span>
-			</label>
-
-			<label class="ws-check wrrapd-esign__ic-status">
-				<input type="checkbox" name="esign_ic_ack" value="1" required />
-				<span>I understand I am applying as an <strong>independent contractor</strong>, not an employee, and that engagement begins only if Wrrapd activates me after onboarding.</span>
+				<input type="checkbox" name="esign_read_all" value="1" <?php checked( $accepted ); ?> <?php disabled( $accepted ); ?> <?php echo $accepted ? '' : 'required'; ?> />
+				<span>I have opened, read and reviewed every document listed above (including the Compensation Schedule).</span>
 			</label>
 
 			<label class="ws-check wrrapd-esign__esign-ack">
-				<input type="checkbox" name="esign_act_ack" value="1" required />
-				<span>I agree that clicking <strong>I Accept</strong> is my electronic signature under the ESIGN Act, has the same legal effect as a handwritten signature, and immediately binds me to this packet. No Wrrapd executive signature on my copy is required.</span>
+				<input type="checkbox" name="esign_act_ack" value="1" <?php checked( $accepted ); ?> <?php disabled( $accepted ); ?> <?php echo $accepted ? '' : 'required'; ?> />
+				<span>I agree that clicking &ldquo;I Accept&rdquo; is my electronic signature and has the same legal effect as a handwritten signature, and immediately binds me to aforementioned agreements.</span>
 			</label>
 
 			<div class="wrrapd-wrapstars-ob-sign">
-				<label for="esign_typed_name">Type your full legal name</label>
-				<input type="text" id="esign_typed_name" name="esign_typed_name" class="wrrapd-wrapstars-ob-sign__input" autocomplete="name" placeholder="Your full legal name" required />
+				<label for="esign_typed_name">Sign as /John Doe/</label>
+				<input type="text" id="esign_typed_name" name="esign_typed_name" class="wrrapd-wrapstars-ob-sign__input" autocomplete="name" placeholder="/John Doe/" pattern="/[^/]+/" title="Use slashes around your name, like /John Doe/" value="<?php echo esc_attr( $signed_name ); ?>" <?php disabled( $accepted ); ?> <?php echo $accepted ? '' : 'required'; ?> />
+				<?php if ( ! $accepted ) : ?>
+					<p class="wrrapd-wrapstars-ob-note">Put a slash before and after your full legal name, for example /John Doe/.</p>
+				<?php endif; ?>
 			</div>
 
-			<button type="submit" name="esign_accept" value="1" class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--lg wrrapd-esign__accept">I Accept</button>
-			<p class="wrrapd-wrapstars-ob-note">If you do not accept, you cannot continue onboarding. Wrrapd may update these terms later; continued access after notice may require a new acceptance.</p>
+			<?php if ( $accepted ) : ?>
+				<button type="button" class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--lg wrrapd-esign__accept" disabled>Accepted</button>
+			<?php else : ?>
+			<button type="submit" name="esign_accept" value="1" class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--lg wrrapd-esign__accept" disabled>I Accept</button>
+			<script>
+			(function () {
+				var form = document.getElementById('wrrapd-esign-form');
+				if (!form || form.getAttribute('data-accepted') === '1') return;
+				var btn = form.querySelector('.wrrapd-esign__accept');
+				var docBoxes = document.querySelectorAll('#wrrapd-esign-docs input[name="esign_doc_ack[]"]');
+				function ready() {
+					var docsOk = true;
+					docBoxes.forEach(function (box) { if (!box.checked) docsOk = false; });
+					var name = (form.querySelector('#esign_typed_name') || {}).value || '';
+					var slashOk = /^\/[^/]+\/$/.test(name.trim());
+					var boxes = form.querySelectorAll('input[type="checkbox"][required]');
+					var restOk = true;
+					boxes.forEach(function (box) { if (!box.checked) restOk = false; });
+					if (btn) btn.disabled = !(docsOk && slashOk && restOk);
+				}
+				form.addEventListener('input', ready);
+				form.addEventListener('change', ready);
+				ready();
+			})();
+			</script>
+			<p class="wrrapd-wrapstars-ob-note">If you do not accept, you cannot continue onboarding.</p>
+			<?php endif; ?>
 		</form>
 	</div>
 	<?php
@@ -186,14 +220,23 @@ function wrrapd_esign_validate_acceptance( $expected_suite ) {
 	if ( $version === '' || $version !== (string) $man['version'] ) {
 		return array( 'ok' => false, 'error' => 'This agreement packet was updated. Please refresh and review again.' );
 	}
-	if ( empty( $_POST['esign_read_all'] ) || empty( $_POST['esign_ic_ack'] ) || empty( $_POST['esign_act_ack'] ) ) {
+	$acked = isset( $_POST['esign_doc_ack'] ) && is_array( $_POST['esign_doc_ack'] )
+		? array_map( 'sanitize_file_name', wp_unslash( $_POST['esign_doc_ack'] ) )
+		: array();
+	foreach ( $man['docs'] as $doc ) {
+		$file = sanitize_file_name( (string) ( $doc['file'] ?? '' ) );
+		if ( $file === '' || ! in_array( $file, $acked, true ) ) {
+			return array( 'ok' => false, 'error' => 'Please initial every agreement before continuing.' );
+		}
+	}
+	if ( empty( $_POST['esign_read_all'] ) || empty( $_POST['esign_act_ack'] ) ) {
 		return array( 'ok' => false, 'error' => 'Please check every acknowledgment box.' );
 	}
 	if ( empty( $_POST['esign_accept'] ) ) {
 		return array( 'ok' => false, 'error' => 'Please tap I Accept to continue.' );
 	}
-	if ( strlen( $name ) < 2 ) {
-		return array( 'ok' => false, 'error' => 'Please type your full legal name.' );
+	if ( ! preg_match( '#^/[^/]+/$#', $name ) ) {
+		return array( 'ok' => false, 'error' => 'Sign with slashes around your full legal name, like /John Doe/.' );
 	}
 
 	$ip = '';
@@ -228,8 +271,8 @@ function wrrapd_esign_validate_acceptance( $expected_suite ) {
 /**
  * Persist ESIGN meta via a setter callback: function( $key, $value ).
  *
- * @param callable               $setter
- * @param array<string,string>   $meta
+ * @param callable             $setter
+ * @param array<string,string> $meta
  */
 function wrrapd_esign_store_meta( $setter, $meta ) {
 	foreach ( $meta as $k => $v ) {
