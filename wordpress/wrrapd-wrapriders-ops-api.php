@@ -594,6 +594,7 @@ function wrrapd_wrapriders_ops_serialize_application( $id ) {
 		'esignIp'                 => wrrapd_wrapriders_get_meta( $id, 'esign_ip' ),
 		'esignUa'                 => wrrapd_wrapriders_get_meta( $id, 'esign_ua' ),
 		'esignDocs'               => wrrapd_wrapriders_get_meta( $id, 'esign_docs' ),
+		'esignDocAcks'            => wrrapd_wrapriders_get_meta( $id, 'esign_doc_acks' ),
 		'esignMethod'             => wrrapd_wrapriders_get_meta( $id, 'esign_method' ),
 		'icSignedAt'              => wrrapd_wrapriders_get_meta( $id, 'ic_signed_at' ),
 		'hasIdFile'               => (bool) wrrapd_wrapriders_get_meta( $id, 'id_file' ),

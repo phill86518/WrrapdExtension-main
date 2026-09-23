@@ -998,7 +998,7 @@ function wrrapd_drivers_process_onboarding_step() {
 		exit;
 	}
 	if ( $step === 'agreement' ) {
-		if ( wrrapd_drivers_step_complete( $app->ID, 'agreement' ) ) {
+		if ( wrrapd_drivers_step_complete( $app->ID, 'agreement' ) || (string) wrrapd_drivers_get_meta( $app->ID, 'esign_accepted_at' ) !== '' ) {
 			$GLOBALS['wrrapd_drv_ob_error'] = 'These agreements are already accepted.';
 			return;
 		}

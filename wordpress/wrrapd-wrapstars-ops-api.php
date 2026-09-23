@@ -385,6 +385,7 @@ function wrrapd_wrapstars_ops_serialize_application( $id ) {
 			'esignIp'             => wrrapd_wrapstars_get_meta( $id, 'esign_ip' ),
 			'esignUa'             => wrrapd_wrapstars_get_meta( $id, 'esign_ua' ),
 			'esignDocs'           => wrrapd_wrapstars_get_meta( $id, 'esign_docs' ),
+			'esignDocAcks'        => wrrapd_wrapstars_get_meta( $id, 'esign_doc_acks' ),
 			'esignMethod'         => wrrapd_wrapstars_get_meta( $id, 'esign_method' ),
 			'icSignedAt'          => wrrapd_wrapstars_get_meta( $id, 'ic_signed_at' ),
 			'orientationScore'    => wrrapd_wrapstars_get_meta( $id, 'orientation_score' ),

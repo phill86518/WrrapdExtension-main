@@ -45,11 +45,43 @@ function wrrapd_esign_doc_html( $suite, $file ) {
 	if ( ! preg_match( '/^[a-zA-Z0-9_.-]+\.html$/', $file ) ) {
 		return '';
 	}
-	$path = wrrapd_esign_legal_root() . '/' . $suite . '/' . $file;
-	if ( ! is_readable( $path ) ) {
+	$path = wrrapd_esign_doc_path( $suite, $file );
+	if ( $path === '' || ! is_readable( $path ) ) {
 		return '';
 	}
 	return (string) file_get_contents( $path );
+}
+
+/**
+ * Absolute path to one suite HTML file, or empty if the name is unsafe.
+ *
+ * @param string $suite
+ * @param string $file
+ * @return string
+ */
+function wrrapd_esign_doc_path( $suite, $file ) {
+	$suite = sanitize_key( $suite );
+	$file  = basename( (string) $file );
+	if ( ! preg_match( '/^[a-zA-Z0-9_.-]+\.html$/', $file ) ) {
+		return '';
+	}
+	return wrrapd_esign_legal_root() . '/' . $suite . '/' . $file;
+}
+
+/**
+ * Full SHA-256 of the HTML bytes on disk at call time.
+ *
+ * @param string $suite
+ * @param string $file
+ * @return string
+ */
+function wrrapd_esign_doc_sha256( $suite, $file ) {
+	$path = wrrapd_esign_doc_path( $suite, $file );
+	if ( $path === '' || ! is_readable( $path ) ) {
+		return '';
+	}
+	$hash = hash_file( 'sha256', $path );
+	return is_string( $hash ) ? $hash : '';
 }
 
 /**
@@ -249,8 +281,17 @@ function wrrapd_esign_validate_acceptance( $expected_suite ) {
 	$ua = isset( $_SERVER['HTTP_USER_AGENT'] ) ? substr( sanitize_text_field( (string) $_SERVER['HTTP_USER_AGENT'] ), 0, 400 ) : '';
 
 	$doc_list = array();
+	$ack_list = array();
 	foreach ( $man['docs'] as $d ) {
-		$doc_list[] = $d['file'] . '#' . $d['sha256_16'];
+		$file = basename( (string) ( $d['file'] ?? '' ) );
+		$hash = wrrapd_esign_doc_sha256( $expected_suite, $file );
+		if ( $file === '' || $hash === '' ) {
+			return array( 'ok' => false, 'error' => 'Agreement file could not be sealed. Contact support.' );
+		}
+		$doc_list[] = $file . '#' . $hash;
+		if ( in_array( $file, $acked, true ) || in_array( sanitize_file_name( $file ), $acked, true ) ) {
+			$ack_list[] = $file;
+		}
 	}
 
 	return array(
@@ -263,6 +304,7 @@ function wrrapd_esign_validate_acceptance( $expected_suite ) {
 			'esign_ip'          => $ip,
 			'esign_ua'          => $ua,
 			'esign_docs'        => implode( '|', $doc_list ),
+			'esign_doc_acks'    => implode( '|', $ack_list ),
 			'esign_method'      => 'clickwrap_i_accept',
 		),
 	);

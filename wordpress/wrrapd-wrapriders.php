@@ -1050,7 +1050,7 @@ function wrrapd_wrapriders_process_onboarding_step() {
 		exit;
 	}
 	if ( $step === 'agreement' ) {
-		if ( wrrapd_wrapriders_step_complete( $app->ID, 'agreement' ) ) {
+		if ( wrrapd_wrapriders_step_complete( $app->ID, 'agreement' ) || (string) wrrapd_wrapriders_get_meta( $app->ID, 'esign_accepted_at' ) !== '' ) {
 			$GLOBALS['wrrapd_wr_ob_error'] = 'These agreements are already accepted.';
 			return;
 		}

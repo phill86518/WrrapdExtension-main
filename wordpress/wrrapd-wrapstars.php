@@ -2082,7 +2082,7 @@ function wrrapd_wrapstars_process_onboarding_step() {
 			break;
 
 		case 'agreement':
-			if ( wrrapd_wrapstars_step_complete( $app_id, 'agreement' ) ) {
+			if ( wrrapd_wrapstars_step_complete( $app_id, 'agreement' ) || (string) wrrapd_wrapstars_get_meta( $app_id, 'esign_accepted_at' ) !== '' ) {
 				$fail( 'These agreements are already accepted.' );
 				return;
 			}
