@@ -2040,6 +2040,16 @@ function wrrapd_wrapriders_shortcode_onboarding( $atts ) {
 			} else {
 				wrrapd_wrapriders_render_step_placeholder( $app->ID, $step );
 			}
+			if ( function_exists( 'wrrapd_hire_onboarding_pager' ) ) {
+				wrrapd_hire_onboarding_pager(
+					array_keys( $labels ),
+					$step,
+					'wrrapd_wrapriders_onboarding_step_url',
+					static function ( $key ) use ( $app ) {
+						return wrrapd_wrapriders_can_access_step( $app->ID, $key );
+					}
+				);
+			}
 			?>
 		</main>
 	</div>

@@ -1833,6 +1833,16 @@ function wrrapd_drivers_shortcode_onboarding( $atts ) {
 			} else {
 				wrrapd_drivers_render_step_placeholder( $app->ID, $step );
 			}
+			if ( function_exists( 'wrrapd_hire_onboarding_pager' ) ) {
+				wrrapd_hire_onboarding_pager(
+					array_keys( $labels ),
+					$step,
+					'wrrapd_drivers_onboarding_step_url',
+					static function ( $key ) use ( $app ) {
+						return wrrapd_drivers_can_access_step( $app->ID, $key );
+					}
+				);
+			}
 			?>
 		</main>
 	</div>

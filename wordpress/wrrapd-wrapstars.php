@@ -22,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_WRAPSTARS_BUILD', '2026-09-23-esign-letters-footer' );
+define( 'WRRAPD_WRAPSTARS_BUILD', '2026-09-23-onboarding-step-pager' );
 /** Approval / re-invite onboarding credentials remain valid this many days. */
 define( 'WRRAPD_WRAPSTARS_INVITE_TTL_DAYS', 15 );
 
@@ -189,6 +189,34 @@ function wrrapd_wrapstars_next_onboarding_step( $step ) {
 		return 'activation';
 	}
 	return $steps[ $idx + 1 ];
+}
+
+/**
+ * Previous / Next under a hire onboarding step.
+ *
+ * @param string[] $step_keys
+ * @param string   $current
+ * @param callable $url_for  function( string $step ): string
+ * @param callable $can_open function( string $step ): bool
+ */
+function wrrapd_hire_onboarding_pager( $step_keys, $current, $url_for, $can_open ) {
+	$idx = array_search( $current, array_values( $step_keys ), true );
+	if ( $idx === false ) {
+		return;
+	}
+	$keys = array_values( $step_keys );
+	$prev = $idx > 0 ? $keys[ $idx - 1 ] : '';
+	$next = isset( $keys[ $idx + 1 ] ) ? $keys[ $idx + 1 ] : '';
+	echo '<nav class="wrrapd-wrapstars-ob-pager" aria-label="Step navigation">';
+	if ( $prev !== '' && $can_open( $prev ) ) {
+		echo '<a class="wrrapd-wrapstars-btn wrrapd-wrapstars-ob-pager__prev" href="' . esc_url( $url_for( $prev ) ) . '">Previous</a>';
+	} else {
+		echo '<span class="wrrapd-wrapstars-ob-pager__spacer"></span>';
+	}
+	if ( $next !== '' && $can_open( $next ) ) {
+		echo '<a class="wrrapd-wrapstars-btn wrrapd-wrapstars-ob-pager__next" href="' . esc_url( $url_for( $next ) ) . '">Next</a>';
+	}
+	echo '</nav>';
 }
 
 // --- Bootstrap ---
@@ -1521,6 +1549,47 @@ function wrrapd_wrapstars_virtual_profile_page() {
 	exit;
 }
 add_action( 'template_redirect', 'wrrapd_wrapstars_virtual_profile_page', 5 );
+add_action( 'template_redirect', 'wrrapd_wrapstars_virtual_onboarding_step_page', 6 );
+
+/**
+ * Step URLs such as /onboarding/policies/ are not all real WordPress pages.
+ * Without this, WordPress paints the theme 404 (the tree) instead of the step.
+ */
+function wrrapd_wrapstars_virtual_onboarding_step_page() {
+	if ( is_admin() || ! wrrapd_wrapstars_is_portal_host() ) {
+		return;
+	}
+	$path = wrrapd_wrapstars_request_path();
+	if ( ! preg_match( '#^/onboarding/.+#', $path ) ) {
+		return;
+	}
+	if ( ! is_user_logged_in() || ! wrrapd_wrapstars_is_onboarding_eligible_user( get_current_user_id() ) ) {
+		return;
+	}
+	$step     = wrrapd_wrapstars_detect_onboarding_step_from_uri();
+	$registry = wrrapd_wrapstars_onboarding_step_registry();
+	$title    = isset( $registry[ $step ]['label'] ) ? $registry[ $step ]['label'] : 'Onboarding';
+	status_header( 200 );
+	nocache_headers();
+	?>
+<!doctype html>
+<html <?php language_attributes(); ?>>
+<head>
+<meta charset="<?php bloginfo( 'charset' ); ?>" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex" />
+<title><?php echo esc_html( $title ); ?> · Wrrapd</title>
+<?php wp_head(); ?>
+</head>
+<body <?php body_class( 'wrrapd-virtual-page' ); ?>>
+<?php wp_body_open(); ?>
+<main class="wrrapd-virtual-page__main"><?php echo do_shortcode( '[wrrapd_wrapstar_onboarding]' ); ?></main>
+<?php wp_footer(); ?>
+</body>
+</html>
+	<?php
+	exit;
+}
 
 function wrrapd_wrapstars_render_lost_page() {
 	if ( is_admin() || ! is_404() ) {
@@ -3794,6 +3863,15 @@ function wrrapd_wrapstars_shortcode_onboarding( $atts ) {
 		default:
 			wrrapd_wrapstars_render_step_welcome( $app->ID );
 	}
+
+	wrrapd_hire_onboarding_pager(
+		array_keys( $registry ),
+		$step,
+		'wrrapd_wrapstars_onboarding_step_url',
+		static function ( $key ) use ( $app ) {
+			return wrrapd_wrapstars_can_access_step( $app->ID, $key );
+		}
+	);
 
 	// Footer helpers: what's next + help.
 	echo '<div class="wrrapd-wrapstars-ob-foot">';
