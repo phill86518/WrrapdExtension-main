@@ -187,7 +187,7 @@ a.wrrapd-ext-cta:focus-visible {
 	display: inline-flex;
 	align-items: center;
 	gap: 8px;
-	font: 800 12px/1.1 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+	font: 800 12px/1.1 Fraunces, Georgia, "Times New Roman", serif;
 	letter-spacing: 0.08em;
 	text-transform: uppercase;
 	color: #0B1780;
@@ -201,7 +201,7 @@ a.wrrapd-ext-cta:focus-visible {
 .wrrapd-howto-stepheading {
 	margin: 0 0 8px 0;
 	color: #0B1780;
-	font-family: Roboto, system-ui, sans-serif;
+	font-family: Fraunces, Georgia, "Times New Roman", serif;
 	font-weight: 800;
 	font-size: clamp(17px, 1.05vw + 14px, 22px);
 	line-height: 1.2;
@@ -209,7 +209,7 @@ a.wrrapd-ext-cta:focus-visible {
 
 .wrrapd-howto-copy p {
 	margin: 0;
-	font: 500 clamp(14px, 0.9vw + 12px, 17px)/1.55 Roboto, system-ui, sans-serif;
+	font: 500 clamp(14px, 0.9vw + 12px, 17px)/1.55 Fraunces, Georgia, "Times New Roman", serif;
 	color: rgba(0, 0, 0, 0.78);
 }
 
@@ -576,12 +576,15 @@ img, video {
 /* === Wrrapd: homepage seasonal promo (Elementor container 306d6bd, post 4857) === */
 .elementor-4857 .elementor-element.elementor-element-6466f5b.elementor-widget-text-editor,
 .elementor-4857 .elementor-element.elementor-element-6466f5b.elementor-widget-text-editor h1,
-.elementor-4857 .elementor-element.elementor-element-6466f5b.elementor-widget-text-editor h1 strong {
+.elementor-4857 .elementor-element.elementor-element-6466f5b.elementor-widget-text-editor h1 strong,
+.elementor-4857 .elementor-element.elementor-element-6466f5b.wrrapd-season-headline-injected h1,
+.elementor-4857 .elementor-element.elementor-element-6466f5b.wrrapd-season-headline-injected h1 strong {
 	font-family: Fraunces, Georgia, serif !important;
 	font-weight: 560 !important;
 	font-size: clamp(1.65rem, 4.2vw, 2.35rem) !important;
 	line-height: 1.2 !important;
 	letter-spacing: -0.02em !important;
+	color: #C40410 !important;
 }
 
 .elementor-4857 .elementor-element.elementor-element-6466f5b.elementor-widget-text-editor p,
@@ -2270,4 +2273,51 @@ body.logged-in .elementor-location-header .greeting-text {
 	body.page-id-6936 {
 		overflow-x: hidden;
 	}
+}
+
+/* === Homepage shout red + logo/ticker flush (2026-09-20) === */
+.elementor-4857 .elementor-element-6466f5b h1,
+.elementor-4857 .elementor-element-6466f5b h1 strong,
+.elementor-4857 .elementor-element-6466f5b.wrrapd-season-headline-injected h1,
+.elementor-4857 .elementor-element-6466f5b.wrrapd-season-headline-injected h1 strong {
+	color: #C40410 !important;
+}
+.elementor-4857 .elementor-element-7a8bd00 {
+	display: none !important;
+	height: 0 !important;
+	min-height: 0 !important;
+	margin: 0 !important;
+	padding: 0 !important;
+}
+.elementor-4857 .elementor-element-0a7e92b {
+	padding-top: 0 !important;
+	margin-top: 0 !important;
+}
+#wrrapd-retailer-wheels-row {
+	margin-bottom: 0 !important;
+	padding-bottom: 0 !important;
+}
+.occasion-ticker-shell {
+	margin-top: 0 !important;
+}
+
+/* Logged-in / welcome: keep ticker + Hide dates visible */
+body.logged-in .occasion-ticker-shell,
+body.page-id-5576 .occasion-ticker-shell,
+body.home .occasion-ticker-shell,
+body.page-id-4857 .occasion-ticker-shell {
+	display: block !important;
+	visibility: visible !important;
+	height: auto !important;
+}
+body.logged-in .occasion-ticker-shell.is-collapsed .occasion-ticker-panel,
+body.page-id-5576 .occasion-ticker-shell.is-collapsed .occasion-ticker-panel {
+	display: none !important;
+}
+.occasion-ticker-toggle {
+	display: inline-flex !important;
+	visibility: visible !important;
+}
+body.page-id-5576 .ticker-message {
+	display: none !important;
 }

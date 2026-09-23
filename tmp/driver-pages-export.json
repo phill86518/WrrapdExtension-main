@@ -1,0 +1,1690 @@
+[
+  {
+    "id": 7226,
+    "date": "2026-07-23T06:26:47",
+    "date_gmt": "2026-07-23T06:26:47",
+    "guid": {
+      "rendered": "https://wrrapd.com/?page_id=7226"
+    },
+    "modified": "2026-07-23T06:29:33",
+    "modified_gmt": "2026-07-23T06:29:33",
+    "slug": "drive",
+    "status": "publish",
+    "type": "page",
+    "link": "https://wrrapd.com/drive/",
+    "title": {
+      "rendered": "Drive with Wrrapd"
+    },
+    "content": {
+      "rendered": "\t\t<div data-elementor-type=\"wp-page\" data-elementor-id=\"7226\" class=\"elementor elementor-7226\">\n\t\t\t\t<div class=\"elementor-element elementor-element-368d8c6 e-flex e-con-boxed e-con e-parent\" data-id=\"368d8c6\" data-element_type=\"container\" data-e-type=\"container\">\n\t\t\t\t\t<div class=\"e-con-inner\">\n\t\t\t\t<div class=\"elementor-element elementor-element-af56b34 elementor-widget elementor-widget-shortcode\" data-id=\"af56b34\" data-element_type=\"widget\" data-e-type=\"widget\" data-widget_type=\"shortcode.default\">\n\t\t\t\t\t\t\t<div class=\"elementor-shortcode\">[wrrapd_driver_landing]</div>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t",
+      "protected": false
+    },
+    "excerpt": {
+      "rendered": "<p>[wrrapd_driver_landing]</p>\n",
+      "protected": false
+    },
+    "author": 1,
+    "featured_media": 0,
+    "parent": 0,
+    "menu_order": 0,
+    "comment_status": "closed",
+    "ping_status": "closed",
+    "template": "",
+    "meta": {
+      "iawp_total_views": 0,
+      "footnotes": ""
+    },
+    "class_list": [
+      "post-7226",
+      "page",
+      "type-page",
+      "status-publish",
+      "hentry"
+    ],
+    "_links": {
+      "self": [
+        {
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages/7226",
+          "targetHints": {
+            "allow": [
+              "GET"
+            ]
+          }
+        }
+      ],
+      "collection": [
+        {
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages"
+        }
+      ],
+      "about": [
+        {
+          "href": "https://wrrapd.com/wp-json/wp/v2/types/page"
+        }
+      ],
+      "author": [
+        {
+          "embeddable": true,
+          "href": "https://wrrapd.com/wp-json/wp/v2/users/1"
+        }
+      ],
+      "replies": [
+        {
+          "embeddable": true,
+          "href": "https://wrrapd.com/wp-json/wp/v2/comments?post=7226"
+        }
+      ],
+      "version-history": [
+        {
+          "count": 5,
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages/7226/revisions"
+        }
+      ],
+      "predecessor-version": [
+        {
+          "id": 7231,
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages/7226/revisions/7231"
+        }
+      ],
+      "wp:attachment": [
+        {
+          "href": "https://wrrapd.com/wp-json/wp/v2/media?parent=7226"
+        }
+      ],
+      "curies": [
+        {
+          "name": "wp",
+          "href": "https://api.w.org/{rel}",
+          "templated": true
+        }
+      ]
+    }
+  },
+  {
+    "id": 7232,
+    "date": "2026-07-23T06:31:16",
+    "date_gmt": "2026-07-23T06:31:16",
+    "guid": {
+      "rendered": "https://wrrapd.com/?page_id=7232"
+    },
+    "modified": "2026-07-23T06:34:19",
+    "modified_gmt": "2026-07-23T06:34:19",
+    "slug": "driver-apply",
+    "status": "publish",
+    "type": "page",
+    "link": "https://wrrapd.com/drive/driver-apply/",
+    "title": {
+      "rendered": "Driver Apply"
+    },
+    "content": {
+      "rendered": "\t\t<div data-elementor-type=\"wp-page\" data-elementor-id=\"7232\" class=\"elementor elementor-7232\">\n\t\t\t\t<div class=\"elementor-element elementor-element-caab4fd e-flex e-con-boxed e-con e-parent\" data-id=\"caab4fd\" data-element_type=\"container\" data-e-type=\"container\">\n\t\t\t\t\t<div class=\"e-con-inner\">\n\t\t\t\t<div class=\"elementor-element elementor-element-b055a04 elementor-widget elementor-widget-shortcode\" data-id=\"b055a04\" data-element_type=\"widget\" data-e-type=\"widget\" data-widget_type=\"shortcode.default\">\n\t\t\t\t\t\t\t<div class=\"elementor-shortcode\">[wrrapd_driver_apply]</div>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t",
+      "protected": false
+    },
+    "excerpt": {
+      "rendered": "<p>[wrrapd_driver_apply]</p>\n",
+      "protected": false
+    },
+    "author": 1,
+    "featured_media": 0,
+    "parent": 7226,
+    "menu_order": 0,
+    "comment_status": "closed",
+    "ping_status": "closed",
+    "template": "",
+    "meta": {
+      "iawp_total_views": 0,
+      "footnotes": ""
+    },
+    "class_list": [
+      "post-7232",
+      "page",
+      "type-page",
+      "status-publish",
+      "hentry"
+    ],
+    "_links": {
+      "self": [
+        {
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages/7232",
+          "targetHints": {
+            "allow": [
+              "GET"
+            ]
+          }
+        }
+      ],
+      "collection": [
+        {
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages"
+        }
+      ],
+      "about": [
+        {
+          "href": "https://wrrapd.com/wp-json/wp/v2/types/page"
+        }
+      ],
+      "author": [
+        {
+          "embeddable": true,
+          "href": "https://wrrapd.com/wp-json/wp/v2/users/1"
+        }
+      ],
+      "replies": [
+        {
+          "embeddable": true,
+          "href": "https://wrrapd.com/wp-json/wp/v2/comments?post=7232"
+        }
+      ],
+      "version-history": [
+        {
+          "count": 4,
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages/7232/revisions"
+        }
+      ],
+      "predecessor-version": [
+        {
+          "id": 7236,
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages/7232/revisions/7236"
+        }
+      ],
+      "up": [
+        {
+          "embeddable": true,
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages/7226"
+        }
+      ],
+      "wp:attachment": [
+        {
+          "href": "https://wrrapd.com/wp-json/wp/v2/media?parent=7232"
+        }
+      ],
+      "curies": [
+        {
+          "name": "wp",
+          "href": "https://api.w.org/{rel}",
+          "templated": true
+        }
+      ]
+    }
+  },
+  {
+    "id": 7237,
+    "date": "2026-07-23T06:34:58",
+    "date_gmt": "2026-07-23T06:34:58",
+    "guid": {
+      "rendered": "https://wrrapd.com/?page_id=7237"
+    },
+    "modified": "2026-07-23T06:36:15",
+    "modified_gmt": "2026-07-23T06:36:15",
+    "slug": "driver-thank-you",
+    "status": "publish",
+    "type": "page",
+    "link": "https://wrrapd.com/drive/driver-thank-you/",
+    "title": {
+      "rendered": "Driver Thank You"
+    },
+    "content": {
+      "rendered": "\t\t<div data-elementor-type=\"wp-page\" data-elementor-id=\"7237\" class=\"elementor elementor-7237\">\n\t\t\t\t<div class=\"elementor-element elementor-element-dd724bd e-flex e-con-boxed e-con e-parent\" data-id=\"dd724bd\" data-element_type=\"container\" data-e-type=\"container\">\n\t\t\t\t\t<div class=\"e-con-inner\">\n\t\t\t\t<div class=\"elementor-element elementor-element-fd2a124 elementor-widget elementor-widget-shortcode\" data-id=\"fd2a124\" data-element_type=\"widget\" data-e-type=\"widget\" data-widget_type=\"shortcode.default\">\n\t\t\t\t\t\t\t<div class=\"elementor-shortcode\">[wrrapd_driver_thankyou]</div>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t",
+      "protected": false
+    },
+    "excerpt": {
+      "rendered": "<p>[wrrapd_driver_thankyou]</p>\n",
+      "protected": false
+    },
+    "author": 1,
+    "featured_media": 0,
+    "parent": 7226,
+    "menu_order": 0,
+    "comment_status": "closed",
+    "ping_status": "closed",
+    "template": "",
+    "meta": {
+      "iawp_total_views": 0,
+      "footnotes": ""
+    },
+    "class_list": [
+      "post-7237",
+      "page",
+      "type-page",
+      "status-publish",
+      "hentry"
+    ],
+    "_links": {
+      "self": [
+        {
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages/7237",
+          "targetHints": {
+            "allow": [
+              "GET"
+            ]
+          }
+        }
+      ],
+      "collection": [
+        {
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages"
+        }
+      ],
+      "about": [
+        {
+          "href": "https://wrrapd.com/wp-json/wp/v2/types/page"
+        }
+      ],
+      "author": [
+        {
+          "embeddable": true,
+          "href": "https://wrrapd.com/wp-json/wp/v2/users/1"
+        }
+      ],
+      "replies": [
+        {
+          "embeddable": true,
+          "href": "https://wrrapd.com/wp-json/wp/v2/comments?post=7237"
+        }
+      ],
+      "version-history": [
+        {
+          "count": 4,
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages/7237/revisions"
+        }
+      ],
+      "predecessor-version": [
+        {
+          "id": 7241,
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages/7237/revisions/7241"
+        }
+      ],
+      "up": [
+        {
+          "embeddable": true,
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages/7226"
+        }
+      ],
+      "wp:attachment": [
+        {
+          "href": "https://wrrapd.com/wp-json/wp/v2/media?parent=7237"
+        }
+      ],
+      "curies": [
+        {
+          "name": "wp",
+          "href": "https://api.w.org/{rel}",
+          "templated": true
+        }
+      ]
+    }
+  },
+  {
+    "id": 7242,
+    "date": "2026-07-23T06:37:10",
+    "date_gmt": "2026-07-23T06:37:10",
+    "guid": {
+      "rendered": "https://wrrapd.com/?page_id=7242"
+    },
+    "modified": "2026-07-23T06:40:35",
+    "modified_gmt": "2026-07-23T06:40:35",
+    "slug": "driver-login",
+    "status": "publish",
+    "type": "page",
+    "link": "https://wrrapd.com/driver-login/",
+    "title": {
+      "rendered": "Driver Login"
+    },
+    "content": {
+      "rendered": "\t\t<div data-elementor-type=\"wp-page\" data-elementor-id=\"7242\" class=\"elementor elementor-7242\">\n\t\t\t\t<div class=\"elementor-element elementor-element-0e541a6 e-flex e-con-boxed e-con e-parent\" data-id=\"0e541a6\" data-element_type=\"container\" data-e-type=\"container\">\n\t\t\t\t\t<div class=\"e-con-inner\">\n\t\t\t\t<div class=\"elementor-element elementor-element-492bae5 elementor-widget elementor-widget-shortcode\" data-id=\"492bae5\" data-element_type=\"widget\" data-e-type=\"widget\" data-widget_type=\"shortcode.default\">\n\t\t\t\t\t\t\t<div class=\"elementor-shortcode\">[wrrapd_driver_login]</div>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t",
+      "protected": false
+    },
+    "excerpt": {
+      "rendered": "<p>[wrrapd_driver_login]</p>\n",
+      "protected": false
+    },
+    "author": 1,
+    "featured_media": 0,
+    "parent": 0,
+    "menu_order": 0,
+    "comment_status": "closed",
+    "ping_status": "closed",
+    "template": "",
+    "meta": {
+      "iawp_total_views": 0,
+      "footnotes": ""
+    },
+    "class_list": [
+      "post-7242",
+      "page",
+      "type-page",
+      "status-publish",
+      "hentry"
+    ],
+    "_links": {
+      "self": [
+        {
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages/7242",
+          "targetHints": {
+            "allow": [
+              "GET"
+            ]
+          }
+        }
+      ],
+      "collection": [
+        {
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages"
+        }
+      ],
+      "about": [
+        {
+          "href": "https://wrrapd.com/wp-json/wp/v2/types/page"
+        }
+      ],
+      "author": [
+        {
+          "embeddable": true,
+          "href": "https://wrrapd.com/wp-json/wp/v2/users/1"
+        }
+      ],
+      "replies": [
+        {
+          "embeddable": true,
+          "href": "https://wrrapd.com/wp-json/wp/v2/comments?post=7242"
+        }
+      ],
+      "version-history": [
+        {
+          "count": 4,
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages/7242/revisions"
+        }
+      ],
+      "predecessor-version": [
+        {
+          "id": 7246,
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages/7242/revisions/7246"
+        }
+      ],
+      "wp:attachment": [
+        {
+          "href": "https://wrrapd.com/wp-json/wp/v2/media?parent=7242"
+        }
+      ],
+      "curies": [
+        {
+          "name": "wp",
+          "href": "https://api.w.org/{rel}",
+          "templated": true
+        }
+      ]
+    }
+  },
+  {
+    "id": 7247,
+    "date": "2026-07-23T06:41:02",
+    "date_gmt": "2026-07-23T06:41:02",
+    "guid": {
+      "rendered": "https://wrrapd.com/?page_id=7247"
+    },
+    "modified": "2026-07-23T06:42:04",
+    "modified_gmt": "2026-07-23T06:42:04",
+    "slug": "decline-driver",
+    "status": "publish",
+    "type": "page",
+    "link": "https://wrrapd.com/decline-driver/",
+    "title": {
+      "rendered": "Decline Driver"
+    },
+    "content": {
+      "rendered": "\t\t<div data-elementor-type=\"wp-page\" data-elementor-id=\"7247\" class=\"elementor elementor-7247\">\n\t\t\t\t<div class=\"elementor-element elementor-element-38c7269 e-flex e-con-boxed e-con e-parent\" data-id=\"38c7269\" data-element_type=\"container\" data-e-type=\"container\">\n\t\t\t\t\t<div class=\"e-con-inner\">\n\t\t\t\t<div class=\"elementor-element elementor-element-c6375cc elementor-widget elementor-widget-shortcode\" data-id=\"c6375cc\" data-element_type=\"widget\" data-e-type=\"widget\" data-widget_type=\"shortcode.default\">\n\t\t\t\t\t\t\t<div class=\"elementor-shortcode\">[wrrapd_driver_decline]\n</div>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t",
+      "protected": false
+    },
+    "excerpt": {
+      "rendered": "<p>[wrrapd_driver_decline]</p>\n",
+      "protected": false
+    },
+    "author": 1,
+    "featured_media": 0,
+    "parent": 0,
+    "menu_order": 0,
+    "comment_status": "closed",
+    "ping_status": "closed",
+    "template": "",
+    "meta": {
+      "iawp_total_views": 0,
+      "footnotes": ""
+    },
+    "class_list": [
+      "post-7247",
+      "page",
+      "type-page",
+      "status-publish",
+      "hentry"
+    ],
+    "_links": {
+      "self": [
+        {
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages/7247",
+          "targetHints": {
+            "allow": [
+              "GET"
+            ]
+          }
+        }
+      ],
+      "collection": [
+        {
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages"
+        }
+      ],
+      "about": [
+        {
+          "href": "https://wrrapd.com/wp-json/wp/v2/types/page"
+        }
+      ],
+      "author": [
+        {
+          "embeddable": true,
+          "href": "https://wrrapd.com/wp-json/wp/v2/users/1"
+        }
+      ],
+      "replies": [
+        {
+          "embeddable": true,
+          "href": "https://wrrapd.com/wp-json/wp/v2/comments?post=7247"
+        }
+      ],
+      "version-history": [
+        {
+          "count": 4,
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages/7247/revisions"
+        }
+      ],
+      "predecessor-version": [
+        {
+          "id": 7251,
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages/7247/revisions/7251"
+        }
+      ],
+      "wp:attachment": [
+        {
+          "href": "https://wrrapd.com/wp-json/wp/v2/media?parent=7247"
+        }
+      ],
+      "curies": [
+        {
+          "name": "wp",
+          "href": "https://api.w.org/{rel}",
+          "templated": true
+        }
+      ]
+    }
+  },
+  {
+    "id": 7252,
+    "date": "2026-07-23T20:51:40",
+    "date_gmt": "2026-07-23T20:51:40",
+    "guid": {
+      "rendered": "https://wrrapd.com/?page_id=7252"
+    },
+    "modified": "2026-07-23T21:00:51",
+    "modified_gmt": "2026-07-23T21:00:51",
+    "slug": "driver-onboarding",
+    "status": "publish",
+    "type": "page",
+    "link": "https://wrrapd.com/driver-onboarding/",
+    "title": {
+      "rendered": "Driver Onboarding"
+    },
+    "content": {
+      "rendered": "\t\t<div data-elementor-type=\"wp-page\" data-elementor-id=\"7252\" class=\"elementor elementor-7252\">\n\t\t\t\t<div class=\"elementor-element elementor-element-23f2c5f e-flex e-con-boxed e-con e-parent\" data-id=\"23f2c5f\" data-element_type=\"container\" data-e-type=\"container\">\n\t\t\t\t\t<div class=\"e-con-inner\">\n\t\t\t\t<div class=\"elementor-element elementor-element-a535bb2 elementor-widget elementor-widget-shortcode\" data-id=\"a535bb2\" data-element_type=\"widget\" data-e-type=\"widget\" data-widget_type=\"shortcode.default\">\n\t\t\t\t\t\t\t<div class=\"elementor-shortcode\">[wrrapd_driver_onboarding step=\"welcome\"]</div>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t",
+      "protected": false
+    },
+    "excerpt": {
+      "rendered": "<p>[wrrapd_driver_onboarding step=\u201dwelcome\u201d]</p>\n",
+      "protected": false
+    },
+    "author": 1,
+    "featured_media": 0,
+    "parent": 0,
+    "menu_order": 0,
+    "comment_status": "closed",
+    "ping_status": "closed",
+    "template": "",
+    "meta": {
+      "iawp_total_views": 0,
+      "footnotes": ""
+    },
+    "class_list": [
+      "post-7252",
+      "page",
+      "type-page",
+      "status-publish",
+      "hentry"
+    ],
+    "_links": {
+      "self": [
+        {
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages/7252",
+          "targetHints": {
+            "allow": [
+              "GET"
+            ]
+          }
+        }
+      ],
+      "collection": [
+        {
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages"
+        }
+      ],
+      "about": [
+        {
+          "href": "https://wrrapd.com/wp-json/wp/v2/types/page"
+        }
+      ],
+      "author": [
+        {
+          "embeddable": true,
+          "href": "https://wrrapd.com/wp-json/wp/v2/users/1"
+        }
+      ],
+      "replies": [
+        {
+          "embeddable": true,
+          "href": "https://wrrapd.com/wp-json/wp/v2/comments?post=7252"
+        }
+      ],
+      "version-history": [
+        {
+          "count": 4,
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages/7252/revisions"
+        }
+      ],
+      "predecessor-version": [
+        {
+          "id": 7256,
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages/7252/revisions/7256"
+        }
+      ],
+      "wp:attachment": [
+        {
+          "href": "https://wrrapd.com/wp-json/wp/v2/media?parent=7252"
+        }
+      ],
+      "curies": [
+        {
+          "name": "wp",
+          "href": "https://api.w.org/{rel}",
+          "templated": true
+        }
+      ]
+    }
+  },
+  {
+    "id": 7258,
+    "date": "2026-07-23T21:02:51",
+    "date_gmt": "2026-07-23T21:02:51",
+    "guid": {
+      "rendered": "https://wrrapd.com/?page_id=7258"
+    },
+    "modified": "2026-07-23T21:12:43",
+    "modified_gmt": "2026-07-23T21:12:43",
+    "slug": "driver-agreement",
+    "status": "publish",
+    "type": "page",
+    "link": "https://wrrapd.com/driver-onboarding/driver-agreement/",
+    "title": {
+      "rendered": "Driver Agreement"
+    },
+    "content": {
+      "rendered": "\t\t<div data-elementor-type=\"wp-page\" data-elementor-id=\"7258\" class=\"elementor elementor-7258\">\n\t\t\t\t<div class=\"elementor-element elementor-element-be73526 e-flex e-con-boxed e-con e-parent\" data-id=\"be73526\" data-element_type=\"container\" data-e-type=\"container\">\n\t\t\t\t\t<div class=\"e-con-inner\">\n\t\t\t\t<div class=\"elementor-element elementor-element-5355851 elementor-widget elementor-widget-shortcode\" data-id=\"5355851\" data-element_type=\"widget\" data-e-type=\"widget\" data-widget_type=\"shortcode.default\">\n\t\t\t\t\t\t\t<div class=\"elementor-shortcode\">[wrrapd_driver_onboarding step=\"agreement\"]</div>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t",
+      "protected": false
+    },
+    "excerpt": {
+      "rendered": "<p>[wrrapd_driver_onboarding step=\u201dagreement\u201d]</p>\n",
+      "protected": false
+    },
+    "author": 1,
+    "featured_media": 0,
+    "parent": 7252,
+    "menu_order": 0,
+    "comment_status": "closed",
+    "ping_status": "closed",
+    "template": "",
+    "meta": {
+      "iawp_total_views": 0,
+      "footnotes": ""
+    },
+    "class_list": [
+      "post-7258",
+      "page",
+      "type-page",
+      "status-publish",
+      "hentry"
+    ],
+    "_links": {
+      "self": [
+        {
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages/7258",
+          "targetHints": {
+            "allow": [
+              "GET"
+            ]
+          }
+        }
+      ],
+      "collection": [
+        {
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages"
+        }
+      ],
+      "about": [
+        {
+          "href": "https://wrrapd.com/wp-json/wp/v2/types/page"
+        }
+      ],
+      "author": [
+        {
+          "embeddable": true,
+          "href": "https://wrrapd.com/wp-json/wp/v2/users/1"
+        }
+      ],
+      "replies": [
+        {
+          "embeddable": true,
+          "href": "https://wrrapd.com/wp-json/wp/v2/comments?post=7258"
+        }
+      ],
+      "version-history": [
+        {
+          "count": 4,
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages/7258/revisions"
+        }
+      ],
+      "predecessor-version": [
+        {
+          "id": 7262,
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages/7258/revisions/7262"
+        }
+      ],
+      "up": [
+        {
+          "embeddable": true,
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages/7252"
+        }
+      ],
+      "wp:attachment": [
+        {
+          "href": "https://wrrapd.com/wp-json/wp/v2/media?parent=7258"
+        }
+      ],
+      "curies": [
+        {
+          "name": "wp",
+          "href": "https://api.w.org/{rel}",
+          "templated": true
+        }
+      ]
+    }
+  },
+  {
+    "id": 7263,
+    "date": "2026-07-23T21:05:23",
+    "date_gmt": "2026-07-23T21:05:23",
+    "guid": {
+      "rendered": "https://wrrapd.com/?page_id=7263"
+    },
+    "modified": "2026-07-23T21:13:15",
+    "modified_gmt": "2026-07-23T21:13:15",
+    "slug": "driver-policies",
+    "status": "publish",
+    "type": "page",
+    "link": "https://wrrapd.com/driver-onboarding/driver-policies/",
+    "title": {
+      "rendered": "Driver Policies"
+    },
+    "content": {
+      "rendered": "\t\t<div data-elementor-type=\"wp-page\" data-elementor-id=\"7263\" class=\"elementor elementor-7263\">\n\t\t\t\t<div class=\"elementor-element elementor-element-e476edd e-flex e-con-boxed e-con e-parent\" data-id=\"e476edd\" data-element_type=\"container\" data-e-type=\"container\">\n\t\t\t\t\t<div class=\"e-con-inner\">\n\t\t\t\t<div class=\"elementor-element elementor-element-9398d01 elementor-widget elementor-widget-shortcode\" data-id=\"9398d01\" data-element_type=\"widget\" data-e-type=\"widget\" data-widget_type=\"shortcode.default\">\n\t\t\t\t\t\t\t<div class=\"elementor-shortcode\">[wrrapd_driver_onboarding step=\"policies\"]</div>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t",
+      "protected": false
+    },
+    "excerpt": {
+      "rendered": "<p>[wrrapd_driver_onboarding step=\u201dpolicies\u201d]</p>\n",
+      "protected": false
+    },
+    "author": 1,
+    "featured_media": 0,
+    "parent": 7252,
+    "menu_order": 0,
+    "comment_status": "closed",
+    "ping_status": "closed",
+    "template": "",
+    "meta": {
+      "iawp_total_views": 0,
+      "footnotes": ""
+    },
+    "class_list": [
+      "post-7263",
+      "page",
+      "type-page",
+      "status-publish",
+      "hentry"
+    ],
+    "_links": {
+      "self": [
+        {
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages/7263",
+          "targetHints": {
+            "allow": [
+              "GET"
+            ]
+          }
+        }
+      ],
+      "collection": [
+        {
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages"
+        }
+      ],
+      "about": [
+        {
+          "href": "https://wrrapd.com/wp-json/wp/v2/types/page"
+        }
+      ],
+      "author": [
+        {
+          "embeddable": true,
+          "href": "https://wrrapd.com/wp-json/wp/v2/users/1"
+        }
+      ],
+      "replies": [
+        {
+          "embeddable": true,
+          "href": "https://wrrapd.com/wp-json/wp/v2/comments?post=7263"
+        }
+      ],
+      "version-history": [
+        {
+          "count": 7,
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages/7263/revisions"
+        }
+      ],
+      "predecessor-version": [
+        {
+          "id": 7270,
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages/7263/revisions/7270"
+        }
+      ],
+      "up": [
+        {
+          "embeddable": true,
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages/7252"
+        }
+      ],
+      "wp:attachment": [
+        {
+          "href": "https://wrrapd.com/wp-json/wp/v2/media?parent=7263"
+        }
+      ],
+      "curies": [
+        {
+          "name": "wp",
+          "href": "https://api.w.org/{rel}",
+          "templated": true
+        }
+      ]
+    }
+  },
+  {
+    "id": 7271,
+    "date": "2026-07-23T21:06:34",
+    "date_gmt": "2026-07-23T21:06:34",
+    "guid": {
+      "rendered": "https://wrrapd.com/?page_id=7271"
+    },
+    "modified": "2026-07-23T21:13:26",
+    "modified_gmt": "2026-07-23T21:13:26",
+    "slug": "driver-orientation",
+    "status": "publish",
+    "type": "page",
+    "link": "https://wrrapd.com/driver-onboarding/driver-orientation/",
+    "title": {
+      "rendered": "Driver Orientation"
+    },
+    "content": {
+      "rendered": "\t\t<div data-elementor-type=\"wp-page\" data-elementor-id=\"7271\" class=\"elementor elementor-7271\">\n\t\t\t\t<div class=\"elementor-element elementor-element-db03ff4 e-flex e-con-boxed e-con e-parent\" data-id=\"db03ff4\" data-element_type=\"container\" data-e-type=\"container\">\n\t\t\t\t\t<div class=\"e-con-inner\">\n\t\t\t\t<div class=\"elementor-element elementor-element-ed92787 elementor-widget elementor-widget-shortcode\" data-id=\"ed92787\" data-element_type=\"widget\" data-e-type=\"widget\" data-widget_type=\"shortcode.default\">\n\t\t\t\t\t\t\t<div class=\"elementor-shortcode\">[wrrapd_driver_onboarding step=\"orientation\"]</div>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t",
+      "protected": false
+    },
+    "excerpt": {
+      "rendered": "<p>[wrrapd_driver_onboarding step=\u201dorientation\u201d]</p>\n",
+      "protected": false
+    },
+    "author": 1,
+    "featured_media": 0,
+    "parent": 7252,
+    "menu_order": 0,
+    "comment_status": "closed",
+    "ping_status": "closed",
+    "template": "",
+    "meta": {
+      "iawp_total_views": 0,
+      "footnotes": ""
+    },
+    "class_list": [
+      "post-7271",
+      "page",
+      "type-page",
+      "status-publish",
+      "hentry"
+    ],
+    "_links": {
+      "self": [
+        {
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages/7271",
+          "targetHints": {
+            "allow": [
+              "GET"
+            ]
+          }
+        }
+      ],
+      "collection": [
+        {
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages"
+        }
+      ],
+      "about": [
+        {
+          "href": "https://wrrapd.com/wp-json/wp/v2/types/page"
+        }
+      ],
+      "author": [
+        {
+          "embeddable": true,
+          "href": "https://wrrapd.com/wp-json/wp/v2/users/1"
+        }
+      ],
+      "replies": [
+        {
+          "embeddable": true,
+          "href": "https://wrrapd.com/wp-json/wp/v2/comments?post=7271"
+        }
+      ],
+      "version-history": [
+        {
+          "count": 4,
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages/7271/revisions"
+        }
+      ],
+      "predecessor-version": [
+        {
+          "id": 7275,
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages/7271/revisions/7275"
+        }
+      ],
+      "up": [
+        {
+          "embeddable": true,
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages/7252"
+        }
+      ],
+      "wp:attachment": [
+        {
+          "href": "https://wrrapd.com/wp-json/wp/v2/media?parent=7271"
+        }
+      ],
+      "curies": [
+        {
+          "name": "wp",
+          "href": "https://api.w.org/{rel}",
+          "templated": true
+        }
+      ]
+    }
+  },
+  {
+    "id": 7276,
+    "date": "2026-07-23T21:07:56",
+    "date_gmt": "2026-07-23T21:07:56",
+    "guid": {
+      "rendered": "https://wrrapd.com/?page_id=7276"
+    },
+    "modified": "2026-07-23T21:13:39",
+    "modified_gmt": "2026-07-23T21:13:39",
+    "slug": "driver-background",
+    "status": "publish",
+    "type": "page",
+    "link": "https://wrrapd.com/driver-onboarding/driver-background/",
+    "title": {
+      "rendered": "Driver Background"
+    },
+    "content": {
+      "rendered": "\t\t<div data-elementor-type=\"wp-page\" data-elementor-id=\"7276\" class=\"elementor elementor-7276\">\n\t\t\t\t<div class=\"elementor-element elementor-element-4030ffc e-flex e-con-boxed e-con e-parent\" data-id=\"4030ffc\" data-element_type=\"container\" data-e-type=\"container\">\n\t\t\t\t\t<div class=\"e-con-inner\">\n\t\t\t\t<div class=\"elementor-element elementor-element-ffed4ad elementor-widget elementor-widget-shortcode\" data-id=\"ffed4ad\" data-element_type=\"widget\" data-e-type=\"widget\" data-widget_type=\"shortcode.default\">\n\t\t\t\t\t\t\t<div class=\"elementor-shortcode\">[wrrapd_driver_onboarding step=\"background\"]</div>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t",
+      "protected": false
+    },
+    "excerpt": {
+      "rendered": "<p>[wrrapd_driver_onboarding step=\u201dbackground\u201d]</p>\n",
+      "protected": false
+    },
+    "author": 1,
+    "featured_media": 0,
+    "parent": 7252,
+    "menu_order": 0,
+    "comment_status": "closed",
+    "ping_status": "closed",
+    "template": "",
+    "meta": {
+      "iawp_total_views": 0,
+      "footnotes": ""
+    },
+    "class_list": [
+      "post-7276",
+      "page",
+      "type-page",
+      "status-publish",
+      "hentry"
+    ],
+    "_links": {
+      "self": [
+        {
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages/7276",
+          "targetHints": {
+            "allow": [
+              "GET"
+            ]
+          }
+        }
+      ],
+      "collection": [
+        {
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages"
+        }
+      ],
+      "about": [
+        {
+          "href": "https://wrrapd.com/wp-json/wp/v2/types/page"
+        }
+      ],
+      "author": [
+        {
+          "embeddable": true,
+          "href": "https://wrrapd.com/wp-json/wp/v2/users/1"
+        }
+      ],
+      "replies": [
+        {
+          "embeddable": true,
+          "href": "https://wrrapd.com/wp-json/wp/v2/comments?post=7276"
+        }
+      ],
+      "version-history": [
+        {
+          "count": 4,
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages/7276/revisions"
+        }
+      ],
+      "predecessor-version": [
+        {
+          "id": 7280,
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages/7276/revisions/7280"
+        }
+      ],
+      "up": [
+        {
+          "embeddable": true,
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages/7252"
+        }
+      ],
+      "wp:attachment": [
+        {
+          "href": "https://wrrapd.com/wp-json/wp/v2/media?parent=7276"
+        }
+      ],
+      "curies": [
+        {
+          "name": "wp",
+          "href": "https://api.w.org/{rel}",
+          "templated": true
+        }
+      ]
+    }
+  },
+  {
+    "id": 7281,
+    "date": "2026-07-23T21:08:41",
+    "date_gmt": "2026-07-23T21:08:41",
+    "guid": {
+      "rendered": "https://wrrapd.com/?page_id=7281"
+    },
+    "modified": "2026-07-23T21:13:52",
+    "modified_gmt": "2026-07-23T21:13:52",
+    "slug": "driver-insurance",
+    "status": "publish",
+    "type": "page",
+    "link": "https://wrrapd.com/driver-onboarding/driver-insurance/",
+    "title": {
+      "rendered": "Driver Insurance"
+    },
+    "content": {
+      "rendered": "\t\t<div data-elementor-type=\"wp-page\" data-elementor-id=\"7281\" class=\"elementor elementor-7281\">\n\t\t\t\t<div class=\"elementor-element elementor-element-e76bd94 e-flex e-con-boxed e-con e-parent\" data-id=\"e76bd94\" data-element_type=\"container\" data-e-type=\"container\">\n\t\t\t\t\t<div class=\"e-con-inner\">\n\t\t\t\t<div class=\"elementor-element elementor-element-69cf122 elementor-widget elementor-widget-shortcode\" data-id=\"69cf122\" data-element_type=\"widget\" data-e-type=\"widget\" data-widget_type=\"shortcode.default\">\n\t\t\t\t\t\t\t<div class=\"elementor-shortcode\">[wrrapd_driver_onboarding step=\"insurance\"]</div>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t",
+      "protected": false
+    },
+    "excerpt": {
+      "rendered": "<p>[wrrapd_driver_onboarding step=\u201dinsurance\u201d]</p>\n",
+      "protected": false
+    },
+    "author": 1,
+    "featured_media": 0,
+    "parent": 7252,
+    "menu_order": 0,
+    "comment_status": "closed",
+    "ping_status": "closed",
+    "template": "",
+    "meta": {
+      "iawp_total_views": 0,
+      "footnotes": ""
+    },
+    "class_list": [
+      "post-7281",
+      "page",
+      "type-page",
+      "status-publish",
+      "hentry"
+    ],
+    "_links": {
+      "self": [
+        {
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages/7281",
+          "targetHints": {
+            "allow": [
+              "GET"
+            ]
+          }
+        }
+      ],
+      "collection": [
+        {
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages"
+        }
+      ],
+      "about": [
+        {
+          "href": "https://wrrapd.com/wp-json/wp/v2/types/page"
+        }
+      ],
+      "author": [
+        {
+          "embeddable": true,
+          "href": "https://wrrapd.com/wp-json/wp/v2/users/1"
+        }
+      ],
+      "replies": [
+        {
+          "embeddable": true,
+          "href": "https://wrrapd.com/wp-json/wp/v2/comments?post=7281"
+        }
+      ],
+      "version-history": [
+        {
+          "count": 4,
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages/7281/revisions"
+        }
+      ],
+      "predecessor-version": [
+        {
+          "id": 7285,
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages/7281/revisions/7285"
+        }
+      ],
+      "up": [
+        {
+          "embeddable": true,
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages/7252"
+        }
+      ],
+      "wp:attachment": [
+        {
+          "href": "https://wrrapd.com/wp-json/wp/v2/media?parent=7281"
+        }
+      ],
+      "curies": [
+        {
+          "name": "wp",
+          "href": "https://api.w.org/{rel}",
+          "templated": true
+        }
+      ]
+    }
+  },
+  {
+    "id": 7286,
+    "date": "2026-07-23T21:09:26",
+    "date_gmt": "2026-07-23T21:09:26",
+    "guid": {
+      "rendered": "https://wrrapd.com/?page_id=7286"
+    },
+    "modified": "2026-07-23T21:14:04",
+    "modified_gmt": "2026-07-23T21:14:04",
+    "slug": "driver-identity",
+    "status": "publish",
+    "type": "page",
+    "link": "https://wrrapd.com/driver-onboarding/driver-identity/",
+    "title": {
+      "rendered": "Driver Identity"
+    },
+    "content": {
+      "rendered": "\t\t<div data-elementor-type=\"wp-page\" data-elementor-id=\"7286\" class=\"elementor elementor-7286\">\n\t\t\t\t<div class=\"elementor-element elementor-element-aa3c703 e-flex e-con-boxed e-con e-parent\" data-id=\"aa3c703\" data-element_type=\"container\" data-e-type=\"container\">\n\t\t\t\t\t<div class=\"e-con-inner\">\n\t\t\t\t<div class=\"elementor-element elementor-element-ac7210e elementor-widget elementor-widget-shortcode\" data-id=\"ac7210e\" data-element_type=\"widget\" data-e-type=\"widget\" data-widget_type=\"shortcode.default\">\n\t\t\t\t\t\t\t<div class=\"elementor-shortcode\">[wrrapd_driver_onboarding step=\"identity\"]</div>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t",
+      "protected": false
+    },
+    "excerpt": {
+      "rendered": "<p>[wrrapd_driver_onboarding step=\u201didentity\u201d]</p>\n",
+      "protected": false
+    },
+    "author": 1,
+    "featured_media": 0,
+    "parent": 7252,
+    "menu_order": 0,
+    "comment_status": "closed",
+    "ping_status": "closed",
+    "template": "",
+    "meta": {
+      "iawp_total_views": 0,
+      "footnotes": ""
+    },
+    "class_list": [
+      "post-7286",
+      "page",
+      "type-page",
+      "status-publish",
+      "hentry"
+    ],
+    "_links": {
+      "self": [
+        {
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages/7286",
+          "targetHints": {
+            "allow": [
+              "GET"
+            ]
+          }
+        }
+      ],
+      "collection": [
+        {
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages"
+        }
+      ],
+      "about": [
+        {
+          "href": "https://wrrapd.com/wp-json/wp/v2/types/page"
+        }
+      ],
+      "author": [
+        {
+          "embeddable": true,
+          "href": "https://wrrapd.com/wp-json/wp/v2/users/1"
+        }
+      ],
+      "replies": [
+        {
+          "embeddable": true,
+          "href": "https://wrrapd.com/wp-json/wp/v2/comments?post=7286"
+        }
+      ],
+      "version-history": [
+        {
+          "count": 4,
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages/7286/revisions"
+        }
+      ],
+      "predecessor-version": [
+        {
+          "id": 7290,
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages/7286/revisions/7290"
+        }
+      ],
+      "up": [
+        {
+          "embeddable": true,
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages/7252"
+        }
+      ],
+      "wp:attachment": [
+        {
+          "href": "https://wrrapd.com/wp-json/wp/v2/media?parent=7286"
+        }
+      ],
+      "curies": [
+        {
+          "name": "wp",
+          "href": "https://api.w.org/{rel}",
+          "templated": true
+        }
+      ]
+    }
+  },
+  {
+    "id": 7291,
+    "date": "2026-07-23T21:10:31",
+    "date_gmt": "2026-07-23T21:10:31",
+    "guid": {
+      "rendered": "https://wrrapd.com/?page_id=7291"
+    },
+    "modified": "2026-07-23T21:14:18",
+    "modified_gmt": "2026-07-23T21:14:18",
+    "slug": "driver-w-9",
+    "status": "publish",
+    "type": "page",
+    "link": "https://wrrapd.com/driver-onboarding/driver-w-9/",
+    "title": {
+      "rendered": "Driver W-9"
+    },
+    "content": {
+      "rendered": "\t\t<div data-elementor-type=\"wp-page\" data-elementor-id=\"7291\" class=\"elementor elementor-7291\">\n\t\t\t\t<div class=\"elementor-element elementor-element-71add46 e-flex e-con-boxed e-con e-parent\" data-id=\"71add46\" data-element_type=\"container\" data-e-type=\"container\">\n\t\t\t\t\t<div class=\"e-con-inner\">\n\t\t\t\t<div class=\"elementor-element elementor-element-d4ce598 elementor-widget elementor-widget-shortcode\" data-id=\"d4ce598\" data-element_type=\"widget\" data-e-type=\"widget\" data-widget_type=\"shortcode.default\">\n\t\t\t\t\t\t\t<div class=\"elementor-shortcode\">[wrrapd_driver_onboarding step=\"w9\"]</div>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t",
+      "protected": false
+    },
+    "excerpt": {
+      "rendered": "<p>[wrrapd_driver_onboarding step=\u201dw9\u2033]</p>\n",
+      "protected": false
+    },
+    "author": 1,
+    "featured_media": 0,
+    "parent": 7252,
+    "menu_order": 0,
+    "comment_status": "closed",
+    "ping_status": "closed",
+    "template": "",
+    "meta": {
+      "iawp_total_views": 0,
+      "footnotes": ""
+    },
+    "class_list": [
+      "post-7291",
+      "page",
+      "type-page",
+      "status-publish",
+      "hentry"
+    ],
+    "_links": {
+      "self": [
+        {
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages/7291",
+          "targetHints": {
+            "allow": [
+              "GET"
+            ]
+          }
+        }
+      ],
+      "collection": [
+        {
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages"
+        }
+      ],
+      "about": [
+        {
+          "href": "https://wrrapd.com/wp-json/wp/v2/types/page"
+        }
+      ],
+      "author": [
+        {
+          "embeddable": true,
+          "href": "https://wrrapd.com/wp-json/wp/v2/users/1"
+        }
+      ],
+      "replies": [
+        {
+          "embeddable": true,
+          "href": "https://wrrapd.com/wp-json/wp/v2/comments?post=7291"
+        }
+      ],
+      "version-history": [
+        {
+          "count": 4,
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages/7291/revisions"
+        }
+      ],
+      "predecessor-version": [
+        {
+          "id": 7295,
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages/7291/revisions/7295"
+        }
+      ],
+      "up": [
+        {
+          "embeddable": true,
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages/7252"
+        }
+      ],
+      "wp:attachment": [
+        {
+          "href": "https://wrrapd.com/wp-json/wp/v2/media?parent=7291"
+        }
+      ],
+      "curies": [
+        {
+          "name": "wp",
+          "href": "https://api.w.org/{rel}",
+          "templated": true
+        }
+      ]
+    }
+  },
+  {
+    "id": 7296,
+    "date": "2026-07-23T21:11:10",
+    "date_gmt": "2026-07-23T21:11:10",
+    "guid": {
+      "rendered": "https://wrrapd.com/?page_id=7296"
+    },
+    "modified": "2026-07-23T21:14:30",
+    "modified_gmt": "2026-07-23T21:14:30",
+    "slug": "driver-tax-1099",
+    "status": "publish",
+    "type": "page",
+    "link": "https://wrrapd.com/driver-onboarding/driver-tax-1099/",
+    "title": {
+      "rendered": "Driver Tax 1099"
+    },
+    "content": {
+      "rendered": "\t\t<div data-elementor-type=\"wp-page\" data-elementor-id=\"7296\" class=\"elementor elementor-7296\">\n\t\t\t\t<div class=\"elementor-element elementor-element-585bbe5 e-flex e-con-boxed e-con e-parent\" data-id=\"585bbe5\" data-element_type=\"container\" data-e-type=\"container\">\n\t\t\t\t\t<div class=\"e-con-inner\">\n\t\t\t\t<div class=\"elementor-element elementor-element-c66875f elementor-widget elementor-widget-shortcode\" data-id=\"c66875f\" data-element_type=\"widget\" data-e-type=\"widget\" data-widget_type=\"shortcode.default\">\n\t\t\t\t\t\t\t<div class=\"elementor-shortcode\">[wrrapd_driver_onboarding step=\"tax_1099\"]</div>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t",
+      "protected": false
+    },
+    "excerpt": {
+      "rendered": "<p>[wrrapd_driver_onboarding step=\u201dtax_1099\u2033]</p>\n",
+      "protected": false
+    },
+    "author": 1,
+    "featured_media": 0,
+    "parent": 7252,
+    "menu_order": 0,
+    "comment_status": "closed",
+    "ping_status": "closed",
+    "template": "",
+    "meta": {
+      "iawp_total_views": 0,
+      "footnotes": ""
+    },
+    "class_list": [
+      "post-7296",
+      "page",
+      "type-page",
+      "status-publish",
+      "hentry"
+    ],
+    "_links": {
+      "self": [
+        {
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages/7296",
+          "targetHints": {
+            "allow": [
+              "GET"
+            ]
+          }
+        }
+      ],
+      "collection": [
+        {
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages"
+        }
+      ],
+      "about": [
+        {
+          "href": "https://wrrapd.com/wp-json/wp/v2/types/page"
+        }
+      ],
+      "author": [
+        {
+          "embeddable": true,
+          "href": "https://wrrapd.com/wp-json/wp/v2/users/1"
+        }
+      ],
+      "replies": [
+        {
+          "embeddable": true,
+          "href": "https://wrrapd.com/wp-json/wp/v2/comments?post=7296"
+        }
+      ],
+      "version-history": [
+        {
+          "count": 4,
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages/7296/revisions"
+        }
+      ],
+      "predecessor-version": [
+        {
+          "id": 7300,
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages/7296/revisions/7300"
+        }
+      ],
+      "up": [
+        {
+          "embeddable": true,
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages/7252"
+        }
+      ],
+      "wp:attachment": [
+        {
+          "href": "https://wrrapd.com/wp-json/wp/v2/media?parent=7296"
+        }
+      ],
+      "curies": [
+        {
+          "name": "wp",
+          "href": "https://api.w.org/{rel}",
+          "templated": true
+        }
+      ]
+    }
+  },
+  {
+    "id": 7301,
+    "date": "2026-07-23T21:15:37",
+    "date_gmt": "2026-07-23T21:15:37",
+    "guid": {
+      "rendered": "https://wrrapd.com/?page_id=7301"
+    },
+    "modified": "2026-07-23T21:19:26",
+    "modified_gmt": "2026-07-23T21:19:26",
+    "slug": "driver-bank-payout",
+    "status": "publish",
+    "type": "page",
+    "link": "https://wrrapd.com/driver-onboarding/driver-bank-payout/",
+    "title": {
+      "rendered": "Driver Bank"
+    },
+    "content": {
+      "rendered": "\t\t<div data-elementor-type=\"wp-page\" data-elementor-id=\"7301\" class=\"elementor elementor-7301\">\n\t\t\t\t<div class=\"elementor-element elementor-element-af8a3dc e-flex e-con-boxed e-con e-parent\" data-id=\"af8a3dc\" data-element_type=\"container\" data-e-type=\"container\">\n\t\t\t\t\t<div class=\"e-con-inner\">\n\t\t\t\t<div class=\"elementor-element elementor-element-07f7285 elementor-widget elementor-widget-shortcode\" data-id=\"07f7285\" data-element_type=\"widget\" data-e-type=\"widget\" data-widget_type=\"shortcode.default\">\n\t\t\t\t\t\t\t<div class=\"elementor-shortcode\">[wrrapd_driver_onboarding step=\"bank_payout\"]</div>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t",
+      "protected": false
+    },
+    "excerpt": {
+      "rendered": "<p>[wrrapd_driver_onboarding step=\u201dbank_payout\u201d]</p>\n",
+      "protected": false
+    },
+    "author": 1,
+    "featured_media": 0,
+    "parent": 7252,
+    "menu_order": 0,
+    "comment_status": "closed",
+    "ping_status": "closed",
+    "template": "",
+    "meta": {
+      "iawp_total_views": 0,
+      "footnotes": ""
+    },
+    "class_list": [
+      "post-7301",
+      "page",
+      "type-page",
+      "status-publish",
+      "hentry"
+    ],
+    "_links": {
+      "self": [
+        {
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages/7301",
+          "targetHints": {
+            "allow": [
+              "GET"
+            ]
+          }
+        }
+      ],
+      "collection": [
+        {
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages"
+        }
+      ],
+      "about": [
+        {
+          "href": "https://wrrapd.com/wp-json/wp/v2/types/page"
+        }
+      ],
+      "author": [
+        {
+          "embeddable": true,
+          "href": "https://wrrapd.com/wp-json/wp/v2/users/1"
+        }
+      ],
+      "replies": [
+        {
+          "embeddable": true,
+          "href": "https://wrrapd.com/wp-json/wp/v2/comments?post=7301"
+        }
+      ],
+      "version-history": [
+        {
+          "count": 4,
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages/7301/revisions"
+        }
+      ],
+      "predecessor-version": [
+        {
+          "id": 7305,
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages/7301/revisions/7305"
+        }
+      ],
+      "up": [
+        {
+          "embeddable": true,
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages/7252"
+        }
+      ],
+      "wp:attachment": [
+        {
+          "href": "https://wrrapd.com/wp-json/wp/v2/media?parent=7301"
+        }
+      ],
+      "curies": [
+        {
+          "name": "wp",
+          "href": "https://api.w.org/{rel}",
+          "templated": true
+        }
+      ]
+    }
+  },
+  {
+    "id": 7306,
+    "date": "2026-07-23T21:17:43",
+    "date_gmt": "2026-07-23T21:17:43",
+    "guid": {
+      "rendered": "https://wrrapd.com/?page_id=7306"
+    },
+    "modified": "2026-07-23T21:19:38",
+    "modified_gmt": "2026-07-23T21:19:38",
+    "slug": "driver-activation",
+    "status": "publish",
+    "type": "page",
+    "link": "https://wrrapd.com/driver-onboarding/driver-activation/",
+    "title": {
+      "rendered": "Driver Activation"
+    },
+    "content": {
+      "rendered": "\t\t<div data-elementor-type=\"wp-page\" data-elementor-id=\"7306\" class=\"elementor elementor-7306\">\n\t\t\t\t<div class=\"elementor-element elementor-element-480a264 e-flex e-con-boxed e-con e-parent\" data-id=\"480a264\" data-element_type=\"container\" data-e-type=\"container\">\n\t\t\t\t\t<div class=\"e-con-inner\">\n\t\t\t\t<div class=\"elementor-element elementor-element-88a63d5 elementor-widget elementor-widget-shortcode\" data-id=\"88a63d5\" data-element_type=\"widget\" data-e-type=\"widget\" data-widget_type=\"shortcode.default\">\n\t\t\t\t\t\t\t<div class=\"elementor-shortcode\">[wrrapd_driver_onboarding step=\"activation\"]</div>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t",
+      "protected": false
+    },
+    "excerpt": {
+      "rendered": "<p>[wrrapd_driver_onboarding step=\u201dactivation\u201d]</p>\n",
+      "protected": false
+    },
+    "author": 1,
+    "featured_media": 0,
+    "parent": 7252,
+    "menu_order": 0,
+    "comment_status": "closed",
+    "ping_status": "closed",
+    "template": "",
+    "meta": {
+      "iawp_total_views": 0,
+      "footnotes": ""
+    },
+    "class_list": [
+      "post-7306",
+      "page",
+      "type-page",
+      "status-publish",
+      "hentry"
+    ],
+    "_links": {
+      "self": [
+        {
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages/7306",
+          "targetHints": {
+            "allow": [
+              "GET"
+            ]
+          }
+        }
+      ],
+      "collection": [
+        {
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages"
+        }
+      ],
+      "about": [
+        {
+          "href": "https://wrrapd.com/wp-json/wp/v2/types/page"
+        }
+      ],
+      "author": [
+        {
+          "embeddable": true,
+          "href": "https://wrrapd.com/wp-json/wp/v2/users/1"
+        }
+      ],
+      "replies": [
+        {
+          "embeddable": true,
+          "href": "https://wrrapd.com/wp-json/wp/v2/comments?post=7306"
+        }
+      ],
+      "version-history": [
+        {
+          "count": 7,
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages/7306/revisions"
+        }
+      ],
+      "predecessor-version": [
+        {
+          "id": 7313,
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages/7306/revisions/7313"
+        }
+      ],
+      "up": [
+        {
+          "embeddable": true,
+          "href": "https://wrrapd.com/wp-json/wp/v2/pages/7252"
+        }
+      ],
+      "wp:attachment": [
+        {
+          "href": "https://wrrapd.com/wp-json/wp/v2/media?parent=7306"
+        }
+      ],
+      "curies": [
+        {
+          "name": "wp",
+          "href": "https://api.w.org/{rel}",
+          "templated": true
+        }
+      ]
+    }
+  }
+]

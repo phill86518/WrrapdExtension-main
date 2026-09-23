@@ -6,6 +6,7 @@ import { orderWrapstarId, orderWrapstarName } from "./types";
 import {
   trackingEarningsCollection,
   trackingPayoutConfigDoc,
+  trackingPayoutHoldsCollection,
   trackingPayoutsCollection,
 } from "./tracking-firestore";
 import { getWrapstarProfile } from "./wrapstar-profiles";
@@ -14,6 +15,14 @@ const DATA_DIR = path.join(process.cwd(), ".data");
 const EARNINGS_FILE = path.join(DATA_DIR, "earnings.json");
 const PAYOUTS_FILE = path.join(DATA_DIR, "payouts.json");
 const CONFIG_FILE = path.join(DATA_DIR, "payout-config.json");
+const HOLDS_FILE = path.join(DATA_DIR, "payout-holds.json");
+
+export type PayoutHold = {
+  contractorId: string;
+  held: boolean;
+  reason: string;
+  updatedAt: string;
+};
 
 const DEFAULT_CONFIG: PayoutConfig = {
   basePayCents: 1800,
@@ -85,6 +94,84 @@ export async function savePayoutConfig(
   }
   await ensureDir();
   await fs.writeFile(CONFIG_FILE, JSON.stringify(next, null, 2));
+  return next;
+}
+
+function normalizeHold(contractorId: string, raw: Partial<PayoutHold> | undefined): PayoutHold | null {
+  if (!raw) return null;
+  return {
+    contractorId,
+    held: !!raw.held,
+    reason: typeof raw.reason === "string" ? raw.reason : "",
+    updatedAt: typeof raw.updatedAt === "string" ? raw.updatedAt : "",
+  };
+}
+
+async function readHoldsLocal(): Promise<Record<string, PayoutHold>> {
+  try {
+    const raw = await fs.readFile(HOLDS_FILE, "utf8");
+    const parsed = JSON.parse(raw) as Record<string, Partial<PayoutHold>>;
+    if (!parsed || typeof parsed !== "object") return {};
+    const out: Record<string, PayoutHold> = {};
+    for (const [id, row] of Object.entries(parsed)) {
+      const hold = normalizeHold(id, row);
+      if (hold) out[id] = hold;
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+/** Command Center withhold flag. Held funds stay in unpaid earnings. */
+export async function getPayoutHold(contractorId: string): Promise<PayoutHold | null> {
+  const id = contractorId.trim();
+  if (!id) return null;
+  const col = trackingPayoutHoldsCollection();
+  if (col) {
+    const snap = await col.doc(id).get();
+    if (!snap.exists) return null;
+    return normalizeHold(id, snap.data() as Partial<PayoutHold>);
+  }
+  const map = await readHoldsLocal();
+  return map[id] || null;
+}
+
+export async function listPayoutHolds(): Promise<Record<string, PayoutHold>> {
+  const col = trackingPayoutHoldsCollection();
+  if (col) {
+    const snap = await col.get();
+    const out: Record<string, PayoutHold> = {};
+    snap.forEach((doc) => {
+      const hold = normalizeHold(doc.id, doc.data() as Partial<PayoutHold>);
+      if (hold) out[doc.id] = hold;
+    });
+    return out;
+  }
+  return readHoldsLocal();
+}
+
+export async function setPayoutHold(
+  contractorId: string,
+  held: boolean,
+  reason: string,
+): Promise<PayoutHold> {
+  const id = contractorId.trim();
+  const next: PayoutHold = {
+    contractorId: id,
+    held,
+    reason: reason.trim(),
+    updatedAt: new Date().toISOString(),
+  };
+  const col = trackingPayoutHoldsCollection();
+  if (col) {
+    await col.doc(id).set(next);
+    return next;
+  }
+  const map = await readHoldsLocal();
+  map[id] = next;
+  await ensureDir();
+  await fs.writeFile(HOLDS_FILE, JSON.stringify(map, null, 2));
   return next;
 }
 
@@ -258,6 +345,13 @@ export async function walletForWrapstar(wrapstarId: string): Promise<{
 export async function createPayoutBatch(wrapstarId: string): Promise<
   { ok: true; payout: PayoutBatch } | { ok: false; error: string }
 > {
+  const hold = await getPayoutHold(wrapstarId);
+  if (hold?.held) {
+    return {
+      ok: false,
+      error: "Payouts are withheld for this contractor. Release the hold before creating a batch. Unpaid earnings stay unpaid.",
+    };
+  }
   const unpaid = (await listEarningsForWrapstar(wrapstarId)).filter((e) => e.status === "unpaid");
   if (unpaid.length === 0) return { ok: false, error: "No unpaid earnings for this WrapStar." };
 

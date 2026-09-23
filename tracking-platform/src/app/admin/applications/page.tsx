@@ -183,6 +183,7 @@ export default async function AdminApplicationsPage({
           resetAt: a.resetAt,
           vehicleType: a.vehicleType,
           canDeliver: "yes",
+          fitScore: a.fitScore,
         }),
       ),
       ...wr.map(
@@ -208,6 +209,7 @@ export default async function AdminApplicationsPage({
           resetAt: a.resetAt,
           vehicleType: a.vehicleType,
           canDeliver: "yes",
+          fitScore: a.fitScore,
         }),
       ),
     ]
@@ -389,7 +391,7 @@ export default async function AdminApplicationsPage({
                           wrap
                         </span>
                       )}
-                      {a.role === "wrapstar" && a.fitScore ? (
+                      {(a.role === "wrapstar" || a.role === "driver" || a.role === "wraprider") && a.fitScore ? (
                         <span className="ml-1 text-xs font-semibold">Fit {a.fitScore}</span>
                       ) : null}
                     </td>

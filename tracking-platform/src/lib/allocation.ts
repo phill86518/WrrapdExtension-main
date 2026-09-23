@@ -16,8 +16,16 @@ import {
   metroForPostalCode,
 } from "./metros";
 import { listDeliveryDrivers } from "./driver-registry";
+import { isDriverAvailableOnDate, type ShiftKey } from "./availability-store";
+import { formatInTimeZone } from "date-fns-tz";
 
 const MAX_PREFERRED_LOAD = 10;
+
+function shiftForScheduledOrder(order: Order): ShiftKey {
+  const iso = wrrapdScheduledInstantIsoForUi(order);
+  const hour = Number(formatInTimeZone(new Date(iso), "America/New_York", "H"));
+  return hour < 13 ? "morning" : "afternoon";
+}
 
 type AllocInput = {
   orders: Order[];
@@ -59,15 +67,19 @@ function milesBetweenOrderAndWrapstar(
   return km / KM_PER_MILE;
 }
 
-function pickCourierForOrder(
+async function pickCourierForOrder(
   order: Order,
   wrapstar: WrapStar,
   deliveryDrivers: DeliveryDriver[],
   wrapstars: WrapStar[],
-): { courierDriverId?: string; courierDriverName?: string; fulfillmentMode: FulfillmentMode } {
+  now: Date,
+): Promise<{ courierDriverId?: string; courierDriverName?: string; fulfillmentMode: FulfillmentMode }> {
   if (!isWrapOnly(wrapstar)) {
     return { fulfillmentMode: "self_delivery" };
   }
+
+  const dateKey = formatDateKeyNy(wrrapdScheduledInstantIsoForUi(order));
+  const shift = shiftForScheduledOrder(order);
 
   const metro =
     (wrapstar.metroId && metroForPostalCode(wrapstar.homePostalCode)?.id === wrapstar.metroId
@@ -81,11 +93,14 @@ function pickCourierForOrder(
       (d) => d.id === wrapstar.assignedDriverId && d.status === "approved",
     );
     if (preferred) {
-      return {
-        fulfillmentMode: "driver_final_mile",
-        courierDriverId: preferred.id,
-        courierDriverName: preferred.name,
-      };
+      const avail = await isDriverAvailableOnDate(preferred.id, dateKey, shift, now);
+      if (avail) {
+        return {
+          fulfillmentMode: "driver_final_mile",
+          courierDriverId: preferred.id,
+          courierDriverName: preferred.name,
+        };
+      }
     }
   }
 
@@ -105,9 +120,17 @@ function pickCourierForOrder(
     return { fulfillmentMode: "driver_final_mile" };
   }
 
+  const availableDrivers: DeliveryDriver[] = [];
+  for (const d of approvedDrivers) {
+    if (await isDriverAvailableOnDate(d.id, dateKey, shift, now)) {
+      availableDrivers.push(d);
+    }
+  }
+  const pool = availableDrivers.length > 0 ? availableDrivers : approvedDrivers;
+
   const orderCoords = approxCoordsForZip(order.postalCode, order.state);
   const orderZip = normalizeZip(order.postalCode);
-  approvedDrivers.sort((a, b) => {
+  pool.sort((a, b) => {
     const aService = (a.servicePostalCodes || []).map(normalizeZip).includes(orderZip);
     const bService = (b.servicePostalCodes || []).map(normalizeZip).includes(orderZip);
     if (aService !== bService) return aService ? -1 : 1;
@@ -115,7 +138,7 @@ function pickCourierForOrder(
     const db = haversineKm(orderCoords, approxCoordsForZip(b.homePostalCode));
     return da - db;
   });
-  const pick = approvedDrivers[0]!;
+  const pick = pool[0]!;
   return {
     fulfillmentMode: "driver_final_mile",
     courierDriverId: pick.id,
@@ -136,16 +159,19 @@ export async function computeAssignmentsForOrders(
   const wrapstars = input.wrapstars?.length ? input.wrapstars : input.drivers || [];
   const deliveryDrivers = input.deliveryDrivers ?? (await listDeliveryDrivers());
   const result = new Map<string, AssignmentResult>();
+  const now = input.now ?? new Date();
 
   const soloId =
     process.env.TRACKING_SOLO_WRAPSTAR_ID?.trim() ||
     process.env.TRACKING_SOLO_DRIVER_ID?.trim();
 
   const approved: WrapStar[] = [];
+  const forcedByWrapstar = new Map<string, string[]>();
   for (const w of wrapstars) {
     const p = await getWrapstarProfile(w.id);
     if (p.onboardingStatus === "approved" && normalizeZip(w.homePostalCode).length === 5) {
       approved.push(w);
+      forcedByWrapstar.set(w.id, p.forcedAvailableDates || []);
     }
   }
   if (approved.length === 0) return result;
@@ -170,8 +196,8 @@ export async function computeAssignmentsForOrders(
     bumpLoad(wsId, dateKey);
   }
 
-  const finalize = (o: Order, ws: WrapStar, distanceMiles: number): AssignmentResult => {
-    const courier = pickCourierForOrder(o, ws, deliveryDrivers, wrapstars);
+  const finalize = async (o: Order, ws: WrapStar, distanceMiles: number): Promise<AssignmentResult> => {
+    const courier = await pickCourierForOrder(o, ws, deliveryDrivers, wrapstars, now);
     return {
       wrapstarId: ws.id,
       wrapstarName: ws.name,
@@ -188,7 +214,6 @@ export async function computeAssignmentsForOrders(
       const wsId = orderWrapstarId(o)!;
       const ws = approved.find((w) => w.id === wsId) || wrapstars.find((w) => w.id === wsId);
       if (ws) {
-        // Preserve manual courier if set; otherwise fill for wrap-only
         if (o.courierDriverId && o.assignmentSource === "manual") {
           result.set(o.id, {
             wrapstarId: ws.id,
@@ -202,7 +227,7 @@ export async function computeAssignmentsForOrders(
             courierDriverName: o.courierDriverName,
           });
         } else {
-          result.set(o.id, finalize(o, ws, 0));
+          result.set(o.id, await finalize(o, ws, 0));
         }
       }
       continue;
@@ -218,7 +243,7 @@ export async function computeAssignmentsForOrders(
           solo.servicePostalCodes,
         );
         if (soloMiles <= ALLOCATION_RADIUS_MILES) {
-          result.set(o.id, finalize(o, solo, soloMiles));
+          result.set(o.id, await finalize(o, solo, soloMiles));
           const dateKey = formatDateKeyNy(wrrapdScheduledInstantIsoForUi(o));
           bumpLoad(solo.id, dateKey);
           continue;
@@ -227,31 +252,39 @@ export async function computeAssignmentsForOrders(
     }
 
     const dateKey = formatDateKeyNy(wrrapdScheduledInstantIsoForUi(o));
+    const shift = shiftForScheduledOrder(o);
     const dayLoads = loadByDay.get(dateKey) ?? new Map<string, number>();
 
     type Scored = { ws: WrapStar; distanceMiles: number; load: number; hybrid: boolean };
-    const scored: Scored[] = approved
-      .map((ws) => {
-        const distanceMiles = milesBetweenOrderAndWrapstar(
-          o.postalCode,
-          o.state,
-          ws.homePostalCode,
-          ws.servicePostalCodes,
-        );
-        return {
-          ws,
-          distanceMiles,
-          load: dayLoads.get(ws.id) ?? 0,
-          hybrid: !isWrapOnly(ws),
-        };
-      })
-      .filter((row) => row.distanceMiles <= ALLOCATION_RADIUS_MILES);
+    const scored: Scored[] = [];
+    for (const ws of approved) {
+      const distanceMiles = milesBetweenOrderAndWrapstar(
+        o.postalCode,
+        o.state,
+        ws.homePostalCode,
+        ws.servicePostalCodes,
+      );
+      if (distanceMiles > ALLOCATION_RADIUS_MILES) continue;
+      const avail = await isDriverAvailableOnDate(
+        ws.id,
+        dateKey,
+        shift,
+        now,
+        forcedByWrapstar.get(ws.id) || [],
+      );
+      if (!avail) continue;
+      scored.push({
+        ws,
+        distanceMiles,
+        load: dayLoads.get(ws.id) ?? 0,
+        hybrid: !isWrapOnly(ws),
+      });
+    }
 
     scored.sort((a, b) => {
       const aOver = a.load >= MAX_PREFERRED_LOAD ? 1 : 0;
       const bOver = b.load >= MAX_PREFERRED_LOAD ? 1 : 0;
       if (aOver !== bOver) return aOver - bOver;
-      // Prefer hybrid self-delivery when distances are within ~9 miles
       if (a.hybrid !== b.hybrid) {
         const distGap = Math.abs(a.distanceMiles - b.distanceMiles);
         if (distGap <= 9) return a.hybrid ? -1 : 1;
@@ -266,7 +299,7 @@ export async function computeAssignmentsForOrders(
 
     const pick = scored[0];
     if (!pick) continue;
-    result.set(o.id, finalize(o, pick.ws, pick.distanceMiles));
+    result.set(o.id, await finalize(o, pick.ws, pick.distanceMiles));
     bumpLoad(pick.ws.id, dateKey);
   }
 

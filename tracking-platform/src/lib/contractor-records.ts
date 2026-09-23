@@ -201,13 +201,8 @@ export function contractorRecordFromWrapstarApplication(
       ob.policiesSignedAt,
       ob.policiesSignature ? `Signed as ${ob.policiesSignature}` : undefined,
     ),
-    doc(
-      "orientation",
-      "Orientation & Quiz",
-      !!steps.orientation,
-      undefined,
-      ob.orientationScore ? `Score ${ob.orientationScore}` : undefined,
-    ),
+    doc("w9", "W-9", !!steps.w9),
+    doc("tax_1099", "Tax acknowledgments (1099)", !!ob.taxAckAt, ob.taxAckAt),
     doc(
       "background",
       "Background check",
@@ -225,8 +220,13 @@ export function contractorRecordFromWrapstarApplication(
         .join(" · ") || undefined,
     ),
     doc("identity", "Identity verification", !!ob.identityConfirmedAt, ob.identityConfirmedAt),
-    doc("w9", "W-9", !!steps.w9),
-    doc("tax_1099", "Tax acknowledgments (1099)", !!ob.taxAckAt, ob.taxAckAt),
+    doc(
+      "orientation",
+      "Orientation & Quiz",
+      !!steps.orientation,
+      undefined,
+      ob.orientationScore ? `Score ${ob.orientationScore}` : undefined,
+    ),
   ];
   const attributes: Record<string, string> = clean({
     "Can deliver": yesNo(app.canDeliver),
@@ -305,13 +305,8 @@ export function contractorRecordFromWrapriderApplication(
         : undefined,
     ),
     doc("policies", "Wrap & Delivery Standards", !!steps.policies),
-    doc(
-      "orientation",
-      "Orientation & Quiz",
-      !!steps.orientation,
-      undefined,
-      app.orientationScore ? `Score ${app.orientationScore}` : undefined,
-    ),
+    doc("w9", "W-9", !!steps.w9),
+    doc("tax_1099", "Tax acknowledgments (1099)", !!steps.tax_1099),
     doc("background", "Background check", !!steps.background),
     doc("insurance", "Vehicle insurance", !!steps.insurance || !!app.hasInsuranceFile),
     doc("identity", "Identity & license", !!steps.identity || !!app.hasIdFile),
@@ -322,8 +317,13 @@ export function contractorRecordFromWrapriderApplication(
       !!steps.workspace || !!app.workspaceConfirmedAt,
       app.workspaceConfirmedAt || undefined,
     ),
-    doc("w9", "W-9", !!steps.w9),
-    doc("tax_1099", "Tax acknowledgments (1099)", !!steps.tax_1099),
+    doc(
+      "orientation",
+      "Orientation & Quiz",
+      !!steps.orientation,
+      undefined,
+      app.orientationScore ? `Score ${app.orientationScore}` : undefined,
+    ),
   ];
   const attributes: Record<string, string> = {
     "Hire track": "WrapRider (wrap + deliver)",
@@ -397,12 +397,12 @@ export function contractorRecordFromDriverApplication(
         : undefined,
     ),
     doc("policies", "Policies & Safety", !!steps.policies),
-    doc("orientation", "Orientation & Quiz", !!steps.orientation),
+    doc("w9", "W-9", !!steps.w9),
+    doc("tax_1099", "Tax acknowledgments (1099)", !!steps.tax_1099),
     doc("background", "Background check", !!steps.background),
     doc("insurance", "Vehicle insurance", !!steps.insurance),
     doc("identity", "Identity & license", !!steps.identity),
-    doc("w9", "W-9", !!steps.w9),
-    doc("tax_1099", "Tax acknowledgments (1099)", !!steps.tax_1099),
+    doc("orientation", "Orientation & Quiz", !!steps.orientation),
   ];
   const attributes: Record<string, string> = {
     Vehicle: app.vehicleType || "",

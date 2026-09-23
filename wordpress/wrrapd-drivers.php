@@ -104,13 +104,13 @@ function wrrapd_drivers_onboarding_steps() {
 		'welcome'     => 'Welcome & Overview',
 		'agreement'   => 'Contractor Agreements',
 		'policies'    => 'Policies & Safety',
-		'orientation' => 'Orientation & Quiz',
-		'background'  => 'Background Check',
-		'insurance'   => 'Vehicle Insurance',
-		'identity'    => 'Identity & License',
 		'w9'          => 'W-9 Tax Form',
 		'tax_1099'    => '1099 & Tax Acknowledgments',
 		'bank_payout' => 'Connect Bank / Payouts',
+		'background'  => 'Background Check',
+		'insurance'   => 'Vehicle Insurance',
+		'identity'    => 'Identity & License',
+		'orientation' => 'Orientation & Quiz',
 		'activation'  => 'App Download & Final Review',
 	);
 }

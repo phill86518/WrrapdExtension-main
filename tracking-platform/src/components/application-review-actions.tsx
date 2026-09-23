@@ -37,6 +37,8 @@ type Props = {
   /** Onboarding portal temporarily reopened for this active contractor (rare) */
   onboardingReopened?: boolean;
   onboardingReopenedAt?: string;
+  gigEvidenceStatus?: string;
+  gigEvidenceNotes?: string;
 };
 
 export function ApplicationReviewActions({
@@ -54,6 +56,8 @@ export function ApplicationReviewActions({
   portalLoginCount,
   onboardingReopened = false,
   onboardingReopenedAt,
+  gigEvidenceStatus = "",
+  gigEvidenceNotes = "",
 }: Props) {
   const [pending, setPending] = useState<string | null>(null);
   const busy = pending !== null;
@@ -207,6 +211,50 @@ export function ApplicationReviewActions({
         )}
 
         <div className="flex flex-wrap gap-2">
+          {(role === "driver" || role === "wraprider") && (
+            <div className="mb-2 w-full rounded-lg border border-slate-200 bg-slate-50 p-3">
+              <p className="text-sm font-medium text-slate-900">Delivery gig evidence</p>
+              <p className="mt-1 text-xs text-slate-600">
+                Live app check, 1099, or a recent earnings PDF. Note the platform and what matched the ID.
+              </p>
+              <label className="mt-2 block text-sm">
+                Evidence
+                <select
+                  name="gigEvidenceStatus"
+                  defaultValue={gigEvidenceStatus || "none"}
+                  className="mt-1 w-full rounded border bg-white px-3 py-2"
+                  disabled={busy}
+                >
+                  <option value="none">Not recorded</option>
+                  <option value="live_verified">Live app verified</option>
+                  <option value="1099">1099-NEC</option>
+                  <option value="earnings_pdf">Recent earnings PDF</option>
+                  <option value="declined">Declined to show</option>
+                  <option value="failed">Did not match</option>
+                </select>
+              </label>
+              <label className="mt-2 block text-sm">
+                Platform / what was shown
+                <textarea
+                  name="gigEvidenceNotes"
+                  rows={2}
+                  defaultValue={gigEvidenceNotes || ""}
+                  className="mt-1 w-full rounded border px-3 py-2"
+                  placeholder="DoorDash — live profile, name and photo matched ID"
+                  disabled={busy}
+                />
+              </label>
+              <button
+                type="submit"
+                name="action"
+                value="save_gig_evidence"
+                disabled={busy}
+                className={`${BTN} mt-2 border border-slate-300 bg-white hover:bg-slate-100`}
+              >
+                {pending === "save_gig_evidence" ? "Saving…" : "Save gig evidence"}
+              </button>
+            </div>
+          )}
           <button
             type="submit"
             name="action"

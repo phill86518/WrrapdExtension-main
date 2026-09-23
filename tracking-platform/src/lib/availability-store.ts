@@ -54,14 +54,45 @@ export function mondayOfWeekContaining(date: Date): string {
 }
 
 /**
- * Deadline: Saturday 10:00 America/New_York **before** the Monday that starts that work week.
- * If `now` is past that instant and the driver has not submitted for that week → unavailable (unless admin forced).
+ * Deadline: Friday 18:00 America/New_York **of the week before** the Monday that starts that work week.
+ * Example: work week Mon 2026-09-28 → deadline Fri 2026-09-25 18:00 ET.
+ * If `now` is past that instant and the contractor has not submitted for that week → unavailable (unless admin forced).
  */
 export function availabilityDeadlineForWeekMonday(weekStartMonday: string): Date {
   const monday = parseISO(`${weekStartMonday}T12:00:00`);
-  const saturdayBeforeMonday = addDays(monday, -2);
-  const deadlineLocal = `${format(saturdayBeforeMonday, "yyyy-MM-dd")}T10:00:00`;
+  const fridayBeforeMonday = addDays(monday, -3);
+  const deadlineLocal = `${format(fridayBeforeMonday, "yyyy-MM-dd")}T18:00:00`;
   return toDate(deadlineLocal, { timeZone: NY });
+}
+
+/**
+ * The work week (Mon–Sun) contractors should submit for **right now**:
+ * - Before Friday 6pm ET of the current week → **next** Monday’s week
+ * - At/after Friday 6pm ET → the week **after** next (next week’s deadline has closed)
+ */
+export function upcomingWeekFromToday(now: Date = nowInNy()): {
+  weekStartMonday: string;
+  days: string[];
+  deadline: Date;
+} {
+  const thisMonday = startOfWeek(now, { weekStartsOn: 1 });
+  const friday6pmThisWeek = toDate(
+    `${format(addDays(thisMonday, 4), "yyyy-MM-dd")}T18:00:00`,
+    { timeZone: NY },
+  );
+  const targetMondayDate =
+    now.getTime() < friday6pmThisWeek.getTime()
+      ? addDays(thisMonday, 7)
+      : addDays(thisMonday, 14);
+  const weekStartMonday = format(targetMondayDate, "yyyy-MM-dd");
+  const days = Array.from({ length: 7 }, (_, i) =>
+    format(addDays(targetMondayDate, i), "yyyy-MM-dd"),
+  );
+  return {
+    weekStartMonday,
+    days,
+    deadline: availabilityDeadlineForWeekMonday(weekStartMonday),
+  };
 }
 
 export async function submitWeekAvailability(
@@ -97,17 +128,6 @@ export async function listWeekRecords(): Promise<WeekAvailabilityRecord[]> {
   }
   const data = await readLegacyFile();
   return data.records;
-}
-
-export function upcomingWeekFromToday(): {
-  weekStartMonday: string;
-  days: string[];
-} {
-  const nyNow = nowInNy();
-  const monday = startOfWeek(nyNow, { weekStartsOn: 1 });
-  const weekStartMonday = format(monday, "yyyy-MM-dd");
-  const days = Array.from({ length: 7 }, (_, i) => format(addDays(monday, i), "yyyy-MM-dd"));
-  return { weekStartMonday, days };
 }
 
 export async function getWeekAvailability(

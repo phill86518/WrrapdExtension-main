@@ -87,6 +87,8 @@ Wrrapd does **not** require Contractor to purchase commercial general liability 
 
 4.4 Contractor shall not contact customers or giftees except as the WrapRider App requires for a delivery attempt (for example, a brief arrival or access message). Contractor shall not open a finished wrap to read a packing slip.
 
+4.4A **Wrrapd dispatch only.** Contractor shall perform wrapping and delivery Services only through the WrapRider App. Contractor shall not accept, dispatch, or complete Wrrapd work through DoorDash, Uber, Spark, Shipt, Instacart, or any other third-party gig platform.
+
 4.5 Wrrapd may update published wrapping, scan, and delivery standards prospectively via the Platform or email.
 
 ---
@@ -135,7 +137,7 @@ Wrrapd does **not** require Contractor to purchase commercial general liability 
 
 7.1 Contractor shall maintain a valid driver license and an eligible personal vehicle, and shall not drive for Wrrapd work while license, registration, or legally required insurance is lapsed or suspended.
 
-7.2 Contractor shall provide proof of legally required automobile insurance upon request and whenever coverage changes.
+7.2 Contractor shall provide proof of legally required automobile insurance upon request and whenever coverage changes. Coverage from DoorDash, Uber, Spark, Shipt, or any other gig platform applies only to that platform’s trips and **does not cover** Wrrapd Services. Contractor shall not rely on that coverage for a Wrrapd hop.
 
 ---
 

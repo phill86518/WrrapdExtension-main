@@ -29,7 +29,7 @@ Chrome extension **3.0.10**. Shopper-loved Amazon checkout + pay; other retailer
 |---|---|
 | `manifest.json` version | **3.0.10** |
 | Site update nudge (`$latest_version`) | **3.0.10** |
-| Chrome Web Store / detect ID | `gapdndgnpolhcknconognpnjecfppddb` |
+| Chrome Web Store / detect ID | `kdfcahdcgpaoohpgagpmpbgcmkdbocbg` (live listing, Sep 2026) |
 | Build | `cd extension && npm run build` → committed `content*.js` bundles |
 
 ### Retailers (content scripts)

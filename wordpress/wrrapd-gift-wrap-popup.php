@@ -1,6 +1,6 @@
 <?php
 /**
- * Homepage gift-wrap retailer popup — cycling “Gift-wrap anything on {retailer}” hero.
+ * Homepage gift-wrap popup — Fraunces, retailer cycle, hub shipping line + extension CTA.
  *
  * Loaded by wrrapd-orders-bridge.php on wrrapd.com front page only.
  */
@@ -9,96 +9,42 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_GIFT_POPUP_BUILD', '2026-07-08-gift-wrap-banner-v4-amazon' );
+define( 'WRRAPD_GIFT_POPUP_BUILD', '2026-09-19-fraunces-hub' );
 
 /**
- * Typography + accent color per retailer slug (logos come from mu-plugins/logos/).
+ * Accent color per retailer slug (logos come from mu-plugins/logos/).
  *
  * @param string $slug Retailer slug.
- * @return array{color:string,font:string}
+ * @return string Hex color.
  */
-function wrrapd_gift_wrap_popup_style_for_slug( $slug ) {
+function wrrapd_gift_wrap_popup_color_for_slug( $slug ) {
 	$map = array(
-		'etsy'       => array(
-			'color' => '#F56400',
-			'font'  => "'Playfair Display', Georgia, serif",
-		),
-		'amazon'     => array(
-			'color' => '#131921',
-			'font'  => "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-		),
-		'target'     => array(
-			'color' => '#E4002B',
-			'font'  => "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-		),
-		'walmart'    => array(
-			'color' => '#0071CE',
-			'font'  => "'Montserrat', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-		),
-		'ulta'       => array(
-			'color' => '#5E2B7E',
-			'font'  => "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-		),
-		'lego'       => array(
-			'color' => '#D40511',
-			'font'  => "'Anton', Impact, Haettenschweiler, 'Arial Black', sans-serif",
-		),
-		'nordstrom'  => array(
-			'color' => '#222222',
-			'font'  => "'Playfair Display', Georgia, serif",
-		),
-		'kohls'      => array(
-			'color' => '#002D62',
-			'font'  => "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-		),
-		'sephora'    => array(
-			'color' => '#222222',
-			'font'  => "'Montserrat', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-		),
-		'bestbuy'    => array(
-			'color' => '#003B64',
-			'font'  => "'Montserrat', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-		),
+		'etsy'      => '#F56400',
+		'amazon'    => '#f6b933',
+		'target'    => '#E4002B',
+		'walmart'   => '#0071CE',
+		'ulta'      => '#5E2B7E',
+		'lego'      => '#D40511',
+		'nordstrom' => '#f6b933',
+		'kohls'     => '#7eb0e0',
+		'sephora'   => '#f6b933',
+		'bestbuy'   => '#0046BE',
 	);
 	$slug = strtolower( (string) $slug );
-	if ( isset( $map[ $slug ] ) ) {
-		return $map[ $slug ];
-	}
-	return array(
-		'color' => '#0f172a',
-		'font'  => "'Inter', system-ui, sans-serif",
-	);
+	return isset( $map[ $slug ] ) ? $map[ $slug ] : '#f6b933';
 }
 
 /**
- * Display name for the popup ticker (uppercase with sensible exceptions).
+ * Retailers for the popup — homepage wheel set with real logos.
  *
- * @param string $label Wheel label.
- */
-function wrrapd_gift_wrap_popup_display_name( $label ) {
-	$label = trim( (string) $label );
-	if ( $label === '' ) {
-		return '';
-	}
-	if ( preg_match( '/^LEGO$/i', $label ) ) {
-		return 'LEGO';
-	}
-	return function_exists( 'mb_strtoupper' )
-		? mb_strtoupper( $label, 'UTF-8' )
-		: strtoupper( $label );
-}
-
-/**
- * Retailers for the popup — Etsy first, then the homepage wheel set with real logos.
- *
- * @return list<array{slug:string,label:string,display:string,logo:string,color:string,font:string}>
+ * @return list<array{slug:string,label:string,display:string,logo:string,color:string}>
  */
 function wrrapd_gift_wrap_popup_retailers() {
 	if ( ! function_exists( 'wrrapd_home_retailer_wheel_brands' ) || ! function_exists( 'wrrapd_mu_logo_url_for_slug' ) ) {
 		return array();
 	}
 
-	$brands = wrrapd_home_retailer_wheel_brands();
+	$brands  = wrrapd_home_retailer_wheel_brands();
 	$by_slug = array();
 	foreach ( $brands as $b ) {
 		if ( empty( $b['slug'] ) ) {
@@ -115,15 +61,13 @@ function wrrapd_gift_wrap_popup_retailers() {
 			continue;
 		}
 		$b     = $by_slug[ $slug ];
-		$style = wrrapd_gift_wrap_popup_style_for_slug( $slug );
 		$label = ! empty( $b['label'] ) ? (string) $b['label'] : ucfirst( $slug );
 		$out[] = array(
 			'slug'    => $slug,
 			'label'   => $label,
-			'display' => wrrapd_gift_wrap_popup_display_name( $label ),
+			'display' => $label,
 			'logo'    => wrrapd_mu_logo_url_for_slug( $slug, ! empty( $b['domain'] ) ? (string) $b['domain'] : $slug . '.com' ),
-			'color'   => $style['color'],
-			'font'    => $style['font'],
+			'color'   => wrrapd_gift_wrap_popup_color_for_slug( $slug ),
 		);
 	}
 
@@ -153,7 +97,7 @@ function wrrapd_gift_wrap_popup_enqueue_assets() {
 
 	wp_enqueue_style(
 		'wrrapd-gift-wrap-popup-fonts',
-		'https://fonts.googleapis.com/css2?family=Pacifico&family=Playfair+Display:wght@700&family=Montserrat:wght@700&family=Anton&family=Inter:wght@600;700&display=swap',
+		'https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,560;0,9..144,700;1,9..144,560&display=swap',
 		array(),
 		null
 	);
@@ -183,6 +127,7 @@ function wrrapd_gift_wrap_popup_enqueue_assets() {
 			array(
 				'retailers' => wrrapd_gift_wrap_popup_retailers(),
 				'build'     => WRRAPD_GIFT_POPUP_BUILD,
+				'storeUrl'  => function_exists( 'wrrapd_chrome_extension_install_url' ) ? wrrapd_chrome_extension_install_url() : 'https://chromewebstore.google.com/detail/wrrapd/kdfcahdcgpaoohpgagpmpbgcmkdbocbg',
 			)
 		);
 	}
@@ -202,34 +147,36 @@ function wrrapd_gift_wrap_popup_render() {
 		return;
 	}
 
-	$first = $retailers[0];
+	$first    = $retailers[0];
+	$store    = function_exists( 'wrrapd_chrome_extension_install_url' ) ? wrrapd_chrome_extension_install_url() : 'https://chromewebstore.google.com/detail/wrrapd/kdfcahdcgpaoohpgagpmpbgcmkdbocbg';
 	?>
 	<div id="wrrapd-gift-popup" class="wrrapd-gift-popup" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="wrrapd-gift-popup-title">
 		<div class="wrrapd-gift-popup__panel">
-			<div class="wrrapd-gift-popup__sparkles" aria-hidden="true">
-				<span></span><span></span><span></span><span></span><span></span><span></span>
-			</div>
 			<button type="button" class="wrrapd-gift-popup__close" id="wrrapd-gift-popup-close" aria-label="<?php esc_attr_e( 'Close', 'wrrapd' ); ?>">&times;</button>
 
-			<div class="wrrapd-gift-popup__hero-fit">
-				<div class="wrrapd-gift-popup__hero" id="wrrapd-gift-popup-title">
-				<span class="wrrapd-gift-popup__static">
-					<?php esc_html_e( 'Gift-wrap', 'wrrapd' ); ?>
-					<span class="wrrapd-gift-popup__handwrite" id="wrrapd-gift-popup-anything" aria-label="<?php esc_attr_e( 'anything', 'wrrapd' ); ?>"><?php esc_html_e( 'anything', 'wrrapd' ); ?></span>
-					<?php esc_html_e( 'on', 'wrrapd' ); ?>
-				</span>
-				<span class="wrrapd-gift-popup__retailer-slot">
-					<span
-						id="wrrapd-gift-popup-name"
-						class="wrrapd-gift-popup__name"
-						style="color:<?php echo esc_attr( $first['color'] ); ?>;font-family:<?php echo esc_attr( $first['font'] ); ?>;"
-					><?php echo esc_html( $first['display'] ); ?></span>
+			<p class="wrrapd-gift-popup__eyebrow"><?php esc_html_e( 'Wrapping Happiness', 'wrrapd' ); ?></p>
+
+			<div class="wrrapd-gift-popup__hero" id="wrrapd-gift-popup-title">
+				<p class="wrrapd-gift-popup__static">
+					<?php esc_html_e( 'Gift-wrap anything on', 'wrrapd' ); ?>
+				</p>
+				<div class="wrrapd-gift-popup__retailer-slot">
 					<span id="wrrapd-gift-popup-logo" class="wrrapd-gift-popup__logo">
 						<img src="<?php echo esc_url( $first['logo'] ); ?>" width="72" height="72" alt="<?php echo esc_attr( $first['label'] ); ?>" decoding="async" />
 					</span>
-				</span>
+					<span
+						id="wrrapd-gift-popup-name"
+						class="wrrapd-gift-popup__name"
+						style="color:<?php echo esc_attr( $first['color'] ); ?>;"
+					><?php echo esc_html( $first['display'] ); ?></span>
+				</div>
 			</div>
-			</div>
+
+			<p class="wrrapd-gift-popup__lede"><?php esc_html_e( 'Confirm shipping to the Wrrapd hub', 'wrrapd' ); ?></p>
+
+			<a class="wrrapd-gift-popup__cta" href="<?php echo esc_url( $store ); ?>" target="_blank" rel="noopener">
+				<?php esc_html_e( 'Get the free Chrome extension', 'wrrapd' ); ?>
+			</a>
 		</div>
 	</div>
 	<?php

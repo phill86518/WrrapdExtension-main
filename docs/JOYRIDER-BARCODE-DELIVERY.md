@@ -57,12 +57,20 @@ Missing label = order not ready for pickup (same as missing photos).
 
 ---
 
+## Completeness (intended; not built)
+
+One barcode per **wrap unit**, plus a flower-only code when there is no wrap
+(`WR-{orderRef}-{n}`, `WR-{orderRef}-FL`). Before leaving for the giftee the app
+must show `2/3 gifts + flowers` and block en-route until 100%. See
+[PRODUCT-LATER-BARCODES-HOURS-LIVEWRAP.md](./PRODUCT-LATER-BARCODES-HOURS-LIVEWRAP.md).
+
 ## Implementation notes (when built)
 
 - Token: reuse `externalOrderId` or a signed short code on `Order`.
-- Scan route: `POST /api/courier/scan` → order + flower flag.
+- Extend `DriverLabelPayload` with `itemIndex` / `itemCount`.
+- Scan route: `POST /api/courier/scan` → order + item + flower flag.
 - Do not expose shopper phone on the scan card unless the delivery requires a call.
-- Flowers-only deliveries can use a flower-stop barcode generated when the JoyRider
+- Flowers-only deliveries can use a flower-stop barcode generated when the courier
   buys / picks up the bouquet.
 
-Related: `docs/CONTRACTOR-HOURLY-PAY.md`, JoyRider IC §4.
+Related: `docs/CONTRACTOR-HOURLY-PAY.md`, JoyRider IC §4, `docs/sop/`.

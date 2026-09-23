@@ -1,7 +1,7 @@
 /**
  * Wrrapd sitewide mobile / touch layout (rem-based).
  * Header layout lives in wrrapd-orders-bridge.php (wrrapd-header-layout-css) — do not duplicate here.
- * Build: 2026-09-18-orders-payment-v2
+ * Build: 2026-09-19-header-chrome-match
  */
 
 html {
@@ -614,18 +614,21 @@ a.wrrapd-ext-cta {
 	}
 
 	.wrrapd-howto-kicker {
+		font-family: Fraunces, Georgia, "Times New Roman", serif !important;
 		font-size: 0.55rem !important;
 		padding: 0.22rem 0.4rem !important;
 		margin-bottom: 0.3rem !important;
 	}
 
 	.wrrapd-howto-stepheading {
+		font-family: Fraunces, Georgia, "Times New Roman", serif !important;
 		font-size: 0.72rem !important;
 		line-height: 1.15 !important;
 		margin-bottom: 0.3rem !important;
 	}
 
 	.wrrapd-howto-copy p {
+		font-family: Fraunces, Georgia, "Times New Roman", serif !important;
 		font-size: 0.62rem !important;
 		line-height: 1.32 !important;
 	}

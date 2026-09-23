@@ -1,0 +1,428 @@
+# PROVISIONAL PATENT APPLICATION
+
+## TITLE OF THE INVENTION
+
+**SYSTEMS AND METHODS FOR BROWSER-MEDIATED MULTI-RETAILER GIFT FULFILLMENT ORCHESTRATION WITH SEPARATE SERVICE PAYMENT, HUB ROUTING, HETEROGENEOUS FULFILLMENT NODES, AND PROOF-OF-SERVICE TRACKING**
+
+---
+
+## CROSS-REFERENCE TO RELATED APPLICATIONS
+
+[None for this provisional. Any related issued patents of the inventor concerning wrapping apparatus may be listed on an Information Disclosure Statement at non-provisional filing time and are not required to be recited by number in this specification.]
+
+---
+
+## INVENTOR(S) AND APPLICANT
+
+**Sole inventor and applicant:**
+
+1. **Roger Phillips**  
+   Residence: Jacksonville, Florida, United States  
+   Mailing address: 8137 Broward Cove Rd, Jacksonville, FL 32218, United States
+
+No artificial intelligence system is named as inventor. This provisional is filed in the inventor’s personal name as applicant.
+
+---
+
+## FIELD OF THE INVENTION
+
+The present invention relates generally to computer-implemented commerce systems, and more particularly to systems and methods for orchestrating gift-wrapping and last-mile gift delivery services that operate across unaffiliated third-party retailer checkout interfaces without requiring retailer application programming interface (API) partnerships, including separate service-payment rails, programmatic shipping-address redirection to a fulfillment hub, artificial-intelligence-assisted wrapping design binding, multi-source order reconciliation, and digital chain-of-custody tracking with proof-of-service documentation.
+
+---
+
+## BACKGROUND OF THE INVENTION
+
+Online shoppers frequently purchase gifts from large e-commerce retailers (for example, Amazon, Target, Walmart, and others). Retailer-native gift-wrapping options, when available, are typically limited in customization, unavailable for many SKUs, and do not support combining items purchased from multiple unaffiliated retailers into a single wrapped presentation delivered to a gift recipient (“giftee”).
+
+Conventional approaches suffer from several deficiencies:
+
+1. **Merchant API dependence.** Prior gift or wrapping add-ons generally require a merchant SDK, partnership, or native checkout integration. Independent services cannot inject wrapping options into arbitrary third-party checkouts without cooperation.
+
+2. **Single-platform constraint.** Existing solutions typically wrap only within one merchant’s fulfillment system and cannot route packages from multiple retailers through a common wrapping node before delivery to the giftee.
+
+3. **Coupled payment.** Service fees, custom designs, and add-ons (flowers, messages) are rarely charged on a payment platform separate from the merchant, creating no clear dual-transaction model or reconciliation between service confirmation and merchant order placement.
+
+4. **No coordination layer.** There is no established system that: (a) elects wrapping on a merchant page via a browser extension; (b) collects giftee destination independently; (c) forces merchant shipping to a hub; (d) binds AI or uploaded wrap art to a specific order line; (e) schedules delivery relative to merchant promise dates; and (f) documents craftsmanship and delivery through contractor proof media.
+
+Accordingly, there is a need for a **coordination-layer invention** that connects the transaction and logistics pipe between any retailer cart and a finished, documented, delivered gift — rather than merely a physical wrapping method.
+
+---
+
+## SUMMARY OF THE INVENTION
+
+In one aspect, the invention provides a computer-implemented method comprising:
+
+- detecting, by a browser extension executing on a client device, a third-party retailer cart or checkout document object model (DOM) without requiring a retailer API;
+- presenting a gift-service election interface without requiring a retailer SDK;
+- collecting service payment on a first payment platform separate from the retailer;
+- under express user authorization, programmatically directing one or more retailer shipping fields to a hub fulfillment address;
+- collecting a giftee delivery address independently of the retailer checkout;
+- creating a fulfillment order binding product identity, wrapping preferences, and optional generative design assets;
+- causing a physical gift-presentation operation (e.g., gift wrapping) to be performed at a fulfillment node with respect to merchandise received at the hub; and
+- scheduling last-mile delivery relative to one or more retailer-promised dates; and
+- providing a customer-accessible tracking interface with status, location, and proof-of-service media.
+
+In another aspect, the invention provides a multi-retailer system with per-retailer content-script adapters sharing hub-ship orchestration logic, cart fingerprinting that invalidates service payment state upon cart mutation, conflict guards against pickup or alternate-address overrides, and pay-lock merge of multi-source order ingests, including combining line items originating from two or more unaffiliated retailers into one job ticket and/or one giftee drop.
+
+In another aspect, the invention provides generative AI wrap-design generation keyed to product identity and order identity, with cloud storage of print-ready assets and structured metadata sidecars.
+
+In another aspect, the invention provides a **heterogeneous fulfillment router** that dispatches a wrap job ticket to a node selected from a pool comprising: (i) a human contractor node (e.g., WrapStar) with media-based completion signaling; and/or (ii) a semi-autonomous gift-wrapping apparatus; and/or (iii) a fully autonomous gift-wrapping apparatus — including apparatuses operated by the platform, a retailer, or a third party — wherein the router translates the job ticket into human instructions or machine-consumable commands and releases last-mile delivery only after a completion signal.
+
+In another aspect, preferred embodiments include tiered product-dimension resolution (catalog lookup, AI inference, optional hub sensors), two-phase reconciliation with refund on retailer checkout abandonment, cross-retailer hub holds, machine-readable wrapping maps/job tickets, **routing of custom wrap designs to large-format printers** (integrated with a wrapping apparatus and/or standalone for manual wrap), and multi-stage video audit trails of wrapping craftsmanship.
+
+The invention is directed to **software, logistics, and marketplace coordination** — including dispatch to wrapping apparatus nodes — **not** to claiming a specific mechanical wrapping-machine structure as such.
+
+---
+
+## BRIEF DESCRIPTION OF THE DRAWINGS
+
+**FIG. 1** is a system architecture diagram of the multi-retailer gift fulfillment orchestration platform.
+
+**FIG. 2** is a flow diagram of the browser-extension hub-ship checkout method for unaffiliated third-party retailers (generic / single ship-to pattern).
+
+**FIG. 3** is a flow diagram of a multi-address retailer routing and place-order gating method, illustrated using Amazon as a non-limiting example.
+
+**FIG. 4** is a flow diagram of AI wrap-design generation, selection, upscale, and print-ready storage.
+
+**FIG. 5** is a flow diagram of cart fingerprinting and dual-platform checkout synchronization.
+
+**FIG. 6** is a flow diagram of order ingest, pay-lock merge, and multi-date delivery preference resolution.
+
+**FIG. 7** is a block diagram of the WrapStar (contractor) fulfillment, GPS tracking, and proof-of-service loop.
+
+**FIG. 8** is a schematic of tiered product-dimension resolution (preferred embodiment).
+
+**FIG. 9** is a flow diagram of two-phase cross-platform transaction commit and abandonment refund (preferred embodiment).
+
+**FIG. 10** is a schematic of multi-stage video audit trail and customer tracking delivery (preferred embodiment).
+
+**FIG. 11** is a flow diagram of heterogeneous fulfillment-node selection among human contractor nodes and semi-/fully-autonomous wrapping apparatuses.
+
+**FIG. 12** is a flow diagram of routing custom wrap designs to large-format printers for integrated machine wrap and/or manual wrap.
+
+---
+
+## DETAILED DESCRIPTION OF THE INVENTION
+
+### Definitions
+
+As used herein:
+
+- **“Retailer”** means an unaffiliated third-party e-commerce merchant (e.g., Amazon, Target, Walmart, Nordstrom, Kohl’s, Sephora, Ulta, Best Buy, Etsy, LEGO, and equivalents).
+- **“Hub”** means a physical or logical fulfillment node address to which the retailer ships merchandise for wrapping (illustratively, a designated PO Box / warehouse address).
+- **“Giftee”** means the ultimate gift recipient; giftee address is collected on the service payment platform, not necessarily on the retailer checkout form.
+- **“Browser extension”** means a client-side software agent (illustratively a modern browser extension content-script architecture) injected into retailer domains.
+- **“User shipping authorization”** means express user authorization for the extension to navigate the retailer’s interface and populate delivery / shipping fields under the user’s direction.
+- **“WrapStar”** means an independent contractor or agent performing wrapping and/or last-mile delivery with required proof documentation.
+- **“Fulfillment node”** means any resource capable of completing a wrap job, including a human contractor node and/or a wrapping apparatus node.
+- **“Semi-autonomous gift-wrapping apparatus”** means a machine that measures, cuts, feeds, and/or wraps paper with partial human involvement (e.g., load, inspect, or finish).
+- **“Fully autonomous gift-wrapping apparatus”** means a machine configured to accept a parcel (or parcel proxy) and a job ticket and to return a wrapped parcel with a completion signal without requiring a human to fold the paper.
+- **“Job ticket”** means a structured fulfillment record comprising, as available: product identity, dimensions or box class, paper/design asset, gift message, flowers, SLA, hub and giftee addresses, merge/grouping preferences, and completion requirements.
+- **“Physical gift-presentation operation”** means a physical transformation of merchandise for gifting, comprising at least exterior gift wrapping of a parcel or item, and optionally including one or more of: application of a custom or stock wrap design, attachment of a gift message or tag, addition of flowers or other add-ons, and preparation for outbound delivery to a giftee.
+- **“Coordination layer”** means the inventive system spanning extension, separate payment rail, hub routing, design binding, node selection, scheduling, and proof/completion tracking.
+
+### System Overview (FIG. 1)
+
+Referring to FIG. 1, an exemplary system **100** comprises:
+
+Vendor names, hostnames, timezones, payment processors, cloud providers, document stores, extension manifest versions, and identifier formats mentioned herein are **exemplary only**. Equivalent payment rails, object stores, document stores, extension frameworks, scheduling timezones, and order-id schemes may be substituted without departing from the invention.
+
+1. **Client browser** with installed extension **110** having per-retailer content-script bundles **112a–112n** and shared orchestration modules **114**.
+2. **Service API / pay server** **120** (illustratively hosted under an operator-controlled domain) providing pricing, payment-intent creation with a payment processor, order persistence, AI design endpoints, upload URLs, and tracking ingest proxy.
+3. **Object storage** **130** for designs, QR codes, and proof media (illustratively a cloud object store).
+4. **Tracking platform** **140** (illustratively a cloud-hosted application with a document database) storing orders, WrapStar profiles, earnings, delivery preference tokens, and public tracking tokens.
+5. **Notification channels** **150** (email, SMS).
+6. **Physical hub / fulfillment network** **160** receiving retailer shipments and performing wrap + delivery via one or more **fulfillment nodes** **162** (human contractor nodes and/or semi-/fully-autonomous wrapping apparatus nodes), optionally with **large-format print resources** **164**.
+
+Communication occurs over standard HTTPS. No retailer API partnership is required for the primary embodiments. The wrapping apparatus, when used, is described functionally as a node that consumes a job ticket and emits a completion signal; specific mechanical structures of any particular machine are outside the primary claim focus of this application.
+
+### Embodiment A — Generic Hub-Ship Method for Unaffiliated Retailers (FIG. 2)
+
+Amazon and other named retailers are referenced herein solely as **non-limiting illustrative implementations**. Unless a particular embodiment expressly limits itself, the disclosed systems and methods apply to any compatible unaffiliated third-party retailer, including retailers supported by the browser-extension adapter architecture described herein and future equivalent retailer domains. Retailer names, hostnames, domain adapters, product-identifier schemes, and checkout DOM implementations are exemplary and substitutable.
+
+Referring to FIG. 2, method **200** (generic hub-ship for retailers that typically use a single ship-to address per checkout):
+
+**Step 210 — Cart detection.** Extension **110** scrapes cart line items (retailer-specific product IDs such as TCIN, USItemId, SKU, listing ID, style ID; titles; quantities; optionally prices/totals). Recommendation carousels are excluded via scrape-region heuristics.
+
+**Step 220 — Service election.** Extension injects a cart opt-in UI. User selects Yes/No. If Yes, a gift-choices modal collects per-item wrap mode (standard, AI, upload), flowers, occasion, gift message.
+
+**Step 230 — Geo eligibility.** User enters giftee ZIP; extension calls pricing-preview API; service area allowlist gates progression. Estimated tax may be computed from ZIP tax tables.
+
+**Step 240 — Fulfillment pre-check.** Extension detects pickup-only or mixed pickup/ship carts and may hide or warn against service election where hub shipping is impossible.
+
+**Step 250 — Checkout gating.** On retailer checkout, extension disables Place Order / Checkout until service payment succeeds. A Pay panel displays service invoice lines.
+
+**Step 260 — Separate payment.** User completes payment on first platform (PaymentIntent or Checkout Session). Server validates `pricingCart` server-side and rejects client/server mismatches. On success, order JSON is persisted with retailer, line items, payment id, customer identity (`customerEmailNorm`, stable customer id).
+
+**Step 270 — Hub autofill and lock.** Extension programmatically fills retailer shipping fields with hub address (HTML autocomplete tokens and/or retailer-specific selectors), and may lock fields. Conflict guard intercepts trusted user clicks on store pickup / different-address controls and presents keep-service vs switch modal.
+
+**Step 280 — Retailer order placement.** User places retailer order shipping to hub. Extension may scrape retailer estimated delivery date for scheduling (illustratively, retailer date plus one calendar day in an operator-selected timezone at a configured local time).
+
+**Step 290 — Tracking ingest.** Order is ingested into tracking platform **140** with line items, design paths, giftee address, and schedule. Merchandise received at the hub undergoes a **physical gift-presentation operation** (gift wrapping and optional add-ons) at a selected fulfillment node before last-mile delivery to the giftee.
+
+### Embodiment B — Multi-Address Retailer Method (Amazon as Non-Limiting Example) (FIG. 3)
+
+Referring to FIG. 3, method **300** extends Embodiment A for retailers that support multi-destination or multi-address carts (illustrated using Amazon checkout behavior as a non-limiting example; the same pattern applies to other retailers offering analogous multi-destination shipping):
+
+**Step 310 — Per-ASIN wrapping election** on gift options / cart UI.
+
+**Step 320 — Multi-address mapping.** Extension maps ASINs requiring wrap to hub address and other ASINs to user default, including address-book automation and guided overlays.
+
+**Step 330 — Inline gift-service summary.** Extension injects a co-rendered summary adjacent to the retailer’s order summary (not merely a sidebar overlay), with Pay control styled for native appearance.
+
+**Step 340 — Place Order gate.** Retailer Place Order remains disabled until service payment succeeds.
+
+**Step 350 — Post-pay Place Order hook.** On Place Order click, extension may intercept, POST tracking ingest with delivery-date hints from hub-bound shipment selectors, then resubmit.
+
+**Step 360 — Delivery hints.** Checked delivery radios and postdata timestamps for hub-bound shipments are stored (session storage) and used for Eastern-calendar scheduling.
+
+### Embodiment C — Cart Fingerprint Dual-Checkout Sync (FIG. 5)
+
+Method **500**:
+
+1. Build cart fingerprint from product ids/titles/quantities.
+2. Persist fingerprint with gift session.
+3. On fingerprint change: clear payment-success flag; require review of gift choices.
+4. On payment success: rewrite fingerprint snapshot to current cart.
+5. If server `process-payment` fails after client payment success: re-block checkout and clear payment flag (rollback).
+
+Preferred embodiment: after payment, re-read retailer cart and enable Place Order only if cart matches paid manifest (**dual-checkout reconciliation**).
+
+### Embodiment D — AI Design Binding (FIG. 4)
+
+Method **400**:
+
+1. User selects AI wrap option and provides occasion/prompt (optionally product title + retailer context).
+2. Server calls generative text model for N design concepts; generative image model produces tileable patterns.
+3. User selects a design; server optionally upscales and stores PNG under print-ready path keyed by `{orderNumber}-{productId}-{index}`, plus metadata sidecar `.txt`.
+4. Selected design GCS path binds to order line item and travels in emails and tracking ingest.
+
+Preferred embodiments: structured **wrap specification object** (JSON) including dimensions, fold zones, bleed, placement; machine-native wrapping map / G-code derived therefrom; and **large-format print routing** of the selected design (see Embodiment P).
+
+### Embodiment E — Tiered Dimension Resolution (FIG. 8) — Preferred
+
+Method **800**:
+
+1. **Primary:** lookup dimensions via retailer product identifier in retailer catalog / Product API.
+2. **Secondary:** AI inference from title + product id + retailer when structured data unavailable.
+3. **Tertiary:** optional physical sensors at hub intake verify and adjust wrap instructions (closed loop).
+
+### Embodiment F — Scheduling and Delivery Preference (FIG. 6)
+
+Method **600**:
+
+1. Ingest may include multiple retailer-promised dates.
+2. Grouping modes: earliest, together/latest, pending/ask customer.
+3. If pending: set preference flag, secret token, respond-by deadline (e.g., EOD Eastern); notify via email/SMS; customer chooses on tokenized page; cron defaults to together if unanswered.
+4. Wrrapd delivery day = retailer date + fixed offset in timezone.
+
+### Embodiment G — Pay-Lock Merge Protocol (FIG. 6)
+
+Method **650**:
+
+1. Canonicalize external order ids (strip pack-line suffixes).
+2. Find open orders sharing external id.
+3. Detect pay-backed authoritative rows (source notes indicating payment ingest).
+4. Prevent staging/extension ingests from overwriting giftee address, schedule, or Amazon snapshot on pay-backed rows.
+5. Merge supplemental data; delete duplicate open docs.
+6. Skip customer notifications on merge re-ingest.
+
+### Embodiment H — WrapStar Proof Loop (FIG. 7)
+
+Method **700**:
+
+1. Assign order to WrapStar (auto ZIP proximity and/or manual).
+2. WrapStar PWA: start delivery, broadcast GPS (manual or auto interval), optional offline queue.
+3. Upload proof photo → store URL → status delivered; earnings computed with platform take.
+4. Customer tracking page polls public API for status, map, ETA, proof.
+
+Preferred embodiment / contractual audit trail: multi-stage **video** of (a) package receipt, (b) unpackaging, (c) wrapping, (d) outbound handoff, pushed to tracking page. Machine-cycle trigger optional.
+
+### Embodiment O — Heterogeneous Fulfillment Router (Human and/or Autonomous Apparatus) (FIG. 11)
+
+Method **1100** — the **bridge** between merchant-originated wrap jobs and physical wrapping capacity:
+
+**Step 1110 — Build job ticket.** After service payment and hub routing (Embodiments A–B), the system builds a job ticket including, as available: product identity (ASIN/SKU/etc.), title/image, dimensions or inferred box class (Embodiment E), wrapping preference, AI/upload design storage path, gift message, flowers, occasion, SLA / scheduled delivery window, hub intake address, giftee address, multi-retailer merge/grouping state, and completion requirements (e.g., media proof and/or machine completion signal).
+
+**Step 1120 — Node pool.** The platform maintains a pool of fulfillment nodes that may include:
+1. **Human contractor nodes** (WrapStars / equivalent) that wrap manually and return photo and/or video completion media;
+2. **Semi-autonomous gift-wrapping apparatuses** that perform measuring/cutting/feeding/wrapping with partial human involvement;
+3. **Fully autonomous gift-wrapping apparatuses** that accept a parcel and job ticket and return a wrapped parcel with a completion signal without requiring a human to fold the paper.
+
+Nodes may be operated by the platform operator, by a retailer, by a warehouse/3PL, or by a third-party machine owner. The invention does **not** require any particular brand or proprietary mechanical design of apparatus.
+
+**Step 1130 — Node selection.** A router selects one or more nodes using factors such as: geometry (e.g., cuboid vs irregular / non-machine-compatible), whether custom-printed paper is required vs stock roll, paper inventory at the node, holiday surge / capacity windows, cost, distance/SLA, whether machine sensors can satisfy completion requirements in lieu of human media, item constraints (e.g., do-not-tilt), and fallback policy.
+
+**Worked examples (non-limiting):**
+- **Example O-1:** Parcel classified as regular cuboid + stock paper available + SLA within 24 hours → select a fully or semi-autonomous apparatus node; translate ticket to cut length / roll ID / wrap recipe; await machine completion signal; release to last mile.
+- **Example O-2:** Parcel classified as irregular geometry + custom AI-printed paper required → select a human contractor node; route design to a standalone large-format printer (Embodiment P); human wraps using printed paper; upload proof media; release to last mile.
+- **Example O-3:** Apparatus node accepts ticket then signals jam / QC fail → fallback reassigns the same job ticket to a human contractor node (or alternate apparatus) without requiring the customer to re-pay.
+
+**Step 1140 — Ticket translation.**
+- If human node: emit human-readable instructions + design assets + QC checklist.
+- If apparatus node: translate the job ticket into machine-consumable commands or parameters via an adapter interface. Illustrative, non-limiting parameters may include cut length, paper roll or media identifier, adhesive mode, wrap recipe identifier, and/or design print-file reference. Such parameters describe an **external job interface** to a wrapping apparatus; they do not claim any particular internal mechanical structure of any wrapping machine. Adapters may differ by manufacturer; the inventive step is the ticket + dispatch + completion contract.
+
+**Step 1150 — Execution and completion.**
+- Human node: Embodiment H proof loop.
+- Apparatus node: machine executes wrap; returns completion signal (and optional sensor logs / images).
+- If apparatus rejects (e.g., irregular geometry, paper jam, QC fail): **fallback** reassigns ticket to a human node or alternate apparatus.
+
+**Step 1160 — Release to last mile.** Only after required completion signal(s) does the system authorize outbound shipping / delivery to the giftee (or customer tracking advance to ready-for-delivery / delivered states).
+
+This embodiment reserves claim territory for the **dispatcher** so that merchant-checkout-originated wrap jobs can land on a kitchen-table contractor **or** on any compatible wrapping cell — without requiring the marketplace claims to recite a specific machine patent.
+
+### Embodiment P — Large-Format Print Routing of Custom Wrap Designs (FIG. 12)
+
+Method **1200** — custom / AI / uploaded wrap art is not limited to on-screen preview. The system may route a print-ready design asset to one or more **large-format printers** (or equivalent wide-format / roll printers) as part of fulfillment:
+
+**Step 1210 — Print-ready asset.** After design selection or upload (Embodiment D), the system stores or derives a print-ready file (illustratively PNG/PDF/TIFF) sized or tiled for wrap paper, optionally with bleed, crop marks, and roll-width metadata in the job ticket / wrap specification.
+
+**Step 1220 — Print destination classes.** The job ticket may designate a print destination of one or more of:
+1. **Integrated print-on-machine** — a large-format (or roll) printer that is part of, co-located with, or controlled by a semi- or fully-autonomous wrapping apparatus, such that printed paper is fed directly into the wrap cycle;
+2. **Standalone production printer** — a large-format printer at a hub, warehouse, or WrapStar location that prints wrapping paper for **manual** wrapping by a human contractor node;
+3. **Third-party / remote print vendor** — a networked print service that returns printed sheets/rolls to a designated fulfillment node.
+
+**Step 1230 — Dispatch.** The router (Embodiment O) may: (a) send the design file + print parameters (width, length/cut, copies, media type, color profile) to the selected printer/controller; (b) wait for a print-complete signal; and (c) only then (or in parallel, as configured) authorize wrap start at the human or apparatus node.
+
+**Step 1240 — Traceability.** The printed output may be associated with the same order ID / product ID / design path used in cloud storage (e.g., barcode/QR on a leader strip, or filename convention `{orderNumber}-{productId}-{index}`), so print, wrap, and proof media remain bound to one fulfillment record.
+
+This embodiment covers both “the wrapping cell prints its own paper” and “paper is printed separately for hand wrap,” without requiring any particular printer brand.
+
+### Embodiment I — Two-Phase Commit / Abandonment (FIG. 9) — Preferred
+
+Method **900**:
+
+- **Phase 1:** Service payment succeeds; order created.
+- **Phase 2:** Retailer order placement detected (or confirmed).
+- If Phase 2 fails (abandonment, navigation away, fingerprint collapse): auto-refund and/or cancel hub print job.
+
+Implemented today: Phase 1 gate + fingerprint invalidation + payment idempotency. Full automated refund handshake is preferred embodiment.
+
+### Embodiment J — User Authorization to Populate Shipping Fields
+
+Prior to programmatic address mutation, the extension obtains express user authorization (illustratively via scroll-to-accept terms) to navigate the retailer interface and populate delivery / shipping fields under the user’s direction. This authorization step is a distinguishing element of the method claim chain and may be recorded as a session or account flag before hub autofill proceeds.
+
+### Embodiment K — Multi-Retailer Adapter Architecture
+
+Per-domain isolated bundles; shared modules for hub address, conflict guard, pay flow, cart opt-in, fingerprint sync, invoice lines, order codes (illustratively a fixed-format alphanumeric order number), terms, occasions. Config-driven: `getCartSnapshot`, `findCheckoutButton`, `fillHubShippingFields`, `sessionPrefix`, `payRoute`.
+
+### Embodiment L — Dynamic Geo Pricing
+
+Server-side unit prices with per-retailer overrides, state/county/postal rules, date-range surges, ZIP-indexed sales-tax tables, admin configuration UI. Client totals are not trusted.
+
+### Embodiment M — Customer Identity Bridge
+
+Normalize email → stable customer id registry; optional website account claim of orders by email + user id; soft-delete; optional future “my orders” read model.
+
+### Embodiment N — DOM Resilience AI Proxy
+
+Server-side language-model proxy for DOM-selector hints to extension origins, reducing breakage when retailer UIs change without full redeploy.
+
+### Detectability (for diligence)
+
+The following are observable from outside without source code access — supporting diligence narratives and later claim drafting:
+
+- Extension install + wrap modal on retailer domains
+- Separate payment domain / payment-processor charge descriptor
+- Packing slips / shipping labels addressed to hub
+- Public tracking pages with GPS and proof media
+- Delivery-choice emails/SMS with tokens
+- Print-ready design assets named by order + product id
+
+### Trade Secrets (intentionally not claimed in detail)
+
+Matching algorithms for WrapStar skill ↔ order complexity, fraud scoring on proof media, paper-yield optimization, and internal fraud rules are preferably maintained as trade secrets and are described herein only at a high level so as not to enable competitors while still supporting enablement of the public method claims.
+
+### Alternative Embodiments
+
+Without departing from the invention: native mobile WebViews; retailer-native licensed SDK integrations; hub network of many nodes; **semi-autonomous and fully autonomous gift-wrapping apparatuses of any compatible design** consuming job tickets; hybrid human+machine cells; PCT counterparts; additional retailers; alternative payment rails; blockchain proof anchoring.
+
+### Trademark notice
+
+“Wrrapd,” “WrapStar,” and related brand names, if appearing herein, are trademarks or service marks of the inventor or an affiliated company and are used only to identify illustrative commercial embodiments. Trademark status does not limit the technical scope of the claims.
+
+### Enablement
+
+A person of ordinary skill in web engineering, e-commerce systems, and logistics software, given this disclosure and ordinary tools (browser extension frameworks, payment APIs, cloud storage, document databases, generative AI APIs, large-format print controllers), can practice the disclosed embodiments without undue experimentation. Preferred embodiments are disclosed sufficiently to reserve claim territory for later non-provisional / continuation practice.
+
+---
+
+## CLAIMS
+
+**1.** A computer-implemented method for gift fulfillment orchestration, comprising:  
+(a) detecting, by a browser extension on a client device, a cart or checkout interface of a third-party retailer website unaffiliated with a gift service operator, without requiring a retailer application programming interface;  
+(b) receiving a user election to apply a gift-wrapping service to one or more line items;  
+(c) collecting payment for the gift-wrapping service on a payment platform separate from the retailer;  
+(d) under authorization from the user, programmatically causing the retailer checkout to designate a hub fulfillment address as a shipping destination for at least one elected line item;  
+(e) receiving a giftee delivery address distinct from the hub address;  
+(f) creating a fulfillment record associating the line item, wrapping preference, and giftee address;  
+(g) causing a physical gift-presentation operation comprising gift wrapping to be performed at a fulfillment node with respect to merchandise associated with the fulfillment record after receipt at the hub; and  
+(h) scheduling a delivery event to the giftee address relative to a retailer-promised date.
+
+**2.** The method of claim 1, further comprising disabling a retailer place-order control until step (c) succeeds.
+
+**3.** The method of claim 1, further comprising computing a cart fingerprint and invalidating payment-success state when the fingerprint changes.
+
+**4.** The method of claim 1, wherein step (d) comprises autofilling shipping form fields and locking said fields against user edit.
+
+**5.** The method of claim 1, further comprising intercepting user selection of store pickup or alternate shipping address while the gift service election remains active, and presenting a conflict resolution interface.
+
+**6.** The method of claim 1, further comprising generating an artificial-intelligence wrap design, storing a print-ready image in cloud storage keyed to an order identifier and product identifier, and binding a storage path to the fulfillment record.
+
+**7.** The method of claim 1, further comprising, when multiple retailer-promised dates are detected, issuing a time-bounded preference token to the user and adjusting schedule based on user selection or deadline default.
+
+**8.** The method of claim 1, further comprising merging a subsequent order ingest into an open fulfillment record sharing a canonical external order identifier while preventing a non-payment ingest from overwriting payment-confirmed giftee or schedule fields.
+
+**9.** The method of claim 1, further comprising assigning the fulfillment record to a contractor device, receiving geolocation updates, receiving proof-of-service media, and exposing status and media on a customer tracking interface.
+
+**10.** The method of claim 1, wherein prior to step (d) the user provides express authorization for the gift service operator to populate shipping fields on the retailer interface.
+
+**11.** The method of claim 1, further comprising resolving physical product dimensions by catalog lookup using a retailer product identifier, or by AI inference when catalog data is unavailable, or by sensor verification at the hub.
+
+**12.** The method of claim 1, further comprising detecting failure of retailer order placement after step (c) and initiating automated refund of the gift service payment.
+
+**13.** The method of claim 1, further comprising combining line items originating from two or more unaffiliated retailers into a single job ticket and/or a single giftee delivery drop.
+
+**14.** A system comprising one or more processors and memory storing instructions that, when executed, perform the method of any of claims 1–13.
+
+**15.** A non-transitory computer-readable medium storing instructions that, when executed by a processor, perform the method of any of claims 1–13.
+
+**16.** A method of operating a multi-retailer gift coordination platform comprising deploying per-retailer browser content scripts sharing common hub-routing, payment-gating, and fingerprint modules, wherein each retailer adapter supplies cart-scraping and shipping-field-fill functions without a retailer API partnership.
+
+**17.** The method of claim 1, further comprising: building a job ticket from the fulfillment record; selecting a fulfillment node from a pool comprising a human contractor node and at least one of a semi-autonomous gift-wrapping apparatus or a fully autonomous gift-wrapping apparatus; translating the job ticket into human instructions or machine-consumable parameters; and authorizing last-mile release only after receiving a completion signal from the selected node.
+
+**18.** The method of claim 17, wherein node selection is based on one or more of: parcel geometry class, custom-print vs stock paper requirement, node capacity, cost, distance or SLA, and whether machine-generated completion signals may satisfy proof requirements.
+
+**19.** The method of claim 17, further comprising, upon apparatus rejection or failure, reassigning the job ticket to a human contractor node or an alternate apparatus node.
+
+**20.** The method of claim 1 or claim 6, further comprising routing a print-ready wrap design asset to a large-format printer that is (i) integrated with or co-located with a wrapping apparatus, or (ii) standalone for producing wrapping paper for manual wrapping by a human contractor node, and associating the print job with the fulfillment record.
+
+**21.** A system comprising one or more processors and memory storing instructions that, when executed, perform the method of any of claims 17–20.
+
+**22.** A computer-implemented method of synchronizing gift-service payment state with a third-party retailer checkout document that the gift service operator does not control, comprising:  
+(a) computing a cart fingerprint from one or more of product identifiers, titles, and quantities present in a retailer cart or checkout interface rendered in a browser;  
+(b) associating the fingerprint with a gift-service session in which a user has elected gift wrapping and/or completed gift-service payment;  
+(c) detecting a subsequent change in the retailer cart or checkout composition by recomputing the fingerprint;  
+(d) when the fingerprint changes, invalidating a payment-success or checkout-release state such that retailer place-order progression remains gated until the gift-service session is reconciled; and  
+(e) optionally, after gift-service payment succeeds, re-verifying that the retailer cart still matches a paid manifest before releasing a place-order control.
+
+**23.** The method of claim 22, further comprising autofilling and locking retailer shipping fields to a hub address and intercepting user selection of store pickup or an alternate shipping address while the gift-service election remains active.
+
+**24.** A computer-implemented method performed by one or more servers of a gift service operator, comprising:  
+(a) receiving, from a browser extension executing on a client device, a request to create a gift-service payment for one or more line items scraped from a third-party retailer checkout without a retailer API;  
+(b) validating a pricing cart server-side and creating a payment intent with a payment processor;  
+(c) upon confirmed payment success, persisting a fulfillment record including wrapping preference, optional design storage path, hub routing indication, and giftee address;  
+(d) ingesting or updating a tracking record for the fulfillment; and  
+(e) selecting or signaling a fulfillment node to perform a physical gift-presentation operation and conditioning last-mile release on a completion signal or proof media associated with the fulfillment record.
+
+**25.** A system comprising one or more servers configured to perform the method of claim 24.
+
+---
+
+## ABSTRACT
+
+A browser-mediated gift fulfillment orchestration system injects gift-wrapping service election into third-party retailer checkouts without retailer APIs, collects separate service payment, programmatically routes elected items to a hub under user authorization to populate shipping fields, causes physical gift wrapping at a fulfillment node, binds optional AI wrap designs to order/product identity, reconciles multi-source order data including multi-retailer combination, synchronizes payment state to third-party cart mutations via fingerprinting and conflict guards, dispatches job tickets to heterogeneous fulfillment nodes including human contractors and/or semi- or fully-autonomous gift-wrapping apparatuses through an external job interface, optionally routes custom wrap designs to large-format printers for integrated or manual wrap, and provides tracking with completion or proof-of-service media.
+
+---
+
+## END OF SPECIFICATION

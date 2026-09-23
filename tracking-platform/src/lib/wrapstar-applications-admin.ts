@@ -222,6 +222,7 @@ export type ApplicationAction =
   | "close_onboarding"
   | "save_notes"
   | "save_bg_status"
+  | "save_gig_evidence"
   | "move_to_wrapstar"
   | "move_to_joyrider";
 

@@ -48,7 +48,7 @@ export function DriverAvailabilityPanel({
     <section className="mt-4 rounded-lg border p-4">
       <h3 className="text-base font-semibold">Weekly Availability</h3>
       <p className="mt-1 text-xs text-slate-600">
-        Submit your next-week availability by <strong>{deadlineLabel}</strong>. If not submitted by then, you are auto-marked unavailable (admin can override).
+        Submit your <strong>next-week</strong> availability by <strong>{deadlineLabel}</strong> (Friday 6:00 p.m. Eastern). If not submitted by then, you are marked unavailable for allocation (admin can override).
       </p>
       <form onSubmit={submit} className="mt-3 space-y-2">
         {days.map((d) => (

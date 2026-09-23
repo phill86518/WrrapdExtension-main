@@ -109,14 +109,14 @@ function wrrapd_wrapriders_onboarding_steps() {
 		'welcome'     => 'Welcome & Overview',
 		'agreement'   => 'Contractor Agreements',
 		'policies'    => 'Wrap & Delivery Standards',
-		'orientation' => 'Orientation & Quiz',
+		'w9'          => 'W-9 Tax Form',
+		'tax_1099'    => '1099 & Tax Acknowledgments',
+		'bank_payout' => 'Connect Bank / Payouts',
 		'background'  => 'Background Check',
 		'insurance'   => 'Vehicle Insurance',
 		'identity'    => 'Identity & License',
 		'workspace'   => 'Wrapping Location',
-		'w9'          => 'W-9 Tax Form',
-		'tax_1099'    => '1099 & Tax Acknowledgments',
-		'bank_payout' => 'Connect Bank / Payouts',
+		'orientation' => 'Orientation & Quiz',
 		'activation'  => 'Apps & Final Review',
 	);
 }

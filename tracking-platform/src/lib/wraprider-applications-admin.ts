@@ -46,6 +46,13 @@ export type WrapriderApplication = {
   deliveryMaxDistance?: string;
   availability?: string;
   deliveryExperience?: string;
+  deliveryGigActive?: string;
+  deliveryGigPlatforms?: string;
+  fitScore?: number;
+  fitBreakdown?: string;
+  gigEvidenceStatus?: string;
+  gigEvidenceNotes?: string;
+  gigEvidenceAt?: string;
   /* Wrap side */
   giftWrappingExperience?: string;
   dedicatedWrapWorkspace?: string;
@@ -206,7 +213,12 @@ export async function getWrapriderApplication(id: number): Promise<WrapriderAppl
 export async function runWrapriderApplicationAction(
   id: number,
   action: ApplicationAction,
-  opts?: { adminNotes?: string; rejectReason?: string },
+  opts?: {
+    adminNotes?: string;
+    rejectReason?: string;
+    gigEvidenceStatus?: string;
+    gigEvidenceNotes?: string;
+  },
 ): Promise<{
   application: WrapriderApplication;
   passwordIssued?: boolean;
@@ -217,6 +229,8 @@ export async function runWrapriderApplicationAction(
   const payload: Record<string, string> = { action };
   if (opts?.adminNotes !== undefined) payload.adminNotes = opts.adminNotes;
   if (opts?.rejectReason !== undefined) payload.rejectReason = opts.rejectReason;
+  if (opts?.gigEvidenceStatus !== undefined) payload.gigEvidenceStatus = opts.gigEvidenceStatus;
+  if (opts?.gigEvidenceNotes !== undefined) payload.gigEvidenceNotes = opts.gigEvidenceNotes;
 
   const r = await fetch(`${wpBase()}/wp-json/wrrapd/v1/wraprider-applications/${id}/action`, {
     method: "POST",

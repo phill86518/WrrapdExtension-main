@@ -6,7 +6,7 @@ Single Git repository for the **multi-retailer Chrome extension**, the **Node pa
 
 | Path | What it is |
 |------|------------|
-| [`extension/`](extension/) | Manifest V3 extension — [Chrome Web Store](https://chromewebstore.google.com/detail/wrrapd/eampapdpkmnnbfdojhmbpckpljnbpapo) for shoppers; **Load unpacked** for dev. One content bundle per retailer under `src/content/`; generated root bundles are committed. |
+| [`extension/`](extension/) | Manifest V3 extension — [Chrome Web Store](https://chromewebstore.google.com/detail/wrrapd/kdfcahdcgpaoohpgagpmpbgcmkdbocbg) for shoppers; **Load unpacked** for dev. One content bundle per retailer under `src/content/`; generated root bundles are committed. |
 | [`backend/wrrapd-api-repo/WrrapdServer/`](backend/wrrapd-api-repo/WrrapdServer/) | Node `server.js`, `public/checkout.html`, PM2 process **`wrrapd-server`**, Stripe, proxies, order ingest. |
 | [`tracking-platform/`](tracking-platform/) | Next.js app: ops hub at `/`, admin `/admin`, driver `/driver`, public `/track/[token]`. Deployed to **Cloud Run** (`wrrapd-tracking`). |
 
@@ -17,7 +17,7 @@ Single Git repository for the **multi-retailer Chrome extension**, the **Node pa
 
 ## Chrome Web Store (public install)
 
-- **Wrrapd (live):** [Chrome Web Store listing](https://chromewebstore.google.com/detail/wrrapd/eampapdpkmnnbfdojhmbpckpljnbpapo)
+- **Wrrapd (live):** [Chrome Web Store listing](https://chromewebstore.google.com/detail/wrrapd/kdfcahdcgpaoohpgagpmpbgcmkdbocbg)
 
 ## Copy-paste deployment (canonical)
 

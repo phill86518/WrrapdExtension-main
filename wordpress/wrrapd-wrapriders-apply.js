@@ -83,6 +83,20 @@
 		window.scrollTo({ top: 0, behavior: 'smooth' });
 	}
 
+	function gigPlatforms() {
+		return Array.prototype.slice.call(form.querySelectorAll('input[name="delivery_gig_platforms[]"]:checked')).map(function (c) {
+			var span = c.parentElement && c.parentElement.querySelector('span');
+			return span ? span.textContent.trim() : c.value;
+		}).join(', ');
+	}
+
+	function syncGigPlatforms() {
+		var sel = document.getElementById('wr-gig-active');
+		var box = document.getElementById('wr-gig-platforms');
+		if (!sel || !box) return;
+		box.hidden = sel.value !== 'yes';
+	}
+
 	function fieldValue(name) {
 		var el = form.elements.namedItem(name);
 		if (!el) return '';
@@ -128,7 +142,8 @@
 			['Custom-print wrap', selectLabel('has_large_format_printer') + (fieldValue('printer_size') ? ' · ' + selectLabel('printer_size') : ''), 'has_large_format_printer'],
 			['Wrapping experience', fieldValue('gift_wrapping_experience'), 'gift_wrapping_experience'],
 			['Availability', fieldValue('availability'), 'availability'],
-			['Delivery experience', fieldValue('delivery_experience'), 'delivery_experience'],
+			['Delivery gigs', selectLabel('delivery_gig_active') + (gigPlatforms() ? ' · ' + gigPlatforms() : ''), 'delivery_gig_active'],
+			['Gig notes', fieldValue('delivery_experience'), 'delivery_experience'],
 			['Why WrapRider', fieldValue('why_wraprider'), 'why_wraprider'],
 			['Bank ready', selectLabel('bank_account_ready'), 'bank_account_ready'],
 			['ID upload', fieldValue('gov_id'), 'gov_id']
@@ -188,6 +203,18 @@
 				}
 			}
 		});
+		var gigSel = screen.querySelector('[name="delivery_gig_active"]');
+		if (gigSel && gigSel.value === 'yes') {
+			var checked = screen.querySelectorAll('input[name="delivery_gig_platforms[]"]:checked');
+			if (!checked.length) {
+				ok = false;
+				if (report) {
+					gigSel.setCustomValidity('Select at least one delivery app.');
+					gigSel.reportValidity();
+					gigSel.setCustomValidity('');
+				}
+			}
+		}
 		return ok;
 	}
 
@@ -282,5 +309,8 @@
 	});
 	syncPrinterSize();
 	updateBasicsNext();
+	var gigSelInit = document.getElementById('wr-gig-active');
+	if (gigSelInit) gigSelInit.addEventListener('change', syncGigPlatforms);
+	syncGigPlatforms();
 	showScreen(0);
 })();

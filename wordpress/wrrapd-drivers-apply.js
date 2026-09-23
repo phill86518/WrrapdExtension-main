@@ -71,6 +71,20 @@
 		window.scrollTo({ top: 0, behavior: 'smooth' });
 	}
 
+	function gigPlatforms() {
+		return Array.prototype.slice.call(form.querySelectorAll('input[name="delivery_gig_platforms[]"]:checked')).map(function (c) {
+			var span = c.parentElement && c.parentElement.querySelector('span');
+			return span ? span.textContent.trim() : c.value;
+		}).join(', ');
+	}
+
+	function syncGigPlatforms() {
+		var sel = document.getElementById('drv-gig-active');
+		var box = document.getElementById('drv-gig-platforms');
+		if (!sel || !box) return;
+		box.hidden = sel.value !== 'yes';
+	}
+
 	function fieldValue(name) {
 		var el = form.elements.namedItem(name);
 		if (!el) return '';
@@ -103,7 +117,8 @@
 			['Driving record', selectLabel('clean_driving_record')],
 			['Bank ready', selectLabel('bank_account_ready')],
 			['Availability', fieldValue('availability')],
-			['Experience', fieldValue('delivery_experience')],
+			['Delivery gigs', selectLabel('delivery_gig_active') + (gigPlatforms() ? ' · ' + gigPlatforms() : '')],
+			['Gig notes', fieldValue('delivery_experience')],
 			['Why Wrrapd', fieldValue('why_drive')],
 			['ID upload', fieldValue('gov_id')],
 			['Driving record / abstract', fieldValue('driving_abstract')]
@@ -163,6 +178,18 @@
 				}
 			}
 		});
+		var gigSel = screen.querySelector('[name="delivery_gig_active"]');
+		if (gigSel && gigSel.value === 'yes') {
+			var checked = screen.querySelectorAll('input[name="delivery_gig_platforms[]"]:checked');
+			if (!checked.length) {
+				ok = false;
+				if (report) {
+					gigSel.setCustomValidity('Select at least one delivery app.');
+					gigSel.reportValidity();
+					gigSel.setCustomValidity('');
+				}
+			}
+		}
 		return ok;
 	}
 
@@ -252,5 +279,8 @@
 		if (i !== 0) screen.hidden = true;
 	});
 	updateBasicsNext();
+	var gigSelInit = document.getElementById('drv-gig-active');
+	if (gigSelInit) gigSelInit.addEventListener('change', syncGigPlatforms);
+	syncGigPlatforms();
 	showScreen(0);
 })();

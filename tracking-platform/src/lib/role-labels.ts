@@ -26,15 +26,15 @@ export const WRAPSTAR_ONBOARDING_STEP_LABELS: Record<string, string> = {
   welcome: "Welcome",
   agreement: "Agreements (ESIGN I Accept)",
   policies: "Standards & Policies",
-  orientation: "Orientation & Quiz",
+  w9: "W-9",
+  tax_1099: "Tax Acknowledgments",
+  bank_payout: "Payout Setup",
   background: "Background Check",
   insurance: "Proof of Insurance",
   identity: "Identity Verification",
   workspace: "Wrapping Location & Handoff",
   po_box: "Wrapping Location (legacy)",
-  w9: "W-9",
-  tax_1099: "Tax Acknowledgments",
-  bank_payout: "Payout Setup",
+  orientation: "Orientation & Quiz",
   activation: "Final Review",
 };
 
@@ -43,17 +43,33 @@ export const WRAPRIDER_ONBOARDING_STEP_LABELS: Record<string, string> = {
   welcome: "Welcome & Overview",
   agreement: "Agreements (ESIGN I Accept)",
   policies: "Wrap & Delivery Standards",
-  orientation: "Orientation & Quiz",
+  w9: "W-9",
+  tax_1099: "Tax Acknowledgments",
+  bank_payout: "Payout Setup",
   background: "Background Check",
   insurance: "Vehicle Insurance",
   identity: "Identity & License",
   workspace: "Wrapping Location",
-  w9: "W-9",
-  tax_1099: "Tax Acknowledgments",
-  bank_payout: "Payout Setup",
+  orientation: "Orientation & Quiz",
   activation: "Apps & Final Review",
 };
 
+export const JOYRIDER_ONBOARDING_STEP_LABELS: Record<string, string> = {
+  welcome: "Welcome & Overview",
+  agreement: "Agreements (ESIGN I Accept)",
+  policies: "Policies & Safety",
+  w9: "W-9",
+  tax_1099: "Tax Acknowledgments",
+  bank_payout: "Payout Setup",
+  background: "Background Check",
+  insurance: "Vehicle Insurance",
+  identity: "Identity & License",
+  orientation: "Orientation & Quiz",
+  activation: "App Download & Final Review",
+};
+
 export function onboardingStepLabels(role: HireRole): Record<string, string> {
-  return role === "wraprider" ? WRAPRIDER_ONBOARDING_STEP_LABELS : WRAPSTAR_ONBOARDING_STEP_LABELS;
+  if (role === "wraprider") return WRAPRIDER_ONBOARDING_STEP_LABELS;
+  if (role === "driver") return JOYRIDER_ONBOARDING_STEP_LABELS;
+  return WRAPSTAR_ONBOARDING_STEP_LABELS;
 }

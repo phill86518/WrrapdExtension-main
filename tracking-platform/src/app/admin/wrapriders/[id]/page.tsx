@@ -9,6 +9,8 @@ import type { MetroId, OnboardingStatus } from "@/lib/types";
 import { normalizeOrderStatus } from "@/lib/types";
 import { WRAPRIDER_LABEL } from "@/lib/role-labels";
 import { formatDateTimeNy } from "@/lib/ny-date";
+import { getPayoutHold } from "@/lib/finance";
+import { setPayoutHoldAction } from "../../payout-hold-action";
 
 export const dynamic = "force-dynamic";
 
@@ -46,6 +48,11 @@ export default async function AdminWrapriderDetailPage({
   const wraprider = await findWrapriderById(id);
   if (!wraprider) notFound();
   const metros = listMetros();
+  const [ownHold, linkedHold] = await Promise.all([
+    getPayoutHold(wraprider.id),
+    wraprider.wrapstarId ? getPayoutHold(wraprider.wrapstarId) : Promise.resolve(null),
+  ]);
+  const payoutHold = ownHold?.held ? ownHold : linkedHold?.held ? linkedHold : ownHold || linkedHold;
 
   const wrapOrders = wraprider.wrapstarId ? await listOrdersForWrapstar(wraprider.wrapstarId) : [];
   const deliverOrders = wraprider.courierDriverId
@@ -172,6 +179,29 @@ export default async function AdminWrapriderDetailPage({
         </label>
         <button type="submit" className="rounded bg-amber-800 px-4 py-2 text-sm text-white">
           Save {WRAPRIDER_LABEL}
+        </button>
+      </form>
+
+      <form action={setPayoutHoldAction} className="mt-4 space-y-2 rounded-xl border border-amber-200 bg-amber-50 p-4">
+        <input type="hidden" name="contractorId" value={wraprider.id} />
+        {wraprider.wrapstarId ? <input type="hidden" name="alsoId" value={wraprider.wrapstarId} /> : null}
+        <input type="hidden" name="held" value={payoutHold?.held ? "0" : "1"} />
+        <p className="text-sm font-medium text-amber-950">
+          {payoutHold?.held ? "Payouts withheld" : "Payouts can leave"}
+        </p>
+        <p className="text-xs text-amber-900">
+          Withheld earnings stay unpaid. A payout batch cannot be created until you release the hold.
+        </p>
+        <label className="block text-sm">
+          Reason
+          <input
+            name="reason"
+            defaultValue={payoutHold?.reason || ""}
+            className="mt-1 w-full rounded border px-3 py-2"
+          />
+        </label>
+        <button type="submit" className="rounded border border-amber-800 px-3 py-1.5 text-sm text-amber-950">
+          {payoutHold?.held ? "Release payouts" : "Withhold payouts"}
         </button>
       </form>
 

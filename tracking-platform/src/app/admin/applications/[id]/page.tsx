@@ -46,6 +46,8 @@ async function actionForm(formData: FormData) {
   const adminNotes = String(formData.get("adminNotes") || "");
   const rejectReason = String(formData.get("rejectReason") || "");
   const bgStatus = String(formData.get("bgStatus") || "");
+  const gigEvidenceStatus = String(formData.get("gigEvidenceStatus") || "");
+  const gigEvidenceNotes = String(formData.get("gigEvidenceNotes") || "");
   const { parseHourlyRateDollarsInput, DEFAULT_WRAPSTAR_HOURLY_CENTS } = await import(
     "@/lib/hourly-rates"
   );
@@ -104,6 +106,8 @@ async function actionForm(formData: FormData) {
     const result = await runDriverApplicationAction(id, action, {
       adminNotes,
       rejectReason: action === "reject" ? rejectReason : undefined,
+      gigEvidenceStatus: action === "save_gig_evidence" ? gigEvidenceStatus : undefined,
+      gigEvidenceNotes: action === "save_gig_evidence" ? gigEvidenceNotes : undefined,
     });
     if (action === "activate" && result.application) {
       await syncActivatedApplicationToDriverRoster(result.application, {
@@ -114,6 +118,8 @@ async function actionForm(formData: FormData) {
     const result = await runWrapriderApplicationAction(id, action, {
       adminNotes,
       rejectReason: action === "reject" ? rejectReason : undefined,
+      gigEvidenceStatus: action === "save_gig_evidence" ? gigEvidenceStatus : undefined,
+      gigEvidenceNotes: action === "save_gig_evidence" ? gigEvidenceNotes : undefined,
     });
     if (action === "activate" && result.application) {
       await syncActivatedApplicationToWrapriderRoster(result.application, {
@@ -237,8 +243,13 @@ export default async function AdminApplicationDetailPage({
   const driverApp = isDriver ? (app as DriverApplication) : null;
   const wrapriderApp = isWraprider ? (app as WrapriderApplication) : null;
   const wrapApp = !isDriver && !isWraprider ? (app as WrapstarApplication) : null;
-  const steps = Object.entries(app.onboardingStepsComplete || {});
   const stepLabels = onboardingStepLabels(role);
+  const stepOrder = Object.keys(stepLabels);
+  const steps = Object.entries(app.onboardingStepsComplete || {}).sort((a, b) => {
+    const ia = stepOrder.indexOf(a[0]);
+    const ib = stepOrder.indexOf(b[0]);
+    return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib);
+  });
   const onboarding = wrapApp?.onboarding;
   const timeline = hireTimelineRows({
     submittedAt: app.submittedAt,
@@ -455,6 +466,13 @@ export default async function AdminApplicationDetailPage({
             <p className="mt-2 whitespace-pre-wrap text-sm text-slate-800">
               {driverApp.availability || "—"}
             </p>
+            {driverApp.deliveryGigActive ? (
+              <p className="mt-2 text-sm text-slate-700">
+                <strong>Delivery gigs:</strong> {driverApp.deliveryGigActive}
+                {driverApp.deliveryGigPlatforms ? ` · ${driverApp.deliveryGigPlatforms}` : ""}
+                {driverApp.fitScore ? ` · Fit ${driverApp.fitScore}` : ""}
+              </p>
+            ) : null}
             {driverApp.deliveryExperience ? (
               <p className="mt-2 whitespace-pre-wrap text-sm text-slate-700">
                 <strong>Experience:</strong> {driverApp.deliveryExperience}
@@ -472,6 +490,13 @@ export default async function AdminApplicationDetailPage({
             {wrapriderApp.availability ? (
               <p className="mt-2 whitespace-pre-wrap text-sm text-slate-700">
                 <strong>Availability:</strong> {wrapriderApp.availability}
+              </p>
+            ) : null}
+            {wrapriderApp.deliveryGigActive ? (
+              <p className="mt-2 text-sm text-slate-700">
+                <strong>Delivery gigs:</strong> {wrapriderApp.deliveryGigActive}
+                {wrapriderApp.deliveryGigPlatforms ? ` · ${wrapriderApp.deliveryGigPlatforms}` : ""}
+                {wrapriderApp.fitScore ? ` · Fit ${wrapriderApp.fitScore}` : ""}
               </p>
             ) : null}
             {wrapriderApp.deliveryExperience ? (
@@ -698,6 +723,8 @@ export default async function AdminApplicationDetailPage({
         portalLoginCount={app.portalLoginCount}
         onboardingReopened={!!app.onboardingReopened}
         onboardingReopenedAt={app.onboardingReopenedAt}
+        gigEvidenceStatus={driverApp?.gigEvidenceStatus || wrapriderApp?.gigEvidenceStatus || ""}
+        gigEvidenceNotes={driverApp?.gigEvidenceNotes || wrapriderApp?.gigEvidenceNotes || ""}
       />
     </div>
   );

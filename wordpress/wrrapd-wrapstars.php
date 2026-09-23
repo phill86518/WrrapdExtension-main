@@ -147,14 +147,14 @@ function wrrapd_wrapstars_onboarding_step_registry() {
 		'welcome'     => array( 'label' => 'Welcome', 'short' => 'What to expect', 'minutes' => 2, 'path' => '/onboarding/', 'group' => 'Get started' ),
 		'agreement'   => array( 'label' => 'Contractor Agreements', 'short' => 'Review & I Accept', 'minutes' => 12, 'path' => '/onboarding/agreement/', 'group' => 'Agreements' ),
 		'policies'    => array( 'label' => 'Standards & Policies', 'short' => 'Read & acknowledge', 'minutes' => 6, 'path' => '/onboarding/policies/', 'group' => 'Agreements' ),
-		'orientation' => array( 'label' => 'Orientation & Quiz', 'short' => 'Learn the workflow', 'minutes' => 10, 'path' => '/onboarding/orientation/', 'group' => 'Training' ),
+		'w9'          => array( 'label' => 'W-9 Tax Form', 'short' => 'E-sign', 'minutes' => 5, 'path' => '/onboarding/w-9/', 'group' => 'Tax & payouts' ),
+		'tax_1099'    => array( 'label' => 'Tax Acknowledgments', 'short' => 'Confirm contractor status', 'minutes' => 2, 'path' => '/onboarding/tax-1099/', 'group' => 'Tax & payouts' ),
+		'bank_payout' => array( 'label' => 'Payout Setup', 'short' => 'Direct deposit', 'minutes' => 4, 'path' => '/onboarding/bank-payout/', 'group' => 'Tax & payouts' ),
 		'background'  => array( 'label' => 'Background Check', 'short' => 'Authorize screening', 'minutes' => 3, 'path' => '/onboarding/background/', 'group' => 'Verification' ),
 		'insurance'   => array( 'label' => 'Proof of Insurance', 'short' => 'Upload your certificate', 'minutes' => 5, 'path' => '/onboarding/insurance/', 'group' => 'Verification' ),
 		'identity'    => array( 'label' => 'Identity Verification', 'short' => 'Confirm your ID', 'minutes' => 3, 'path' => '/onboarding/identity/', 'group' => 'Verification' ),
 		'workspace'   => array( 'label' => 'Wrapping Location & Handoff', 'short' => 'Where & when', 'minutes' => 4, 'path' => '/onboarding/workspace/', 'group' => 'Your setup' ),
-		'w9'          => array( 'label' => 'W-9 Tax Form', 'short' => 'E-sign', 'minutes' => 5, 'path' => '/onboarding/w-9/', 'group' => 'Tax & payouts' ),
-		'tax_1099'    => array( 'label' => 'Tax Acknowledgments', 'short' => 'Confirm contractor status', 'minutes' => 2, 'path' => '/onboarding/tax-1099/', 'group' => 'Tax & payouts' ),
-		'bank_payout' => array( 'label' => 'Payout Setup', 'short' => 'Direct deposit', 'minutes' => 4, 'path' => '/onboarding/bank-payout/', 'group' => 'Tax & payouts' ),
+		'orientation' => array( 'label' => 'Orientation & Quiz', 'short' => 'Learn the workflow', 'minutes' => 10, 'path' => '/onboarding/orientation/', 'group' => 'Training' ),
 		'activation'  => array( 'label' => 'Final Review', 'short' => 'We activate you', 'minutes' => 0, 'path' => '/onboarding/activation/', 'group' => 'Finish' ),
 	);
 }

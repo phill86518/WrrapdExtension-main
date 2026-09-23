@@ -15,6 +15,7 @@ export const TRACKING_COLLECTIONS = {
   earnings: "tracking_earnings",
   payouts: "tracking_payouts",
   payoutConfig: "tracking_payout_config",
+  payoutHolds: "tracking_payout_holds",
   wrapstarShifts: "tracking_wrapstar_shifts",
   wrapstarShiftGifts: "tracking_wrapstar_shift_gifts",
   wrapstarShiftVideos: "tracking_wrapstar_shift_videos",
@@ -81,6 +82,11 @@ export function trackingPayoutsCollection(): CollectionReference | null {
 export function trackingPayoutConfigDoc(): DocumentReference | null {
   const db = getFirestoreDb();
   return db ? db.collection(TRACKING_COLLECTIONS.payoutConfig).doc("default") : null;
+}
+
+export function trackingPayoutHoldsCollection(): CollectionReference | null {
+  const db = getFirestoreDb();
+  return db ? db.collection(TRACKING_COLLECTIONS.payoutHolds) : null;
 }
 
 export function trackingWrapstarShiftsCollection(): CollectionReference | null {

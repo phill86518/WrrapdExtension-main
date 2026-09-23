@@ -5,6 +5,8 @@ import { getSession } from "@/lib/auth";
 import { findDeliveryDriverById, updateDeliveryDriver } from "@/lib/driver-registry";
 import { listMetros } from "@/lib/metros";
 import type { MetroId, OnboardingStatus } from "@/lib/types";
+import { getPayoutHold } from "@/lib/finance";
+import { setPayoutHoldAction } from "../../payout-hold-action";
 
 export const dynamic = "force-dynamic";
 
@@ -50,6 +52,7 @@ export default async function AdminDriverDetailPage({
     redirect(driver.wrapriderId ? `/admin/wrapriders/${driver.wrapriderId}` : "/admin/wrapriders");
   }
   const metros = listMetros();
+  const payoutHold = await getPayoutHold(driver.id);
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -167,6 +170,28 @@ export default async function AdminDriverDetailPage({
         </label>
         <button type="submit" className="rounded bg-slate-900 px-4 py-2 text-sm text-white">
           Save JoyRider
+        </button>
+      </form>
+
+      <form action={setPayoutHoldAction} className="mt-4 space-y-2 rounded-xl border border-amber-200 bg-amber-50 p-4">
+        <input type="hidden" name="contractorId" value={driver.id} />
+        <input type="hidden" name="held" value={payoutHold?.held ? "0" : "1"} />
+        <p className="text-sm font-medium text-amber-950">
+          {payoutHold?.held ? "Payouts withheld" : "Payouts can leave"}
+        </p>
+        <p className="text-xs text-amber-900">
+          Withheld earnings stay unpaid. A payout batch cannot be created until you release the hold.
+        </p>
+        <label className="block text-sm">
+          Reason
+          <input
+            name="reason"
+            defaultValue={payoutHold?.reason || ""}
+            className="mt-1 w-full rounded border px-3 py-2"
+          />
+        </label>
+        <button type="submit" className="rounded border border-amber-800 px-3 py-1.5 text-sm text-amber-950">
+          {payoutHold?.held ? "Release payouts" : "Withhold payouts"}
         </button>
       </form>
     </div>

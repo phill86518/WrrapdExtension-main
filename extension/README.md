@@ -1,6 +1,6 @@
 # Wrrapd Extension
 
-**Public install:** [Wrrapd on the Chrome Web Store](https://chromewebstore.google.com/detail/wrrapd/eampapdpkmnnbfdojhmbpckpljnbpapo). For development, use **Load unpacked** on this folder after `npm run build`.
+**Public install:** [Wrrapd on the Chrome Web Store](https://chromewebstore.google.com/detail/wrrapd/kdfcahdcgpaoohpgagpmpbgcmkdbocbg). For development, use **Load unpacked** on this folder after `npm run build`.
 
 Manifest V3 **multi-retailer** extension (see `manifest.json`): a **separate content script bundle per retailer domain**, not one script on all stores. Current build supports Amazon, Target, LEGO, Ulta, Walmart, Nordstrom, Kohl's, Sephora, Best Buy, and Etsy, with generated `content*.js` bundles committed for Chrome loading.
 

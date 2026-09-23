@@ -7,9 +7,16 @@ import { DriverInstallCard } from "@/components/driver-install-card";
 import { LogoutButton } from "@/components/logout-button";
 import { WrrapdLogo } from "@/components/wrrapd-logo";
 import { wrapPhaseLabel } from "@/lib/wrap-status-display";
-import { isAllocationReleasedToModules } from "@/lib/types";
+import { isAllocationReleasedToModules, type DayShiftAvailability } from "@/lib/types";
 import { getContractorRecord } from "@/lib/contractor-records";
 import { ContractorAccountCard } from "@/components/contractor-account-card";
+import { DriverAvailabilityPanel } from "@/components/driver-availability-panel";
+import {
+  availabilityDeadlineForWeekMonday,
+  getWeekAvailability,
+  upcomingWeekFromToday,
+} from "@/lib/availability-store";
+import { formatInTimeZone } from "date-fns-tz";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -57,6 +64,21 @@ export default async function CourierPage() {
   const delivered = mine.filter((o) => o.status === "delivered");
   const contractor = await getContractorRecord("driver", driver.id).catch(() => null);
 
+  const week = upcomingWeekFromToday();
+  const existing = await getWeekAvailability(driver.id, week.weekStartMonday);
+  const initialDays = Object.fromEntries(
+    week.days.map((d) => {
+      const raw = existing?.days?.[d];
+      if (typeof raw === "boolean") return [d, { morning: raw, afternoon: raw }];
+      if (raw && typeof raw === "object") {
+        return [d, { morning: raw.morning === true, afternoon: raw.afternoon === true }];
+      }
+      return [d, { morning: false, afternoon: false }];
+    }),
+  ) as Record<string, DayShiftAvailability>;
+  const deadline = availabilityDeadlineForWeekMonday(week.weekStartMonday);
+  const deadlineLabel = formatInTimeZone(deadline, "America/New_York", "EEE MMM d, h:mm a zzz");
+
   return (
     <main className="mx-auto max-w-3xl px-4 py-6">
       <div className="mb-5 flex items-start justify-between gap-3">
@@ -74,7 +96,14 @@ export default async function CourierPage() {
         <DriverInstallCard variant="driver" />
       </div>
 
-      <section className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50/50 p-4">
+      <DriverAvailabilityPanel
+        weekStartMonday={week.weekStartMonday}
+        days={week.days}
+        initialDays={initialDays}
+        deadlineLabel={deadlineLabel}
+      />
+
+      <section className="mb-6 mt-6 rounded-xl border border-emerald-200 bg-emerald-50/50 p-4">
         <h2 className="text-lg font-semibold text-emerald-950">Ready for pickup</h2>
         <p className="mt-1 text-xs text-emerald-900">
           WrapStar finished wrapping — scan the box QR for delivery details.

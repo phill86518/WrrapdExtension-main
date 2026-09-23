@@ -12,10 +12,12 @@ import {
   createPayoutBatch,
   formatUsdCents,
   getPayoutConfig,
+  getPayoutHold,
   listEarningsForWrapstar,
   listPayouts,
   walletForWrapstar,
 } from "@/lib/finance";
+import { setPayoutHoldAction } from "../../payout-hold-action";
 
 export const dynamic = "force-dynamic";
 
@@ -57,33 +59,41 @@ async function payoutAction(formData: FormData) {
   const session = await getSession();
   if (!session || session.role !== "admin") return;
   const id = String(formData.get("wrapstarId") || "");
-  await createPayoutBatch(id);
+  const result = await createPayoutBatch(id);
   revalidatePath(`/admin/wrapstars/${id}`);
   revalidatePath("/admin/finance");
+  if (!result.ok) {
+    redirect(`/admin/wrapstars/${id}?payoutError=${encodeURIComponent(result.error)}`);
+  }
   redirect(`/admin/wrapstars/${id}`);
 }
 
 export default async function AdminWrapstarDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const session = await getSession();
   if (!session || session.role !== "admin") notFound();
   const { id } = await params;
+  const sp = await searchParams;
+  const payoutError = typeof sp.payoutError === "string" ? sp.payoutError : "";
   const wrapstar = await findWrapstarById(id);
   if (!wrapstar) notFound();
   if (wrapstar.hireRole === "wraprider") {
     redirect(wrapstar.wrapriderId ? `/admin/wrapriders/${wrapstar.wrapriderId}` : "/admin/wrapriders");
   }
 
-  const [profile, orders, earnings, wallet, payouts, globalRates] = await Promise.all([
+  const [profile, orders, earnings, wallet, payouts, globalRates, payoutHold] = await Promise.all([
     getWrapstarProfile(id),
     listOrdersForWrapstar(id),
     listEarningsForWrapstar(id),
     walletForWrapstar(id),
     listPayouts(),
     getPayoutConfig(),
+    getPayoutHold(id),
   ]);
   const myPayouts = payouts.filter((p) => p.wrapstarId === id);
   const hourly = hourlyRateCents(
@@ -267,12 +277,33 @@ export default async function AdminWrapstarDetailPage({
             <button
               type="submit"
               className="rounded bg-emerald-700 px-3 py-1.5 text-sm text-white disabled:opacity-50"
-              disabled={wallet.unpaidCount === 0}
+              disabled={wallet.unpaidCount === 0 || !!payoutHold?.held}
             >
               Create payout batch ({wallet.unpaidCount} unpaid)
             </button>
           </form>
         </div>
+        {payoutError ? (
+          <p className="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+            {payoutError}
+          </p>
+        ) : null}
+        <form action={setPayoutHoldAction} className="mt-3 flex flex-wrap items-end gap-2">
+          <input type="hidden" name="contractorId" value={wrapstar.id} />
+          <input type="hidden" name="held" value={payoutHold?.held ? "0" : "1"} />
+          <label className="text-sm">
+            {payoutHold?.held ? "Payouts withheld" : "Payouts can leave"}
+            <input
+              name="reason"
+              defaultValue={payoutHold?.reason || ""}
+              placeholder="Reason (optional)"
+              className="mt-1 block w-64 rounded border px-2 py-1 text-sm"
+            />
+          </label>
+          <button type="submit" className="rounded border border-amber-700 px-3 py-1.5 text-sm text-amber-900">
+            {payoutHold?.held ? "Release payouts" : "Withhold payouts"}
+          </button>
+        </form>
         <div className="mt-3 overflow-x-auto">
           <table className="min-w-full text-left text-sm">
             <thead className="text-xs uppercase text-slate-500">

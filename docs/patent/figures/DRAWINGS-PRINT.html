@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Wrrapd Provisional — Drawing Sheets FIGS. 1–10</title>
+<style>
+  @page { size: letter; margin: 0.6in; }
+  * { box-sizing: border-box; }
+  body { font-family: Arial, Helvetica, sans-serif; color: #000; background: #fff; margin: 0; }
+  .sheet {
+    page-break-after: always;
+    min-height: 9.5in;
+    border: 1px solid #000;
+    padding: 0.4in;
+    position: relative;
+  }
+  .sheet:last-child { page-break-after: auto; }
+  .fig-label { font-weight: bold; font-size: 14pt; margin-bottom: 0.25in; }
+  .caption { font-size: 11pt; margin-top: 0.3in; text-align: center; }
+  .box {
+    border: 2px solid #000;
+    padding: 8px 10px;
+    text-align: center;
+    font-size: 10pt;
+    background: #fff;
+    display: inline-block;
+    min-width: 1.4in;
+  }
+  .box.sm { font-size: 9pt; min-width: 1.1in; padding: 6px 8px; }
+  .row { display: flex; justify-content: center; align-items: center; gap: 12px; flex-wrap: wrap; margin: 14px 0; }
+  .col { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .arrow { font-size: 18pt; font-weight: bold; }
+  .arrow-down { font-size: 16pt; line-height: 1; }
+  .step {
+    border: 2px solid #000;
+    border-radius: 4px;
+    padding: 8px 12px;
+    width: 5.5in;
+    text-align: left;
+    font-size: 10pt;
+    margin: 4px auto;
+  }
+  .step b { display: inline-block; min-width: 0.55in; }
+  .diamond {
+    border: 2px solid #000;
+    padding: 10px 14px;
+    font-size: 10pt;
+    text-align: center;
+    max-width: 3.5in;
+    margin: 6px auto;
+    transform: none;
+  }
+  .muted { font-size: 9pt; font-style: italic; margin-top: 0.2in; text-align: center; }
+  .print-hint {
+    position: fixed; top: 0; left: 0; right: 0; background: #ff0; border-bottom: 2px solid #000;
+    padding: 8px; font-size: 12pt; z-index: 9; text-align: center;
+  }
+  @media print { .print-hint { display: none; } }
+</style>
+</head>
+<body>
+<div class="print-hint">
+  PRINT INSTRUCTIONS: Ctrl+P (Cmd+P) → Destination: Save as PDF → Margins: Default → Background graphics: OFF → Save as <b>02-DRAWINGS-FIGS-1-10.pdf</b>
+</div>
+
+<!-- FIG 1 -->
+<section class="sheet">
+  <div class="fig-label">FIG. 1</div>
+  <div class="row">
+    <div class="box">Retailer Websites<br/>(Amazon, Target, Walmart, …)</div>
+  </div>
+  <div class="row"><span class="arrow-down">↓ ↑</span></div>
+  <div class="row">
+    <div class="box">Browser Extension 110<br/>Per-retailer adapters 112<br/>Shared hub-ship modules 114</div>
+  </div>
+  <div class="row"><span class="arrow-down">↓ ↑</span></div>
+  <div class="row">
+    <div class="box">Pay / API Server 120<br/>pricing · Stripe · AI · orders</div>
+    <span class="arrow">→</span>
+    <div class="box sm">Object Storage 130<br/>designs · proof media</div>
+  </div>
+  <div class="row"><span class="arrow-down">↓</span></div>
+  <div class="row">
+    <div class="box">Tracking Platform 140<br/>orders · tokens · WrapStars</div>
+  </div>
+  <div class="row">
+    <span class="arrow">↙</span>
+    <span class="arrow">↓</span>
+    <span class="arrow">↘</span>
+  </div>
+  <div class="row">
+    <div class="box sm">Human WrapStar<br/>node</div>
+    <div class="box sm">Semi-/Fully<br/>Autonomous<br/>wrapping apparatus<br/>node (generic)</div>
+    <div class="box sm">Customer Track Page<br/>+ Email / SMS 150</div>
+  </div>
+  <p class="caption">FIG. 1 — System architecture of multi-retailer gift fulfillment orchestration platform.</p>
+  <p class="muted">Black-and-white line drawing for U.S. provisional application. Apparatus node is generic (any compatible machine).</p>
+</section>
+
+<!-- FIG 2 -->
+<section class="sheet">
+  <div class="fig-label">FIG. 2</div>
+  <div class="step"><b>210</b> Scrape retailer cart (product IDs, titles, qty)</div>
+  <div class="arrow-down" style="text-align:center">↓</div>
+  <div class="step"><b>220</b> Inject wrap opt-in + gift-choices modal</div>
+  <div class="arrow-down" style="text-align:center">↓</div>
+  <div class="step"><b>230</b> Giftee ZIP gate + pricing / allowlist check</div>
+  <div class="arrow-down" style="text-align:center">↓</div>
+  <div class="step"><b>240</b> Fulfillment pre-check (block pickup-only carts)</div>
+  <div class="arrow-down" style="text-align:center">↓</div>
+  <div class="step"><b>250</b> Gate retailer checkout button until Wrrapd paid</div>
+  <div class="arrow-down" style="text-align:center">↓</div>
+  <div class="step"><b>260</b> Collect service payment on SEPARATE pay platform</div>
+  <div class="arrow-down" style="text-align:center">↓</div>
+  <div class="step"><b>270</b> Autofill + lock HUB shipping address; conflict guard</div>
+  <div class="arrow-down" style="text-align:center">↓</div>
+  <div class="step"><b>280</b> User places retailer order → ships to hub</div>
+  <div class="arrow-down" style="text-align:center">↓</div>
+  <div class="step"><b>290</b> Ingest order → schedule delivery (retailer date + 1 day)</div>
+  <p class="caption">FIG. 2 — Hub-ship checkout method (non-Amazon retailers).</p>
+</section>
+
+<!-- FIG 3 -->
+<section class="sheet">
+  <div class="fig-label">FIG. 3</div>
+  <div class="step"><b>310</b> Per-ASIN wrap election on retailer gift/cart UI</div>
+  <div class="arrow-down" style="text-align:center">↓</div>
+  <div class="step"><b>320</b> Map ASIN → hub address vs default address</div>
+  <div class="arrow-down" style="text-align:center">↓</div>
+  <div class="step"><b>330</b> Inject inline Wrrapd Summary next to order summary</div>
+  <div class="arrow-down" style="text-align:center">↓</div>
+  <div class="step"><b>340</b> Disable Place Order until service payment succeeds</div>
+  <div class="arrow-down" style="text-align:center">↓</div>
+  <div class="step"><b>350</b> Pay on separate platform</div>
+  <div class="arrow-down" style="text-align:center">↓</div>
+  <div class="step"><b>360</b> Place Order hook → capture delivery hints → ingest → resubmit</div>
+  <p class="caption">FIG. 3 — Multi-address routing and Place Order gating (Amazon-class retailers).</p>
+</section>
+
+<!-- FIG 4 -->
+<section class="sheet">
+  <div class="fig-label">FIG. 4</div>
+  <div class="step"><b>410</b> User selects AI wrap + occasion/prompt (+ product context)</div>
+  <div class="arrow-down" style="text-align:center">↓</div>
+  <div class="step"><b>420</b> Generative text model → N design concepts (title/description)</div>
+  <div class="arrow-down" style="text-align:center">↓</div>
+  <div class="step"><b>430</b> Generative image model → tileable wrap pattern images</div>
+  <div class="arrow-down" style="text-align:center">↓</div>
+  <div class="step"><b>440</b> User selects one design</div>
+  <div class="arrow-down" style="text-align:center">↓</div>
+  <div class="step"><b>450</b> Optional upscale → store print-ready PNG + metadata sidecar</div>
+  <div class="arrow-down" style="text-align:center">↓</div>
+  <div class="step"><b>460</b> Bind storage path to order ID + product ID → fulfillment ticket</div>
+  <p class="caption">FIG. 4 — AI wrap-design generation, selection, and order binding.</p>
+</section>
+
+<!-- FIG 5 -->
+<section class="sheet">
+  <div class="fig-label">FIG. 5</div>
+  <div class="step"><b>510</b> Build cart fingerprint = product IDs + titles + quantities</div>
+  <div class="arrow-down" style="text-align:center">↓</div>
+  <div class="step"><b>520</b> Store fingerprint with gift session</div>
+  <div class="arrow-down" style="text-align:center">↓</div>
+  <div class="diamond">Cart changed?<br/>(fingerprint mismatch)</div>
+  <div class="row">
+    <div class="col">
+      <span>YES ↓</span>
+      <div class="box sm">Invalidate payment<br/>Require choice review</div>
+    </div>
+    <div class="col">
+      <span>NO ↓</span>
+      <div class="box sm">Allow Pay / keep state</div>
+    </div>
+  </div>
+  <div class="arrow-down" style="text-align:center">↓</div>
+  <div class="step"><b>530</b> On payment success → rewrite fingerprint snapshot</div>
+  <div class="arrow-down" style="text-align:center">↓</div>
+  <div class="step"><b>540</b> Preferred: re-verify cart matches paid manifest before Place Order</div>
+  <p class="caption">FIG. 5 — Cart fingerprinting and dual-platform checkout synchronization.</p>
+</section>
+
+<!-- FIG 6 -->
+<section class="sheet">
+  <div class="fig-label">FIG. 6</div>
+  <div class="step"><b>610</b> Ingest payload (external order id, dates, line items, pay source)</div>
+  <div class="arrow-down" style="text-align:center">↓</div>
+  <div class="step"><b>620</b> Canonicalize external id (strip pack-line suffixes)</div>
+  <div class="arrow-down" style="text-align:center">↓</div>
+  <div class="step"><b>630</b> Pay-lock merge: protect payment-confirmed giftee/schedule fields</div>
+  <div class="arrow-down" style="text-align:center">↓</div>
+  <div class="diamond">Multiple retailer-promised dates?</div>
+  <div class="row">
+    <div class="col">
+      <span>YES ↓</span>
+      <div class="box sm">Issue preference token<br/>Email/SMS → choice page<br/>or deadline default</div>
+    </div>
+    <div class="col">
+      <span>NO ↓</span>
+      <div class="box sm">Schedule from<br/>single date + offset</div>
+    </div>
+  </div>
+  <div class="arrow-down" style="text-align:center">↓</div>
+  <div class="step"><b>640</b> Wrrapd delivery day = retailer date + fixed offset (e.g. +1 day @ 14:00 ET)</div>
+  <p class="caption">FIG. 6 — Order ingest, pay-lock merge, and multi-date delivery preference.</p>
+</section>
+
+<!-- FIG 7 -->
+<section class="sheet">
+  <div class="fig-label">FIG. 7</div>
+  <div class="step"><b>710</b> Assign fulfillment record to WrapStar (ZIP proximity and/or manual)</div>
+  <div class="arrow-down" style="text-align:center">↓</div>
+  <div class="step"><b>720</b> WrapStar starts job; GPS broadcast (manual or auto); offline queue optional</div>
+  <div class="arrow-down" style="text-align:center">↓</div>
+  <div class="step"><b>730</b> Perform wrap / prepare gift at node</div>
+  <div class="arrow-down" style="text-align:center">↓</div>
+  <div class="step"><b>740</b> Upload proof-of-service media → cloud storage URL on order</div>
+  <div class="arrow-down" style="text-align:center">↓</div>
+  <div class="step"><b>750</b> Status → delivered; compute contractor earnings</div>
+  <div class="arrow-down" style="text-align:center">↓</div>
+  <div class="step"><b>760</b> Customer tracking page polls: status + map + ETA + proof media</div>
+  <p class="caption">FIG. 7 — WrapStar fulfillment, GPS tracking, and proof-of-service loop.</p>
+</section>
+
+<!-- FIG 8 -->
+<section class="sheet">
+  <div class="fig-label">FIG. 8 (Preferred Embodiment)</div>
+  <div class="row">
+    <div class="box sm">Primary<br/>Catalog lookup<br/>by product ID</div>
+    <div class="box sm">Secondary<br/>AI inference<br/>from metadata</div>
+    <div class="box sm">Tertiary<br/>Hub sensor<br/>verification</div>
+  </div>
+  <div class="row"><span class="arrow-down">↓ ↓ ↓</span></div>
+  <div class="row">
+    <div class="box">Wrap Specification Object<br/>(dimensions + design placement + optional machine map)</div>
+  </div>
+  <div class="row"><span class="arrow-down">↓</span></div>
+  <div class="row">
+    <div class="box sm">Print-ready asset</div>
+    <div class="box sm">Optional G-code /<br/>machine instructions</div>
+  </div>
+  <p class="caption">FIG. 8 — Tiered product-dimension resolution for wrapping.</p>
+</section>
+
+<!-- FIG 9 -->
+<section class="sheet">
+  <div class="fig-label">FIG. 9 (Preferred Embodiment)</div>
+  <div class="step"><b>PHASE 1</b> Service payment succeeds → create fulfillment order</div>
+  <div class="arrow-down" style="text-align:center">↓</div>
+  <div class="diamond">PHASE 2: Retailer order placed?</div>
+  <div class="row">
+    <div class="col">
+      <span>YES ↓</span>
+      <div class="box sm">Lock fulfillment<br/>Proceed to hub wrap</div>
+    </div>
+    <div class="col">
+      <span>NO / abandon ↓</span>
+      <div class="box sm">Auto-refund service fee<br/>Cancel print / hub job</div>
+    </div>
+  </div>
+  <p class="caption">FIG. 9 — Two-phase cross-platform transaction commit and abandonment refund.</p>
+</section>
+
+<!-- FIG 10 -->
+<section class="sheet">
+  <div class="fig-label">FIG. 10 (Preferred Embodiment)</div>
+  <div class="row">
+    <div class="box sm">(a) Package<br/>receipt</div>
+    <span class="arrow">→</span>
+    <div class="box sm">(b) Unpack</div>
+    <span class="arrow">→</span>
+    <div class="box sm">(c) Wrap</div>
+    <span class="arrow">→</span>
+    <div class="box sm">(d) Outbound<br/>handoff</div>
+  </div>
+  <div class="row"><span class="arrow-down">↓</span></div>
+  <div class="row">
+    <div class="box">Upload video/photo audit artifacts → cloud storage</div>
+  </div>
+  <div class="row"><span class="arrow-down">↓</span></div>
+  <div class="row">
+    <div class="box">Customer tracking page surfaces audit trail + delivery proof</div>
+  </div>
+  <p class="caption">FIG. 10 — Multi-stage video audit trail linked to customer tracking.</p>
+</section>
+
+<!-- FIG 11 -->
+<section class="sheet">
+  <div class="fig-label">FIG. 11</div>
+  <div class="step"><b>1110</b> Build job ticket (product, dimensions/class, design, SLA, addresses, merge state)</div>
+  <div class="arrow-down" style="text-align:center">↓</div>
+  <div class="step"><b>1120</b> Node pool: human contractor AND/OR semi-autonomous apparatus AND/OR fully autonomous apparatus</div>
+  <div class="arrow-down" style="text-align:center">↓</div>
+  <div class="step"><b>1130</b> Select node (geometry, paper/custom print, capacity, cost, distance/SLA, QC mode)</div>
+  <div class="arrow-down" style="text-align:center">↓</div>
+  <div class="row">
+    <div class="box sm">Human node<br/>instructions + media QC</div>
+    <div class="box sm">Apparatus node<br/>machine parameters / commands</div>
+  </div>
+  <div class="row"><span class="arrow-down">↓</span></div>
+  <div class="diamond">Completion signal OK?</div>
+  <div class="row">
+    <div class="col"><span>YES ↓</span><div class="box sm">Release last mile<br/>to giftee</div></div>
+    <div class="col"><span>NO / reject ↓</span><div class="box sm">Fallback reassign<br/>human or other machine</div></div>
+  </div>
+  <p class="caption">FIG. 11 — Heterogeneous fulfillment-node selection (human and/or wrapping apparatus).</p>
+  <p class="muted">Apparatus is functional/generic — no specific machine brand or patent number required.</p>
+</section>
+
+<!-- FIG 12 -->
+<section class="sheet">
+  <div class="fig-label">FIG. 12</div>
+  <div class="step"><b>1210</b> Print-ready wrap design asset (AI / upload) + bleed / roll-width metadata</div>
+  <div class="arrow-down" style="text-align:center">↓</div>
+  <div class="step"><b>1220</b> Choose print destination class</div>
+  <div class="arrow-down" style="text-align:center">↓</div>
+  <div class="row">
+    <div class="box sm">Integrated<br/>print-on-machine<br/>(feeds wrap cycle)</div>
+    <div class="box sm">Standalone<br/>large-format printer<br/>(manual WrapStar wrap)</div>
+    <div class="box sm">Remote / third-party<br/>print vendor</div>
+  </div>
+  <div class="row"><span class="arrow-down">↓</span></div>
+  <div class="step"><b>1230</b> Send file + print params → print-complete signal</div>
+  <div class="arrow-down" style="text-align:center">↓</div>
+  <div class="step"><b>1240</b> Bind print job to order ID / product ID → authorize wrap / last mile</div>
+  <p class="caption">FIG. 12 — Routing custom wrap designs to large-format printers (machine-integrated or manual).</p>
+</section>
+
+</body>
+</html>

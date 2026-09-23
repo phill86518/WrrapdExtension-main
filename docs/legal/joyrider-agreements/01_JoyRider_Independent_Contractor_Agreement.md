@@ -28,7 +28,7 @@ By signing, Contractor acknowledges that Contractor has read, understands, and a
 
 2.1 Contractor is and shall remain an **independent contractor**. Contractor is solely responsible for all federal, state, and local taxes, withholdings, and filings arising from compensation under this Agreement. Wrrapd will issue IRS Form **1099-NEC** (or successor) as required by law.
 
-2.2 Contractor shall provide, at Contractor’s own expense, a compatible smartphone capable of running the JoyRider App, internet access, fuel, and an eligible, legally operated vehicle with insurance required by law to drive. Wrrapd does **not** require Contractor to purchase commercial general liability or cargo insurance beyond legally required automobile insurance, unless a future written amendment states otherwise.
+2.2 Contractor shall provide, at Contractor’s own expense, a compatible smartphone capable of running the JoyRider App, internet access, fuel, and an eligible, legally operated vehicle with insurance required by law to drive. Wrrapd does **not** require Contractor to purchase commercial general liability or cargo insurance beyond legally required automobile insurance, unless a future written amendment states otherwise. Coverage from DoorDash, Uber, Spark, Shipt, or any other gig platform applies only to that platform’s trips and **does not cover** Wrrapd Services. Contractor shall not rely on that coverage for a Wrrapd hop.
 
 2.3 Subject to Platform rules and published safety, scan, proof, and timing standards, Contractor controls the manner and means of performing the Services, including route choices within App instructions.
 
@@ -115,6 +115,8 @@ By signing, Contractor acknowledges that Contractor has read, understands, and a
 7.3 **Device and permissions.** Contractor shall use a compatible smartphone and grant permissions reasonably needed for the Services (camera for scans and proof, notifications, and location while performing assigned logistics windows, as published in the App).
 
 7.4 **Workflow.** Work windows, navigation aids, scans, status updates, earnings views, and contractor communications will primarily occur in the JoyRider App. Contractor shall keep notifications reasonably enabled while available for work.
+
+7.4A **Wrrapd dispatch only.** Contractor shall perform the Services only through the JoyRider App. Contractor shall not accept, dispatch, or complete Wrrapd work through DoorDash, Uber, Spark, Shipt, Instacart, or any other third-party gig platform.
 
 7.5 **Updates; availability.** Wrrapd may update or suspend App features. The JoyRider App is provided “as available.” Temporary outages do not by themselves constitute breach if Wrrapd uses commercially reasonable efforts to restore service.
 

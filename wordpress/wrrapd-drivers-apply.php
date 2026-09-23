@@ -31,6 +31,59 @@ function wrrapd_drivers_vehicle_type_options() {
 	);
 }
 
+/** @return array<string, string> */
+function wrrapd_drivers_delivery_gig_platform_options() {
+	return array(
+		'doordash'    => 'DoorDash',
+		'uber_eats'   => 'Uber Eats',
+		'spark'       => 'Spark',
+		'shipt'       => 'Shipt',
+		'instacart'   => 'Instacart',
+		'amazon_flex' => 'Amazon Flex',
+		'other'       => 'Other',
+	);
+}
+
+/**
+ * @param array<int, string> $platforms
+ * @return array{total:int,breakdown:array<string,float>,rationales:array<string,string>}
+ */
+function wrrapd_drivers_compute_fit_score( $why, $availability, $gig_active, $platforms, $state, $bank_ready ) {
+	$why = trim( (string) $why );
+	$commitment = array( 'score' => 0.0, 'rationale' => 'No motivation provided.' );
+	if ( $why !== '' && function_exists( 'wrrapd_wrapstars_ai_score_text' ) ) {
+		$commitment = wrrapd_wrapstars_ai_score_text( $why, 'commitment' );
+	}
+	$avail_words = str_word_count( (string) $availability );
+	$avail_pts   = $avail_words >= 12 ? 10 : ( $avail_words >= 4 ? 6 : 2 );
+	$gig_pts     = ( $gig_active === 'yes' ) ? 15 : 0;
+	$major       = array( 'doordash', 'uber_eats', 'spark', 'shipt' );
+	$platform_pts = 0;
+	if ( $gig_active === 'yes' ) {
+		foreach ( (array) $platforms as $p ) {
+			if ( in_array( $p, $major, true ) ) {
+				$platform_pts = 5;
+				break;
+			}
+		}
+	}
+	$loc_pts  = in_array( strtoupper( (string) $state ), array( 'FL', 'GA' ), true ) ? 10 : 4;
+	$bank_pts = ( $bank_ready === 'yes' ) ? 8 : 3;
+	$breakdown = array(
+		'commitment'     => round( (float) $commitment['score'], 1 ),
+		'availability'   => (float) $avail_pts,
+		'delivery_gig'   => (float) $gig_pts,
+		'major_platform' => (float) $platform_pts,
+		'location'       => (float) $loc_pts,
+		'bank_ready'     => (float) $bank_pts,
+	);
+	return array(
+		'total'      => (int) min( 100, round( array_sum( $breakdown ) ) ),
+		'breakdown'  => $breakdown,
+		'rationales' => array( 'commitment' => (string) ( $commitment['rationale'] ?? '' ) ),
+	);
+}
+
 function wrrapd_drivers_apply_bot_checks() {
 	$honeypot = sanitize_text_field( wp_unslash( $_POST['company_website'] ?? '' ) );
 	if ( $honeypot !== '' ) {
@@ -82,6 +135,18 @@ function wrrapd_drivers_process_application() {
 	$availability = sanitize_textarea_field( wp_unslash( $_POST['availability'] ?? '' ) );
 	$why_drive    = sanitize_textarea_field( wp_unslash( $_POST['why_drive'] ?? '' ) );
 	$gig_exp      = sanitize_textarea_field( wp_unslash( $_POST['delivery_experience'] ?? '' ) );
+	$gig_active   = sanitize_text_field( wp_unslash( $_POST['delivery_gig_active'] ?? '' ) );
+	$gig_platforms = array();
+	if ( ! empty( $_POST['delivery_gig_platforms'] ) && is_array( $_POST['delivery_gig_platforms'] ) ) {
+		$allowed_gig = array_keys( wrrapd_drivers_delivery_gig_platform_options() );
+		foreach ( $_POST['delivery_gig_platforms'] as $g ) {
+			$g = sanitize_text_field( wp_unslash( $g ) );
+			if ( in_array( $g, $allowed_gig, true ) ) {
+				$gig_platforms[] = $g;
+			}
+		}
+	}
+	$gig_platforms = array_values( array_unique( $gig_platforms ) );
 	$bank_ready   = sanitize_text_field( wp_unslash( $_POST['bank_account_ready'] ?? '' ) );
 
 	$states = wrrapd_drivers_apply_state_options();
@@ -123,6 +188,15 @@ function wrrapd_drivers_process_application() {
 	}
 	if ( ! in_array( $bank_ready, array( 'yes', 'no' ), true ) ) {
 		$errors[] = 'Please indicate bank account readiness.';
+	}
+	if ( ! in_array( $gig_active, array( 'yes', 'no' ), true ) ) {
+		$errors[] = 'Please answer whether you currently do delivery gig work.';
+	}
+	if ( $gig_active === 'yes' && $gig_platforms === array() ) {
+		$errors[] = 'Select at least one delivery platform. Live proof is required at interview.';
+	}
+	if ( $gig_active !== 'yes' ) {
+		$gig_platforms = array();
 	}
 	if ( $availability === '' ) {
 		$errors[] = 'Please describe your availability.';
@@ -187,7 +261,13 @@ function wrrapd_drivers_process_application() {
 	wrrapd_drivers_set_meta( $post_id, 'availability', $availability );
 	wrrapd_drivers_set_meta( $post_id, 'why_drive', $why_drive );
 	wrrapd_drivers_set_meta( $post_id, 'delivery_experience', $gig_exp );
+	wrrapd_drivers_set_meta( $post_id, 'delivery_gig_active', $gig_active );
+	wrrapd_drivers_set_meta( $post_id, 'delivery_gig_platforms', implode( ',', $gig_platforms ) );
 	wrrapd_drivers_set_meta( $post_id, 'bank_account_ready', $bank_ready );
+	$fit = wrrapd_drivers_compute_fit_score( $why_drive, $availability, $gig_active, $gig_platforms, $state, $bank_ready );
+	wrrapd_drivers_set_meta( $post_id, 'fit_score', (string) $fit['total'] );
+	wrrapd_drivers_set_meta( $post_id, 'fit_breakdown', wp_json_encode( $fit['breakdown'] ) );
+	wrrapd_drivers_set_meta( $post_id, 'fit_rationales', wp_json_encode( $fit['rationales'] ) );
 	wrrapd_drivers_set_meta( $post_id, 'ack_background_check', '1' );
 	wrrapd_drivers_set_meta( $post_id, 'ack_contact', '1' );
 	wrrapd_drivers_set_meta( $post_id, 'ack_age_vehicle', '1' );
@@ -420,8 +500,23 @@ function wrrapd_drivers_shortcode_apply() {
 							<textarea name="availability" id="drv-availability" rows="3" required placeholder="Evenings, weekends, weekdays…"></textarea>
 						</div>
 						<div class="ws-field">
-							<label for="drv-experience">Delivery / gig experience <span class="ws-optional">(optional)</span></label>
-							<textarea name="delivery_experience" id="drv-experience" rows="3" placeholder="DoorDash, Uber, Amazon Flex, etc."></textarea>
+							<label for="drv-gig-active">Do you currently do delivery gig work? <span class="ws-optional">(requires live proof)</span><?php echo $req; ?></label>
+							<select name="delivery_gig_active" id="drv-gig-active" required>
+								<option value="">Select…</option>
+								<option value="yes">Yes</option>
+								<option value="no">No</option>
+							</select>
+							<p class="wrrapd-apply-field-hint">If yes, live proof happens at interview: you open your courier profile and the name and photo must match your ID. We do not collect passwords, customer screens, or another company’s background report.</p>
+						</div>
+						<fieldset class="wrrapd-apply-fieldset" id="drv-gig-platforms" hidden>
+							<legend>Which delivery apps?<?php echo $req; ?></legend>
+							<?php foreach ( wrrapd_drivers_delivery_gig_platform_options() as $value => $label ) : ?>
+								<label class="ws-check ws-check--inline"><input type="checkbox" name="delivery_gig_platforms[]" value="<?php echo esc_attr( $value ); ?>" /> <span><?php echo esc_html( $label ); ?></span></label>
+							<?php endforeach; ?>
+						</fieldset>
+						<div class="ws-field">
+							<label for="drv-experience">Notes <span class="ws-optional">(optional — markets, how long)</span></label>
+							<textarea name="delivery_experience" id="drv-experience" rows="3" placeholder="Which cities, and how long you have been delivering."></textarea>
 						</div>
 						<div class="ws-field">
 							<label for="drv-why">Why do you want to drive with Wrrapd?<?php echo $req; ?></label>

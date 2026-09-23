@@ -67,6 +67,18 @@ function wrrapd_wrapriders_run_admin_action( $app_id, $action, $opts = array() )
 		return array( 'ok' => true, 'status' => wrrapd_wrapriders_get_meta( $app_id, 'status' ) );
 	}
 
+	if ( $action === 'save_gig_evidence' ) {
+		$allowed = array( 'none', 'live_verified', '1099', 'earnings_pdf', 'declined', 'failed' );
+		$status  = sanitize_text_field( (string) ( $opts['gig_evidence_status'] ?? 'none' ) );
+		if ( ! in_array( $status, $allowed, true ) ) {
+			$status = 'none';
+		}
+		wrrapd_wrapriders_set_meta( $app_id, 'gig_evidence_status', $status );
+		wrrapd_wrapriders_set_meta( $app_id, 'gig_evidence_notes', sanitize_textarea_field( (string) ( $opts['gig_evidence_notes'] ?? '' ) ) );
+		wrrapd_wrapriders_set_meta( $app_id, 'gig_evidence_at', gmdate( 'c' ) );
+		return array( 'ok' => true, 'status' => wrrapd_wrapriders_get_meta( $app_id, 'status' ) );
+	}
+
 	if ( $action === 'interview' ) {
 		$current = (string) wrrapd_wrapriders_get_meta( $app_id, 'status' );
 		if ( $current !== 'under_review' ) {
@@ -564,6 +576,13 @@ function wrrapd_wrapriders_ops_serialize_application( $id ) {
 		'availability'            => wrrapd_wrapriders_get_meta( $id, 'availability' ),
 		'whyWraprider'            => wrrapd_wrapriders_get_meta( $id, 'why_wraprider' ),
 		'deliveryExperience'      => wrrapd_wrapriders_get_meta( $id, 'delivery_experience' ),
+		'deliveryGigActive'       => wrrapd_wrapriders_get_meta( $id, 'delivery_gig_active' ),
+		'deliveryGigPlatforms'    => wrrapd_wrapriders_get_meta( $id, 'delivery_gig_platforms' ),
+		'fitScore'                => (int) wrrapd_wrapriders_get_meta( $id, 'fit_score', '0' ),
+		'fitBreakdown'            => wrrapd_wrapriders_get_meta( $id, 'fit_breakdown' ),
+		'gigEvidenceStatus'       => wrrapd_wrapriders_get_meta( $id, 'gig_evidence_status' ),
+		'gigEvidenceNotes'        => wrrapd_wrapriders_get_meta( $id, 'gig_evidence_notes' ),
+		'gigEvidenceAt'           => wrrapd_wrapriders_get_meta( $id, 'gig_evidence_at' ),
 		// Wrapping half of the hybrid role.
 		'giftWrappingExperience'  => wrrapd_wrapriders_get_meta( $id, 'gift_wrapping_experience' ),
 		'dedicatedWrapWorkspace'  => wrrapd_wrapriders_get_meta( $id, 'dedicated_wrap_workspace' ),
@@ -741,6 +760,12 @@ function wrrapd_wrapriders_ops_application_action( $request ) {
 					? (string) ( $body['adminNotes'] ?? $body['admin_notes'] ?? '' )
 					: null,
 				'reject_reason' => (string) ( $body['rejectReason'] ?? $body['reject_reason'] ?? '' ),
+				'gig_evidence_status' => array_key_exists( 'gigEvidenceStatus', $body )
+					? (string) $body['gigEvidenceStatus']
+					: null,
+				'gig_evidence_notes' => array_key_exists( 'gigEvidenceNotes', $body )
+					? (string) $body['gigEvidenceNotes']
+					: null,
 			),
 			static function ( $v ) {
 				return $v !== null;

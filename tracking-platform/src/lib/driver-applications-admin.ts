@@ -35,6 +35,13 @@ export type DriverApplication = {
   availability?: string;
   whyDrive?: string;
   deliveryExperience?: string;
+  deliveryGigActive?: string;
+  deliveryGigPlatforms?: string;
+  fitScore?: number;
+  fitBreakdown?: string;
+  gigEvidenceStatus?: string;
+  gigEvidenceNotes?: string;
+  gigEvidenceAt?: string;
   bankAccountReady: string;
   adminNotes: string;
   rejectReason: string;
@@ -175,11 +182,18 @@ export async function getDriverApplication(id: number): Promise<DriverApplicatio
 export async function runDriverApplicationAction(
   id: number,
   action: ApplicationAction,
-  opts?: { adminNotes?: string; rejectReason?: string },
+  opts?: {
+    adminNotes?: string;
+    rejectReason?: string;
+    gigEvidenceStatus?: string;
+    gigEvidenceNotes?: string;
+  },
 ): Promise<{ application: DriverApplication; passwordIssued?: boolean }> {
   const payload: Record<string, string> = { action };
   if (opts?.adminNotes !== undefined) payload.adminNotes = opts.adminNotes;
   if (opts?.rejectReason !== undefined) payload.rejectReason = opts.rejectReason;
+  if (opts?.gigEvidenceStatus !== undefined) payload.gigEvidenceStatus = opts.gigEvidenceStatus;
+  if (opts?.gigEvidenceNotes !== undefined) payload.gigEvidenceNotes = opts.gigEvidenceNotes;
 
   const r = await fetch(`${wpBase()}/wp-json/wrrapd/v1/driver-applications/${id}/action`, {
     method: "POST",

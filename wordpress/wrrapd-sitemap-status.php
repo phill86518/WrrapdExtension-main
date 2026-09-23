@@ -257,7 +257,7 @@ if ( ! function_exists( 'wrrapd_seo_public_map' ) ) {
 			),
 			'/contact/'                 => array(
 				'title'       => 'Contact Wrrapd',
-				'description' => 'Email help@wrrapd.com or text (844) 638-5484.',
+				'description' => 'How can we help — shopper, pro, and press contact paths.',
 			),
 			'/top-gifting-choices/'     => array(
 				'title'       => 'Top gifting choices | Wrrapd',

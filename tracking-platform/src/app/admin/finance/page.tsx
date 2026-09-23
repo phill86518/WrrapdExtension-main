@@ -8,11 +8,13 @@ import {
   formatUsdCents,
   getPayoutConfig,
   listEarnings,
+  listPayoutHolds,
   listPayouts,
   markPayoutPaid,
   payoutBatchToCsv,
   walletForWrapstar,
 } from "@/lib/finance";
+import { setPayoutHoldAction } from "../payout-hold-action";
 
 export const dynamic = "force-dynamic";
 
@@ -21,8 +23,11 @@ async function createPayoutAction(formData: FormData) {
   const session = await getSession();
   if (!session || session.role !== "admin") return;
   const wrapstarId = String(formData.get("wrapstarId") || "");
-  await createPayoutBatch(wrapstarId);
+  const result = await createPayoutBatch(wrapstarId);
   revalidatePath("/admin/finance");
+  if (!result.ok) {
+    redirect(`/admin/finance?payoutError=${encodeURIComponent(result.error)}`);
+  }
   redirect("/admin/finance");
 }
 
@@ -52,12 +57,14 @@ export default async function AdminFinancePage({
 
   const sp = await searchParams;
   const focusPayout = pick(sp.payout);
+  const payoutError = pick(sp.payoutError);
 
-  const [wrapstars, earnings, payouts, config] = await Promise.all([
+  const [wrapstars, earnings, payouts, config, holds] = await Promise.all([
     listWrapstars(),
     listEarnings(),
     listPayouts(),
     getPayoutConfig(),
+    listPayoutHolds(),
   ]);
 
   const wallets = await Promise.all(
@@ -73,6 +80,11 @@ export default async function AdminFinancePage({
   return (
     <div className="mx-auto max-w-6xl">
       <h1 className="text-2xl font-semibold text-slate-900">Finance & payouts</h1>
+      {payoutError ? (
+        <p className="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+          {payoutError}
+        </p>
+      ) : null}
       <p className="mt-1 text-sm text-slate-600">
         Contractors are paid hourly by ZIP (not per order). Ledger + ACH export stay here; set
         defaults and ZIP overrides under Hourly rates.
@@ -112,30 +124,54 @@ export default async function AdminFinancePage({
             </tr>
           </thead>
           <tbody>
-            {wallets.map(({ w, wallet }) => (
+            {wallets.map(({ w, wallet }) => {
+              const hold = holds[w.id];
+              const withheld = !!hold?.held;
+              return (
               <tr key={w.id} className="border-t border-slate-100">
                 <td className="py-2 pr-3">
                   <Link href={`/admin/wrapstars/${w.id}`} className="text-blue-700 underline">
                     {w.name}
                   </Link>
                   <div className="font-mono text-[10px] text-slate-500">{w.id}</div>
+                  {withheld ? (
+                    <div className="text-[11px] font-medium text-amber-800">
+                      Withheld{hold?.reason ? ` — ${hold.reason}` : ""}
+                    </div>
+                  ) : null}
                 </td>
                 <td className="py-2 pr-3">{formatUsdCents(wallet.unpaidCents)}</td>
                 <td className="py-2 pr-3">{formatUsdCents(wallet.paidCents)}</td>
                 <td className="py-2 pr-3">
-                  <form action={createPayoutAction}>
-                    <input type="hidden" name="wrapstarId" value={w.id} />
-                    <button
-                      type="submit"
-                      disabled={wallet.unpaidCount === 0}
-                      className="text-xs text-emerald-700 underline disabled:text-slate-400"
-                    >
-                      Create payout
-                    </button>
-                  </form>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <form action={createPayoutAction}>
+                      <input type="hidden" name="wrapstarId" value={w.id} />
+                      <button
+                        type="submit"
+                        disabled={wallet.unpaidCount === 0 || withheld}
+                        className="text-xs text-emerald-700 underline disabled:text-slate-400"
+                      >
+                        Create payout
+                      </button>
+                    </form>
+                    <form action={setPayoutHoldAction} className="flex items-center gap-1">
+                      <input type="hidden" name="contractorId" value={w.id} />
+                      <input type="hidden" name="held" value={withheld ? "0" : "1"} />
+                      <input
+                        name="reason"
+                        defaultValue={hold?.reason || ""}
+                        placeholder="Reason"
+                        className="w-28 rounded border px-1 py-0.5 text-[11px]"
+                      />
+                      <button type="submit" className="text-xs text-amber-800 underline">
+                        {withheld ? "Release" : "Withhold"}
+                      </button>
+                    </form>
+                  </div>
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </section>
