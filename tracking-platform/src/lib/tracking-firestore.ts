@@ -21,6 +21,8 @@ export const TRACKING_COLLECTIONS = {
   wrapstarShiftVideos: "tracking_wrapstar_shift_videos",
   /** Contractor record migrated from WordPress on "Approve onboarding" (profile, agreements, tax, payout summary). */
   contractorRecords: "tracking_contractor_records",
+  /** One document per outside phone number (shopper or applicant). */
+  serviceThreads: "tracking_service_threads",
 } as const;
 
 export function trackingContractorRecordsCollection(): CollectionReference | null {
@@ -102,4 +104,9 @@ export function trackingWrapstarShiftGiftsCollection(): CollectionReference | nu
 export function trackingWrapstarShiftVideosCollection(): CollectionReference | null {
   const db = getFirestoreDb();
   return db ? db.collection(TRACKING_COLLECTIONS.wrapstarShiftVideos) : null;
+}
+
+export function trackingServiceThreadsCollection(): CollectionReference | null {
+  const db = getFirestoreDb();
+  return db ? db.collection(TRACKING_COLLECTIONS.serviceThreads) : null;
 }

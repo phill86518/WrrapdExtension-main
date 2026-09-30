@@ -18,6 +18,11 @@ function pickSearchParam(v: string | string[] | undefined): string | undefined {
 
 const MODULES = [
   {
+    href: "/admin/service",
+    title: "Customer service",
+    body: "Texts, photos, and calls to the Wrrapd number — shoppers, and WrapStar, JoyRider, and WrapRider applicants.",
+  },
+  {
     href: "/admin/allocations",
     title: "Allocations",
     body: "Review 15-mile auto-matches. Approve to release onto Orders, WrapStars, and JoyRiders — or assign by hand.",

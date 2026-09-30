@@ -1,5 +1,6 @@
 export const ADMIN_NAV_LINKS = [
   { href: "/admin", label: "Command Center", match: "exact" as const },
+  { href: "/admin/service", label: "Customer service", match: "prefix" as const },
   { href: "/admin/allocations", label: "Allocations", match: "prefix" as const },
   { href: "/admin/availability", label: "Availability", match: "prefix" as const },
   { href: "/admin/orders", label: "Orders", match: "prefix" as const },
