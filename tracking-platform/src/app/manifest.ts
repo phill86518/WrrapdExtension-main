@@ -35,10 +35,13 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
     name: app.name,
     short_name: app.short_name,
     description: app.description,
+    id: "/",
     start_url: app.start_url,
+    scope: "/",
     display: "standalone",
-    background_color: "#ffffff",
-    theme_color: "#0f0351",
+    display_override: ["standalone", "minimal-ui"],
+    background_color: "#0c0638",
+    theme_color: "#0c0638",
     orientation: "portrait",
     icons: [
       {

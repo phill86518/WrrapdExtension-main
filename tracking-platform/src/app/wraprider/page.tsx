@@ -4,7 +4,7 @@ import { listAllOrders, listWrapstarOrders, listWrapstarPastOrders } from "@/lib
 import { findWrapriderById } from "@/lib/wraprider-registry";
 import { DriverConsole } from "@/components/driver-console";
 import { DriverInstallCard } from "@/components/driver-install-card";
-import { WrapriderLoginForm } from "@/components/wraprider-login-form";
+import { PortalLogin } from "@/components/portal-login";
 import { LogoutButton } from "@/components/logout-button";
 import { CourierDeliveryActions } from "@/components/courier-delivery-actions";
 import {
@@ -12,7 +12,6 @@ import {
   getWeekAvailability,
   upcomingWeekFromToday,
 } from "@/lib/availability-store";
-import { WrrapdLogo } from "@/components/wrrapd-logo";
 import { formatInTimeZone } from "date-fns-tz";
 import { formatDateKeyNy, initialDriverDayKeyNy } from "@/lib/ny-date";
 import { wrrapdScheduledInstantIsoForUi } from "@/lib/order-schedule-display";
@@ -41,12 +40,13 @@ export default async function WrapriderPage() {
   const session = await getSession();
   if (!session || session.role !== "wraprider") {
     return (
-      <main className="mx-auto min-h-screen max-w-xl px-4 py-10">
-        <WrrapdLogo className="h-14 w-auto max-w-[220px]" />
-        <h1 className="mt-3 text-3xl font-semibold">{WRAPRIDER_LABEL} App Login</h1>
-        <p className="mt-2 text-sm text-slate-600">Sign in to see your wrap jobs and deliveries.</p>
-        <WrapriderLoginForm />
-      </main>
+      <PortalLogin
+        appName="WrapRider"
+        iconSrc="/icons/app-wraprider-512.png"
+        action="/api/wraprider/login"
+        redirectTo="/wraprider"
+        blurb="Sign in to your wrap jobs and deliveries."
+      />
     );
   }
 

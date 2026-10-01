@@ -2,7 +2,7 @@ import { getSession } from "@/lib/auth";
 import { listWrapstarOrders, listWrapstarPastOrders } from "@/lib/data";
 import { DriverConsole } from "@/components/driver-console";
 import { DriverInstallCard } from "@/components/driver-install-card";
-import { DriverLoginForm } from "@/components/driver-login-form";
+import { PortalLogin } from "@/components/portal-login";
 import { DriverAccountPanel } from "@/components/driver-account-panel";
 import { getWrapstarProfile } from "@/lib/wrapstar-profiles";
 import {
@@ -10,7 +10,6 @@ import {
   getWeekAvailability,
   upcomingWeekFromToday,
 } from "@/lib/availability-store";
-import { WrrapdLogo } from "@/components/wrrapd-logo";
 import { formatInTimeZone } from "date-fns-tz";
 import { formatDateKeyNy, initialDriverDayKeyNy } from "@/lib/ny-date";
 import { wrrapdScheduledInstantIsoForUi } from "@/lib/order-schedule-display";
@@ -37,12 +36,13 @@ export default async function WrapstarPage() {
   const session = await getSession();
   if (!session || !isWrapstarSession(session.role)) {
     return (
-      <main className="mx-auto min-h-screen max-w-xl px-4 py-10">
-        <WrrapdLogo className="h-14 w-auto max-w-[220px]" />
-        <h1 className="mt-3 text-3xl font-semibold">WrapStar App Login</h1>
-        <p className="mt-2 text-sm text-slate-600">Sign in to access your wrap queue and shifts.</p>
-        <DriverLoginForm />
-      </main>
+      <PortalLogin
+        appName="WrapStar"
+        iconSrc="/icons/app-wrapstar-512.png"
+        action="/api/wrapstar/login"
+        redirectTo="/wrapstar"
+        blurb="Sign in to your wrap jobs."
+      />
     );
   }
 

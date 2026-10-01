@@ -1,7 +1,7 @@
 import { getSession } from "@/lib/auth";
 import { listAllOrders } from "@/lib/data";
 import { findDeliveryDriverById } from "@/lib/driver-registry";
-import { CourierLoginForm } from "@/components/courier-login-form";
+import { PortalLogin } from "@/components/portal-login";
 import { CourierDeliveryActions } from "@/components/courier-delivery-actions";
 import { DriverInstallCard } from "@/components/driver-install-card";
 import { LogoutButton } from "@/components/logout-button";
@@ -25,14 +25,13 @@ export default async function CourierPage() {
   const session = await getSession();
   if (!session || session.role !== "driver") {
     return (
-      <main className="mx-auto min-h-screen max-w-xl px-4 py-10">
-        <WrrapdLogo className="h-14 w-auto max-w-[220px]" />
-        <h1 className="mt-3 text-3xl font-semibold">JoyRider App Login</h1>
-        <p className="mt-2 text-sm text-slate-600">
-          Sign in to see pickups and deliveries. WrapStars use the WrapStar app instead.
-        </p>
-        <CourierLoginForm />
-      </main>
+      <PortalLogin
+        appName="JoyRider"
+        iconSrc="/icons/app-joyrider-512.png"
+        action="/api/courier/login"
+        redirectTo="/courier"
+        blurb="Sign in to your pickups and deliveries."
+      />
     );
   }
 

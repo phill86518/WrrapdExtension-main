@@ -1,7 +1,8 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
 import { Geist, Geist_Mono } from "next/font/google";
 import { portalKindForHost, type PortalKind } from "@/lib/portal-hosts";
+import { PwaRegister } from "@/components/pwa-register";
 import "./globals.css";
 
 const APP_TITLES: Record<PortalKind, string> = {
@@ -19,6 +20,14 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#0c0638",
+  colorScheme: "light",
+};
 
 export async function generateMetadata(): Promise<Metadata> {
   const h = await headers();
@@ -56,7 +65,8 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col" suppressHydrationWarning>
+      <body className="min-h-full flex flex-col bg-white text-[#171717]" suppressHydrationWarning>
+        <PwaRegister />
         {children}
       </body>
     </html>
