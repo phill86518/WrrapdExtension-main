@@ -64,7 +64,7 @@ export function WrapstarAppShell({
   sectionLabels,
 }: Props) {
   const [section, setSection] = useState<WrapstarNavSection>(initialSection);
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(true);
   const allowed = sections ?? (deliveries === undefined ? NAV.filter((n) => n.id !== "deliveries").map((n) => n.id) : NAV.map((n) => n.id));
   const nav = allowed
     .map((id) => {
@@ -120,6 +120,13 @@ export function WrapstarAppShell({
           </div>
           <div className="px-5 py-5">
             <p className="text-2xl font-semibold tracking-tight">{appLabel}</p>
+            <button
+              type="button"
+              className="mt-3 text-lg font-semibold text-white/80 underline"
+              onClick={() => setDrawerOpen(false)}
+            >
+              Close menu
+            </button>
             <p className="mt-1 truncate text-lg text-slate-200">{wrapstarName}</p>
             <p className="mt-1 font-mono text-sm text-slate-400">ID {wrapstarId}</p>
           </div>
@@ -151,19 +158,19 @@ export function WrapstarAppShell({
       <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-slate-200 bg-white/95 px-3 py-3 backdrop-blur">
         <button
           type="button"
-          className="flex h-11 w-11 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-900 shadow-sm"
+          className="flex h-14 items-center gap-2 rounded-2xl bg-[#f6b933] px-4 text-lg font-bold text-[#0f0351] shadow-sm"
           aria-label="Open menu"
           onClick={() => setDrawerOpen(true)}
         >
-          <span className="sr-only">Menu</span>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden>
             <path
               d="M4 7h16M4 12h16M4 17h16"
               stroke="currentColor"
-              strokeWidth="2"
+              strokeWidth="2.4"
               strokeLinecap="round"
             />
           </svg>
+          Menu
         </button>
         <div className="min-w-0 flex-1">
           <p className="truncate text-xl font-semibold text-slate-900">{title}</p>

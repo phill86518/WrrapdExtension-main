@@ -74,7 +74,9 @@ async function pickCourierForOrder(
   wrapstars: WrapStar[],
   now: Date,
 ): Promise<{ courierDriverId?: string; courierDriverName?: string; fulfillmentMode: FulfillmentMode }> {
-  if (!isWrapOnly(wrapstar)) {
+  // A WrapRider wraps and delivers the same gift. A hybrid WrapStar delivers their own.
+  // A separate driver is only for a wrap-only WrapStar, and only one person.
+  if (wrapstar.hireRole === "wraprider" || !isWrapOnly(wrapstar)) {
     return { fulfillmentMode: "self_delivery" };
   }
 
@@ -114,19 +116,23 @@ async function pickCourierForOrder(
   }
 
   const approvedDrivers = deliveryDrivers.filter(
-    (d) => d.status === "approved" && d.metroId === metro.id,
+    (d) => d.status === "approved" && d.metroId === metro.id && d.hireRole !== "wraprider",
   );
-  if (approvedDrivers.length === 0) {
+  const backupRiders = deliveryDrivers.filter(
+    (d) => d.status === "approved" && d.metroId === metro.id && d.hireRole === "wraprider",
+  );
+  const poolSource = approvedDrivers.length > 0 ? approvedDrivers : backupRiders;
+  if (poolSource.length === 0) {
     return { fulfillmentMode: "driver_final_mile" };
   }
 
   const availableDrivers: DeliveryDriver[] = [];
-  for (const d of approvedDrivers) {
+  for (const d of poolSource) {
     if (await isDriverAvailableOnDate(d.id, dateKey, shift, now)) {
       availableDrivers.push(d);
     }
   }
-  const pool = availableDrivers.length > 0 ? availableDrivers : approvedDrivers;
+  const pool = availableDrivers.length > 0 ? availableDrivers : poolSource;
 
   const orderCoords = approxCoordsForZip(order.postalCode, order.state);
   const orderZip = normalizeZip(order.postalCode);

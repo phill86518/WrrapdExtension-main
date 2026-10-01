@@ -144,18 +144,31 @@ export async function applyAutoAllocationToOrders(orders: Order[]): Promise<Orde
     }
     if (isAllocationCommitted(o) && orderWrapstarId(o)) {
       const a = map.get(o.id);
-      return {
+      const wsId = orderWrapstarId(o)!;
+      const ws = wrapstars.find((w) => w.id === wsId);
+      const self =
+        ws?.hireRole === "wraprider" || (ws ? ws.wrapOnly !== true && ws.canDeliver !== false : false);
+      const keepBackup = o.assignmentSource === "manual" && Boolean(o.courierDriverId);
+      const courierDriverId = self && !keepBackup ? undefined : (o.courierDriverId || a?.courierDriverId);
+      const courierDriverName = self && !keepBackup ? undefined : (o.courierDriverName || a?.courierDriverName);
+      const next: Order = {
         ...o,
         status: status === "pending" || status === "scheduled" ? "assigned" : status,
-        wrapstarId: orderWrapstarId(o),
+        wrapstarId: wsId,
         wrapstarName: orderWrapstarName(o),
-        driverId: orderWrapstarId(o),
+        driverId: wsId,
         driverName: orderWrapstarName(o),
-        fulfillmentMode: a?.fulfillmentMode || o.fulfillmentMode,
-        courierDriverId: a?.courierDriverId ?? o.courierDriverId,
-        courierDriverName: a?.courierDriverName ?? o.courierDriverName,
+        fulfillmentMode: self && !keepBackup ? "self_delivery" : a?.fulfillmentMode || o.fulfillmentMode,
         allocationStatus: "approved" as const,
       };
+      if (courierDriverId) {
+        next.courierDriverId = courierDriverId;
+        next.courierDriverName = courierDriverName;
+      } else {
+        delete next.courierDriverId;
+        delete next.courierDriverName;
+      }
+      return next;
     }
     const a = map.get(o.id);
     const boardStatus = status === "assigned" ? "scheduled" : status;
@@ -1076,7 +1089,7 @@ export async function assignWrapstar(id: string, wrapstarId: string, updatedBy: 
   const wrapstar = await findWrapstarById(wrapstarId);
   if (!current || !wrapstar) return null;
   const st = normalizeOrderStatus(current.status);
-  const wrapOnly = wrapstar.wrapOnly === true || wrapstar.canDeliver === false;
+  const wrapOnly = wrapstar.hireRole !== "wraprider" && (wrapstar.wrapOnly === true || wrapstar.canDeliver === false);
   const next: Order = {
     ...current,
     wrapstarId: wrapstar.id,

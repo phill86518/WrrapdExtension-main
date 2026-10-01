@@ -90,12 +90,9 @@ export async function startShift(wrapstarId: string): Promise<
   const today = todaysOrders(allMine, dateKey);
 
   if (existing) {
-    const orders = await loadShiftOrders(existing);
-    return { ok: true, shift: existing, orders };
-  }
-
-  if (today.length === 0) {
-    return { ok: false, error: "No wrap jobs assigned for today. Check Admin assignment." };
+    const shift = await absorbTodaysOrders(existing);
+    const orders = await loadShiftOrders(shift);
+    return { ok: true, shift, orders };
   }
 
   const now = new Date().toISOString();
@@ -153,11 +150,41 @@ export async function getActiveShiftBundle(wrapstarId: string): Promise<{
   orders: Order[];
   videos: WrapStarShiftVideo[];
 }> {
-  const shift = await getActiveShift(wrapstarId);
-  if (!shift) return { shift: null, orders: [], videos: [] };
+  const found = await getActiveShift(wrapstarId);
+  if (!found) return { shift: null, orders: [], videos: [] };
+  const shift = await absorbTodaysOrders(found);
   const orders = await loadShiftOrders(shift);
   const videos = await listVideosForShift(shift.id);
   return { shift, orders, videos };
+}
+
+/** Gifts assigned after clock-in join the open shift. */
+async function absorbTodaysOrders(shift: WrapStarShift): Promise<WrapStarShift> {
+  if (shift.status !== "active") return shift;
+  const allMine = await listWrapstarOrders(shift.wrapstarId);
+  const today = todaysOrders(allMine, shift.dateKey);
+  const have = new Set(shift.orderIds);
+  const extra = today.filter((o) => !have.has(o.id));
+  if (extra.length === 0) return shift;
+  const now = new Date().toISOString();
+  const next: WrapStarShift = {
+    ...shift,
+    orderIds: [...shift.orderIds, ...extra.map((o) => o.id)],
+    updatedAt: now,
+  };
+  await saveShift(next);
+  for (const o of extra) {
+    if (o.wrapPhase === "complete") continue;
+    await patchOrderFields(
+      o.id,
+      {
+        wrapShiftId: next.id,
+        wrapPhase: o.wrapPhase === "recording" || o.wrapPhase === "label_ready" ? o.wrapPhase : "queued",
+      },
+      shift.wrapstarId,
+    );
+  }
+  return next;
 }
 
 function priorOrdersComplete(orders: Order[], orderId: string): boolean {
