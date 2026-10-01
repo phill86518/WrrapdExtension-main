@@ -40,8 +40,8 @@ export function WrapriderLoginForm() {
       />
       <PasswordField name="password" placeholder="Password" autoComplete="current-password" />
       <p className="text-xs text-slate-500">
-        Use the same email and password as your WrapRider onboarding. New here? Apply at
-        apply.wrrapd.com/wraprider.
+        Use the email and password from your WrapRider onboarding. Staff testing: admin@wrrapd.com
+        and the Command Center password. That opens Alex Rivera&apos;s WrapRider seat.
       </p>
       {error && <p className="text-sm font-medium text-rose-600">{error}</p>}
       <button

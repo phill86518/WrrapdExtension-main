@@ -3,6 +3,7 @@ import { applySessionCookieToResponse, createSessionToken } from "@/lib/auth";
 import { findWrapriderByEmail } from "@/lib/wraprider-registry";
 import { looksLikeEmail, verifyPortalCredentials } from "@/lib/wp-portal-auth";
 import { touchContractorLogin } from "@/lib/contractor-records";
+import { founderWrapriderSeat, isFounderPortalLogin } from "@/lib/founder-portal-login";
 
 /**
  * WrapRider App login (wraprider.wrrapd.com) — the THIRD contractor login, separate from the
@@ -29,6 +30,20 @@ export async function POST(request: NextRequest) {
       { ok: false, error: "Sign in with the email address from your WrapRider onboarding." },
       { status: 400 },
     );
+  }
+
+  if (isFounderPortalLogin(identifier, password)) {
+    const seat = await founderWrapriderSeat();
+    if (!seat) {
+      return NextResponse.json(
+        { ok: false, error: "The WrapRider test login is not on the roster yet." },
+        { status: 409 },
+      );
+    }
+    const token = await createSessionToken({ role: "wraprider", userId: seat.id, name: seat.name });
+    const res = NextResponse.json({ ok: true, wrapriderId: seat.id });
+    applySessionCookieToResponse(res, token);
+    return res;
   }
 
   const auth = await verifyPortalCredentials(identifier, password, "wraprider");

@@ -11,6 +11,7 @@ import {
 } from "@/lib/driver-registry";
 import { looksLikeEmail, verifyPortalCredentials } from "@/lib/wp-portal-auth";
 import { touchContractorLogin } from "@/lib/contractor-records";
+import { founderJoyriderSeat, isFounderPortalLogin } from "@/lib/founder-portal-login";
 
 /**
  * JoyRider (courier) App login (joyrider.wrrapd.com) — separate from WrapStar.
@@ -44,6 +45,17 @@ export async function POST(request: NextRequest) {
     applySessionCookieToResponse(res, token);
     return res;
   };
+
+  if (looksLikeEmail(identifier) && isFounderPortalLogin(identifier, password)) {
+    const seat = await founderJoyriderSeat();
+    if (!seat) {
+      return NextResponse.json(
+        { ok: false, error: "The JoyRider test login is not on the roster yet." },
+        { status: 409 },
+      );
+    }
+    return issueSession(seat.id, seat.name);
+  }
 
   if (looksLikeEmail(identifier)) {
     const auth = await verifyPortalCredentials(identifier, password, "driver");

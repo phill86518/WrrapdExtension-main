@@ -40,8 +40,8 @@ export function DriverLoginForm() {
       />
       <PasswordField name="password" placeholder="Password" autoComplete="current-password" />
       <p className="text-xs text-slate-500">
-        Use the same email and password as your WrapStar onboarding. Forgot it? Reset it from your
-        profile at apply.wrrapd.com, or email support.
+        Use the email and password from your WrapStar onboarding. Staff testing: admin@wrrapd.com
+        and the Command Center password. That opens Roger&apos;s WrapStar seat.
       </p>
       {error && <p className="text-sm font-medium text-rose-600">{error}</p>}
       <button

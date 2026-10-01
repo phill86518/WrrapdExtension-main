@@ -46,6 +46,11 @@ const MODULE_GROUPS = [
         title: "Availability",
         body: "Who can wrap or deliver this week.",
       },
+      {
+        href: "/admin/wrap-work",
+        title: "Wrap hours",
+        body: "Clock-in, gifts wrapped, and the codes on each box.",
+      },
     ],
   },
   {
@@ -225,6 +230,34 @@ export default async function AdminPage({
           )}
         </div>
       </div>
+
+      <section className="rounded-2xl border border-[#1a2744]/25 bg-white p-5 shadow-sm">
+        <h2 className="text-sm font-bold uppercase tracking-[0.14em] text-[#1a2744]">Portal test logins</h2>
+        <p className="mt-2 text-sm text-[#2d4a38]">
+          Same email on every app: <strong>admin@wrrapd.com</strong>. Same password as this Command
+          Center. Saving an email on a roster row does not create a login.
+        </p>
+        <ul className="mt-3 space-y-1 text-sm text-[#0f172a]">
+          <li>
+            <a className="font-semibold text-blue-800 underline" href="https://wrapstar.wrrapd.com">
+              wrapstar.wrrapd.com
+            </a>{" "}
+            — opens as Roger
+          </li>
+          <li>
+            <a className="font-semibold text-blue-800 underline" href="https://joyrider.wrrapd.com">
+              joyrider.wrrapd.com
+            </a>{" "}
+            — opens as Devon Blake
+          </li>
+          <li>
+            <a className="font-semibold text-blue-800 underline" href="https://wraprider.wrrapd.com">
+              wraprider.wrrapd.com
+            </a>{" "}
+            — opens as Alex Rivera
+          </li>
+        </ul>
+      </section>
 
       {MODULE_GROUPS.map((group) => (
         <section key={group.title} className="space-y-3">

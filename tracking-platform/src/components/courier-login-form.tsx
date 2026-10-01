@@ -40,8 +40,8 @@ export function CourierLoginForm() {
       />
       <PasswordField name="password" placeholder="Password" autoComplete="current-password" />
       <p className="text-xs text-slate-500">
-        Use the same email and password as your JoyRider onboarding. New here? Apply at
-        apply.wrrapd.com/drive.
+        Use the email and password from your JoyRider onboarding. Staff testing: admin@wrrapd.com
+        and the Command Center password. That opens Devon Blake&apos;s JoyRider seat.
       </p>
       {error && <p className="text-sm font-medium text-rose-600">{error}</p>}
       <button

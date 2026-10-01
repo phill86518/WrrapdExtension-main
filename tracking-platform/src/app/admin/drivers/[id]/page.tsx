@@ -134,6 +134,10 @@ export default async function AdminDriverDetailPage({
             defaultValue={driver.email || ""}
             className="mt-1 w-full rounded border px-3 py-2"
           />
+          <span className="mt-1 block text-xs text-slate-500">
+            Contact email only. It does not create an app password. Staff test the JoyRider app as
+            admin@wrrapd.com with the Command Center password.
+          </span>
         </label>
         <label className="block text-sm">
           Phone

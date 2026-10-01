@@ -4,6 +4,7 @@ import { findWrapstarByEmail, findWrapstarById, findWrapstarByName } from "@/lib
 import { looksLikeEmail, verifyPortalCredentials } from "@/lib/wp-portal-auth";
 import { touchContractorLogin } from "@/lib/contractor-records";
 import { getWrapstarProfile } from "@/lib/wrapstar-profiles";
+import { founderWrapstarSeat, isFounderPortalLogin } from "@/lib/founder-portal-login";
 
 /**
  * WrapStar App login (wrapstar.wrrapd.com).
@@ -36,6 +37,17 @@ export async function POST(request: NextRequest) {
     applySessionCookieToResponse(res, token);
     return res;
   };
+
+  if (looksLikeEmail(identifier) && isFounderPortalLogin(identifier, password)) {
+    const seat = await founderWrapstarSeat();
+    if (!seat) {
+      return NextResponse.json(
+        { ok: false, error: "The WrapStar test login is not on the roster yet." },
+        { status: 409 },
+      );
+    }
+    return issueSession(seat.id, seat.name);
+  }
 
   if (looksLikeEmail(identifier)) {
     const auth = await verifyPortalCredentials(identifier, password, "wrapstar");
