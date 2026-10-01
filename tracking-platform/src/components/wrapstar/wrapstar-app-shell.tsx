@@ -36,10 +36,14 @@ type Props = {
   account: ReactNode;
   help: ReactNode;
   installCard?: ReactNode;
-  /** App branding — "WrapStar" (default) or "WrapRider" (third contractor app, same shell). */
-  appLabel?: "WrapStar" | "WrapRider";
+  /** App branding. */
+  appLabel?: "WrapStar" | "JoyRider" | "WrapRider";
   /** Where Log out lands — defaults to the WrapStar app. */
   logoutPath?: string;
+  /** Which menu items to show, in order. Defaults to the WrapStar set. */
+  sections?: WrapstarNavSection[];
+  /** Override a menu label, for example JoyRider "Pickups". */
+  sectionLabels?: Partial<Record<WrapstarNavSection, string>>;
 };
 
 export function WrapstarAppShell({
@@ -56,14 +60,24 @@ export function WrapstarAppShell({
   installCard,
   appLabel = "WrapStar",
   logoutPath = "/wrapstar",
+  sections,
+  sectionLabels,
 }: Props) {
   const [section, setSection] = useState<WrapstarNavSection>(initialSection);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const nav = deliveries === undefined ? NAV.filter((n) => n.id !== "deliveries") : NAV;
+  const allowed = sections ?? (deliveries === undefined ? NAV.filter((n) => n.id !== "deliveries").map((n) => n.id) : NAV.map((n) => n.id));
+  const nav = allowed
+    .map((id) => {
+      const item = NAV.find((n) => n.id === id);
+      if (!item) return null;
+      return { id, label: sectionLabels?.[id] ?? item.label };
+    })
+    .filter((item): item is { id: WrapstarNavSection; label: string } => item !== null);
 
   function go(id: WrapstarNavSection) {
     setSection(id);
     setDrawerOpen(false);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   const body =
@@ -95,22 +109,22 @@ export function WrapstarAppShell({
       ) : null}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-[min(18rem,86vw)] flex-col bg-slate-950 text-white shadow-xl transition-transform duration-200 ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-[min(22rem,92vw)] flex-col bg-slate-950 text-white shadow-xl transition-transform duration-200 ${
           drawerOpen ? "translate-x-0" : "-translate-x-full"
         }`}
         aria-hidden={!drawerOpen}
       >
         <div className="border-b border-white/10">
-          <div className="bg-[#faf8f4] px-4 py-4">
-            <WrrapdLogo className="h-10 w-auto max-w-[180px] object-contain object-left" />
+          <div className="bg-[#faf8f4] px-5 py-5">
+            <WrrapdLogo className="h-12 w-auto max-w-[210px] object-contain object-left" />
           </div>
-          <div className="px-4 py-4">
-            <p className="text-lg font-semibold tracking-tight">{appLabel}</p>
-            <p className="mt-0.5 truncate text-sm text-slate-300">{wrapstarName}</p>
-            <p className="mt-1 font-mono text-[11px] text-slate-500">ID {wrapstarId}</p>
+          <div className="px-5 py-5">
+            <p className="text-2xl font-semibold tracking-tight">{appLabel}</p>
+            <p className="mt-1 truncate text-lg text-slate-200">{wrapstarName}</p>
+            <p className="mt-1 font-mono text-sm text-slate-400">ID {wrapstarId}</p>
           </div>
         </div>
-        <nav className="flex-1 overflow-y-auto px-2 py-3">
+        <nav className="flex-1 space-y-2 overflow-y-auto px-3 py-4">
           {nav.map((item) => {
             const active = section === item.id;
             return (
@@ -118,10 +132,10 @@ export function WrapstarAppShell({
                 key={item.id}
                 type="button"
                 onClick={() => go(item.id)}
-                className={`mb-1 flex w-full items-center rounded-lg px-3 py-3 text-left text-sm font-medium ${
+                className={`flex w-full items-center rounded-2xl px-4 py-4 text-left text-lg font-semibold leading-snug ${
                   active
-                    ? "bg-amber-500 text-slate-950"
-                    : "text-slate-100 hover:bg-white/10"
+                    ? "bg-[#f6b933] text-[#0f0351]"
+                    : "text-white hover:bg-white/10"
                 }`}
               >
                 {item.label}
@@ -152,14 +166,45 @@ export function WrapstarAppShell({
           </svg>
         </button>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-base font-semibold text-slate-900">{title}</p>
-          <p className="truncate text-xs text-slate-500">{appLabel} App</p>
+          <p className="truncate text-xl font-semibold text-slate-900">{title}</p>
+          <p className="truncate text-base text-slate-500">{appLabel}</p>
         </div>
       </header>
 
-      <main className="mx-auto max-w-3xl px-4 py-4 pb-16">
+      <main className="mx-auto max-w-3xl px-4 py-4 pb-10">
+        <nav aria-label="Pages" className="-mx-4 mb-5 flex gap-3 overflow-x-auto px-4 pb-1">
+          {nav.map((item) => {
+            const active = section === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => go(item.id)}
+                className={`shrink-0 rounded-full px-5 py-3 text-lg font-bold ${
+                  active ? "bg-[#0c0638] text-white" : "border-2 border-slate-200 bg-white text-[#0f0351]"
+                }`}
+              >
+                {item.label}
+              </button>
+            );
+          })}
+        </nav>
         {installCard && section === "today" ? <div className="mb-4">{installCard}</div> : null}
         {body}
+        <nav aria-label="More pages" className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {nav
+            .filter((item) => item.id !== section)
+            .map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => go(item.id)}
+                className="rounded-2xl border-2 border-slate-200 bg-white px-5 py-4 text-left text-lg font-bold leading-snug text-[#0f0351]"
+              >
+                {item.label}
+              </button>
+            ))}
+        </nav>
       </main>
     </div>
   );

@@ -5,7 +5,7 @@ import { PortalLogin } from "@/components/portal-login";
 import { CourierDeliveryActions } from "@/components/courier-delivery-actions";
 import { DriverInstallCard } from "@/components/driver-install-card";
 import { LogoutButton } from "@/components/logout-button";
-import { WrrapdLogo } from "@/components/wrrapd-logo";
+import { WrapstarAppShell } from "@/components/wrapstar/wrapstar-app-shell";
 import { wrapPhaseLabel } from "@/lib/wrap-status-display";
 import { isAllocationReleasedToModules, type DayShiftAvailability } from "@/lib/types";
 import { getContractorRecord } from "@/lib/contractor-records";
@@ -79,108 +79,112 @@ export default async function CourierPage() {
   const deadlineLabel = formatInTimeZone(deadline, "America/New_York", "EEE MMM d, h:mm a zzz");
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-6">
-      <div className="mb-5 flex items-start justify-between gap-3">
-        <div>
-          <WrrapdLogo className="h-12 w-auto max-w-[200px]" />
-          <h1 className="mt-2 text-2xl font-semibold">JoyRider App</h1>
-          <p className="text-sm text-slate-600">
-            {driver.name} · <span className="font-mono text-xs">{driver.displayId || driver.id}</span>
+    <WrapstarAppShell
+      appLabel="JoyRider"
+      logoutPath="/courier"
+      wrapstarName={driver.name}
+      wrapstarId={driver.displayId || driver.id}
+      installCard={<DriverInstallCard variant="driver" />}
+      sections={["today", "shift", "deliveries", "availability", "account"]}
+      sectionLabels={{
+        today: "Pickups",
+        shift: "Still wrapping",
+        deliveries: "History",
+      }}
+      today={
+        <section className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-4">
+          <h2 className="text-2xl font-semibold text-emerald-950">Ready for pickup</h2>
+          <p className="mt-2 text-lg text-emerald-900">
+            The gift is wrapped. Scan the code on the box for the address and the time.
           </p>
-        </div>
-        <LogoutButton redirectPath="/courier" />
-      </div>
-
-      <div className="mb-6">
-        <DriverInstallCard variant="driver" />
-      </div>
-
-      <DriverAvailabilityPanel
-        weekStartMonday={week.weekStartMonday}
-        days={week.days}
-        initialDays={initialDays}
-        deadlineLabel={deadlineLabel}
-      />
-
-      <section className="mb-6 mt-6 rounded-xl border border-emerald-200 bg-emerald-50/50 p-4">
-        <h2 className="text-lg font-semibold text-emerald-950">Ready for pickup</h2>
-        <p className="mt-1 text-xs text-emerald-900">
-          WrapStar finished wrapping — scan the box QR for delivery details.
-        </p>
-        <ul className="mt-3 space-y-3">
-          {ready.length === 0 ? (
-            <li className="text-sm text-slate-600">No wrap-complete jobs yet.</li>
-          ) : (
-            ready.map((o) => (
-              <li key={o.id} className="rounded-lg border border-emerald-200 bg-white p-3 text-sm">
-                <p className="font-semibold">{o.externalOrderId || o.id}</p>
-                <p className="text-slate-700">
-                  {o.recipientName} · {o.addressLine1}, {o.city}
-                </p>
-                <p className="mt-1 text-xs text-slate-500">
-                  Wrap: {wrapPhaseLabel(o.wrapPhase)}
-                  {o.readyForCourierAt
-                    ? ` · ready ${new Date(o.readyForCourierAt).toLocaleString()}`
-                    : ""}
-                </p>
-                {o.driverLabelToken ? (
-                  <a
-                    className="mt-2 inline-block text-xs font-semibold text-blue-700 underline"
-                    href={`/api/driver/scan/${o.driverLabelToken}`}
-                  >
-                    Open scan details
-                  </a>
-                ) : (
-                  <p className="mt-2 text-xs text-amber-800">Label QR not generated yet.</p>
-                )}
-                <CourierDeliveryActions orderId={o.id} status={o.status} />
-              </li>
-            ))
-          )}
-        </ul>
-      </section>
-
-      <section className="rounded-xl border border-slate-200 bg-white p-4">
-        <h2 className="text-lg font-semibold text-slate-900">Assigned — still wrapping</h2>
-        <ul className="mt-3 space-y-2">
-          {waiting.length === 0 ? (
-            <li className="text-sm text-slate-600">None.</li>
-          ) : (
-            waiting.map((o) => (
-              <li key={o.id} className="rounded-lg border border-slate-100 px-3 py-2 text-sm">
-                <span className="font-medium">{o.externalOrderId || o.id}</span>
-                <span className="ml-2 text-xs text-slate-500">{wrapPhaseLabel(o.wrapPhase)}</span>
-              </li>
-            ))
-          )}
-        </ul>
-      </section>
-
-      <details className="mt-6 rounded-xl border border-slate-200 bg-white p-4">
-        <summary className="cursor-pointer text-lg font-semibold text-slate-900">
-          Delivery history{delivered.length ? ` (${delivered.length})` : ""}
-        </summary>
-        <ul className="mt-3 space-y-2">
-          {delivered.length === 0 ? (
-            <li className="text-sm text-slate-600">No completed deliveries yet.</li>
-          ) : (
-            delivered.slice(0, 50).map((o) => (
-              <li key={o.id} className="rounded-lg border border-slate-100 px-3 py-2 text-sm">
-                <span className="font-medium">{o.externalOrderId || o.id}</span>
-                <span className="ml-2 text-xs text-slate-500">
-                  {o.recipientName} · {o.city}
-                  {o.updatedAt ? ` · ${new Date(o.updatedAt).toLocaleDateString()}` : ""}
-                </span>
-              </li>
-            ))
-          )}
-        </ul>
-      </details>
-
-      <section className="mt-6">
-        <h2 className="mb-3 text-lg font-semibold text-slate-900">Account</h2>
-        <ContractorAccountCard record={contractor} roleLabel="JoyRider" />
-      </section>
-    </main>
+          <ul className="mt-4 space-y-3">
+            {ready.length === 0 ? (
+              <li className="text-lg text-slate-600">No wrap-complete jobs yet.</li>
+            ) : (
+              ready.map((o) => (
+                <li key={o.id} className="rounded-lg border border-emerald-200 bg-white p-4 text-lg">
+                  <p className="font-semibold">{o.externalOrderId || o.id}</p>
+                  <p className="text-slate-700">
+                    {o.recipientName} · {o.addressLine1}, {o.city}
+                  </p>
+                  <p className="mt-1 text-base text-slate-500">
+                    Wrap: {wrapPhaseLabel(o.wrapPhase)}
+                    {o.readyForCourierAt
+                      ? ` · ready ${new Date(o.readyForCourierAt).toLocaleString()}`
+                      : ""}
+                  </p>
+                  {o.driverLabelToken ? (
+                    <a
+                      className="mt-3 inline-block text-lg font-semibold text-blue-700 underline"
+                      href={`/api/driver/scan/${o.driverLabelToken}`}
+                    >
+                      Open scan details
+                    </a>
+                  ) : (
+                    <p className="mt-3 text-base text-amber-800">Label code is not ready yet.</p>
+                  )}
+                  <CourierDeliveryActions orderId={o.id} status={o.status} />
+                </li>
+              ))
+            )}
+          </ul>
+        </section>
+      }
+      shift={
+        <section className="rounded-xl border border-slate-200 bg-white p-4">
+          <h2 className="text-2xl font-semibold text-slate-900">Still wrapping</h2>
+          <ul className="mt-4 space-y-3">
+            {waiting.length === 0 ? (
+              <li className="text-lg text-slate-600">None.</li>
+            ) : (
+              waiting.map((o) => (
+                <li key={o.id} className="rounded-lg border border-slate-100 px-4 py-3 text-lg">
+                  <span className="font-medium">{o.externalOrderId || o.id}</span>
+                  <span className="ml-2 text-base text-slate-500">{wrapPhaseLabel(o.wrapPhase)}</span>
+                </li>
+              ))
+            )}
+          </ul>
+        </section>
+      }
+      deliveries={
+        <section className="rounded-xl border border-slate-200 bg-white p-4">
+          <h2 className="text-2xl font-semibold text-slate-900">
+            Delivery history{delivered.length ? ` (${delivered.length})` : ""}
+          </h2>
+          <ul className="mt-4 space-y-3">
+            {delivered.length === 0 ? (
+              <li className="text-lg text-slate-600">No completed deliveries yet.</li>
+            ) : (
+              delivered.slice(0, 50).map((o) => (
+                <li key={o.id} className="rounded-lg border border-slate-100 px-4 py-3 text-lg">
+                  <span className="font-medium">{o.externalOrderId || o.id}</span>
+                  <span className="mt-1 block text-base text-slate-500">
+                    {o.recipientName} · {o.city}
+                    {o.updatedAt ? ` · ${new Date(o.updatedAt).toLocaleDateString()}` : ""}
+                  </span>
+                </li>
+              ))
+            )}
+          </ul>
+        </section>
+      }
+      availability={
+        <DriverAvailabilityPanel
+          weekStartMonday={week.weekStartMonday}
+          days={week.days}
+          initialDays={initialDays}
+          deadlineLabel={deadlineLabel}
+        />
+      }
+      earnings={null}
+      account={
+        <section>
+          <h2 className="mb-3 text-2xl font-semibold text-slate-900">Account</h2>
+          <ContractorAccountCard record={contractor} roleLabel="JoyRider" />
+        </section>
+      }
+      help={null}
+    />
   );
 }

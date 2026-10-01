@@ -13,7 +13,7 @@ export function LogoutButton({
 }) {
   const tone =
     variant === "gold"
-      ? "h-12 w-full border-[#f6b933] bg-[#f6b933] text-base text-[#0f0351] hover:bg-[#e5aa22]"
+      ? "h-14 w-full border-[#f6b933] bg-[#f6b933] text-lg text-[#0f0351] hover:bg-[#e5aa22]"
       : "border-[#1a3d2e]/60 bg-white text-[#0f241c] hover:bg-[#1a3d2e]/10 hover:border-[#1a3d2e]";
   return (
     <button
