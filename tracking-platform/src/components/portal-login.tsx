@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useState, useSyncExternalStore } from "react";
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -25,16 +25,26 @@ function inStandaloneApp() {
   );
 }
 
+function subscribeStandalone(onStoreChange: () => void) {
+  const standalone = window.matchMedia("(display-mode: standalone)");
+  const fullscreen = window.matchMedia("(display-mode: fullscreen)");
+  standalone.addEventListener("change", onStoreChange);
+  fullscreen.addEventListener("change", onStoreChange);
+  return () => {
+    standalone.removeEventListener("change", onStoreChange);
+    fullscreen.removeEventListener("change", onStoreChange);
+  };
+}
+
 export function PortalLogin({ appName, iconSrc, action, redirectTo, blurb }: Props) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [standalone, setStandalone] = useState(true);
+  const standalone = useSyncExternalStore(subscribeStandalone, inStandaloneApp, () => true);
   const [installEvent, setInstallEvent] = useState<BeforeInstallPromptEvent | null>(null);
   const [installed, setInstalled] = useState(false);
 
   useEffect(() => {
-    setStandalone(inStandaloneApp());
     const onPrompt = (event: Event) => {
       event.preventDefault();
       setInstallEvent(event as BeforeInstallPromptEvent);
