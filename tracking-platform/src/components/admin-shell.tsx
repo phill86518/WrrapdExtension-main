@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { ADMIN_NAV_LINKS, isAdminNavActive } from "@/components/admin-nav";
+import { ADMIN_NAV_GROUPS, isAdminNavActive } from "@/components/admin-nav";
 import { ServiceNavBadge } from "@/components/service-nav-badge";
 import { LogoutButton } from "@/components/logout-button";
 import { WrrapdLogo } from "@/components/wrrapd-logo";
@@ -52,25 +52,34 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             </Link>
           </div>
 
-          <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4" aria-label="Admin modules">
-            {ADMIN_NAV_LINKS.map((link) => {
-              const active = isAdminNavActive(pathname, link.href, link.match);
-              return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  onClick={closeNav}
-                  className={
-                    active
-                      ? "flex items-center rounded-xl bg-gradient-to-r from-[#c9a227] to-[#a88417] px-3 py-2.5 text-sm font-bold text-[#1a1a12] shadow-md"
-                      : "flex items-center rounded-xl px-3 py-2.5 text-sm font-medium text-slate-200 transition hover:bg-white/10 hover:text-white"
-                  }
-                >
-                  <span className="flex-1">{link.label}</span>
-                  {link.href === "/admin/service" ? <ServiceNavBadge /> : null}
-                </Link>
-              );
-            })}
+          <nav className="flex-1 space-y-4 overflow-y-auto px-3 py-4" aria-label="Admin modules">
+            {ADMIN_NAV_GROUPS.map((group) => (
+              <div key={group.label}>
+                <p className="px-3 pb-1 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">
+                  {group.label}
+                </p>
+                <div className="space-y-1">
+                  {group.links.map((link) => {
+                    const active = isAdminNavActive(pathname, link.href, link.match);
+                    return (
+                      <Link
+                        key={link.href}
+                        href={link.href}
+                        onClick={closeNav}
+                        className={
+                          active
+                            ? "flex items-center rounded-xl bg-gradient-to-r from-[#c9a227] to-[#a88417] px-3 py-2.5 text-sm font-bold text-[#1a1a12] shadow-md"
+                            : "flex items-center rounded-xl px-3 py-2.5 text-sm font-medium text-slate-200 transition hover:bg-white/10 hover:text-white"
+                        }
+                      >
+                        <span className="flex-1">{link.label}</span>
+                        {link.href === "/admin/service" ? <ServiceNavBadge /> : null}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </nav>
 
           <div className="hidden border-t border-white/10 p-4 lg:block">

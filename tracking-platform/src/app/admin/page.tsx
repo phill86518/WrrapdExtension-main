@@ -16,66 +16,100 @@ function pickSearchParam(v: string | string[] | undefined): string | undefined {
   return undefined;
 }
 
-const MODULES = [
+const MODULE_GROUPS = [
   {
-    href: "/admin/service",
-    title: "Customer service",
-    body: "Texts, photos, and calls to the Wrrapd number — shoppers, and WrapStar, JoyRider, and WrapRider applicants.",
+    title: "Today",
+    blurb: "Messages, gifts in motion, and who is working.",
+    modules: [
+      {
+        href: "/admin/service",
+        title: "Customer service",
+        body: "Texts, photos, and calls on the Wrrapd number.",
+      },
+      {
+        href: "/admin/orders",
+        title: "Orders",
+        body: "Active, scheduled, delinquent, and past gifts.",
+      },
+      {
+        href: "/admin/orders/calendar",
+        title: "Calendar",
+        body: "Every order by Eastern calendar day.",
+      },
+      {
+        href: "/admin/allocations",
+        title: "Allocations",
+        body: "Approve a nearby match, or assign a WrapStar and JoyRider by hand.",
+      },
+      {
+        href: "/admin/availability",
+        title: "Availability",
+        body: "Who can wrap or deliver this week.",
+      },
+    ],
   },
   {
-    href: "/admin/allocations",
-    title: "Allocations",
-    body: "Review 15-mile auto-matches. Approve to release onto Orders, WrapStars, and JoyRiders — or assign by hand.",
+    title: "People",
+    blurb: "Hire first, then open the roster for that role.",
+    modules: [
+      {
+        href: "/admin/applications",
+        title: "Applications",
+        body: "Review, interview, and activate WrapStar, JoyRider, and WrapRider applicants.",
+      },
+      {
+        href: "/admin/wrapstars",
+        title: "WrapStars",
+        body: "People who wrap the gift.",
+      },
+      {
+        href: "/admin/drivers",
+        title: "JoyRiders",
+        body: "People who deliver the wrapped gift.",
+      },
+      {
+        href: "/admin/wrapriders",
+        title: "WrapRiders",
+        body: "People who wrap and deliver the same gift.",
+      },
+    ],
   },
   {
-    href: "/admin/orders",
-    title: "Orders",
-    body: "Active, scheduled, delinquent, and past boards — WrapStar + JoyRider assignment.",
+    title: "Money",
+    blurb: "What we owe, and how the day went.",
+    modules: [
+      {
+        href: "/admin/finance",
+        title: "Finance & payouts",
+        body: "Hourly rates, wallets, and the payout export.",
+      },
+      {
+        href: "/admin/reports",
+        title: "Delivery reports",
+        body: "Daily numbers and a CSV export.",
+      },
+    ],
   },
   {
-    href: "/admin/orders/calendar",
-    title: "Orders calendar",
-    body: "Browse every order by Eastern calendar day.",
-  },
-  {
-    href: "/admin/applications",
-    title: "Applications",
-    body: "Review, interview, approve, and activate WrapStar, JoyRider, and WrapRider applicants.",
-  },
-  {
-    href: "/admin/wrapstars",
-    title: "WrapStars",
-    body: "Wrap-only gift-wrappers (IDs start with 8). Demo: Roger 8260981201, Taylor 8260965201.",
-  },
-  {
-    href: "/admin/drivers",
-    title: "JoyRiders",
-    body: "Deliver-only couriers (IDs start with 7). Demo: Devon 7260981201, Morgan 7261090301. App: /courier",
-  },
-  {
-    href: "/admin/wrapriders",
-    title: "WrapRiders",
-    body: "Hybrid wrap + deliver (IDs start with 6). Own board — not listed with WrapStars or JoyRiders. Demo: Alex 6260981201.",
-  },
-  {
-    href: "/admin/finance",
-    title: "Finance & payouts",
-    body: "Hourly ZIP rates, wallets, and ACH CSV export.",
-  },
-  {
-    href: "/admin/reports",
-    title: "Delivery reports",
-    body: "View daily metrics and export CSV for operations.",
-  },
-  {
-    href: "/admin/pricing",
-    title: "Checkout pricing",
-    body: "Commercial and geo pricing rules for checkout.",
-  },
-  {
-    href: "/admin/zip-codes",
-    title: "Allowed ZIP codes",
-    body: "Service-area allowlist for intake and allocation.",
+    title: "Setup",
+    blurb: "Rules that checkout and assignment already use.",
+    modules: [
+      {
+        href: "/admin/pricing",
+        title: "Checkout pricing",
+        body: "What the shopper is charged.",
+      },
+      {
+        href: "/admin/zip-codes",
+        title: "Allowed ZIP codes",
+        body: "Where we accept a gift.",
+      },
+      {
+        href: "/admin/printer-coverage",
+        title: "Custom-design coverage",
+        body: "Who can print a custom wrap.",
+      },
+    ],
   },
 ] as const;
 
@@ -162,7 +196,7 @@ export default async function AdminPage({
         <WrrapdLogo className="h-10 w-auto max-w-[180px] object-contain object-left" />
         <h1 className="mt-2 text-3xl font-bold tracking-tight text-[#0f172a]">WrapStars Command Center</h1>
         <p className="mt-1 text-sm font-medium text-[#2d4a38]">
-          Module hub — open Orders for boards, Applications for hiring, and the left rail for everything else.
+          Start with Today. People is hiring and rosters. Money is payouts. Setup is checkout rules.
         </p>
         <div className="mt-5 flex flex-wrap gap-3">
           <Link
@@ -192,32 +226,40 @@ export default async function AdminPage({
         </div>
       </div>
 
-      <section className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-        {MODULES.map((mod) => (
-          <Link
-            key={mod.href}
-            href={mod.href}
-            className="group relative overflow-hidden rounded-2xl border-2 border-[#1a2744]/35 bg-[#faf8f4] p-6 shadow-lg shadow-[#0f172a]/15 transition hover:border-[#c9a227] hover:shadow-xl"
-          >
-            <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-[#c9a227] via-amber-500 to-[#c9a227]" />
-            <h3 className="mt-2 font-bold text-[#0f172a]">{mod.title}</h3>
-            <p className="mt-2 text-sm leading-relaxed text-[#2d4a38]">{mod.body}</p>
-            {mod.href === "/admin/allocations" && allocationCount > 0 ? (
-              <p className="mt-3 text-xs font-bold uppercase tracking-wide text-amber-800">
-                {allocationCount} waiting for approval
-              </p>
-            ) : null}
-            {mod.href === "/admin/orders" && delinquentCount > 0 ? (
-              <p className="mt-3 text-xs font-bold uppercase tracking-wide text-rose-700">
-                {delinquentCount} delinquent need attention
-              </p>
-            ) : null}
-            <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-[#1a2744] group-hover:text-amber-700">
-              Open →
-            </p>
-          </Link>
-        ))}
-      </section>
+      {MODULE_GROUPS.map((group) => (
+        <section key={group.title} className="space-y-3">
+          <div>
+            <h2 className="text-xs font-bold uppercase tracking-[0.16em] text-[#1a2744]">{group.title}</h2>
+            <p className="mt-1 text-sm text-[#2d4a38]">{group.blurb}</p>
+          </div>
+          <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+            {group.modules.map((mod) => (
+              <Link
+                key={mod.href}
+                href={mod.href}
+                className="group relative overflow-hidden rounded-2xl border-2 border-[#1a2744]/35 bg-[#faf8f4] p-6 shadow-lg shadow-[#0f172a]/15 transition hover:border-[#c9a227] hover:shadow-xl"
+              >
+                <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-[#c9a227] via-amber-500 to-[#c9a227]" />
+                <h3 className="mt-2 font-bold text-[#0f172a]">{mod.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-[#2d4a38]">{mod.body}</p>
+                {mod.href === "/admin/allocations" && allocationCount > 0 ? (
+                  <p className="mt-3 text-xs font-bold uppercase tracking-wide text-amber-800">
+                    {allocationCount} waiting for approval
+                  </p>
+                ) : null}
+                {mod.href === "/admin/orders" && delinquentCount > 0 ? (
+                  <p className="mt-3 text-xs font-bold uppercase tracking-wide text-rose-700">
+                    {delinquentCount} delinquent need attention
+                  </p>
+                ) : null}
+                <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-[#1a2744] group-hover:text-amber-700">
+                  Open →
+                </p>
+              </Link>
+            ))}
+          </div>
+        </section>
+      ))}
     </div>
   );
 }
