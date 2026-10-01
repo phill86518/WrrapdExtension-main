@@ -100,11 +100,15 @@ export function WrapstarAppShell({
         }`}
         aria-hidden={!drawerOpen}
       >
-        <div className="border-b border-white/10 px-4 py-5">
-          <WrrapdLogo className="h-10 w-auto max-w-[180px] brightness-0 invert" />
-          <p className="mt-3 text-lg font-semibold tracking-tight">{appLabel}</p>
-          <p className="mt-0.5 truncate text-sm text-slate-300">{wrapstarName}</p>
-          <p className="mt-1 font-mono text-[11px] text-slate-500">ID {wrapstarId}</p>
+        <div className="border-b border-white/10">
+          <div className="bg-[#faf8f4] px-4 py-4">
+            <WrrapdLogo className="h-10 w-auto max-w-[180px] object-contain object-left" />
+          </div>
+          <div className="px-4 py-4">
+            <p className="text-lg font-semibold tracking-tight">{appLabel}</p>
+            <p className="mt-0.5 truncate text-sm text-slate-300">{wrapstarName}</p>
+            <p className="mt-1 font-mono text-[11px] text-slate-500">ID {wrapstarId}</p>
+          </div>
         </div>
         <nav className="flex-1 overflow-y-auto px-2 py-3">
           {nav.map((item) => {
@@ -125,8 +129,8 @@ export function WrapstarAppShell({
             );
           })}
         </nav>
-        <div className="border-t border-white/10 p-3">
-          <LogoutButton redirectPath={logoutPath} />
+        <div className="shrink-0 border-t border-white/10 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          <LogoutButton redirectPath={logoutPath} label="Log out" variant="gold" />
         </div>
       </aside>
 
