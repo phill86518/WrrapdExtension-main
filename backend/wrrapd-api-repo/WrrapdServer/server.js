@@ -21,6 +21,7 @@ const grokClient = require(path.join(__dirname, 'lib', 'grok-client'));
 const flowerStores = require(path.join(__dirname, 'lib', 'flowers', 'stores'));
 const flowerCatalog = require(path.join(__dirname, 'lib', 'flowers', 'catalog'));
 const orderEmails = require(path.join(__dirname, 'lib', 'order-emails'));
+const helcim = require(path.join(__dirname, 'lib', 'helcim'));
 
 // Initialize Google Cloud Storage
 let storageOptions = {
@@ -772,78 +773,196 @@ app.get('/api/flowers/catalog', async (req, res) => {
     }
 });
 
+/**
+ * Server-priced checkout total. Same rules for the quote and the Helcim charge.
+ * @returns {{ ok: true, amountCents: number, pricingDebug: object|null } | { ok: false, status: number, body: object }}
+ */
+function resolveCheckoutCharge(body, logLabel) {
+    const source = body && typeof body === 'object' ? body : {};
+    const { total, orderNumber, pricingCart } = source;
+    if (pricingCart != null && typeof pricingCart === 'object') {
+        const cart = wrrapdPricing.sanitizePricingCartFromRequest(pricingCart);
+        if (!cart || !Array.isArray(cart.items) || cart.items.length === 0) {
+            return { ok: false, status: 400, body: { error: 'pricingCart.items required' } };
+        }
+        for (const item of cart.items) {
+            for (const opt of item.options || []) {
+                if (!opt.checkbox_flowers || !opt.flower_offer_id) continue;
+                const chk = flowerCatalog.validateOfferAmount(opt.flower_offer_id, opt.flower_amount);
+                if (!chk.ok) {
+                    return {
+                        ok: false,
+                        status: 400,
+                        body: {
+                            error: 'Flower offer price mismatch or expired — refresh Add Flowers and try again',
+                            detail: chk.error,
+                            expected: chk.expected,
+                        },
+                    };
+                }
+                opt.flower_amount = chk.offer.chargedPrice;
+            }
+        }
+        const validated = wrrapdPricing.computeTotalCentsFromPricingCart(cart);
+        if (!validated.ok) {
+            return { ok: false, status: 400, body: { error: validated.error || 'Invalid cart total' } };
+        }
+        const subSum =
+            validated.breakdown.giftWrapTotal +
+            validated.breakdown.designAiTotal +
+            validated.breakdown.designUploadTotal +
+            validated.breakdown.flowersTotal;
+        if (!Number.isFinite(subSum) || subSum <= 0) {
+            return { ok: false, status: 400, body: { error: 'Zero or invalid Wrrapd subtotal' } };
+        }
+        const amountCents = validated.cents;
+        const pricingDebug = {
+            configVersion: validated.configVersion,
+            appliedRuleIds: validated.appliedRuleIds,
+            serverCents: amountCents,
+        };
+        if (total != null && total !== '') {
+            const clientCents = Math.round(Number(total));
+            if (Number.isFinite(clientCents) && Math.abs(clientCents - amountCents) > 1) {
+                console.warn(`[${logLabel}] client/server total mismatch`, {
+                    orderNumber: orderNumber || null,
+                    clientCents,
+                    serverCents: amountCents,
+                    postalCode: cart.postalCode,
+                    retailer: cart.retailer,
+                });
+                pricingDebug.clientCents = clientCents;
+                pricingDebug.adjusted = true;
+            }
+        }
+        return { ok: true, amountCents, pricingDebug };
+    }
+    const n = Math.round(Number(total));
+    if (!Number.isFinite(n) || n <= 0) {
+        return { ok: false, status: 400, body: { error: 'Invalid total amount' } };
+    }
+    return { ok: true, amountCents: n, pricingDebug: null };
+}
+
+function helcimBillingFromClient(raw) {
+    const b = raw && typeof raw === 'object' ? raw : {};
+    const addr = b.address && typeof b.address === 'object' ? b.address : {};
+    const name = String(b.name || '').trim().slice(0, 80);
+    const street1 = String(addr.line1 || '').trim().slice(0, 120);
+    const street2 = String(addr.line2 || '').trim().slice(0, 120);
+    const postal = String(addr.postal_code || addr.postalCode || '').replace(/\D/g, '').slice(0, 10);
+    const province = String(addr.state || '').trim().slice(0, 2).toUpperCase();
+    const city = String(addr.city || '').trim().slice(0, 80);
+    const phoneDigits = String(b.phone || '').replace(/\D/g, '').slice(0, 15);
+    const email = String(b.email || '').trim().slice(0, 120);
+    if (!name || !street1 || postal.length < 5) return null;
+    const out = {
+        name,
+        street1,
+        city,
+        province,
+        country: 'USA',
+        postalCode: postal,
+    };
+    if (street2) out.street2 = street2;
+    if (phoneDigits.length >= 10) out.phone = phoneDigits;
+    if (email.includes('@')) out.email = email;
+    return out;
+}
+
+function clientIpForHelcim(req) {
+    const xf = req.headers['x-forwarded-for'];
+    const first = typeof xf === 'string' ? xf.split(',')[0] : '';
+    return String(first || req.ip || '').replace(/^::ffff:/, '').trim() || '0.0.0.0';
+}
+
+app.get('/api/helcim-checkout-config', (req, res) => {
+    if (!req.isApiDomain) {
+        return res.status(403).send('Access forbidden.');
+    }
+    if (!helcim.enabled()) {
+        return res.status(503).json({ enabled: false });
+    }
+    return res.status(200).json({ enabled: true, jsToken: helcim.jsToken() });
+});
+
+app.post('/api/checkout-quote', (req, res) => {
+    if (!req.isApiDomain) {
+        return res.status(403).send('Access forbidden.');
+    }
+    const priced = resolveCheckoutCharge(req.body || {}, 'checkout-quote');
+    if (!priced.ok) return res.status(priced.status).json(priced.body);
+    return res.status(200).json({
+        serverCents: priced.amountCents,
+        ...(priced.pricingDebug ? { pricing: priced.pricingDebug } : {}),
+    });
+});
+
+app.post('/api/helcim-purchase', async (req, res) => {
+    if (!req.isApiDomain) {
+        return res.status(403).send('Access forbidden.');
+    }
+    if (!helcim.enabled()) {
+        return res.status(503).json({ error: 'Payment is not available. Please refresh the page.' });
+    }
+    const body = req.body && typeof req.body === 'object' ? req.body : {};
+    const cardToken = String(body.cardToken || '').trim();
+    if (!cardToken || cardToken.length > 80) {
+        return res.status(400).json({ error: 'Card could not be verified. Check the card and try again.' });
+    }
+    const priced = resolveCheckoutCharge(body, 'helcim-purchase');
+    if (!priced.ok) return res.status(priced.status).json(priced.body);
+    const billing = helcimBillingFromClient(body.billing);
+    if (!billing) {
+        return res.status(400).json({ error: 'Billing address is required.' });
+    }
+    try {
+        const result = await helcim.purchase({
+            amountCents: priced.amountCents,
+            cardToken,
+            orderNumber: body.orderNumber,
+            billing,
+            ipAddress: clientIpForHelcim(req),
+        });
+        const data = result.data || {};
+        if (!result.ok || !helcim.isApproved(data.status) || !data.transactionId) {
+            console.warn('[helcim-purchase] not approved', {
+                http: result.status,
+                orderNumber: body.orderNumber || null,
+                helcimStatus: data.status || null,
+            });
+            return res.status(402).json({ error: helcim.errorText(data) });
+        }
+        const chargedCents = Math.round(Number(data.amount) * 100);
+        if (Number.isFinite(chargedCents) && Math.abs(chargedCents - priced.amountCents) > 1) {
+            console.error('[helcim-purchase] amount mismatch', {
+                transactionId: data.transactionId,
+                chargedCents,
+                expectedCents: priced.amountCents,
+            });
+        }
+        return res.status(200).json({
+            paymentIntentId: String(data.transactionId),
+            ...(priced.pricingDebug ? { pricing: priced.pricingDebug } : {}),
+        });
+    } catch (error) {
+        console.error('[helcim-purchase]', error);
+        return res.status(500).json({ error: 'Payment could not complete. Please try again.' });
+    }
+});
+
 // Endpoint specific to api.wrrapd.com
 app.post('/create-payment-intent', async (req, res) => {
     if (!req.isApiDomain) {
         return res.status(403).send('Access forbidden.');
     }
 
-    const { total, orderNumber, pricingCart } = req.body || {};
+    const { orderNumber } = req.body || {};
 
     try {
-        let amountCents;
-        let pricingDebug = null;
-        if (pricingCart != null && typeof pricingCart === 'object') {
-            const cart = wrrapdPricing.sanitizePricingCartFromRequest(pricingCart);
-            if (!cart || !Array.isArray(cart.items) || cart.items.length === 0) {
-                return res.status(400).json({ error: 'pricingCart.items required' });
-            }
-            for (const item of cart.items) {
-                for (const opt of item.options || []) {
-                    if (!opt.checkbox_flowers || !opt.flower_offer_id) continue;
-                    const chk = flowerCatalog.validateOfferAmount(opt.flower_offer_id, opt.flower_amount);
-                    if (!chk.ok) {
-                        return res.status(400).json({
-                            error: 'Flower offer price mismatch or expired — refresh Add Flowers and try again',
-                            detail: chk.error,
-                            expected: chk.expected,
-                        });
-                    }
-                    opt.flower_amount = chk.offer.chargedPrice;
-                }
-            }
-            const validated = wrrapdPricing.computeTotalCentsFromPricingCart(cart);
-            if (!validated.ok) {
-                return res.status(400).json({ error: validated.error || 'Invalid cart total' });
-            }
-            const subSum =
-                validated.breakdown.giftWrapTotal +
-                validated.breakdown.designAiTotal +
-                validated.breakdown.designUploadTotal +
-                validated.breakdown.flowersTotal;
-            if (!Number.isFinite(subSum) || subSum <= 0) {
-                return res.status(400).json({ error: 'Zero or invalid Wrrapd subtotal' });
-            }
-            amountCents = validated.cents;
-            pricingDebug = {
-                configVersion: validated.configVersion,
-                appliedRuleIds: validated.appliedRuleIds,
-                serverCents: amountCents,
-            };
-            if (total != null && total !== '') {
-                const clientCents = Math.round(Number(total));
-                if (Number.isFinite(clientCents) && Math.abs(clientCents - amountCents) > 1) {
-                    // Charge the server-priced amount (giftee ZIP + tax table). Checkout
-                    // updates the on-page total from pricing.serverCents so the shopper
-                    // pays what we display — do not block the payment form.
-                    console.warn('[create-payment-intent] client/server total mismatch', {
-                        orderNumber: orderNumber || null,
-                        clientCents,
-                        serverCents: amountCents,
-                        postalCode: cart.postalCode,
-                        retailer: cart.retailer,
-                    });
-                    pricingDebug.clientCents = clientCents;
-                    pricingDebug.adjusted = true;
-                }
-            }
-        } else {
-            const n = Math.round(Number(total));
-            if (!Number.isFinite(n) || n <= 0) {
-                return res.status(400).json({ error: 'Invalid total amount' });
-            }
-            amountCents = n;
-        }
+        const priced = resolveCheckoutCharge(req.body || {}, 'create-payment-intent');
+        if (!priced.ok) return res.status(priced.status).json(priced.body);
+        const { amountCents, pricingDebug } = priced;
 
         const paymentIntent = await stripe.paymentIntents.create({
             amount: amountCents,
@@ -2321,11 +2440,26 @@ app.post('/process-payment', async (req, res) => {
         typeof req.body.gifterFullName === 'string' ? req.body.gifterFullName.trim() : '';
 
     try {
-        // Verify the PaymentIntent with Stripe
-        const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
-
-        if (paymentIntent.status !== 'succeeded') {
-            return res.status(400).json({ error: 'Payment not confirmed' });
+        // New checkout charges are Helcim transaction ids. In-flight Stripe
+        // checkouts still send a PaymentIntent id (pi_…).
+        let paymentIntent;
+        if (String(paymentIntentId).startsWith('pi_')) {
+            paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+            if (paymentIntent.status !== 'succeeded') {
+                return res.status(400).json({ error: 'Payment not confirmed' });
+            }
+        } else {
+            const txn = await helcim.getTransaction(paymentIntentId);
+            const data = txn.data || {};
+            const purchaseType = String(data.type || '').toLowerCase() === 'purchase';
+            if (!txn.ok || !helcim.isApproved(data.status) || !purchaseType || !data.transactionId) {
+                return res.status(400).json({ error: 'Payment not confirmed' });
+            }
+            paymentIntent = {
+                id: String(data.transactionId),
+                amount: Math.round(Number(data.amount) * 100),
+                status: 'succeeded',
+            };
         }
 
         const existingOrder = findExistingOrderByPaymentIntent(paymentIntentId);
