@@ -64,7 +64,7 @@ export function WrapstarAppShell({
   sectionLabels,
 }: Props) {
   const [section, setSection] = useState<WrapstarNavSection>(initialSection);
-  const [drawerOpen, setDrawerOpen] = useState(true);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const allowed = sections ?? (deliveries === undefined ? NAV.filter((n) => n.id !== "deliveries").map((n) => n.id) : NAV.map((n) => n.id));
   const nav = allowed
     .map((id) => {
@@ -98,7 +98,7 @@ export function WrapstarAppShell({
   const title = nav.find((n) => n.id === section)?.label ?? appLabel;
 
   return (
-    <div className="relative min-h-screen bg-slate-50">
+    <div className="flex h-dvh flex-col bg-[#f4f1ea] text-[#0f0351]">
       {drawerOpen ? (
         <button
           type="button"
@@ -116,22 +116,22 @@ export function WrapstarAppShell({
       >
         <div className="border-b border-white/10">
           <div className="bg-[#faf8f4] px-5 py-5">
-            <WrrapdLogo className="h-12 w-auto max-w-[210px] object-contain object-left" />
+            <WrrapdLogo className="h-14 w-auto max-w-[220px] object-contain object-left" />
           </div>
           <div className="px-5 py-5">
-            <p className="text-2xl font-semibold tracking-tight">{appLabel}</p>
+            <p className="text-3xl font-semibold tracking-tight">{appLabel}</p>
             <button
               type="button"
-              className="mt-3 text-lg font-semibold text-white/80 underline"
+              className="mt-3 text-xl font-semibold text-white/80 underline"
               onClick={() => setDrawerOpen(false)}
             >
               Close menu
             </button>
-            <p className="mt-1 truncate text-lg text-slate-200">{wrapstarName}</p>
-            <p className="mt-1 font-mono text-sm text-slate-400">ID {wrapstarId}</p>
+            <p className="mt-2 truncate text-xl text-slate-200">{wrapstarName}</p>
+            <p className="mt-1 font-mono text-base text-slate-400">ID {wrapstarId}</p>
           </div>
         </div>
-        <nav className="flex-1 space-y-2 overflow-y-auto px-3 py-4">
+        <nav className="flex flex-1 flex-col justify-evenly overflow-y-auto px-3 py-4">
           {nav.map((item) => {
             const active = section === item.id;
             return (
@@ -139,10 +139,8 @@ export function WrapstarAppShell({
                 key={item.id}
                 type="button"
                 onClick={() => go(item.id)}
-                className={`flex w-full items-center rounded-2xl px-4 py-4 text-left text-lg font-semibold leading-snug ${
-                  active
-                    ? "bg-[#f6b933] text-[#0f0351]"
-                    : "text-white hover:bg-white/10"
+                className={`flex w-full items-center rounded-2xl px-4 py-5 text-left text-xl font-semibold leading-snug ${
+                  active ? "bg-[#f6b933] text-[#0f0351]" : "text-white hover:bg-white/10"
                 }`}
               >
                 {item.label}
@@ -155,14 +153,14 @@ export function WrapstarAppShell({
         </div>
       </aside>
 
-      <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-slate-200 bg-white/95 px-3 py-3 backdrop-blur">
+      <header className="flex shrink-0 items-center gap-3 border-b border-[#0c0638]/10 bg-white px-4 py-4">
         <button
           type="button"
-          className="flex h-14 items-center gap-2 rounded-2xl bg-[#f6b933] px-4 text-lg font-bold text-[#0f0351] shadow-sm"
+          className="flex h-16 items-center gap-2 rounded-2xl bg-[#f6b933] px-5 text-xl font-bold text-[#0f0351] shadow-sm"
           aria-label="Open menu"
           onClick={() => setDrawerOpen(true)}
         >
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden>
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden>
             <path
               d="M4 7h16M4 12h16M4 17h16"
               stroke="currentColor"
@@ -173,46 +171,38 @@ export function WrapstarAppShell({
           Menu
         </button>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-xl font-semibold text-slate-900">{title}</p>
-          <p className="truncate text-base text-slate-500">{appLabel}</p>
+          <p className="truncate text-2xl font-bold text-[#0f0351]">{title}</p>
+          <p className="truncate text-lg text-[#0f0351]/70">{appLabel}</p>
         </div>
       </header>
 
-      <main className="mx-auto max-w-3xl px-4 py-4 pb-10">
-        <nav aria-label="Pages" className="-mx-4 mb-5 flex gap-3 overflow-x-auto px-4 pb-1">
-          {nav.map((item) => {
-            const active = section === item.id;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => go(item.id)}
-                className={`shrink-0 rounded-full px-5 py-3 text-lg font-bold ${
-                  active ? "bg-[#0c0638] text-white" : "border-2 border-slate-200 bg-white text-[#0f0351]"
-                }`}
-              >
-                {item.label}
-              </button>
-            );
-          })}
-        </nav>
-        {installCard && section === "today" ? <div className="mb-4">{installCard}</div> : null}
-        {body}
-        <nav aria-label="More pages" className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {nav
-            .filter((item) => item.id !== section)
-            .map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => go(item.id)}
-                className="rounded-2xl border-2 border-slate-200 bg-white px-5 py-4 text-left text-lg font-bold leading-snug text-[#0f0351]"
-              >
-                {item.label}
-              </button>
-            ))}
-        </nav>
+      <main className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+        <div className="mx-auto my-auto w-full max-w-3xl space-y-6 px-5 py-8 [&_h2]:text-3xl [&_h3]:text-2xl [&_label]:text-xl [&_li]:text-xl [&_p]:text-xl [&_summary]:text-2xl">
+          {installCard && section === "today" ? <div>{installCard}</div> : null}
+          {body}
+        </div>
       </main>
+
+      <nav
+        aria-label="Pages"
+        className="grid shrink-0 grid-cols-2 gap-2 border-t border-[#0c0638]/10 bg-white px-3 py-3 [padding-bottom:max(0.75rem,env(safe-area-inset-bottom))]"
+      >
+        {nav.map((item) => {
+          const active = section === item.id;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => go(item.id)}
+              className={`rounded-2xl px-3 py-4 text-lg font-bold leading-tight ${
+                active ? "bg-[#0c0638] text-white" : "bg-[#f4f1ea] text-[#0f0351]"
+              }`}
+            >
+              {item.label}
+            </button>
+          );
+        })}
+      </nav>
     </div>
   );
 }

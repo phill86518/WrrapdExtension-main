@@ -80,19 +80,18 @@ export function PortalLogin({ appName, iconSrc, action, redirectTo, blurb }: Pro
   }
 
   return (
-    <main className="flex min-h-dvh items-center justify-center bg-[#0c0638] px-4 py-8 text-[#0f0351] [padding-bottom:max(2rem,env(safe-area-inset-bottom))] [padding-top:max(2rem,env(safe-area-inset-top))]">
-      <div className="w-full max-w-[520px]">
-        <div className="mb-8 flex flex-col items-center text-center">
-          <img
-            src={iconSrc}
-            alt=""
-            width={148}
-            height={148}
-            className="h-36 w-36 rounded-[32px] bg-white shadow-lg"
-          />
-          <h1 className="mt-6 text-5xl font-bold tracking-tight text-white">{appName}</h1>
-          <p className="mt-3 text-2xl leading-snug text-white/90">{blurb}</p>
-        </div>
+    <main className="flex min-h-dvh flex-col justify-between bg-[#0c0638] px-5 py-8 text-[#0f0351] [padding-bottom:max(1.5rem,env(safe-area-inset-bottom))] [padding-top:max(1.5rem,env(safe-area-inset-top))]">
+      <div className="flex flex-1 flex-col items-center justify-center text-center">
+        <img
+          src={iconSrc}
+          alt=""
+          width={160}
+          height={160}
+          className="h-40 w-40 rounded-[36px] bg-white shadow-lg"
+        />
+        <h1 className="mt-6 text-6xl font-bold tracking-tight text-white">{appName}</h1>
+        <p className="mt-4 max-w-md text-3xl leading-snug text-white/90">{blurb}</p>
+      </div>
 
         {!standalone && !installed ? (
           <div className="mb-6 rounded-3xl border border-white/20 bg-white/10 p-5 text-white">
@@ -117,7 +116,7 @@ export function PortalLogin({ appName, iconSrc, action, redirectTo, blurb }: Pro
         ) : null}
 
         <form onSubmit={onSubmit} className="rounded-[28px] bg-white p-7 shadow-2xl">
-          <label className="block text-xl font-semibold" htmlFor="portal-email">
+          <label className="block text-2xl font-semibold" htmlFor="portal-email">
             Email
           </label>
           <input
@@ -129,10 +128,10 @@ export function PortalLogin({ appName, iconSrc, action, redirectTo, blurb }: Pro
             autoCapitalize="none"
             placeholder="you@email.com"
             required
-            className="mt-3 h-16 w-full rounded-2xl border-2 border-slate-200 bg-white px-4 text-2xl text-[#0f0351] outline-none placeholder:text-slate-400 focus:border-[#f6b933]"
+            className="mt-3 h-[4.5rem] w-full rounded-2xl border-2 border-slate-200 bg-white px-4 text-3xl text-[#0f0351] outline-none placeholder:text-slate-400 focus:border-[#f6b933]"
           />
 
-          <label className="mt-6 block text-xl font-semibold" htmlFor="portal-password">
+          <label className="mt-6 block text-2xl font-semibold" htmlFor="portal-password">
             Password
           </label>
           <div className="relative mt-3">
@@ -143,7 +142,7 @@ export function PortalLogin({ appName, iconSrc, action, redirectTo, blurb }: Pro
               autoComplete="current-password"
               placeholder="Password"
               required
-              className="h-16 w-full rounded-2xl border-2 border-slate-200 bg-white px-4 pr-28 text-2xl text-[#0f0351] outline-none placeholder:text-slate-400 focus:border-[#f6b933]"
+              className="h-[4.5rem] w-full rounded-2xl border-2 border-slate-200 bg-white px-4 pr-28 text-3xl text-[#0f0351] outline-none placeholder:text-slate-400 focus:border-[#f6b933]"
             />
             <button
               type="button"
@@ -154,7 +153,7 @@ export function PortalLogin({ appName, iconSrc, action, redirectTo, blurb }: Pro
             </button>
           </div>
 
-          <p className="mt-5 text-lg leading-relaxed text-slate-600">
+          <p className="mt-5 text-xl leading-relaxed text-slate-600">
             Use the email and password from your onboarding. Staff testing: admin@wrrapd.com and the
             Command Center password.
           </p>
@@ -168,12 +167,11 @@ export function PortalLogin({ appName, iconSrc, action, redirectTo, blurb }: Pro
           <button
             type="submit"
             disabled={loading}
-            className="mt-6 h-16 w-full rounded-2xl bg-[#f6b933] text-2xl font-bold text-[#0f0351] disabled:opacity-60"
+            className="mt-6 h-[4.5rem] w-full rounded-2xl bg-[#f6b933] text-3xl font-bold text-[#0f0351] disabled:opacity-60"
           >
             {loading ? "Signing in…" : "Sign in"}
           </button>
         </form>
-      </div>
     </main>
   );
 }
