@@ -1,26 +1,62 @@
 import type { MetadataRoute } from "next";
+import { headers } from "next/headers";
+import { portalKindForHost, type PortalKind } from "@/lib/portal-hosts";
 
-export default function manifest(): MetadataRoute.Manifest {
+const APPS: Record<
+  PortalKind,
+  { name: string; short_name: string; description: string; start_url: string }
+> = {
+  wrapstar: {
+    name: "WrapStar",
+    short_name: "WrapStar",
+    description: "Wrap gifts for Wrrapd.",
+    start_url: "/",
+  },
+  joyrider: {
+    name: "JoyRider",
+    short_name: "JoyRider",
+    description: "Deliver gifts for Wrrapd.",
+    start_url: "/",
+  },
+  wraprider: {
+    name: "WrapRider",
+    short_name: "WrapRider",
+    description: "Wrap and deliver gifts for Wrrapd.",
+    start_url: "/",
+  },
+};
+
+export default async function manifest(): Promise<MetadataRoute.Manifest> {
+  const h = await headers();
+  const kind = portalKindForHost(h.get("x-forwarded-host") || h.get("host"));
+  const app = kind ? APPS[kind] : APPS.wrapstar;
+  const key = kind ?? "wrapstar";
   return {
-    name: "Wrrapd WrapStar",
-    short_name: "W",
-    description: "WrapStar App for wrap jobs, shift video proof, and handoff.",
-    start_url: "/wrapstar",
+    name: app.name,
+    short_name: app.short_name,
+    description: app.description,
+    start_url: app.start_url,
     display: "standalone",
-    background_color: "#0f172a",
-    theme_color: "#0f172a",
+    background_color: "#ffffff",
+    theme_color: "#0f0351",
     orientation: "portrait",
     icons: [
       {
-        src: "/icons/w-mark.svg",
-        sizes: "any",
-        type: "image/svg+xml",
+        src: `/icons/app-${key}-192.png`,
+        sizes: "192x192",
+        type: "image/png",
         purpose: "any",
       },
       {
-        src: "/icons/w-mark.svg",
+        src: `/icons/app-${key}-512.png`,
         sizes: "512x512",
-        type: "image/svg+xml",
+        type: "image/png",
+        purpose: "any",
+      },
+      {
+        src: `/icons/app-${key}-512.png`,
+        sizes: "512x512",
+        type: "image/png",
         purpose: "maskable",
       },
     ],
