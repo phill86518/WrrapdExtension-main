@@ -68,7 +68,8 @@ export default async function AdminAvailabilityPage({
   await ensureDemoStaffing();
 
   const sp = await searchParams;
-  const todayKey = formatInTimeZone(new Date(), "America/New_York", "yyyy-MM-dd");
+  const now = new Date();
+  const todayKey = formatInTimeZone(now, "America/New_York", "yyyy-MM-dd");
   const dateKey = pick(sp.date) || todayKey;
   const ym = pick(sp.ym) || dateKey.slice(0, 7);
   const [yStr, mStr] = ym.split("-");
@@ -79,7 +80,7 @@ export default async function AdminAvailabilityPage({
   const weekStart = mondayOfWeekContaining(parseISO(`${dateKey}T12:00:00`));
   const deadline = availabilityDeadlineForWeekMonday(weekStart);
   const deadlineLabel = formatInTimeZone(deadline, "America/New_York", "EEE MMM d, h:mm a zzz");
-  const pastDeadline = Date.now() > deadline.getTime();
+  const pastDeadline = now.getTime() > deadline.getTime();
 
   const [wrapstars, joyriders, records] = await Promise.all([
     listWrapstars(),
