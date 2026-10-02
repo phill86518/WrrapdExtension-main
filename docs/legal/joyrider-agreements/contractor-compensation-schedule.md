@@ -28,9 +28,11 @@ address and flower pairing; and final delivery of gifts and/or flowers.
 
 A wrapping-pace rule does **not** apply to JoyRider hours.
 
-## 4. Minimum hour and incentives
+## 4. Estimated hours, and no extra pay for delay
 
-Each accepted delivery window actually commenced is paid **not less than one (1) hour**.
+Delivery pay is the hourly rate times **estimated hours** for each route the JoyRider actually starts. The estimate uses planned stops (15 minutes each) plus planned drive distance at 25 miles per hour. It is fixed when the route is assigned.
+
+Traffic, congestion, detours, weather, parking, waiting, and any other delay do **not** increase the hours or the pay. Actual elapsed time is not the measure of pay. A route that is not started is unpaid.
 
 From time to time — especially in higher-demand periods — Wrrapd may publish
 **discretionary incentive or bonus compensation** (peak-period or completion bonuses).
@@ -38,7 +40,7 @@ Terms apply only for the stated period.
 
 ## 5. Accrual and pay calendar
 
-Hours accrue under Section 4 for accepted windows actually worked. Wrrapd pays on
+Pay follows the estimated hours in Section 4. Wrrapd pays on
 the then-published payout calendar (direct deposit). Wrrapd may offset or withhold
 for fraud, failed scans or proof, overpayment, no-show reassignment cost, or amounts
 the contractor owes Wrrapd.

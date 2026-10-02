@@ -19,7 +19,7 @@
 | Tips | **Not** part of WrapStar pay unless Schedule later changes |
 | Insurance | **No commercial mandate** in TSA §10 |
 | Confidentiality | TSA §12; indefinite survival for personal/gift data |
-| Arbitration seat | **Duval County, Florida** |
+| Arbitration seat | **Pinellas County, Florida** |
 | Signing | Blank signature / initials lines in each PDF (wet-ink or in-document e-sign) |
 
 ---
@@ -35,7 +35,7 @@
 | File | Role |
 |------|------|
 | `01_WrapStar_Technology_Services_Agreement.md` | Master IC — wrap-only |
-| `02_Mutual_Arbitration_Agreement.md` | Duval County, FL arbitration |
+| `02_Mutual_Arbitration_Agreement.md` | Pinellas County, FL arbitration |
 | `03_Background_Check_Authorization.md` | FCRA (no routine MVR) |
 | `04_WrapStar_Code_of_Conduct.md` | Behavioral guidelines |
 | `05_Third_Party_Litigation_Funding_Disclosure.md` | Funding disclosure |

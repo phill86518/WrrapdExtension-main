@@ -65,15 +65,14 @@ stock a WrapStar’s studio. Minimum kit:
 Ribbon, tissue, and tags follow the order card; if an order specifies a material Wrrapd
 will supply, that is called out on the order. Otherwise the WrapStar supplies it.
 
-### Pace, floor, and fractional hours (very important)
+### Clock time, half-hour floor, twelve-an-hour cap (very important)
 
-Conversion rate: **12 finished gifts = 1 paid hour**.
+Paid time for a started wrap window with at least one finished gift runs from the
+App clock-in timestamp to the App clock-out timestamp, including fractions of an hour.
 
-For each accepted wrap window with at least one finished gift (or other recorded
-wrapping work), paid hours = the **greater of**:
-
-1. **1 hour** (floor — e.g. 4 gifts still pay 1 full hour), or  
-2. **finished gifts ÷ 12** (fractional hours allowed — e.g. 37 gifts = 3 + 1/12 hours).
+That paid time is **not less than one-half hour** and **not more than** finished gifts ÷ 12.
+Extra time beyond 12 finished gifts an hour is unpaid. Finishing faster than that pace
+pays the actual clock time, still subject to the half-hour floor.
 
 A gift counts as finished only when it is wrapped to standard, documented (live session
 and proof), sealed/labeled (including delivery barcode), and ready for JoyRider pickup.
@@ -87,18 +86,21 @@ From time to time — especially higher-demand periods — Wrrapd may publish
 
 ### How hours are counted
 
-Wrapping pay follows the floor + gifts÷12 rule above for accepted wrap windows (the
-same windows the JoyRider uses for drop-off and pickup), not “time the app was open.”
-The ledger implementation (finished gifts → paid hours → earnings row) follows this
-doc; until that ledger ships, Command Center still holds the rates and ops can compute
-a batch by hand.
+Wrapping pay follows the clock, the half-hour floor, and the twelve-an-hour cap above.
+The weekly payout uses those App timestamps.
 
 ---
 
 ## JoyRiders
 
-JoyRiders are also **hourly**, same ZIP lookup, **no** 12-gifts pace rule (that is
-WrapStar-only). JoyRider hours are the accepted delivery / logistics windows.
+JoyRiders are **hourly**, same ZIP lookup, **no** 12-gifts pace rule (that is
+WrapStar-only). Pay is the hourly rate times **estimated** delivery hours for each
+route actually started (15 minutes per planned stop plus planned miles at 25 mph).
+Traffic and other delays do not increase the hours or the pay.
+
+WrapRiders are paid **$2.50 per finished gift** plus the same estimated delivery hours
+at the WrapRider hourly rate. Time spent wrapping does not add hourly pay on top of
+the per-gift amount. Traffic and other delays do not increase delivery pay.
 
 ### What a JoyRider does in a window
 

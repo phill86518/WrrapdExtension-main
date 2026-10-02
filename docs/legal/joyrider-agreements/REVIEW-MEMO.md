@@ -18,7 +18,7 @@
 | Age | **21+** |
 | Insurance | Legally required **automobile** insurance |
 | Pay | **Hourly by ZIP** (no 12-gift pace) |
-| Arbitration | **Duval County, Florida** |
+| Arbitration | **Pinellas County, Florida** |
 | Signing | Blank signature / initials lines in each PDF |
 
 ---

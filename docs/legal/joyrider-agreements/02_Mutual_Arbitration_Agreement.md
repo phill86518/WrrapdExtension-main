@@ -25,17 +25,17 @@ This Mutual Arbitration Agreement (the “**Arbitration Agreement**”) is enter
 
 2.1 This Arbitration Agreement and any arbitration hereunder shall be governed by the laws of the **State of Florida**, without regard to conflict-of-law principles that would defeat the Parties’ choice of Florida law or the seat specified herein, except where the Federal Arbitration Act controls.
 
-2.2 The **seat of arbitration** shall be **Duval County, State of Florida**.
+2.2 The **seat of arbitration** shall be **Pinellas County, State of Florida**.
 
-2.3 Hearings may be conducted in Duval County, Florida, or, by agreement of the Parties or order of the arbitrator, by videoconference or other remote means, provided that the legal seat remains Duval County, Florida.
+2.3 Hearings may be conducted in Pinellas County, Florida, or, by agreement of the Parties or order of the arbitrator, by videoconference or other remote means, provided that the legal seat remains Pinellas County, Florida.
 
-2.4 If any Dispute proceeds in court notwithstanding this Arbitration Agreement (including under Section 5 or upon a final determination that a claim is non-arbitrable), the Parties consent to the **exclusive jurisdiction and venue** of the state or federal courts located in **Duval County, Florida**, and waive any objection based on inconvenient forum.
+2.4 If any Dispute proceeds in court notwithstanding this Arbitration Agreement (including under Section 5 or upon a final determination that a claim is non-arbitrable), the Parties consent to the **exclusive jurisdiction and venue** of the state or federal courts located in **Pinellas County, Florida**, and waive any objection based on inconvenient forum.
 
 ---
 
 ## 3. Administrator; Rules; Initiation
 
-3.1 Arbitration shall be administered by the **American Arbitration Association (“AAA”)** under its Commercial Arbitration Rules (or, if AAA determines they apply, its Consumer Arbitration Rules), as modified by this Arbitration Agreement. If AAA is unavailable or unwilling to administer the arbitration, the Parties shall use **JAMS** under its applicable Comprehensive or Streamlined Rules. If neither is available, the Parties shall select a mutually agreeable arbitrator in Duval County, Florida; if they cannot agree within thirty (30) days, a court in Duval County, Florida may appoint an arbitrator.
+3.1 Arbitration shall be administered by the **American Arbitration Association (“AAA”)** under its Commercial Arbitration Rules (or, if AAA determines they apply, its Consumer Arbitration Rules), as modified by this Arbitration Agreement. If AAA is unavailable or unwilling to administer the arbitration, the Parties shall use **JAMS** under its applicable Comprehensive or Streamlined Rules. If neither is available, the Parties shall select a mutually agreeable arbitrator in Pinellas County, Florida; if they cannot agree within thirty (30) days, a court in Pinellas County, Florida may appoint an arbitrator.
 
 3.2 A Party may initiate arbitration by filing a demand with the administrator in accordance with its rules and providing notice to the other Party as required by the Services Agreement or applicable law.
 
@@ -51,7 +51,7 @@ This Mutual Arbitration Agreement (the “**Arbitration Agreement**”) is enter
 
 4.3 **Jury trial waiver.** To the fullest extent permitted by law, each Party waives any right to a jury trial for any Dispute.
 
-4.4 **Severability of waiver.** If a court or arbitrator determines that the class/collective waiver in this Section 4 is unenforceable as to a particular claim, that claim (and only that claim) shall proceed in court in Duval County, Florida, and not in arbitration. All other arbitrable claims remain subject to arbitration.
+4.4 **Severability of waiver.** If a court or arbitrator determines that the class/collective waiver in this Section 4 is unenforceable as to a particular claim, that claim (and only that claim) shall proceed in court in Pinellas County, Florida, and not in arbitration. All other arbitrable claims remain subject to arbitration.
 
 ---
 
@@ -59,9 +59,9 @@ This Mutual Arbitration Agreement (the “**Arbitration Agreement**”) is enter
 
 Notwithstanding Section 1, either Party may:
 
-5.1 Seek **temporary, preliminary, or permanent injunctive or other equitable relief** in a court of competent jurisdiction in Duval County, Florida, to protect intellectual property, Confidential Information, Platform or JoyRider App integrity, or customer goods in logistics custody (including claims relating to theft, conversion, or unauthorized retention of goods), without waiving the right to arbitration of related damages claims;
+5.1 Seek **temporary, preliminary, or permanent injunctive or other equitable relief** in a court of competent jurisdiction in Pinellas County, Florida, to protect intellectual property, Confidential Information, Platform or JoyRider App integrity, or customer goods in logistics custody (including claims relating to theft, conversion, or unauthorized retention of goods), without waiving the right to arbitration of related damages claims;
 
-5.2 Bring an individual action in **small claims court** in Duval County, Florida (or the small claims court of competent jurisdiction for the claim), if the claim qualifies and remains individual; and
+5.2 Bring an individual action in **small claims court** in Pinellas County, Florida (or the small claims court of competent jurisdiction for the claim), if the claim qualifies and remains individual; and
 
 5.3 Pursue claims that applicable law prohibits from being subject to predispute arbitration, but only to the minimum extent so required.
 

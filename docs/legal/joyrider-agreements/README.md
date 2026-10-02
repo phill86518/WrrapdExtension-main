@@ -3,7 +3,7 @@
 JoyRider (courier / logistics) onboarding agreements. Signature / initials fields are blank lines for wet-ink or in-document e-sign.  
 **Public name:** JoyRider. Code/URLs may still say `driver` / `/drive/`.
 
-**Current scope:** PO Box/hub inbound → drop/pickup at wrapping location → floral hops when assigned → barcode scan → final delivery via the **JoyRider App**. **No wrapping.** Age **21+**. Legally required **auto insurance**. Hourly-by-ZIP pay. Arbitration: **Duval County, Florida**.
+**Current scope:** PO Box/hub inbound → drop/pickup at wrapping location → floral hops when assigned → barcode scan → final delivery via the **JoyRider App**. **No wrapping.** Age **21+**. Legally required **auto insurance**. Hourly-by-ZIP pay. Arbitration: **Pinellas County, Florida**.
 
 ## Documents
 

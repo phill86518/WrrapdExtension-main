@@ -19,23 +19,27 @@ Amounts may differ by **ZIP code** (exact ZIP or 3-digit prefix).
 For the contractor’s home / assigned work ZIP: exact ZIP override, else 3-digit
 prefix override, else the WrapStar default.
 
-## 3. Pace, floor, and fractional hours
+## 3. Clock time, half-hour floor, twelve-an-hour cap
 
-The wrapping conversion rate is **twelve (12) finished gifts = one (1) paid hour**.
+Paid time for a wrap window that was started and has at least one finished gift
+runs from the App clock-in timestamp to the App clock-out timestamp, including
+fractions of an hour.
 
-For each accepted wrap window in which at least one gift is finished (or assigned
-wrapping work is otherwise recorded in the App), paid hours equal the **greater of**:
+That paid time is:
 
-1. **one (1) hour** (the floor), or  
-2. **finished gifts ÷ 12** (including fractional hours).
+1. **not less than one-half hour**, and
+2. **not more than** finished gifts ÷ 12.
+
+Extra time beyond twelve finished gifts an hour is unpaid. Finishing faster than
+that pace pays the actual clock time, still subject to the half-hour floor.
 
 **Examples**
 
-| Finished gifts | Paid hours |
-|----------------|------------|
-| 4 | 1 hour (floor) |
-| 12 | 1 hour |
-| 37 | 3 hours + 1/12 hour |
+| Clock | Finished gifts | Paid time |
+|-------|----------------|-----------|
+| 2 hours | 12 | 1 hour (pace cap) |
+| 40 minutes | 12 | 40 minutes |
+| 20 minutes | 3 | 30 minutes (half-hour floor) |
 
 A gift is “finished” when it is wrapped to published standards, documented (live
 session and proof), labeled (including the delivery barcode), and ready for collection.
@@ -56,8 +60,8 @@ states that Wrrapd will supply a material.
 
 ## 6. Accrual and pay calendar
 
-Wrapping pay is calculated under Section 3 from finished gifts (with the one-hour
-floor). Wrrapd pays on the then-published payout calendar (direct deposit). Wrrapd may
+Wrapping pay is calculated under Section 3 from App timestamps, the half-hour floor,
+and the twelve-gifts-an-hour cap. Wrrapd pays on the then-published payout calendar (direct deposit). Wrrapd may
 offset or withhold for fraud, failed proof, skipped live session, overpayment,
 no-show reassignment cost, or amounts the contractor owes Wrrapd.
 

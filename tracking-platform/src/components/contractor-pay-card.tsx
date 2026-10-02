@@ -32,12 +32,11 @@ export async function ContractorPayCard({
     <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
       <h2 className="text-lg font-semibold text-slate-900">This week</h2>
       <p className="mt-1 text-sm text-slate-600">
-        {formatUsdCents(line.hourlyRateCents)} an hour
-        {role === "wrapstar"
-          ? " · 12 finished gifts count as one hour, with a one-hour floor"
-          : role === "wraprider"
-            ? " · wrapping uses 12 gifts an hour; each delivery window is at least one hour"
-            : " · each delivery window you start is at least one hour"}
+        {role === "wraprider"
+          ? `$2.50 per finished gift, plus ${formatUsdCents(line.hourlyRateCents)} an hour for estimated delivery time. Traffic does not add pay`
+          : role === "wrapstar"
+            ? `${formatUsdCents(line.hourlyRateCents)} an hour from your clock-in and clock-out. At least half an hour, and no more than 12 finished gifts an hour`
+            : `${formatUsdCents(line.hourlyRateCents)} an hour for estimated delivery time. Traffic does not add pay`}
         .
       </p>
       <p className="mt-3 text-3xl font-semibold text-slate-900">{formatUsdCents(line.amountCents)}</p>

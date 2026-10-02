@@ -9,7 +9,7 @@ Contractor agreement packets for wet-ink or in-document electronic signature / i
 | **WrapRider** | [wraprider-agreements/](./wraprider-agreements/) | Hybrid wrap **and** deliver (WrapRider App) |
 | Pay index (ops) | [contractor-compensation-schedule.md](./contractor-compensation-schedule.md) | Points at three role-only schedules |
 
-Each suite has five companion documents (IC/TSA, Arbitration — Duval County, FL, Background, Code of Conduct, Litigation Funding), plus README, REVIEW-MEMO, `branded/` HTML, and downloadable **PDFs**.
+Each suite has five companion documents (IC/TSA, Arbitration — Pinellas County, FL, Background, Code of Conduct, Litigation Funding), plus README, REVIEW-MEMO, `branded/` HTML, and downloadable **PDFs**.
 
 Regenerate PDFs after editing any `.md`:
 

@@ -176,11 +176,8 @@ def md_to_html_body(md: str) -> str:
 
 
 def resolve_sig_src() -> str:
-    """Relative path for browser HTML; absolute file URI also works."""
-    local = Path(__file__).resolve().parent / "rp-signature.png"
-    if local.is_file():
-        return "rp-signature.png"
-    return "../samples/RP_signatures.jpg"
+    """No personal or company signature image in branded HTML."""
+    return ""
 
 def wrap_document(filename: str, body: str) -> str:
     title = filename.replace(".md", "").replace("_", " ")
@@ -212,7 +209,7 @@ def wrap_document(filename: str, body: str) -> str:
 {body}
     </main>
     <footer class="doc-footer">
-      © 2026 Wrrapd Inc. · WrapStar contractor documentation · Duval County, Florida
+      © 2026 Wrrapd Inc. · WrapStar contractor documentation · Pinellas County, Florida
     </footer>
   </article>
 </body>

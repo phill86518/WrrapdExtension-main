@@ -10,8 +10,8 @@ Effective: 2026-09-22 until superseded in Command Center → Finance → Hourly 
 
 ## 1. Form of pay
 
-Wrrapd pays WrapRiders an **hourly rate**. Wrrapd does **not** pay a per-order piece rate.
-Dollar amounts are published in Command Center and, once activated, in the WrapRider App.
+Wrrapd pays WrapRiders **$2.50 per finished gift** plus an **hourly rate** for estimated
+delivery hours. Dollar amounts are published in Command Center and, once activated, in the WrapRider App.
 Amounts may differ by **ZIP code** (exact ZIP or 3-digit prefix). WrapRider has its own
 rate schedule.
 
@@ -20,34 +20,27 @@ rate schedule.
 For the contractor’s home / assigned work ZIP: exact ZIP override, else 3-digit
 prefix override, else the WrapRider default.
 
-## 3. Two clocks (one rate)
+## 3. Wrapping piece rate plus estimated delivery hours
 
-A WrapRider is engaged to wrap **and** deliver under a single **WrapRider hourly
-rate**.
-
-### 3a. Wrapping hours — pace, floor, fractional
-
-Conversion: **twelve (12) finished gifts = one (1) paid hour**.
-
-Paid wrapping hours for an accepted wrap window = the **greater of** one (1) hour
-or finished gifts ÷ 12 (fractional hours allowed).
-
-Examples: 4 gifts → 1 hour; 37 gifts → 3 + 1/12 hours.
+Wrapping pay is **$2.50 per finished gift**. Time spent wrapping does not add
+hourly pay on top of that amount.
 
 A gift is “finished” when wrapped to published standards, documented (live session
 and proof), labeled (including the delivery barcode), and ready for delivery.
 
-### 3b. Delivery hours
+Delivery pay is the WrapRider hourly rate times **estimated hours** for each route
+actually started. The estimate uses planned stops (15 minutes each) plus planned
+drive distance at 25 miles per hour, and is fixed when the route is assigned.
 
-Delivery hours accrue for accepted delivery windows actually commenced, with a
-**minimum of one (1) hour** per such window. There is **no** twelve-gifts pace on
-delivery hours.
+Traffic, congestion, detours, weather, parking, waiting, and any other delay do
+**not** increase delivery hours or delivery pay. Actual time on the road is not
+the measure of delivery pay.
 
 ## 4. Incentive compensation
 
 From time to time — especially in higher-demand periods — Wrrapd may publish
-**discretionary incentive or bonus compensation**, including extra pay for wrapping
-above the twelve-gifts-per-hour pace, peak-period bonuses, or other incentives.
+**discretionary incentive or bonus compensation**, including peak-period bonuses
+or other incentives.
 Terms apply only for the stated period.
 
 ## 5. Materials (wrapping hours)
@@ -61,7 +54,7 @@ responsibility for delivery hours.
 
 ## 6. Accrual and pay calendar
 
-Pay follows Sections 3a–3b. Wrrapd pays on the then-published payout calendar
+Pay follows Section 3. Wrrapd pays on the then-published payout calendar
 (direct deposit). Wrrapd may offset or withhold for fraud, failed proof, skipped
 live session, failed scans, overpayment, no-show reassignment cost, or amounts the
 contractor owes Wrrapd.

@@ -16,7 +16,7 @@ This suite is a **merged** Technology Services Agreement plus companions that in
 - On Activate: WrapRider login row (prefix 6) plus capacity rows on WrapStar (8) and JoyRider (7) rosters for allocation
 - App: `wraprider.wrrapd.com`
 - Pay: WrapStar hourly + 12/hour pace for wrap windows; JoyRider hourly for delivery — Compensation Schedule §5a
-- Age 21+; Duval County, FL arbitration; blank signature / initials lines in each PDF
+- Age 21+; Pinellas County, FL arbitration; blank signature / initials lines in each PDF
 
 ## Open ops items
 

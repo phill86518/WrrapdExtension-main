@@ -3,7 +3,7 @@
 WrapRider (wrap **and** deliver) onboarding agreements. Signature / initials fields are blank lines for wet-ink or in-document e-sign.  
 **Public name:** WrapRider. Apply: `/wraprider/apply/`. App: `wraprider.wrrapd.com`.
 
-**Current scope:** Wrap **and** deliver via the **WrapRider App**. Age **21+**. Valid driver license. Legally required **auto insurance**. Hourly-by-ZIP pay (12-gifts/hour pace on wrapping hours with 1-hour floor and fractional hours; discretionary incentives). Live wrap session required. Arbitration: **Duval County, Florida**.
+**Current scope:** Wrap **and** deliver via the **WrapRider App**. Age **21+**. Valid driver license. Legally required **auto insurance**. Hourly-by-ZIP pay (12-gifts/hour pace on wrapping hours with 1-hour floor and fractional hours; discretionary incentives). Live wrap session required. Arbitration: **Pinellas County, Florida**.
 
 ## Documents
 

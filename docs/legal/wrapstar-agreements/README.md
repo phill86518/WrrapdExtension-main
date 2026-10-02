@@ -2,7 +2,7 @@
 
 WrapStar onboarding agreements. Signature / initials fields are blank lines in each document for wet-ink or in-document e-sign.
 
-**Current scope:** WrapStars = **gift wrapping only** via the **WrapStar App**. Packages are **brought by the person Wrrapd assigns** and **collected when done**. Affix **delivery barcode**. Proof = **live session** plus unboxing → wrap → finished gift. **Hourly-by-ZIP** pay with **12 gifts/hour** pace (1-hour floor; fractional hours; discretionary incentives). **No commercial insurance mandate** in this suite. Arbitration: **Duval County, Florida**.
+**Current scope:** WrapStars = **gift wrapping only** via the **WrapStar App**. Packages are **brought by the person Wrrapd assigns** and **collected when done**. Affix **delivery barcode**. Proof = **live session** plus unboxing → wrap → finished gift. **Hourly-by-ZIP** pay with **12 gifts/hour** pace (1-hour floor; fractional hours; discretionary incentives). **No commercial insurance mandate** in this suite. Arbitration: **Pinellas County, Florida**.
 
 ## Documents
 

@@ -1,16 +1,16 @@
 {
   "wrapstar": {
-    "version": "44b4e28138fe",
+    "version": "f1dd3f2fdd62",
     "docs": [
       {
         "file": "01_WrapStar_Technology_Services_Agreement.html",
         "title": "WRAPSTAR INDEPENDENT CONTRACTOR",
-        "sha256_16": "09a44e37bb90dbf8"
+        "sha256_16": "574a3dc6764b8baf"
       },
       {
         "file": "02_Mutual_Arbitration_Agreement.html",
         "title": "MUTUAL ARBITRATION AGREEMENT",
-        "sha256_16": "943735c3cdbd68d2"
+        "sha256_16": "ddbe896e05ef2aa0"
       },
       {
         "file": "03_Background_Check_Authorization.html",
@@ -25,27 +25,27 @@
       {
         "file": "05_Third_Party_Litigation_Funding_Disclosure.html",
         "title": "THIRD-PARTY LITIGATION FUNDING DISCLOSURE",
-        "sha256_16": "d2ea5f61375d5b1c"
+        "sha256_16": "3964be36c379f000"
       },
       {
         "file": "contractor-compensation-schedule.html",
         "title": "WrapStar Compensation Schedule",
-        "sha256_16": "9953c5bb4e506a19"
+        "sha256_16": "59f97d91f5fe6456"
       }
     ]
   },
   "joyrider": {
-    "version": "e6292f2cccfb",
+    "version": "6d5132816653",
     "docs": [
       {
         "file": "01_JoyRider_Independent_Contractor_Agreement.html",
         "title": "JOYRIDER INDEPENDENT CONTRACTOR AGREEMENT",
-        "sha256_16": "0fba779ee8be8770"
+        "sha256_16": "26e58213fb5d38f5"
       },
       {
         "file": "02_Mutual_Arbitration_Agreement.html",
         "title": "MUTUAL ARBITRATION AGREEMENT",
-        "sha256_16": "6bfc5948307e7525"
+        "sha256_16": "5c9d76b85458d866"
       },
       {
         "file": "03_Background_Check_Authorization.html",
@@ -60,27 +60,27 @@
       {
         "file": "05_Third_Party_Litigation_Funding_Disclosure.html",
         "title": "THIRD-PARTY LITIGATION FUNDING DISCLOSURE",
-        "sha256_16": "89a7f07fa5ee5b07"
+        "sha256_16": "8603a716caf35829"
       },
       {
         "file": "contractor-compensation-schedule.html",
         "title": "JoyRider Compensation Schedule",
-        "sha256_16": "e1f5d35ca63676e9"
+        "sha256_16": "0ebfd7b8f3a5e632"
       }
     ]
   },
   "wraprider": {
-    "version": "b456ad2517f8",
+    "version": "42f6cff256b6",
     "docs": [
       {
         "file": "01_WrapRider_Technology_Services_Agreement.html",
         "title": "WRAPRIDER INDEPENDENT CONTRACTOR",
-        "sha256_16": "c8b09023638dfdc4"
+        "sha256_16": "eba6d2fef6e13afb"
       },
       {
         "file": "02_Mutual_Arbitration_Agreement.html",
         "title": "MUTUAL ARBITRATION AGREEMENT",
-        "sha256_16": "5af3e2a27069492a"
+        "sha256_16": "1a7596484821c048"
       },
       {
         "file": "03_Background_Check_Authorization.html",
@@ -100,7 +100,7 @@
       {
         "file": "contractor-compensation-schedule.html",
         "title": "WrapRider Compensation Schedule",
-        "sha256_16": "0e1c11c0ef8e04ff"
+        "sha256_16": "5c22bd568a84606d"
       }
     ]
   }

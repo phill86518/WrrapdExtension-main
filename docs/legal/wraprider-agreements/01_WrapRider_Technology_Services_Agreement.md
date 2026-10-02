@@ -143,13 +143,13 @@ Wrrapd does **not** require Contractor to purchase commercial general liability 
 
 ## 8. Compensation
 
-8.1 Contractor is paid an **hourly rate** under the then-current WrapRider Compensation Schedule published in Command Center and shown in the WrapRider App. Amounts may differ by ZIP. Wrrapd does **not** pay a per-order piece rate unless a future Schedule expressly says so.
+8.1 **Two kinds of pay.** Wrapping pay is the per-gift amount in the WrapRider Compensation Schedule, currently **two dollars and fifty cents ($2.50) per finished gift**, unless that Schedule states a different amount. Delivery pay is the WrapRider hourly rate multiplied by the **estimated hours** for each accepted route that Contractor actually starts. The hourly rate may differ by ZIP.
 
-8.2 **Wrapping hours — minimum and fractional pace.** For wrapping work, the conversion rate is **twelve (12) finished gifts = one (1) paid hour**. Paid wrapping hours for an accepted wrap window equal the **greater of** (a) one (1) hour, or (b) finished gifts ÷ 12 (including fractional hours). **Examples:** four (4) finished gifts still earn one (1) full paid hour; thirty-seven (37) finished gifts earn **three (3) hours plus one-twelfth (1/12) of an hour**. A gift is finished when wrapped to published standards, documented (live session and proof), labeled (including the delivery barcode), and ready for delivery.
+8.2 **Finished gift.** A gift is finished when wrapped to published standards, documented (live session and proof), labeled (including the delivery barcode), and ready for delivery. Time spent wrapping does not add hourly pay on top of the per-gift amount.
 
-8.3 **Delivery hours.** Delivery / logistics hours accrue for accepted delivery windows actually worked, as recorded in the WrapRider App, with a **minimum of one (1) hour** for each accepted delivery window actually commenced. There is **no** twelve-gifts pace on delivery hours.
+8.3 **Estimated delivery hours; no extra pay for delay.** Wrrapd calculates estimated delivery hours from the planned stops and planned drive distance and shows them in the WrapRider App. The estimate is fixed when the route is assigned. **Traffic, congestion, detours, weather, parking, waiting on a recipient, and any other delay do not increase the hours or the delivery pay.** Actual time on the road is not the measure of delivery pay. A route Contractor does not start is unpaid.
 
-8.4 **Incentive compensation.** From time to time — particularly during higher-demand periods — Wrrapd may offer **discretionary incentive or bonus compensation**, including additional pay for wrapping above the twelve-gifts-per-hour pace, peak-period bonuses, or other incentives published in the Compensation Schedule, Command Center, or WrapRider App. Incentive terms apply only for the periods stated and create no ongoing entitlement afterward.
+8.4 **Incentive compensation.** From time to time — particularly during higher-demand periods — Wrrapd may offer **discretionary incentive or bonus compensation**, including peak-period bonuses or other incentives published in the Compensation Schedule, Command Center, or WrapRider App. Incentive terms apply only for the periods stated and create no ongoing entitlement afterward.
 
 8.5 Wrrapd may offset or withhold for fraud, failed proof, skipped live session, overpayment, no-show costs under Section 16A, amounts under Section 5A, or other amounts Contractor owes Wrrapd.
 
@@ -185,7 +185,7 @@ Wrrapd does **not** require Contractor to purchase commercial general liability 
 
 ## 12. Dispute Resolution; Governing Law
 
-Disputes are resolved under the Mutual Arbitration Agreement. The seat of arbitration is Duval County, Florida. Florida law governs, except where the Federal Arbitration Act controls.
+Disputes are resolved under the Mutual Arbitration Agreement. The seat of arbitration is Pinellas County, Florida. Florida law governs, except where the Federal Arbitration Act controls.
 
 ---
 

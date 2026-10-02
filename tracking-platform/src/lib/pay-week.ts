@@ -30,17 +30,40 @@ export function payWeekId(week: PayWeek, contractorId: string): string {
   return `${week.startKey}_${contractorId}`;
 }
 
-/** Twelve finished gifts = one paid hour, with a one-hour floor once any gift is finished. */
-export function paidWrapHours(finishedGifts: number): number {
-  const n = Math.max(0, Math.floor(finishedGifts));
-  if (n <= 0) return 0;
-  return Math.max(1, n / 12);
+/** WrapStar floor: a started window with finished gifts pays at least half an hour. */
+export const WRAP_MIN_HOURS = 0.5;
+
+/** Planned stop time used for JoyRider and WrapRider delivery estimates. */
+export const DELIVERY_MINUTES_PER_STOP = 15;
+
+/** Planned drive speed used for JoyRider and WrapRider delivery estimates. */
+export const DELIVERY_ASSUMED_MPH = 25;
+
+/** WrapRider wrapping pay. Delivery hours are separate and use the hourly rate. */
+export const WRAPRIDER_GIFT_CENTS = 250;
+
+/**
+ * WrapStar paid hours for one started window.
+ * Clock time, including fractions, floored at half an hour and capped at gifts ÷ 12.
+ * Missing clock time falls back to the pace cap (still floored at half an hour).
+ */
+export function paidWrapShiftHours(clockHours: number, finishedGifts: number): number {
+  const gifts = Math.max(0, Math.floor(finishedGifts));
+  if (gifts <= 0) return 0;
+  const paceCap = gifts / 12;
+  const clock = Number.isFinite(clockHours) && clockHours > 0 ? clockHours : paceCap;
+  return Math.max(WRAP_MIN_HOURS, Math.min(clock, paceCap));
 }
 
-/** Each commenced delivery window pays at least one hour. Longer windows pay the elapsed time. */
-export function paidDeliveryHours(elapsedHours: number): number {
-  if (!Number.isFinite(elapsedHours) || elapsedHours <= 0) return 1;
-  return Math.max(1, elapsedHours);
+/**
+ * Delivery pay hours from the plan, not from time on the road.
+ * Traffic cannot change this number after the route is assigned.
+ */
+export function estimatedDeliveryHours(stops: number, miles: number): number {
+  const n = Math.max(0, Math.floor(stops));
+  if (n <= 0) return 0;
+  const drive = Number.isFinite(miles) && miles > 0 ? miles / DELIVERY_ASSUMED_MPH : 0;
+  return n * (DELIVERY_MINUTES_PER_STOP / 60) + drive;
 }
 
 export function amountCentsForHours(hours: number, hourlyRateCents: number): number {

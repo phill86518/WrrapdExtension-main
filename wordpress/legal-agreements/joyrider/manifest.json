@@ -1,15 +1,15 @@
 {
-  "version": "e6292f2cccfb",
+  "version": "6d5132816653",
   "docs": [
     {
       "file": "01_JoyRider_Independent_Contractor_Agreement.html",
       "title": "JOYRIDER INDEPENDENT CONTRACTOR AGREEMENT",
-      "sha256_16": "0fba779ee8be8770"
+      "sha256_16": "26e58213fb5d38f5"
     },
     {
       "file": "02_Mutual_Arbitration_Agreement.html",
       "title": "MUTUAL ARBITRATION AGREEMENT",
-      "sha256_16": "6bfc5948307e7525"
+      "sha256_16": "5c9d76b85458d866"
     },
     {
       "file": "03_Background_Check_Authorization.html",
@@ -24,12 +24,12 @@
     {
       "file": "05_Third_Party_Litigation_Funding_Disclosure.html",
       "title": "THIRD-PARTY LITIGATION FUNDING DISCLOSURE",
-      "sha256_16": "89a7f07fa5ee5b07"
+      "sha256_16": "8603a716caf35829"
     },
     {
       "file": "contractor-compensation-schedule.html",
       "title": "JoyRider Compensation Schedule",
-      "sha256_16": "e1f5d35ca63676e9"
+      "sha256_16": "0ebfd7b8f3a5e632"
     }
   ]
 }

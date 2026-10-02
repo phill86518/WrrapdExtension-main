@@ -20,7 +20,7 @@ SUITES = [
     {
         "folder": "wrapstar-agreements",
         "eyebrow": "WrapStar Agreements",
-        "footer": "© 2026 Wrrapd Inc. · WrapStar contractor documentation · Duval County, Florida",
+        "footer": "© 2026 Wrrapd Inc. · WrapStar contractor documentation · Pinellas County, Florida",
         "docs": [
             "01_WrapStar_Technology_Services_Agreement.md",
             "02_Mutual_Arbitration_Agreement.md",
@@ -32,7 +32,7 @@ SUITES = [
     {
         "folder": "joyrider-agreements",
         "eyebrow": "JoyRider Agreements",
-        "footer": "© 2026 Wrrapd Inc. · JoyRider contractor documentation · Duval County, Florida",
+        "footer": "© 2026 Wrrapd Inc. · JoyRider contractor documentation · Pinellas County, Florida",
         "docs": [
             "01_JoyRider_Independent_Contractor_Agreement.md",
             "02_Mutual_Arbitration_Agreement.md",
@@ -44,7 +44,7 @@ SUITES = [
     {
         "folder": "wraprider-agreements",
         "eyebrow": "WrapRider Agreements",
-        "footer": "© 2026 Wrrapd Inc. · WrapRider contractor documentation · Duval County, Florida",
+        "footer": "© 2026 Wrrapd Inc. · WrapRider contractor documentation · Pinellas County, Florida",
         "docs": [
             "01_WrapRider_Technology_Services_Agreement.md",
             "02_Mutual_Arbitration_Agreement.md",
@@ -316,17 +316,8 @@ def local_logo() -> str:
 
 
 def local_signature() -> str:
-    """Return data-URI for Roger Phillips / Wrrapd Inc. President signature."""
-    import base64
-    path = LEGAL / "_pdf_assets" / "rp-signature.jpg"
-    if not path.is_file():
-        path = LEGAL / "_pdf_assets" / "rp-signature.png"
-    if not path.is_file():
-        path = LEGAL / "wrapstar-agreements" / "samples" / "RP_signatures.jpg"
-    if not path.is_file():
-        return ""
-    mime = "image/jpeg" if path.suffix.lower() in {".jpg", ".jpeg"} else "image/png"
-    return f"data:{mime};base64," + base64.b64encode(path.read_bytes()).decode("ascii")
+    """No company countersignature image — clickwrap / blank sign lines only."""
+    return ""
 
 
 def _link_callback(uri: str, rel: str) -> str:
@@ -390,7 +381,7 @@ def main() -> None:
             schedule,
             dest,
             "Internal pay index",
-            "© 2026 Wrrapd Inc. · Compensation Schedule index · Duval County, Florida",
+            "© 2026 Wrrapd Inc. · Compensation Schedule index · Pinellas County, Florida",
             logo_src,
             sig_src,
         )

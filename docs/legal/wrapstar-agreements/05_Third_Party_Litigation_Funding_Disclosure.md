@@ -49,7 +49,7 @@ ________________________________
 
 5.1 False, incomplete, or untimely disclosure under this document is a **material breach** of the Services Agreement and may result in suspension or termination of Platform access, in addition to any other remedies available at law or equity.
 
-5.2 Nothing in this document waives any defense, privilege, or procedural right of either Party. Disputes arising under or relating to this disclosure are subject to the **Mutual Arbitration Agreement**, including its seat in **Duval County, Florida**.
+5.2 Nothing in this document waives any defense, privilege, or procedural right of either Party. Disputes arising under or relating to this disclosure are subject to the **Mutual Arbitration Agreement**, including its seat in **Pinellas County, Florida**.
 
 ---
 

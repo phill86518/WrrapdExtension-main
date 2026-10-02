@@ -12,10 +12,11 @@ import { listWrapriders } from "./wraprider-registry";
 import { formatDateKeyNy, hourNy } from "./ny-date";
 import {
   amountCentsForHours,
-  paidDeliveryHours,
-  paidWrapHours,
+  estimatedDeliveryHours,
+  paidWrapShiftHours,
   payWeekContaining,
   payWeekId,
+  WRAPRIDER_GIFT_CENTS,
   type PayWeek,
 } from "./pay-week";
 import { getStripeConnectAccount, sendStripePayout, stripeConfigured } from "./stripe-connect";
@@ -65,6 +66,14 @@ type RosterPerson = {
   approved: boolean;
 };
 
+function shiftClockHours(shift: WrapStarShift): number {
+  const start = new Date(shift.startedAt).getTime();
+  let end = shift.endedAt ? new Date(shift.endedAt).getTime() : NaN;
+  if (!Number.isFinite(end) && shift.status === "active") end = Date.now();
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return 0;
+  return (end - start) / 3_600_000;
+}
+
 function shiftCounts(shifts: WrapStarShift[], orders: Order[], wrapstarId: string, week: PayWeek): { hours: number; gifts: number } {
   const relevant = shifts.filter((shift) => {
     if (shift.wrapstarId !== wrapstarId) return false;
@@ -82,7 +91,7 @@ function shiftCounts(shifts: WrapStarShift[], orders: Order[], wrapstarId: strin
       if (item.phase === "wrapped" || item.phase === "done" || item.wrappedAt || item.labeledAt) n += 1;
     }
     gifts += n;
-    hours += paidWrapHours(n);
+    hours += paidWrapShiftHours(shiftClockHours(shift), n);
   }
   const extrasByDay = new Map<string, number>();
   for (const order of orders) {
@@ -95,32 +104,28 @@ function shiftCounts(shifts: WrapStarShift[], orders: Order[], wrapstarId: strin
   }
   for (const n of extrasByDay.values()) {
     gifts += n;
-    hours += paidWrapHours(n);
+    hours += paidWrapShiftHours(0, n);
   }
   return { hours, gifts };
 }
 
 function deliveryCounts(orders: Order[], week: PayWeek): { hours: number; windows: number } {
-  const buckets = new Map<string, number[]>();
+  const buckets = new Map<string, { stops: number; miles: number }>();
   for (const order of orders) {
     const status = normalizeOrderStatus(order.status);
     if (status !== "delivered" && status !== "out_for_delivery") continue;
     const day = formatDateKeyNy(order.updatedAt);
     if (!day || day < week.startKey || day > week.endKey) continue;
     const windowId = `${day}-${hourNy(order.updatedAt) < 13 ? "am" : "pm"}`;
-    const t = new Date(order.updatedAt).getTime();
-    const list = buckets.get(windowId) || [];
-    if (Number.isFinite(t)) list.push(t);
-    buckets.set(windowId, list);
+    const cur = buckets.get(windowId) || { stops: 0, miles: 0 };
+    cur.stops += 1;
+    const miles = Number(order.proposedDistanceMiles);
+    if (Number.isFinite(miles) && miles > 0) cur.miles += miles;
+    buckets.set(windowId, cur);
   }
   let hours = 0;
-  for (const times of buckets.values()) {
-    if (times.length === 0) {
-      hours += 1;
-      continue;
-    }
-    const span = (Math.max(...times) - Math.min(...times)) / 3_600_000;
-    hours += paidDeliveryHours(span);
+  for (const bucket of buckets.values()) {
+    hours += estimatedDeliveryHours(bucket.stops, bucket.miles);
   }
   return { hours, windows: buckets.size };
 }
@@ -245,11 +250,12 @@ export async function previewWeeklyPay(now: Date = new Date()): Promise<{
           week,
         )
       : { hours: 0, windows: 0 };
-    const wrapHours = person.role === "joyrider" ? 0 : wrap.hours;
+    const wrapHours = person.role === "wrapstar" ? wrap.hours : 0;
     const deliveryHours = person.role === "wrapstar" ? 0 : delivery.hours;
     const paidHours = wrapHours + deliveryHours;
     const hourlyRateCentsValue = hourlyRateCents(cfg, person.role, person.homePostalCode, person.personRateCents);
-    const amountCents = amountCentsForHours(paidHours, hourlyRateCentsValue);
+    const pieceCents = person.role === "wraprider" ? wrap.gifts * WRAPRIDER_GIFT_CENTS : 0;
+    const amountCents = pieceCents + amountCentsForHours(paidHours, hourlyRateCentsValue);
     const hold =
       (await getPayoutHold(person.contractorId)) ||
       (person.wrapstarId ? await getPayoutHold(person.wrapstarId) : null);

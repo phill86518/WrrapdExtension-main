@@ -16,6 +16,7 @@ import {
 } from "@/lib/finance";
 import { setPayoutHoldAction } from "../payout-hold-action";
 import { previewWeeklyPay, runWeeklyPayouts } from "@/lib/weekly-pay";
+import { stripeKeyMode } from "@/lib/stripe-connect";
 
 export const dynamic = "force-dynamic";
 
@@ -98,8 +99,9 @@ export default async function AdminFinancePage({
         </p>
       ) : null}
       <p className="mt-1 text-sm text-slate-600">
-        Contractors are paid their hourly rate. Wrapping hours are finished gifts ÷ 12, with a one-hour
-        floor. Delivery windows are at least one hour. Thursday at 6:00pm Eastern, Stripe sends the
+        WrapStars are paid from clock-in to clock-out, at least half an hour and no more than 12 finished
+        gifts an hour. WrapRiders get $2.50 per finished gift plus estimated delivery hours. JoyRiders get
+        estimated delivery hours only. Traffic does not add delivery pay. Thursday at 6:00pm Eastern, Stripe sends the
         bank deposit for Friday.
       </p>
 
@@ -111,7 +113,11 @@ export default async function AdminFinancePage({
             </h2>
             <p className="mt-1 text-sm text-slate-600">
               {formatUsdCents(weeklyTotal)} across {weekly.lines.length} contractors.
-              {weekly.stripeReady ? " Stripe is connected." : " Stripe key is not set on this server yet."}
+              {weekly.stripeReady
+                ? " Stripe is live."
+                : stripeKeyMode() === "test"
+                  ? " Stripe is still in test mode. Live keys are required for contractor payouts."
+                  : " Stripe live key is not set on this server yet."}
             </p>
           </div>
           <form action={runWeeklyPayoutsAction}>

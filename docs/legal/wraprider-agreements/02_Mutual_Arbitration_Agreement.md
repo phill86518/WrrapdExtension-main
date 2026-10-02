@@ -23,11 +23,11 @@ This Mutual Arbitration Agreement (the “**Arbitration Agreement**”) is enter
 
 2.1 This Arbitration Agreement and any arbitration hereunder shall be governed by the laws of the **State of Florida**, without regard to conflict-of-law principles that would defeat the Parties’ choice of Florida law or the seat specified herein, except where the Federal Arbitration Act controls.
 
-2.2 The **seat of arbitration** shall be **Duval County, State of Florida**.
+2.2 The **seat of arbitration** shall be **Pinellas County, State of Florida**.
 
-2.3 Hearings may be conducted in Duval County, Florida, or, by agreement of the Parties or order of the arbitrator, by videoconference or other remote means, provided that the legal seat remains Duval County, Florida.
+2.3 Hearings may be conducted in Pinellas County, Florida, or, by agreement of the Parties or order of the arbitrator, by videoconference or other remote means, provided that the legal seat remains Pinellas County, Florida.
 
-2.4 If any Dispute proceeds in court notwithstanding this Arbitration Agreement (including under Section 5 or upon a final determination that a claim is non-arbitrable), the Parties consent to the **exclusive jurisdiction and venue** of the state or federal courts located in **Duval County, Florida**, and waive any objection based on inconvenient forum.
+2.4 If any Dispute proceeds in court notwithstanding this Arbitration Agreement (including under Section 5 or upon a final determination that a claim is non-arbitrable), the Parties consent to the **exclusive jurisdiction and venue** of the state or federal courts located in **Pinellas County, Florida**, and waive any objection based on inconvenient forum.
 
 ---
 

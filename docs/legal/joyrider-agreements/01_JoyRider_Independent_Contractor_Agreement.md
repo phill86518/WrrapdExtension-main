@@ -132,7 +132,7 @@ By signing, Contractor acknowledges that Contractor has read, understands, and a
 
 8.1 Contractor is paid an **hourly rate**, not a per-order piece rate. The rate is determined by the **Compensation Schedule** then published in Command Center / the JoyRider App, which may vary by **ZIP code** (exact ZIP or 3-digit prefix) or use the JoyRider default.
 
-8.2 Hours accrue for accepted windows actually worked, as recorded in the JoyRider App, with a **minimum of one (1) hour** for each accepted window actually commenced. Wrrapd does not guarantee volume. A wrapping-pace rule does **not** apply to JoyRiders.
+8.2 **Estimated delivery hours.** Delivery pay is Contractor’s hourly rate multiplied by the **estimated hours** for each accepted route that Contractor actually starts. Wrrapd calculates that estimate from the planned stops and planned drive distance and shows it in the JoyRider App. The estimate is fixed when the route is assigned. **Traffic, congestion, detours, weather, parking, waiting on a recipient, and any other delay do not increase the hours or the pay.** Actual elapsed time is not the measure of delivery pay. A route Contractor does not start is unpaid. A wrapping-pace rule does **not** apply to JoyRiders.
 
 8.3 **Incentive compensation.** From time to time — particularly during higher-demand periods — Wrrapd may offer **discretionary incentive or bonus compensation** (for example, peak-period or completion bonuses) as published in the Compensation Schedule, Command Center, or JoyRider App. Incentive terms apply only for the periods stated and create no ongoing entitlement afterward.
 
@@ -182,7 +182,7 @@ Exclusions for publicly available information, prior rightful possession, and in
 
 12.4 Contractor shall protect Confidential Information with reasonable care, notify Wrrapd within twenty-four (24) hours of any suspected breach, and upon termination return or delete Confidential Information (except proof already uploaded to Wrrapd).
 
-12.5 Unauthorized disclosure may cause irreparable harm. Wrrapd may seek injunctive relief in Duval County, Florida, as provided in the Mutual Arbitration Agreement, without waiving arbitration of damages claims.
+12.5 Unauthorized disclosure may cause irreparable harm. Wrrapd may seek injunctive relief in Pinellas County, Florida, as provided in the Mutual Arbitration Agreement, without waiving arbitration of damages claims.
 
 12.6 This Section 12 survives termination **indefinitely** as to trade secrets and customer/gift/recipient data, and for no less than **five (5) years** as to other Confidential Information.
 
