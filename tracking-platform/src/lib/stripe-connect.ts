@@ -48,16 +48,20 @@ export type PlatformPayoutBank = {
 /** Live platform bank Stripe will use. Null until a live key is set and a bank is attached. */
 export async function getPlatformPayoutBank(): Promise<PlatformPayoutBank | null> {
   if (!stripeConfigured()) return null;
-  const me = await stripe().accounts.retrieve(null);
-  const listed = await stripe().accounts.listExternalAccounts(me.id, { object: "bank_account", limit: 10 });
-  const banks = listed.data.filter((row): row is Stripe.BankAccount => row.object === "bank_account");
-  const bank = banks.find((row) => row.default_for_currency) || banks[0];
-  if (!bank) return null;
-  return {
-    bankName: bank.bank_name || "Bank",
-    last4: bank.last4 || "",
-    currency: bank.currency || "usd",
-  };
+  try {
+    const me = await stripe().accounts.retrieve(null);
+    const listed = await stripe().accounts.listExternalAccounts(me.id, { object: "bank_account", limit: 10 });
+    const banks = listed.data.filter((row): row is Stripe.BankAccount => row.object === "bank_account");
+    const bank = banks.find((row) => row.default_for_currency) || banks[0];
+    if (!bank) return null;
+    return {
+      bankName: bank.bank_name || "Bank",
+      last4: bank.last4 || "",
+      currency: bank.currency || "usd",
+    };
+  } catch {
+    return null;
+  }
 }
 
 export function trackingPublicOrigin(request?: Request): string {
@@ -200,6 +204,8 @@ export async function sendStripePayout(input: {
   amountCents: number;
   description: string;
   idempotencyKey: string;
+  /** Set when the platform transfer already succeeded and only the bank payout should be retried. */
+  existingTransferId?: string;
 }): Promise<{ transferId: string; payoutId: string }> {
   const client = stripe();
   try {
@@ -209,25 +215,34 @@ export async function sendStripePayout(input: {
   } catch {
     // Account may still be finishing onboarding. The payout call reports the real error.
   }
-  const transfer = await client.transfers.create(
-    {
-      amount: input.amountCents,
-      currency: "usd",
-      destination: input.stripeAccountId,
-      description: input.description,
-    },
-    { idempotencyKey: `${input.idempotencyKey}-transfer` },
-  );
-  const payout = await client.payouts.create(
-    {
-      amount: input.amountCents,
-      currency: "usd",
-      description: input.description,
-      statement_descriptor: "WRRAPD",
-    },
-    { stripeAccount: input.stripeAccountId, idempotencyKey: `${input.idempotencyKey}-payout` },
-  );
-  return { transferId: transfer.id, payoutId: payout.id };
+  let transferId = input.existingTransferId?.trim() || "";
+  if (!transferId) {
+    const transfer = await client.transfers.create(
+      {
+        amount: input.amountCents,
+        currency: "usd",
+        destination: input.stripeAccountId,
+        description: input.description,
+      },
+      { idempotencyKey: `${input.idempotencyKey}-transfer` },
+    );
+    transferId = transfer.id;
+  }
+  try {
+    const payout = await client.payouts.create(
+      {
+        amount: input.amountCents,
+        currency: "usd",
+        description: input.description,
+        statement_descriptor: "WRRAPD",
+      },
+      { stripeAccount: input.stripeAccountId, idempotencyKey: `${input.idempotencyKey}-payout` },
+    );
+    return { transferId, payoutId: payout.id };
+  } catch (err) {
+    const error = err instanceof Error ? err : new Error("Stripe payout failed");
+    throw Object.assign(error, { transferId });
+  }
 }
 
 export function constructStripeEvent(rawBody: string, signature: string): Stripe.Event {

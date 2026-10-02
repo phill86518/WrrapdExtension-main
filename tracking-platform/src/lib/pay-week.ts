@@ -30,6 +30,23 @@ export function payWeekId(week: PayWeek, contractorId: string): string {
   return `${week.startKey}_${contractorId}`;
 }
 
+/** The Friday–Thursday week immediately before `week`. */
+export function previousPayWeek(week: PayWeek): PayWeek {
+  const start = toDate(`${week.startKey}T12:00:00`, { timeZone: NY });
+  return payWeekContaining(addDays(start, -1));
+}
+
+/**
+ * The week that may be sent now.
+ * Thursday 6:00pm Eastern or later: this week.
+ * Before that: last week, so an early click cannot freeze the week that is still open.
+ */
+export function payableWeek(now: Date = new Date()): PayWeek {
+  const current = payWeekContaining(now);
+  if (now.getTime() >= new Date(current.payoutAtIso).getTime()) return current;
+  return previousPayWeek(current);
+}
+
 /** WrapStar floor: a started window with finished gifts pays at least half an hour. */
 export const WRAP_MIN_HOURS = 0.5;
 

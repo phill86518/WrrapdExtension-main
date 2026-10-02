@@ -14,6 +14,7 @@ import {
   amountCentsForHours,
   estimatedDeliveryHours,
   paidWrapShiftHours,
+  payableWeek,
   payWeekContaining,
   payWeekId,
   WRAPRIDER_GIFT_CENTS,
@@ -215,12 +216,12 @@ async function roster(): Promise<RosterPerson[]> {
   return people.filter((p) => p.approved);
 }
 
-export async function previewWeeklyPay(now: Date = new Date()): Promise<{
+export async function previewWeeklyPay(now: Date = new Date(), weekOverride?: PayWeek): Promise<{
   week: PayWeek;
   lines: WeeklyPayLine[];
   stripeReady: boolean;
 }> {
-  const week = payWeekContaining(now);
+  const week = weekOverride || payWeekContaining(now);
   const cfg = await getPayoutConfig();
   const [people, shifts, orders, stored] = await Promise.all([
     roster(),
@@ -232,8 +233,12 @@ export async function previewWeeklyPay(now: Date = new Date()): Promise<{
   for (const person of people) {
     const id = payWeekId(week, person.contractorId);
     const saved = stored[id];
-    if (saved && (saved.status === "paid" || saved.status === "transferred")) {
+    if (saved?.status === "paid") {
       lines.push(saved);
+      continue;
+    }
+    if (saved?.stripeTransferId) {
+      lines.push({ ...saved, status: "transferred" });
       continue;
     }
     const wrap = person.wrapstarId
@@ -318,15 +323,23 @@ function earningFor(line: WeeklyPayLine, status: EarningsEntry["status"]): Earni
   };
 }
 
-/** Thursday evening run: transfer each unpaid week to Stripe, then pay the bank. */
+function transferIdFrom(err: unknown): string {
+  if (err && typeof err === "object" && "transferId" in err) {
+    const id = (err as { transferId?: unknown }).transferId;
+    if (typeof id === "string" && id.trim()) return id.trim();
+  }
+  return "";
+}
+
+/** Send the closed pay week: transfer each unpaid line, then pay the contractor's bank. */
 export async function runWeeklyPayouts(now: Date = new Date()): Promise<{
   week: PayWeek;
   results: Array<{ contractorId: string; name: string; status: WeeklyPayStatus; note?: string }>;
 }> {
-  const preview = await previewWeeklyPay(now);
+  const preview = await previewWeeklyPay(now, payableWeek(now));
   const results: Array<{ contractorId: string; name: string; status: WeeklyPayStatus; note?: string }> = [];
   for (const line of preview.lines) {
-    if (line.status === "paid" || line.status === "transferred") {
+    if (line.status === "paid") {
       results.push({ contractorId: line.contractorId, name: line.name, status: line.status });
       continue;
     }
@@ -338,6 +351,17 @@ export async function runWeeklyPayouts(now: Date = new Date()): Promise<{
       continue;
     }
     if (!preview.stripeReady || !line.stripeAccountId) {
+      if (line.stripeTransferId) {
+        const held: WeeklyPayLine = {
+          ...line,
+          status: "transferred",
+          note: "Transfer is saved. Stripe must be live before the bank deposit can finish.",
+          updatedAt: new Date().toISOString(),
+        };
+        await saveLine(held);
+        results.push({ contractorId: line.contractorId, name: line.name, status: "transferred", note: held.note });
+        continue;
+      }
       const skipped: WeeklyPayLine = { ...line, status: "needs_bank", note: "Stripe is not configured", updatedAt: new Date().toISOString() };
       await saveLine(skipped);
       results.push({ contractorId: line.contractorId, name: line.name, status: "needs_bank", note: skipped.note });
@@ -349,13 +373,14 @@ export async function runWeeklyPayouts(now: Date = new Date()): Promise<{
         amountCents: line.amountCents,
         description: `Wrrapd ${line.weekStart} to ${line.weekEnd}`,
         idempotencyKey: `weekly-${line.id}`,
+        existingTransferId: line.stripeTransferId,
       });
       const paid: WeeklyPayLine = {
         ...line,
         status: "paid",
         stripeTransferId: sent.transferId,
         stripePayoutId: sent.payoutId,
-        note: "Sent Thursday evening for Friday bank deposit",
+        note: "Sent for Friday bank deposit",
         updatedAt: new Date().toISOString(),
       };
       await saveLine(paid);
@@ -363,10 +388,22 @@ export async function runWeeklyPayouts(now: Date = new Date()): Promise<{
       results.push({ contractorId: line.contractorId, name: line.name, status: "paid" });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Stripe payout failed";
-      const failed: WeeklyPayLine = { ...line, status: "failed", note: message, updatedAt: new Date().toISOString() };
+      const transferId = transferIdFrom(err) || line.stripeTransferId || "";
+      const failed: WeeklyPayLine = {
+        ...line,
+        status: transferId ? "transferred" : "failed",
+        stripeTransferId: transferId || undefined,
+        note: transferId ? `${message} Transfer is saved; the next send finishes the bank deposit.` : message,
+        updatedAt: new Date().toISOString(),
+      };
       await saveLine(failed);
       await upsertEarning(earningFor(failed, "unpaid"));
-      results.push({ contractorId: line.contractorId, name: line.name, status: "failed", note: message });
+      results.push({
+        contractorId: line.contractorId,
+        name: line.name,
+        status: failed.status,
+        note: failed.note,
+      });
     }
   }
   return { week: preview.week, results };

@@ -16,6 +16,7 @@ import {
   walletForWrapstar,
 } from "@/lib/finance";
 import { setPayoutHoldAction } from "../payout-hold-action";
+import { payableWeek } from "@/lib/pay-week";
 import { previewWeeklyPay, runWeeklyPayouts } from "@/lib/weekly-pay";
 import { getPlatformPayoutBank, stripeKeyMode } from "@/lib/stripe-connect";
 
@@ -99,7 +100,11 @@ export default async function AdminFinancePage({
   const unpaidTotal = wallets.reduce((s, x) => s + x.wallet.unpaidCents, 0);
   const paidTotal = wallets.reduce((s, x) => s + x.wallet.paidCents, 0);
   const weekly = await previewWeeklyPay();
+  const dueWeek = payableWeek();
+  const due = dueWeek.startKey === weekly.week.startKey ? weekly : await previewWeeklyPay(new Date(), dueWeek);
   const weeklyTotal = weekly.lines.reduce((s, line) => s + line.amountCents, 0);
+  const dueTotal = due.lines.reduce((s, line) => s + line.amountCents, 0);
+  const sameWeek = due.week.startKey === weekly.week.startKey;
   const payoutMode = config.weeklyPayoutMode === "automatic" ? "automatic" : "manual";
   const platformBank = await getPlatformPayoutBank();
 
@@ -155,17 +160,22 @@ export default async function AdminFinancePage({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="font-semibold">
-              This pay week · {weekly.week.startKey} to {weekly.week.endKey}
+              {sameWeek ? "Closed pay week" : "This pay week"} · {weekly.week.startKey} to {weekly.week.endKey}
             </h2>
             <p className="mt-1 text-sm text-slate-600">
               {formatUsdCents(weeklyTotal)} across {weekly.lines.length} contractors.
+              {sameWeek
+                ? " Thursday 6:00pm Eastern has passed. Send pays this week."
+                : " This week is still open. Send pays the closed week below."}
             </p>
           </div>
-          <form action={runWeeklyPayoutsAction}>
-            <button type="submit" className="rounded bg-slate-900 px-3 py-2 text-sm font-semibold text-white">
-              Send Thursday payouts
-            </button>
-          </form>
+          {sameWeek ? (
+            <form action={runWeeklyPayoutsAction}>
+              <button type="submit" className="rounded bg-slate-900 px-3 py-2 text-sm font-semibold text-white">
+                Send Thursday payouts
+              </button>
+            </form>
+          ) : null}
         </div>
         <div className="mt-3 overflow-x-auto">
           <table className="min-w-full text-left text-sm">
@@ -206,6 +216,59 @@ export default async function AdminFinancePage({
         </div>
       </section>
 
+      {sameWeek ? null : (
+        <section className="mt-6 rounded-xl border bg-white p-4 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="font-semibold">
+                Ready to send · {due.week.startKey} to {due.week.endKey}
+              </h2>
+              <p className="mt-1 text-sm text-slate-600">
+                {formatUsdCents(dueTotal)} across {due.lines.length} contractors. This week is closed.
+              </p>
+            </div>
+            <form action={runWeeklyPayoutsAction}>
+              <button type="submit" className="rounded bg-slate-900 px-3 py-2 text-sm font-semibold text-white">
+                Send Thursday payouts
+              </button>
+            </form>
+          </div>
+          <div className="mt-3 overflow-x-auto">
+            <table className="min-w-full text-left text-sm">
+              <thead className="text-xs uppercase text-slate-500">
+                <tr>
+                  <th className="py-1 pr-3">Contractor</th>
+                  <th className="py-1 pr-3">Role</th>
+                  <th className="py-1 pr-3">Amount</th>
+                  <th className="py-1 pr-3">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {due.lines.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="py-3 text-slate-500">
+                      No approved contractors yet.
+                    </td>
+                  </tr>
+                ) : (
+                  due.lines.map((line) => (
+                    <tr key={line.id} className="border-t border-slate-100">
+                      <td className="py-2 pr-3">{line.name}</td>
+                      <td className="py-2 pr-3">{line.role}</td>
+                      <td className="py-2 pr-3">{formatUsdCents(line.amountCents)}</td>
+                      <td className="py-2 pr-3">
+                        {line.status}
+                        {line.note ? <span className="block text-xs text-slate-500">{line.note}</span> : null}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
       <div className="mt-6 grid gap-4 sm:grid-cols-3">
         <div className="rounded-xl border bg-white p-4 shadow-sm">
           <p className="text-xs uppercase text-slate-500">Unpaid liability</p>
@@ -229,7 +292,10 @@ export default async function AdminFinancePage({
       </div>
 
       <section className="mt-8 rounded-xl border bg-white p-4 shadow-sm">
-        <h2 className="font-semibold">WrapStar wallets</h2>
+        <h2 className="font-semibold">Older per-order rows</h2>
+        <p className="mt-1 text-sm text-slate-600">
+          These are leftover order rows. Thursday payouts above are the live pay. A batch here does not include a week that Stripe already handles.
+        </p>
         <table className="mt-3 min-w-full text-left text-sm">
           <thead className="text-xs uppercase text-slate-500">
             <tr>
