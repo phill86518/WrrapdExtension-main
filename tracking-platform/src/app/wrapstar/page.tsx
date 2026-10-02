@@ -23,6 +23,7 @@ import { WrapstarAvailabilitySection } from "@/components/wrapstar/wrapstar-avai
 import { listEarningsForWrapstar, walletForWrapstar } from "@/lib/finance";
 import { getContractorRecord } from "@/lib/contractor-records";
 import { ContractorAccountCard } from "@/components/contractor-account-card";
+import { ContractorPayCard } from "@/components/contractor-pay-card";
 
 export const dynamic = "force-dynamic";
 
@@ -138,19 +139,22 @@ export default async function WrapstarPage() {
           />
         }
         earnings={
-          <WrapstarEarningsPanel
-            unpaidCents={wallet.unpaidCents}
-            paidCents={wallet.paidCents}
-            lifetimeCents={wallet.lifetimeCents}
-            unpaidCount={wallet.unpaidCount}
-            recent={earnings.map((e) => ({
-              id: e.id,
-              orderId: e.orderId,
-              netCents: e.netCents,
-              earnedAt: e.earnedAt,
-              status: e.status,
-            }))}
-          />
+          <>
+            <ContractorPayCard contractorId={session.userId} role="wrapstar" showConnect />
+            <WrapstarEarningsPanel
+              unpaidCents={wallet.unpaidCents}
+              paidCents={wallet.paidCents}
+              lifetimeCents={wallet.lifetimeCents}
+              unpaidCount={wallet.unpaidCount}
+              recent={earnings.map((e) => ({
+                id: e.id,
+                orderId: e.orderId,
+                netCents: e.netCents,
+                earnedAt: e.earnedAt,
+                status: e.status,
+              }))}
+            />
+          </>
         }
         account={accountPanel}
         help={<WrapstarHelpPanel />}
@@ -187,19 +191,22 @@ export default async function WrapstarPage() {
         />
       }
       earnings={
-        <WrapstarEarningsPanel
-          unpaidCents={wallet.unpaidCents}
-          paidCents={wallet.paidCents}
-          lifetimeCents={wallet.lifetimeCents}
-          unpaidCount={wallet.unpaidCount}
-          recent={earnings.map((e) => ({
-            id: e.id,
-            orderId: e.orderId,
-            netCents: e.netCents,
-            earnedAt: e.earnedAt,
-            status: e.status,
-          }))}
-        />
+        <>
+          <ContractorPayCard contractorId={session.userId} role="wrapstar" showConnect />
+          <WrapstarEarningsPanel
+            unpaidCents={wallet.unpaidCents}
+            paidCents={wallet.paidCents}
+            lifetimeCents={wallet.lifetimeCents}
+            unpaidCount={wallet.unpaidCount}
+            recent={earnings.map((e) => ({
+              id: e.id,
+              orderId: e.orderId,
+              netCents: e.netCents,
+              earnedAt: e.earnedAt,
+              status: e.status,
+            }))}
+          />
+        </>
       }
       account={accountPanel}
       help={<WrapstarHelpPanel />}

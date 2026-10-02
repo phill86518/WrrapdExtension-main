@@ -15,6 +15,7 @@ import {
   walletForWrapstar,
 } from "@/lib/finance";
 import { setPayoutHoldAction } from "../payout-hold-action";
+import { previewWeeklyPay, runWeeklyPayouts } from "@/lib/weekly-pay";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +29,15 @@ async function createPayoutAction(formData: FormData) {
   if (!result.ok) {
     redirect(`/admin/finance?payoutError=${encodeURIComponent(result.error)}`);
   }
+  redirect("/admin/finance");
+}
+
+async function runWeeklyPayoutsAction() {
+  "use server";
+  const session = await getSession();
+  if (!session || session.role !== "admin") return;
+  await runWeeklyPayouts();
+  revalidatePath("/admin/finance");
   redirect("/admin/finance");
 }
 
@@ -76,6 +86,8 @@ export default async function AdminFinancePage({
 
   const unpaidTotal = wallets.reduce((s, x) => s + x.wallet.unpaidCents, 0);
   const paidTotal = wallets.reduce((s, x) => s + x.wallet.paidCents, 0);
+  const weekly = await previewWeeklyPay();
+  const weeklyTotal = weekly.lines.reduce((s, line) => s + line.amountCents, 0);
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -86,9 +98,66 @@ export default async function AdminFinancePage({
         </p>
       ) : null}
       <p className="mt-1 text-sm text-slate-600">
-        Contractors are paid hourly by ZIP (not per order). Ledger + ACH export stay here; set
-        defaults and ZIP overrides under Hourly rates.
+        Contractors are paid their hourly rate. Wrapping hours are finished gifts ÷ 12, with a one-hour
+        floor. Delivery windows are at least one hour. Thursday at 6:00pm Eastern, Stripe sends the
+        bank deposit for Friday.
       </p>
+
+      <section className="mt-6 rounded-xl border bg-white p-4 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="font-semibold">
+              This pay week · {weekly.week.startKey} to {weekly.week.endKey}
+            </h2>
+            <p className="mt-1 text-sm text-slate-600">
+              {formatUsdCents(weeklyTotal)} across {weekly.lines.length} contractors.
+              {weekly.stripeReady ? " Stripe is connected." : " Stripe key is not set on this server yet."}
+            </p>
+          </div>
+          <form action={runWeeklyPayoutsAction}>
+            <button type="submit" className="rounded bg-slate-900 px-3 py-2 text-sm font-semibold text-white">
+              Send Thursday payouts
+            </button>
+          </form>
+        </div>
+        <div className="mt-3 overflow-x-auto">
+          <table className="min-w-full text-left text-sm">
+            <thead className="text-xs uppercase text-slate-500">
+              <tr>
+                <th className="py-1 pr-3">Contractor</th>
+                <th className="py-1 pr-3">Role</th>
+                <th className="py-1 pr-3">Rate</th>
+                <th className="py-1 pr-3">Hours</th>
+                <th className="py-1 pr-3">Amount</th>
+                <th className="py-1 pr-3">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {weekly.lines.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-3 text-slate-500">
+                    No approved contractors yet.
+                  </td>
+                </tr>
+              ) : (
+                weekly.lines.map((line) => (
+                  <tr key={line.id} className="border-t border-slate-100">
+                    <td className="py-2 pr-3">{line.name}</td>
+                    <td className="py-2 pr-3">{line.role}</td>
+                    <td className="py-2 pr-3">{formatUsdCents(line.hourlyRateCents)}</td>
+                    <td className="py-2 pr-3">{line.paidHours.toFixed(2)}</td>
+                    <td className="py-2 pr-3">{formatUsdCents(line.amountCents)}</td>
+                    <td className="py-2 pr-3">
+                      {line.status}
+                      {line.note ? <span className="block text-xs text-slate-500">{line.note}</span> : null}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-3">
         <div className="rounded-xl border bg-white p-4 shadow-sm">

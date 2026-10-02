@@ -10,6 +10,7 @@ import { wrapPhaseLabel } from "@/lib/wrap-status-display";
 import { isAllocationReleasedToModules, type DayShiftAvailability } from "@/lib/types";
 import { getContractorRecord } from "@/lib/contractor-records";
 import { ContractorAccountCard } from "@/components/contractor-account-card";
+import { ContractorPayCard } from "@/components/contractor-pay-card";
 import { DriverAvailabilityPanel } from "@/components/driver-availability-panel";
 import {
   availabilityDeadlineForWeekMonday,
@@ -177,7 +178,7 @@ export default async function CourierPage() {
           deadlineLabel={deadlineLabel}
         />
       }
-      earnings={null}
+      earnings={<ContractorPayCard contractorId={driver.id} role="joyrider" showConnect />}
       account={
         <section>
           <h2 className="mb-3 text-2xl font-semibold text-slate-900">Account</h2>

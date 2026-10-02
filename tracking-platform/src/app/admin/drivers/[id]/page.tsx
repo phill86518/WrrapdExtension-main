@@ -7,6 +7,7 @@ import { listMetros } from "@/lib/metros";
 import type { MetroId, OnboardingStatus } from "@/lib/types";
 import { getPayoutHold } from "@/lib/finance";
 import { setPayoutHoldAction } from "../../payout-hold-action";
+import { ContractorPayCard } from "@/components/contractor-pay-card";
 
 export const dynamic = "force-dynamic";
 
@@ -69,6 +70,9 @@ export default async function AdminDriverDetailPage({
       <p className="mt-1 text-xs text-slate-500">
         JoyRider (final-mile courier) — separate from WrapStars. App: joyrider.wrrapd.com
       </p>
+      <div className="mt-4">
+        <ContractorPayCard contractorId={driver.id} role="joyrider" />
+      </div>
 
       <form action={updateAction} className="mt-6 space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
         <input type="hidden" name="driverId" value={driver.id} />

@@ -1,7 +1,7 @@
 import { randomBytes } from "crypto";
 import { promises as fs } from "fs";
 import path from "path";
-import type { Order, WrapStarShift, WrapStarShiftVideo } from "./types";
+import type { Order, WrapShiftItem, WrapStarShift, WrapStarShiftVideo } from "./types";
 import {
   trackingWrapstarShiftsCollection,
   trackingWrapstarShiftVideosCollection,
@@ -91,6 +91,15 @@ export async function startShift(wrapstarId: string): Promise<
 
   if (existing) {
     const shift = await absorbTodaysOrders(existing);
+    const orders = await loadShiftOrders(shift);
+    return { ok: true, shift, orders };
+  }
+
+  const sheet = (await shiftsForWrapstar(wrapstarId)).find((s) => s.dateKey === dateKey && s.status === "sheet");
+  if (sheet) {
+    const now = new Date().toISOString();
+    const shift: WrapStarShift = { ...sheet, status: "active", startedAt: now, updatedAt: now };
+    await saveShift(shift);
     const orders = await loadShiftOrders(shift);
     return { ok: true, shift, orders };
   }
@@ -400,5 +409,171 @@ export async function registerVideoSegment(input: {
   };
   await saveVideo(video);
   return { ok: true, video };
+}
+
+/** Clock hours and gifts wrapped. Pay uses the contract rule in weekly-pay.ts, not this clock. */
+export function shiftPace(shift: WrapStarShift): {
+  hours: number;
+  wrapped: number;
+  itemCount: number;
+  perHour: number;
+  behind: number;
+} {
+  const items = shift.items || [];
+  const wrapped = items.filter(
+    (item) => item.phase === "wrapped" || item.phase === "done" || Boolean(item.wrappedAt || item.labeledAt),
+  ).length;
+  const start = shift.startedAt ? new Date(shift.startedAt).getTime() : NaN;
+  const end = shift.endedAt ? new Date(shift.endedAt).getTime() : Date.now();
+  const hours = Number.isFinite(start) ? Math.max(0, (end - start) / 3_600_000) : 0;
+  const perHour = hours > 0 ? wrapped / hours : 0;
+  const behind = Math.max(0, Math.round(hours * 12 - wrapped));
+  return { hours, wrapped, itemCount: items.length, perHour, behind };
+}
+
+export async function listWrapShifts(limit = 80): Promise<WrapStarShift[]> {
+  const col = trackingWrapstarShiftsCollection();
+  let rows: WrapStarShift[] = [];
+  if (col) {
+    const snap = await col.get();
+    rows = snap.docs.map((d) => d.data() as WrapStarShift);
+  } else {
+    rows = await readJsonArray<WrapStarShift>(SHIFTS_FILE);
+  }
+  return rows
+    .sort((a, b) => (b.dateKey || "").localeCompare(a.dateKey || "") || b.startedAt.localeCompare(a.startedAt))
+    .slice(0, limit);
+}
+
+async function shiftsForWrapstar(wrapstarId: string): Promise<WrapStarShift[]> {
+  const col = trackingWrapstarShiftsCollection();
+  if (col) {
+    const snap = await col.where("wrapstarId", "==", wrapstarId).get();
+    return snap.docs.map((d) => d.data() as WrapStarShift);
+  }
+  const all = await readJsonArray<WrapStarShift>(SHIFTS_FILE);
+  return all.filter((s) => s.wrapstarId === wrapstarId);
+}
+
+async function loadShiftById(shiftId: string): Promise<WrapStarShift | null> {
+  const col = trackingWrapstarShiftsCollection();
+  if (col) {
+    const snap = await col.doc(shiftId).get();
+    return snap.exists ? (snap.data() as WrapStarShift) : null;
+  }
+  const all = await readJsonArray<WrapStarShift>(SHIFTS_FILE);
+  return all.find((s) => s.id === shiftId) || null;
+}
+
+function itemsFromOrders(orders: Order[]): WrapShiftItem[] {
+  const items: WrapShiftItem[] = [];
+  for (const order of orders) {
+    const lines = order.lineItems?.length ? order.lineItems : [{ title: order.recipientName }];
+    lines.forEach((line, lineIndex) => {
+      const token = lineIndex === 0 && order.driverLabelToken ? order.driverLabelToken : newDriverLabelToken();
+      items.push({
+        id: newId("itm"),
+        orderId: order.id,
+        lineIndex,
+        code: token.slice(0, 6).toUpperCase(),
+        scanToken: token,
+        title: line.title || order.recipientName || "Gift",
+        imageUrl: line.imageUrl,
+        wrappingPaper: line.wrappingOption || "Standard",
+        customPrint: line.wrappingOption === "upload" || line.wrappingOption === "ai",
+        printFileUrl: line.wrappingDesignImageUrl,
+        printFileName: line.uploadedDesignFileName,
+        needsBox: false,
+        phase: "queued",
+      });
+    });
+  }
+  return items;
+}
+
+/** Morning sheet for a calendar day. Does not start the paid clock. */
+export async function ensureDaySheet(wrapstarId: string, dateKey: string): Promise<WrapStarShift | null> {
+  const existing = (await shiftsForWrapstar(wrapstarId)).find((s) => s.dateKey === dateKey && s.status !== "cancelled");
+  if (existing) return existing;
+  const today = todaysOrders(await listWrapstarOrders(wrapstarId), dateKey);
+  if (today.length === 0) return null;
+  const now = new Date().toISOString();
+  const shift: WrapStarShift = {
+    id: newId("shf"),
+    wrapstarId,
+    dateKey,
+    startedAt: now,
+    status: "sheet",
+    orderIds: today.map((o) => o.id),
+    items: itemsFromOrders(today),
+    createdAt: now,
+    updatedAt: now,
+  };
+  await saveShift(shift);
+  return shift;
+}
+
+export async function markMorningEmailSent(shiftId: string): Promise<void> {
+  const shift = await loadShiftById(shiftId);
+  if (!shift) return;
+  const now = new Date().toISOString();
+  await saveShift({ ...shift, morningEmailSentAt: now, updatedAt: now });
+}
+
+export async function endShift(
+  wrapstarId: string,
+): Promise<{ ok: true; shift: WrapStarShift } | { ok: false; error: string }> {
+  const shift = await getActiveShift(wrapstarId);
+  if (!shift) return { ok: false, error: "No active shift." };
+  const now = new Date().toISOString();
+  const next: WrapStarShift = { ...shift, status: "ended", endedAt: now, updatedAt: now };
+  await saveShift(next);
+  return { ok: true, shift: next };
+}
+
+async function updateItem(
+  wrapstarId: string,
+  itemId: string,
+  patch: Partial<WrapShiftItem>,
+): Promise<{ ok: true; shift: WrapStarShift; item: WrapShiftItem } | { ok: false; error: string }> {
+  const shift = await getActiveShift(wrapstarId);
+  if (!shift) return { ok: false, error: "No active shift." };
+  const items = shift.items || [];
+  const idx = items.findIndex((item) => item.id === itemId);
+  if (idx < 0) return { ok: false, error: "Gift not on this shift." };
+  const item = { ...items[idx]!, ...patch };
+  const nextItems = items.slice();
+  nextItems[idx] = item;
+  const next: WrapStarShift = { ...shift, items: nextItems, updatedAt: new Date().toISOString() };
+  await saveShift(next);
+  return { ok: true, shift: next, item };
+}
+
+export async function openItemByScan(wrapstarId: string, code: string) {
+  const shift = await getActiveShift(wrapstarId);
+  if (!shift) return { ok: false as const, error: "No active shift." };
+  const needle = code.trim().toUpperCase();
+  const item = (shift.items || []).find((row) => row.code.toUpperCase() === needle || row.scanToken === code.trim());
+  if (!item) return { ok: false as const, error: "That code is not on today's sheet." };
+  return updateItem(wrapstarId, item.id, { phase: item.phase === "queued" ? "open" : item.phase, openedAt: item.openedAt || new Date().toISOString() });
+}
+
+export function startItemCamera(wrapstarId: string, itemId: string) {
+  return updateItem(wrapstarId, itemId, { phase: "recording", cameraStartedAt: new Date().toISOString() });
+}
+
+export function confirmItemBox(wrapstarId: string, itemId: string) {
+  return updateItem(wrapstarId, itemId, { boxPickedAt: new Date().toISOString() });
+}
+
+export function completeItemWrap(wrapstarId: string, itemId: string) {
+  return updateItem(wrapstarId, itemId, { phase: "wrapped", wrappedAt: new Date().toISOString() }).then((result) => {
+    if (!result.ok) return result;
+    return { ...result, barcodeDataUrl: "" };
+  });
+}
+
+export function confirmItemLabel(wrapstarId: string, itemId: string) {
+  return updateItem(wrapstarId, itemId, { phase: "done", labeledAt: new Date().toISOString() });
 }
 

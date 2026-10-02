@@ -18,6 +18,7 @@ import {
   walletForWrapstar,
 } from "@/lib/finance";
 import { setPayoutHoldAction } from "../../payout-hold-action";
+import { ContractorPayCard } from "@/components/contractor-pay-card";
 
 export const dynamic = "force-dynamic";
 
@@ -272,6 +273,10 @@ export default async function AdminWrapstarDetailPage({
           .
         </p>
       </section>
+
+      <div className="mt-6">
+        <ContractorPayCard contractorId={wrapstar.id} role="wrapstar" />
+      </div>
 
       <section className="mt-6 rounded-xl border bg-white p-4 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">

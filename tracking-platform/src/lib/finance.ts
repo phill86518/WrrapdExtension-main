@@ -500,6 +500,19 @@ export function getPaymentRail(): PaymentRail {
   return new ManualAchExportRail();
 }
 
+export async function upsertEarning(entry: EarningsEntry): Promise<void> {
+  const col = trackingEarningsCollection();
+  if (col) {
+    await col.doc(entry.id).set(entry);
+    return;
+  }
+  const list = await listEarningsLocal();
+  const idx = list.findIndex((e) => e.id === entry.id);
+  if (idx >= 0) list[idx] = entry;
+  else list.push(entry);
+  await writeEarningsLocal(list);
+}
+
 export function formatUsdCents(cents: number): string {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(cents / 100);
 }
