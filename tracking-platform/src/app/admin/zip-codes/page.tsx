@@ -122,9 +122,9 @@ export default async function AdminZipCodesPage() {
       <WrrapdLogo className="mt-2 h-10 w-auto max-w-[180px] object-contain object-left" />
       <h1 className="mt-2 text-3xl font-semibold">Allowed ZIP codes</h1>
       <p className="mt-1 text-sm text-slate-600">
-        Manage which giftee ZIP codes can receive Wrrapd deliveries. Checkout and gift modals use this
-        allowlist before showing pricing. Use <strong>Seed launch metros</strong> for Atlanta, Savannah,
-        Duval, Miami, Orlando, and Tampa.
+        Manage which giftee ZIP codes can receive gift wrapping. Checkout uses this allowlist before
+        showing pricing. <strong>Open Map</strong> to click ZIP codes on or off across the country,
+        including Alaska and Hawaii. For now the allowlist is strictly Duval County / Jacksonville.
       </p>
 
       {loadError && (

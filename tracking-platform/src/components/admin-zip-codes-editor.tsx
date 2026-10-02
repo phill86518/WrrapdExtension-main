@@ -1,7 +1,13 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useMemo, useState, useTransition } from "react";
 import type { AllowedZipCodesPayload, ZipCheckResult } from "@/lib/wrrapd-zip-codes-admin";
+
+const ZipAllowlistMap = dynamic(
+  () => import("@/components/zip-allowlist-map").then((mod) => mod.ZipAllowlistMap),
+  { ssr: false },
+);
 
 type PayloadResult = { ok: true; data: AllowedZipCodesPayload } | { ok: false; error: string };
 type CheckResult = { ok: true; result: ZipCheckResult } | { ok: false; error: string };
@@ -54,6 +60,7 @@ export function AdminZipCodesEditor({
   const [filter, setFilter] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [mapOpen, setMapOpen] = useState(false);
   const [pending, startTransition] = useTransition();
 
   const filtered = useMemo(() => {
@@ -83,6 +90,14 @@ export function AdminZipCodesEditor({
             {data.notes ? <p className="mt-1 text-xs text-slate-500">{data.notes}</p> : null}
           </div>
           <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => setMapOpen(true)}
+              className="rounded-lg bg-[#0c0638] px-3 py-2 text-sm font-semibold text-white hover:bg-[#16104a] disabled:opacity-50"
+            >
+              Open Map
+            </button>
             <button
               type="button"
               disabled={pending}
@@ -322,6 +337,24 @@ export function AdminZipCodesEditor({
         <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900">{error}</p>
       ) : null}
       {pending ? <p className="text-sm text-slate-500">Working…</p> : null}
+      {mapOpen ? (
+        <ZipAllowlistMap
+          allowed={data.allowedZipCodes}
+          onClose={() => setMapOpen(false)}
+          onSave={async (zips) => {
+            const result = await onReplace(
+              zips,
+              `Gift-wrapping delivery areas updated from the ZIP map — ${zips.length} ZIPs.`,
+            );
+            if (result.ok) {
+              setData(result.data);
+              setMessage(`Saved ${result.data.count.toLocaleString()} ZIP codes from the map.`);
+              setMapOpen(false);
+            }
+            return result;
+          }}
+        />
+      ) : null}
     </div>
   );
 }
