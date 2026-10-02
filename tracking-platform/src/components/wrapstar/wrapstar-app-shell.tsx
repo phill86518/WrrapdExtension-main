@@ -97,7 +97,7 @@ export function WrapstarAppShell({
 
   return (
     <div className="min-h-dvh bg-[#f4f1ea] text-[#0f0351] md:flex">
-      <aside className="border-b border-white/10 bg-slate-950 text-white md:flex md:w-60 md:shrink-0 md:flex-col md:border-b-0 md:border-r">
+      <aside className="border-b border-white/10 bg-slate-950 text-white md:sticky md:top-0 md:flex md:max-h-dvh md:w-60 md:shrink-0 md:flex-col md:self-start md:overflow-y-auto md:border-b-0 md:border-r">
         <div className="flex items-center gap-3 bg-[#faf8f4] px-4 py-3 text-[#0f0351] md:block md:px-4 md:py-4">
           <WrrapdLogo className="h-9 w-auto max-w-[140px] object-contain object-left md:h-10 md:max-w-[180px]" />
           <div className="min-w-0 md:mt-3">
@@ -105,7 +105,7 @@ export function WrapstarAppShell({
             <p className="truncate text-sm text-[#0f0351]/70 md:text-slate-600">{wrapstarName}</p>
           </div>
         </div>
-        <nav aria-label="Pages" className="grid grid-cols-2 gap-2 p-3 md:flex md:flex-1 md:flex-col md:gap-1 md:overflow-y-auto">
+        <nav aria-label="Pages" className="grid grid-cols-2 gap-2 p-3 md:flex md:flex-col md:gap-1">
           {nav.map((item) => {
             const active = section === item.id;
             return (
@@ -122,7 +122,7 @@ export function WrapstarAppShell({
             );
           })}
         </nav>
-        <div className="px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:mt-auto md:border-t md:border-white/10 md:p-3">
+        <div className="px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:border-t md:border-white/10 md:p-3">
           <LogoutButton
             redirectPath={logoutPath}
             label="Log out"
