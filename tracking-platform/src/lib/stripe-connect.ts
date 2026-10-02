@@ -48,9 +48,9 @@ export type PlatformPayoutBank = {
 /** Live platform bank Stripe will use. Null until a live key is set and a bank is attached. */
 export async function getPlatformPayoutBank(): Promise<PlatformPayoutBank | null> {
   if (!stripeConfigured()) return null;
-  const account = await stripe().accounts.retrieve();
-  const rows = account.external_accounts?.data || [];
-  const banks = rows.filter((row): row is Stripe.BankAccount => row.object === "bank_account");
+  const me = await stripe().accounts.retrieve(null);
+  const listed = await stripe().accounts.listExternalAccounts(me.id, { object: "bank_account", limit: 10 });
+  const banks = listed.data.filter((row): row is Stripe.BankAccount => row.object === "bank_account");
   const bank = banks.find((row) => row.default_for_currency) || banks[0];
   if (!bank) return null;
   return {
