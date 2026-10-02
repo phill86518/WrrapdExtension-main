@@ -36,6 +36,7 @@ const DEFAULT_CONFIG: PayoutConfig = {
   wrapriderHourlyCents: 3000,
   wrapstarPaceGiftsPerHour: 12,
   hourlyByZip: [],
+  weeklyPayoutMode: "manual",
   updatedAt: new Date().toISOString(),
 };
 
@@ -51,6 +52,7 @@ function migrateRetiredHourlyDefaults(cfg: PayoutConfig): PayoutConfig {
   ) {
     next.wrapriderHourlyCents = 3000;
   }
+  if (next.weeklyPayoutMode !== "automatic") next.weeklyPayoutMode = "manual";
   return next;
 }
 

@@ -39,6 +39,27 @@ function stripe(): Stripe {
   return new Stripe(stripeSecret());
 }
 
+export type PlatformPayoutBank = {
+  bankName: string;
+  last4: string;
+  currency: string;
+};
+
+/** Live platform bank Stripe will use. Null until a live key is set and a bank is attached. */
+export async function getPlatformPayoutBank(): Promise<PlatformPayoutBank | null> {
+  if (!stripeConfigured()) return null;
+  const account = await stripe().accounts.retrieve();
+  const rows = account.external_accounts?.data || [];
+  const banks = rows.filter((row): row is Stripe.BankAccount => row.object === "bank_account");
+  const bank = banks.find((row) => row.default_for_currency) || banks[0];
+  if (!bank) return null;
+  return {
+    bankName: bank.bank_name || "Bank",
+    last4: bank.last4 || "",
+    currency: bank.currency || "usd",
+  };
+}
+
 export function trackingPublicOrigin(request?: Request): string {
   if (request) {
     const rawHost = request.headers.get("x-forwarded-host") || request.headers.get("host") || "";

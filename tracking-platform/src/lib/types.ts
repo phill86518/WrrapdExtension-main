@@ -520,6 +520,8 @@ export type PayoutConfig = {
   wrapstarPaceGiftsPerHour: number;
   /** Exact ZIP or 3-digit prefix overrides. */
   hourlyByZip: HourlyZipRate[];
+  /** Thursday cron sends payouts only when automatic. Manual = Command Center button only. */
+  weeklyPayoutMode?: "manual" | "automatic";
   updatedAt: string;
 };
 

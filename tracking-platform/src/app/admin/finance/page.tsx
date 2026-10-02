@@ -7,6 +7,7 @@ import {
   createPayoutBatch,
   formatUsdCents,
   getPayoutConfig,
+  savePayoutConfig,
   listEarnings,
   listPayoutHolds,
   listPayouts,
@@ -16,7 +17,7 @@ import {
 } from "@/lib/finance";
 import { setPayoutHoldAction } from "../payout-hold-action";
 import { previewWeeklyPay, runWeeklyPayouts } from "@/lib/weekly-pay";
-import { stripeKeyMode } from "@/lib/stripe-connect";
+import { getPlatformPayoutBank, stripeKeyMode } from "@/lib/stripe-connect";
 
 export const dynamic = "force-dynamic";
 
@@ -38,6 +39,16 @@ async function runWeeklyPayoutsAction() {
   const session = await getSession();
   if (!session || session.role !== "admin") return;
   await runWeeklyPayouts();
+  revalidatePath("/admin/finance");
+  redirect("/admin/finance");
+}
+
+async function saveWeeklyPayoutModeAction(formData: FormData) {
+  "use server";
+  const session = await getSession();
+  if (!session || session.role !== "admin") return;
+  const mode = String(formData.get("weeklyPayoutMode") || "") === "automatic" ? "automatic" : "manual";
+  await savePayoutConfig({ weeklyPayoutMode: mode });
   revalidatePath("/admin/finance");
   redirect("/admin/finance");
 }
@@ -89,6 +100,8 @@ export default async function AdminFinancePage({
   const paidTotal = wallets.reduce((s, x) => s + x.wallet.paidCents, 0);
   const weekly = await previewWeeklyPay();
   const weeklyTotal = weekly.lines.reduce((s, line) => s + line.amountCents, 0);
+  const payoutMode = config.weeklyPayoutMode === "automatic" ? "automatic" : "manual";
+  const platformBank = await getPlatformPayoutBank();
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -101,9 +114,42 @@ export default async function AdminFinancePage({
       <p className="mt-1 text-sm text-slate-600">
         WrapStars are paid from clock-in to clock-out, at least half an hour and no more than 12 finished
         gifts an hour. WrapRiders get $2.50 per finished gift plus estimated delivery hours. JoyRiders get
-        estimated delivery hours only. Traffic does not add delivery pay. Thursday at 6:00pm Eastern, Stripe sends the
-        bank deposit for Friday.
+        estimated delivery hours only. Traffic does not add delivery pay. Automatic mode sends Thursday at
+        6:00pm Eastern. Manual mode waits for Send Thursday payouts. The Friday bank deposit follows either way.
       </p>
+
+      <section className="mt-6 rounded-xl border bg-white p-4 shadow-sm">
+        <h2 className="font-semibold">Outbound payments</h2>
+        <form action={saveWeeklyPayoutModeAction} className="mt-3 flex flex-wrap items-end gap-6">
+          <fieldset className="space-y-2">
+            <legend className="text-sm font-medium text-slate-700">How should Thursday payouts go out?</legend>
+            <label className="flex items-center gap-2 text-sm">
+              <input type="radio" name="weeklyPayoutMode" value="manual" defaultChecked={payoutMode === "manual"} />
+              Manual — I press Send Thursday payouts
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input type="radio" name="weeklyPayoutMode" value="automatic" defaultChecked={payoutMode === "automatic"} />
+              Automatic — send Thursday at 6:00pm Eastern
+            </label>
+          </fieldset>
+          <button type="submit" className="rounded bg-slate-900 px-3 py-2 text-sm font-semibold text-white">
+            Save
+          </button>
+        </form>
+        <p className="mt-3 text-sm text-slate-600">
+          Now: {payoutMode === "automatic" ? "Automatic" : "Manual"}.
+          {weekly.stripeReady
+            ? " Stripe is live."
+            : stripeKeyMode() === "test"
+              ? " Stripe is still in test mode. Live keys are required for contractor payouts."
+              : " Stripe live key is not set on this server yet."}
+          {platformBank
+            ? ` Platform bank ${platformBank.bankName} ····${platformBank.last4}.`
+            : weekly.stripeReady
+              ? " No platform bank is attached in Stripe yet."
+              : ""}
+        </p>
+      </section>
 
       <section className="mt-6 rounded-xl border bg-white p-4 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -113,11 +159,6 @@ export default async function AdminFinancePage({
             </h2>
             <p className="mt-1 text-sm text-slate-600">
               {formatUsdCents(weeklyTotal)} across {weekly.lines.length} contractors.
-              {weekly.stripeReady
-                ? " Stripe is live."
-                : stripeKeyMode() === "test"
-                  ? " Stripe is still in test mode. Live keys are required for contractor payouts."
-                  : " Stripe live key is not set on this server yet."}
             </p>
           </div>
           <form action={runWeeklyPayoutsAction}>
