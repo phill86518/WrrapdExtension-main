@@ -31,17 +31,20 @@ function stripe(): Stripe {
 }
 
 export function trackingPublicOrigin(request?: Request): string {
+  if (request) {
+    const rawHost = request.headers.get("x-forwarded-host") || request.headers.get("host") || "";
+    const host = rawHost.split(",")[0]?.trim() || "";
+    if (host && !host.startsWith("localhost") && !host.startsWith("127.0.0.1")) {
+      const proto = (request.headers.get("x-forwarded-proto") || "https").split(",")[0]?.trim() || "https";
+      return `${proto}://${host}`;
+    }
+  }
   const env =
     process.env.TRACKING_PUBLIC_ORIGIN?.trim() ||
     process.env.NEXT_PUBLIC_TRACKING_BASE_URL?.trim() ||
     process.env.WRRAPD_PUBLIC_TRACKING_URL?.trim() ||
     "";
-  if (env) return env.replace(/\/$/, "");
-  if (!request) return "";
-  const host = request.headers.get("x-forwarded-host") || request.headers.get("host") || "";
-  if (!host) return "";
-  const proto = request.headers.get("x-forwarded-proto") || "https";
-  return `${proto}://${host}`;
+  return env.replace(/\/$/, "");
 }
 
 async function readLocal(): Promise<Record<string, StripeConnectAccount>> {
