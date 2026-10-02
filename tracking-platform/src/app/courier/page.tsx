@@ -32,6 +32,7 @@ export default async function CourierPage() {
         action="/api/courier/login"
         redirectTo="/courier"
         blurb="Sign in to your pickups and deliveries."
+        portal="driver"
       />
     );
   }

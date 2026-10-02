@@ -35,6 +35,11 @@ export async function middleware(request: NextRequest) {
       u.pathname = home;
       return NextResponse.rewrite(u);
     }
+    if (pathname === "/reset-password") {
+      const u = request.nextUrl.clone();
+      u.pathname = `${home}/reset-password`;
+      return NextResponse.rewrite(u);
+    }
     if (
       others.some((other) => pathname === other || pathname.startsWith(`${other}/`)) ||
       pathname === "/admin" ||
@@ -139,6 +144,7 @@ export const config = {
   matcher: [
     "/",
     "/platform",
+    "/reset-password",
     "/admin",
     "/admin/:path*",
     "/driver/:path*",

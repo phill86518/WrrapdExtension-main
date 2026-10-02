@@ -47,6 +47,7 @@ export default async function WrapriderPage() {
         action="/api/wraprider/login"
         redirectTo="/wraprider"
         blurb="Sign in to your wrap jobs and deliveries."
+        portal="wraprider"
       />
     );
   }

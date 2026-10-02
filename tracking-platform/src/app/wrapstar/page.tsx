@@ -43,6 +43,7 @@ export default async function WrapstarPage() {
         action="/api/wrapstar/login"
         redirectTo="/wrapstar"
         blurb="Sign in to your wrap jobs."
+        portal="wrapstar"
       />
     );
   }

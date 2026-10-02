@@ -281,8 +281,8 @@ export function ShiftModule() {
     return (
       <section className="space-y-4">
         <div>
-          <h2 className="text-3xl font-semibold text-slate-900">Start shift</h2>
-          <p className="mt-2 text-lg leading-relaxed text-slate-700">
+          <h2 className="text-2xl font-semibold text-slate-900 md:text-xl">Start shift</h2>
+          <p className="mt-2 text-lg leading-relaxed text-slate-700 md:text-sm md:leading-normal">
             Clock in when you begin, even if no gifts are assigned yet. They show up here when they are.
           </p>
         </div>
@@ -295,7 +295,7 @@ export function ShiftModule() {
           type="button"
           disabled={busy}
           onClick={() => void startShift()}
-          className="h-16 w-full rounded-2xl bg-[#f6b933] px-4 text-2xl font-bold text-[#0f0351] disabled:opacity-60"
+          className="h-14 w-full rounded-2xl bg-[#f6b933] px-4 text-xl font-bold text-[#0f0351] disabled:opacity-60 md:h-11 md:w-auto md:rounded-lg md:px-5 md:text-sm"
         >
           {busy ? "Starting…" : "Start shift"}
         </button>

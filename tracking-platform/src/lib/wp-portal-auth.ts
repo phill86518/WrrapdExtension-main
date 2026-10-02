@@ -26,6 +26,8 @@ export type PortalAuthRoles = {
   wraprider?: PortalAuthRole;
 };
 
+export type PortalTrack = "wrapstar" | "driver" | "wraprider";
+
 export type PortalAuthResult =
   | {
       ok: true;
@@ -46,6 +48,64 @@ function wpBase(): string {
 
 export function looksLikeEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
+async function postPortal(path: string, body: Record<string, string>): Promise<{ status: number; body: Record<string, unknown> }> {
+  const key = (process.env.WRRAPD_WRAPSTARS_OPS_API_KEY || "").trim();
+  if (!key) {
+    return { status: 503, body: { error: "Password reset is not available right now." } };
+  }
+  const r = await fetch(`${wpBase()}/wp-json/wrrapd/v1/${path}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Wrrapd-Wrapstars-Ops-Key": key,
+    },
+    body: JSON.stringify(body),
+    cache: "no-store",
+  });
+  const parsed = (await r.json().catch(() => ({}))) as Record<string, unknown>;
+  return { status: r.status, body: parsed };
+}
+
+/** Ask WordPress to email a reset link. A missing account still looks successful. */
+export async function requestPortalPasswordReset(email: string, portal: PortalTrack): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const { status, body } = await postPortal("portal-forgot-password", {
+      email: email.trim().toLowerCase(),
+      portal,
+    });
+    if (status >= 200 && status < 300) return { ok: true };
+    if (status === 400) {
+      return { ok: false, error: typeof body.error === "string" ? body.error : "Enter the email on your account." };
+    }
+    return { ok: false, error: "We couldn't send the email. Try again in a few minutes." };
+  } catch {
+    return { ok: false, error: "We couldn't send the email. Try again in a few minutes." };
+  }
+}
+
+export async function completePortalPasswordReset(input: {
+  login: string;
+  key: string;
+  newPassword: string;
+  portal: PortalTrack;
+}): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const { status, body } = await postPortal("portal-reset-password", {
+      login: input.login,
+      key: input.key,
+      newPassword: input.newPassword,
+      portal: input.portal,
+    });
+    if (status >= 200 && status < 300 && body.ok === true) return { ok: true };
+    return {
+      ok: false,
+      error: typeof body.error === "string" ? body.error : "This reset link has expired. Ask for a new one.",
+    };
+  } catch {
+    return { ok: false, error: "We couldn't save the new password. Try again in a few minutes." };
+  }
 }
 
 export async function verifyPortalCredentials(

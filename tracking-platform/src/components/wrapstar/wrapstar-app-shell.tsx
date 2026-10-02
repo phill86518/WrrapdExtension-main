@@ -64,7 +64,6 @@ export function WrapstarAppShell({
   sectionLabels,
 }: Props) {
   const [section, setSection] = useState<WrapstarNavSection>(initialSection);
-  const [drawerOpen, setDrawerOpen] = useState(false);
   const allowed = sections ?? (deliveries === undefined ? NAV.filter((n) => n.id !== "deliveries").map((n) => n.id) : NAV.map((n) => n.id));
   const nav = allowed
     .map((id) => {
@@ -76,7 +75,6 @@ export function WrapstarAppShell({
 
   function go(id: WrapstarNavSection) {
     setSection(id);
-    setDrawerOpen(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -98,40 +96,16 @@ export function WrapstarAppShell({
   const title = nav.find((n) => n.id === section)?.label ?? appLabel;
 
   return (
-    <div className="flex h-dvh flex-col bg-[#f4f1ea] text-[#0f0351]">
-      {drawerOpen ? (
-        <button
-          type="button"
-          className="fixed inset-0 z-40 bg-black/40"
-          aria-label="Close menu"
-          onClick={() => setDrawerOpen(false)}
-        />
-      ) : null}
-
-      <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-[min(22rem,92vw)] flex-col bg-slate-950 text-white shadow-xl transition-transform duration-200 ${
-          drawerOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
-        aria-hidden={!drawerOpen}
-      >
-        <div className="border-b border-white/10">
-          <div className="bg-[#faf8f4] px-5 py-5">
-            <WrrapdLogo className="h-14 w-auto max-w-[220px] object-contain object-left" />
-          </div>
-          <div className="px-5 py-5">
-            <p className="text-3xl font-semibold tracking-tight">{appLabel}</p>
-            <button
-              type="button"
-              className="mt-3 text-xl font-semibold text-white/80 underline"
-              onClick={() => setDrawerOpen(false)}
-            >
-              Close menu
-            </button>
-            <p className="mt-2 truncate text-xl text-slate-200">{wrapstarName}</p>
-            <p className="mt-1 font-mono text-base text-slate-400">ID {wrapstarId}</p>
+    <div className="min-h-dvh bg-[#f4f1ea] text-[#0f0351] md:flex">
+      <aside className="border-b border-white/10 bg-slate-950 text-white md:flex md:w-60 md:shrink-0 md:flex-col md:border-b-0 md:border-r">
+        <div className="flex items-center gap-3 bg-[#faf8f4] px-4 py-3 text-[#0f0351] md:block md:px-4 md:py-4">
+          <WrrapdLogo className="h-9 w-auto max-w-[140px] object-contain object-left md:h-10 md:max-w-[180px]" />
+          <div className="min-w-0 md:mt-3">
+            <p className="truncate text-base font-semibold md:text-lg">{appLabel}</p>
+            <p className="truncate text-sm text-[#0f0351]/70 md:text-slate-600">{wrapstarName}</p>
           </div>
         </div>
-        <nav className="flex flex-1 flex-col justify-evenly overflow-y-auto px-3 py-4">
+        <nav aria-label="Pages" className="grid grid-cols-2 gap-2 p-3 md:flex md:flex-1 md:flex-col md:gap-1 md:overflow-y-auto">
           {nav.map((item) => {
             const active = section === item.id;
             return (
@@ -139,8 +113,8 @@ export function WrapstarAppShell({
                 key={item.id}
                 type="button"
                 onClick={() => go(item.id)}
-                className={`flex w-full items-center rounded-2xl px-4 py-5 text-left text-xl font-semibold leading-snug ${
-                  active ? "bg-[#f6b933] text-[#0f0351]" : "text-white hover:bg-white/10"
+                className={`rounded-xl px-3 py-3 text-left text-sm font-semibold leading-snug md:rounded-lg md:px-3 md:py-2 md:text-sm ${
+                  active ? "bg-[#f6b933] text-[#0f0351]" : "bg-white/10 text-white hover:bg-white/15 md:bg-transparent"
                 }`}
               >
                 {item.label}
@@ -148,61 +122,26 @@ export function WrapstarAppShell({
             );
           })}
         </nav>
-        <div className="shrink-0 border-t border-white/10 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-          <LogoutButton redirectPath={logoutPath} label="Log out" variant="gold" />
+        <div className="px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:mt-auto md:border-t md:border-white/10 md:p-3">
+          <LogoutButton
+            redirectPath={logoutPath}
+            label="Log out"
+            variant="gold"
+            className="!h-11 !px-3 !text-sm md:!h-10"
+          />
         </div>
       </aside>
 
-      <header className="flex shrink-0 items-center gap-3 border-b border-[#0c0638]/10 bg-white px-4 py-4">
-        <button
-          type="button"
-          className="flex h-16 items-center gap-2 rounded-2xl bg-[#f6b933] px-5 text-xl font-bold text-[#0f0351] shadow-sm"
-          aria-label="Open menu"
-          onClick={() => setDrawerOpen(true)}
-        >
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden>
-            <path
-              d="M4 7h16M4 12h16M4 17h16"
-              stroke="currentColor"
-              strokeWidth="2.4"
-              strokeLinecap="round"
-            />
-          </svg>
-          Menu
-        </button>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-2xl font-bold text-[#0f0351]">{title}</p>
-          <p className="truncate text-lg text-[#0f0351]/70">{appLabel}</p>
-        </div>
-      </header>
-
-      <main className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-        <div className="mx-auto my-auto w-full max-w-3xl space-y-6 px-5 py-8 [&_h2]:text-3xl [&_h3]:text-2xl [&_label]:text-xl [&_li]:text-xl [&_p]:text-xl [&_summary]:text-2xl">
+      <div className="min-w-0 md:flex-1">
+        <header className="border-b border-[#0c0638]/10 bg-white px-4 py-3 md:px-6 md:py-4">
+          <h1 className="truncate text-lg font-semibold text-[#0f0351] md:text-xl">{title}</h1>
+          <p className="truncate text-sm text-[#0f0351]/60">{appLabel}</p>
+        </header>
+        <main className="mx-auto w-full max-w-3xl space-y-4 px-4 py-4 pb-10 md:space-y-5 md:px-6 md:py-6">
           {installCard && section === "today" ? <div>{installCard}</div> : null}
           {body}
-        </div>
-      </main>
-
-      <nav
-        aria-label="Pages"
-        className="grid shrink-0 grid-cols-2 gap-2 border-t border-[#0c0638]/10 bg-white px-3 py-3 [padding-bottom:max(0.75rem,env(safe-area-inset-bottom))]"
-      >
-        {nav.map((item) => {
-          const active = section === item.id;
-          return (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => go(item.id)}
-              className={`rounded-2xl px-3 py-4 text-lg font-bold leading-tight ${
-                active ? "bg-[#0c0638] text-white" : "bg-[#f4f1ea] text-[#0f0351]"
-              }`}
-            >
-              {item.label}
-            </button>
-          );
-        })}
-      </nav>
+        </main>
+      </div>
     </div>
   );
 }

@@ -498,6 +498,24 @@ function wrrapd_wrapstars_ops_register_rest_routes() {
 			'permission_callback' => 'wrrapd_wrapstars_ops_api_permission',
 		)
 	);
+	register_rest_route(
+		'wrrapd/v1',
+		'/portal-forgot-password',
+		array(
+			'methods'             => 'POST',
+			'callback'            => 'wrrapd_wrapstars_ops_portal_forgot_password',
+			'permission_callback' => 'wrrapd_wrapstars_ops_api_permission',
+		)
+	);
+	register_rest_route(
+		'wrrapd/v1',
+		'/portal-reset-password',
+		array(
+			'methods'             => 'POST',
+			'callback'            => 'wrrapd_wrapstars_ops_portal_reset_password',
+			'permission_callback' => 'wrrapd_wrapstars_ops_api_permission',
+		)
+	);
 }
 add_action( 'rest_api_init', 'wrrapd_wrapstars_ops_register_rest_routes' );
 
@@ -669,6 +687,131 @@ function wrrapd_wrapstars_ops_portal_contact( $request ) {
 		),
 		200
 	);
+}
+
+/**
+ * Public app host for a password-reset link.
+ *
+ * @param string $portal wrapstar|driver|wraprider.
+ */
+function wrrapd_wrapstars_ops_portal_reset_url( $portal, $login, $key ) {
+	$hosts = array(
+		'wrapstar'  => 'https://wrapstar.wrrapd.com/reset-password',
+		'driver'    => 'https://joyrider.wrrapd.com/reset-password',
+		'wraprider' => 'https://wraprider.wrrapd.com/reset-password',
+	);
+	$base = $hosts[ $portal ] ?? $hosts['wrapstar'];
+	return $base . '?login=' . rawurlencode( $login ) . '&key=' . rawurlencode( $key );
+}
+
+/**
+ * Application post for this email on one hire track, any status.
+ *
+ * @param int    $user_id User ID.
+ * @param string $portal  wrapstar|driver|wraprider.
+ * @return WP_Post|null
+ */
+function wrrapd_wrapstars_ops_portal_application( $user_id, $portal ) {
+	if ( $portal === 'driver' && function_exists( 'wrrapd_drivers_get_application_by_user' ) ) {
+		$app = wrrapd_drivers_get_application_by_user( $user_id );
+		return $app ? $app : null;
+	}
+	if ( $portal === 'wraprider' && function_exists( 'wrrapd_wrapriders_get_application_by_user' ) ) {
+		$app = wrrapd_wrapriders_get_application_by_user( $user_id );
+		return $app ? $app : null;
+	}
+	if ( $portal === 'wrapstar' ) {
+		$app = wrrapd_wrapstars_get_application_by_user( $user_id );
+		return $app ? $app : null;
+	}
+	return null;
+}
+
+/**
+ * POST /wrrapd/v1/portal-forgot-password { email, portal }
+ *
+ * Always reports success for a valid email so the reply does not reveal who has an account.
+ *
+ * @param WP_REST_Request $request Request.
+ * @return WP_REST_Response
+ */
+function wrrapd_wrapstars_ops_portal_forgot_password( $request ) {
+	$email  = sanitize_email( (string) $request->get_param( 'email' ) );
+	$portal = sanitize_key( (string) $request->get_param( 'portal' ) );
+	if ( $email === '' || ! is_email( $email ) || ! in_array( $portal, array( 'wrapstar', 'driver', 'wraprider' ), true ) ) {
+		return new WP_REST_Response( array( 'ok' => false, 'error' => 'Enter the email on your account.' ), 400 );
+	}
+	$quiet = new WP_REST_Response( array( 'ok' => true ), 200 );
+	$user  = get_user_by( 'email', $email );
+	if ( ! $user ) {
+		$user = get_user_by( 'login', $email );
+	}
+	if ( ! $user ) {
+		return $quiet;
+	}
+	$app = wrrapd_wrapstars_ops_portal_application( (int) $user->ID, $portal );
+	if ( ! $app ) {
+		return $quiet;
+	}
+	$key = get_password_reset_key( $user );
+	if ( is_wp_error( $key ) ) {
+		return $quiet;
+	}
+	$labels = array(
+		'wrapstar'  => 'WrapStar',
+		'driver'    => 'JoyRider',
+		'wraprider' => 'WrapRider',
+	);
+	$label = $labels[ $portal ];
+	$url   = wrrapd_wrapstars_ops_portal_reset_url( $portal, $user->user_login, $key );
+	$name  = $user->display_name !== '' ? $user->display_name : $label;
+	$body  = "Hi {$name},\n\nUse this link to choose a new password for your {$label} app:\n\n{$url}\n\nThe link works for a limited time. If you did not ask for this, you can ignore this email.\n";
+	wrrapd_wrapstars_send_email( $user->user_email, "Reset your {$label} password", $body, false );
+	return $quiet;
+}
+
+/**
+ * POST /wrrapd/v1/portal-reset-password { login, key, newPassword, portal }
+ *
+ * @param WP_REST_Request $request Request.
+ * @return WP_REST_Response
+ */
+function wrrapd_wrapstars_ops_portal_reset_password( $request ) {
+	$login  = sanitize_text_field( (string) $request->get_param( 'login' ) );
+	$key    = (string) $request->get_param( 'key' );
+	$new    = (string) $request->get_param( 'newPassword' );
+	$portal = sanitize_key( (string) $request->get_param( 'portal' ) );
+	if ( $login === '' || $key === '' || ! in_array( $portal, array( 'wrapstar', 'driver', 'wraprider' ), true ) ) {
+		return new WP_REST_Response( array( 'ok' => false, 'error' => 'This reset link is not valid. Ask for a new one.' ), 400 );
+	}
+	if ( strlen( $new ) < 10 ) {
+		return new WP_REST_Response( array( 'ok' => false, 'error' => 'Use at least 10 characters.' ), 400 );
+	}
+	$user = check_password_reset_key( $key, $login );
+	if ( is_wp_error( $user ) ) {
+		return new WP_REST_Response( array( 'ok' => false, 'error' => 'This reset link has expired. Ask for a new one.' ), 400 );
+	}
+	$app = wrrapd_wrapstars_ops_portal_application( (int) $user->ID, $portal );
+	if ( ! $app ) {
+		return new WP_REST_Response( array( 'ok' => false, 'error' => 'This reset link is not valid. Ask for a new one.' ), 400 );
+	}
+	reset_password( $user, $new );
+	$now = gmdate( 'c' );
+	if ( $portal === 'wrapstar' ) {
+		wrrapd_wrapstars_set_meta( $app->ID, 'password_changed_at', $now );
+		wrrapd_wrapstars_set_must_change_password( $user->ID, $app->ID, false );
+	} elseif ( $portal === 'wraprider' && function_exists( 'wrrapd_wrapriders_set_meta' ) ) {
+		wrrapd_wrapriders_set_meta( $app->ID, 'password_changed_at', $now );
+		if ( function_exists( 'wrrapd_wrapriders_set_must_change_password' ) ) {
+			wrrapd_wrapriders_set_must_change_password( $user->ID, $app->ID, false );
+		}
+	} elseif ( function_exists( 'wrrapd_drivers_set_meta' ) ) {
+		wrrapd_drivers_set_meta( $app->ID, 'password_changed_at', $now );
+		if ( function_exists( 'wrrapd_drivers_set_must_change_password' ) ) {
+			wrrapd_drivers_set_must_change_password( $user->ID, $app->ID, false );
+		}
+	}
+	return new WP_REST_Response( array( 'ok' => true ), 200 );
 }
 
 /**
