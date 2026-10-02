@@ -83,6 +83,10 @@ export type OrderLineItem = {
   giftMessage?: string;
   senderName?: string;
   occasion?: string;
+  /** Loose item that needs a cardboard box before the paper is cut. */
+  needsGiftBox?: boolean;
+  /** Anticipated box size when needsGiftBox is set, e.g. "12 x 9 x 4 in". */
+  giftBoxSize?: string;
   /** Optional unit price in USD cents when known from checkout */
   unitPriceCents?: number;
 };
@@ -195,6 +199,8 @@ export type Order = {
   driverLabelQrUrl?: string;
   /** Opaque token for /api/driver/scan/[token] — designated Drivers only. */
   driverLabelToken?: string;
+  /** Extra per-item label tokens when one order has more than one wrap. */
+  itemLabelTokens?: string[];
   /**
    * Set when WrapStar ends video and wrap is complete — courier may pick up.
    * Admin board uses this with wrapPhase === "complete".
@@ -367,7 +373,37 @@ export type DayShiftAvailability = {
   afternoon: boolean; // 1:00 PM - 7:00 PM
 };
 
-export type WrapStarShiftStatus = "active" | "handed_off" | "cancelled";
+export type WrapStarShiftStatus = "sheet" | "active" | "ended" | "handed_off" | "cancelled";
+
+/** One gift inside a shift. The morning email and the JoyRider label share `code`. */
+export type WrapShiftItemPhase = "queued" | "open" | "recording" | "wrapped" | "done";
+
+export type WrapShiftItem = {
+  id: string;
+  orderId: string;
+  lineIndex: number;
+  /** Short code printed in the 8am email and scanned to open this gift. */
+  code: string;
+  /** Opaque token encoded in the QR. Same token is reprinted onto the shipper box. */
+  scanToken: string;
+  title: string;
+  imageUrl?: string;
+  occasion?: string;
+  wrappingPaper: string;
+  customPrint: boolean;
+  printFileUrl?: string;
+  printFileName?: string;
+  /** Loose item: pick up this box before cutting paper. */
+  needsBox: boolean;
+  boxSize?: string;
+  phase: WrapShiftItemPhase;
+  openedAt?: string;
+  cameraStartedAt?: string;
+  /** Set when the cardboard box is in hand, before the paper is cut. */
+  boxPickedAt?: string;
+  wrappedAt?: string;
+  labeledAt?: string;
+};
 
 export type WrapStarShift = {
   id: string;
@@ -375,11 +411,17 @@ export type WrapStarShift = {
   /** Eastern calendar date YYYY-MM-DD */
   dateKey: string;
   startedAt: string;
+  /** Set by End shift. Pay uses this timestamp with startedAt. */
+  endedAt?: string;
   status: WrapStarShiftStatus;
   /** Ordered list of order ids for this shift (stopSequence). */
   orderIds: string[];
+  /** One row per gift on the morning sheet. */
+  items?: WrapShiftItem[];
   /** WrapStar confirmed custom/AI wrap paper printed for the day. */
   printsConfirmedAt?: string;
+  /** When the 8am gift sheet email went out. */
+  morningEmailSentAt?: string;
   handedOffAt?: string;
   createdAt: string;
   updatedAt: string;
