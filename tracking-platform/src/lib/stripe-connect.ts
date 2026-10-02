@@ -20,14 +20,23 @@ export function stripeSecret(): string {
   return (process.env.STRIPE_SECRET_KEY || "").trim();
 }
 
+export function stripeKeyMode(): "live" | "test" | "missing" {
+  const key = stripeSecret();
+  if (key.startsWith("sk_live_")) return "live";
+  if (key.startsWith("sk_test_")) return "test";
+  return "missing";
+}
+
+/** Live keys only. Test mode must not look ready or send contractor payouts. */
 export function stripeConfigured(): boolean {
-  return stripeSecret().startsWith("sk_");
+  return stripeKeyMode() === "live";
 }
 
 function stripe(): Stripe {
-  const key = stripeSecret();
-  if (!key) throw new Error("STRIPE_SECRET_KEY is not set.");
-  return new Stripe(key);
+  if (stripeKeyMode() !== "live") {
+    throw new Error("STRIPE_SECRET_KEY must be a live key (sk_live_...). Test mode is disabled.");
+  }
+  return new Stripe(stripeSecret());
 }
 
 export function trackingPublicOrigin(request?: Request): string {
