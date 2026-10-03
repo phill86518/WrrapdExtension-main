@@ -11,7 +11,7 @@
 - Prefer small, focused changes in **`src/shared/`** for retailer-agnostic helpers and **`src/retailers/<retailer>/`** for DOM selectors/adapters.
 - **`content-legacy.js`** remains Amazon-only and large; migrate carefully and rebuild after every change.
 - After edits: **`cd extension && npm run build`** before Chrome Reload.
-- **Next Chrome Web Store version:** include the parked usage-tracking work (random `installId`, optional daily heartbeat, attach id on pay). See repo rule `.cursor/rules/wrrapd-extension-usage-tracking-later.mdc`. Not a standalone CWS ship.
+- **Chrome Web Store 3.0.11** includes the install id and once-a-day heartbeat. Do not add page-level analytics.
 
 ## Deploy
 

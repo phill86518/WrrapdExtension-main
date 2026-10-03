@@ -23,6 +23,7 @@ const flowerCatalog = require(path.join(__dirname, 'lib', 'flowers', 'catalog'))
 const orderEmails = require(path.join(__dirname, 'lib', 'order-emails'));
 const helcim = require(path.join(__dirname, 'lib', 'helcim'));
 const facebookScheduler = require(path.join(__dirname, 'lib', 'facebook-scheduler'));
+const extensionInstalls = require(path.join(__dirname, 'lib', 'extension-installs'));
 
 // Initialize Google Cloud Storage
 let storageOptions = {
@@ -2373,6 +2374,14 @@ app.post('/api/internal/delete-orders', (req, res) => {
     return res.status(200).json({ ok: true, results });
 });
 
+app.post('/extension-heartbeat', (req, res) => {
+    if (!req.isApiDomain) {
+        return res.status(403).json({ ok: false });
+    }
+    const saved = extensionInstalls.recordHeartbeat(req.body || {});
+    return res.status(saved ? 200 : 400).json({ ok: saved });
+});
+
 app.post('/process-payment', async (req, res) => {
     if (!req.isApiDomain) {
         return res.status(403).send('Access forbidden.');
@@ -2396,6 +2405,7 @@ app.post('/process-payment', async (req, res) => {
     if (!paymentIntentId || !customerEmail || !customerPhone || !orderNumber) {
         return res.status(400).json({ error: 'Missing required parameters' });
     }
+    extensionInstalls.attachPayer(req.body && req.body.installId, customerEmail);
 
     const normalizedOrderData = normalizeOrderItems(orderData);
     const payRetailer = normalizePayRetailer(req.body);

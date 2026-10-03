@@ -35,6 +35,7 @@ import {
 import { hubAsPaymentAddress } from "./wrrapd-hub.js";
 import { buildGiftWrapInvoiceRows } from "./wrrapd-invoice-lines.js";
 import { BOX_CHARGE_USD, countLooseBoxes, looseItemNeedsBox } from "./gift-box.js";
+import { readInstallId } from "./install-id.js";
 import { resolveFlowerChargeDollars } from "./flowers-catalog.js";
 import { captureRetailerDeliveryDate } from "./retailer-delivery-date.js";
 import { generateWrrapdOrderNumber } from "./wrrapd-order-code.js";
@@ -608,6 +609,7 @@ async function postProcessPayment(config, eventData) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         paymentIntentId: eventData.paymentIntentId,
+        ...(eventData.customerEmail ? { installId: (await readInstallId()) || undefined } : {}),
         orderData: buildOrderData(config),
         customerEmail: eventData.customerEmail,
         customerPhone: String(eventData.customerPhone || "").trim() || "000-000-0000",

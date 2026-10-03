@@ -30,6 +30,7 @@ import { getValueByLabel, getElementValue, generateOrderNumber } from './lib/ord
 import { ensureWrrapdSummaryAlignment } from './lib/summary-alignment.js';
 import { enrichStoredAmazonItemFacts } from '../shared/amazon-item-facts.js';
 import { BOX_CHARGE_USD, looseItemNeedsBox } from '../shared/gift-box.js';
+import { readInstallId } from '../shared/install-id.js';
 import { isZipCodeAllowed } from './lib/zip-codes.js';
 import { WRRAPD_RETAILER_AMAZON } from '../retailers/amazon/constants.js';
 import { occasionOptionsHtml, isValidOccasion } from '../shared/occasions.js';
@@ -12485,11 +12486,13 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                                             event.data.name_of_retailer.trim()
                                           ? String(event.data.name_of_retailer).trim()
                                           : 'Amazon';
+                                const installId = customerEmail ? await readInstallId() : '';
                                 const response = await fetch('https://api.wrrapd.com/process-payment', {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({
                                         paymentIntentId,
+                                        ...(installId ? { installId } : {}),
                                         orderData,
                                         customerEmail,
                                         customerPhone,

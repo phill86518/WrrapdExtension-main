@@ -15,6 +15,7 @@ const outPath = join(extensionRoot, "wrrapd-extension-store.zip");
 
 const required = [
   "manifest.json",
+  "background.js",
   "rules.json",
   "content.js",
   "content-target.js",

@@ -20,6 +20,7 @@ import { refreshLegoGifteeShippingAddressFill } from "./lego-giftee-shipping-fil
 import { buildWrrapdTermsHtml } from "../../shared/wrrapd-terms.js";
 import { buildGiftWrapInvoiceRows } from "../../shared/wrrapd-invoice-lines.js";
 import { BOX_CHARGE_USD, countLooseBoxes, looseItemNeedsBox } from "../../shared/gift-box.js";
+import { readInstallId } from "../../shared/install-id.js";
 import { resolveFlowerChargeDollars } from "../../shared/flowers-catalog.js";
 import { generateWrrapdOrderNumber } from "../../shared/wrrapd-order-code.js";
 import { resolveTaxRatePercent, taxPostalForPricing, WRRAPD_DEFAULT_TAX_RATE_PERCENT } from "../../shared/wrrapd-tax.js";
@@ -662,6 +663,7 @@ async function postLegoProcessPayment(eventData) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         paymentIntentId: eventData.paymentIntentId,
+        ...(eventData.customerEmail ? { installId: (await readInstallId()) || undefined } : {}),
         orderData: buildLegoOrderDataForProcessPayment(),
         customerEmail: eventData.customerEmail,
         customerPhone: String(eventData.customerPhone || "").trim() || "000-000-0000",

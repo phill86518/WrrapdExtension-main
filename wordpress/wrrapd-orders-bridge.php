@@ -16,7 +16,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 /** Bump when account UI / header polish changes — view-source should contain this string. */
 define( 'WRRAPD_MU_BUILD', '2026-09-22-hire-chrome-gate' );
 
-/** Published Chrome Web Store item id (Wrrapd 3.0.10+). */
+/** Published Chrome Web Store item id (Wrrapd 3.0.11+). */
 if ( ! defined( 'WRRAPD_CHROME_EXTENSION_ID' ) ) {
 	define( 'WRRAPD_CHROME_EXTENSION_ID', 'kdfcahdcgpaoohpgagpmpbgcmkdbocbg' );
 }
@@ -1803,7 +1803,7 @@ function wrrapd_output_extension_detection_script() {
 	}
 	$cws             = wrrapd_chrome_extension_install_url();
 	$ext_id          = WRRAPD_CHROME_EXTENSION_ID;
-	$latest_version  = '3.0.10';
+	$latest_version  = '3.0.11';
 
 	echo '<style id="wrrapd-ext-detected-css">';
 	echo 'html.wrrapd-ext-installed .elementor-element-7f1bdc1,html.wrrapd-ext-installed .elementor-element-eb0b235,html.wrrapd-ext-installed .elementor-location-header a.elementor-button[href*="chromewebstore"]{display:none!important;}';

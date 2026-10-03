@@ -3,6 +3,7 @@ no-upload/
 orders/.pending-final-shipping-*.json
 customers/email_to_customer_id.json
 .env
+data/extension-installs.json
 data/facebook-post-log.json
 data/facebook-post-log.json.tmp
 server-test.js

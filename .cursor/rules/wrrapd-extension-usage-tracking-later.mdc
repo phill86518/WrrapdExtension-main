@@ -1,25 +1,15 @@
 ---
-description: Parked (not mission-critical) — include extension install/usage tracking in the next Chrome Web Store version, not as a standalone ship.
+description: Shipped in Chrome Web Store 3.0.11 — extension install id and daily heartbeat.
 alwaysApply: true
 ---
 
-# Parked: extension usage tracking (next CWS version)
+# Extension usage tracking — shipped in 3.0.11
 
-**Do not ship a CWS release just for this.** When the next real `extension/` edit is packaged for the Chrome Web Store, **include this work in that same version**.
+Included with the 3.0.11 store package (box charge for loose items).
 
-Parked 2026-10-01 after the CWS “who installed / who is using it” plan. Server interaction was **not** built; user still wanted more detail first. It is **not mission-critical**.
+- Random `installId` in `chrome.storage.local`.
+- Heartbeat once per day to `https://api.wrrapd.com/extension-heartbeat` with `{ installId, extensionVersion, firstSeen }` only.
+- `installId` is attached on `process-payment` only after the shopper already sends an email.
+- Privacy page §1a already allows extension version and limited usage signals.
 
-## What to add (with that next store version)
-
-- Random `installId` in `chrome.storage.local` (not a Google account, not a browsing fingerprint).
-- Optional first-run / daily heartbeat to `api.wrrapd.com`: `{ installId, extensionVersion, firstSeen }` only — no cart, no URLs, no retailer page contents. Rate-limit once per day.
-- Attach `installId` on `process-payment` / Pay Wrrapd only after the shopper already gives email.
-- Confirm privacy + CWS “privacy practices” still match (`docs/wordpress-snippets/wrrapd-privacy-page.html` §1a already allows extension version and limited usage/error signals).
-
-## Do not
-
-- Do not scrape the Chrome Web Store or expect a named installer list from Google (CWS dashboard stays the install count).
-- Do not ping on every product page or add hidden analytics SDKs.
-- Do not treat the existing `WRRAPD_PING` on wrrapd.com as server-side install tracking — that ping is local, to hide install buttons only.
-
-When this ships, delete or mark this rule done.
+Do not ping on every product page, scrape the Chrome Web Store, or treat the local `WRRAPD_PING` as install tracking.
