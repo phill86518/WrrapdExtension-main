@@ -25,6 +25,8 @@ import { getContractorRecord } from "@/lib/contractor-records";
 import { ContractorAccountCard } from "@/components/contractor-account-card";
 import { ContractorPayCard } from "@/components/contractor-pay-card";
 import { ContractorPayHistory } from "@/components/contractor-pay-history";
+import { InventoryCalendar } from "@/components/inventory-calendar";
+import { inventoryNeedsFromOrders } from "@/lib/inventory";
 
 export const dynamic = "force-dynamic";
 
@@ -182,6 +184,20 @@ export default async function WrapstarPage() {
             orders={ordersForConsole}
           />
         </section>
+      }
+      inventory={
+        <InventoryCalendar
+          needs={inventoryNeedsFromOrders(orders, [
+            {
+              id: session.userId,
+              name: session.name,
+              role: "WrapStar",
+              orderOwnerId: session.userId,
+            },
+          ])}
+          todayKey={todayNyKey}
+          personId={session.userId}
+        />
       }
       shift={<ShiftModule />}
       availability={

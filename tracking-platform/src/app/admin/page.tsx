@@ -37,6 +37,11 @@ const MODULE_GROUPS = [
         body: "Every order by Eastern calendar day.",
       },
       {
+        href: "/admin/inventory",
+        title: "Daily inventory",
+        body: "Wrapping paper, cardboard boxes, and tissue for each WrapStar and WrapRider.",
+      },
+      {
         href: "/admin/allocations",
         title: "Allocations",
         body: "Approve a nearby match, or assign a WrapStar and JoyRider by hand.",

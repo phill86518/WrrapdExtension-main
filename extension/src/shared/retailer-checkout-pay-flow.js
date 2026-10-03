@@ -34,6 +34,7 @@ import {
 } from "./cart-gift-sync.js";
 import { hubAsPaymentAddress } from "./wrrapd-hub.js";
 import { buildGiftWrapInvoiceRows } from "./wrrapd-invoice-lines.js";
+import { BOX_CHARGE_USD, countLooseBoxes, looseItemNeedsBox } from "./gift-box.js";
 import { resolveFlowerChargeDollars } from "./flowers-catalog.js";
 import { captureRetailerDeliveryDate } from "./retailer-delivery-date.js";
 import { generateWrrapdOrderNumber } from "./wrrapd-order-code.js";
@@ -164,13 +165,15 @@ async function ensureUnitPrices(state, geo, retailer, sessionPrefix) {
   await state.priceFetchPromise;
 }
 
-function computeServiceSubtotalCents(state, prefix) {
+function computeServiceSubtotalCents(state, prefix, cartLines) {
   const p = getActiveUnitPrices(state);
   const choices = readItemChoices(prefix);
   const n = choices.length;
   if (n <= 0) return 0;
   let dollars = p.giftWrapBase * n;
-  for (const ch of choices) {
+  const lines = Array.isArray(cartLines) ? cartLines : [];
+  for (let i = 0; i < n; i++) {
+    const ch = choices[i];
     if (ch.wrapPref === "ai") dollars += p.customDesignAi;
     if (ch.wrapPref === "upload") dollars += p.customDesignUpload;
     if (ch.flowers) {
@@ -180,12 +183,16 @@ function computeServiceSubtotalCents(state, prefix) {
         unitFallback: p.flowers,
       });
     }
+    const line = lines[i] || {};
+    if (looseItemNeedsBox({ title: line.title, category: line.category, flowers: ch.flowers === true })) {
+      dollars += BOX_CHARGE_USD;
+    }
   }
   return Math.round(dollars * 100);
 }
 
-function computeTotalBreakdown(state, prefix) {
-  const subtotalCents = computeServiceSubtotalCents(state, prefix);
+function computeTotalBreakdown(state, prefix, cartLines) {
+  const subtotalCents = computeServiceSubtotalCents(state, prefix, cartLines);
   const pct = resolveTaxRatePercent(state.taxPercent);
   const taxCents = Math.round(subtotalCents * (pct / 100));
   return {
@@ -196,11 +203,19 @@ function computeTotalBreakdown(state, prefix) {
   };
 }
 
-function buildSummaryLinesAndTotal(state, prefix) {
+function buildSummaryLinesAndTotal(state, prefix, cartLines) {
   const p = getActiveUnitPrices(state);
   const choices = readItemChoices(prefix);
-  const rows = buildGiftWrapInvoiceRows(choices, p);
-  const br = computeTotalBreakdown(state, prefix);
+  const lines = Array.isArray(cartLines) ? cartLines : [];
+  const boxCount = countLooseBoxes(
+    choices.map((ch, i) => ({
+      title: lines[i]?.title,
+      category: lines[i]?.category,
+      flowers: ch.flowers === true,
+    })),
+  );
+  const rows = buildGiftWrapInvoiceRows(choices, p, boxCount);
+  const br = computeTotalBreakdown(state, prefix, cartLines);
   if (br.taxUsd > 0) rows.push({ label: "Sales tax", amount: `$${br.taxUsd.toFixed(2)}` });
   return { invoiceRows: rows, totalCents: br.totalCents };
 }
@@ -256,15 +271,25 @@ function buildOrderData(config) {
 }
 
 /** Server-side PaymentIntent amount (must mirror Amazon/LEGO checkout math). */
-function buildPricingCart(state, prefix, retailer) {
+function buildPricingCart(state, prefix, retailer, cartLines) {
   const choices = readItemChoices(prefix);
+  const lines = Array.isArray(cartLines) ? cartLines : [];
   const zipForTax = taxPostalForPricing(gifteeZip5(prefix));
   const taxRatePercent = resolveTaxRatePercent(state.taxPercent);
   const p = getActiveUnitPrices(state);
-  const items = choices.map((ch) => ({
+  const items = choices.map((ch, i) => ({
+    title: lines[i]?.title || "",
+    itemCategory: lines[i]?.category || "",
     options: [
       {
         checkbox_wrrapd: true,
+        needs_gift_box: looseItemNeedsBox({
+          title: lines[i]?.title,
+          category: lines[i]?.category,
+          flowers: ch.flowers === true,
+        }),
+        title: lines[i]?.title || "",
+        itemCategory: lines[i]?.category || "",
         selected_wrapping_option: ch.wrapPref || "wrrapd",
         checkbox_flowers: ch.flowers === true,
         flower_offer_id: ch.flowers ? ch.flowerOfferId || null : null,
@@ -513,7 +538,12 @@ async function openPaymentPopup(config, state) {
     return null;
   }
   const choices = readItemChoices(config.sessionPrefix);
-  const pricingCart = buildPricingCart(state, config.sessionPrefix, config.payRoute);
+  const pricingCart = buildPricingCart(
+    state,
+    config.sessionPrefix,
+    config.payRoute,
+    config.getCartSnapshot?.()?.items,
+  );
   const { totalCents } = computeTotalBreakdown(state, config.sessionPrefix);
   if (
     !choices.length ||
@@ -678,7 +708,11 @@ export function initRetailerCheckoutPayFlow(config) {
     );
     const paid = readPaymentSuccess(config.sessionPrefix);
     const payReady = state.pricingFetchComplete === true;
-    const { invoiceRows, totalCents } = buildSummaryLinesAndTotal(state, config.sessionPrefix);
+    const { invoiceRows, totalCents } = buildSummaryLinesAndTotal(
+      state,
+      config.sessionPrefix,
+      config.getCartSnapshot?.()?.items,
+    );
     const cartFp = buildCartFingerprint(config.getCartSnapshot?.());
     const renderSig = `${paid ? 1 : 0}|${payReady ? 1 : 0}|${totalCents}|${cartFp}|${invoiceRows
       .map((r) => `${r?.label ?? ""}=${r?.amount ?? r?.cents ?? ""}`)

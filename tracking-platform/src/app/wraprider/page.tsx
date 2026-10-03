@@ -28,6 +28,8 @@ import { ContractorAccountCard } from "@/components/contractor-account-card";
 import { ContractorPayCard } from "@/components/contractor-pay-card";
 import { ContractorPayHistory } from "@/components/contractor-pay-history";
 import { WRAPRIDER_LABEL } from "@/lib/role-labels";
+import { InventoryCalendar } from "@/components/inventory-calendar";
+import { inventoryNeedsFromOrders } from "@/lib/inventory";
 
 export const dynamic = "force-dynamic";
 
@@ -255,6 +257,20 @@ export default async function WrapriderPage() {
             orders={ordersForConsole}
           />
         </section>
+      }
+      inventory={
+        <InventoryCalendar
+          needs={inventoryNeedsFromOrders(orders, [
+            {
+              id: wraprider.id,
+              name: wraprider.name,
+              role: "WrapRider",
+              orderOwnerId: wrapId,
+            },
+          ])}
+          todayKey={todayNyKey}
+          personId={wraprider.id}
+        />
       }
       shift={<ShiftModule />}
       deliveries={deliveriesPanel}

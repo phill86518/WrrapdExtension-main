@@ -5,13 +5,15 @@
  */
 
 import { resolveFlowerChargeDollars } from "./flowers-catalog.js";
+import { BOX_CHARGE_USD } from "./gift-box.js";
 
 /**
  * @param {Array<{ wrapPref?: string, flowers?: boolean, flowerPrice?: number|null, flowerOfferId?: string|null }>} choices
  * @param {{ giftWrapBase: number, customDesignAi: number, customDesignUpload: number, flowers: number }} unitPrices
+ * @param {number} [boxCount]
  * @returns {Array<{ label: string, amount: string }>}
  */
-export function buildGiftWrapInvoiceRows(choices, unitPrices) {
+export function buildGiftWrapInvoiceRows(choices, unitPrices, boxCount = 0) {
   const p = unitPrices;
   const list = Array.isArray(choices) && choices.length > 0 ? choices : [{ wrapPref: "wrrapd", flowers: false }];
 
@@ -67,6 +69,14 @@ export function buildGiftWrapInvoiceRows(choices, unitPrices) {
     rows.push({
       label: `Flowers${xF}`,
       amount: `$${flowersTotal.toFixed(2)}`,
+    });
+  }
+  const boxes = Math.max(0, Math.floor(Number(boxCount) || 0));
+  if (boxes > 0) {
+    const xB = boxes > 1 ? ` (×${boxes})` : "";
+    rows.push({
+      label: `Box charges (loose item)${xB}`,
+      amount: `$${(BOX_CHARGE_USD * boxes).toFixed(2)}`,
     });
   }
 

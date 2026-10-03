@@ -6,6 +6,7 @@ import { WrrapdLogo } from "@/components/wrrapd-logo";
 
 export type WrapstarNavSection =
   | "today"
+  | "inventory"
   | "shift"
   | "deliveries"
   | "availability"
@@ -15,6 +16,7 @@ export type WrapstarNavSection =
 
 const NAV: { id: WrapstarNavSection; label: string }[] = [
   { id: "today", label: "Home / Today" },
+  { id: "inventory", label: "Inventory" },
   { id: "shift", label: "Start Shift" },
   { id: "deliveries", label: "Deliveries" },
   { id: "availability", label: "Availability" },
@@ -28,6 +30,7 @@ type Props = {
   wrapstarId: string;
   initialSection?: WrapstarNavSection;
   today: ReactNode;
+  inventory?: ReactNode;
   shift: ReactNode;
   /** WrapRider app only — the delivery side. Omit for the WrapStar app (nav item hidden). */
   deliveries?: ReactNode;
@@ -51,6 +54,7 @@ export function WrapstarAppShell({
   wrapstarId,
   initialSection = "today",
   today,
+  inventory,
   shift,
   deliveries,
   availability,
@@ -64,7 +68,13 @@ export function WrapstarAppShell({
   sectionLabels,
 }: Props) {
   const [section, setSection] = useState<WrapstarNavSection>(initialSection);
-  const allowed = sections ?? (deliveries === undefined ? NAV.filter((n) => n.id !== "deliveries").map((n) => n.id) : NAV.map((n) => n.id));
+  const allowed =
+    sections ??
+    NAV.filter((item) => {
+      if (item.id === "deliveries" && deliveries === undefined) return false;
+      if (item.id === "inventory" && inventory === undefined) return false;
+      return true;
+    }).map((item) => item.id);
   const nav = allowed
     .map((id) => {
       const item = NAV.find((n) => n.id === id);
@@ -81,7 +91,9 @@ export function WrapstarAppShell({
   const body =
     section === "today"
       ? today
-      : section === "shift"
+      : section === "inventory"
+        ? inventory ?? today
+        : section === "shift"
         ? shift
         : section === "deliveries"
           ? deliveries ?? today

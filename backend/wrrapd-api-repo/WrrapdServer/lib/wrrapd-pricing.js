@@ -28,6 +28,7 @@ let cachedConfigSignature = '';
 
 const salesTaxZip = require('./sales-tax-zip');
 const zipCounty = require('./zip-county');
+const { BOX_CHARGE_USD, looseItemNeedsBox } = require('./gift-box');
 
 /** Wrrapd hub ZIP (Duval County FL) — default sales-tax jurisdiction for extension checkouts. */
 const HUB_TAX_ZIP5 = '32226';
@@ -389,7 +390,11 @@ function computeSubtotalFromPricingCartItems(items, unitPrices) {
     let designAiTotal = 0;
     let designUploadTotal = 0;
     let flowersTotal = 0;
-    if (!Array.isArray(items)) return { giftWrapTotal, designAiTotal, designUploadTotal, flowersTotal };
+    let boxTotal = 0;
+    let boxCount = 0;
+    if (!Array.isArray(items)) {
+        return { giftWrapTotal, designAiTotal, designUploadTotal, flowersTotal, boxTotal, boxCount };
+    }
     for (const item of items) {
         if (!item || typeof item !== 'object') continue;
         const opts = Array.isArray(item.options) ? item.options : [];
@@ -401,6 +406,17 @@ function computeSubtotalFromPricingCartItems(items, unitPrices) {
                     designAiTotal += p.customDesignAi;
                 } else if (option.selected_wrapping_option === 'upload') {
                     designUploadTotal += p.customDesignUpload;
+                }
+                if (
+                    looseItemNeedsBox({
+                        title: option.title || item.title,
+                        category: option.itemCategory || item.itemCategory,
+                        flowers: option.checkbox_flowers === true,
+                        needsGiftBox: option.needs_gift_box === true,
+                    })
+                ) {
+                    boxTotal += BOX_CHARGE_USD;
+                    boxCount += 1;
                 }
             }
             if (option.checkbox_flowers) {
@@ -418,6 +434,8 @@ function computeSubtotalFromPricingCartItems(items, unitPrices) {
         designAiTotal: round2(designAiTotal),
         designUploadTotal: round2(designUploadTotal),
         flowersTotal: round2(flowersTotal),
+        boxTotal: round2(boxTotal),
+        boxCount,
     };
 }
 
@@ -442,7 +460,7 @@ function computeTotalUsdFromPricingCart(pricingCart) {
     const { unitPrices, configVersion, appliedRuleIds, timeZone } = resolved;
     const br = computeSubtotalFromPricingCartItems(pricingCart && pricingCart.items, unitPrices);
     const subtotal = round2(
-        br.giftWrapTotal + br.designAiTotal + br.designUploadTotal + br.flowersTotal,
+        br.giftWrapTotal + br.designAiTotal + br.designUploadTotal + br.flowersTotal + (br.boxTotal || 0),
     );
     const estimatedTax = round2(subtotal * (taxRatePercent / 100));
     const total = round2(subtotal + estimatedTax);

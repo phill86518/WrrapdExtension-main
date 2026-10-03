@@ -498,6 +498,7 @@ function itemsFromOrders(orders: Order[]): WrapShiftItem[] {
         scanToken: token,
         title: line.title || order.recipientName || "Gift",
         imageUrl: line.imageUrl,
+        occasion: line.occasion,
         wrappingPaper: line.wrappingOption || "Standard",
         customPrint: line.wrappingOption === "upload" || line.wrappingOption === "ai",
         printFileUrl: line.wrappingDesignImageUrl,

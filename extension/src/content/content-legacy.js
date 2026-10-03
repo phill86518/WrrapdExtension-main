@@ -29,6 +29,7 @@ import { wrrapdTrace } from './lib/wrrapd-debug.js';
 import { getValueByLabel, getElementValue, generateOrderNumber } from './lib/order-helpers.js';
 import { ensureWrrapdSummaryAlignment } from './lib/summary-alignment.js';
 import { enrichStoredAmazonItemFacts } from '../shared/amazon-item-facts.js';
+import { BOX_CHARGE_USD, looseItemNeedsBox } from '../shared/gift-box.js';
 import { isZipCodeAllowed } from './lib/zip-codes.js';
 import { WRRAPD_RETAILER_AMAZON } from '../retailers/amazon/constants.js';
 import { occasionOptionsHtml, isValidOccasion } from '../shared/occasions.js';
@@ -200,8 +201,17 @@ import { formatUsd } from '../shared/wrrapd-unit-pricing.js';
         return Object.values(itemsInCurrentCheckout || {})
             .filter((item) => item && Array.isArray(item.options))
             .map((item) => ({
+                title: item.title ? String(item.title).slice(0, 300) : '',
+                itemCategory: item.itemCategory ? String(item.itemCategory).slice(0, 120) : '',
                 options: item.options.map((o) => ({
                       checkbox_wrrapd: wrrapdOptionHasGiftWrap(o),
+                      needs_gift_box: wrrapdOptionHasGiftWrap(o)
+                          ? looseItemNeedsBox({
+                                title: item.title,
+                                category: item.itemCategory,
+                                flowers: o.checkbox_flowers === true,
+                            })
+                          : false,
                       selected_wrapping_option: o.selected_wrapping_option || null,
                       checkbox_flowers:
                           o.checkbox_flowers === true ||
@@ -12553,6 +12563,8 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
         let designAiTotal = 0;
         let designUploadTotal = 0;
         let flowersTotal = 0;
+        let boxTotal = 0;
+        let qtyBoxes = 0;
         let qtyGiftWrap = 0;
         let qtyDesignAi = 0;
         let qtyDesignUpload = 0;
@@ -12569,6 +12581,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                 let customDesignAi = 0;
                 let customDesignUpload = 0;
                 let flowers = 0;
+                let boxCharge = 0;
                 if (wrrapdOptionHasGiftWrap(option)) {
                     giftWrapBase = p.giftWrapBase;
                     giftWrapTotal += p.giftWrapBase;
@@ -12581,6 +12594,11 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                         customDesignUpload = p.customDesignUpload;
                         designUploadTotal += p.customDesignUpload;
                         qtyDesignUpload += 1;
+                    }
+                    if (looseItemNeedsBox({ title: item.title, category: item.itemCategory, flowers: option.checkbox_flowers === true })) {
+                        boxCharge = BOX_CHARGE_USD;
+                        boxTotal += BOX_CHARGE_USD;
+                        qtyBoxes += 1;
                     }
                 }
                 if (option.checkbox_flowers) {
@@ -12609,13 +12627,14 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                     customDesignAi,
                     customDesignUpload,
                     flowers,
+                    boxCharge,
                 });
             });
         });
 
         const taxRatePercent = getWrrapdGifteeTaxRatePercent();
         const taxRate = taxRatePercent / 100;
-        const subtotal = roundMoney2(giftWrapTotal + designAiTotal + designUploadTotal + flowersTotal);
+        const subtotal = roundMoney2(giftWrapTotal + designAiTotal + designUploadTotal + flowersTotal + boxTotal);
         const estimatedTax = roundMoney2(subtotal * taxRate);
         const total = roundMoney2(subtotal + estimatedTax);
         return {
@@ -12627,6 +12646,8 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             qtyDesignAi,
             qtyDesignUpload,
             qtyFlowers,
+            qtyBoxes,
+            boxTotal: roundMoney2(boxTotal),
             subtotal,
             estimatedTax,
             total,
@@ -12666,6 +12687,9 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             if (b.flowersTotal > 0) {
                 lines.push({ label: 'Flowers', amount: roundMoney2(b.flowersTotal) });
             }
+            if (b.boxTotal > 0) {
+                lines.push({ label: 'Box charges (loose item)', amount: roundMoney2(b.boxTotal) });
+            }
             lines.push({ label: 'Total before tax:', amount: roundMoney2(subtotal) });
             lines.push({
                 label: 'Estimated tax to be collected:',
@@ -12701,6 +12725,13 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                     quantity: b.qtyFlowers,
                     unitPrice: pc.flowers,
                     amount: roundMoney2(b.flowersTotal),
+                },
+                {
+                    code: 'WRPD_BOX_CHARGE',
+                    label: 'Box charges (loose item)',
+                    quantity: b.qtyBoxes,
+                    unitPrice: BOX_CHARGE_USD,
+                    amount: roundMoney2(b.boxTotal),
                 },
                 {
                     code: 'WRPD_SUBTOTAL_BEFORE_TAX',
@@ -12816,6 +12847,9 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             }
             if (flowersTotal > 0) {
                 addSummaryLineItem(wrrapdSummaryItems, 'Flowers', flowersTotal);
+            }
+            if (br.boxTotal > 0) {
+                addSummaryLineItem(wrrapdSummaryItems, 'Box charges (loose item)', br.boxTotal);
             }
             // Add grey dividing line before "Total before tax:"
             const dividerBeforeTax = document.createElement('hr');

@@ -19,6 +19,7 @@ import { readLegoCartSnapshot, syncLegoCartGiftState } from "./lego-cart-extract
 import { refreshLegoGifteeShippingAddressFill } from "./lego-giftee-shipping-fill.js";
 import { buildWrrapdTermsHtml } from "../../shared/wrrapd-terms.js";
 import { buildGiftWrapInvoiceRows } from "../../shared/wrrapd-invoice-lines.js";
+import { BOX_CHARGE_USD, countLooseBoxes, looseItemNeedsBox } from "../../shared/gift-box.js";
 import { resolveFlowerChargeDollars } from "../../shared/flowers-catalog.js";
 import { generateWrrapdOrderNumber } from "../../shared/wrrapd-order-code.js";
 import { resolveTaxRatePercent, taxPostalForPricing, WRRAPD_DEFAULT_TAX_RATE_PERCENT } from "../../shared/wrrapd-tax.js";
@@ -234,10 +235,12 @@ function persistGifteeAddressFromPayMessage(eventData) {
 function computeServiceSubtotalCents() {
   const p = getActiveCheckoutUnitPrices();
   const allChoices = readLegoItemChoices();
+  const lines = readLegoCartSnapshot();
   const n = allChoices.length;
   if (n <= 0) return 0;
   let dollars = p.giftWrapBase * n;
-  for (const ch of allChoices) {
+  for (let i = 0; i < n; i++) {
+    const ch = allChoices[i];
     if (ch.wrapPref === "ai") dollars += p.customDesignAi;
     if (ch.wrapPref === "upload") dollars += p.customDesignUpload;
     if (ch.flowers) {
@@ -246,6 +249,9 @@ function computeServiceSubtotalCents() {
         flowerOfferId: ch.flowerOfferId,
         unitFallback: p.flowers,
       });
+    }
+    if (looseItemNeedsBox({ title: lines[i]?.title, flowers: ch.flowers === true })) {
+      dollars += BOX_CHARGE_USD;
     }
   }
   return Math.round(dollars * 100);
@@ -271,11 +277,15 @@ function computeLegoTotalBreakdown() {
 
 function buildLegoPricingCart() {
   const allChoices = readLegoItemChoices();
+  const lines = readLegoCartSnapshot();
   const zipForTax = taxPostalForPricing(gifteeZip5());
   const tr = resolveTaxRatePercent(legoPreviewTaxPercent);
-  const items = allChoices.map((ch) => ({
+  const items = allChoices.map((ch, i) => ({
+    title: lines[i]?.title || "",
     options: [{
       checkbox_wrrapd: true,
+      needs_gift_box: looseItemNeedsBox({ title: lines[i]?.title, flowers: ch.flowers === true }),
+      title: lines[i]?.title || "",
       selected_wrapping_option: ch.wrapPref || "wrrapd",
       checkbox_flowers: ch.flowers === true,
       flower_offer_id: ch.flowers ? ch.flowerOfferId || null : null,
@@ -736,7 +746,13 @@ function bindPayMessageOnce() {
 function buildSummaryLinesAndTotal() {
   const p = getActiveCheckoutUnitPrices();
   const allChoices = readLegoItemChoices();
-  const invoiceRows = buildGiftWrapInvoiceRows(allChoices, p);
+  const invoiceRows = buildGiftWrapInvoiceRows(
+    allChoices,
+    p,
+    countLooseBoxes(
+      allChoices.map((ch, i) => ({ title: readLegoCartSnapshot()[i]?.title, flowers: ch.flowers === true })),
+    ),
+  );
   const br = computeLegoTotalBreakdown();
   if (br.taxUsd > 0) {
     invoiceRows.push({ label: "Sales tax", amount: `$${br.taxUsd.toFixed(2)}` });

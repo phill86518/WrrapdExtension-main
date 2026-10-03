@@ -13,6 +13,9 @@ export type GiftBoxEstimate = {
   measured?: string;
 };
 
+/** Folded apparel uses one standard shirt box, not the garment's body measurements. */
+export const SHIRT_BOX = "Shirt box 14 x 10 x 3 in";
+
 /** Common gift cartons, longest side first. */
 const BOXES: Inches[] = [
   { l: 6, w: 4, h: 2 },
@@ -96,7 +99,7 @@ function classify(title: string, category: string): { needsBox: boolean; fallbac
   if (/\b(book|paperback|hardcover|novel|manga)\b/.test(text)) {
     return { needsBox: false, fallback: { l: 10, w: 8, h: 2 } };
   }
-  if (/\b(shirt|dress|hoodie|sweater|jacket|pants|jeans|apparel|clothing|sock|pajama|blouse|skirt)\b/.test(text)) {
+  if (isClothingText(text)) {
     return { needsBox: true, fallback: { l: 14, w: 10, h: 3 } };
   }
   if (/\b(shoe|sneaker|boot|sandal)\b/.test(text)) return { needsBox: true, fallback: { l: 14, w: 10, h: 6 } };
@@ -105,8 +108,8 @@ function classify(title: string, category: string): { needsBox: boolean; fallbac
   }
   if (/\b(mug|tumbler|glass|cup)\b/.test(text)) return { needsBox: true, fallback: { l: 8, w: 6, h: 5 } };
   if (/\b(plush|stuffed|teddy)\b/.test(text)) return { needsBox: true, fallback: { l: 12, w: 10, h: 6 } };
-  if (/\b(headphone|earbud|speaker|tablet|kindle)\b/.test(text)) {
-    return { needsBox: true, fallback: { l: 10, w: 8, h: 4 } };
+  if (/\b(headphone|earbud|earbuds|speaker|tablet|kindle)\b/.test(text)) {
+    return { needsBox: false, fallback: { l: 10, w: 8, h: 4 } };
   }
   if (/\b(makeup|lipstick|skincare|perfume|cologne|cosmetic|lotion|fragrance)\b/.test(text)) {
     return { needsBox: true, fallback: { l: 8, w: 6, h: 3 } };
@@ -114,6 +117,21 @@ function classify(title: string, category: string): { needsBox: boolean; fallbac
   if (/\b(laptop|monitor|printer)\b/.test(text)) return { needsBox: false, fallback: { l: 18, w: 12, h: 4 } };
   if (/\b(toy|doll|action figure|game)\b/.test(text)) return { needsBox: true, fallback: { l: 12, w: 9, h: 4 } };
   return { needsBox: true, fallback: { l: 12, w: 9, h: 4 } };
+}
+
+function isClothingText(text: string): boolean {
+  return /\b(shirt|dress|hoodie|sweater|jacket|pants|jeans|apparel|clothing|sock|socks|pajama|pajamas|blouse|skirt|t-shirt|tee)\b/.test(
+    text,
+  );
+}
+
+/** Occasion paper name for inventory and the morning sheet. */
+export function wrappingPaperName(line: { wrappingOption?: string; occasion?: string }): string {
+  const opt = (line.wrappingOption || "").toLowerCase();
+  if (opt === "ai" || opt === "upload") return "Custom printed wrap";
+  const occasion = (line.occasion || "").trim();
+  if (!occasion) return "Standard wrapping paper";
+  return `${occasion.charAt(0).toUpperCase()}${occasion.slice(1)} wrapping paper`;
 }
 
 export function estimateGiftBox(input: {
@@ -124,6 +142,10 @@ export function estimateGiftBox(input: {
   flowers?: boolean;
 }): GiftBoxEstimate {
   if (input.flowers) return { needsBox: false, boxSize: "", source: "category" };
+  const text = `${input.category || ""} ${input.title || ""}`.toLowerCase();
+  if (isClothingText(text)) {
+    return { needsBox: true, boxSize: SHIRT_BOX, source: "category" };
+  }
   const kind = classify(input.title || "", input.category || "");
   const pkg = parseDimensionText(input.packageDimensions);
   const prod = parseDimensionText(input.productDimensions);

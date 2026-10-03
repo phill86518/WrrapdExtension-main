@@ -4,6 +4,7 @@ import { driverLabelScanUrl } from "./driver-label-qr";
 import { formatDateKeyNy } from "./ny-date";
 import { ensureDaySheet, markMorningEmailSent } from "./shift-store";
 import { listRegisteredWrapstars } from "./wrapstar-registry";
+import { wrappingPaperName } from "./gift-box";
 import type { WrapShiftItem, WrapStar } from "./types";
 
 function itemBlock(item: WrapShiftItem): string {
@@ -26,9 +27,10 @@ function itemBlock(item: WrapShiftItem): string {
       <p style="margin:8px 0 0;font-size:18px;font-weight:700;letter-spacing:0.08em;">${escapeHtml(item.code)}</p>
       <p style="margin:6px 0 0;">${escapeHtml(item.title)}</p>
       <p style="margin:4px 0 0;">Occasion: ${escapeHtml(item.occasion || "—")}</p>
-      <p style="margin:4px 0 0;">Paper: ${escapeHtml(item.wrappingPaper)}</p>
+      <p style="margin:4px 0 0;">Paper: ${escapeHtml(wrappingPaperName({ wrappingOption: item.wrappingPaper, occasion: item.occasion }))}</p>
       <p style="margin:4px 0 0;">${custom}</p>
       <p style="margin:4px 0 0;">${box}</p>
+      ${item.needsBox ? `<p style="margin:4px 0 0;">Tissue: 1 sheet</p>` : ""}
     </li>`;
 }
 

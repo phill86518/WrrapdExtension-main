@@ -1,6 +1,7 @@
 import { formatInTimeZone } from "date-fns-tz";
 import { toInstantDate } from "@/lib/ny-date";
 import { wrrapdScheduledInstantIsoForUi } from "@/lib/order-schedule-display";
+import { giftBoxForLine, wrappingPaperName } from "@/lib/gift-box";
 import type { FlowerPickupLocation, OrderLineItem } from "@/lib/types";
 
 const NY = "America/New_York";
@@ -90,6 +91,21 @@ function lineItemOpsGiftBlock(li: OrderLineItem): string {
     parts.push(
       `<p style="margin:2px 0 0;font-size:12px;color:#0f172a;"><strong>Sender</strong> ${escapeHtml(li.senderName)}</p>`,
     );
+  }
+  const box = giftBoxForLine(li);
+  parts.push(
+    `<p style="margin:3px 0 0;font-size:12px;color:#0f172a;"><strong>Paper</strong> ${escapeHtml(wrappingPaperName(li))}</p>`,
+  );
+  if (box.needsBox && box.boxSize) {
+    parts.push(
+      `<p style="margin:2px 0 0;font-size:12px;color:#0f172a;"><strong>Box</strong> ${escapeHtml(box.boxSize)} · 1 sheet of tissue</p>`,
+    );
+  } else if (box.measured) {
+    parts.push(
+      `<p style="margin:2px 0 0;font-size:12px;color:#0f172a;"><strong>Box</strong> none — package is ${escapeHtml(box.measured)}</p>`,
+    );
+  } else {
+    parts.push(`<p style="margin:2px 0 0;font-size:12px;color:#0f172a;"><strong>Box</strong> none</p>`);
   }
   return parts.join("");
 }
