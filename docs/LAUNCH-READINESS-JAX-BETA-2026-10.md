@@ -1,6 +1,6 @@
 # Wrrapd — Jacksonville / Duval Beta Launch: Master Readiness Review
 
-**Prepared:** Saturday, October 3, 2026
+**Prepared:** Saturday, October 3, 2026 (updated the same evening with Roger's answers)
 **For:** Roger (founder, first WrapRider, Flight Director)
 **Scope:** Whole business and whole application — shopper site, Chrome extension, pay server, Command Center, contractor apps, hire funnel, hub/PO Box logistics, hardware, data/media architecture, legal, insurance, tax.
 **Status:** INTERNAL. Never publish any part of this document. It contains pay mechanics, routing, and security findings.
@@ -37,7 +37,7 @@ Status legend used everywhere:
 
 ## 1.1 Bottom line
 
-**We are not "Go" today, but we are close on software and far on operations.** The shopper-facing software (extension 3.0.11, pay page, Duval ZIP gating, Command Center order flow, wrap shift recording, contractor pay) is substantially built — roughly **75% ready for a controlled beta**. The physical operation (package receiving at the hub, matching boxes to orders, delivery proof, exception handling, hardware kits, insurance, tax registration) is roughly **35% ready**. The gap is mostly not code; it is process, configuration, and a handful of specific bugs.
+**We are not "Go" today, but we are close on software and far on operations.** The shopper-facing software (extension 3.0.12, pay page, Duval ZIP gating, Command Center order flow, wrap shift recording, contractor pay) is substantially built — roughly **75% ready for a controlled beta**. The physical operation (package receiving at the hub, matching boxes to orders, delivery proof, exception handling, hardware kits, insurance) is roughly **35% ready**. The gap is mostly not code; it is process, configuration, and a handful of specific bugs.
 
 Realistic path:
 
@@ -202,7 +202,7 @@ Each system lists subsystems, current state, risks, and what must happen before 
 | "How it works" / service area / FAQ | YELLOW | Must say plainly: Jacksonville/Duval only during beta, delivery the day after the retailer delivers |
 | SEO/sitemap | GREEN | Sitemap MU present |
 
-## System 2 — Chrome extension (3.0.11)
+## System 2 — Chrome extension (3.0.12 submitted Oct 3; 3.0.11 live)
 
 | Subsystem | State | Notes |
 |---|---|---|
@@ -311,6 +311,9 @@ Each system lists subsystems, current state, risks, and what must happen before 
 | Service desk (Twilio SMS/voice/MMS) | GREEN | Verify Twilio number is A2P 10DLC registered (US carriers block unregistered business SMS) |
 | CS playbook / macros | GREY | Write the 12 standard replies (Section 6) |
 | Support hours promise | ? | Decide and publish (shopper-friendly wording only) |
+| Website chat (Tidio) | YELLOW | Live on wrrapd.com; answered by a person. AI live support planned (see below) |
+
+**AI live support (planned, Oct 3).** One Wrrapd AI assistant behind both channels: Tidio website chat and the Twilio text line. It answers common questions and looks up an order by phone/email + order number (status, delivery day, tracking link), never reveals the gift to a giftee, and hands off to Roger for refunds, complaints, damaged/missing gifts, and anything it is unsure about. Start in **draft mode** (Roger approves each reply in the Service desk), then turn on auto-send for safe question types after two clean weeks.
 
 ## System 10 — Contractor hiring & onboarding
 
@@ -378,7 +381,7 @@ See §4 for the full analysis. Summary: two sources of truth (VM JSON + Firestor
 |---|---|---|
 | Entity (Wrrapd, Inc. on Sunbiz, C corporation), EIN, bank | GREEN | Resale certificate on file; fix any leftover "LLC" wording |
 | Local business tax receipts (City of Jacksonville / Duval) | ? | Needed for operating in Duval |
-| Florida sales tax registration & taxability | **RED (R8)** | CPA |
+| Florida sales tax registration & taxability | **YELLOW (R8)** | Registered; 2026 resale certificate on file. CPA to confirm taxability of wrap service + flowers |
 | Insurance: general liability, bailee/inland marine (customer goods), hired & non-owned auto, cyber | **RED (R9)** | Broker |
 | Contractor classification review | YELLOW | Before first hire (§2.3 B) |
 | Shopper Terms + Privacy | YELLOW | Privacy update |
@@ -477,7 +480,7 @@ Three options, from least to most employee-like:
 2. **Wrrapd sells or rents a starter kit** at cost, deducted from early payouts, owned by the contractor after N weeks.
 3. **Wrrapd lends a kit** with a signed equipment agreement and a deposit, returned on deactivation.
 
-**Decision (Oct 3): option 3 — contractors borrow a Wrrapd kit and return it.** Requirements that follow: a signed equipment loan acknowledgment (counsel to draft; note that supplying equipment is a factor in contractor-vs-employee tests), serialized asset tags, a return checklist and return shipping on deactivation, a lost/damaged policy, and the Command Center Equipment module (§5.3) with the return flow — all before the first non-founder contractor starts. Roger's first purchased item (AliExpress order, arriving ~Oct 13) is registered as asset #1 when it arrives.
+**Decision (Oct 3): option 3 — contractors borrow a Wrrapd kit and return it.** Requirements that follow: a signed equipment loan acknowledgment (counsel to draft; note that supplying equipment is a factor in contractor-vs-employee tests), serialized asset tags, a return checklist and return shipping on deactivation, a lost/damaged policy, and the Command Center Equipment module (§5.3) with the return flow — all before the first non-founder contractor starts. Roger's first purchased item — a **portable Bluetooth mini thermal label printer** (AliExpress, Black Standard Set, arriving Oct 9–15) — is registered as asset #1 when it arrives.
 
 ## 5.2 Kit contents by role (starting proposal — validate with Roger's own setup)
 
@@ -486,7 +489,7 @@ Three options, from least to most employee-like:
 | Smartphone (contractor-owned) | ✔ | ✔ | ✔ | Minimum OS version; camera + data |
 | Overhead phone/camera mount or tripod | ✔ | | ✔ | For the table-view wrap video |
 | LED light (ring/panel) | ✔ | | ✔ | Video quality = proof quality |
-| Thermal label printer (e.g., 4×6 or 2×1 label) | ✔ | | ✔ | Decide one model fleet-wide so templates work |
+| Mini Bluetooth thermal label printer (model bought Oct 3; prints from a phone app) | ✔ | | ✔ | Use: tag each received package and each finished gift with the Wrrapd order number (matches the packing-slip decision). Small inkless labels only — **not** for 4×6 shipping labels. Test fade/heat in a hot car before standardizing; keep one model fleet-wide |
 | Labels (Wrrapd-supplied) | ✔ | | ✔ | Signed QR label per box |
 | Scissors, cutter, tape dispenser, double-sided tape | ✔ | | ✔ | |
 | Paper, tissue, ribbon, boxes | ✔ | | ✔ | Supplied per policy; forecast in Inventory calendar |
@@ -633,7 +636,7 @@ Columns: `ID` · Check · How to verify · Pass criterion · 1st ☐ · 2nd ☐
 |---|---|---|---|---|---|
 | WEB-01 | Homepage loads, desktop Chrome | Incognito, cold cache | < 3 s, no console errors, correct build string in view-source | ☐ | ☐ |
 | WEB-02 | Homepage loads, iPhone Safari + Android Chrome | Real devices | Header, logo left, hamburger works, no overlap | ☐ | ☐ |
-| WEB-03 | Install CTA opens current CWS listing | Click | Listing shows 3.0.11+ | ☐ | ☐ |
+| WEB-03 | Install CTA opens current CWS listing | Click | Listing shows 3.0.12+ | ☐ | ☐ |
 | WEB-04 | CTA hidden after install | Install extension, reload | Install buttons hidden | ☐ | ☐ |
 | WEB-05 | Register / login / password reset | New email, end-to-end | Email arrives < 2 min, login works | ☐ | ☐ |
 | WEB-06 | Google + Amazon login | Real accounts | Lands logged-in, gold buttons, no plugin blue | ☐ | ☐ |
@@ -796,7 +799,7 @@ Columns: `ID` · Check · How to verify · Pass criterion · 1st ☐ · 2nd ☐
 | CS-07 | Giftee never receives a message that spoils the surprise | Review all templates | Pass | ☐ | ☐ |
 | CS-08 | All shopper copy short, plain, no internal terms | Read all templates | Pass | ☐ | ☐ |
 | CS-09 | Support response target set (e.g., same day) | Written | Pass | ☐ | ☐ |
-
+| CS-10 | AI assistant (if on): never reveals gift contents to a giftee; hands off refunds/complaints to a person | 20 scripted test chats + texts | 20/20 correct | ☐ | ☐ |
 ## A.10 CREW — Contractor hiring, onboarding, pay
 
 | ID | Check | How to verify | Pass criterion | 1st | 2nd |
@@ -822,7 +825,7 @@ Columns: `ID` · Check · How to verify · Pass criterion · 1st ☐ · 2nd ☐
 |---|---|---|---|---|---|
 | SUP-01 | Equipment policy decided (buy / sell-at-cost / lend) | Written | Pass | ☐ | ☐ |
 | SUP-02 | Kit templates per role finalized (from §5.2) | List | Pass | ☐ | ☐ |
-| SUP-03 | One label printer model chosen; labels in stock | Order | 2 spare rolls minimum | ☐ | ☐ |
+| SUP-03 | Mini label printer (asset #1) received, paired, prints a Wrrapd order number legibly; labels in stock | Print 10 test labels; leave one in a hot car for a day | Readable; 2 spare rolls minimum | ☐ | ☐ |
 | SUP-04 | Equipment & Kits module live (assets, shipments, acknowledgments) | Command Center | Pass | ☐ | ☐ |
 | SUP-05 | Roger's own kit registered as asset set #1 | Module | Pass | ☐ | ☐ |
 | SUP-06 | First kit shipment rehearsed end-to-end (ship → track → receive → acknowledge) | Ship to self | Pass | ☐ | ☐ |
@@ -962,7 +965,6 @@ FLIGHT calls each station; each answers **"GO"** or **"NO-GO + reason"**.
 **Answered Oct 3, 2026 (second round)** — see the Decisions log in §1.2a for Q6–Q18. Q1 address: **150 BUSCH DR #26067, JACKSONVILLE FL 32218**.
 
 Still open:
-- What is the AliExpress item (order arriving ~Oct 13)? It goes into the kit list as asset #1.
 - Support hours you can commit to (Q13).
 - Order-number format for the dummy-order cleanup.
 
