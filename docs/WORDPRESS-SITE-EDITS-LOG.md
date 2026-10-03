@@ -8,6 +8,12 @@ WordPress + Elementor + Hello theme content mostly lives **in the production dat
 
 ## Recent changes
 
+### 2026-10-03 — How it works: Step 6 (same-day wrap + delivery, photo proof)
+
+- **Homepage 4857**, HTML widget **`e7baa0c`**: added **Step 6** row (`is-flip`) after Step 5 — heading "We wrap it and deliver it — often the same day"; copy: adds at most one day, same day when the gift reaches the hub by 8 AM, polished photo proof of delivery like Amazon's. `aria-label` now "in six steps".
+- **Image:** media **7366** `wp-content/uploads/2026/10/wrrapd-howto-006.jpg`; source `wordpress/howto/wrrapd-howto-006.html` (render with `wordpress/howto/render-howto.py`).
+- **Edit method:** SQL `REPLACE` on `_elementor_data` (JSON-escaped HTML). Backup row: meta key `_wrrapd_backup_elementor_data_20261003_step6` on post 4857. Cleared `_elementor_element_cache`, `_elementor_css`, `_elementor_page_assets`; W3TC flushed (`w3tc_flush_all`). SiteGround proxy cache cannot be purged from WordPress without SG Optimizer — flush in Site Tools → Speed → Caching, or wait for expiry.
+
 ### 2026-09-20 — Chrome Web Store live listing (new extension id)
 
 - **Listing:** [Wrrapd on the Chrome Web Store](https://chromewebstore.google.com/detail/wrrapd/kdfcahdcgpaoohpgagpmpbgcmkdbocbg) — item id **`kdfcahdcgpaoohpgagpmpbgcmkdbocbg`** (public 3.0.10).

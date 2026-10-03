@@ -311,9 +311,10 @@ Each system lists subsystems, current state, risks, and what must happen before 
 | Service desk (Twilio SMS/voice/MMS) | GREEN | Verify Twilio number is A2P 10DLC registered (US carriers block unregistered business SMS) |
 | CS playbook / macros | GREY | Write the 12 standard replies (Section 6) |
 | Support hours promise | ? | Decide and publish (shopper-friendly wording only) |
-| Website chat (Tidio) | YELLOW | Live on wrrapd.com; answered by a person. AI live support planned (see below) |
+| Website chat (Tidio) | YELLOW | Live on wrrapd.com; answered by a person (free plan) |
+| AI text assistant | YELLOW | Built and live Oct 3; set `SUPPORT_ALERT_SMS_TO` (Roger's mobile) so handoffs also text him |
 
-**AI live support (planned, Oct 3).** One Wrrapd AI assistant behind both channels: Tidio website chat and the Twilio text line. It answers common questions and looks up an order by phone/email + order number (status, delivery day, tracking link), never reveals the gift to a giftee, and hands off to Roger for refunds, complaints, damaged/missing gifts, and anything it is unsure about. Start in **draft mode** (Roger approves each reply in the Service desk), then turn on auto-send for safe question types after two clean weeks.
+**AI text assistant (built Oct 3, live on the Twilio line).** Answers simple questions on its own (order status with tracking link, how Wrrapd works, prices shown at checkout, delivery area and timing, wrap options, flowers, extension help, contractor how-to, application next steps). Everything else — refunds, complaints, damaged/missing/late gifts, order changes, contractor pay, schedule changes, delivery problems, any unknown number asking about an order, or any reply that promises a follow-up — gets a short holding text, an alert to Roger, and a saved AI draft in the Service desk ("Use AI draft"). Code-level rules: order details only go to the shopper's own phone number; no dollar amounts; no refund/cancel language; a person replying pauses the AI on that thread for 12 hours; max 4 AI replies per thread per hour; STOP respected. Switch on/off in Service desk; "Pause AI here" per thread. Test suite: `tracking-platform/scripts/support-ai-eval.mts` (20 scripted conversations). Website chat (Tidio free plan) stays human-answered; free plan has no API to connect.
 
 ## System 10 — Contractor hiring & onboarding
 
@@ -715,7 +716,7 @@ Columns: `ID` · Check · How to verify · Pass criterion · 1st ☐ · 2nd ☐
 | API-10 | Flask helper `debug=False`, bound to 127.0.0.1 | Config | Pass | ☐ | ☐ |
 | API-11 | Disk space alert at 80% | Monitoring | Alert configured | ☐ | ☐ |
 | API-12 | SMTP sending: SPF, DKIM, DMARC pass for `wrrapd.com` | mail-tester.com | Score ≥ 9/10, not in spam (Gmail + Outlook + iCloud) | ☐ | ☐ |
-| API-13 | Twilio number A2P 10DLC registered | Twilio console | Approved campaign | ☐ | ☐ |
+| API-13 | Twilio number A2P 10DLC registered | Twilio console | Approved campaign (Roger confirmed Oct 3) | ☑ | ☐ |
 
 ## A.5 GROUND — Hub / PO Box / inbound packages
 

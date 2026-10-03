@@ -43,6 +43,8 @@ export type ServiceLink = {
   href: string;
 };
 
+export type ServiceAiSuggestion = { text: string; reason: string; at: string };
+
 export type ServiceThread = {
   id: string;
   phoneE164: string;
@@ -59,7 +61,16 @@ export type ServiceThread = {
   status: ServiceThreadStatus;
   optedOut: boolean;
   updatedAt: string;
+  /** AI stays quiet on this thread (a person took over, or paused by hand). */
+  aiPaused: boolean;
+  aiPausedUntil?: string;
+  /** Latest AI draft that was held back for a person to review. */
+  aiSuggestion?: ServiceAiSuggestion;
 };
+
+/** A person replying pauses the AI on that thread for this long. */
+const HUMAN_TAKEOVER_MS = 12 * 60 * 60 * 1000;
+export const AI_ACTOR = "Wrrapd AI";
 
 const CLOSED_ORDER = new Set(["delivered", "cancelled", "refunded"]);
 const OPT_OUT = /^(stop|stopall|unsubscribe|cancel|end|quit)$/i;
@@ -146,6 +157,22 @@ function asThread(id: string, raw: Record<string, unknown>): ServiceThread {
     status: raw.status === "waiting" || raw.status === "resolved" ? raw.status : "open",
     optedOut: raw.optedOut === true,
     updatedAt: typeof raw.updatedAt === "string" ? raw.updatedAt : "",
+    ...aiFields(raw),
+  };
+}
+
+function aiFields(raw: Record<string, unknown>): Pick<ServiceThread, "aiPaused" | "aiPausedUntil" | "aiSuggestion"> {
+  const until = typeof raw.aiPausedUntil === "string" ? raw.aiPausedUntil : undefined;
+  const untilMs = until ? Date.parse(until) : NaN;
+  const s = raw.aiSuggestion as Record<string, unknown> | null | undefined;
+  const suggestion =
+    s && typeof s.text === "string" && s.text
+      ? { text: s.text, reason: typeof s.reason === "string" ? s.reason : "", at: typeof s.at === "string" ? s.at : "" }
+      : undefined;
+  return {
+    aiPaused: raw.aiPaused === true || (Number.isFinite(untilMs) && untilMs > Date.now()),
+    aiPausedUntil: until,
+    aiSuggestion: suggestion,
   };
 }
 
@@ -183,7 +210,7 @@ type Identity = {
   links: ServiceLink[];
 };
 
-async function findOrdersByPhone(e164: string): Promise<Order[]> {
+export async function findOrdersByPhone(e164: string): Promise<Order[]> {
   const db = getFirestoreDb();
   if (!db) return [];
   const snap = await db.collection("orders").where("customerPhone", "in", phoneVariants(e164)).limit(20).get();
@@ -409,22 +436,30 @@ export async function updateCallStatus(callSid: string, fromRaw: string, status:
   await threadRef(e164).collection("messages").doc(callSid).set(patch, { merge: true });
 }
 
-/** Automatic text (for example after a call). Keeps the thread in the reply queue. */
-export async function logSystemSms(phoneRaw: string, body: string, sid: string): Promise<void> {
-  const e164 = toUsE164(phoneRaw);
-  const text = body.trim();
-  if (!e164 || !text || !sid) return;
+/** Record an automatic outbound text that was already sent through Twilio. */
+export async function logAutomaticSms(opts: {
+  phoneRaw: string;
+  body: string;
+  sid: string;
+  actor: string;
+  /** false = the text answered them, so the thread leaves the reply queue. */
+  needsReply: boolean;
+  extra?: Record<string, unknown>;
+}): Promise<void> {
+  const e164 = toUsE164(opts.phoneRaw);
+  const text = opts.body.trim();
+  if (!e164 || !text || !opts.sid) return;
   const ref = threadRef(e164);
   const snap = await ref.get();
   if (snap.data()?.optedOut === true) return;
   const now = new Date().toISOString();
-  await ref.collection("messages").doc(sid).set({
+  await ref.collection("messages").doc(opts.sid).set({
     direction: "out",
     channel: "sms",
     body: text.slice(0, 1500),
     media: [],
     createdAt: now,
-    actor: "Wrrapd",
+    actor: opts.actor,
   });
   await ref.set(
     {
@@ -433,12 +468,47 @@ export async function logSystemSms(phoneRaw: string, body: string, sid: string):
       lastDirection: "out",
       lastPreview: text.slice(0, 160),
       lastChannel: "sms",
-      needsReply: true,
-      status: "open",
+      needsReply: opts.needsReply,
+      status: opts.needsReply ? "open" : "waiting",
+      ...(opts.needsReply ? {} : { unreadCount: 0 }),
       updatedAt: now,
+      ...(opts.extra || {}),
     },
     { merge: true },
   );
+}
+
+/** Automatic text (for example after a call). Keeps the thread in the reply queue. */
+export async function logSystemSms(phoneRaw: string, body: string, sid: string): Promise<void> {
+  await logAutomaticSms({ phoneRaw, body, sid, actor: "Wrrapd", needsReply: true });
+}
+
+export async function readThreadDoc(e164: string): Promise<Record<string, unknown> | null> {
+  const snap = await threadRef(e164).get();
+  return snap.exists ? (snap.data() as Record<string, unknown>) : null;
+}
+
+export async function recentThreadMessages(e164: string, limit = 12): Promise<ServiceMessage[]> {
+  const snap = await threadRef(e164).collection("messages").orderBy("createdAt", "desc").limit(limit).get();
+  return snap.docs.map((doc) => asMessage(doc.id, doc.data() as Record<string, unknown>)).reverse();
+}
+
+export async function patchThread(e164: string, patch: Record<string, unknown>): Promise<void> {
+  await threadRef(e164).set({ ...patch, updatedAt: new Date().toISOString() }, { merge: true });
+}
+
+export async function setThreadAiPaused(phoneRaw: string, paused: boolean): Promise<ServiceThread | null> {
+  const e164 = toUsE164(phoneRaw);
+  if (!e164) return null;
+  const ref = threadRef(e164);
+  const snap = await ref.get();
+  if (!snap.exists) return null;
+  await ref.set(
+    { aiPaused: paused, aiPausedUntil: null, updatedAt: new Date().toISOString() },
+    { merge: true },
+  );
+  const saved = await ref.get();
+  return asThread(saved.id, saved.data() as Record<string, unknown>);
 }
 
 export async function replyOnThread(opts: {
@@ -480,6 +550,8 @@ export async function replyOnThread(opts: {
     status: "waiting",
     optedOut: false,
     updatedAt: now,
+    aiPausedUntil: new Date(Date.now() + HUMAN_TAKEOVER_MS).toISOString(),
+    aiSuggestion: null,
   };
   await ref.set(next, { merge: true });
   const saved = await ref.get();

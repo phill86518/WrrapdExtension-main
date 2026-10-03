@@ -28,7 +28,11 @@ type Thread = {
   needsReply: boolean;
   status: "open" | "waiting" | "resolved";
   optedOut: boolean;
+  aiPaused?: boolean;
+  aiSuggestion?: { text: string; reason: string; at: string };
 };
+
+type AiSettings = { enabled: boolean; configured: boolean };
 
 type Message = {
   id: string;
@@ -113,6 +117,54 @@ export function ServiceDesk() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [loadingList, setLoadingList] = useState(true);
+  const [ai, setAi] = useState<AiSettings | null>(null);
+
+  useEffect(() => {
+    void fetch("/api/admin/service/ai", { cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: AiSettings | null) => setAi(data))
+      .catch(() => setAi(null));
+  }, []);
+
+  async function toggleAi() {
+    if (!ai) return;
+    setBusy(true);
+    setError("");
+    try {
+      const res = await fetch("/api/admin/service/ai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enabled: !ai.enabled }),
+      });
+      const data = (await res.json()) as AiSettings & { error?: string };
+      if (!res.ok) throw new Error(data.error || "Could not update the AI assistant");
+      setAi(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not update the AI assistant");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function setThreadAi(paused: boolean) {
+    if (!active) return;
+    setBusy(true);
+    setError("");
+    try {
+      const res = await fetch(`/api/admin/service/threads/${encodeURIComponent(active.phoneE164)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ aiPaused: paused }),
+      });
+      const data = (await res.json()) as { error?: string };
+      if (!res.ok) throw new Error(data.error || "Could not update");
+      await loadThread(active.phoneE164);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not update");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   const loadList = useCallback(async () => {
     const res = await fetch("/api/admin/service", { cache: "no-store" });
@@ -294,6 +346,25 @@ export function ServiceDesk() {
             >
               {summary.waitingOver15m} waiting over 15 min
             </span>
+            {ai ? (
+              <button
+                type="button"
+                disabled={busy || !ai.configured}
+                onClick={() => void toggleAi()}
+                title={
+                  ai.configured
+                    ? "Answers simple questions on its own and hands everything else to you"
+                    : "Add XAI_API_KEY to this server to use the AI assistant"
+                }
+                className={
+                  ai.enabled && ai.configured
+                    ? "rounded-full bg-emerald-600 px-3 py-1 text-white disabled:opacity-60"
+                    : "rounded-full bg-white px-3 py-1 text-[#2d4a38] ring-1 ring-[#1a2744]/20 disabled:opacity-60"
+                }
+              >
+                AI assistant: {ai.configured ? (ai.enabled ? "On" : "Off") : "Not set up"}
+              </button>
+            ) : null}
           </div>
         </div>
         {!configured ? (
@@ -425,6 +496,20 @@ export function ServiceDesk() {
                   <button type="button" disabled={busy} onClick={() => void mark("open")} className="rounded-lg border border-[#1a2744]/20 px-2.5 py-1 text-xs font-bold text-[#1a2744]">
                     Reopen
                   </button>
+                  {ai?.configured ? (
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => void setThreadAi(!active.aiPaused)}
+                      className={
+                        active.aiPaused
+                          ? "rounded-lg border border-emerald-600/40 px-2.5 py-1 text-xs font-bold text-emerald-800"
+                          : "rounded-lg border border-[#1a2744]/20 px-2.5 py-1 text-xs font-bold text-[#1a2744]"
+                      }
+                    >
+                      {active.aiPaused ? "Let AI answer here" : "Pause AI here"}
+                    </button>
+                  ) : null}
                 </div>
               </div>
               {active.optedOut ? (
@@ -492,6 +577,21 @@ export function ServiceDesk() {
 
           {(composing || (active && !active.optedOut)) && (
             <div className="border-t border-[#1a2744]/10 p-4">
+              {!composing && active?.needsReply && active.aiSuggestion ? (
+                <div className="mb-3 rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-950 ring-1 ring-amber-200">
+                  <p className="text-[11px] font-bold uppercase tracking-wide">
+                    Held for you · {active.aiSuggestion.reason}
+                  </p>
+                  <p className="mt-1 whitespace-pre-wrap">{active.aiSuggestion.text}</p>
+                  <button
+                    type="button"
+                    onClick={() => setDraft(active.aiSuggestion?.text || "")}
+                    className="mt-2 rounded-lg bg-[#0f172a] px-2.5 py-1 text-xs font-bold text-white"
+                  >
+                    Use AI draft
+                  </button>
+                </div>
+              ) : null}
               <div className="mb-2 flex flex-wrap gap-2">
                 {QUICK_REPLIES.map((lineText) => (
                   <button

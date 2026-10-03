@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { recordInbound } from "@/lib/service-desk";
+import { handleInboundWithAi } from "@/lib/support-ai";
 import { readTwilioForm, twilioRequestTrusted, twiml } from "@/lib/twilio-rest";
 
 export const dynamic = "force-dynamic";
@@ -19,8 +20,9 @@ export async function POST(request: NextRequest) {
       contentType: params[`MediaContentType${i}`] || "application/octet-stream",
     });
   }
+  let thread;
   try {
-    await recordInbound({
+    thread = await recordInbound({
       sid: params.MessageSid || "",
       fromRaw: params.From || "",
       channel: media.length > 0 ? "mms" : "sms",
@@ -30,6 +32,11 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     console.error("[twilio/sms] store failed", err);
     return NextResponse.json({ error: "Could not store message" }, { status: 500 });
+  }
+  try {
+    await handleInboundWithAi(thread, params.Body || "", media.length);
+  } catch (err) {
+    console.error("[twilio/sms] ai reply failed", err);
   }
   return twiml("");
 }
