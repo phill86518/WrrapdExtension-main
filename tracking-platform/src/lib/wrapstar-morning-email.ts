@@ -9,7 +9,9 @@ import type { WrapShiftItem, WrapStar } from "./types";
 function itemBlock(item: WrapShiftItem): string {
   const box = item.needsBox
     ? `Box needed before you cut the paper${item.boxSize ? `: ${escapeHtml(item.boxSize)}` : "."}`
-    : "No extra box.";
+    : item.boxSize && !/estimate/i.test(item.boxSize)
+      ? `No extra box. Package is ${escapeHtml(item.boxSize)}.`
+      : "No extra box.";
   const cid = `${item.code}.png`;
   const custom = item.customPrint
     ? `Custom wrap. Print this file before you wrap.${

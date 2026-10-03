@@ -10,6 +10,7 @@ import { formatDateKeyNy } from "./ny-date";
 import { wrrapdScheduledInstantIsoForUi } from "./order-schedule-display";
 import { getOrderById, listWrapstarOrders, patchOrderFields } from "./data";
 import { generateDriverLabelQr, newDriverLabelToken } from "./driver-label-qr";
+import { giftBoxForLine } from "./gift-box";
 
 const DATA_DIR = path.join(process.cwd(), ".data");
 const SHIFTS_FILE = path.join(DATA_DIR, "wrapstar-shifts.json");
@@ -465,12 +466,30 @@ async function loadShiftById(shiftId: string): Promise<WrapStarShift | null> {
   return all.find((s) => s.id === shiftId) || null;
 }
 
+function refreshQueuedBoxSizes(shift: WrapStarShift, orders: Order[]): WrapStarShift | null {
+  const fresh = new Map(itemsFromOrders(orders).map((item) => [`${item.orderId}:${item.lineIndex}`, item]));
+  let changed = false;
+  const items = (shift.items || []).map((item) => {
+    if (item.phase !== "queued" || item.boxPickedAt) return item;
+    const next = fresh.get(`${item.orderId}:${item.lineIndex}`);
+    if (!next) return item;
+    if (item.needsBox === next.needsBox && (item.boxSize || "") === (next.boxSize || "")) return item;
+    changed = true;
+    return { ...item, needsBox: next.needsBox, boxSize: next.boxSize };
+  });
+  if (!changed) return null;
+  return { ...shift, items, updatedAt: new Date().toISOString() };
+}
+
 function itemsFromOrders(orders: Order[]): WrapShiftItem[] {
   const items: WrapShiftItem[] = [];
   for (const order of orders) {
     const lines = order.lineItems?.length ? order.lineItems : [{ title: order.recipientName }];
     lines.forEach((line, lineIndex) => {
       const token = lineIndex === 0 && order.driverLabelToken ? order.driverLabelToken : newDriverLabelToken();
+      const box = order.lineItems?.length
+        ? giftBoxForLine(line)
+        : { needsBox: false, boxSize: "" };
       items.push({
         id: newId("itm"),
         orderId: order.id,
@@ -483,7 +502,8 @@ function itemsFromOrders(orders: Order[]): WrapShiftItem[] {
         customPrint: line.wrappingOption === "upload" || line.wrappingOption === "ai",
         printFileUrl: line.wrappingDesignImageUrl,
         printFileName: line.uploadedDesignFileName,
-        needsBox: false,
+        needsBox: box.needsBox,
+        ...(box.boxSize ? { boxSize: box.boxSize } : {}),
         phase: "queued",
       });
     });
@@ -494,8 +514,17 @@ function itemsFromOrders(orders: Order[]): WrapShiftItem[] {
 /** Morning sheet for a calendar day. Does not start the paid clock. */
 export async function ensureDaySheet(wrapstarId: string, dateKey: string): Promise<WrapStarShift | null> {
   const existing = (await shiftsForWrapstar(wrapstarId)).find((s) => s.dateKey === dateKey && s.status !== "cancelled");
-  if (existing) return existing;
   const today = todaysOrders(await listWrapstarOrders(wrapstarId), dateKey);
+  if (existing) {
+    if (existing.status === "sheet") {
+      const patched = refreshQueuedBoxSizes(existing, today);
+      if (patched) {
+        await saveShift(patched);
+        return patched;
+      }
+    }
+    return existing;
+  }
   if (today.length === 0) return null;
   const now = new Date().toISOString();
   const shift: WrapStarShift = {

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Order, WrapStarShift } from "@/lib/types";
 import { isCustomPrintDesign, wrapPhaseLabel } from "@/lib/shift-store-client";
+import { giftBoxForLine } from "@/lib/gift-box";
 
 type Bundle = {
   shift: WrapStarShift | null;
@@ -443,7 +444,15 @@ export function ShiftModule() {
                 ) : (
                   <div className="h-14 w-14 rounded bg-slate-100" />
                 )}
-                <p className="text-xs text-slate-700 line-clamp-3">{li.title || "Item"}</p>
+                <div className="text-xs text-slate-700">
+                  <p className="line-clamp-3">{li.title || "Item"}</p>
+                  {(() => {
+                    const box = giftBoxForLine(li);
+                    if (box.needsBox && box.boxSize) return <p className="mt-1 font-medium">Box: {box.boxSize}</p>;
+                    if (box.measured) return <p className="mt-1">Package: {box.measured}</p>;
+                    return null;
+                  })()}
+                </div>
               </div>
             ))}
           </div>

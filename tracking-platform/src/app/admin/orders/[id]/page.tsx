@@ -19,6 +19,7 @@ import {
   metroForPostalCode,
 } from "@/lib/metros";
 import { formatUsdCents } from "@/lib/finance";
+import { giftBoxForLine } from "@/lib/gift-box";
 
 export const dynamic = "force-dynamic";
 
@@ -339,7 +340,14 @@ export default async function AdminOrderDetailPage({
         <section className="mt-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
           <h2 className="font-semibold text-slate-900">Line items</h2>
           <ul className="mt-3 space-y-3">
-            {order.lineItems.map((li, i) => (
+            {order.lineItems.map((li, i) => {
+              const box = giftBoxForLine(li);
+              const boxLine = box.needsBox
+                ? `Cardboard box: ${box.boxSize}${box.source === "category" ? "" : ` (from ${box.source} size${box.measured ? ` ${box.measured}` : ""})`}`
+                : box.measured
+                  ? `No extra box. Package is ${box.measured}.`
+                  : "No extra box.";
+              return (
               <li key={i} className="flex gap-3 border-b border-slate-100 pb-3 last:border-0">
                 {li.imageUrl || li.wrappingDesignImageUrl ? (
                   <Image
@@ -355,9 +363,12 @@ export default async function AdminOrderDetailPage({
                   {li.giftMessage ? <p className="text-slate-600">Message: {li.giftMessage}</p> : null}
                   {li.occasion ? <p className="text-slate-600">Occasion: {li.occasion}</p> : null}
                   {li.wrappingOption ? <p className="text-slate-600">Wrap: {li.wrappingOption}</p> : null}
+                  <p className="text-slate-600">{boxLine}</p>
+                  {li.itemCategory ? <p className="text-slate-500">Category: {li.itemCategory}</p> : null}
                 </div>
               </li>
-            ))}
+              );
+            })}
           </ul>
         </section>
       ) : null}

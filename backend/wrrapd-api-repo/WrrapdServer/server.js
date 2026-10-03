@@ -1500,6 +1500,9 @@ function normalizeOrderItems(orderData) {
                 estimatedDeliveryDate: option.estimatedDeliveryDate || item.estimatedDeliveryDate || null,
                 arrivalDate: option.arrivalDate || item.arrivalDate || null,
                 shippingDate: option.shippingDate || item.shippingDate || null,
+                packageDimensions: item.packageDimensions || null,
+                productDimensions: item.productDimensions || null,
+                itemCategory: item.itemCategory || null,
             });
         }
     }
@@ -2909,6 +2912,9 @@ app.post('/process-payment', async (req, res) => {
                     giftMessage: it.giftMessage ? String(it.giftMessage) : '',
                     senderName: it.senderName ? String(it.senderName) : '',
                     occasion: it.occasion ? String(it.occasion) : '',
+                    packageDimensions: it.packageDimensions ? String(it.packageDimensions) : '',
+                    productDimensions: it.productDimensions ? String(it.productDimensions) : '',
+                    itemCategory: it.itemCategory ? String(it.itemCategory) : '',
                 };
             });
             const wrappedAmazonDays = [...new Set(

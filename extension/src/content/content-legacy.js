@@ -28,6 +28,7 @@ import {
 import { wrrapdTrace } from './lib/wrrapd-debug.js';
 import { getValueByLabel, getElementValue, generateOrderNumber } from './lib/order-helpers.js';
 import { ensureWrrapdSummaryAlignment } from './lib/summary-alignment.js';
+import { enrichStoredAmazonItemFacts } from '../shared/amazon-item-facts.js';
 import { isZipCodeAllowed } from './lib/zip-codes.js';
 import { WRRAPD_RETAILER_AMAZON } from '../retailers/amazon/constants.js';
 import { occasionOptionsHtml, isValidOccasion } from '../shared/occasions.js';
@@ -1760,6 +1761,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
     
             // Save immediately - don't wait for anything
             saveAllItemsToLocalStorage(allItems);
+            enrichStoredAmazonItemFacts().catch(() => {});
             
             // Set a flag so the next page knows we're coming from checkout
             localStorage.setItem('wrrapd-coming-from-checkout', 'true');
@@ -11536,6 +11538,9 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                         asin: item.asin,
                         title: item.title,
                         imageUrl: item.imageUrl || null,
+                        packageDimensions: item.packageDimensions || null,
+                        productDimensions: item.productDimensions || null,
+                        itemCategory: item.itemCategory || null,
                         checkbox_wrrapd: option.checkbox_wrrapd === true,
                         checkbox_flowers: option.checkbox_flowers,
                         selected_flower_design: option.selected_flower_design || null,
@@ -11612,6 +11617,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             );
             return;
         }
+        await enrichStoredAmazonItemFacts().catch(() => {});
         const orderData = buildWrrapdOrderDataFromLocalStorage();
         if (!orderData.length) {
             console.warn('[Wrrapd staging ingest] No Wrrapd line items in wrrapd-items.');
@@ -12290,6 +12296,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                             localStorage.setItem('wrrapd-payment-status', 'success');
 
                             // Same rows as staging ingest: only true Wrrapd selections (not Amazon gift-bag-only lines).
+                            await enrichStoredAmazonItemFacts().catch(() => {});
                             const orderData = buildWrrapdOrderDataFromLocalStorage();
 
                             console.log('Order Data:', orderData);

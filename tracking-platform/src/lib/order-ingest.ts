@@ -1,5 +1,6 @@
 import type { CreateOrderInput } from "@/lib/data";
 import type { Order, OrderLineItem, OrderRetailer } from "@/lib/types";
+import { giftBoxForLine } from "@/lib/gift-box";
 import {
   endOfCalendarDayAmericaNewYorkIso,
   wrrapdScheduledInstantFromAmazonDeliveryDateKey,
@@ -197,6 +198,16 @@ function parseLineItems(v: unknown, invalidFields: string[]): OrderLineItem[] | 
     const giftMessage = str(row.giftMessage);
     const senderName = str(row.senderName);
     const occasion = str(row.occasion);
+    const packageDimensions = str(row.packageDimensions);
+    const productDimensions = str(row.productDimensions);
+    const itemCategory = str(row.itemCategory);
+    const box = giftBoxForLine({
+      title,
+      flowers,
+      packageDimensions,
+      productDimensions,
+      itemCategory,
+    });
     out.push({
       ...(asin ? { asin } : {}),
       ...(title ? { title } : {}),
@@ -217,6 +228,12 @@ function parseLineItems(v: unknown, invalidFields: string[]): OrderLineItem[] | 
       ...(giftMessage ? { giftMessage } : {}),
       ...(senderName ? { senderName } : {}),
       ...(occasion ? { occasion } : {}),
+      ...(packageDimensions ? { packageDimensions } : {}),
+      ...(productDimensions ? { productDimensions } : {}),
+      ...(itemCategory ? { itemCategory } : {}),
+      ...(box.needsBox ? { needsGiftBox: true } : {}),
+      ...(box.boxSize ? { giftBoxSize: box.boxSize } : {}),
+      ...(box.boxSize ? { giftBoxSource: box.source } : {}),
     });
   }
   return out.length ? out : undefined;

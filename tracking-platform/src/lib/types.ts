@@ -85,8 +85,16 @@ export type OrderLineItem = {
   occasion?: string;
   /** Loose item that needs a cardboard box before the paper is cut. */
   needsGiftBox?: boolean;
-  /** Anticipated box size when needsGiftBox is set, e.g. "12 x 9 x 4 in". */
+  /** Anticipated box size when needsGiftBox is set, e.g. "12 x 9 x 4 in" or "14 x 10 x 3 in estimate". */
   giftBoxSize?: string;
+  /** Where giftBoxSize came from. */
+  giftBoxSource?: "package" | "product" | "category";
+  /** Retailer package size when the product page listed one. */
+  packageDimensions?: string;
+  /** Retailer product size when the product page listed one. */
+  productDimensions?: string;
+  /** Retailer department, used when no dimensions were listed. */
+  itemCategory?: string;
   /** Optional unit price in USD cents when known from checkout */
   unitPriceCents?: number;
 };
