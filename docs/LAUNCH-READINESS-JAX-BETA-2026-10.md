@@ -64,15 +64,15 @@ Launching publicly before Black Friday matters: it gives us ~3 calm weeks to fin
 
 | # | Blocker | Why it matters | Fix size |
 |---|---|---|---|
-| R1 | **Hub address is a USPS PO Box** (`PO BOX 26067, JACKSONVILLE FL 32226-6067` hard-coded in `extension/src/shared/wrrapd-hub.js`) | UPS, FedEx, and Amazon Logistics generally **cannot deliver to a USPS PO Box**. Many Amazon items, and most Best Buy / Walmart items, will refuse a PO Box or bounce. This could break most orders on day one. | Business decision + 1-line config + extension release |
-| R2 | **No way to match an arriving box to its Wrrapd order.** Every package is addressed to "WRRAPD INC" and the extension does not capture the retailer order number or tracking number after checkout. | At the hub, Roger opens 6 identical-looking Amazon boxes and cannot reliably tell whose gift is whose. Wrong gift to wrong giftee is the worst possible failure. | Medium (capture + intake screen) — or a manual SOP for beta |
+| R1 | **Hub address is a USPS PO Box** (`PO BOX 26067, JACKSONVILLE FL 32226-6067` hard-coded in `extension/src/shared/wrrapd-hub.js`) | UPS, FedEx, and Amazon Logistics generally **cannot deliver to a USPS PO Box**. Many Amazon items, and most Best Buy / Walmart items, will refuse a PO Box or bounce. This could break most orders on day one. **Decision (Oct 3): use USPS Street Addressing** — format is the post office's street address + `#26067`. Remaining risk: Amazon Logistics drivers may still refuse a post office; prove with HUB-01/HUB-02 test shipments from every carrier, all 10 retailers. | 1-line config + extension release 3.0.12 (needs the post office's exact street address) |
+| R2 | **No way to match an arriving box to its Wrrapd order.** Every package is addressed to "WRRAPD INC" and the extension does not capture the retailer order number or tracking number after checkout. **Decision (Oct 3): no Wrrapd code on the label — match by packing slip.** That makes capturing the **retailer order number** on each retailer's confirmation page mandatory, because the packing slip's order number is the only reliable key. Retailers that ship without a slip need a fallback (item + shopper name + expected date) and a quarantine shelf. | At the hub, Roger opens 6 identical-looking Amazon boxes and cannot reliably tell whose gift is whose. Wrong gift to wrong giftee is the worst possible failure. | Medium: order-number capture for 10 retailers + intake search by order number |
 | R3 | **Proof photos, wrap videos, and QR labels very likely fail to upload in production.** Cloud Run has no `FIREBASE_STORAGE_BUCKET` / `GCS_BACKUP_BUCKET`, and Firebase is initialized without a default bucket (`tracking-platform/src/lib/firebase-admin.ts` L151–160). The code then silently returns `null`. | No chain-of-custody evidence, no delivery photo, no labels for couriers. | Small (1 env var + bucket + test) |
 | R4 | **No hub inbound "receive package" step** in Command Center | We cannot see "package arrived / not arrived / damaged" per order, so we cannot catch the shopper who paid Wrrapd but never completed the retailer order. | Medium — manual sheet acceptable for beta |
 | R5 | **Delivery proof UI missing for the courier/WrapRider delivery step** — the API exists but the courier screen only has Start / Mark delivered. Separately, the WrapStar "wrap photo" path marks the order **delivered**. | Wrong status sent to shoppers; no door photo; disputes become unwinnable. | Small–medium |
 | R6 | **Orders' system of record is JSON files on one VM** with no scheduled backup (one tarball from Jun 19). Firestore has **point-in-time recovery OFF** and **delete protection OFF**, and no backup schedule. | One bad disk, a mistaken delete, or a bad deploy loses paid orders. | Small (configuration) |
 | R7 | **`pros.wrrapd.com` is still "Under construction"**; `pros.wrrapd.com/wraprider-onboarding/` returns **404**. | Every approval email sends new contractors to a dead link. Not blocking Roger, blocking every hire. | Small (DNS / SiteGround) |
-| R8 | **Florida sales tax**: checkout charges 7.5% sales tax. | If Wrrapd is collecting tax, it must be registered with the Florida Department of Revenue and filing. If wrap service fees are not taxable, we must stop charging it. Either way it must be settled before money is taken. | CPA call |
-| R9 | **Insurance**: holding customers' goods (bailee), driving for business, and handling payments needs coverage. Agreements conflict (WrapStar agreement says no insurance mandate; onboarding demands a $1M general liability + inland marine certificate). | One crash or one stolen box of electronics without coverage could end the company. | Broker call |
+| R8 → YELLOW | **Florida sales tax**: checkout charges 7.5% sales tax. **Update (Oct 3): Wrrapd is registered with Florida DOR.** | Remaining: confirm filing frequency is set up and that the taxable lines (wrap, design, box, flowers) match what the CPA advised. | CPA confirmation |
+| R9 | **Insurance — none bound as of Oct 3.** Holding customers' goods (bailee), driving for business, and handling payments needs coverage. Agreements conflict (WrapStar agreement says no insurance mandate; onboarding demands a $1M general liability + inland marine certificate). | One crash or one stolen box of electronics without coverage could end the company. **Now the top non-software blocker.** | Broker call this week |
 | R10 | **Unit economics of "free final delivery"** (see §2.3) | At the placeholder $30/hour contractor rate, a single-gift delivery costs far more than the $6.99 wrap fee. Fine while Roger delivers; not fine once hires do. | Business decision |
 
 ## 1.4 Important but not blocking (YELLOW, fix during beta)
@@ -110,7 +110,7 @@ Launching publicly before Black Friday matters: it gives us ~3 calm weeks to fin
 | 14 | Data, media & architecture | 55% | RED (R6) |
 | 15 | Security & privacy | 50% | YELLOW |
 | 16 | Monitoring, backup & disaster recovery | 15% | RED |
-| 17 | Legal, insurance, tax, licensing | 40% | **RED (R8, R9)** |
+| 17 | Legal, insurance, tax, licensing | 45% | **RED (R9 insurance)**; sales tax registered |
 | 18 | Flowers add-on | 40% | YELLOW — recommend OFF for beta |
 
 ---
@@ -189,7 +189,7 @@ Each system lists subsystems, current state, risks, and what must happen before 
 |---|---|---|
 | Amazon cart opt-in, gift options, hub address swap, Pay Wrrapd, Place Order hook | YELLOW | Most mature; huge DOM automation surface; must be smoke-tested within 24 h of launch and daily |
 | Multi-address / mixed carts on Amazon | YELLOW | Historically brittle; recommend telling beta shoppers "one giftee per order" |
-| Other 9 retailers (shared flow) | YELLOW | Thin proof; only Best Buy/Kohl's fixture checks. **Recommend: Amazon + Target + LEGO for public beta; others labeled "early" or hidden** |
+| Other 9 retailers (shared flow) | YELLOW | Thin proof; only Best Buy/Kohl's fixture checks. **Decision (Oct 3): all 10 live for beta** → each needs a passing rehearsal order (EXT-19), packing-slip match (HUB-04), and a per-retailer off switch (EXT-20). Best Buy and Walmart are the most likely to refuse post-office addresses — test them first |
 | Duval ZIP gate | GREEN | Allowlist API; out-of-area copy is polite |
 | Giftee address capture | YELLOW | Amazon scrapes before swap; others collect on pay page. Verify full street + phone reach Command Center |
 | Hub address | **RED (R1)** | PO Box hard-coded |
@@ -522,8 +522,9 @@ All dates 2026 unless noted. Owners: **R** = Roger, **Eng** = engineering (agent
 ### Phase 1 — Stabilize (Mon Oct 5 – Sun Oct 11) — "close the REDs"
 - Eng: R3 storage bucket + video cap + lifecycle; R6 backups + Firestore PITR/delete protection/backup schedule.
 - Eng: R5 door photo + GPS in courier/WrapRider UI; stop wrap photo from setting `delivered`.
-- Eng: R2 capture retailer order number at the retailer's confirmation page (Amazon first) and add it to the Wrrapd order; put the **Wrrapd order code in the ship-to line 2 or name line** (e.g., "WRRAPD INC / W-1234") so the box label itself identifies the order.
-- Eng: R1 switch hub address to the street-addressable receiving location (once decided) — extension release 3.0.12.
+- Eng: R2 capture retailer order number (and tracking number where shown) at each of the 10 retailers' confirmation pages and add it to the Wrrapd order; Command Center intake search by retailer order number. (Decision Oct 3: no Wrrapd code on the label.)
+- Eng: R1 switch hub address to the USPS Street Addressing format (post office street address + `#26067`) — extension release 3.0.12.
+- Eng: per-retailer on/off switch, since all 10 retailers launch together (decision Oct 3).
 - Eng: server-side ZIP check, $0.99 box fix, ingest proxy secret, disable Stripe test customer routes.
 - Eng: schedule the 8 am morning-sheet cron and expire-delivery-preferences cron.
 - Eng: uptime checks + alert to Roger's phone; Sentry.
@@ -537,7 +538,7 @@ All dates 2026 unless noted. Owners: **R** = Roger, **Eng** = engineering (agent
 - Restore drill: restore yesterday's Firestore backup into a test database; restore VM orders from GCS.
 
 ### Phase 3 — Friends & family closed beta (Mon Oct 19 – Sun Nov 1)
-- 15–30 invited shoppers; cap 5 orders/day; flowers OFF; Amazon (+ Target/LEGO if rehearsals pass).
+- 15–30 invited shoppers; cap 5 orders/day; flowers OFF; all 10 retailers that passed rehearsal (EXT-19).
 - Daily 15-minute review: orders, failures, time per wrap, time per stop, cost per order.
 - Privacy policy updated; how-it-works/FAQ updated with service area + timing.
 - Begin recruiting 1–2 backup WrapRiders/JoyRiders (now that `pros` works).
@@ -622,7 +623,7 @@ Columns: `ID` · Check · How to verify · Pass criterion · 1st ☐ · 2nd ☐
 | EXT-08 | Upload design ≤ 5 MB saves | Upload | Saved, appears on order | ☐ | ☐ |
 | EXT-09 | Gift message saved exactly (emoji, apostrophes, 250 chars) | Compare in Command Center | Exact | ☐ | ☐ |
 | EXT-10 | Giftee full address + phone reach Command Center | Order detail | Complete and correct | ☐ | ☐ |
-| EXT-11 | Ship-to swapped to hub **street-addressable** address and locked | Amazon checkout page | Hub address selected, includes Wrrapd order code | ☐ | ☐ |
+| EXT-11 | Ship-to swapped to hub USPS Street Addressing address and locked | Each retailer's checkout page | Hub address selected and accepted (no PO Box error) | ☐ | ☐ |
 | EXT-12 | Place Order blocked until Wrrapd paid | Try to place first | Blocked with clear message | ☐ | ☐ |
 | EXT-13 | Place Order released after payment | Pay, then place | Retailer order placed | ☐ | ☐ |
 | EXT-14 | Retailer order number captured on confirmation page | Command Center order | Retailer order # present | ☐ | ☐ |
@@ -630,8 +631,8 @@ Columns: `ID` · Check · How to verify · Pass criterion · 1st ☐ · 2nd ☐
 | EXT-16 | Mixed cart (some wrapped, some not) | 3 items, wrap 1 | Only wrapped item goes to hub; others ship to shopper (or blocked by policy) | ☐ | ☐ |
 | EXT-17 | Amazon delivery date captured, Wrrapd date = +1 day | Compare | Correct, not in the past | ☐ | ☐ |
 | EXT-18 | Pickup-only / digital items refused | Add gift card / pickup item | Not offered | ☐ | ☐ |
-| EXT-19 | Each beta retailer (Target, LEGO, …) repeats EXT-03 → EXT-17 | Per retailer | Pass, or retailer disabled for beta | ☐ | ☐ |
-| EXT-20 | Retailers NOT in beta are disabled/hidden | Visit site | No Wrrapd UI or "coming soon" | ☐ | ☐ |
+| EXT-19 | All 10 retailers (Amazon, Target, LEGO, Ulta, Walmart, Nordstrom, Kohl's, Sephora, Best Buy, Etsy) each repeat EXT-03 → EXT-17 with one real rehearsal order | Per retailer | Pass, or that retailer switched off until it passes | ☐ | ☐ |
+| EXT-20 | Per-retailer off switch works | Toggle one retailer | Wrrapd UI disappears on that retailer only | ☐ | ☐ |
 | EXT-21 | Kill switch works (empty allowlist or flag) | Toggle in Command Center | All ZIPs refused within 5 min; restore works | ☐ | ☐ |
 | EXT-22 | Windows build reproducible (`npm run build`) | Roger's Windows clone | Bundles identical to CWS zip | ☐ | ☐ |
 | EXT-23 | Daily Amazon smoke test assigned | Calendar | Owner + time set through Dec 24 | ☐ | ☐ |
@@ -680,7 +681,7 @@ Columns: `ID` · Check · How to verify · Pass criterion · 1st ☐ · 2nd ☐
 | HUB-01 | Receiving address accepts USPS, UPS, FedEx, Amazon Logistics, OnTrac | Send one test shipment via each | All 5 arrive | ☐ | ☐ |
 | HUB-02 | Amazon accepts the hub address for a typical gift (non-USPS item) | Amazon checkout | No "cannot ship to PO Box" error | ☐ | ☐ |
 | HUB-03 | Address in extension = verified address | Compare | Exact | ☐ | ☐ |
-| HUB-04 | Wrrapd order code appears on the shipping label | Test shipment | Visible on label | ☐ | ☐ |
+| HUB-04 | Packing slip from each of the 10 retailers shows an order number that matches the captured retailer order # | One test order per retailer | 10/10 match, or a written fallback for retailers without slips | ☐ | ☐ |
 | HUB-05 | Pickup schedule set (days/times, incl. Saturday) and in calendar | Calendar | Set through Dec 31 | ☐ | ☐ |
 | HUB-06 | Keys/access: 2 copies, logged in Equipment module | Count | 2, logged | ☐ | ☐ |
 | HUB-07 | Oversized/signature-required package procedure known | Ask post office / receiving desk | Written in SOP-01 | ☐ | ☐ |
@@ -911,7 +912,14 @@ FLIGHT calls each station; each answers **"GO"** or **"NO-GO + reason"**.
 
 # Exhibit B — Questions for Roger
 
-Answers change the plan; the first five are the most important.
+**Answered Oct 3, 2026:**
+- Q1 Hub: PO Box with **USPS Street Addressing** available. Next: send the post office's exact street address for the extension.
+- Q2 Label code: **No** — match by packing slip (retailer order number capture becomes mandatory).
+- Q3 Sales tax: **Registered** with Florida DOR.
+- Q4 Insurance: **none bound yet**.
+- Q5 Beta retailers: **all 10**.
+
+Still open (Q6–Q18). The first five below were the most important.
 
 1. **Hub receiving address:** Does the micro-hub have a **street address** that accepts UPS, FedEx, and Amazon deliveries? Or is it USPS PO Box only? Does that post office offer USPS "Street Addressing" for your box? (Determines R1.)
 2. **Matching packages:** Are you OK adding the Wrrapd order code to the ship-to (for example, name line "WRRAPD INC W-1234" or address line 2)? Retailers allow line 2 freely.
