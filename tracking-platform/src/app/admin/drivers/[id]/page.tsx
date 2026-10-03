@@ -8,6 +8,7 @@ import type { MetroId, OnboardingStatus } from "@/lib/types";
 import { getPayoutHold } from "@/lib/finance";
 import { setPayoutHoldAction } from "../../payout-hold-action";
 import { ContractorPayCard } from "@/components/contractor-pay-card";
+import { ContractorPayHistory } from "@/components/contractor-pay-history";
 
 export const dynamic = "force-dynamic";
 
@@ -72,6 +73,7 @@ export default async function AdminDriverDetailPage({
       </p>
       <div className="mt-4">
         <ContractorPayCard contractorId={driver.id} role="joyrider" />
+        <ContractorPayHistory contractorId={driver.id} admin />
       </div>
 
       <form action={updateAction} className="mt-6 space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">

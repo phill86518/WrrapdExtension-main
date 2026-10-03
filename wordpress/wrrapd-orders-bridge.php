@@ -378,7 +378,7 @@ function wrrapd_output_header_member_polish_script() {
 add_action( 'wp_footer', 'wrrapd_output_header_member_polish_script', 22 );
 
 /**
- * Header "Delivering to" — reliable geolocation with Jacksonville fallback.
+ * Header "Delivering to" — reliable geolocation with company-address fallback.
  * Elementor HTML widget still renders #wrrapd-location / #location-text; this MU script
  * runs in the footer (after the header DOM exists) and fixes stuck "Loading..." when ipapi fails.
  */
@@ -386,7 +386,7 @@ function wrrapd_output_header_location_script() {
 	if ( is_admin() ) {
 		return;
 	}
-	$fallback = wp_json_encode( 'Jacksonville, FL 32218' );
+	$fallback = wp_json_encode( 'St. Petersburg, FL 33702' );
 	echo '<script id="wrrapd-header-location">';
 	echo '(function(){';
 	echo 'var FALLBACK=' . $fallback . ';';
@@ -2271,7 +2271,7 @@ function wrrapd_output_tidio_mobile_compact_script() {
 add_action( 'wp_footer', 'wrrapd_output_tidio_mobile_compact_script', 26 );
 
 /**
- * Home page: move Elementor gift-guides HTML widget below the hero (after Jacksonville + red divider).
+ * Home page: move Elementor gift-guides HTML widget below the hero (after the red divider).
  * Also removes the duplicate partner-logo strip inside the gift-guides block (header wheel is canonical).
  */
 function wrrapd_output_home_gift_guides_reposition_script() {
@@ -2304,7 +2304,7 @@ function wrrapd_output_home_gift_guides_reposition_script() {
 	echo 'var jack=document.querySelector(".elementor-element-de3f6bb");';
 	echo 'if(!jack){var nodes=document.querySelectorAll("p,.elementor-widget-text-editor");';
 	echo 'for(var i=0;i<nodes.length;i++){var t=(nodes[i].textContent||"");';
-	echo 'if(/Jacksonville,\\s*Florida/i.test(t)&&/new cities being added soon/i.test(t)){';
+	echo 'if(/new cities being added soon/i.test(t)){';
 	echo 'jack=nodes[i].closest(".elementor-element");break;}}}';
 	echo 'if(!jack)return null;';
 	echo 'var walk=jack;';

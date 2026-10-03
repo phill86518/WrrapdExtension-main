@@ -1,0 +1,48 @@
+[
+  {
+    "id": "8260981201",
+    "displayId": "8260981201",
+    "name": "Roger",
+    "homePostalCode": "32218",
+    "allocationRank": 0,
+    "legacyDriverId": "drv-1",
+    "canDeliver": true,
+    "hasVehicle": true,
+    "wrapOnly": false,
+    "metroId": "jacksonville"
+  },
+  {
+    "id": "8260965201",
+    "displayId": "8260965201",
+    "name": "Taylor",
+    "homePostalCode": "32256",
+    "allocationRank": 1,
+    "legacyDriverId": "drv-2",
+    "canDeliver": true,
+    "hasVehicle": true,
+    "wrapOnly": false,
+    "metroId": "jacksonville"
+  },
+  {
+    "id": "8260981202",
+    "displayId": "8260981202",
+    "name": "Jordan Lee",
+    "homePostalCode": "32218",
+    "allocationRank": 2,
+    "canDeliver": false,
+    "hasVehicle": false,
+    "wrapOnly": true,
+    "metroId": "jacksonville"
+  },
+  {
+    "id": "8261090301",
+    "displayId": "8261090301",
+    "name": "Casey Nguyen",
+    "homePostalCode": "30309",
+    "allocationRank": 3,
+    "canDeliver": false,
+    "hasVehicle": false,
+    "wrapOnly": true,
+    "metroId": "atlanta"
+  }
+]

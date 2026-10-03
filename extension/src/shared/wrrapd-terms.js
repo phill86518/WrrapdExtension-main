@@ -40,6 +40,6 @@ export function buildWrrapdTermsHtml(retailerLabel) {
       ${p(14, `Refund Policy: Gift-wrapping fees are non-refundable except in limited cases: (a) damage to the gift-wrap itself during transit; or (b) failure to ship the wrapped item within our promised window. Service fees are not refundable once the wrapping process has been documented.`)}
       ${p(15, `Prohibited Conduct: You agree not to provide false or misleading information or use the service for any fraudulent or illegal purposes.`)}
       ${p(16, `Warranties and Liability: The service is provided &quot;AS IS.&quot; Wrrapd&apos;s total liability is limited to the service fee paid. We are not liable for indirect, incidental, or consequential damages.`)}
-      ${p(17, `Dispute Resolution &amp; Governing Law: Any disputes will be resolved through binding individual arbitration in Jacksonville, Florida. You waive the right to a jury trial or class action. These Terms are governed by the laws of the State of Florida, USA.`)}
+      ${p(17, `Dispute Resolution &amp; Governing Law: Any disputes will be resolved through binding individual arbitration in St. Petersburg, Florida. You waive the right to a jury trial or class action. These Terms are governed by the laws of the State of Florida, USA.`)}
     </div>`;
 }

@@ -146,6 +146,11 @@ async function writeLocal(map: Record<string, WeeklyPayLine>) {
   await fs.writeFile(FILE, JSON.stringify(map, null, 2));
 }
 
+export async function listWeeklyPayLines(): Promise<WeeklyPayLine[]> {
+  const stored = await loadStored();
+  return Object.values(stored);
+}
+
 async function loadStored(): Promise<Record<string, WeeklyPayLine>> {
   const col = trackingWeeklyPayCollection();
   if (col) {

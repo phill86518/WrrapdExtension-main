@@ -1,0 +1,14 @@
+---
+description: Checks required before publishing a Wrrapd Facebook ad image
+alwaysApply: true
+---
+
+# Facebook ad images
+
+Before posting any Facebook creative, open the finished image and confirm it. Details: `backend/wrrapd-api-repo/WrrapdServer/docs/FACEBOOK-AD-IMAGES.md`.
+
+- The role logo is small, top-left, and the whole W is visible, including both arms.
+- Use `wordpress/icons/WrapStar.png`, `JoyRider.png`, or `WrapRider.png`. The black wordmark in those files is recolored cream before it sits on navy. Black type on `#0c0638` does not show.
+- Role names are written in double quotes: "WrapStar", "JoyRider", "WrapRider".
+- Each role shows a different person.
+- No city names and no dollar amounts.

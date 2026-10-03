@@ -49,11 +49,19 @@ function createNotifySmtpTransport() {
   });
 }
 
+export type EmailAttachment = {
+  filename: string;
+  content: Buffer;
+  cid: string;
+  contentType: string;
+};
+
 async function sendTransactionalEmailSmtp(opts: {
   to: string;
   subject: string;
   html: string;
   bcc?: string | string[];
+  attachments?: EmailAttachment[];
 }): Promise<boolean> {
   try {
     const transporter = createNotifySmtpTransport();
@@ -80,6 +88,12 @@ async function sendTransactionalEmailSmtp(opts: {
       html: opts.html,
       ...(bcc ? { bcc } : {}),
       replyTo: replyTo || undefined,
+      attachments: opts.attachments?.map((a) => ({
+        filename: a.filename,
+        content: a.content,
+        cid: a.cid,
+        contentType: a.contentType,
+      })),
     });
     console.info("[notify] SMTP sent OK to", opts.to);
     return true;
@@ -98,6 +112,7 @@ export async function sendTransactionalEmail(opts: {
   subject: string;
   html: string;
   bcc?: string | string[];
+  attachments?: EmailAttachment[];
 }): Promise<boolean> {
   if (smtpEnvConfigured()) {
     return sendTransactionalEmailSmtp(opts);
@@ -137,13 +152,24 @@ export async function sendTransactionalEmail(opts: {
     params.set("h:Reply-To", replyTo);
   }
   const url = `${mailgunApiBase()}/${encodeURIComponent(domain)}/messages`;
+  const headers: Record<string, string> = {
+    Authorization: `Basic ${Buffer.from(`api:${key}`).toString("base64")}`,
+  };
+  let body: URLSearchParams | FormData = params;
+  if (opts.attachments?.length) {
+    const form = new FormData();
+    for (const [k, v] of params.entries()) form.set(k, v);
+    for (const file of opts.attachments) {
+      form.append("inline", new Blob([new Uint8Array(file.content)], { type: file.contentType }), file.filename);
+    }
+    body = form;
+  } else {
+    headers["Content-Type"] = "application/x-www-form-urlencoded";
+  }
   const res = await fetch(url, {
     method: "POST",
-    headers: {
-      Authorization: `Basic ${Buffer.from(`api:${key}`).toString("base64")}`,
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body: params.toString(),
+    headers,
+    body,
   });
   if (!res.ok) {
     const t = await res.text();

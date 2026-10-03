@@ -109,7 +109,12 @@ export default async function AdminWrapstarsPage() {
 
   return (
     <div className="mx-auto max-w-6xl">
-      <h1 className="text-2xl font-semibold text-slate-900">WrapStars</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-semibold text-slate-900">WrapStars</h1>
+        <Link href="/admin/tax?role=wrapstar" className="rounded border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-800">
+          Tax forms
+        </Link>
+      </div>
       <p className="mt-1 text-sm text-slate-600">
         Live ops roster for <strong>wrap-only</strong> WrapStars. Wrap + deliver people are on{" "}
         <Link href="/admin/wrapriders" className="font-medium text-amber-800 underline">

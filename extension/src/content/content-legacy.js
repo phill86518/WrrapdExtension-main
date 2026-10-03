@@ -10281,7 +10281,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                 <p style="margin-bottom: 16px;"><strong>14.</strong> Refund Policy: Gift-wrapping fees are non-refundable except in limited cases: (a) damage to the gift-wrap itself during transit; or (b) failure to ship the wrapped item within our promised window. Service fees are not refundable once the wrapping process has been documented.</p>
                 <p style="margin-bottom: 16px;"><strong>15.</strong> Prohibited Conduct: You agree not to provide false or misleading information or use the service for any fraudulent or illegal purposes.</p>
                 <p style="margin-bottom: 16px;"><strong>16.</strong> Warranties and Liability: The service is provided "AS IS." Wrrapd's total liability is limited to the service fee paid. We are not liable for indirect, incidental, or consequential damages.</p>
-                <p style="margin-bottom: 16px;"><strong>17.</strong> Dispute Resolution & Governing Law: Any disputes will be resolved through binding individual arbitration in Jacksonville, Florida. You waive the right to a jury trial or class action. These Terms are governed by the laws of the State of Florida, USA.</p>
+                <p style="margin-bottom: 16px;"><strong>17.</strong> Dispute Resolution & Governing Law: Any disputes will be resolved through binding individual arbitration in St. Petersburg, Florida. You waive the right to a jury trial or class action. These Terms are governed by the laws of the State of Florida, USA.</p>
             </div>
         `;
         

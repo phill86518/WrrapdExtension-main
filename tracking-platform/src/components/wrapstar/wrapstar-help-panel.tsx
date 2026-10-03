@@ -3,20 +3,26 @@ export function WrapstarHelpPanel() {
     <section className="space-y-4">
       <div>
         <h2 className="text-xl font-semibold text-slate-900">Help</h2>
-        <p className="mt-1 text-sm text-slate-600">Quick standards for wrapping shifts.</p>
+        <p className="mt-1 text-sm text-slate-600">How a wrap shift runs.</p>
       </div>
       <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-700 shadow-sm">
         <p>
-          <strong className="text-slate-900">Your role:</strong> gift wrapping only. Stage finished
-          gifts for courier pickup — you do not deliver to recipients.
+          <strong className="text-slate-900">Morning email:</strong> by 8am you get a code for each
+          gift, whether it is a custom wrap (and the file to print), and whether it needs a box.
         </p>
         <p>
-          <strong className="text-slate-900">Shift order:</strong> (1) Start shift, (2) print all
-          custom/AI wrap papers for the day, (3) wrap each job in the assigned sequence only.
+          <strong className="text-slate-900">Clock:</strong> tap Start shift when you begin and End
+          shift when you finish. Keep a pace of 12 gifts an hour.
         </p>
         <p>
-          <strong className="text-slate-900">Per order:</strong> Start video → wrap (unbox, wrap,
-          ribbon/bow) → Finished wrapping (print driver QR on the original box) → End video.
+          <strong className="text-slate-900">Each gift:</strong> match it to the email, scan the code
+          to open it, print custom paper if it asks, then tap Start camera. If it needs a box, pick
+          the box up before you cut the paper. Wrap it, show the finished wrap, then tap Item fully
+          gift-wrapped.
+        </p>
+        <p>
+          <strong className="text-slate-900">The code again:</strong> print that same code and stick
+          it on the outside of the original packaging. Do not tape the box yet. One code per gift.
         </p>
         <p>
           <strong className="text-slate-900">Support:</strong> email{" "}

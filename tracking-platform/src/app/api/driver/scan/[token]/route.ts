@@ -36,7 +36,9 @@ export async function GET(
   }
 
   const orders = await listAllOrders();
-  const order = orders.find((o) => o.driverLabelToken === token);
+  const order = orders.find(
+    (o) => o.driverLabelToken === token || (o.itemLabelTokens || []).includes(token),
+  );
   if (!order) {
     return NextResponse.json({ error: "Label not found" }, { status: 404 });
   }

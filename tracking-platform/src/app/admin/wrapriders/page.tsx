@@ -74,7 +74,12 @@ export default async function AdminWrapridersPage() {
 
   return (
     <div className="mx-auto max-w-6xl">
-      <h1 className="text-2xl font-semibold text-slate-900">{WRAPRIDER_LABEL_PLURAL}</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-semibold text-slate-900">{WRAPRIDER_LABEL_PLURAL}</h1>
+        <Link href="/admin/tax?role=wraprider" className="rounded border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-800">
+          Tax forms
+        </Link>
+      </div>
       <p className="mt-1 text-sm text-slate-600">
         Third hire category — wrap <em>and</em> deliver. IDs start with <strong>6</strong>. This is
         their home in Command Center. They do not appear on the WrapStars or JoyRiders boards.

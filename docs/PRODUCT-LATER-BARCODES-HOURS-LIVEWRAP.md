@@ -8,7 +8,7 @@ Related: [JOYRIDER-BARCODE-DELIVERY.md](./JOYRIDER-BARCODE-DELIVERY.md), [CONTRA
 
 ## 1. Per-item barcodes + completeness scan
 
-**Today:** one QR per order (`DriverLabelPayload` in `tracking-platform/src/lib/driver-label-qr.ts`). WrapStar “Finished wrapping” prints that single code. There is **no** item index and **no** stop checklist.
+**Today:** the 8am sheet issues one code per gift. The WrapStar scans that code to **open** the gift (not to start the camera). After the wrap, they print that **same** code onto the original packaging for the JoyRider to scan at pickup. A loose gift that needs a box is picked up after the camera is on and **before the paper is cut**.
 
 **Build:**
 
@@ -25,8 +25,8 @@ Related: [JOYRIDER-BARCODE-DELIVERY.md](./JOYRIDER-BARCODE-DELIVERY.md), [CONTRA
 
 **Build:**
 
-- Start/end of an **accepted** wrap or delivery window writes an earnings line: `hours × rate − pace shortfall`.
-- Hours are the accepted window, not “app open time,” prorated to 15 minutes.
+- **Start shift** and **End shift** in the WrapStar App are the clock-in and clock-out used for hours.
+- Pace shortfall is measured against 12 gifts an hour for that clocked time.
 - Pace shortfall applies to **wrapping hours only** (12 gifts/hour).
 - Until this ships, ops can still batch from the roster by hand.
 

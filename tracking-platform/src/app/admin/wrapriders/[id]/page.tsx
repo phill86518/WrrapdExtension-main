@@ -12,6 +12,7 @@ import { formatDateTimeNy } from "@/lib/ny-date";
 import { getPayoutHold } from "@/lib/finance";
 import { setPayoutHoldAction } from "../../payout-hold-action";
 import { ContractorPayCard } from "@/components/contractor-pay-card";
+import { ContractorPayHistory } from "@/components/contractor-pay-history";
 
 export const dynamic = "force-dynamic";
 
@@ -78,6 +79,7 @@ export default async function AdminWrapriderDetailPage({
       </p>
       <div className="mt-4">
         <ContractorPayCard contractorId={wraprider.id} role="wraprider" />
+        <ContractorPayHistory contractorId={wraprider.id} admin />
       </div>
       <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-950">
         Open orders: <strong>{open.length}</strong> · lifetime unique: <strong>{orders.length}</strong>

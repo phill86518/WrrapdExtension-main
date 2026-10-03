@@ -1,7 +1,7 @@
 {
   "radiusMiles": 15,
-  "updatedAt": "2026-09-12T19:40:00.000Z",
-  "notes": "Printer sites (WrapStars with large-format printers). Managed from Command Center → Custom-design coverage; roster sites are pushed from the tracking platform on WrapStar activation. HQ (32218) is a permanent manual site.",
+  "updatedAt": "2026-10-01T19:57:19.080Z",
+  "notes": "Roster sync 2026-10-01 19:57 UTC — 0 WrapStar printer site(s).",
   "sites": [
     {
       "id": "hq-32218",

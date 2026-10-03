@@ -18,7 +18,7 @@ export function isCustomPrintDesign(order: Order): boolean {
 export function wrapPhaseLabel(phase: WrapOrderPhase | undefined): string {
   switch (phase) {
     case "recording":
-      return "Recording";
+      return "Camera on";
     case "label_ready":
       return "Print barcode";
     case "complete":

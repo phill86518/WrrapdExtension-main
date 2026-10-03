@@ -19,6 +19,7 @@ import {
 } from "@/lib/finance";
 import { setPayoutHoldAction } from "../../payout-hold-action";
 import { ContractorPayCard } from "@/components/contractor-pay-card";
+import { ContractorPayHistory } from "@/components/contractor-pay-history";
 
 export const dynamic = "force-dynamic";
 
@@ -276,6 +277,7 @@ export default async function AdminWrapstarDetailPage({
 
       <div className="mt-6">
         <ContractorPayCard contractorId={wrapstar.id} role="wrapstar" />
+        <ContractorPayHistory contractorId={wrapstar.id} admin />
       </div>
 
       <section className="mt-6 rounded-xl border bg-white p-4 shadow-sm">

@@ -9,10 +9,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_GIFT_POPUP_BUILD', '2026-09-19-fraunces-hub' );
+define( 'WRRAPD_GIFT_POPUP_BUILD', '2026-10-01-amazon-contrast' );
 
 /**
  * Accent color per retailer slug (logos come from mu-plugins/logos/).
+ * Navy popup panel is #0c0638 — never use near-black / deep-navy brand inks here.
  *
  * @param string $slug Retailer slug.
  * @return string Hex color.
@@ -22,13 +23,13 @@ function wrrapd_gift_wrap_popup_color_for_slug( $slug ) {
 		'etsy'      => '#F56400',
 		'amazon'    => '#f6b933',
 		'target'    => '#E4002B',
-		'walmart'   => '#0071CE',
-		'ulta'      => '#5E2B7E',
-		'lego'      => '#D40511',
+		'walmart'   => '#6DB3F2',
+		'ulta'      => '#C084FC',
+		'lego'      => '#FF4D4D',
 		'nordstrom' => '#f6b933',
 		'kohls'     => '#7eb0e0',
 		'sephora'   => '#f6b933',
-		'bestbuy'   => '#0046BE',
+		'bestbuy'   => '#5B9BFF',
 	);
 	$slug = strtolower( (string) $slug );
 	return isset( $map[ $slug ] ) ? $map[ $slug ] : '#f6b933';

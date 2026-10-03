@@ -22,7 +22,7 @@ export function wrapPhaseLabel(phase: WrapOrderPhase | undefined): string {
     case "recording":
       return "Recording";
     case "label_ready":
-      return "Label ready — end video next";
+      return "Print barcode";
     case "complete":
       return "Wrap complete";
     default:

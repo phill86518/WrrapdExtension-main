@@ -107,6 +107,16 @@ export function newDriverLabelToken(): string {
   return randomBytes(24).toString("base64url");
 }
 
+/** Same URL encoded in the morning-email QR and the label stuck on the box. */
+export function driverLabelScanUrl(token: string): string {
+  const base =
+    process.env.NEXT_PUBLIC_TRACKING_BASE_URL?.replace(/\/$/, "") ||
+    process.env.WRRAPD_PUBLIC_TRACKING_URL?.replace(/\/$/, "") ||
+    "";
+  const scanPath = `/api/driver/scan/${token}`;
+  return base ? `${base}${scanPath}` : scanPath;
+}
+
 /**
  * QR encodes a scan URL (Drivers open in Driver app) plus signed payload query is avoided —
  * token resolves server-side so only designated Drivers see full details.
@@ -118,12 +128,8 @@ export async function generateDriverLabelQr(order: Order, token: string): Promis
   scanPath: string;
 }> {
   const payload = buildDriverLabelPayload(order);
-  const base =
-    process.env.NEXT_PUBLIC_TRACKING_BASE_URL?.replace(/\/$/, "") ||
-    process.env.WRRAPD_PUBLIC_TRACKING_URL?.replace(/\/$/, "") ||
-    "";
+  const qrContent = driverLabelScanUrl(token);
   const scanPath = `/api/driver/scan/${token}`;
-  const qrContent = base ? `${base}${scanPath}` : JSON.stringify(payload);
 
   const barcodeDataUrl = await QRCode.toDataURL(qrContent, {
     errorCorrectionLevel: "M",

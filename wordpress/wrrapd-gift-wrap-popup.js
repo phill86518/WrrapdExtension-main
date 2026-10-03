@@ -55,13 +55,28 @@
 		return document.documentElement.classList.contains('wrrapd-ext-installed');
 	}
 
+	function readableNameColor(hex) {
+		var raw = String(hex || '').replace('#', '').trim();
+		if (raw.length === 3) {
+			raw = raw.charAt(0) + raw.charAt(0) + raw.charAt(1) + raw.charAt(1) + raw.charAt(2) + raw.charAt(2);
+		}
+		if (!/^[0-9a-fA-F]{6}$/.test(raw)) {
+			return '#f6b933';
+		}
+		var r = parseInt(raw.slice(0, 2), 16);
+		var g = parseInt(raw.slice(2, 4), 16);
+		var b = parseInt(raw.slice(4, 6), 16);
+		var luma = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+		return luma < 140 ? '#f6b933' : '#' + raw;
+	}
+
 	function applyRetailer(item) {
 		if (!nameEl || !logoEl || !item) {
 			return;
 		}
 
 		nameEl.textContent = item.display || item.label || '';
-		nameEl.style.color = item.color || '#f6b933';
+		nameEl.style.color = readableNameColor(item.color || '#f6b933');
 		nameEl.style.fontFamily = 'Fraunces, Georgia, "Times New Roman", serif';
 
 		var img = logoEl.querySelector('img');

@@ -26,6 +26,7 @@ import { listEarningsForWrapstar, walletForWrapstar } from "@/lib/finance";
 import { getContractorRecord } from "@/lib/contractor-records";
 import { ContractorAccountCard } from "@/components/contractor-account-card";
 import { ContractorPayCard } from "@/components/contractor-pay-card";
+import { ContractorPayHistory } from "@/components/contractor-pay-history";
 import { WRAPRIDER_LABEL } from "@/lib/role-labels";
 
 export const dynamic = "force-dynamic";
@@ -269,6 +270,7 @@ export default async function WrapriderPage() {
       earnings={
         <>
           <ContractorPayCard contractorId={wraprider.id} role="wraprider" showConnect />
+          <ContractorPayHistory contractorId={wraprider.id} />
           <WrapstarEarningsPanel
           unpaidCents={wallet.unpaidCents}
           paidCents={wallet.paidCents}

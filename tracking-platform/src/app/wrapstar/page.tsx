@@ -24,6 +24,7 @@ import { listEarningsForWrapstar, walletForWrapstar } from "@/lib/finance";
 import { getContractorRecord } from "@/lib/contractor-records";
 import { ContractorAccountCard } from "@/components/contractor-account-card";
 import { ContractorPayCard } from "@/components/contractor-pay-card";
+import { ContractorPayHistory } from "@/components/contractor-pay-history";
 
 export const dynamic = "force-dynamic";
 
@@ -142,6 +143,7 @@ export default async function WrapstarPage() {
         earnings={
           <>
             <ContractorPayCard contractorId={session.userId} role="wrapstar" showConnect />
+            <ContractorPayHistory contractorId={session.userId} />
             <WrapstarEarningsPanel
               unpaidCents={wallet.unpaidCents}
               paidCents={wallet.paidCents}
@@ -194,6 +196,7 @@ export default async function WrapstarPage() {
       earnings={
         <>
           <ContractorPayCard contractorId={session.userId} role="wrapstar" showConnect />
+          <ContractorPayHistory contractorId={session.userId} />
           <WrapstarEarningsPanel
             unpaidCents={wallet.unpaidCents}
             paidCents={wallet.paidCents}

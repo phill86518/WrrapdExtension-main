@@ -21,6 +21,7 @@ export const ADMIN_NAV_GROUPS: readonly AdminNavGroup[] = [
       { href: "/admin/orders", label: "Orders", match: "prefix" },
       { href: "/admin/orders/calendar", label: "Calendar", match: "prefix" },
       { href: "/admin/allocations", label: "Allocations", match: "prefix" },
+      { href: "/admin/wrap-work", label: "Wrap hours", match: "prefix" },
       { href: "/admin/availability", label: "Availability", match: "prefix" },
     ],
   },
@@ -37,6 +38,7 @@ export const ADMIN_NAV_GROUPS: readonly AdminNavGroup[] = [
     label: "Money",
     links: [
       { href: "/admin/finance", label: "Finance", match: "prefix" },
+      { href: "/admin/tax", label: "Tax forms", match: "prefix" },
       { href: "/admin/reports", label: "Reports", match: "prefix" },
     ],
   },

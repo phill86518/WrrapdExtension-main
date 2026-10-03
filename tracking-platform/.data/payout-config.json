@@ -1,0 +1,15 @@
+{
+  "basePayCents": 1800,
+  "peakMultiplier": 1.25,
+  "tipPassthrough": false,
+  "platformFeeCents": 0,
+  "platformTakeWrapPercent": 28,
+  "platformTakeFlowersPercent": 15,
+  "wrapstarHourlyCents": 3000,
+  "joyriderHourlyCents": 3000,
+  "wrapriderHourlyCents": 3000,
+  "wrapstarPaceGiftsPerHour": 12,
+  "hourlyByZip": [],
+  "weeklyPayoutMode": "manual",
+  "updatedAt": "2026-10-02T16:03:15.850Z"
+}

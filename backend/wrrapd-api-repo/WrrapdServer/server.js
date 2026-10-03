@@ -22,6 +22,7 @@ const flowerStores = require(path.join(__dirname, 'lib', 'flowers', 'stores'));
 const flowerCatalog = require(path.join(__dirname, 'lib', 'flowers', 'catalog'));
 const orderEmails = require(path.join(__dirname, 'lib', 'order-emails'));
 const helcim = require(path.join(__dirname, 'lib', 'helcim'));
+const facebookScheduler = require(path.join(__dirname, 'lib', 'facebook-scheduler'));
 
 // Initialize Google Cloud Storage
 let storageOptions = {
@@ -2545,7 +2546,7 @@ app.post('/process-payment', async (req, res) => {
                     ${item.shippingAddress.postalCode || 'N/A'},<br>
                     ${item.shippingAddress.country || 'N/A'}
                 `
-                : 'Wrrapd PO BOX 26067, JACKSONVILLE, FL, 32226-6067, US';
+                : 'Wrrapd Inc., 7901 4th St N, Ste 300, St. Petersburg, FL 33702, US';
 
             // Format delivery instructions if they exist
             let deliveryInstructionsFormatted = '';
@@ -4069,6 +4070,55 @@ app.get('/api/valid-addresses', (req, res) => {
     res.status(200).json(validAddresses);
 });
 
+function facebookAdminHost(req) {
+    if (req.isApiDomain) return true;
+    return req.hostname === 'localhost' || req.hostname === '127.0.0.1';
+}
+
+app.get('/api/admin/facebook/status', (req, res) => {
+    if (!facebookAdminHost(req)) {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
+    if (!requireWrrapdAdminKey(req, res)) return;
+    res.json(facebookScheduler.status());
+});
+
+app.post('/api/admin/facebook/publish', (req, res) => {
+    if (!facebookAdminHost(req)) {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
+    if (!requireWrrapdAdminKey(req, res)) return;
+    const preview = facebookScheduler.status();
+    if (!req.body || req.body.publish !== true) {
+        return res.json({ preview: true, ...preview });
+    }
+    if (!preview.nextPost) {
+        return res.status(409).json({ error: 'No Facebook post is scheduled for today', ...preview });
+    }
+    if (preview.alreadyPostedToday) {
+        return res.status(409).json({ error: 'Already posted today', lastPost: preview.lastPost });
+    }
+    if (!preview.ready) {
+        return res.status(503).json({
+            error: 'Set META_PAGE_ID, META_PAGE_ACCESS_TOKEN, and FACEBOOK_POST_ENABLED=true',
+            configured: preview.configured,
+            enabled: preview.enabled,
+        });
+    }
+    facebookScheduler
+        .publishSelected({
+            ...preview.nextPost,
+            dateKey: preview.today,
+        })
+        .then((result) => {
+            res.json({ posted: true, facebookId: result.id, id: preview.nextPost.id });
+        })
+        .catch((err) => {
+            console.error('[facebook] Manual publish failed:', err.message || err);
+            res.status(502).json({ error: err.message || 'Publish failed' });
+        });
+});
+
 // Health check endpoint for PM2 monitoring
 app.get('/health', (req, res) => {
     res.status(200).json({ 
@@ -4136,6 +4186,15 @@ const server = app.listen(PORT, () => {
     console.log(`[SERVER] CORS enabled for Amazon domains`);
     console.log(`[SERVER] OPTIONS handler configured for all routes`);
     console.log(`[SERVER] Health check available at /health`);
+    console.log(`[SERVER] Facebook poster: Tue/Thu/Sat 10:15am America/New_York`);
+    setInterval(() => {
+        facebookScheduler.tick().catch((err) => {
+            console.error('[facebook] tick error:', err.message || err);
+        });
+    }, 60000);
+    facebookScheduler.tick().catch((err) => {
+        console.error('[facebook] tick error:', err.message || err);
+    });
     console.log(`[SERVER] Process PID: ${process.pid}`);
     // Signal to PM2 that server is ready
     if (process.send) {

@@ -18,6 +18,8 @@ export const TRACKING_COLLECTIONS = {
   payoutHolds: "tracking_payout_holds",
   stripeAccounts: "tracking_stripe_accounts",
   weeklyPay: "tracking_weekly_pay",
+  /** One document per contractor per calendar year: annual statement and 1099-NEC copy. */
+  taxStatements: "tracking_tax_statements",
   wrapstarShifts: "tracking_wrapstar_shifts",
   wrapstarShiftGifts: "tracking_wrapstar_shift_gifts",
   wrapstarShiftVideos: "tracking_wrapstar_shift_videos",
@@ -101,6 +103,11 @@ export function trackingStripeAccountsCollection(): CollectionReference | null {
 export function trackingWeeklyPayCollection(): CollectionReference | null {
   const db = getFirestoreDb();
   return db ? db.collection(TRACKING_COLLECTIONS.weeklyPay) : null;
+}
+
+export function trackingTaxStatementsCollection(): CollectionReference | null {
+  const db = getFirestoreDb();
+  return db ? db.collection(TRACKING_COLLECTIONS.taxStatements) : null;
 }
 
 export function trackingWrapstarShiftsCollection(): CollectionReference | null {
