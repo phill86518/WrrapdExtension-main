@@ -574,6 +574,8 @@ function wrrapd_wrapriders_ops_serialize_application( $id ) {
 		'cleanDrivingRecord'      => wrrapd_wrapriders_get_meta( $id, 'clean_driving_record' ),
 		'deliveryMaxDistance'     => wrrapd_wrapriders_get_meta( $id, 'delivery_max_distance' ),
 		'availability'            => wrrapd_wrapriders_get_meta( $id, 'availability' ),
+		'backupName'              => wrrapd_wrapriders_get_meta( $id, 'backup_name' ),
+		'backupContact'           => wrrapd_wrapriders_get_meta( $id, 'backup_contact' ),
 		'whyWraprider'            => wrrapd_wrapriders_get_meta( $id, 'why_wraprider' ),
 		'deliveryExperience'      => wrrapd_wrapriders_get_meta( $id, 'delivery_experience' ),
 		'deliveryGigActive'       => wrrapd_wrapriders_get_meta( $id, 'delivery_gig_active' ),

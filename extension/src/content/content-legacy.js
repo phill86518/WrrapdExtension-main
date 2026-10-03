@@ -2674,7 +2674,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                                    Array.from(document.querySelectorAll('span, div, p, a')).some(el => {
                                        const text = (el.textContent || el.innerText || '').trim();
                                        return text.includes('Shipping to:') && 
-                                              (text.includes('PO BOX 26067') || text.includes('Wrrapd'));
+                                              (text.includes('26067') || text.includes('Wrrapd'));
                                    });
         
         if (addressesBelowItems) {
@@ -2687,12 +2687,12 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                                   Array.from(document.querySelectorAll('div, section, header')).find(el => {
                                       const text = (el.textContent || el.innerText || '').trim();
                                       return (text.includes('Shipping address') || text.includes('Delivery address')) &&
-                                             (text.includes('PO BOX 26067') || text.includes('Wrrapd'));
+                                             (text.includes('26067') || text.includes('Wrrapd'));
                                   });
         
         if (topAddressSection) {
             const sectionText = (topAddressSection.textContent || topAddressSection.innerText || '').trim();
-            if (sectionText.includes('PO BOX 26067') || sectionText.includes('Wrrapd')) {
+            if (sectionText.includes('26067') || sectionText.includes('Wrrapd')) {
                 return true;
             }
         }
@@ -5330,9 +5330,9 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                 
                 // Check current address in dropdown
                 const currentDropdownText = dropdown.textContent?.trim() || dropdown.innerText?.trim() || '';
-                const hasPOBox = currentDropdownText.includes('PO BOX 26067');
+                const hasPOBox = currentDropdownText.includes('26067');
                 const hasJacksonville = currentDropdownText.includes('JACKSONVILLE') || currentDropdownText.includes('Jacksonville');
-                const hasZip = currentDropdownText.includes('32226');
+                const hasZip = currentDropdownText.includes('32218') || currentDropdownText.includes('32226');
                 const isWrrapd = hasPOBox && hasJacksonville && hasZip;
                 
                 // Check if current address matches requirements
@@ -6221,10 +6221,10 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                 if (!text || text.length < 10) return false;
                 const textLower = text.toLowerCase();
                 const hasWrrapd = textLower.trim().startsWith('wrrapd') || textLower.includes('wrrapd');
-                const hasPOBox = text.includes('PO BOX 26067') || text.includes('P.O. BOX 26067') || text.includes('26067');
+                const hasPOBox = text.includes('26067') || text.includes('P.O. BOX 26067') || text.includes('26067');
                 const hasJacksonville = text.includes('JACKSONVILLE') || text.includes('Jacksonville');
-                const hasFL = text.includes(' FL ') || text.includes(', FL') || text.includes('FL 32226');
-                const hasZip = text.includes('32226-6067') || text.includes('32226') || text.includes('32226 6067');
+                const hasFL = text.includes(' FL ') || text.includes(', FL') || text.includes('FL 32218') || text.includes('FL 32226');
+                const hasZip = text.includes('32218') || text.includes('32226');
                 return hasWrrapd || (hasPOBox && hasJacksonville && (hasFL || hasZip));
             }
             
@@ -6688,7 +6688,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                         const errorText = errorPrompt?.textContent?.trim() || errorPrompt?.innerText?.trim() || '';
                         
                         console.warn("[selectWrrapdAddressFromDropdown] ⚠️ Selection verification failed after polling.");
-                        console.warn("[selectWrrapdAddressFromDropdown] Expected: Wrrapd PO BOX 26067");
+                        console.warn("[selectWrrapdAddressFromDropdown] Expected: Wrrapd 150 BUSCH DR #26067");
                         console.warn("[selectWrrapdAddressFromDropdown] Got:", errorText.substring(0, 100));
                         
                         // Try one more time with a different approach - click the parent container
@@ -7492,8 +7492,8 @@ Return ONLY the JSON array, nothing else.`;
             let targetOption = null;
             
             if (needsWrrapd) {
-                // Looking for Wrrapd address: "Wrrapd, PO BOX 26067, Jacksonville, FL, 32226-6067"
-                console.log("[selectAddressFromDropdown] Searching for Wrrapd address (PO BOX 26067, Jacksonville, 32226-6067)...");
+                // Looking for Wrrapd address: "Wrrapd, 150 BUSCH DR #26067, Jacksonville, FL, 32218"
+                console.log("[selectAddressFromDropdown] Searching for Wrrapd address (#26067, Jacksonville)...");
                 const wrrapdAddress = buildWrrapdAddress();
                 
                 // Log all available options for debugging
@@ -7508,7 +7508,7 @@ Return ONLY the JSON array, nothing else.`;
                     const optionTextLower = option.textContent.trim().toLowerCase();
                     
                     // Strategy 1: Match by PO Box number (most reliable identifier)
-                    const hasPOBox = optionText.includes("PO BOX 26067") || 
+                    const hasPOBox = optionText.includes("26067") || 
                                    optionText.includes("P.O. BOX 26067") ||
                                    optionText.includes("POBOX 26067") ||
                                    optionText.includes("26067");
@@ -7556,7 +7556,7 @@ Return ONLY the JSON array, nothing else.`;
                         const geminiPrompt = `I need to identify which of these Amazon shipping addresses is the Wrrapd address. 
 The Wrrapd address should be:
 - Name: Wrrapd or Wrrapd.com
-- Street: PO BOX 26067 or P.O. BOX 26067
+- Street: 150 BUSCH DR #26067 (older saved copies may say PO BOX 26067)
 - City: JACKSONVILLE
 - State: FL
 - Zip: 32218 or 32226
@@ -7684,7 +7684,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             for (const option of dropdownOptions) {
                 const optionText = option.textContent.trim();
                 if (needsWrrapd) {
-                    if (optionText.includes("Wrrapd.com") && optionText.includes("PO BOX 26067")) {
+                    if (optionText.includes("Wrrapd.com") && optionText.includes("26067")) {
                         targetOption = option;
                         break;
                     }
@@ -7796,7 +7796,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             
             if (needsWrrapd) {
                 // Look for Wrrapd address with improved matching
-                console.log(`[selectAddressInCustomDropdown] Searching for Wrrapd address (PO BOX 26067, JACKSONVILLE)...`);
+                console.log(`[selectAddressInCustomDropdown] Searching for Wrrapd address (#26067, JACKSONVILLE)...`);
                 
                 // Log all available options for debugging
                 console.log(`[selectAddressInCustomDropdown] Available options (${dropdownOptions.length}):`);
@@ -7809,7 +7809,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                     const optionTextLower = option.textContent.trim().toLowerCase();
                     
                     // Improved matching logic (same as selectAddressFromDropdown)
-                    const hasPOBox = optionText.includes("PO BOX 26067") || 
+                    const hasPOBox = optionText.includes("26067") || 
                                    optionText.includes("P.O. BOX 26067") ||
                                    optionText.includes("POBOX 26067") ||
                                    optionText.includes("26067");
@@ -7936,7 +7936,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             let targetValue = null;
             
             if (needsWrrapd) {
-                console.log(`[selectAddressInNativeSelect] Searching for Wrrapd address (PO BOX 26067, JACKSONVILLE)...`);
+                console.log(`[selectAddressInNativeSelect] Searching for Wrrapd address (#26067, JACKSONVILLE)...`);
                 
                 // Log all available options for debugging
                 console.log(`[selectAddressInNativeSelect] Available options (${options.length}):`);
@@ -7951,7 +7951,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                     const optionValue = option.value;
                     
                     // Improved matching logic (same as other functions)
-                    const hasPOBox = optionText.includes("PO BOX 26067") || 
+                    const hasPOBox = optionText.includes("26067") || 
                                    optionText.includes("P.O. BOX 26067") ||
                                    optionText.includes("POBOX 26067") ||
                                    optionText.includes("26067");
@@ -8123,7 +8123,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                 for (const option of dropdownOptions) {
                     const optionText = option.textContent.trim();
                     if ((optionText.includes("Wrrapd.com") || optionText.includes("Wrrapd")) && 
-                        (optionText.includes("PO BOX 26067") || optionText.includes("26067"))) {
+                        (optionText.includes("26067") || optionText.includes("26067"))) {
                         targetOption = option;
                         console.log("[selectAddressInDropdown] Found Wrrapd address option.");
                         break;
@@ -9187,7 +9187,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
         let wrrapdOption = null;
         for (const o of sel.options) {
             const t = o.textContent || '';
-            if (t.includes('Wrrapd.com') && t.includes('PO BOX 26067')) {
+            if (t.includes('Wrrapd.com') && t.includes('26067')) {
                 wrrapdOption = o;
                 break;
             }
@@ -9330,7 +9330,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
 
             for (const option of dropdownOptions) {
                 const optionText = option.textContent.trim();
-                if (optionText.includes('Wrrapd.com') && optionText.includes('PO BOX 26067')) {
+                if (optionText.includes('Wrrapd.com') && optionText.includes('26067')) {
                     wrrapdLink = option;
                 }
                 if (optionText.includes('Ship to a new address')) {
@@ -9397,11 +9397,11 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             await new Promise(r => setTimeout(r, 500));
             phoneField.value = '(904) 515-2034';
             await new Promise(r => setTimeout(r, 500));
-            addressLine1Field.value = 'PO BOX 26067';
+            addressLine1Field.value = '150 BUSCH DR #26067';
             await new Promise(r => setTimeout(r, 500));
             cityField.value = 'Jacksonville';
             await new Promise(r => setTimeout(r, 500));
-            postalCodeField.value = '32226-6067';
+            postalCodeField.value = '32218';
             await new Promise(r => setTimeout(r, 500));
             
             // Try selecting "Florida" state (matching old code)
@@ -9486,11 +9486,11 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             await new Promise(r => setTimeout(r, 500));
             phoneField.value = '(904) 515-2034';
             await new Promise(r => setTimeout(r, 500));
-            addressLine1Field.value = 'PO BOX 26067';
+            addressLine1Field.value = '150 BUSCH DR #26067';
             await new Promise(r => setTimeout(r, 500));
             cityField.value = 'Jacksonville';
             await new Promise(r => setTimeout(r, 500));
-            postalCodeField.value = '32226-6067';
+            postalCodeField.value = '32218';
             await new Promise(r => setTimeout(r, 500));
 
             // Try selecting "Florida"
@@ -9541,10 +9541,10 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
     function buildWrrapdAddress() {
         return {
             name: 'Wrrapd',
-            street: 'PO BOX 26067',
+            street: '150 BUSCH DR #26067',
             city: 'Jacksonville',
             state: 'FL',
-            postalCode: '32226-6067', // EXACT format as specified
+            postalCode: '32218',
             country: 'United States',
             phone: '(904) 515-2034' // EXACT phone number
         };
@@ -9925,7 +9925,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                     const addressText = addressContainer ? addressContainer.textContent?.trim() || '' : '';
                     
                     const hasWrrapd = addressText.includes("Wrrapd") || addressText.includes("Wrrapd.com");
-                    const hasPOBox = addressText.includes("PO BOX 26067");
+                    const hasPOBox = addressText.includes("26067");
                     const hasJacksonville = addressText.includes("JACKSONVILLE") || addressText.includes("Jacksonville");
                     const hasZip = addressText.includes("32218") || addressText.includes("32226");
                     const hasState = addressText.includes("FL") || addressText.includes("Florida");
@@ -10033,11 +10033,11 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             await new Promise(r => setTimeout(r, 500));
             triggerInputEvent(phoneField, '(904) 515-2034');
             await new Promise(r => setTimeout(r, 500));
-            triggerInputEvent(addressLine1Field, 'PO BOX 26067');
+            triggerInputEvent(addressLine1Field, '150 BUSCH DR #26067');
             await new Promise(r => setTimeout(r, 500));
             triggerInputEvent(cityField, 'Jacksonville');
             await new Promise(r => setTimeout(r, 500));
-            triggerInputEvent(postalCodeField, '32226-6067');
+            triggerInputEvent(postalCodeField, '32218');
             await new Promise(r => setTimeout(r, 500));
             
             // Select "Florida" state
@@ -10136,7 +10136,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
         const a = subItem.amazonShippingAddress;
         return (
             a.name === 'Wrrapd.com' && 
-            a.street.includes('PO BOX 26067')
+            a.street.includes('26067')
         );
     }
     
@@ -10910,7 +10910,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             
             // Check if delivery recipient is "Wrrapd" - look for multiple patterns
             const hasWrrapdRecipient = containerText.includes('Delivering to Wrrapd') || 
-                                     (containerText.includes('Wrrapd') && containerText.includes('PO BOX 26067')) ||
+                                     (containerText.includes('Wrrapd') && containerText.includes('26067')) ||
                                      (containerText.includes('Wrrapd') && containerText.includes('32226-6067')) ||
                                      (containerText.includes('Wrrapd') && containerText.includes('JACKSONVILLE')) ||
                                      containerText.includes('Wrrapd PO BOX 26067');

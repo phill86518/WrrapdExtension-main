@@ -75,8 +75,8 @@ export const LEGO_GIFT_INTENT_SESSION_KEY = "wrrapdLegoGiftIntent";
  */
 export const WRRAPD_HUB_SHIP_LINES = [
   "WRRAPD INC",
-  "PO BOX 26067",
-  "JACKSONVILLE FL 32226-6067",
+  "150 BUSCH DR #26067",
+  "JACKSONVILLE FL 32218",
 ];
 
 /** Structured hub ship-to for programmatic fill on retailer checkout forms. */
@@ -85,10 +85,10 @@ export const WRRAPD_HUB_ADDRESS_OBJECT = {
   /** Shown as recipient first / last name when LEGO has no company-only path. */
   recipientFirstName: "WRRAPD",
   recipientLastName: "INC",
-  addressLine1: "PO BOX 26067",
+  addressLine1: "150 BUSCH DR #26067",
   city: "JACKSONVILLE",
   state: "FL",
-  postalCode: "32226-6067",
+  postalCode: "32218",
   country: "US",
 };
 

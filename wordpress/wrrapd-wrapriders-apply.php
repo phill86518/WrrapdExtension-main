@@ -172,6 +172,8 @@ function wrrapd_wrapriders_process_application() {
 
 	// About you.
 	$availability = sanitize_textarea_field( wp_unslash( $_POST['availability'] ?? '' ) );
+	$backup_name    = mb_substr( sanitize_text_field( wp_unslash( $_POST['backup_name'] ?? '' ) ), 0, 80 );
+	$backup_contact = mb_substr( sanitize_text_field( wp_unslash( $_POST['backup_contact'] ?? '' ) ), 0, 120 );
 	$why          = sanitize_textarea_field( wp_unslash( $_POST['why_wraprider'] ?? '' ) );
 	$gig_exp      = sanitize_textarea_field( wp_unslash( $_POST['delivery_experience'] ?? '' ) );
 	$gig_active   = sanitize_text_field( wp_unslash( $_POST['delivery_gig_active'] ?? '' ) );
@@ -324,6 +326,8 @@ function wrrapd_wrapriders_process_application() {
 	wrrapd_wrapriders_set_meta( $post_id, 'comfortable_video_monitoring', $video_ok );
 	wrrapd_wrapriders_set_meta( $post_id, 'gift_wrapping_experience', $wrap_exp );
 	wrrapd_wrapriders_set_meta( $post_id, 'availability', $availability );
+	wrrapd_wrapriders_set_meta( $post_id, 'backup_name', $backup_name );
+	wrrapd_wrapriders_set_meta( $post_id, 'backup_contact', $backup_contact );
 	wrrapd_wrapriders_set_meta( $post_id, 'why_wraprider', $why );
 	wrrapd_wrapriders_set_meta( $post_id, 'delivery_experience', $gig_exp );
 	wrrapd_wrapriders_set_meta( $post_id, 'delivery_gig_active', $gig_active );
@@ -361,6 +365,9 @@ function wrrapd_wrapriders_process_application() {
 	$admin .= "Location: {$address}" . ( $address2 !== '' ? ', ' . $address2 : '' ) . ", {$city}, {$state} {$zip}\n";
 	$admin .= "Vehicle: {$vehicle_type} · Max distance: {$max_distance}\n";
 	$admin .= "Custom-print wrap: {$has_printer}" . ( $printer_size !== '' ? " ({$printer_size})" : '' ) . "\n";
+	if ( $backup_name !== '' || $backup_contact !== '' ) {
+		$admin .= "Backup buddy: {$backup_name}" . ( $backup_contact !== '' ? " · {$backup_contact}" : '' ) . "\n";
+	}
 	$admin .= 'Command Center → Applications (WrapRider filter)' . "\n";
 	wrrapd_wrapriders_send_email( wrrapd_wrapriders_admin_notify_email(), 'New WrapRider application: ' . $full_name, $admin );
 
@@ -607,6 +614,17 @@ function wrrapd_wrapriders_shortcode_apply() {
 							<label for="wr-availability">Typical availability<?php echo $req; ?></label>
 							<textarea name="availability" id="wr-availability" rows="3" required placeholder="Evenings, weekends, weekdays…"></textarea>
 						</div>
+						<div class="ws-field-row">
+							<div class="ws-field">
+								<label for="wr-backup-name">Backup buddy <span class="ws-optional">(optional)</span></label>
+								<input type="text" id="wr-backup-name" name="backup_name" maxlength="80" autocomplete="off" placeholder="Their name" />
+							</div>
+							<div class="ws-field">
+								<label for="wr-backup-contact">Backup buddy's phone or email <span class="ws-optional">(optional)</span></label>
+								<input type="text" id="wr-backup-contact" name="backup_contact" maxlength="120" autocomplete="off" placeholder="(555) 555-5555 or name@email.com" />
+							</div>
+						</div>
+						<p class="wrrapd-apply-field-hint">Someone you trust who could step in on a day you're unavailable. We'll invite them to apply too.</p>
 						<div class="ws-field">
 							<label for="wr-gig-active">Do you currently do delivery gig work? <span class="ws-optional">(requires live proof)</span><?php echo $req; ?></label>
 							<select name="delivery_gig_active" id="wr-gig-active" required>

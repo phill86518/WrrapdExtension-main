@@ -39,3 +39,6 @@ no-upload/
 
 # Server secrets (never commit keys)
 backend/wrrapd-api-repo/WrrapdServer/config/
+
+# Personal / legal documents dropped in tmp/ for review (addresses, card digits)
+tmp/*.pdf

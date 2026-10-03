@@ -5,7 +5,7 @@
 const https = require('https');
 const http = require('http');
 
-const MARKUP = 1.49;
+const MARKUP = 2.0;
 const CAP_PUBLIX = 17;
 const CAP_TARGET = 17;
 const CAP_SAMS_ROSES = 20;
@@ -183,6 +183,7 @@ async function scrapePublix(store) {
       retailPrice: row.retailPrice,
       productUrl: 'https://www.publix.com/shop',
       isRose: isRoseTitle(row.title),
+      priceFallback: true,
     }));
   }
 }
@@ -433,9 +434,9 @@ async function scrapeSams(store) {
   }
 
   // Bot wall: serve the exact floral SKUs from the max_price=20 bouquet search.
-  const fallback = SAMS_SEARCH_FALLBACK.map((row) => samsCandidateFromParts(row)).filter(
-    Boolean,
-  );
+  const fallback = SAMS_SEARCH_FALLBACK.map((row) => samsCandidateFromParts(row))
+    .filter(Boolean)
+    .map((c) => ({ ...c, priceFallback: true }));
   console.warn(
     '[flowers-scrape] sams using search-page fallback catalog',
     fallback.length,
@@ -448,7 +449,7 @@ async function scrapeSams(store) {
 /**
  * Classic Wrrapd 4-bouquet backup (same designs as the extension assets).
  * Used when live retailer scrape fails (e.g. HTTP 403).
- * Price = Wrrapd flowers unit price (geo), not retail+$1.49.
+ * Price = Wrrapd flowers unit price (geo), not retail + MARKUP.
  */
 function classicFourBouquets(store, flowerUnitPrice) {
   const price = Number(flowerUnitPrice);
@@ -507,7 +508,7 @@ async function fetchBouquetsForStore(store) {
     scrapeFailed,
     items: items.map((it) => ({
       ...it,
-      live: true,
+      live: !it.priceFallback,
       storeId: store.storeId,
       storeName: store.storeName,
       storeAddress: store.address,

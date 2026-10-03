@@ -142,6 +142,7 @@
 			['Custom-print wrap', selectLabel('has_large_format_printer') + (fieldValue('printer_size') ? ' · ' + selectLabel('printer_size') : ''), 'has_large_format_printer'],
 			['Wrapping experience', fieldValue('gift_wrapping_experience'), 'gift_wrapping_experience'],
 			['Availability', fieldValue('availability'), 'availability'],
+			['Backup buddy', [fieldValue('backup_name'), fieldValue('backup_contact')].filter(Boolean).join(' · '), 'backup_name'],
 			['Delivery gigs', selectLabel('delivery_gig_active') + (gigPlatforms() ? ' · ' + gigPlatforms() : ''), 'delivery_gig_active'],
 			['Gig notes', fieldValue('delivery_experience'), 'delivery_experience'],
 			['Why WrapRider', fieldValue('why_wraprider'), 'why_wraprider'],

@@ -29,7 +29,7 @@ if ( ! function_exists( 'wrrapd_onboarding_login_url' ) ) {
 	}
 }
 
-define( 'WRRAPD_DRIVERS_BUILD', '2026-09-19-no-public-rates' );
+define( 'WRRAPD_DRIVERS_BUILD', '2026-10-03-backup-buddy' );
 define( 'WRRAPD_DRIVERS_INVITE_TTL_DAYS', 15 );
 define( 'WRRAPD_DRIVERS_CPT', 'wrrapd_driver_app' );
 

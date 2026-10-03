@@ -5,6 +5,8 @@
  * On scrape failure or short live lists: pad with classic Publix-style bouquets.
  */
 const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
 const storesLib = require('./stores');
 const scrape = require('./scrape');
 const grok = require('../grok-client');
@@ -20,6 +22,42 @@ const CLASSIC_DISCLAIMER =
 const zipCache = new Map();
 /** Global offer lookup for checkout validation */
 const offerById = new Map();
+
+/**
+ * Offers are persisted so a shopper's chosen bouquet still validates at payment
+ * after a PM2 restart (the in-memory map would otherwise be empty).
+ */
+const OFFERS_FILE = path.join(__dirname, '..', '..', 'data', 'flower-offers.json');
+const OFFER_KEEP_MS = 48 * 60 * 60 * 1000;
+
+function loadPersistedOffers() {
+  try {
+    const rows = JSON.parse(fs.readFileSync(OFFERS_FILE, 'utf8'));
+    const cutoff = Date.now() - OFFER_KEEP_MS;
+    for (const o of Array.isArray(rows) ? rows : []) {
+      if (o && o.offerId && Date.parse(o.createdAt || '') > cutoff) offerById.set(o.offerId, o);
+    }
+  } catch {
+    /* first run or unreadable file — start empty */
+  }
+}
+
+let persistTimer = null;
+function schedulePersistOffers() {
+  if (persistTimer) return;
+  persistTimer = setTimeout(() => {
+    persistTimer = null;
+    const cutoff = Date.now() - OFFER_KEEP_MS;
+    const rows = [...offerById.values()].filter((o) => Date.parse(o.createdAt || '') > cutoff);
+    const tmp = `${OFFERS_FILE}.tmp`;
+    fs.promises
+      .writeFile(tmp, JSON.stringify(rows))
+      .then(() => fs.promises.rename(tmp, OFFERS_FILE))
+      .catch((e) => console.warn('[flowers-catalog] persist offers failed', e.message));
+  }, 2000);
+}
+
+loadPersistedOffers();
 
 function chargedPrice(retail) {
   return Math.round((Number(retail) + scrape.MARKUP) * 100) / 100;
@@ -208,6 +246,7 @@ function toOffers(selected) {
     offerById.set(offerId, offer);
     offers.push(offer);
   }
+  schedulePersistOffers();
   return offers;
 }
 
@@ -312,7 +351,11 @@ async function buildCatalogForZip(postalCode) {
     // Short live lists (e.g. Sam's-only roses when Publix 403s): pad with classic Publix designs.
     const beforePad = selected.length;
     selected = padWithClassicPublix(selected, byRetailer, unit);
-    if (selected.some((c) => c.classicBackup)) {
+    if (selected.every((c) => c.priceFallback || c.classicBackup)) {
+      source = 'fallback_prices';
+      disclaimer = CLASSIC_DISCLAIMER;
+      console.warn('[flowers-catalog] no live retailer prices for', zip, '— serving stored price list');
+    } else if (selected.some((c) => c.classicBackup || c.priceFallback)) {
       disclaimer = CLASSIC_DISCLAIMER;
       if (beforePad < MIN_CHOICES) {
         source = 'live_padded';

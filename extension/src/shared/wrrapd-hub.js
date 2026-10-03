@@ -7,19 +7,23 @@
  */
 export const WRRAPD_HUB_SHIP_LINES = [
   "WRRAPD INC",
-  "PO BOX 26067",
-  "JACKSONVILLE FL 32226-6067",
+  "150 BUSCH DR #26067",
+  "JACKSONVILLE FL 32218",
 ];
 
+/**
+ * USPS Street Addressing for PO Box 26067 so UPS, FedEx, and Amazon Logistics
+ * can deliver. The box number must stay on line 1 ("#26067") — carriers drop line 2.
+ */
 export const WRRAPD_HUB_ADDRESS = Object.freeze({
   organization: "WRRAPD INC",
   recipientFirstName: "WRRAPD",
   recipientLastName: "INC",
-  addressLine1: "PO BOX 26067",
+  addressLine1: "150 BUSCH DR #26067",
   addressLine2: "",
   city: "JACKSONVILLE",
   state: "FL",
-  postalCode: "32226-6067",
+  postalCode: "32218",
   country: "US",
 });
 
@@ -59,7 +63,7 @@ const SHIPPING_FIELD_SELECTORS = [
 /** 5-digit hub ZIP for pricing fallbacks. */
 export function hubPostal5() {
   const m = String(WRRAPD_HUB_ADDRESS.postalCode || "").match(/^(\d{5})/);
-  return m ? m[1] : "32226";
+  return m ? m[1] : "32218";
 }
 
 /** Hub as a pay.wrrapd.com `address` (billing) object. */

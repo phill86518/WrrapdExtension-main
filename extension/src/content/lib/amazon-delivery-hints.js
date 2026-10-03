@@ -15,10 +15,9 @@ function isWrrapdItemContainer(container) {
   const containerText = container.textContent || '';
   const hasWrrapdRecipient =
     containerText.includes('Delivering to Wrrapd') ||
-    (containerText.includes('Wrrapd') && containerText.includes('PO BOX 26067')) ||
+    (containerText.includes('Wrrapd') && containerText.includes('26067')) ||
     (containerText.includes('Wrrapd') && containerText.includes('32226-6067')) ||
-    (containerText.includes('Wrrapd') && containerText.includes('JACKSONVILLE')) ||
-    containerText.includes('Wrrapd PO BOX 26067');
+    (containerText.includes('Wrrapd') && containerText.includes('JACKSONVILLE'));
   if (!hasWrrapdRecipient) return false;
   /** Reject merged DOM regions that also describe shipment to someone other than Wrrapd. */
   if (/Delivering to\s/i.test(containerText)) {

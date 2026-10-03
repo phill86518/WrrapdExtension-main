@@ -35,6 +35,8 @@ export type DriverApplication = {
   availability?: string;
   whyDrive?: string;
   deliveryExperience?: string;
+  backupName?: string;
+  backupContact?: string;
   deliveryGigActive?: string;
   deliveryGigPlatforms?: string;
   fitScore?: number;

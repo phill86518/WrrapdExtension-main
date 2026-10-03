@@ -60,11 +60,30 @@ Launching publicly before Black Friday matters: it gives us ~3 calm weeks to fin
 - **Hire funnel** has three separate tracks with apply forms, fit scoring, clickwrap agreements, and Command Center review.
 - **Media design is fundamentally right**: photos and videos go to object storage with only a pointer in the database. That is the single most important decision for avoiding the "Uber wall" (see §4), and it was made correctly.
 
+## 1.2a Decisions log
+
+| Date | Decision | Effect on this plan |
+|---|---|---|
+| Oct 3 | Hub = USPS Premium PO Box with Street Addressing: **WRRAPD INC, 150 BUSCH DR #26067, JACKSONVILLE FL 32218** | Coded in extension **3.0.12** (all 10 retailers) + server hub detection. Old "PO BOX 26067" still recognized. Remaining: CWS publish + carrier tests (HUB-01/02) |
+| Oct 3 | No Wrrapd code on the shipping label — match by packing slip | Retailer order # capture is mandatory (R2) |
+| Oct 3 | All 10 retailers live for beta | EXT-19 per retailer; per-retailer off switch (EXT-20) |
+| Oct 3 | Wrrapd Inc. is a **C corporation**; **2026 Florida Annual Resale Certificate** on file (expires Dec 31, 2026) | R8 → YELLOW. Ask CPA whether wrap supplies may be bought tax-exempt under the resale certificate (only if incorporated into the taxable wrap sold) |
+| Oct 3 | **Free final delivery** stays for now | §2.3 A remains a watch item; revisit with beta data |
+| Oct 3 | **No daily order cap** | CC-06 becomes a **pause switch** (not a cap). Kill switch EXT-21 still required |
+| Oct 3 | **Flowers stay ON** (integral to the offer) | Flowers move from "recommend OFF" to a RED fix item (see System 17) |
+| Oct 3 | Contractors **borrow a Wrrapd kit and return it** | §5 option 3. Equipment agreement + return flow required before first hire; counsel review of IC impact |
+| Oct 3 | High-value threshold **$100** | No safe-drop above $100; hand to an adult at the door (SOP-07, DEL-09) |
+| Oct 3 | Provisional patent **64/159,570** filed **Sep 22, 2026** (confirmation 3565) | LEG-10 done. Provisionals are never published or examined — not finding it on USPTO search is normal. **Non-provisional / PCT deadline: Sep 22, 2027** |
+| Oct 3 | No backup person for Roger assumed | If Roger is unavailable on a delivery day: pause new orders, contact affected shoppers. Optional "Backup buddy" question added to WrapRider + JoyRider applications |
+| Oct 3 | Micro-hub = the PO Box only (no separate facility; no camera) | HUB-10 changes: held packages live at Roger's wrap location; wrap video is the chain-of-custody record |
+| Oct 3 | Helcim: all signals green, **not yet tested live** | PAY-01 must include one real live charge + refund with Roger's own card before beta |
+| Oct 3 | All 210 VM orders are **dummy orders** | Clean up and make order numbers realistic + consistent (pending format choice) |
+
 ## 1.3 The launch blockers (RED), in priority order
 
 | # | Blocker | Why it matters | Fix size |
 |---|---|---|---|
-| R1 | **Hub address is a USPS PO Box** (`PO BOX 26067, JACKSONVILLE FL 32226-6067` hard-coded in `extension/src/shared/wrrapd-hub.js`) | UPS, FedEx, and Amazon Logistics generally **cannot deliver to a USPS PO Box**. Many Amazon items, and most Best Buy / Walmart items, will refuse a PO Box or bounce. This could break most orders on day one. **Decision (Oct 3): use USPS Street Addressing** — format is the post office's street address + `#26067`. Remaining risk: Amazon Logistics drivers may still refuse a post office; prove with HUB-01/HUB-02 test shipments from every carrier, all 10 retailers. | 1-line config + extension release 3.0.12 (needs the post office's exact street address) |
+| R1 | **Hub address is a USPS PO Box** (`PO BOX 26067, JACKSONVILLE FL 32226-6067` hard-coded in `extension/src/shared/wrrapd-hub.js`) | UPS, FedEx, and Amazon Logistics generally **cannot deliver to a USPS PO Box**. Many Amazon items, and most Best Buy / Walmart items, will refuse a PO Box or bounce. This could break most orders on day one. **Decision (Oct 3): use USPS Street Addressing** — **150 BUSCH DR #26067, JACKSONVILLE FL 32218** — coded in extension 3.0.12 on Oct 3. Remaining risk: Amazon Logistics drivers may still refuse a post office; prove with HUB-01/HUB-02 test shipments from every carrier, all 10 retailers. | Code done Oct 3 (3.0.12). Remaining: Chrome Web Store publish + carrier test shipments |
 | R2 | **No way to match an arriving box to its Wrrapd order.** Every package is addressed to "WRRAPD INC" and the extension does not capture the retailer order number or tracking number after checkout. **Decision (Oct 3): no Wrrapd code on the label — match by packing slip.** That makes capturing the **retailer order number** on each retailer's confirmation page mandatory, because the packing slip's order number is the only reliable key. Retailers that ship without a slip need a fallback (item + shopper name + expected date) and a quarantine shelf. | At the hub, Roger opens 6 identical-looking Amazon boxes and cannot reliably tell whose gift is whose. Wrong gift to wrong giftee is the worst possible failure. | Medium: order-number capture for 10 retailers + intake search by order number |
 | R3 | **Proof photos, wrap videos, and QR labels very likely fail to upload in production.** Cloud Run has no `FIREBASE_STORAGE_BUCKET` / `GCS_BACKUP_BUCKET`, and Firebase is initialized without a default bucket (`tracking-platform/src/lib/firebase-admin.ts` L151–160). The code then silently returns `null`. | No chain-of-custody evidence, no delivery photo, no labels for couriers. | Small (1 env var + bucket + test) |
 | R4 | **No hub inbound "receive package" step** in Command Center | We cannot see "package arrived / not arrived / damaged" per order, so we cannot catch the shopper who paid Wrrapd but never completed the retailer order. | Medium — manual sheet acceptable for beta |
@@ -111,7 +130,7 @@ Launching publicly before Black Friday matters: it gives us ~3 calm weeks to fin
 | 15 | Security & privacy | 50% | YELLOW |
 | 16 | Monitoring, backup & disaster recovery | 15% | RED |
 | 17 | Legal, insurance, tax, licensing | 45% | **RED (R9 insurance)**; sales tax registered |
-| 18 | Flowers add-on | 40% | YELLOW — recommend OFF for beta |
+| 18 | Flowers add-on | 50% | **RED** — ON for beta; live prices failing (System 17) |
 
 ---
 
@@ -192,7 +211,7 @@ Each system lists subsystems, current state, risks, and what must happen before 
 | Other 9 retailers (shared flow) | YELLOW | Thin proof; only Best Buy/Kohl's fixture checks. **Decision (Oct 3): all 10 live for beta** → each needs a passing rehearsal order (EXT-19), packing-slip match (HUB-04), and a per-retailer off switch (EXT-20). Best Buy and Walmart are the most likely to refuse post-office addresses — test them first |
 | Duval ZIP gate | GREEN | Allowlist API; out-of-area copy is polite |
 | Giftee address capture | YELLOW | Amazon scrapes before swap; others collect on pay page. Verify full street + phone reach Command Center |
-| Hub address | **RED (R1)** | PO Box hard-coded |
+| Hub address | **YELLOW (R1)** | Street Addressing coded in 3.0.12; carrier tests pending |
 | Retailer order # / tracking capture | **RED (R2)** | Not captured |
 | International Amazon | GREY | Permissions requested but not used — remove to simplify CWS review |
 | Install heartbeat | GREEN | Already in `background.js` (the "parked" rule is out of date) |
@@ -357,7 +376,7 @@ See §4 for the full analysis. Summary: two sources of truth (VM JSON + Firestor
 
 | Subsystem | State | Notes |
 |---|---|---|
-| Entity (Wrrapd, Inc. on Sunbiz), EIN, bank | ? | Confirm "Inc." vs "LLC" everywhere |
+| Entity (Wrrapd, Inc. on Sunbiz, C corporation), EIN, bank | GREEN | Resale certificate on file; fix any leftover "LLC" wording |
 | Local business tax receipts (City of Jacksonville / Duval) | ? | Needed for operating in Duval |
 | Florida sales tax registration & taxability | **RED (R8)** | CPA |
 | Insurance: general liability, bailee/inland marine (customer goods), hired & non-owned auto, cyber | **RED (R9)** | Broker |
@@ -366,9 +385,28 @@ See §4 for the full analysis. Summary: two sources of truth (VM JSON + Firestor
 | Patent | YELLOW | Provisional kit prepared; confirm filed before public launch (public use/disclosure starts the clock) |
 | Trademark "Wrrapd", "WrapStar", "JoyRider", "WrapRider" | ? | Consider filing |
 
-## System 17 — Flowers add-on
+## System 17 — Flowers add-on (ON for beta — decision Oct 3)
 
-Catalog scrapers are degraded (Publix 403, Sam's bot wall in logs). Flowers add perishability, purchase-on-behalf, and timing risk. **Recommend: flowers OFF for the public beta**, turn on after 2 clean weeks.
+How it works (`WrrapdServer/lib/flowers/`): giftee ZIP → nearest Publix + Sam's Club → fetch bouquet prices → Grok picks 4–8 → shopper sees "Bouquet #N" at **retail + markup**; the server re-validates the chosen offer at payment. Target is paused as a floral supplier.
+
+Audit on Oct 3 (live calls for 32218, 32256, 32207, 32250):
+
+| Check | Finding | Status |
+|---|---|---|
+| Markup | Was **$1.49**, now **$2.00** (`scrape.js` `MARKUP`) — deployed Oct 3 | GREEN |
+| Live Publix prices | **Every request returns HTTP 403** (Publix blocks our server) | **RED** |
+| Live Sam's Club prices | **Bot wall (HTTP 412)** every request | **RED** |
+| What shoppers actually saw | Hard-coded backup price lists (Publix $9.99–$16.49, Sam's $12.98–$19.76) **labeled as "live"**, no photo disclaimer | Fixed Oct 3: now labeled `fallback_prices` with "Actual bouquets might differ slightly from the photos shown." |
+| Backup Publix photos | Point at **Sam's Club** image URLs | YELLOW — replace with real Publix photos or Wrrapd's own |
+| Offer survives server restart | Was memory-only → "price mismatch or expired" at payment after any PM2 restart | Fixed Oct 3: offers saved to `data/flower-offers.json` (48 h) |
+| Purchase practicality | Sam's requires a membership; Sam's at **300 Busch Dr** is next to the PO Box (150 Busch Dr) | Note |
+
+**Recommendation (pick one before beta):**
+1. **Weekly price list in Command Center** (recommended): Roger enters current in-store bouquet prices + photos each week (he buys them anyway); server serves those + $2.00. Reliable, honest, no bot walls.
+2. Paid scraping proxy (residential IPs) to keep automated prices — ongoing cost, still fragile, retailer terms risk.
+3. Keep stored price list (today's behavior) — prices drift; margin risk if store prices rise above the stored price.
+
+Ops risks to cover in SOPs: perishability (buy same day as delivery), substitution rule when the exact bouquet is out of stock (equal or better, never cheaper-looking), receipt photo on the order.
 
 ---
 
@@ -439,7 +477,7 @@ Three options, from least to most employee-like:
 2. **Wrrapd sells or rents a starter kit** at cost, deducted from early payouts, owned by the contractor after N weeks.
 3. **Wrrapd lends a kit** with a signed equipment agreement and a deposit, returned on deactivation.
 
-Recommendation for beta: option 1 for tools, plus **Wrrapd-supplied branded consumables and labels** (quality and chain-of-custody depend on them). Revisit after counsel review.
+**Decision (Oct 3): option 3 — contractors borrow a Wrrapd kit and return it.** Requirements that follow: a signed equipment loan acknowledgment (counsel to draft; note that supplying equipment is a factor in contractor-vs-employee tests), serialized asset tags, a return checklist and return shipping on deactivation, a lost/damaged policy, and the Command Center Equipment module (§5.3) with the return flow — all before the first non-founder contractor starts. Roger's first purchased item (AliExpress order, arriving ~Oct 13) is registered as asset #1 when it arrives.
 
 ## 5.2 Kit contents by role (starting proposal — validate with Roger's own setup)
 
@@ -523,7 +561,7 @@ All dates 2026 unless noted. Owners: **R** = Roger, **Eng** = engineering (agent
 - Eng: R3 storage bucket + video cap + lifecycle; R6 backups + Firestore PITR/delete protection/backup schedule.
 - Eng: R5 door photo + GPS in courier/WrapRider UI; stop wrap photo from setting `delivered`.
 - Eng: R2 capture retailer order number (and tracking number where shown) at each of the 10 retailers' confirmation pages and add it to the Wrrapd order; Command Center intake search by retailer order number. (Decision Oct 3: no Wrrapd code on the label.)
-- Eng: R1 switch hub address to the USPS Street Addressing format (post office street address + `#26067`) — extension release 3.0.12.
+- Eng: R1 hub address switched to 150 BUSCH DR #26067, JACKSONVILLE FL 32218 — extension 3.0.12 (done Oct 3; publish to the Chrome Web Store).
 - Eng: per-retailer on/off switch, since all 10 retailers launch together (decision Oct 3).
 - Eng: server-side ZIP check, $0.99 box fix, ingest proxy secret, disable Stripe test customer routes.
 - Eng: schedule the 8 am morning-sheet cron and expire-delivery-preferences cron.
@@ -641,7 +679,9 @@ Columns: `ID` · Check · How to verify · Pass criterion · 1st ☐ · 2nd ☐
 
 | ID | Check | How to verify | Pass criterion | 1st | 2nd |
 |---|---|---|---|---|---|
-| PAY-01 | Helcim account live, bank verified, payouts arriving | Helcim dashboard | First live payout received in bank | ☐ | ☐ |
+| PAY-01 | Helcim live end-to-end (never tested as of Oct 3) | Roger buys one real order with his own card, then refunds it | Charge appears, refund lands, deposit reaches the bank | ☐ | ☐ |
+| PAY-01b | Flower price shown = price charged = store price + $2.00 | Order with flowers; compare to the store shelf | Exact | ☐ | ☐ |
+| PAY-01c | Flower order still pays after a server restart mid-checkout | Pick bouquet → `pm2 restart` → pay | Payment succeeds | ☐ | ☐ |
 | PAY-02 | Statement descriptor reads "WRRAPD" | Real card statement | Recognizable name (reduces chargebacks) | ☐ | ☐ |
 | PAY-03 | Server total = shopper-displayed total (all wrap types + box + tax) | 6 test carts | Exact to the cent | ☐ | ☐ |
 | PAY-04 | Tampered client total is ignored | Edit total in devtools | Server charges correct price | ☐ | ☐ |
@@ -687,7 +727,7 @@ Columns: `ID` · Check · How to verify · Pass criterion · 1st ☐ · 2nd ☐
 | HUB-07 | Oversized/signature-required package procedure known | Ask post office / receiving desk | Written in SOP-01 | ☐ | ☐ |
 | HUB-08 | Intake: each package photographed and matched to order within 2 h of pickup | Dry run | 100% matched or quarantined | ☐ | ☐ |
 | HUB-09 | "Expected but not arrived" list reviewed daily | Command Center report / sheet | Exists and used | ☐ | ☐ |
-| HUB-10 | Secure, dry, locked storage for held packages | Inspect | Pass; camera if possible | ☐ | ☐ |
+| HUB-10 | Held packages stored dry and secure at Roger's wrap location (the PO Box is the only hub) | Inspect | Pass; unboxing on wrap video covers custody | ☐ | ☐ |
 | HUB-11 | Damaged-on-arrival flow rehearsed | Simulate | Shopper notified same day | ☐ | ☐ |
 | HUB-12 | Holiday overflow plan (larger box / counter / second location) | Written | Pass | ☐ | ☐ |
 
@@ -700,7 +740,7 @@ Columns: `ID` · Check · How to verify · Pass criterion · 1st ☐ · 2nd ☐
 | CC-03 | Order detail shows all fields (items, wrap, design, message, giftee address, phone, retailer order #, dates) | Inspect | Complete | ☐ | ☐ |
 | CC-04 | Allocation proposes Roger (WrapRider) for every Duval ZIP | Allocations board | Correct | ☐ | ☐ |
 | CC-05 | Manual reassign works | Reassign + back | Pass | ☐ | ☐ |
-| CC-06 | Daily capacity cap enforced (beta 5 → 10/day) | Exceed cap | Shopper sees a polite "fully booked" message | ☐ | ☐ |
+| CC-06 | Pause switch works (no daily cap — decision Oct 3) | Turn on pause | New orders refused politely within 5 min; existing orders unaffected | ☐ | ☐ |
 | CC-07 | Calendar view matches Wrrapd delivery dates | Compare | Pass | ☐ | ☐ |
 | CC-08 | Cancel order flow sets status, notifies, flags refund | Test | Pass | ☐ | ☐ |
 | CC-09 | Inventory forecast matches tomorrow's orders | Compare | Pass | ☐ | ☐ |
@@ -738,7 +778,7 @@ Columns: `ID` · Check · How to verify · Pass criterion · 1st ☐ · 2nd ☐
 | DEL-06 | "Delivered" notification to shopper | Phone/email | Received with photo link | ☐ | ☐ |
 | DEL-07 | Giftee-not-home flow (safe drop vs reattempt) rehearsed | Simulate | Per SOP-06 | ☐ | ☐ |
 | DEL-08 | Wrong address / refused flow rehearsed | Simulate | Per SOP-06 | ☐ | ☐ |
-| DEL-09 | High-value threshold rule applied | Test item above threshold | No safe drop | ☐ | ☐ |
+| DEL-09 | High-value rule: gift value over **$100** | Test item above $100 | No safe drop; handed to an adult; photo of handoff | ☐ | ☐ |
 | DEL-10 | Vehicle: registration, insurance card, business-use coverage | Documents in car | Pass | ☐ | ☐ |
 | DEL-11 | Route plan for the day (Maps multi-stop) | Morning | Pass | ☐ | ☐ |
 | DEL-12 | Delivery hours logged correctly for pay | Finance | Pass | ☐ | ☐ |
@@ -836,7 +876,7 @@ Columns: `ID` · Check · How to verify · Pass criterion · 1st ☐ · 2nd ☐
 
 | ID | Check | How to verify | Pass criterion | 1st | 2nd |
 |---|---|---|---|---|---|
-| LEG-01 | Entity active on Sunbiz; name used everywhere matches | Sunbiz | Pass | ☐ | ☐ |
+| LEG-01 | Entity active on Sunbiz (Wrrapd Inc., C corporation); "Wrrapd, Inc." everywhere — fix any "LLC" | Sunbiz + agreements | Pass | ☐ | ☐ |
 | LEG-02 | City of Jacksonville / Duval local business tax receipt | Certificate | Pass | ☐ | ☐ |
 | LEG-03 | Florida sales tax: registered or not required (CPA letter/email) | Document | Pass | ☐ | ☐ |
 | LEG-04 | General liability policy bound | Certificate | Pass | ☐ | ☐ |
@@ -845,7 +885,7 @@ Columns: `ID` · Check · How to verify · Pass criterion · 1st ☐ · 2nd ☐
 | LEG-07 | Cyber liability (customer PII, payments) | Quote/bound | Decision made | ☐ | ☐ |
 | LEG-08 | Shopper Terms reflect refund practice, service area, timing | Read | Pass | ☐ | ☐ |
 | LEG-09 | Privacy page = CWS privacy disclosures | Compare | Pass | ☐ | ☐ |
-| LEG-10 | Patent provisional filed before public launch announcement | USPTO receipt | Pass | ☐ | ☐ |
+| LEG-10 | Patent provisional filed before public launch announcement | USPTO receipt 64/159,570, Sep 22, 2026 | Pass — calendar the Sep 22, 2027 non-provisional/PCT deadline | ☑ | ☐ |
 | LEG-11 | Trademarks considered/filed | Decision | Pass | ☐ | ☐ |
 | LEG-12 | Contractor agreements reviewed by Florida counsel (before first hire) | Memo | Pass | ☐ | ☐ |
 
@@ -888,7 +928,7 @@ FLIGHT calls each station; each answers **"GO"** or **"NO-GO + reason"**.
 - Payments failing or charging wrong amounts.
 - Two delivery mix-ups in a week.
 - Unmatched packages > 1 for more than 24 hours.
-- Roger unavailable with no trained backup for the next day's deliveries.
+- Roger unavailable with no trained backup for the next day's deliveries (assumed true until the first hire — pause new orders and message affected shoppers the same day).
 
 ## A.18 Daily flight checklist (every operating day, 10 minutes)
 
@@ -913,13 +953,20 @@ FLIGHT calls each station; each answers **"GO"** or **"NO-GO + reason"**.
 # Exhibit B — Questions for Roger
 
 **Answered Oct 3, 2026:**
-- Q1 Hub: PO Box with **USPS Street Addressing** available. Next: send the post office's exact street address for the extension.
+- Q1 Hub: PO Box with **USPS Street Addressing** — 150 Busch Dr #26067, Jacksonville FL 32218 (in extension 3.0.12).
 - Q2 Label code: **No** — match by packing slip (retailer order number capture becomes mandatory).
 - Q3 Sales tax: **Registered** with Florida DOR.
 - Q4 Insurance: **none bound yet**.
 - Q5 Beta retailers: **all 10**.
 
-Still open (Q6–Q18). The first five below were the most important.
+**Answered Oct 3, 2026 (second round)** — see the Decisions log in §1.2a for Q6–Q18. Q1 address: **150 BUSCH DR #26067, JACKSONVILLE FL 32218**.
+
+Still open:
+- What is the AliExpress item (order arriving ~Oct 13)? It goes into the kit list as asset #1.
+- Support hours you can commit to (Q13).
+- Order-number format for the dummy-order cleanup.
+
+Original question list, for reference:
 
 1. **Hub receiving address:** Does the micro-hub have a **street address** that accepts UPS, FedEx, and Amazon deliveries? Or is it USPS PO Box only? Does that post office offer USPS "Street Addressing" for your box? (Determines R1.)
 2. **Matching packages:** Are you OK adding the Wrrapd order code to the ship-to (for example, name line "WRRAPD INC W-1234" or address line 2)? Retailers allow line 2 freely.

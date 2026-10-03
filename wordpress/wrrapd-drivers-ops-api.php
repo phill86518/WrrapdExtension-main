@@ -290,6 +290,8 @@ function wrrapd_drivers_ops_serialize_application( $id ) {
 		'hasSmartphone'           => wrrapd_drivers_get_meta( $id, 'has_smartphone' ),
 		'cleanDrivingRecord'      => wrrapd_drivers_get_meta( $id, 'clean_driving_record' ),
 		'availability'            => wrrapd_drivers_get_meta( $id, 'availability' ),
+		'backupName'              => wrrapd_drivers_get_meta( $id, 'backup_name' ),
+		'backupContact'           => wrrapd_drivers_get_meta( $id, 'backup_contact' ),
 		'whyDrive'                => wrrapd_drivers_get_meta( $id, 'why_drive' ),
 		'deliveryExperience'      => wrrapd_drivers_get_meta( $id, 'delivery_experience' ),
 		'deliveryGigActive'       => wrrapd_drivers_get_meta( $id, 'delivery_gig_active' ),

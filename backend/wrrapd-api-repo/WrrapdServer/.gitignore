@@ -6,6 +6,8 @@ customers/email_to_customer_id.json
 data/extension-installs.json
 data/facebook-post-log.json
 data/facebook-post-log.json.tmp
+data/flower-offers.json
+data/flower-offers.json.tmp
 server-test.js
 venv/
 config/

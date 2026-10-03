@@ -478,6 +478,12 @@ export default async function AdminApplicationDetailPage({
                 <strong>Experience:</strong> {driverApp.deliveryExperience}
               </p>
             ) : null}
+            {driverApp.backupName || driverApp.backupContact ? (
+              <p className="mt-2 text-sm text-slate-700">
+                <strong>Backup buddy:</strong>{" "}
+                {[driverApp.backupName, driverApp.backupContact].filter(Boolean).join(" · ")}
+              </p>
+            ) : null}
             <p className="mt-3 text-sm">
               <strong>Why:</strong> {driverApp.whyDrive || driverApp.whyWrapstar || "—"}
             </p>
@@ -502,6 +508,12 @@ export default async function AdminApplicationDetailPage({
             {wrapriderApp.deliveryExperience ? (
               <p className="mt-2 whitespace-pre-wrap text-sm text-slate-700">
                 <strong>Delivery experience:</strong> {wrapriderApp.deliveryExperience}
+              </p>
+            ) : null}
+            {wrapriderApp.backupName || wrapriderApp.backupContact ? (
+              <p className="mt-2 text-sm text-slate-700">
+                <strong>Backup buddy:</strong>{" "}
+                {[wrapriderApp.backupName, wrapriderApp.backupContact].filter(Boolean).join(" · ")}
               </p>
             ) : null}
             <p className="mt-3 text-sm">

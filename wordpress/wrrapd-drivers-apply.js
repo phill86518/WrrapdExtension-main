@@ -117,6 +117,7 @@
 			['Driving record', selectLabel('clean_driving_record')],
 			['Bank ready', selectLabel('bank_account_ready')],
 			['Availability', fieldValue('availability')],
+			['Backup buddy', [fieldValue('backup_name'), fieldValue('backup_contact')].filter(Boolean).join(' · ')],
 			['Delivery gigs', selectLabel('delivery_gig_active') + (gigPlatforms() ? ' · ' + gigPlatforms() : '')],
 			['Gig notes', fieldValue('delivery_experience')],
 			['Why Wrrapd', fieldValue('why_drive')],

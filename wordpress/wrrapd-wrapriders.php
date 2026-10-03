@@ -34,7 +34,7 @@ if ( ! function_exists( 'wrrapd_onboarding_login_url' ) ) {
 	}
 }
 
-define( 'WRRAPD_WRAPRIDERS_BUILD', '2026-09-20-apply-contrast' );
+define( 'WRRAPD_WRAPRIDERS_BUILD', '2026-10-03-backup-buddy' );
 define( 'WRRAPD_WRAPRIDERS_INVITE_TTL_DAYS', 15 );
 define( 'WRRAPD_WRAPRIDERS_CPT', 'wrrapd_wraprider_app' );
 

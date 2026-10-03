@@ -1973,7 +1973,8 @@ function isLikelyWrrapdWarehouseAddressObj(addr) {
     const blob = `${addr.name || ''} ${addr.street || ''} ${addr.line1 || ''}`.toLowerCase();
     return (
         blob.includes('wrrapd') ||
-        (blob.includes('po box') && blob.includes('26067')) ||
+        blob.includes('26067') ||
+        blob.includes('150 busch') ||
         (blob.includes('32226') && blob.includes('jacksonville'))
     );
 }

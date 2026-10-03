@@ -133,6 +133,8 @@ function wrrapd_drivers_process_application() {
 	$has_phone    = sanitize_text_field( wp_unslash( $_POST['has_smartphone'] ?? '' ) );
 	$clean_record = sanitize_text_field( wp_unslash( $_POST['clean_driving_record'] ?? '' ) );
 	$availability = sanitize_textarea_field( wp_unslash( $_POST['availability'] ?? '' ) );
+	$backup_name    = mb_substr( sanitize_text_field( wp_unslash( $_POST['backup_name'] ?? '' ) ), 0, 80 );
+	$backup_contact = mb_substr( sanitize_text_field( wp_unslash( $_POST['backup_contact'] ?? '' ) ), 0, 120 );
 	$why_drive    = sanitize_textarea_field( wp_unslash( $_POST['why_drive'] ?? '' ) );
 	$gig_exp      = sanitize_textarea_field( wp_unslash( $_POST['delivery_experience'] ?? '' ) );
 	$gig_active   = sanitize_text_field( wp_unslash( $_POST['delivery_gig_active'] ?? '' ) );
@@ -259,6 +261,8 @@ function wrrapd_drivers_process_application() {
 	wrrapd_drivers_set_meta( $post_id, 'has_smartphone', $has_phone );
 	wrrapd_drivers_set_meta( $post_id, 'clean_driving_record', $clean_record );
 	wrrapd_drivers_set_meta( $post_id, 'availability', $availability );
+	wrrapd_drivers_set_meta( $post_id, 'backup_name', $backup_name );
+	wrrapd_drivers_set_meta( $post_id, 'backup_contact', $backup_contact );
 	wrrapd_drivers_set_meta( $post_id, 'why_drive', $why_drive );
 	wrrapd_drivers_set_meta( $post_id, 'delivery_experience', $gig_exp );
 	wrrapd_drivers_set_meta( $post_id, 'delivery_gig_active', $gig_active );
@@ -302,6 +306,9 @@ function wrrapd_drivers_process_application() {
 	$admin  = "New JoyRider application.\n\nName: {$full_name}\nEmail: {$email}\nMobile: {$phone_mobile}\n";
 	$admin .= "Location: {$address}" . ( $address2 !== '' ? ', ' . $address2 : '' ) . ", {$city}, {$state} {$zip}\n";
 	$admin .= "Vehicle: {$vehicle_type}\n";
+	if ( $backup_name !== '' || $backup_contact !== '' ) {
+		$admin .= "Backup buddy: {$backup_name}" . ( $backup_contact !== '' ? " · {$backup_contact}" : '' ) . "\n";
+	}
 	$admin .= 'Command Center → Applications (JoyRider filter)' . "\n";
 	wrrapd_drivers_send_email( wrrapd_drivers_admin_notify_email(), 'New JoyRider application: ' . $full_name, $admin );
 
@@ -499,6 +506,17 @@ function wrrapd_drivers_shortcode_apply() {
 							<label for="drv-availability">Typical availability<?php echo $req; ?></label>
 							<textarea name="availability" id="drv-availability" rows="3" required placeholder="Evenings, weekends, weekdays…"></textarea>
 						</div>
+						<div class="ws-field-row">
+							<div class="ws-field">
+								<label for="drv-backup-name">Backup buddy <span class="ws-optional">(optional)</span></label>
+								<input type="text" id="drv-backup-name" name="backup_name" maxlength="80" autocomplete="off" placeholder="Their name" />
+							</div>
+							<div class="ws-field">
+								<label for="drv-backup-contact">Backup buddy's phone or email <span class="ws-optional">(optional)</span></label>
+								<input type="text" id="drv-backup-contact" name="backup_contact" maxlength="120" autocomplete="off" placeholder="(555) 555-5555 or name@email.com" />
+							</div>
+						</div>
+						<p class="wrrapd-apply-field-hint">Someone you trust who could step in on a day you're unavailable. We'll invite them to apply too.</p>
 						<div class="ws-field">
 							<label for="drv-gig-active">Do you currently do delivery gig work? <span class="ws-optional">(requires live proof)</span><?php echo $req; ?></label>
 							<select name="delivery_gig_active" id="drv-gig-active" required>
