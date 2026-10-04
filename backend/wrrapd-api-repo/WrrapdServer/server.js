@@ -3240,6 +3240,10 @@ app.post('/process-payment', async (req, res) => {
             const payEmailNorm = normalizeCustomerEmail(customerEmail);
             const payWrrapdCustomerId = getOrCreateWrrapdCustomerId(payEmailNorm);
             const revenue = revenueCentsFromCheckoutInvoice(checkoutInvoice);
+            const chargedTotalCents = Math.round(Number(paymentIntent && paymentIntent.amount));
+            if (Number.isFinite(chargedTotalCents) && chargedTotalCents > 0) {
+                revenue.orderValueCents = chargedTotalCents;
+            }
             const ingestCommon = {
                 customerName,
                 customerPhone,

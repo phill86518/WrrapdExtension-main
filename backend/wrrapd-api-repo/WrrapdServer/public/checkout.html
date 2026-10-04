@@ -342,20 +342,20 @@
         <input type="hidden" id="name" name="name" value="">
         <input type="hidden" id="line2" name="line2" value="">
         <div class="form-group">
-            <label for="line1">Address Line 1</label>
+            <label for="line1">Address Line 1*</label>
             <div class="address-autocomplete-wrap">
-                <input type="text" id="line1" name="line1" autocomplete="off" spellcheck="false" data-lpignore="true" data-1p-ignore placeholder="Street address, Apt (optional)">
+                <input type="text" id="line1" name="line1" autocomplete="off" spellcheck="false" data-lpignore="true" data-1p-ignore placeholder="Street address, apt or suite">
                 <ul class="address-suggestions" id="line1-suggestions" role="listbox" hidden></ul>
             </div>
             <div id="places-load-warning" role="status"></div>
         </div>
         <div class="row">
             <div class="form-group">
-                <label for="city">City</label>
+                <label for="city">City*</label>
                 <input type="text" id="city" name="city">
             </div>
             <div class="form-group">
-                <label for="postal_code">ZIP Code</label>
+                <label for="postal_code">ZIP Code*</label>
                 <input type="text" id="postal_code" name="postal_code" inputmode="numeric" autocomplete="postal-code" maxlength="10">
             </div>
         </div>
@@ -365,7 +365,7 @@
                 <input type="text" id="country" name="country" value="US" disabled>
             </div>
             <div class="form-group">
-                <label for="state">State</label>
+                <label for="state">State*</label>
                 <input type="text" id="state" name="state">
             </div>
         </div>
@@ -380,11 +380,11 @@
         <div id="billing-address-section" style="display: none;">
             <div class="heading-address">Billing Address</div>
             <div class="form-group">
-                <label for="billing-name">Full Name</label>
+                <label for="billing-name">Full Name*</label>
                 <input type="text" id="billing-name" name="billing-name">
             </div>
             <div class="form-group">
-                <label for="billing-line1">Address Line 1</label>
+                <label for="billing-line1">Address Line 1*</label>
                 <div class="address-autocomplete-wrap">
                     <input type="text" id="billing-line1" name="billing-line1" autocomplete="off" spellcheck="false" data-lpignore="true" data-1p-ignore>
                     <ul class="address-suggestions" id="billing-line1-suggestions" role="listbox" hidden></ul>
@@ -396,11 +396,11 @@
             </div>
             <div class="row">
                 <div class="form-group">
-                    <label for="billing-city">City</label>
+                    <label for="billing-city">City*</label>
                     <input type="text" id="billing-city" name="billing-city">
                 </div>
                 <div class="form-group">
-                    <label for="billing-postal_code">ZIP Code</label>
+                    <label for="billing-postal_code">ZIP Code*</label>
                     <input type="text" id="billing-postal_code" name="billing-postal_code">
                 </div>
             </div>
@@ -410,7 +410,7 @@
                     <input type="text" id="billing-country" name="billing-country" value="US" disabled>
                 </div>
                 <div class="form-group">
-                    <label for="billing-state">State</label>
+                    <label for="billing-state">State*</label>
                     <input type="text" id="billing-state" name="billing-state" value="">
                 </div>
             </div>

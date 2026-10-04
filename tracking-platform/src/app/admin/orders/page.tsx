@@ -5,10 +5,13 @@ import { SameOriginLogoutLink } from "@/components/same-origin-logout-link";
 import { createOrderAction } from "@/app/admin/orders/actions";
 import { getSession } from "@/lib/auth";
 import {
+  listAllocationQueue,
   listCourierDrivers,
   listOrdersByStatus,
   listWrapstars,
 } from "@/lib/data";
+import { formatDateKeyNy } from "@/lib/ny-date";
+import { wrrapdScheduledInstantIsoForUi } from "@/lib/order-schedule-display";
 import { ensureDemoStaffing } from "@/lib/demo-staffing";
 import { notFound } from "next/navigation";
 
@@ -39,6 +42,7 @@ export default async function AdminOrdersPage({
   let past: Awaited<ReturnType<typeof listOrdersByStatus>>;
   let wrapstars: Awaited<ReturnType<typeof listWrapstars>>;
   let drivers: Awaited<ReturnType<typeof listCourierDrivers>>;
+  let waiting: Awaited<ReturnType<typeof listAllocationQueue>>;
 
   try {
     await ensureDemoStaffing();
@@ -49,6 +53,7 @@ export default async function AdminOrdersPage({
       listOrdersByStatus("past"),
       listWrapstars(),
       listCourierDrivers(),
+      listAllocationQueue(),
     ]);
     const labels = [
       "orders:active",
@@ -57,6 +62,7 @@ export default async function AdminOrdersPage({
       "orders:past",
       "wrapstars",
       "drivers",
+      "allocation-queue",
     ] as const;
     settled.forEach((r, i) => {
       if (r.status === "rejected") {
@@ -73,6 +79,7 @@ export default async function AdminOrdersPage({
     past = (settled[3] as PromiseFulfilledResult<typeof past>).value;
     wrapstars = (settled[4] as PromiseFulfilledResult<typeof wrapstars>).value;
     drivers = (settled[5] as PromiseFulfilledResult<typeof drivers>).value;
+    waiting = (settled[6] as PromiseFulfilledResult<typeof waiting>).value;
   } catch (err) {
     console.error("[admin/orders] failed to load", err);
     return (
@@ -126,6 +133,33 @@ export default async function AdminOrdersPage({
           </p>
         ) : null}
       </div>
+
+      {waiting.length > 0 ? (
+        <section className="rounded-2xl border-2 border-amber-300 bg-amber-50 p-5 shadow-md">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 className="text-lg font-bold text-amber-950">
+              Waiting for a WrapStar ({waiting.length})
+            </h2>
+            <Link href="/admin/allocations" className="text-sm font-semibold text-amber-900 underline">
+              Assign in Allocations
+            </Link>
+          </div>
+          <ul className="mt-3 divide-y divide-amber-200">
+            {waiting.map((o) => (
+              <li key={o.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
+                <Link href={`/admin/orders/${o.id}`} className="font-semibold text-[#0f172a] underline">
+                  {o.externalOrderId || o.id}
+                </Link>
+                <span className="text-amber-950">
+                  {o.recipientName || "Giftee"} · {o.postalCode || ""} ·{" "}
+                  {formatDateKeyNy(wrrapdScheduledInstantIsoForUi(o)) || "no date"} ·{" "}
+                  {o.allocationStatus === "proposed" ? "proposed" : "unassigned"}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       <AdminOrdersBoard
         active={active}
