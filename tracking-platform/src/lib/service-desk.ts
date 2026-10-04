@@ -436,6 +436,14 @@ export async function updateCallStatus(callSid: string, fromRaw: string, status:
   await threadRef(e164).collection("messages").doc(callSid).set(patch, { merge: true });
 }
 
+/** True when this number texted STOP (and has not texted START since). */
+export async function isSmsOptedOut(phoneRaw: string): Promise<boolean> {
+  const e164 = toUsE164(phoneRaw);
+  if (!e164 || !getFirestoreDb()) return false;
+  const snap = await threadRef(e164).get();
+  return snap.data()?.optedOut === true;
+}
+
 /** Record an automatic outbound text that was already sent through Twilio. */
 export async function logAutomaticSms(opts: {
   phoneRaw: string;

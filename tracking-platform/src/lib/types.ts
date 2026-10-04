@@ -132,7 +132,23 @@ export type Order = {
     lng: number;
     updatedAt: string;
   };
+  /** Door / hand-off photo — set only by the delivery step. */
   proofPhotoUrl?: string;
+  /** Wrapped-gift photo from the wrap step; does not change delivery status. */
+  wrapPhotoUrl?: string;
+  wrapPhotoAt?: string;
+  deliveredAt?: string;
+  /** Shopper status messages already sent (each fires once). */
+  notifiedOutForDeliveryAt?: string;
+  notifiedDeliveredAt?: string;
+  deliveryProof?: {
+    lat?: number;
+    lng?: number;
+    accuracyM?: number;
+    handedTo?: string;
+    at: string;
+    by: string;
+  };
   createdAt: string;
   updatedAt: string;
   updatedBy?: string;

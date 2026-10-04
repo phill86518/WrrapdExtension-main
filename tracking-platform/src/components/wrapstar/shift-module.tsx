@@ -156,7 +156,12 @@ export function ShiftModule() {
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: "environment" } },
+        video: {
+          facingMode: { ideal: "environment" },
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          frameRate: { ideal: 24, max: 30 },
+        },
         audio: true,
       });
       mediaStreamRef.current = stream;
@@ -169,9 +174,11 @@ export function ShiftModule() {
         : MediaRecorder.isTypeSupported("video/webm")
           ? "video/webm"
           : "";
+      // ~0.9 Mbps total keeps an hour of wrapping near 400 MB instead of ~1 GB at browser defaults.
+      const bitrates = { videoBitsPerSecond: 850_000, audioBitsPerSecond: 64_000 };
       const recorder = mime
-        ? new MediaRecorder(stream, { mimeType: mime })
-        : new MediaRecorder(stream);
+        ? new MediaRecorder(stream, { mimeType: mime, ...bitrates })
+        : new MediaRecorder(stream, bitrates);
       recorder.ondataavailable = (ev) => {
         if (ev.data.size > 0) {
           chunksRef.current.push(ev.data);

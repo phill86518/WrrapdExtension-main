@@ -1028,6 +1028,19 @@ export async function expireStaleDeliveryPreferences(): Promise<number> {
   return toClose.length;
 }
 
+/** Out-for-delivery / delivered shopper message, once per order (failures never block the status change). */
+async function sendDeliveryNoticeOnce(order: Order, kind: "out_for_delivery" | "delivered", updatedBy: string) {
+  const field = kind === "delivered" ? "notifiedDeliveredAt" : "notifiedOutForDeliveryAt";
+  if (order[field]) return;
+  try {
+    const { notifyDeliveryStatus } = await import("@/lib/delivery-status-notify");
+    const at = await notifyDeliveryStatus(order, kind);
+    if (at) await patchOrderFields(order.id, { [field]: at }, updatedBy);
+  } catch (e) {
+    console.error("[data] delivery notice failed", order.id, kind, e);
+  }
+}
+
 export async function updateOrderStatus(
   id: string,
   status: DeliveryStatus | OrderStatus,
@@ -1036,7 +1049,8 @@ export async function updateOrderStatus(
   const current = await getOrderById(id);
   if (!current) return null;
   const normalized = normalizeOrderStatus(status);
-  const next = { ...current, status: normalized, updatedAt: nowIso(), updatedBy };
+  const next: Order = { ...current, status: normalized, updatedAt: nowIso(), updatedBy };
+  if (normalized === "delivered" && !next.deliveredAt) next.deliveredAt = next.updatedAt;
   const ocUp = getOrdersCollection();
   if (ocUp) {
     await ocUp.doc(id).set(next);
@@ -1052,6 +1066,9 @@ export async function updateOrderStatus(
     if (normalized === "delivered") {
       await createEarningsForDeliveredOrder(next);
     }
+  }
+  if (normalized === "out_for_delivery" || normalized === "delivered") {
+    await sendDeliveryNoticeOnce(next, normalized, updatedBy);
   }
   return next;
 }
@@ -1252,7 +1269,33 @@ export async function updateDriverLocation(
   return next;
 }
 
-export async function saveProofPhoto(id: string, proofPhotoUrl: string, updatedBy: string) {
+/** Wrap-step photo: stored on the order, delivery status untouched. */
+export async function saveWrapPhoto(id: string, photoUrl: string, updatedBy: string) {
+  const current = await getOrderById(id);
+  if (!current) return null;
+  let storedUrl = photoUrl;
+  if (photoUrl.trim().startsWith("data:")) {
+    const uploaded = await uploadProofDataUrl(photoUrl, id);
+    if (uploaded) storedUrl = uploaded;
+  }
+  const at = nowIso();
+  return patchOrderFields(id, { wrapPhotoUrl: storedUrl, wrapPhotoAt: at }, updatedBy);
+}
+
+export type DeliveryProofInput = {
+  lat?: number;
+  lng?: number;
+  accuracyM?: number;
+  handedTo?: string;
+};
+
+/** Delivery-step photo (door / hand-off): marks the order delivered with time + GPS. */
+export async function saveProofPhoto(
+  id: string,
+  proofPhotoUrl: string,
+  updatedBy: string,
+  proof: DeliveryProofInput = {},
+) {
   const current = await getOrderById(id);
   if (!current) return null;
   let storedUrl = proofPhotoUrl;
@@ -1260,11 +1303,21 @@ export async function saveProofPhoto(id: string, proofPhotoUrl: string, updatedB
     const uploaded = await uploadProofDataUrl(proofPhotoUrl, id);
     if (uploaded) storedUrl = uploaded;
   }
+  const at = nowIso();
+  const deliveryProof: NonNullable<Order["deliveryProof"]> = { at, by: updatedBy };
+  if (Number.isFinite(proof.lat) && Number.isFinite(proof.lng)) {
+    deliveryProof.lat = proof.lat;
+    deliveryProof.lng = proof.lng;
+    if (Number.isFinite(proof.accuracyM)) deliveryProof.accuracyM = Math.round(proof.accuracyM as number);
+  }
+  if (proof.handedTo?.trim()) deliveryProof.handedTo = proof.handedTo.trim().slice(0, 80);
   const next: Order = {
     ...current,
     proofPhotoUrl: storedUrl,
+    deliveryProof,
+    deliveredAt: at,
     status: "delivered",
-    updatedAt: nowIso(),
+    updatedAt: at,
     updatedBy,
   };
   const ocProof = getOrdersCollection();
@@ -1281,6 +1334,7 @@ export async function saveProofPhoto(id: string, proofPhotoUrl: string, updatedB
     await writeFallbackPayload(assignStopSequences(updated));
     await createEarningsForDeliveredOrder(next);
   }
+  await sendDeliveryNoticeOnce(next, "delivered", updatedBy);
   return next;
 }
 

@@ -176,6 +176,44 @@ export function thankYouEmailHtml(input: {
   return wrap(inner);
 }
 
+export function deliveryStatusEmailHtml(input: {
+  customerName: string;
+  customerGreetingName?: string;
+  orderRef: string;
+  recipientFirstName: string;
+  kind: "out_for_delivery" | "delivered";
+  trackUrl: string;
+  photoUrl?: string;
+}): string {
+  const heading = input.kind === "delivered" ? "Your gift was delivered" : "Your gift is on its way";
+  const line =
+    input.kind === "delivered"
+      ? `Your wrapped gift for ${escapeHtml(input.recipientFirstName)} was delivered.`
+      : `Your wrapped gift for ${escapeHtml(input.recipientFirstName)} is out for delivery today.`;
+  const photo =
+    input.kind === "delivered" && input.photoUrl
+      ? `<tr><td style="padding:0 28px 8px;"><img src="${escapeAttr(input.photoUrl)}" alt="Photo of the delivered gift" style="display:block;width:100%;max-width:544px;border-radius:10px;border:1px solid #e8e4dc;"/></td></tr>`
+      : "";
+  const inner = `
+<tr><td style="background:#0c0638;padding:24px;text-align:center;">
+  <img src="${escapeAttr(WRRAPD_LOGO_URL)}" alt="Wrrapd" style="display:block;margin:0 auto 6px;max-width:150px;height:auto;"/>
+  <h1 style="margin:10px 0 0;font-size:24px;font-weight:600;color:#fff;line-height:1.2;">${heading}</h1>
+</td></tr>
+<tr><td style="padding:24px 28px 12px;">
+  <p style="margin:0;font-size:16px;color:#1a1a1a;">Hi ${escapeHtml(firstName(input.customerGreetingName || input.customerName))},</p>
+  <p style="margin:12px 0 0;font-size:15px;line-height:1.55;color:#333;">${line}</p>
+  <p style="margin:8px 0 0;font-size:13px;color:#6b6560;">Order ${escapeHtml(input.orderRef)}</p>
+</td></tr>
+${photo}
+<tr><td style="padding:12px 28px 28px;">
+  <a href="${escapeAttr(input.trackUrl)}" style="display:inline-block;background:#f6b933;color:#0f0351;font-weight:700;font-size:14px;padding:12px 20px;border-radius:8px;text-decoration:none;">${input.kind === "delivered" ? "View delivery photo" : "Track your gift"}</a>
+</td></tr>
+<tr><td style="padding:0 28px 28px;font-size:13px;color:#777;line-height:1.5;">
+  With gratitude,<br/><span style="color:#0c0638;font-weight:600;">Team Wrrapd</span>
+</td></tr>`;
+  return wrap(inner);
+}
+
 export function deliveryChoiceEmailHtml(input: {
   customerName: string;
   customerGreetingName?: string;

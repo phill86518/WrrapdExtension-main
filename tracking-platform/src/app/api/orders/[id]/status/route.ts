@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
+import { getSession, isContractorRole } from "@/lib/auth";
 import { updateOrderStatus } from "@/lib/data";
 import { loadOrderIfMutable } from "@/lib/order-access";
 
@@ -27,9 +27,13 @@ export async function POST(
     status = String(formData.get("status") || status);
   }
 
+  if (status === "delivered" && isContractorRole(session.role) && !allowed.proofPhotoUrl) {
+    return NextResponse.json({ error: "Take the delivery photo first." }, { status: 400 });
+  }
+
   const result = await updateOrderStatus(
     id,
-    status as "scheduled" | "assigned" | "en_route" | "delivered" | "cancelled",
+    status as "scheduled" | "assigned" | "en_route" | "out_for_delivery" | "delivered" | "cancelled",
     session.userId,
   );
   if (!result) return NextResponse.json({ error: "Order not found" }, { status: 404 });

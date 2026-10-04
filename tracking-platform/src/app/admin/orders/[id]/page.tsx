@@ -464,6 +464,40 @@ export default async function AdminOrderDetailPage({
             height={360}
             className="mt-2 h-64 rounded object-cover"
           />
+          {order.deliveryProof ? (
+            <p className="mt-2 text-xs text-slate-600">
+              {new Date(order.deliveryProof.at).toLocaleString("en-US", { timeZone: "America/New_York" })} ET
+              {order.deliveryProof.handedTo ? ` · Handed to ${order.deliveryProof.handedTo}` : ""}
+              {order.deliveryProof.lat != null && order.deliveryProof.lng != null ? (
+                <>
+                  {" · "}
+                  <a
+                    className="underline"
+                    target="_blank"
+                    rel="noreferrer"
+                    href={`https://maps.google.com/?q=${order.deliveryProof.lat},${order.deliveryProof.lng}`}
+                  >
+                    GPS ±{order.deliveryProof.accuracyM ?? "?"} m
+                  </a>
+                </>
+              ) : (
+                " · No GPS"
+              )}
+            </p>
+          ) : null}
+        </section>
+      ) : null}
+
+      {order.wrapPhotoUrl ? (
+        <section className="mt-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <h2 className="font-semibold text-slate-900">Wrapped gift</h2>
+          <Image
+            src={order.wrapPhotoUrl}
+            alt="Wrapped gift"
+            width={720}
+            height={360}
+            className="mt-2 h-64 rounded object-cover"
+          />
         </section>
       ) : null}
     </div>
