@@ -1,0 +1,53 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  pay-server:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend/wrrapd-api-repo/WrrapdServer
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: node --check server.js
+      - run: node --test test/
+
+  command-center:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tracking-platform
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: tracking-platform/package-lock.json
+      - run: npm ci
+      - run: npx tsc --noEmit -p .
+
+  extension:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: extension
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: extension/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - run: npm run check:bestbuy-fixture
+      - run: npm run check:kohls-fixture

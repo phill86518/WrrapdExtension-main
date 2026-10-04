@@ -10,5 +10,8 @@
     "nodemailer": "^6.9.16",
     "qrcode": "^1.5.4",
     "stripe": "^17.4.0"
+  },
+  "scripts": {
+    "test": "node --test test/"
   }
 }

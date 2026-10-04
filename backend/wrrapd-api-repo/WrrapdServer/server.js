@@ -4226,6 +4226,19 @@ app.get('/health', (req, res) => {
     });
 });
 
+/** Uptime-checked: 503 when scripts/backup-orders.sh has not succeeded in the last 3 hours. */
+app.get('/health/backup', (req, res) => {
+    let last = null;
+    try {
+        last = fs.readFileSync(path.join(__dirname, 'logs', 'last-backup-ok.txt'), 'utf8').trim();
+    } catch (_) {
+        last = null;
+    }
+    const ageMs = last ? Date.now() - Date.parse(last) : Infinity;
+    const ok = Number.isFinite(ageMs) && ageMs < 3 * 60 * 60 * 1000;
+    res.status(ok ? 200 : 503).json({ status: ok ? 'ok' : 'stale', lastBackupAt: last });
+});
+
 // Handle uncaught errors to prevent server crashes
 process.on('uncaughtException', (error) => {
     console.error('[SERVER] Uncaught Exception:', error);
