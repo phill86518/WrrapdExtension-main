@@ -33,6 +33,11 @@ const MODULE_GROUPS = [
         body: "Active, scheduled, delinquent, and past gifts.",
       },
       {
+        href: "/admin/intake",
+        title: "Hub intake",
+        body: "Check in arriving boxes by packing-slip order number.",
+      },
+      {
         href: "/admin/orders/calendar",
         title: "Calendar",
         body: "Every order by Eastern calendar day.",

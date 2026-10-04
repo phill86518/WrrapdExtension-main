@@ -25,6 +25,7 @@ import {
     showWrrapdManualDeliverGuidanceOverlay,
     removeWrrapdManualDeliverGuidanceOverlay,
 } from './lib/loading-ui.js';
+import { rememberPaidOrderForCapture } from '../shared/retailer-order-capture.js';
 import { wrrapdTrace } from './lib/wrrapd-debug.js';
 import { getValueByLabel, getElementValue, generateOrderNumber } from './lib/order-helpers.js';
 import { ensureWrrapdSummaryAlignment } from './lib/summary-alignment.js';
@@ -12521,6 +12522,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                                 const result = await response.json();
                                 if (result.success) {
                                     console.log('Payment and order processed successfully.');
+                                    void rememberPaidOrderForCapture('amazon', orderNumber);
                                     if (result.warnings && result.warnings.length) {
                                         console.warn(
                                             '[Wrrapd process-payment] warnings (e.g. Mailgun):',

@@ -234,7 +234,7 @@ export default async function AdminApplicationsPage({
         Three separate hire tracks from apply.wrrapd.com — WrapStars (<code>/apply</code>),{" "}
         {JOYRIDER_LABEL_PLURAL} (<code>/drive/driver-apply</code>), and {WRAPRIDER_LABEL_PLURAL} (
         <code>/wraprider/apply</code>) — each with its own application record and its own
-        pros.wrrapd.com onboarding portal. Approve to email login credentials. Activated{" "}
+        apply.wrrapd.com onboarding portal. Approve to email login credentials. Activated{" "}
         {WRAPRIDER_LABEL_PLURAL} live on their own{" "}
         <Link href="/admin/wrapriders" className="font-medium text-amber-800 underline">
           WrapRiders

@@ -58,6 +58,13 @@ export type FlowerPickupLocation = {
   imageUrl?: string;
 };
 
+export type HubReceipt = {
+  status: "received" | "partial" | "damaged" | "missing";
+  at: string;
+  by: string;
+  note?: string;
+};
+
 export type OrderLineItem = {
   asin?: string;
   title?: string;
@@ -168,6 +175,10 @@ export type Order = {
    * UI should prefer this for labels when present; `id` remains the system key for APIs.
    */
   externalOrderId?: string;
+  /** Retailer's own order number(s) from the confirmation page, the shopper, or the hub — matches the packing slip. */
+  retailerOrderNumbers?: string[];
+  /** Hub check-in of the retailer package(s) for this order. */
+  hubReceipt?: HubReceipt;
   /** Per WrapStar + calendar day (ET): optimized stop order (1 = first after leaving depot) */
   stopSequence?: number;
   customerEmail?: string;

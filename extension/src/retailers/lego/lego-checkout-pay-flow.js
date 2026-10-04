@@ -1,3 +1,4 @@
+import { rememberPaidOrderForCapture } from "../../shared/retailer-order-capture.js";
 import {
   WRRAPD_HUB_ADDRESS_OBJECT,
   WRRAPD_HUB_SHIP_LINES,
@@ -681,6 +682,7 @@ async function postLegoProcessPayment(eventData) {
       if (result.warnings && result.warnings.length) {
         console.warn("[LEGO pay] process-payment warnings:", result.warnings);
       }
+      void rememberPaidOrderForCapture("lego", orderNumber);
       return true;
     }
     console.error("[LEGO pay] process-payment failed:", result.error || response.status);

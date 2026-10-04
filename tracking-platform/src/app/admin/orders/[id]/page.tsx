@@ -489,6 +489,26 @@ export default async function AdminOrderDetailPage({
         </section>
       ) : null}
 
+      <section className="mt-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <h2 className="font-semibold text-slate-900">Hub package</h2>
+        <p className="mt-1 text-sm text-slate-700">
+          Retailer order #:{" "}
+          {order.retailerOrderNumbers?.length ? (
+            <strong className="font-mono">{order.retailerOrderNumbers.join(", ")}</strong>
+          ) : (
+            <span className="text-amber-700">not captured</span>
+          )}
+        </p>
+        <p className="text-sm text-slate-700">
+          {order.hubReceipt
+            ? `${order.hubReceipt.status} · ${new Date(order.hubReceipt.at).toLocaleString("en-US", { timeZone: "America/New_York" })} · ${order.hubReceipt.by}${order.hubReceipt.note ? ` · ${order.hubReceipt.note}` : ""}`
+            : "Not received at the hub yet."}
+        </p>
+        <Link href="/admin/intake" className="mt-1 inline-block text-sm text-blue-800 underline">
+          Hub intake
+        </Link>
+      </section>
+
       {order.externalOrderId?.trim() ? (
         <AdminRefundPanel
           orderId={order.id}

@@ -1,8 +1,10 @@
+import { startRetailerOrderCapture } from "../shared/retailer-order-capture.js";
 import { exposeBuildTag } from "../shared/store-build.js";
 import { initBestbuyRetailerBootstrap } from "../retailers/bestbuy/retailer-bootstrap.js";
 import { initBestbuyCheckoutPayFlow } from "../retailers/bestbuy/bestbuy-checkout.js";
 
 if (typeof window !== "undefined") {
+  startRetailerOrderCapture("bestbuy");
   // Injection proof — fires before any scraping. `window.__WRRAPD_HEARTBEAT__["Best Buy"]`
   // confirms the content script injected and its version even in store builds.
   try {

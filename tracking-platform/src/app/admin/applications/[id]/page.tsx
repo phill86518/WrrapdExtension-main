@@ -537,10 +537,10 @@ export default async function AdminApplicationDetailPage({
           <h2 className="font-semibold">
             Onboarding progress (
             {isDriver
-              ? "pros.wrrapd.com/driver-onboarding"
+              ? "apply.wrrapd.com/driver-onboarding"
               : isWraprider
-                ? "pros.wrrapd.com/wraprider-onboarding"
-                : "pros.wrrapd.com/onboarding"}
+                ? "apply.wrrapd.com/wraprider-onboarding"
+                : "apply.wrrapd.com/onboarding"}
             )
           </h2>
           {app.status === "approved" && app.inviteExpiresAt ? (

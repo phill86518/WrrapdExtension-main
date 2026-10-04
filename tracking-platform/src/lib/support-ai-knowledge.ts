@@ -33,7 +33,7 @@ HELP
 export const CONTRACTOR_FACTS = `
 ROLES
 - WrapStars gift-wrap orders. JoyRiders deliver wrapped gifts. WrapRiders do both: wrap and deliver.
-- The contractor portal is pros.wrrapd.com. Applications are at apply.wrrapd.com.
+- Applications and contractor onboarding are at apply.wrrapd.com.
 
 WRAPPING
 - Record the wrap video for every gift (table view, good light) in the portal shift recorder.

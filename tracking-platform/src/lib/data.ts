@@ -44,7 +44,7 @@ const ORDERS_FILE_VERSION = 4;
 
 /** Lazy so a bad FIREBASE_PRIVATE_KEY does not 500 every route at import time. */
 let ordersFirestoreRef: CollectionReference | null | undefined;
-function getOrdersCollection(): CollectionReference | null {
+export function getOrdersCollection(): CollectionReference | null {
   if (ordersFirestoreRef !== undefined) return ordersFirestoreRef;
   try {
     const db = getFirestoreDb();

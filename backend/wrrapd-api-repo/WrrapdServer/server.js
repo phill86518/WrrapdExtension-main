@@ -101,6 +101,7 @@ for (const p of [
     '/create-checkout-session',
     '/process-payment',
     '/api/proxy-tracking-ingest',
+    '/api/retailer-order-ref',
 ]) {
     app.post(p, payLimiter);
 }
@@ -2530,6 +2531,51 @@ function recordRefundOnOrder(orderNumber, refund) {
     fs.renameSync(tmp, hit.fp);
     return hit.data;
 }
+
+/**
+ * Extension → retailer order number read from the retailer's confirmation page after Pay Wrrapd.
+ * Body: { orderNumber, retailerOrderNumber, retailer }. The Wrrapd order must be paid and recent.
+ */
+app.post('/api/retailer-order-ref', async (req, res) => {
+    if (!req.isApiDomain) return res.status(403).json({ error: 'Forbidden' });
+    const body = req.body || {};
+    const orderNumber = String(body.orderNumber || '').trim();
+    const ref = String(body.retailerOrderNumber || '').trim().replace(/^#/, '').replace(/\s+/g, '').toUpperCase();
+    if (!/^[A-Z0-9][A-Z0-9-]{3,39}$/.test(ref)) return res.status(400).json({ error: 'Invalid retailer order number' });
+    const paid = findRecentPaidOrderByNumber(orderNumber);
+    if (!paid) return res.status(404).json({ error: 'Order not found' });
+    const hit = findOrderFileByNumber(orderNumber);
+    if (!hit) return res.status(404).json({ error: 'Order not found' });
+    const refs = Array.isArray(hit.data.retailerOrderNumbers) ? hit.data.retailerOrderNumbers : [];
+    if (!refs.includes(ref) && refs.length < 6) {
+        refs.push(ref);
+        hit.data.retailerOrderNumbers = refs;
+        const tmp = `${hit.fp}.tmp`;
+        fs.writeFileSync(tmp, JSON.stringify(hit.data, null, 2));
+        fs.renameSync(tmp, hit.fp);
+    }
+    const ingestKey = process.env.INGEST_API_KEY;
+    const ingestUrl = process.env.TRACKING_INGEST_URL || 'http://127.0.0.1:3000/api/orders/ingest';
+    let forwarded = false;
+    if (ingestKey) {
+        try {
+            const resp = await fetch(ingestUrl.replace(/\/ingest\/?$/, '/retailer-ref'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${ingestKey}` },
+                body: JSON.stringify({
+                    externalOrderId: orderNumber,
+                    retailerOrderNumber: ref,
+                    source: `extension:${String(body.retailer || '').slice(0, 20)}`,
+                }),
+            });
+            forwarded = resp.ok;
+            if (!resp.ok) console.warn('[retailer-order-ref] tracking forward', resp.status, orderNumber);
+        } catch (e) {
+            console.warn('[retailer-order-ref] tracking forward failed', e && e.message);
+        }
+    }
+    return res.json({ ok: true, forwarded });
+});
 
 /**
  * Command Center → refund a paid order (Helcim or legacy Stripe). Auth: X-Wrrapd-Internal-Key.

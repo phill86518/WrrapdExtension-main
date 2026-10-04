@@ -15,6 +15,7 @@
  *
  * The retailer adapter supplies DOM-specific hooks via `config`.
  */
+import { rememberPaidOrderForCapture } from "./retailer-order-capture.js";
 import {
   readGiftChoicesSaved,
   readGiftLegalTermsAccepted,
@@ -623,7 +624,10 @@ async function postProcessPayment(config, eventData) {
       }),
     });
     const result = await resp.json().catch(() => ({}));
-    if (resp.ok && result.success) return true;
+    if (resp.ok && result.success) {
+      void rememberPaidOrderForCapture(config.retailerName, orderNumber);
+      return true;
+    }
     console.error("[Wrrapd pay] process-payment failed:", result.error || resp.status);
     return false;
   } catch (e) {

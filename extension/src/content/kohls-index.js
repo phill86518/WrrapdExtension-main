@@ -1,8 +1,10 @@
+import { startRetailerOrderCapture } from "../shared/retailer-order-capture.js";
 import { exposeBuildTag } from "../shared/store-build.js";
 import { initKohlsRetailerBootstrap } from "../retailers/kohls/retailer-bootstrap.js";
 import { initKohlsCheckoutPayFlow } from "../retailers/kohls/kohls-checkout.js";
 
 if (typeof window !== "undefined") {
+  startRetailerOrderCapture("kohls");
   // Injection proof — fires the instant content-kohls.js is evaluated, BEFORE any page scraping
   // that could throw. The window global survives store builds (`--drop:console`), so on any
   // kohls.com tab `window.__WRRAPD_HEARTBEAT__["Kohl's"]` tells you the script injected and which

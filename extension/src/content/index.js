@@ -13,10 +13,12 @@ import { initWrrapdCheckoutDebug } from './lib/wrrapd-debug.js';
 import './lib/amazon-account-signed-in.js';
 import './lib/amazon-delivery-hints.js';
 import './content-legacy.js';
+import { startRetailerOrderCapture } from '../shared/retailer-order-capture.js';
 
 /** Dev-only build tag — omitted from Chrome Web Store bundles. */
 export const WRRAPD_CONTENT_BUILD_TAG = '2026-06-15-store-prep-v1';
 if (typeof window !== 'undefined') {
+    startRetailerOrderCapture('amazon');
     exposeBuildTag('__WRRAPD_CONTENT_BUILD_TAG__', WRRAPD_CONTENT_BUILD_TAG);
     if (!IS_STORE_BUILD) {
         initWrrapdCheckoutDebug({ tag: WRRAPD_CONTENT_BUILD_TAG });

@@ -8,6 +8,7 @@ import {
   TrackingLiveExperience,
   type TrackingPublicSnapshot,
 } from "@/components/tracking-live-experience";
+import { TrackRetailerRefForm } from "@/components/track-retailer-ref-form";
 
 export const dynamic = "force-dynamic";
 
@@ -52,6 +53,13 @@ export default async function TrackingPage({
         createdAtIso={order.createdAt}
         initial={initial}
       />
+      {!order.retailerOrderNumbers?.length &&
+      !order.hubReceipt &&
+      ["pending", "scheduled", "assigned", "accepted"].includes(order.status) ? (
+        <div className="mx-auto max-w-4xl">
+          <TrackRetailerRefForm token={token} retailerLabel={order.retailer || "store"} />
+        </div>
+      ) : null}
     </main>
   );
 }
