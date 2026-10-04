@@ -21,7 +21,8 @@ SRC = ROOT / "docs" / "LAUNCH-READINESS-JAX-BETA-2026-10.md"
 # "LAUNCH-READINESS-JAX-BETA-2026-10 202610032138.pdf" (Roger relies on it after git pull).
 CREATED = datetime.now(ZoneInfo("America/New_York"))
 OUT = ROOT / "docs" / f"LAUNCH-READINESS-JAX-BETA-2026-10 {CREATED:%Y%m%d%H%M}.pdf"
-ICON = ROOT / "wordpress" / "icons" / "favicon" / "icon-focus-512.png"
+# Same file as live wrrapd.com wp-content/mu-plugins/icons/favicon/android-chrome-512x512.png
+ICON = ROOT / "wordpress" / "icons" / "favicon" / "android-chrome-512x512.png"
 
 NAVY = "#0c0638"
 GOLD = "#f6b933"

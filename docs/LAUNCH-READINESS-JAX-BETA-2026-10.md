@@ -1,6 +1,6 @@
 # Wrrapd — Jacksonville / Duval Beta Launch: Master Readiness Review
 
-**Prepared:** Saturday, October 3, 2026 (updated the same evening with Roger's answers)
+**Prepared:** Saturday, October 3, 2026 (updated the same evening with Roger's answers, then again late Oct 3 after the fixes in §1.3 and §1.4 shipped)
 **For:** Roger (founder, first WrapRider, Flight Director)
 **Scope:** Whole business and whole application — shopper site, Chrome extension, pay server, Command Center, contractor apps, hire funnel, hub/PO Box logistics, hardware, data/media architecture, legal, insurance, tax.
 **Status:** INTERNAL. Never publish any part of this document. It contains pay mechanics, routing, and security findings.
@@ -37,7 +37,7 @@ Status legend used everywhere:
 
 ## 1.1 Bottom line
 
-**We are not "Go" today, but we are close on software and far on operations.** The shopper-facing software (extension 3.0.12, pay page, Duval ZIP gating, Command Center order flow, wrap shift recording, contractor pay) is substantially built — roughly **75% ready for a controlled beta**. The physical operation (package receiving at the hub, matching boxes to orders, delivery proof, exception handling, hardware kits, insurance) is roughly **35% ready**. The gap is mostly not code; it is process, configuration, and a handful of specific bugs.
+**We are not "Go" today, but we are close on software and far on operations.** *(Late Oct 3: after the fixes in §1.3 and §1.4, software is about 85% and operations about 50%; the remaining REDs are insurance (R9), the delivery-cost decision (R10), and carrier test shipments for R1.)* The shopper-facing software (extension 3.0.12, pay page, Duval ZIP gating, Command Center order flow, wrap shift recording, contractor pay) is substantially built — roughly **75% ready for a controlled beta**. The physical operation (package receiving at the hub, matching boxes to orders, delivery proof, exception handling, hardware kits, insurance) is roughly **35% ready**. The gap is mostly not code; it is process, configuration, and a handful of specific bugs.
 
 Realistic path:
 
@@ -84,12 +84,12 @@ Launching publicly before Black Friday matters: it gives us ~3 calm weeks to fin
 | # | Blocker | Why it matters | Fix size |
 |---|---|---|---|
 | R1 | **Hub address is a USPS PO Box** (`PO BOX 26067, JACKSONVILLE FL 32226-6067` hard-coded in `extension/src/shared/wrrapd-hub.js`) | UPS, FedEx, and Amazon Logistics generally **cannot deliver to a USPS PO Box**. Many Amazon items, and most Best Buy / Walmart items, will refuse a PO Box or bounce. This could break most orders on day one. **Decision (Oct 3): use USPS Street Addressing** — **150 BUSCH DR #26067, JACKSONVILLE FL 32218** — coded in extension 3.0.12 on Oct 3. Remaining risk: Amazon Logistics drivers may still refuse a post office; prove with HUB-01/HUB-02 test shipments from every carrier, all 10 retailers. | Code done Oct 3 (3.0.12). Remaining: Chrome Web Store publish + carrier test shipments |
-| R2 | **No way to match an arriving box to its Wrrapd order.** Every package is addressed to "WRRAPD INC" and the extension does not capture the retailer order number or tracking number after checkout. **Decision (Oct 3): no Wrrapd code on the label — match by packing slip.** That makes capturing the **retailer order number** on each retailer's confirmation page mandatory, because the packing slip's order number is the only reliable key. Retailers that ship without a slip need a fallback (item + shopper name + expected date) and a quarantine shelf. | At the hub, Roger opens 6 identical-looking Amazon boxes and cannot reliably tell whose gift is whose. Wrong gift to wrong giftee is the worst possible failure. | Medium: order-number capture for 10 retailers + intake search by order number |
-| R3 | **Proof photos, wrap videos, and QR labels very likely fail to upload in production.** Cloud Run has no `FIREBASE_STORAGE_BUCKET` / `GCS_BACKUP_BUCKET`, and Firebase is initialized without a default bucket (`tracking-platform/src/lib/firebase-admin.ts` L151–160). The code then silently returns `null`. | No chain-of-custody evidence, no delivery photo, no labels for couriers. | Small (1 env var + bucket + test) |
-| R4 | **No hub inbound "receive package" step** in Command Center | We cannot see "package arrived / not arrived / damaged" per order, so we cannot catch the shopper who paid Wrrapd but never completed the retailer order. | Medium — manual sheet acceptable for beta |
-| R5 | **Delivery proof UI missing for the courier/WrapRider delivery step** — the API exists but the courier screen only has Start / Mark delivered. Separately, the WrapStar "wrap photo" path marks the order **delivered**. | Wrong status sent to shoppers; no door photo; disputes become unwinnable. | Small–medium |
-| R6 | **Orders' system of record is JSON files on one VM** with no scheduled backup (one tarball from Jun 19). Firestore has **point-in-time recovery OFF** and **delete protection OFF**, and no backup schedule. | One bad disk, a mistaken delete, or a bad deploy loses paid orders. | Small (configuration) |
-| R7 | **`pros.wrrapd.com` is still "Under construction"**; `pros.wrrapd.com/wraprider-onboarding/` returns **404**. | Every approval email sends new contractors to a dead link. Not blocking Roger, blocking every hire. | Small (DNS / SiteGround) |
+| R2 → YELLOW | **Fixed in code Oct 3 (ext 3.0.13 + Command Center):** the extension reads the retailer order number on each retailer's confirmation page after Pay Wrrapd; the shopper can also add it on the tracking page; Command Center **Hub intake** searches by packing-slip number, Wrrapd number, names, or item. Remaining: publish 3.0.13 to the Chrome Web Store and confirm capture on one real order per retailer (Kohl's, Nordstrom, Sephora, Ulta use the generic "Order #" reader). Original finding: **No way to match an arriving box to its Wrrapd order.** Every package is addressed to "WRRAPD INC" and the extension does not capture the retailer order number or tracking number after checkout. **Decision (Oct 3): no Wrrapd code on the label — match by packing slip.** That makes capturing the **retailer order number** on each retailer's confirmation page mandatory, because the packing slip's order number is the only reliable key. Retailers that ship without a slip need a fallback (item + shopper name + expected date) and a quarantine shelf. | At the hub, Roger opens 6 identical-looking Amazon boxes and cannot reliably tell whose gift is whose. Wrong gift to wrong giftee is the worst possible failure. | Medium: order-number capture for 10 retailers + intake search by order number |
+| R3 → GREEN | **Fixed Oct 3:** private bucket `gs://wrrapd-proofs` linked to Firebase, `FIREBASE_STORAGE_BUCKET` set on Cloud Run, token download links, videos to Nearline at 30 days, recording capped near 1 Mbps. Remaining: one real photo + video upload during dress rehearsal. Original finding: **Proof photos, wrap videos, and QR labels very likely fail to upload in production.** Cloud Run has no `FIREBASE_STORAGE_BUCKET` / `GCS_BACKUP_BUCKET`, and Firebase is initialized without a default bucket (`tracking-platform/src/lib/firebase-admin.ts` L151–160). The code then silently returns `null`. | No chain-of-custody evidence, no delivery photo, no labels for couriers. | Small (1 env var + bucket + test) |
+| R4 → GREEN | **Fixed Oct 3:** Command Center → **Hub intake** marks each order Received / Partly received / Damaged / Missing (note required for damaged or partial), shows who and when, and lists every order still waiting for a box. Original finding: **No hub inbound "receive package" step** in Command Center | We cannot see "package arrived / not arrived / damaged" per order, so we cannot catch the shopper who paid Wrrapd but never completed the retailer order. | Medium — manual sheet acceptable for beta |
+| R5 → GREEN | **Fixed Oct 3:** courier/WrapRider screen has Start delivery → camera photo + GPS + "Handed to" name (required over $100) → Mark delivered; delivered cannot be set without the photo; the wrap photo no longer marks the order delivered. Original finding: **Delivery proof UI missing for the courier/WrapRider delivery step** — the API exists but the courier screen only has Start / Mark delivered. Separately, the WrapStar "wrap photo" path marks the order **delivered**. | Wrong status sent to shoppers; no door photo; disputes become unwinnable. | Small–medium |
+| R6 → GREEN | **Fixed Oct 3:** VM orders + customers back up hourly (full nightly) to `gs://wrrapd-ops-backups`; `/health/backup` alerts if the last backup is over 3 hours old; Firestore point-in-time recovery + delete protection ON, daily backup kept 14 days. Remaining: one practice restore (DATA checklist). Original finding: **Orders' system of record is JSON files on one VM** with no scheduled backup (one tarball from Jun 19). Firestore has **point-in-time recovery OFF** and **delete protection OFF**, and no backup schedule. | One bad disk, a mistaken delete, or a bad deploy loses paid orders. | Small (configuration) |
+| R7 → YELLOW | **Oct 3:** all three onboarding pages work on `apply.wrrapd.com` (`/onboarding/`, `/wraprider-onboarding/`, `/driver-onboarding/`), and Command Center now shows those links. **Roger, one step:** in SiteGround File Manager for the **apply** site, add `define( 'WRRAPD_WRAPSTARS_PROS_HOST', 'apply.wrrapd.com' );` to `wp-config.php` above "That's all, stop editing" — approval emails then link to `apply`. (Alternative: make `pros.wrrapd.com` a parked domain of the apply site.) Original finding: **`pros.wrrapd.com` is still "Under construction"**; `pros.wrrapd.com/wraprider-onboarding/` returns **404**. | Every approval email sends new contractors to a dead link. Not blocking Roger, blocking every hire. | Small (DNS / SiteGround) |
 | R8 → YELLOW | **Florida sales tax**: checkout charges 7.5% sales tax. **Update (Oct 3): Wrrapd is registered with Florida DOR.** | Remaining: confirm filing frequency is set up and that the taxable lines (wrap, design, box, flowers) match what the CPA advised. | CPA confirmation |
 | R9 | **Insurance — none bound as of Oct 3.** Holding customers' goods (bailee), driving for business, and handling payments needs coverage. Agreements conflict (WrapStar agreement says no insurance mandate; onboarding demands a $1M general liability + inland marine certificate). | One crash or one stolen box of electronics without coverage could end the company. **Now the top non-software blocker.** | Broker call this week |
 | R10 | **Unit economics of "free final delivery"** (see §2.3) | At the placeholder $30/hour contractor rate, a single-gift delivery costs far more than the $6.99 wrap fee. Fine while Roger delivers; not fine once hires do. | Business decision |
@@ -98,15 +98,15 @@ Launching publicly before Black Friday matters: it gives us ~3 calm weeks to fin
 
 - Stripe customer-side key is still **test mode** on the pay server; Helcim is the live customer processor. Stripe Connect for contractor payouts on Cloud Run **is live** (`sk_live_`). Decide: Helcim-only for customers, and remove/disable the Stripe customer checkout routes so nobody can reach a test-mode path.
 - **Server does not enforce Duval ZIP at charge time** — only the browser does. Add a server check.
-- **$0.99 loose-item box charge is dropped server-side**: `sanitizePricingCartFromRequest` (`WrrapdServer/lib/wrrapd-pricing.js` L499–524) strips title/category/`needs_gift_box`, so the server price usually omits the box. Shopper sees $0.99 more than is charged (undercharge, not overcharge — safe but wrong).
-- `/create-checkout-session` trusts the client total; `/api/proxy-tracking-ingest` has no shared secret; CORS allows any origin; no rate limiting.
-- No refunds in code; no webhooks. Refunds are manual in Helcim — needs an SOP.
-- Command Center admin is one shared password, no MFA.
-- No customer "out for delivery" / "delivered" notifications.
-- Only one Cloud Scheduler job exists (weekly payouts). The WrapStar **8 am morning sheet** cron and the **expire delivery preferences** job are not scheduled.
-- Privacy policy (last updated Apr 23, 2026) says Amazon-only and Stripe; product is now 10 retailers and Helcim. Chrome Web Store review risk.
-- No monitoring, alerting, or uptime checks anywhere. No automated tests.
-- VM firewall: SSH (22) and Windows remote desktop (3389) open to the whole internet.
+- **FIXED Oct 3 — $0.99 loose-item box:** the server pricing cart now keeps item title, category, and `needs_gift_box`, so the box is charged.
+- **FIXED Oct 3 — pay server lockdown:** `/create-checkout-session` prices only from the server cart (no client-total fallback); `/api/proxy-tracking-ingest` accepts only paid orders (or the internal key) and takes email/phone from the saved order; CORS allowlist (`*.wrrapd.com`, the 10 retailers, the extension); per-IP rate limits (payment routes 20 per 10 minutes); nginx now passes the real shopper IP.
+- **FIXED Oct 3 — refunds:** Command Center order page → **Refund** (full or partial, reason, cannot double-refund) through Helcim, or Stripe for older orders; shopper gets a refund email; Helcim webhook endpoint verifies signatures and records dashboard refunds. SOP: `docs/REFUNDS-SOP.md`. **Roger:** add the Helcim webhook and send the verifier token (see SOP); one live $1 charge + refund (PAY-01).
+- **FIXED Oct 3 — admin logins:** Command Center → **Set up admin login**: personal email + password + authenticator-app code, lockout after 8 wrong tries, codes cannot be reused. The first saved login retires the shared password (and signs out shared-password sessions). **Roger:** set yours up first. The contractor-app test seats (admin@wrrapd.com) still use the shared password.
+- **FIXED Oct 3 — delivery messages:** shoppers get a text + email for "out for delivery" and "delivered" (with the door photo), once each; STOP opt-outs respected.
+- **FIXED Oct 3 — schedulers:** `wrrapd-wrapstar-morning` (7:45 am ET daily) and `wrrapd-expire-delivery-preferences` (hourly) added next to weekly payouts.
+- **FIXED Oct 3 — privacy policy:** updated for all 10 retailers, Helcim, texts/calls, proof of delivery, and Chrome Web Store Limited Use (live, "Last updated: October 3, 2026").
+- **FIXED Oct 3 — monitoring + tests:** uptime checks on wrrapd.com, api health, pay checkout, apply, Command Center, and order-backup freshness, emailing admin@wrrapd.com; GitHub Actions runs pay-server tests (pricing, rate limits, Helcim webhook), Command Center type-check, and the extension build + fixture checks on every push. **Roger:** send a mobile number to add text alerts.
+- **PARTLY FIXED Oct 3 — VM firewall:** remote desktop (3389) closed. SSH (22) is key-only but still open to the internet (about 2,700 bot attempts a day, all failing). **Roger:** choose "your home IP + Google IAP only" or leave key-only.
 - Hire funnel: background check (Checkr), identity (Persona), and BoldSign W-9 are placeholders or need keys for JoyRider/WrapRider tracks.
 
 ## 1.5 Overall readiness scorecard
@@ -117,18 +117,18 @@ Launching publicly before Black Friday matters: it gives us ~3 calm weeks to fin
 | 2 | Chrome extension — Amazon | 80% | YELLOW |
 | 3 | Chrome extension — 9 other retailers | 55% | YELLOW |
 | 4 | Payments & pricing integrity | 65% | YELLOW (R8) |
-| 5 | Pay/API server (VM) | 60% | RED (R6) |
-| 6 | Hub & PO Box inbound logistics | 15% | **RED (R1, R2, R4)** |
-| 7 | Command Center — orders & allocation | 80% | GREEN/YELLOW |
-| 8 | Wrap operations & video proof | 65% | RED (R3) |
-| 9 | Delivery & proof of delivery | 40% | **RED (R5)** |
-| 10 | Customer communications & service | 55% | YELLOW |
-| 11 | Contractor hiring & onboarding | 55% | RED for hires (R7), GREEN for Roger |
+| 5 | Pay/API server (VM) | 85% | GREEN/YELLOW (backups, lockdown, refunds done Oct 3) |
+| 6 | Hub & PO Box inbound logistics | 55% | YELLOW (R1 carrier tests; R2 publish 3.0.13 + real-order checks) |
+| 7 | Command Center — orders & allocation | 85% | GREEN/YELLOW |
+| 8 | Wrap operations & video proof | 80% | GREEN/YELLOW (R3 fixed; prove one upload) |
+| 9 | Delivery & proof of delivery | 80% | GREEN/YELLOW (R5 fixed; prove on a rehearsal) |
+| 10 | Customer communications & service | 75% | GREEN/YELLOW |
+| 11 | Contractor hiring & onboarding | 65% | YELLOW (R7: one wp-config line), GREEN for Roger |
 | 12 | Contractor pay, payouts, 1099 | 75% | YELLOW |
 | 13 | Hardware, kits & supplies | 10% | GREY → must exist before first hire |
-| 14 | Data, media & architecture | 55% | RED (R6) |
-| 15 | Security & privacy | 50% | YELLOW |
-| 16 | Monitoring, backup & disaster recovery | 15% | RED |
+| 14 | Data, media & architecture | 80% | GREEN/YELLOW (R6 fixed; practice a restore) |
+| 15 | Security & privacy | 75% | YELLOW (Roger: admin login, SSH choice) |
+| 16 | Monitoring, backup & disaster recovery | 70% | YELLOW (email alerts live; add SMS) |
 | 17 | Legal, insurance, tax, licensing | 45% | **RED (R9 insurance)**; sales tax registered |
 | 18 | Flowers add-on | 50% | **RED** — ON for beta; live prices failing (System 17) |
 
@@ -202,7 +202,7 @@ Each system lists subsystems, current state, risks, and what must happen before 
 | "How it works" / service area / FAQ | YELLOW | Must say plainly: Jacksonville/Duval only during beta, delivery the day after the retailer delivers |
 | SEO/sitemap | GREEN | Sitemap MU present |
 
-## System 2 — Chrome extension (3.0.12 submitted Oct 3; 3.0.11 live)
+## System 2 — Chrome extension (3.0.13 built Oct 3 with retailer order # capture; 3.0.12 submitted Oct 3; 3.0.11 live)
 
 | Subsystem | State | Notes |
 |---|---|---|
@@ -212,7 +212,7 @@ Each system lists subsystems, current state, risks, and what must happen before 
 | Duval ZIP gate | GREEN | Allowlist API; out-of-area copy is polite |
 | Giftee address capture | YELLOW | Amazon scrapes before swap; others collect on pay page. Verify full street + phone reach Command Center |
 | Hub address | **YELLOW (R1)** | Street Addressing coded in 3.0.12; carrier tests pending |
-| Retailer order # / tracking capture | **RED (R2)** | Not captured |
+| Retailer order # / tracking capture | YELLOW (R2) | Order # read on confirmation pages in 3.0.13 (not yet published); tracking # not captured |
 | International Amazon | GREY | Permissions requested but not used — remove to simplify CWS review |
 | Install heartbeat | GREEN | Already in `background.js` (the "parked" rule is out of date) |
 | Automated tests | GREY | Two fixture scripts only |
@@ -226,7 +226,7 @@ Each system lists subsystems, current state, risks, and what must happen before 
 | Stripe customer checkout routes | YELLOW | Test key; `create-checkout-session` trusts client total — disable or lock down |
 | Idempotency / double charge | GREEN | Helcim idempotency key + "already processed" scan |
 | Charged but order save failed | RED-ish | Money captured, client sees 500, no auto-refund. Need alert + SOP |
-| Refunds | GREY | Manual in Helcim dashboard; write SOP and log refunds on the order |
+| Refunds | GREEN/YELLOW | Built Oct 3: Command Center refund (Helcim / Stripe), logged on the order, shopper email, webhook; SOP `docs/REFUNDS-SOP.md`. Prove with PAY-01 live $1 refund |
 | Chargebacks / disputes | GREY | Need evidence packet (wrap video, door photo, timestamps) — depends on R3/R5 |
 | Sales tax | **RED (R8)** | 7.5% charged; registration/taxability unconfirmed |
 | PCI scope | GREEN | Helcim.js hosted fields → minimal scope; confirm no card data in logs |
@@ -236,7 +236,7 @@ Each system lists subsystems, current state, risks, and what must happen before 
 | Subsystem | State | Notes |
 |---|---|---|
 | Process health | YELLOW | Online, but **153 lifetime restarts** — review why |
-| Orders persistence | **RED (R6)** | `orders/order_*.json` on local disk, no locks, no scheduled backup |
+| Orders persistence | GREEN/YELLOW (R6) | `orders/order_*.json` on local disk; hourly + nightly backup to GCS since Oct 3; atomic writes for refunds / order refs |
 | Tracking ingest to Command Center | YELLOW | If ingest fails, order exists only on the VM. Need retry + alert |
 | Emails | YELLOW | SMTP via `mail.wrrapd.com`; no giftee email (correct for surprise gifts) |
 | Logs | YELLOW | Full order data (addresses, messages) logged to PM2 logs — trim PII |
@@ -251,8 +251,8 @@ Each system lists subsystems, current state, risks, and what must happen before 
 |---|---|---|
 | Receiving address accepting **all carriers** | **RED (R1)** | See §1.3 and Exhibit B Q1 |
 | Daily pickup routine | GREY | No SOP: who, when, keys, counter pickup for oversized, Sunday gaps |
-| Package → order matching | **RED (R2)** | No retailer order # / tracking # / shopper name on label |
-| Intake check-in (scan, photo, condition) | **RED (R4)** | No module; use a manual sheet for beta |
+| Package → order matching | YELLOW (R2) | Hub intake search by packing-slip #, Wrrapd #, shopper, giftee, item |
+| Intake check-in (scan, photo, condition) | GREEN (R4) | Hub intake: received / partly / damaged / missing + note; no photo yet (wrap video covers condition) |
 | Damage / wrong item / missing item | GREY | Agreements require reporting within 24 h; no SOP |
 | "Expected but not arrived" report | GREY | Needed to catch abandoned retailer checkouts and carrier delays |
 | Secure storage at micro-hub | ? | Locked, climate-OK, camera? (Exhibit B) |
@@ -270,7 +270,7 @@ Each system lists subsystems, current state, risks, and what must happen before 
 | Reports + daily CSV | GREEN | |
 | Pricing + ZIP admin (proxies pay server) | GREEN | |
 | Daily capacity cap / pause switch | GREY | Not built; needed for beta (CAPCOM) |
-| Inbound package module | **RED (R4)** | |
+| Inbound package module | GREEN (R4) | `/admin/intake` |
 | Admin auth | YELLOW | Shared password, no MFA, no per-person audit trail |
 | Firestore rules / indexes | YELLOW | Server uses Admin SDK so rules are bypassed; indexes not versioned |
 
@@ -280,11 +280,11 @@ Each system lists subsystems, current state, risks, and what must happen before 
 |---|---|---|
 | Morning sheet email with codes (8 am) | YELLOW | Code exists; **no Cloud Scheduler job** found |
 | Shift start/end, scan-to-open | GREEN | |
-| Wrap video (MediaRecorder, live chunks, 500 MB/segment) | **RED (R3)** | Storage bucket not configured; bitrate not capped (~1 GB/hour at browser default) |
-| QR label generation for courier | **RED (R3)** | Same bucket dependency |
+| Wrap video (MediaRecorder, live chunks, 500 MB/segment) | GREEN/YELLOW (R3) | Bucket `wrrapd-proofs` live; 720p, about 0.9 Mbps (~400 MB/hour) |
+| QR label generation for courier | GREEN/YELLOW (R3) | Bucket live; prove one label in rehearsal |
 | Label printing | ? | Which printer? (Exhibit B) |
 | Pace (12 gifts/hour) and pay cap | GREEN | |
-| "Wrap photo" marks order delivered | **RED (R5)** | Status conflation bug |
+| "Wrap photo" marks order delivered | GREEN (R5) | Fixed Oct 3: wrap photo is saved separately |
 | Per-item barcodes / completeness scan | GREY | Documented as later; SOPs and legal already describe it — align wording or build |
 | Live wrap viewing | GREY | Deferred (fine) |
 
@@ -294,7 +294,7 @@ Each system lists subsystems, current state, risks, and what must happen before 
 |---|---|---|
 | Courier/WrapRider deliveries list, Start / Mark delivered | GREEN | |
 | QR scan shows address, flowers, instructions | GREEN | HMAC-signed |
-| Door photo capture in courier/WrapRider UI | **RED (R5)** | API exists, no UI |
+| Door photo capture in courier/WrapRider UI | GREEN (R5) | Camera + GPS + handed-to name; required before delivered |
 | GPS on delivery | YELLOW | API exists, courier UI doesn't send it |
 | Route planning / ordering stops | GREY | Use Google Maps multi-stop manually for beta |
 | Giftee not home / safe drop / reattempt / refused | GREY | No SOP, no status |
@@ -322,7 +322,7 @@ Each system lists subsystems, current state, risks, and what must happen before 
 |---|---|---|
 | Apply forms (3 tracks) + fit score | GREEN | `apply.wrrapd.com` live (`2026-09-23-onboarding-step-pager`) |
 | Command Center review / interview / move stream / activate | GREEN | |
-| `pros.wrrapd.com` onboarding host | **RED (R7)** | Under construction; onboarding URLs 404 |
+| `pros.wrrapd.com` onboarding host | YELLOW (R7) | Onboarding works on apply.wrrapd.com; one wp-config line for approval emails (§1.3) |
 | Clickwrap agreements | GREEN | Entity name "Wrrapd, Inc." vs LLC still flagged in memos — confirm |
 | BoldSign W-9 | YELLOW | Needs template IDs/keys in hire `wp-config.php` |
 | Background check | YELLOW | Consent captured; no vendor. For beta: run manually via a vendor account (e.g., Checkr) — drivers need an MVR |
