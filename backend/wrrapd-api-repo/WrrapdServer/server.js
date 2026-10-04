@@ -160,6 +160,50 @@ app.get('/checkout/:retailer', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'checkout.html'));
 });
 
+/**
+ * Helcim webhook (configure in Helcim → Integrations → Webhooks, URL https://api.wrrapd.com/api/helcim-webhook,
+ * verifier token in HELCIM_WEBHOOK_VERIFIER_TOKEN). Refunds or reversals made in the Helcim dashboard are
+ * recorded on the matching order so Command Center and support see them.
+ */
+app.post('/api/helcim-webhook', express.raw({ type: '*/*', limit: '64kb' }), async (req, res) => {
+    const rawBody = Buffer.isBuffer(req.body) ? req.body.toString('utf8') : '';
+    const verified = helcim.verifyWebhook({
+        rawBody,
+        webhookId: req.get('webhook-id'),
+        webhookTimestamp: req.get('webhook-timestamp'),
+        webhookSignature: req.get('webhook-signature'),
+    });
+    if (!verified) return res.status(401).json({ error: 'Bad signature' });
+    let evt = {};
+    try {
+        evt = JSON.parse(rawBody);
+    } catch (_) {
+        return res.status(400).json({ error: 'Bad JSON' });
+    }
+    res.status(200).json({ ok: true });
+    try {
+        if (evt.type !== 'cardTransaction' || !evt.id) return;
+        const txn = await helcim.getTransaction(evt.id);
+        const d = (txn && txn.data) || {};
+        const type = String(d.type || '').toLowerCase();
+        fs.appendFileSync(
+            path.join(__dirname, 'logs', 'helcim-webhooks.jsonl'),
+            `${JSON.stringify({ at: new Date().toISOString(), id: evt.id, type, status: d.status, amount: d.amount, invoiceNumber: d.invoiceNumber || null })}\n`,
+        );
+        if ((type === 'refund' || type === 'reverse') && helcim.isApproved(d.status) && d.invoiceNumber) {
+            recordRefundOnOrder(String(d.invoiceNumber), {
+                id: String(d.transactionId || evt.id),
+                amountCents: Math.round(Number(d.amount) * 100),
+                kind: type,
+                reason: 'Helcim dashboard',
+                by: 'helcim-webhook',
+            });
+        }
+    } catch (e) {
+        console.error('[helcim-webhook]', e && e.message ? e.message : e);
+    }
+});
+
 // Increase body size limit to handle large base64 images (50MB)
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
@@ -2452,6 +2496,104 @@ app.post('/api/internal/delete-orders', (req, res) => {
         if (!matched) results.push({ orderNumber, status: 'not_found' });
     }
     return res.status(200).json({ ok: true, results });
+});
+
+function findOrderFileByNumber(orderNumber) {
+    const want = String(orderNumber || '').trim();
+    const ordersDir = path.join(__dirname, 'orders');
+    if (!want || !fs.existsSync(ordersDir)) return null;
+    for (const file of fs.readdirSync(ordersDir)) {
+        if (!file.startsWith('order_') || !file.endsWith('.json')) continue;
+        const fp = path.join(ordersDir, file);
+        try {
+            const data = JSON.parse(fs.readFileSync(fp, 'utf8'));
+            if (data && String(data.orderNumber || '').trim() === want) return { fp, data };
+        } catch (_) {
+            // ignore malformed historical files
+        }
+    }
+    return null;
+}
+
+/** Append a refund to the order JSON (idempotent on refund id). Returns the updated order or null. */
+function recordRefundOnOrder(orderNumber, refund) {
+    const hit = findOrderFileByNumber(orderNumber);
+    if (!hit) return null;
+    const refunds = Array.isArray(hit.data.refunds) ? hit.data.refunds : [];
+    if (!refunds.some((r) => r && r.id === refund.id)) {
+        refunds.push({ ...refund, at: refund.at || new Date().toISOString() });
+    }
+    hit.data.refunds = refunds;
+    hit.data.refundedCents = refunds.reduce((s, r) => s + (Number(r.amountCents) || 0), 0);
+    const tmp = `${hit.fp}.tmp`;
+    fs.writeFileSync(tmp, JSON.stringify(hit.data, null, 2));
+    fs.renameSync(tmp, hit.fp);
+    return hit.data;
+}
+
+/**
+ * Command Center → refund a paid order (Helcim or legacy Stripe). Auth: X-Wrrapd-Internal-Key.
+ * Body: { orderNumber, amountCents?, reason, requestedBy, requestId }. Omit amountCents for the full remaining amount.
+ */
+app.post('/api/internal/refund-order', async (req, res) => {
+    if (!req.isApiDomain) return res.status(403).json({ error: 'Forbidden' });
+    if (!internalClaimSecretMatches(String(req.get('x-wrrapd-internal-key') || ''))) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+    const body = req.body && typeof req.body === 'object' ? req.body : {};
+    const orderNumber = String(body.orderNumber || '').trim();
+    const reason = String(body.reason || '').trim().slice(0, 300);
+    const requestedBy = String(body.requestedBy || '').trim().slice(0, 120) || 'command-center';
+    const requestId = String(body.requestId || '').trim().slice(0, 80);
+    if (!orderNumber || !reason || !requestId) {
+        return res.status(400).json({ error: 'orderNumber, reason and requestId are required' });
+    }
+    const hit = findOrderFileByNumber(orderNumber);
+    const paymentId = hit && hit.data.payment && String(hit.data.payment.id || '');
+    const paidCents = hit && hit.data.payment ? Math.round(Number(hit.data.payment.amount) || 0) : 0;
+    if (!hit || !paymentId || paidCents <= 0) return res.status(404).json({ error: 'Paid order not found' });
+    const already = Math.round(Number(hit.data.refundedCents) || 0);
+    const remaining = paidCents - already;
+    const amountCents = body.amountCents == null ? remaining : Math.round(Number(body.amountCents));
+    if (!Number.isFinite(amountCents) || amountCents <= 0 || amountCents > remaining) {
+        return res.status(400).json({ error: `Refund must be between $0.01 and $${(remaining / 100).toFixed(2)}` });
+    }
+    const full = amountCents === remaining && already === 0;
+    try {
+        let refundId;
+        let kind;
+        if (paymentId.startsWith('pi_')) {
+            const r = await stripe.refunds.create(
+                { payment_intent: paymentId, amount: amountCents, metadata: { orderNumber, reason: reason.slice(0, 200) } },
+                { idempotencyKey: `wrrapd-refund-${requestId}` },
+            );
+            refundId = r.id;
+            kind = 'stripe-refund';
+        } else {
+            if (!helcim.enabled()) return res.status(503).json({ error: 'Helcim is not configured' });
+            const r = await helcim.refund({ transactionId: paymentId, amountCents, ipAddress: '34.58.136.32', requestId, full });
+            const d = r.data || {};
+            if (!r.ok || !helcim.isApproved(d.status) || !d.transactionId) {
+                console.warn('[refund-order] Helcim refused', { orderNumber, http: r.status, kind: r.kind });
+                return res.status(402).json({ error: helcim.errorText(d) });
+            }
+            refundId = String(d.transactionId);
+            kind = r.kind;
+        }
+        const updated = recordRefundOnOrder(orderNumber, { id: refundId, amountCents, kind, reason, by: requestedBy });
+        console.log(`[refund-order] ${orderNumber} ${kind} ${amountCents}c by ${requestedBy}`);
+        return res.status(200).json({
+            ok: true,
+            refundId,
+            kind,
+            amountCents,
+            refundedCents: updated ? updated.refundedCents : already + amountCents,
+            paidCents,
+        });
+    } catch (e) {
+        console.error('[refund-order]', e && e.message ? e.message : e);
+        return res.status(500).json({ error: 'Refund failed. Nothing was refunded — try again or use the Helcim dashboard.' });
+    }
 });
 
 app.post('/extension-heartbeat', (req, res) => {

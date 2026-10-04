@@ -97,6 +97,64 @@ async function getTransaction(transactionId) {
     return helcimFetch(`/card-transactions/${id}`);
 }
 
+function uuidFrom(seed) {
+    const hex = crypto.createHash('sha256').update(String(seed)).digest('hex');
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
+}
+
+/**
+ * Refund a settled purchase. Helcim only refunds settled batches; a purchase still in the
+ * open batch must be reversed instead (full amount only), so a full refund falls back to reverse.
+ * `requestId` makes retries of the same refund request idempotent.
+ */
+async function refund({ transactionId, amountCents, ipAddress, requestId, full }) {
+    const id = Number(String(transactionId || '').replace(/\D/g, ''));
+    if (!id) return { ok: false, status: 400, data: { errors: ['Missing transaction'] } };
+    const ip = String(ipAddress || '').trim() || '0.0.0.0';
+    const r = await helcimFetch('/payment/refund', {
+        method: 'POST',
+        body: {
+            originalTransactionId: id,
+            amount: Math.round(Number(amountCents)) / 100,
+            ipAddress: ip,
+            ecommerce: true,
+        },
+        idempotencyKey: uuidFrom(`refund|${requestId}`),
+    });
+    if (r.ok || !full) return { ...r, kind: 'refund' };
+    const why = errorText(r.data).toLowerCase();
+    if (!/settle|batch|open/.test(why)) return { ...r, kind: 'refund' };
+    const rev = await helcimFetch('/payment/reverse', {
+        method: 'POST',
+        body: { cardTransactionId: id, ipAddress: ip, ecommerce: true },
+        idempotencyKey: uuidFrom(`reverse|${requestId}`),
+    });
+    return { ...rev, kind: 'reverse' };
+}
+
+/**
+ * Helcim webhook signature: base64(HMAC-SHA256(base64decode(verifierToken), `${id}.${timestamp}.${body}`)).
+ * Header may hold several space-separated "v1,<sig>" values.
+ */
+function verifyWebhook({ rawBody, webhookId, webhookTimestamp, webhookSignature }) {
+    const token = String(process.env.HELCIM_WEBHOOK_VERIFIER_TOKEN || '').trim();
+    if (!token || !rawBody || !webhookId || !webhookTimestamp || !webhookSignature) return false;
+    const ts = Number(webhookTimestamp);
+    if (!Number.isFinite(ts) || Math.abs(Date.now() / 1000 - ts) > 600) return false;
+    const expected = crypto
+        .createHmac('sha256', Buffer.from(token, 'base64'))
+        .update(`${webhookId}.${webhookTimestamp}.${rawBody}`)
+        .digest('base64');
+    return String(webhookSignature)
+        .split(' ')
+        .map((part) => part.replace(/^v\d+,/, ''))
+        .some((sig) => {
+            const a = Buffer.from(sig);
+            const b = Buffer.from(expected);
+            return a.length === b.length && crypto.timingSafeEqual(a, b);
+        });
+}
+
 module.exports = {
     apiToken,
     jsToken,
@@ -105,4 +163,6 @@ module.exports = {
     errorText,
     purchase,
     getTransaction,
+    refund,
+    verifyWebhook,
 };

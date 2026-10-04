@@ -214,6 +214,28 @@ ${photo}
   return wrap(inner);
 }
 
+export function refundIssuedEmailHtml(input: {
+  customerName: string;
+  customerGreetingName?: string;
+  orderRef: string;
+  amountCents: number;
+}): string {
+  const amount = `$${(Math.max(0, input.amountCents) / 100).toFixed(2)}`;
+  const inner = `
+<tr><td style="background:#0c0638;padding:24px;text-align:center;">
+  <img src="${escapeAttr(WRRAPD_LOGO_URL)}" alt="Wrrapd" style="display:block;margin:0 auto 6px;max-width:150px;height:auto;"/>
+  <h1 style="margin:10px 0 0;font-size:24px;font-weight:600;color:#fff;line-height:1.2;">Your refund is on its way</h1>
+</td></tr>
+<tr><td style="padding:24px 28px 12px;">
+  <p style="margin:0;font-size:16px;color:#1a1a1a;">Hi ${escapeHtml(firstName(input.customerGreetingName || input.customerName))},</p>
+  <p style="margin:12px 0 0;font-size:15px;line-height:1.55;color:#333;">We refunded ${amount} to your card for order ${escapeHtml(input.orderRef)}. It usually shows on your statement within 5&ndash;10 business days.</p>
+</td></tr>
+<tr><td style="padding:12px 28px 28px;font-size:13px;color:#777;line-height:1.5;">
+  With gratitude,<br/><span style="color:#0c0638;font-weight:600;">Team Wrrapd</span>
+</td></tr>`;
+  return wrap(inner);
+}
+
 export function deliveryChoiceEmailHtml(input: {
   customerName: string;
   customerGreetingName?: string;

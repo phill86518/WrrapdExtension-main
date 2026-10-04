@@ -3,6 +3,7 @@ import { SameOriginLogoutLink } from "@/components/same-origin-logout-link";
 import { PasswordField } from "@/components/password-field";
 import { WrrapdLogo } from "@/components/wrrapd-logo";
 import { getSession } from "@/lib/auth";
+import { adminAccountsEnrolled } from "@/lib/admin-accounts";
 import { listAllocationQueue, listOrdersByStatus } from "@/lib/data";
 import { ensureDemoStaffing } from "@/lib/demo-staffing";
 import { safeAdminNextPath } from "@/lib/url";
@@ -134,6 +135,7 @@ export default async function AdminPage({
   const session = await getSession();
 
   if (!session || session.role !== "admin") {
+    const enrolled = await adminAccountsEnrolled().catch(() => false);
     return (
       <main className="mx-auto min-h-screen max-w-xl px-4 py-16">
         <WrrapdLogo className="h-10 w-auto max-w-[180px] object-contain object-left" />
@@ -146,18 +148,39 @@ export default async function AdminPage({
         ) : null}
         {query.error === "1" && (
           <p className="mt-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
-            Incorrect admin password. It must match{" "}
-            <code className="rounded bg-red-100 px-1">APP_ADMIN_PASSWORD</code> on Cloud Run.
+            {enrolled ? "Email, password, or code is incorrect." : "Incorrect admin password."}
           </p>
         )}
-        <p className="mt-3 text-sm text-slate-500">
-          Sign in with the <strong>admin</strong> password from{" "}
-          <code className="rounded bg-slate-100 px-1">APP_ADMIN_PASSWORD</code> (default{" "}
-          <code className="rounded bg-slate-100 px-1">admin123</code> if unset).
-        </p>
+        {query.error === "locked" && (
+          <p className="mt-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+            Too many tries. Wait 15 minutes and try again.
+          </p>
+        )}
         <form action="/api/admin/login" method="post" className="mt-6 space-y-4 rounded-lg border p-6">
           {nextPath ? <input type="hidden" name="next" value={nextPath} /> : null}
-          <PasswordField name="password" placeholder="Admin password" autoComplete="current-password" />
+          {enrolled ? (
+            <input
+              name="email"
+              type="email"
+              required
+              placeholder="Email"
+              autoComplete="username"
+              className="w-full rounded border px-3 py-2"
+            />
+          ) : null}
+          <PasswordField name="password" placeholder={enrolled ? "Password" : "Admin password"} autoComplete="current-password" />
+          {enrolled ? (
+            <input
+              name="code"
+              required
+              inputMode="numeric"
+              pattern="[0-9 ]{6,7}"
+              maxLength={7}
+              placeholder="6-digit code from your authenticator app"
+              autoComplete="one-time-code"
+              className="w-full rounded border px-3 py-2"
+            />
+          ) : null}
           <button className="rounded bg-black px-4 py-2 text-white" type="submit">
             Sign in
           </button>
@@ -200,8 +223,22 @@ export default async function AdminPage({
     );
   }
 
+  const adminEnrolled = await adminAccountsEnrolled().catch(() => false);
+
   return (
     <div className="space-y-8">
+      {!adminEnrolled ? (
+        <div className="rounded-2xl border-2 border-amber-400 bg-amber-50 p-5 text-amber-950">
+          <p className="font-semibold">Command Center still uses the shared password.</p>
+          <p className="mt-1 text-sm">
+            Set up your personal login with an authenticator code. After the first one is saved, the shared
+            password stops working here.
+          </p>
+          <Link href="/admin/security" className="mt-3 inline-block rounded-lg bg-[#0f172a] px-4 py-2 text-sm font-bold text-white">
+            Set up admin login
+          </Link>
+        </div>
+      ) : null}
       <div className="rounded-2xl border-2 border-[#1a2744]/40 bg-[#faf8f4] p-6 shadow-xl shadow-[#0f172a]/20 ring-1 ring-white/40">
         <WrrapdLogo className="h-10 w-auto max-w-[180px] object-contain object-left" />
         <h1 className="mt-2 text-3xl font-bold tracking-tight text-[#0f172a]">WrapStars Command Center</h1>
@@ -239,8 +276,8 @@ export default async function AdminPage({
       <section className="rounded-2xl border border-[#1a2744]/25 bg-white p-5 shadow-sm">
         <h2 className="text-sm font-bold uppercase tracking-[0.14em] text-[#1a2744]">Portal test logins</h2>
         <p className="mt-2 text-sm text-[#2d4a38]">
-          Same email on every app: <strong>admin@wrrapd.com</strong>. Same password as this Command
-          Center. Saving an email on a roster row does not create a login.
+          Same email on every app: <strong>admin@wrrapd.com</strong>. Password is the shared admin
+          password (APP_ADMIN_PASSWORD), not your personal Command Center login. Saving an email on a roster row does not create a login.
         </p>
         <ul className="mt-3 space-y-1 text-sm text-[#0f172a]">
           <li>

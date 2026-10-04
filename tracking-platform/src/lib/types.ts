@@ -138,6 +138,15 @@ export type Order = {
   wrapPhotoUrl?: string;
   wrapPhotoAt?: string;
   deliveredAt?: string;
+  refunds?: Array<{
+    id: string;
+    amountCents: number;
+    kind: string;
+    reason: string;
+    by: string;
+    at: string;
+  }>;
+  refundedCents?: number;
   /** Shopper status messages already sent (each fires once). */
   notifiedOutForDeliveryAt?: string;
   notifiedDeliveredAt?: string;

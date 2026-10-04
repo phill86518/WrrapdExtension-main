@@ -22,13 +22,15 @@ export const FOUNDER_PORTAL_SEATS = {
 } as const;
 
 export function founderPortalPassword(): string {
-  return (process.env.APP_ADMIN_PASSWORD || "admin123").trim();
+  return (process.env.APP_ADMIN_PASSWORD || "").trim();
 }
 
 export function isFounderPortalLogin(email: string, password: string): boolean {
+  const expected = founderPortalPassword();
   return (
+    Boolean(expected) &&
     email.trim().toLowerCase() === FOUNDER_PORTAL_EMAIL &&
-    password.trim() === founderPortalPassword()
+    password.trim() === expected
   );
 }
 

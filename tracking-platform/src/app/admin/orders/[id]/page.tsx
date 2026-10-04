@@ -20,6 +20,7 @@ import {
 } from "@/lib/metros";
 import { formatUsdCents } from "@/lib/finance";
 import { giftBoxForLine } from "@/lib/gift-box";
+import { AdminRefundPanel } from "@/components/admin-refund-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -486,6 +487,14 @@ export default async function AdminOrderDetailPage({
             </p>
           ) : null}
         </section>
+      ) : null}
+
+      {order.externalOrderId?.trim() ? (
+        <AdminRefundPanel
+          orderId={order.id}
+          orderNumber={order.externalOrderId.trim()}
+          refunds={order.refunds || []}
+        />
       ) : null}
 
       {order.wrapPhotoUrl ? (

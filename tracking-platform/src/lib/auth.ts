@@ -75,13 +75,25 @@ export async function clearSessionCookie() {
   cookieStore.delete(SESSION_COOKIE_NAME);
 }
 
+let sharedAdminRetired = false;
+
+/** Shared-password admin sessions stop working once a personal admin login exists. */
+async function sharedAdminLoginRetired(): Promise<boolean> {
+  if (sharedAdminRetired) return true;
+  const { adminAccountsEnrolled } = await import("./admin-accounts");
+  sharedAdminRetired = await adminAccountsEnrolled().catch(() => false);
+  return sharedAdminRetired;
+}
+
 export async function getSession(): Promise<Session | null> {
   const cookieStore = await cookies();
   const raw = cookieStore.get(SESSION_COOKIE_NAME)?.value;
   if (!raw) return null;
   try {
     const { payload } = await jwtVerify(raw, secret, { clockTolerance: 300 });
-    return payload as Session;
+    const session = payload as Session;
+    if (session.role === "admin" && session.userId === "admin-1" && (await sharedAdminLoginRetired())) return null;
+    return session;
   } catch {
     return null;
   }

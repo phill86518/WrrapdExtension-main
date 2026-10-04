@@ -27,7 +27,14 @@ export const TRACKING_COLLECTIONS = {
   contractorRecords: "tracking_contractor_records",
   /** One document per outside phone number (shopper or applicant). */
   serviceThreads: "tracking_service_threads",
+  /** Personal Command Center admin logins (password + authenticator code). Doc id = lowercased email. */
+  adminUsers: "tracking_admin_users",
 } as const;
+
+export function trackingAdminUsersCollection(): CollectionReference | null {
+  const db = getFirestoreDb();
+  return db ? db.collection(TRACKING_COLLECTIONS.adminUsers) : null;
+}
 
 export function trackingContractorRecordsCollection(): CollectionReference | null {
   const db = getFirestoreDb();
