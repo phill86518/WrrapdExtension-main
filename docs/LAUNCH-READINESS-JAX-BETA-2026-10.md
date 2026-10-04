@@ -37,7 +37,7 @@ Status legend used everywhere:
 
 ## 1.1 Bottom line
 
-**We are not "Go" today, but we are close on software and far on operations.** *(Late Oct 3: after the fixes in §1.3 and §1.4, software is about 85% and operations about 50%; the remaining REDs are insurance (R9), the delivery-cost decision (R10), and carrier test shipments for R1. Sales tax (R8) is closed.)* The shopper-facing software (extension 3.0.12, pay page, Duval ZIP gating, Command Center order flow, wrap shift recording, contractor pay) is substantially built — roughly **75% ready for a controlled beta**. The physical operation (package receiving at the hub, matching boxes to orders, delivery proof, exception handling, hardware kits, insurance) is roughly **35% ready**. The gap is mostly not code; it is process, configuration, and a handful of specific bugs.
+**We are not "Go" today, but software is nearly there and operations are about halfway.** *(Updated Oct 4.)* The shopper-facing software (extension, pay page, Duval ZIP gating, Command Center order flow, hub intake, refunds, admin logins with codes, wrap shift recording, delivery photos, contractor pay, backups, monitoring) is about **85% ready** for a controlled beta. The physical operation is about **55% ready**: the tools for receiving packages at the hub, wrapping on video, and proving delivery are built, but none has been run end to end with a real order yet, and insurance (R9), the delivery-cost decision (R10), carrier test shipments (R1), hardware kits, and the first hires are still open. Sales tax (R8) is closed. Operations reaches 80%+ after the first dress rehearsals pass.
 
 Realistic path:
 
