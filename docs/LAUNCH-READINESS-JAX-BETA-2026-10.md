@@ -100,7 +100,7 @@ Launching publicly before Black Friday matters: it gives us ~3 calm weeks to fin
 - **Server does not enforce Duval ZIP at charge time** — only the browser does. Add a server check.
 - **FIXED Oct 3 — $0.99 loose-item box:** the server pricing cart now keeps item title, category, and `needs_gift_box`, so the box is charged.
 - **FIXED Oct 3 — pay server lockdown:** `/create-checkout-session` prices only from the server cart (no client-total fallback); `/api/proxy-tracking-ingest` accepts only paid orders (or the internal key) and takes email/phone from the saved order; CORS allowlist (`*.wrrapd.com`, the 10 retailers, the extension); per-IP rate limits (payment routes 20 per 10 minutes); nginx now passes the real shopper IP.
-- **FIXED Oct 3 — refunds:** Command Center order page → **Refund** (full or partial, reason, cannot double-refund) through Helcim, or Stripe for older orders; shopper gets a refund email; Helcim webhook endpoint verifies signatures and records dashboard refunds. SOP: `docs/REFUNDS-SOP.md`. **Roger:** add the Helcim webhook and send the verifier token (see SOP); one live $1 charge + refund (PAY-01).
+- **FIXED Oct 3 — refunds:** Command Center order page → **Refund** (full or partial, reason, cannot double-refund) through Helcim, or Stripe for older orders; shopper gets a refund email; Helcim webhook endpoint verifies signatures and records dashboard refunds. **Oct 4: webhook connected in Helcim (`https://api.wrrapd.com/api/payment-events`), verifier token installed, signed test accepted and forged test rejected.** SOP: `docs/REFUNDS-SOP.md`. **Roger:** add the Helcim webhook and send the verifier token (see SOP); one live $1 charge + refund (PAY-01).
 - **FIXED Oct 3 — admin logins:** Command Center → **Set up admin login**: personal email + password + authenticator-app code, lockout after 8 wrong tries, codes cannot be reused. The first saved login retires the shared password (and signs out shared-password sessions). **Roger:** set yours up first. The contractor-app test seats (admin@wrrapd.com) still use the shared password.
 - **FIXED Oct 3 — delivery messages:** shoppers get a text + email for "out for delivery" and "delivered" (with the door photo), once each; STOP opt-outs respected.
 - **FIXED Oct 3 — schedulers:** `wrrapd-wrapstar-morning` (7:45 am ET daily) and `wrrapd-expire-delivery-preferences` (hourly) added next to weekly payouts.
@@ -226,7 +226,7 @@ Each system lists subsystems, current state, risks, and what must happen before 
 | Stripe customer checkout routes | YELLOW | Test key; `create-checkout-session` trusts client total — disable or lock down |
 | Idempotency / double charge | GREEN | Helcim idempotency key + "already processed" scan |
 | Charged but order save failed | RED-ish | Money captured, client sees 500, no auto-refund. Need alert + SOP |
-| Refunds | GREEN/YELLOW | Built Oct 3: Command Center refund (Helcim / Stripe), logged on the order, shopper email, webhook; SOP `docs/REFUNDS-SOP.md`. Prove with PAY-01 live $1 refund |
+| Refunds | GREEN/YELLOW | Built Oct 3: Command Center refund (Helcim / Stripe), logged on the order, shopper email, webhook; SOP `docs/REFUNDS-SOP.md`. Webhook connected Oct 4. Prove with PAY-01 live $1 refund (Roger, Oct 4) |
 | Chargebacks / disputes | GREY | Need evidence packet (wrap video, door photo, timestamps) — depends on R3/R5 |
 | Sales tax | GREEN | Registered; annual filer; 7.5% charged on Wrrapd lines |
 | PCI scope | GREEN | Helcim.js hosted fields → minimal scope; confirm no card data in logs |
