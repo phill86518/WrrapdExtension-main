@@ -133,7 +133,7 @@ Launching publicly before Black Friday matters: it gives us ~3 calm weeks to fin
 | 15 | Security & privacy | 75% | YELLOW (Roger: admin login, SSH choice) |
 | 16 | Monitoring, backup & disaster recovery | 70% | YELLOW (email alerts live; add SMS) |
 | 17 | Legal, insurance, tax, licensing | 45% | **RED (R9 insurance)**; sales tax registered |
-| 18 | Flowers add-on | 50% | **RED** — ON for beta; live prices failing (System 17) |
+| 18 | Flowers add-on | 75% | **YELLOW** — ON for beta; live Publix prices working Oct 4, Sam's still stored (System 17) |
 
 ---
 
@@ -407,10 +407,11 @@ Audit on Oct 3 (live calls for 32218, 32256, 32207, 32250):
 | Check | Finding | Status |
 |---|---|---|
 | Markup | Was **$1.49**, now **$2.00** (`scrape.js` `MARKUP`) — deployed Oct 3 | GREEN |
-| Live Publix prices | **Every request returns HTTP 403** (Publix blocks our server) | **RED** |
-| Live Sam's Club prices | **Bot wall (HTTP 412)** every request | **RED** |
+| Live Publix prices | Old product API returns 403. **Fixed Oct 4:** Publix's store locator finds the real nearest store number, then that store's floral shelf prices and photos are read from publix.com (cached 6 h). Live for 32218, 32256, 32207, 32250, 32210, 32277 | GREEN |
+| Live Sam's Club prices | **Bot wall (HTTP 412)** every request, same for Walmart. Stored Member's Mark list still used | YELLOW — Publix covers every tested ZIP |
+| Target / Big Y | Target's online catalog has no fresh-cut bouquets (artificial and LEGO only), so it stays paused. Big Y has no Florida stores | Note |
 | What shoppers actually saw | Hard-coded backup price lists (Publix $9.99–$16.49, Sam's $12.98–$19.76) **labeled as "live"**, no photo disclaimer | Fixed Oct 3: now labeled `fallback_prices` with "Actual bouquets might differ slightly from the photos shown." |
-| Backup Publix photos | Point at **Sam's Club** image URLs | YELLOW — replace with real Publix photos or Wrrapd's own |
+| Backup Publix photos | Pointed at Sam's Club image URLs. **Fixed Oct 4:** real Publix products and photos | GREEN |
 | Offer survives server restart | Was memory-only → "price mismatch or expired" at payment after any PM2 restart | Fixed Oct 3: offers saved to `data/flower-offers.json` (48 h) |
 | Purchase practicality | Sam's requires a membership; Sam's at **300 Busch Dr** is next to the PO Box (150 Busch Dr) | Note |
 

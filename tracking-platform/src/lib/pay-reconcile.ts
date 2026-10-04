@@ -11,6 +11,8 @@ export type PaidOrderRow = {
   customerEmail: string;
   ingestOk: boolean | null;
   canResend: boolean;
+  itemCount?: number;
+  alertedAt?: string | null;
 };
 
 /**
@@ -49,6 +51,24 @@ export async function resendPaidOrder(orderNumber: string): Promise<{ ok: boolea
     method: "POST",
     headers: { "Content-Type": "application/json", "X-Wrrapd-Internal-Key": key },
     body: JSON.stringify({ orderNumber }),
+  });
+  const data = (await res.json().catch(() => ({}))) as { error?: string };
+  return res.ok ? { ok: true } : { ok: false, error: data.error || `pay server ${res.status}` };
+}
+
+/** "alerted": ops was emailed. "handled" (note required): stop flagging the order. */
+export async function markPaidOrders(
+  orderNumbers: string[],
+  action: "alerted" | "handled",
+  note = "",
+  by = "",
+): Promise<{ ok: boolean; error?: string }> {
+  const key = process.env.WRRAPD_PAY_INTERNAL_KEY?.trim();
+  if (!key) return { ok: false, error: "WRRAPD_PAY_INTERNAL_KEY is not set" };
+  const res = await fetch(`${PAY_API}/api/internal/reconcile-mark`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Wrrapd-Internal-Key": key },
+    body: JSON.stringify({ orderNumbers, action, note, by }),
   });
   const data = (await res.json().catch(() => ({}))) as { error?: string };
   return res.ok ? { ok: true } : { ok: false, error: data.error || `pay server ${res.status}` };

@@ -2603,7 +2603,7 @@ app.get('/api/internal/paid-orders', (req, res) => {
             try {
                 const d = JSON.parse(fs.readFileSync(path.join(ordersDir, file), 'utf8'));
                 const ts = Date.parse(d.timestamp || '');
-                if (!d.orderNumber || !d.payment || !d.payment.id || !(ts >= cutoff)) continue;
+                if (!d.orderNumber || !d.payment || !d.payment.id || !(ts >= cutoff) || d.reconcileHandled) continue;
                 orders.push({
                     orderNumber: d.orderNumber,
                     timestamp: d.timestamp,
@@ -2613,6 +2613,8 @@ app.get('/api/internal/paid-orders', (req, res) => {
                     customerEmail: (d.customer && d.customer.email) || '',
                     ingestOk: d.trackingIngest ? d.trackingIngest.ok !== false : null,
                     canResend: !!(d.trackingIngest && d.trackingIngest.payload),
+                    itemCount: Array.isArray(d.orderItems) ? d.orderItems.length : 0,
+                    alertedAt: d.reconcileAlertedAt || null,
                 });
             } catch (_) {
                 // ignore malformed historical files
@@ -2632,6 +2634,41 @@ app.post('/api/internal/resend-order', async (req, res) => {
     const r = await resendOrderToTracking(orderNumber);
     if (!r.ok) return res.status(502).json({ error: r.reason || 'Resend failed' });
     res.json({ ok: true });
+});
+
+/**
+ * Body: { orderNumbers: string[], action: 'alerted' | 'handled', note?, by? }.
+ * 'alerted' records that ops was emailed; 'handled' (note required) removes the order from reconciliation.
+ */
+app.post('/api/internal/reconcile-mark', (req, res) => {
+    if (!req.isApiDomain || !internalClaimSecretMatches(String(req.get('x-wrrapd-internal-key') || ''))) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+    const body = req.body || {};
+    const action = String(body.action || '');
+    const note = String(body.note || '').trim().slice(0, 500);
+    const by = String(body.by || '').trim().slice(0, 80);
+    const numbers = (Array.isArray(body.orderNumbers) ? body.orderNumbers : [])
+        .map((n) => String(n || '').trim())
+        .filter(Boolean)
+        .slice(0, 100);
+    if (!numbers.length || !['alerted', 'handled'].includes(action)) {
+        return res.status(400).json({ error: 'orderNumbers and action required' });
+    }
+    if (action === 'handled' && !note) return res.status(400).json({ error: 'A note is required' });
+    const updated = [];
+    for (const n of numbers) {
+        const hit = findOrderFileByNumber(n);
+        if (!hit) continue;
+        const at = new Date().toISOString();
+        if (action === 'alerted') hit.data.reconcileAlertedAt = at;
+        else hit.data.reconcileHandled = { at, by, note };
+        const tmp = `${hit.fp}.tmp`;
+        fs.writeFileSync(tmp, JSON.stringify(hit.data, null, 2));
+        fs.renameSync(tmp, hit.fp);
+        updated.push(n);
+    }
+    res.json({ ok: true, updated });
 });
 
 /**

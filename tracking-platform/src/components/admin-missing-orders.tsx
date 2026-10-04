@@ -25,6 +25,28 @@ export function AdminMissingOrders({ rows, error }: { rows: PaidOrderRow[]; erro
     }
   }
 
+  async function markHandled(orderNumber: string) {
+    const note = window.prompt(
+      `What happened with ${orderNumber}? (for example: refunded, test order, entered with Create delivery)`,
+    );
+    if (!note || !note.trim()) return;
+    setBusy(orderNumber);
+    setMsg(null);
+    try {
+      const res = await fetch("/api/admin/reconcile/handled", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderNumber, note: note.trim() }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) throw new Error(data.error || "Could not mark the order handled");
+      location.reload();
+    } catch (e) {
+      setMsg(e instanceof Error ? e.message : String(e));
+      setBusy(null);
+    }
+  }
+
   if (error) {
     return (
       <p className="rounded-xl border-2 border-rose-300 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-900">
@@ -49,19 +71,30 @@ export function AdminMissingOrders({ rows, error }: { rows: PaidOrderRow[]; erro
               <strong className="font-mono">{r.orderNumber}</strong> · {r.retailer || "retailer ?"} · {r.customerEmail} · $
               {(r.amountCents / 100).toFixed(2)} · paid {new Date(r.timestamp).toLocaleString("en-US", { timeZone: "America/New_York" })}
               {r.refundedCents ? ` · refunded $${(r.refundedCents / 100).toFixed(2)}` : ""}
+              {r.itemCount === 0 ? " · no items saved" : ""}
             </span>
-            {r.canResend ? (
+            <span className="flex flex-wrap items-center gap-2">
+              {r.canResend ? (
+                <button
+                  type="button"
+                  disabled={busy === r.orderNumber}
+                  onClick={() => resend(r.orderNumber)}
+                  className="rounded-lg bg-rose-700 px-3 py-1.5 text-xs font-bold text-white"
+                >
+                  {busy === r.orderNumber ? "Working…" : "Bring into Command Center"}
+                </button>
+              ) : (
+                <span className="text-xs font-semibold text-rose-800">Older order: add it with Create delivery</span>
+              )}
               <button
                 type="button"
                 disabled={busy === r.orderNumber}
-                onClick={() => resend(r.orderNumber)}
-                className="rounded-lg bg-rose-700 px-3 py-1.5 text-xs font-bold text-white"
+                onClick={() => markHandled(r.orderNumber)}
+                className="rounded-lg border border-rose-400 bg-white px-3 py-1.5 text-xs font-semibold text-rose-900"
               >
-                {busy === r.orderNumber ? "Bringing in…" : "Bring into Command Center"}
+                Mark handled
               </button>
-            ) : (
-              <span className="text-xs font-semibold text-rose-800">Older order: add it with Create delivery</span>
-            )}
+            </span>
           </li>
         ))}
       </ul>

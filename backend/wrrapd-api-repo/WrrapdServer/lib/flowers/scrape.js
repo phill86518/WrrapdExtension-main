@@ -137,41 +137,112 @@ async function scrapeTarget(store) {
   }
 }
 
-async function scrapePublix(store) {
-  // Publix storefront APIs vary by region; try product search, then empty → catalog fill.
-  const q = encodeURIComponent('flower bouquet');
-  const url = `https://services.publix.com/api/v3/product/Search?storeNumber=1&keyword=${q}&rowCount=24`;
-  try {
-    const { status, body } = await fetchText(url, {
-      headers: { Accept: 'application/json' },
-    });
-    if (status !== 200) throw new Error(`HTTP ${status}`);
-    const j = JSON.parse(body);
-    const products = j?.Products || j?.products || j?.items || [];
-    const out = [];
+const PUBLIX_STORE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const PUBLIX_PRODUCTS_TTL_MS = 6 * 60 * 60 * 1000;
+/** @type {Map<string, { at: number, store: any }>} */
+const publixStoreCache = new Map();
+/** @type {Map<string, { at: number, items: any[] }>} */
+const publixProductCache = new Map();
+
+function decodeHtmlAttr(s) {
+  return String(s || '')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&');
+}
+
+/** Publix's own store locator: real store number for the CSV store (matched by street number). */
+async function resolvePublixStore(store) {
+  const key = store.storeId || `${store.postalCode}|${store.address}`;
+  const hit = publixStoreCache.get(key);
+  if (hit && Date.now() - hit.at < PUBLIX_STORE_TTL_MS) return hit.store;
+  const zip = String(store.postalCode || '').slice(0, 5);
+  const url =
+    'https://services.publix.com/api/v1/storelocation?types=R,G,H,N,S&option=&count=8' +
+    `&includeOpenAndCloseDates=true&isWebsite=true&zipCode=${encodeURIComponent(zip)}`;
+  const { status, body } = await fetchText(url, { headers: { Accept: 'application/json' } });
+  if (status !== 200) throw new Error(`store locator HTTP ${status}`);
+  const rows = (JSON.parse(body)?.Stores || []).filter((s) => s && s.KEY && s.ISENABLED !== false);
+  if (!rows.length) throw new Error('store locator returned no stores');
+  const houseNo = (String(store.address || '').match(/^\s*(\d+)/) || [])[1];
+  const match = (houseNo && rows.find((s) => String(s.ADDR || '').trim().startsWith(`${houseNo} `))) || rows[0];
+  const resolved = {
+    number: Number(match.KEY),
+    name: String(match.NAME || ''),
+    shortName: String(match.SHORTNAME || match.NAME || ''),
+    option: String(match.OPTION || ''),
+  };
+  publixStoreCache.set(key, { at: Date.now(), store: resolved });
+  return resolved;
+}
+
+function parsePublixSearch(html) {
+  const m = html.match(/:first-search-results="([^"]*)"/);
+  if (!m) return { storeNum: null, products: [] };
+  const j = JSON.parse(decodeHtmlAttr(m[1]));
+  return { storeNum: Number(j?.searchStoreNum) || null, products: j?.storeProducts || [] };
+}
+
+/** Live floral prices for one Publix store (store chosen through the Store cookie, as on publix.com). */
+async function fetchPublixFloral(pstore) {
+  const hit = publixProductCache.get(String(pstore.number));
+  if (hit && Date.now() - hit.at < PUBLIX_PRODUCTS_TTL_MS) return hit.items;
+  const cookie = `Store=${JSON.stringify({
+    StoreName: pstore.name,
+    StoreNumber: pstore.number,
+    Option: pstore.option,
+    ShortStoreName: pstore.shortName,
+  })}`;
+  const byCode = new Map();
+  const pages = await Promise.all(
+    ['bouquet', 'roses'].map((term) =>
+      fetchText(`https://www.publix.com/search?searchTerm=${encodeURIComponent(term)}`, {
+        headers: { Cookie: cookie, Referer: 'https://www.publix.com/' },
+      }),
+    ),
+  );
+  for (const { status, body } of pages) {
+    if (status !== 200) throw new Error(`search HTTP ${status}`);
+    const { storeNum, products } = parsePublixSearch(body);
+    if (storeNum !== pstore.number) throw new Error(`search ran for store ${storeNum}, not ${pstore.number}`);
     for (const p of products) {
-      const title = p?.Name || p?.name || p?.title || '';
-      if (!isBouquetish(title)) continue;
-      const price =
-        parseMoney(p?.Price) ||
-        parseMoney(p?.price) ||
-        parseMoney(p?.RegularPrice) ||
-        parseMoney(p?.SalePrice);
-      if (price == null || price >= CAP_PUBLIX || price < 5) continue;
-      const image = p?.ImageUrl || p?.imageUrl || p?.Image || null;
-      if (!image) continue;
-      out.push({
+      const floral = (p?.fauxTaxonomy || []).some((t) => /^Floral\//i.test(String(t)));
+      const title = String(p?.title || '').trim();
+      if (!floral || !title || /corsage|boutonniere/i.test(title)) continue;
+      const priceText = String(p?.priceLine || '').trim();
+      if (!/^\$\d+(\.\d{2})?$/.test(priceText)) continue;
+      const price = parseMoney(priceText);
+      const image = p?.imageUrls?.large?.a || p?.imageUrls?.small?.a || null;
+      if (price == null || !image) continue;
+      byCode.set(String(p.itemCode), {
         retailer: 'publix',
-        sku: String(p?.ProductId || p?.id || title).slice(0, 64),
-        title: String(title).slice(0, 120),
+        sku: `publix-${p.itemCode}`,
+        title: title.slice(0, 120),
         imageUrl: String(image),
         retailPrice: price,
-        productUrl: 'https://www.publix.com/shop',
+        productUrl: `https://www.publix.com/search?searchTerm=${encodeURIComponent(title)}`,
         isRose: isRoseTitle(title),
+        publixStoreNumber: pstore.number,
       });
     }
-    if (out.length) return out;
-    throw new Error('no bouquet products');
+  }
+  const items = [...byCode.values()];
+  publixProductCache.set(String(pstore.number), { at: Date.now(), items });
+  return items;
+}
+
+async function scrapePublix(store) {
+  try {
+    const pstore = await resolvePublixStore(store);
+    const all = await fetchPublixFloral(pstore);
+    const out = all.filter((it) => it.retailPrice < CAP_PUBLIX && it.retailPrice >= 5);
+    if (out.length) {
+      console.log('[flowers-scrape] publix live ok', out.length, 'of', all.length, 'for store', pstore.number);
+      return out;
+    }
+    throw new Error(`no floral items under $${CAP_PUBLIX} at store ${pstore.number}`);
   } catch (e) {
     console.warn('[flowers-scrape] publix failed', store.storeId, e.message);
     return PUBLIX_FALLBACK.map((row) => ({
@@ -189,38 +260,37 @@ async function scrapePublix(store) {
 }
 
 /**
- * Classic Publix-style designs with distinct retail prices (under $17 cap).
- * Used when the Publix API 403s so the shopper still sees a real price ladder
- * instead of four copies of the geo unit price.
+ * Real Publix floral items and photos (Highland Square #00686 shelf prices, Oct 4 2026).
+ * Used only when publix.com cannot be read, so the shopper still sees a real price ladder.
  */
 const PUBLIX_FALLBACK = [
   {
-    sku: 'flowers-1',
+    sku: 'publix-268447',
     designKey: 'flowers-1',
-    title: 'Mixed garden bouquet',
-    retailPrice: 9.99,
-    imageUrl: 'https://scene7.samsclub.com/is/image/samsclub/0002005943541_A?$DT_PDP_BB$',
-  },
-  {
-    sku: 'flowers-2',
-    designKey: 'flowers-2',
-    title: 'Bright celebration bouquet',
-    retailPrice: 12.49,
-    imageUrl: 'https://scene7.samsclub.com/is/image/samsclub/0002371100828_A?$DT_PDP_BB$',
-  },
-  {
-    sku: 'flowers-3',
-    designKey: 'flowers-3',
-    title: 'Soft pastel bouquet',
+    title: 'GreenWise Bouquet',
     retailPrice: 14.99,
-    imageUrl: 'https://scene7.samsclub.com/is/image/samsclub/0002005929934_A?$DT_PDP_BB$',
+    imageUrl: 'https://images.publixcdn.com/pct/images/products/265000/268447-600x600-A.jpg',
   },
   {
-    sku: 'flowers-4',
+    sku: 'publix-82008',
+    designKey: 'flowers-2',
+    title: 'White Rose Bouquet',
+    retailPrice: 14.99,
+    imageUrl: 'https://images.publixcdn.com/pct/images/products/80000/082008-600x600-A.jpg',
+  },
+  {
+    sku: 'publix-82322',
+    designKey: 'flowers-3',
+    title: 'Classic Dozen Roses',
+    retailPrice: 14.99,
+    imageUrl: 'https://images.publixcdn.com/pct/images/products/80000/082322-600x600-A.jpg',
+  },
+  {
+    sku: 'publix-238686',
     designKey: 'flowers-4',
-    title: 'Deluxe mixed bouquet',
-    retailPrice: 16.49,
-    imageUrl: 'https://scene7.samsclub.com/is/image/samsclub/0002005930392_A?$DT_PDP_BB$',
+    title: 'Sunny Days Bouquet',
+    retailPrice: 16.99,
+    imageUrl: 'https://images.publixcdn.com/pct/images/products/235000/238686-600x600-A.jpg',
   },
 ];
 
@@ -456,12 +526,7 @@ function classicFourBouquets(store, flowerUnitPrice) {
   const base = Number.isFinite(price) && price > 0 ? Math.round(price * 100) / 100 : 17.99;
   // Distinct ladder around the geo unit — never four identical prices.
   const offsets = [-3, -1.5, 0, 1.5];
-  const images = [
-    'https://scene7.samsclub.com/is/image/samsclub/0002005943541_A?$DT_PDP_BB$',
-    'https://scene7.samsclub.com/is/image/samsclub/0002371100828_A?$DT_PDP_BB$',
-    'https://scene7.samsclub.com/is/image/samsclub/0002005929934_A?$DT_PDP_BB$',
-    'https://scene7.samsclub.com/is/image/samsclub/0002005930392_A?$DT_PDP_BB$',
-  ];
+  const images = PUBLIX_FALLBACK.map((row) => row.imageUrl);
   const s = store || {};
   return [1, 2, 3, 4].map((n, i) => {
     const charged = Math.round(Math.max(8.99, base + offsets[i]) * 100) / 100;
