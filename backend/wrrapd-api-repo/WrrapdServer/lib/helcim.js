@@ -56,6 +56,7 @@ async function helcimFetch(path, { method, body, idempotencyKey: idemKey } = {})
 
 function errorText(data) {
     if (!data || typeof data !== 'object') return 'Payment was declined';
+    if (typeof data.errors === 'string' && data.errors.trim()) return data.errors.trim();
     if (Array.isArray(data.errors) && data.errors.length) {
         return data.errors.map((e) => (typeof e === 'string' ? e : e && (e.message || e.error) || '')).filter(Boolean).join(' ')
             || 'Payment was declined';
@@ -121,9 +122,19 @@ async function refund({ transactionId, amountCents, ipAddress, requestId, full }
         },
         idempotencyKey: uuidFrom(`refund|${requestId}`),
     });
-    if (r.ok || !full) return { ...r, kind: 'refund' };
+    if (r.ok) return { ...r, kind: 'refund' };
     const why = errorText(r.data).toLowerCase();
-    if (!/settle|batch|open/.test(why)) return { ...r, kind: 'refund' };
+    // Helcim only refunds settled payments; a same-day (open batch) payment must be reversed in full.
+    const unsettled = /cannot be refunded|settle|batch|open/.test(why);
+    if (!unsettled) return { ...r, kind: 'refund' };
+    if (!full) {
+        return {
+            ok: false,
+            status: 400,
+            data: { errors: 'This payment has not settled yet, so only a full refund is possible today. Leave the amount empty, or refund part of it tomorrow.' },
+            kind: 'refund',
+        };
+    }
     const rev = await helcimFetch('/payment/reverse', {
         method: 'POST',
         body: { cardTransactionId: id, ipAddress: ip, ecommerce: true },

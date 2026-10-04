@@ -32,6 +32,11 @@ async function loadInstalls(): Promise<InstallRow[] | null> {
   }
 }
 
+function countActiveSince(rows: InstallRow[], days: number) {
+  const cutoff = Date.now() - days * DAY;
+  return rows.filter((r) => r.lastSeen && Date.parse(r.lastSeen) > cutoff).length;
+}
+
 function fmt(iso?: string) {
   return iso ? new Date(iso).toLocaleString("en-US", { timeZone: "America/New_York" }) : "—";
 }
@@ -40,8 +45,7 @@ export default async function ExtensionInstallsPage() {
   const session = await requireAdminSession();
   if (!session) redirect("/admin?next=/admin/extension-installs");
   const rows = await loadInstalls();
-  const now = Date.now();
-  const active = (days: number) => (rows || []).filter((r) => r.lastSeen && now - Date.parse(r.lastSeen) < days * DAY).length;
+  const active = (days: number) => countActiveSince(rows || [], days);
   const versions = new Map<string, number>();
   for (const r of rows || []) versions.set(r.extensionVersion || "?", (versions.get(r.extensionVersion || "?") || 0) + 1);
 
