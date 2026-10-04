@@ -2590,7 +2590,9 @@ setInterval(() => {
 
 /** Command Center reconciliation: every paid order on this server in the last `days` days. */
 app.get('/api/internal/paid-orders', (req, res) => {
-    if (!req.isApiDomain || !internalClaimSecretMatches(req)) return res.status(401).json({ error: 'Unauthorized' });
+    if (!req.isApiDomain || !internalClaimSecretMatches(String(req.get('x-wrrapd-internal-key') || ''))) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
     const days = Math.min(Math.max(Number(req.query.days) || 30, 1), 365);
     const cutoff = Date.now() - days * 86400000;
     const ordersDir = path.join(__dirname, 'orders');
@@ -2622,7 +2624,9 @@ app.get('/api/internal/paid-orders', (req, res) => {
 });
 
 app.post('/api/internal/resend-order', async (req, res) => {
-    if (!req.isApiDomain || !internalClaimSecretMatches(req)) return res.status(401).json({ error: 'Unauthorized' });
+    if (!req.isApiDomain || !internalClaimSecretMatches(String(req.get('x-wrrapd-internal-key') || ''))) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
     const orderNumber = String((req.body && req.body.orderNumber) || '').trim();
     if (!orderNumber) return res.status(400).json({ error: 'orderNumber required' });
     const r = await resendOrderToTracking(orderNumber);
