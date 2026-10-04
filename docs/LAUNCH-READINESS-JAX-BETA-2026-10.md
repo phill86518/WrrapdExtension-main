@@ -78,6 +78,9 @@ Launching publicly before Black Friday matters: it gives us ~3 calm weeks to fin
 | Oct 3 | Micro-hub = the PO Box only (no separate facility; no camera) | HUB-10 changes: held packages live at Roger's wrap location; wrap video is the chain-of-custody record |
 | Oct 3 | Helcim: all signals green, **not yet tested live** | PAY-01 must include one real live charge + refund with Roger's own card before beta |
 | Oct 3 | All 210 VM orders are **dummy orders** | Clean up and make order numbers realistic + consistent (pending format choice) |
+| Oct 4 | **Never miss an order.** Every order shows under Orders, with or without a WrapStar ("Needs staffing" badge) | A charged order that is not in Command Center shows in a red box on Orders with "Bring into Command Center"; the pay server resends failed hand-offs every 5 minutes; an hourly check (`wrrapd-order-reconcile`) emails ops if anything is missing or the check fails |
+| Oct 4 | **Extra items not for wrapping**: shopper must call Customer Service within 48 hours to arrange pickup (Terms §13 website, §14 extension) | Hub intake "Hold for pickup" emails + texts the shopper; 11:30 PM email (`wrrapd-hub-exceptions`) lists held items and paid orders with no retailer order # |
+| Oct 4 | Same-day refunds reverse the full charge (Helcim cannot refund an unsettled batch) | Partial refunds work after the nightly settlement |
 
 ## 1.3 The launch blockers (RED), in priority order
 
