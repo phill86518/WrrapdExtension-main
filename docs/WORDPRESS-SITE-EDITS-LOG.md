@@ -8,6 +8,11 @@ WordPress + Elementor + Hello theme content mostly lives **in the production dat
 
 ## Recent changes
 
+### 2026-10-03 — How it works: hub address blurred in Steps 4 and 5
+
+- Step 4 and Step 5 screenshots showed the old "PO BOX 26067 … 32226-6067" hub address. Replaced with blurred copies: media **7367** `uploads/2026/10/wrrapd-howto-004-v2.jpg`, **7368** `uploads/2026/10/wrrapd-howto-005-v2.jpg` (also in `wordpress/howto/`). Swapped `src` in `_elementor_data` (post 4857); Elementor cache cleared; W3TC flushed.
+- Cache note: W3 Total Cache can be flushed through the AI Engine connection (one-shot plugin calling `w3tc_flush_all`, left deactivated as `wrrapd-cache-purge-once`). The SiteGround proxy cache cannot be flushed from WordPress on this site (SG Optimizer not installed) — Site Tools → Speed → Caching → Flush.
+
 ### 2026-10-03 — How it works: Step 6 (same-day wrap + delivery, photo proof)
 
 - **Homepage 4857**, HTML widget **`e7baa0c`**: added **Step 6** row (`is-flip`) after Step 5 — heading "We wrap it and deliver it — often the same day"; copy: adds at most one day, same day when the gift reaches the hub by 8 AM, polished photo proof of delivery like Amazon's. `aria-label` now "in six steps".
