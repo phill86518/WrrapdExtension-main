@@ -1,0 +1,14 @@
+---
+description: Launch readiness PDFs always carry their creation timestamp in the file name
+alwaysApply: true
+---
+
+# Launch readiness PDF naming
+
+Every launch readiness PDF must have its **creation time (Eastern)** in the file name, so Roger can tell builds apart after `git pull origin main`:
+
+`docs/LAUNCH-READINESS-JAX-BETA-2026-10 YYYYMMDDHHMM.pdf` (example: `LAUNCH-READINESS-JAX-BETA-2026-10 202610032138.pdf`)
+
+- Build with `docs/build-launch-pdf.py`; it stamps the name and the page footer automatically. Never write an undated `LAUNCH-READINESS-*.pdf`.
+- Keep earlier timestamped PDFs; do not overwrite them.
+- When telling Roger where the PDF is, give the full timestamped file name.

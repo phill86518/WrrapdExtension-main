@@ -8,15 +8,19 @@ is unpacked under ~/pdflibs (apt is not usable there), so run:
 """
 import re
 import sys
-from datetime import date
+from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import markdown
 from weasyprint import HTML
 
 ROOT = Path(__file__).resolve().parent.parent
 SRC = ROOT / "docs" / "LAUNCH-READINESS-JAX-BETA-2026-10.md"
-OUT = ROOT / "docs" / "LAUNCH-READINESS-JAX-BETA-2026-10.pdf"
+# Every build gets its own Eastern-time creation stamp in the file name, e.g.
+# "LAUNCH-READINESS-JAX-BETA-2026-10 202610032138.pdf" (Roger relies on it after git pull).
+CREATED = datetime.now(ZoneInfo("America/New_York"))
+OUT = ROOT / "docs" / f"LAUNCH-READINESS-JAX-BETA-2026-10 {CREATED:%Y%m%d%H%M}.pdf"
 ICON = ROOT / "wordpress" / "icons" / "favicon" / "icon-focus-512.png"
 
 NAVY = "#0c0638"
@@ -33,7 +37,7 @@ CSS = f"""
   margin: 0.75in 0.6in 0.7in 0.6in;
   @top-left {{ content: "Wrrapd — Jacksonville Beta Master Readiness Review"; font: 7.5pt Body; color: #667; }}
   @top-right {{ content: "INTERNAL — do not publish"; font: bold 7.5pt Body; color: #b00020; }}
-  @bottom-left {{ content: "Updated {date.today():%B %-d, %Y}"; font: 7.5pt Body; color: #667; }}
+  @bottom-left {{ content: "Created {CREATED:%B %-d, %Y %-I:%M %p} ET"; font: 7.5pt Body; color: #667; }}
   @bottom-right {{ content: "Page " counter(page) " of " counter(pages); font: 7.5pt Body; color: #667; }}
 }}
 @page cover {{ margin: 0; @top-left {{ content: none; }} @top-right {{ content: none; }}

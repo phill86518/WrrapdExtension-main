@@ -42,35 +42,43 @@ const storage = new Storage(storageOptions);
 const app = express();
 app.set('trust proxy', 1);
 
-// Configure CORS to allow requests from Amazon domains
+// Browsers may call this API only from Wrrapd sites, the extension, and the retailer pages
+// the extension runs on (content-script fetches carry the retailer page's origin).
+// Server-to-server calls send no Origin and are unaffected.
+const CORS_ALLOWED_HOST = new RegExp(
+    '^(?:[a-z0-9-]+\\.)*(?:' +
+        [
+            'wrrapd\\.com',
+            'amazon\\.(?:com|ca|co\\.uk|de|fr|es|it|nl|co\\.jp|in|com\\.au|com\\.br|com\\.mx)',
+            'bestbuy\\.com',
+            'etsy\\.com',
+            'kohls\\.com',
+            'lego\\.com',
+            'nordstrom\\.com',
+            'sephora\\.com',
+            'target\\.com',
+            'ulta\\.com',
+            'walmart\\.com',
+        ].join('|') +
+        ')$',
+);
+
+function corsOriginAllowed(origin) {
+    if (origin.startsWith('chrome-extension://')) return true;
+    try {
+        const u = new URL(origin);
+        return u.protocol === 'https:' && CORS_ALLOWED_HOST.test(u.hostname);
+    } catch (_) {
+        return false;
+    }
+}
+
 const corsOptions = {
     origin: function (origin, callback) {
-        // Allow requests with no origin (like mobile apps or curl requests)
         if (!origin) return callback(null, true);
-        
-        const allowedOrigins = [
-            'https://www.amazon.com',
-            'https://www.amazon.ca',
-            'https://www.amazon.co.uk',
-            'https://www.amazon.de',
-            'https://www.amazon.fr',
-            'https://www.amazon.es',
-            'https://www.amazon.it',
-            'https://www.amazon.nl',
-            'https://www.amazon.co.jp',
-            'https://www.amazon.in',
-            'https://www.amazon.com.au',
-            'https://www.amazon.com.br',
-            'https://www.amazon.mx'
-        ];
-        
-        if (allowedOrigins.indexOf(origin) !== -1 || origin.includes('amazon.com')) {
-            callback(null, true);
-        } else {
-            callback(null, true); // Allow all for now, can restrict later
-        }
+        callback(null, corsOriginAllowed(origin));
     },
-    credentials: true,
+    credentials: false,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'X-Requested-With'],
     preflightContinue: false,
@@ -78,6 +86,26 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
+
+const { rateLimit } = require('./lib/rate-limit');
+const globalLimiter = rateLimit({ name: 'all', windowMs: 5 * 60 * 1000, max: 900 });
+app.use((req, res, next) =>
+    req.path.startsWith('/api/wrapstars-wp-bridge') || req.path.startsWith('/api/internal')
+        ? next()
+        : globalLimiter(req, res, next),
+);
+const payLimiter = rateLimit({ name: 'pay', windowMs: 10 * 60 * 1000, max: 20 });
+for (const p of [
+    '/api/helcim-purchase',
+    '/create-payment-intent',
+    '/create-checkout-session',
+    '/process-payment',
+    '/api/proxy-tracking-ingest',
+]) {
+    app.post(p, payLimiter);
+}
+app.post('/api/checkout-quote', rateLimit({ name: 'quote', windowMs: 10 * 60 * 1000, max: 120 }));
+app.use('/api/internal', rateLimit({ name: 'internal', windowMs: 10 * 60 * 1000, max: 1200 }));
 
 // Pay pages: register before body parsers and static (CORS already handles OPTIONS preflight).
 app.use((req, res, next) => {
@@ -789,7 +817,11 @@ function resolveCheckoutCharge(body, logLabel) {
         }
         for (const item of cart.items) {
             for (const opt of item.options || []) {
-                if (!opt.checkbox_flowers || !opt.flower_offer_id) continue;
+                if (!opt.checkbox_flowers) continue;
+                if (!opt.flower_offer_id) {
+                    opt.flower_amount = null;
+                    continue;
+                }
                 const chk = flowerCatalog.validateOfferAmount(opt.flower_offer_id, opt.flower_amount);
                 if (!chk.ok) {
                     return {
@@ -839,11 +871,12 @@ function resolveCheckoutCharge(body, logLabel) {
         }
         return { ok: true, amountCents, pricingDebug };
     }
-    const n = Math.round(Number(total));
-    if (!Number.isFinite(n) || n <= 0) {
-        return { ok: false, status: 400, body: { error: 'Invalid total amount' } };
-    }
-    return { ok: true, amountCents: n, pricingDebug: null };
+    console.warn(`[${logLabel}] rejected: no pricingCart`, { orderNumber: orderNumber || null });
+    return {
+        ok: false,
+        status: 400,
+        body: { error: 'Your cart could not be priced. Please refresh the page and try again.' },
+    };
 }
 
 function helcimBillingFromClient(raw) {
@@ -994,12 +1027,11 @@ app.post('/create-checkout-session', async (req, res) => {
         return res.status(403).send('Access forbidden.');
     }
 
-    const { total, orderNumber, customerEmail } = req.body;
+    const { orderNumber, customerEmail } = req.body || {};
 
     try {
-        if (!total || total <= 0) {
-            return res.status(400).json({ error: 'Invalid total amount' });
-        }
+        const priced = resolveCheckoutCharge(req.body || {}, 'create-checkout-session');
+        if (!priced.ok) return res.status(priced.status).json(priced.body);
 
         const session = await stripe.checkout.sessions.create({
             mode: 'payment',
@@ -1007,7 +1039,7 @@ app.post('/create-checkout-session', async (req, res) => {
                 {
                     price_data: {
                         currency: 'usd',
-                        unit_amount: total,
+                        unit_amount: priced.amountCents,
                         product_data: {
                             name: `Wrrapd Gift Wrap — Order ${orderNumber || 'N/A'}`,
                         },
@@ -1033,7 +1065,7 @@ app.post('/create-checkout-session', async (req, res) => {
         res.status(200).json({ url: session.url });
     } catch (error) {
         console.error('Error creating Checkout Session:', error);
-        res.status(500).json({ error: error.message || 'Failed to create Checkout Session' });
+        res.status(500).json({ error: 'Failed to create Checkout Session' });
     }
 });
 
@@ -1521,6 +1553,31 @@ function findExistingOrderByPaymentIntent(paymentIntentId) {
             const parsed = JSON.parse(raw);
             if (parsed && parsed.payment && parsed.payment.id === paymentIntentId) {
                 return { file, data: parsed };
+            }
+        } catch (_) {
+            // ignore malformed historical files
+        }
+    }
+    return null;
+}
+
+const PAID_ORDER_INGEST_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+
+/** Saved order with a confirmed payment, created in the last 7 days; null otherwise. */
+function findRecentPaidOrderByNumber(orderNumber) {
+    const want = String(orderNumber || '').trim();
+    if (!/^[A-Z]{2}-[0-9A-Z]{9}-[0-9A-Z]{6}$/.test(want)) return null;
+    const ordersDir = path.join(__dirname, 'orders');
+    if (!fs.existsSync(ordersDir)) return null;
+    const cutoff = Date.now() - PAID_ORDER_INGEST_WINDOW_MS;
+    for (const file of fs.readdirSync(ordersDir)) {
+        if (!file.startsWith('order_') || !file.endsWith('.json')) continue;
+        try {
+            const fp = path.join(ordersDir, file);
+            if (fs.statSync(fp).mtimeMs < cutoff) continue;
+            const parsed = JSON.parse(fs.readFileSync(fp, 'utf8'));
+            if (parsed && String(parsed.orderNumber || '').trim() === want && parsed.payment && parsed.payment.id) {
+                return parsed;
             }
         } catch (_) {
             // ignore malformed historical files
@@ -2219,13 +2276,35 @@ app.post('/api/proxy-tracking-ingest', async (req, res) => {
         return res.status(403).json({ error: 'Forbidden' });
     }
     const orders = req.body && req.body.orders;
-    if (!Array.isArray(orders) || orders.length === 0) {
+    if (!Array.isArray(orders) || orders.length === 0 || orders.length > 40) {
         return res.status(400).json({ error: 'Expected JSON body: { orders: [ {...}, ... ] }' });
+    }
+    // The extension cannot hold a secret, so each line must belong to a paid order this server
+    // already saved; contact details always come from that saved order, never from the request.
+    const trusted = internalClaimSecretMatches(String(req.get('x-wrrapd-internal-key') || ''));
+    const paidByNumber = new Map();
+    if (!trusted) {
+        for (const o of orders) {
+            const num = canonicalTrackingExternalOrderId(String((o && o.externalOrderId) || ''));
+            if (!paidByNumber.has(num)) paidByNumber.set(num, findRecentPaidOrderByNumber(num));
+            if (!paidByNumber.get(num)) {
+                return res.status(403).json({ error: 'Order not found or not paid' });
+            }
+        }
     }
     const results = [];
     for (let i = 0; i < orders.length; i++) {
+        const paid = trusted
+            ? null
+            : paidByNumber.get(canonicalTrackingExternalOrderId(String(orders[i].externalOrderId || '')));
         const payload = {
             ...orders[i],
+            ...(paid
+                ? {
+                      customerEmail: paid.customer && paid.customer.email,
+                      customerPhone: paid.customer && paid.customer.phone,
+                  }
+                : {}),
             // Staging button should never customer-spam; production customer email comes from process-payment ingest.
             skipCustomerNotifications: true,
         };

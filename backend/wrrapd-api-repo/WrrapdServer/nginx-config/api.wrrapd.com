@@ -1,15 +1,19 @@
 server {
 
-        server_name api.wrrapd.com;
+	client_max_body_size 100M;  # Add this line
+	server_name api.wrrapd.com;
 
-        location / {
-                proxy_pass http://localhost:8080; # Tu backend
+	location / {
+		proxy_pass http://localhost:8080; # Tu backend
                 proxy_http_version 1.1;
                 proxy_set_header Upgrade $http_upgrade;
                 proxy_set_header Connection 'upgrade';
                 proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $remote_addr;
+                proxy_set_header X-Forwarded-Proto $scheme;
                 proxy_cache_bypass $http_upgrade;
-        }
+	}
 
     listen [::]:443 ssl ipv6only=on; # managed by Certbot
     listen 443 ssl; # managed by Certbot
@@ -26,10 +30,10 @@ server {
     } # managed by Certbot
 
 
-        listen 80 default_server;
-        listen [::]:80 default_server;
+	listen 80 default_server;
+	listen [::]:80 default_server;
 
-        server_name api.wrrapd.com;
+	server_name api.wrrapd.com;
     return 404; # managed by Certbot
 
 

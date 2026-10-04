@@ -500,6 +500,7 @@ function sanitizePricingCartFromRequest(body) {
     if (!body || typeof body !== 'object') return null;
     const itemsIn = Array.isArray(body.items) ? body.items : [];
     const items = [];
+    const text = (v, max) => (typeof v === 'string' ? v.slice(0, max) : '');
     for (const it of itemsIn.slice(0, 80)) {
         if (!it || typeof it !== 'object') continue;
         const optsIn = Array.isArray(it.options) ? it.options : [];
@@ -508,6 +509,9 @@ function sanitizePricingCartFromRequest(body) {
             if (!o || typeof o !== 'object') continue;
             const flowerAmt = Number(o.flower_amount);
             options.push({
+                title: text(o.title, 300),
+                itemCategory: text(o.itemCategory, 120),
+                needs_gift_box: o.needs_gift_box === true,
                 checkbox_wrrapd: o.checkbox_wrrapd === true,
                 selected_wrapping_option:
                     o.selected_wrapping_option != null
@@ -520,7 +524,7 @@ function sanitizePricingCartFromRequest(body) {
                     Number.isFinite(flowerAmt) && flowerAmt > 0 ? Math.round(flowerAmt * 100) / 100 : null,
             });
         }
-        items.push({ options });
+        items.push({ title: text(it.title, 300), itemCategory: text(it.itemCategory, 120), options });
     }
     const taxRaw = body.taxRatePercent;
     let taxRatePercent =
