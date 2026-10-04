@@ -504,6 +504,18 @@ export default async function AdminOrderDetailPage({
             ? `${order.hubReceipt.status} · ${new Date(order.hubReceipt.at).toLocaleString("en-US", { timeZone: "America/New_York" })} · ${order.hubReceipt.by}${order.hubReceipt.note ? ` · ${order.hubReceipt.note}` : ""}`
             : "Not received at the hub yet."}
         </p>
+        {order.heldItems?.length ? (
+          <ul className="mt-1 space-y-0.5 text-sm text-amber-900">
+            {order.heldItems.map((it) => (
+              <li key={it.id}>
+                Extra item held: <strong>{it.description}</strong> · pickup by{" "}
+                {new Date(it.pickupBy).toLocaleString("en-US", { timeZone: "America/New_York" })} ·{" "}
+                {it.status === "held" ? "waiting" : it.status === "picked_up" ? "picked up" : `closed${it.note ? `: ${it.note}` : ""}`}
+                {it.customerNotifiedAt ? "" : " · shopper not notified"}
+              </li>
+            ))}
+          </ul>
+        ) : null}
         <Link href="/admin/intake" className="mt-1 inline-block text-sm text-blue-800 underline">
           Hub intake
         </Link>

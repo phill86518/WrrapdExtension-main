@@ -65,6 +65,23 @@ export type HubReceipt = {
   note?: string;
 };
 
+/**
+ * An item that arrived at the hub but was not selected for Wrrapd gift-wrapping.
+ * Terms: it is the shopper's to collect; they call Customer Service within 48 hours of `receivedAt`.
+ */
+export type HeldItem = {
+  id: string;
+  description: string;
+  receivedAt: string;
+  by: string;
+  pickupBy: string;
+  status: "held" | "picked_up" | "closed";
+  customerNotifiedAt?: string;
+  resolvedAt?: string;
+  resolvedBy?: string;
+  note?: string;
+};
+
 export type OrderLineItem = {
   asin?: string;
   title?: string;
@@ -179,6 +196,7 @@ export type Order = {
   retailerOrderNumbers?: string[];
   /** Hub check-in of the retailer package(s) for this order. */
   hubReceipt?: HubReceipt;
+  heldItems?: HeldItem[];
   /** Per WrapStar + calendar day (ET): optimized stop order (1 = first after leaving depot) */
   stopSequence?: number;
   customerEmail?: string;

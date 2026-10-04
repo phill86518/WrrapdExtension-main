@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import type { HubReceipt } from "@/lib/types";
+import type { HeldItem, HubReceipt } from "@/lib/types";
 
 export type IntakeRow = {
   id: string;
@@ -16,6 +16,8 @@ export type IntakeRow = {
   wrapDay: string;
   status: string;
   hubReceipt: HubReceipt | null;
+  heldItems: HeldItem[];
+  missingRetailerOrder: boolean;
 };
 
 function norm(s: string | null | undefined) {
@@ -45,7 +47,15 @@ export function AdminIntakeBoard({ rows: initialRows }: { rows: IntakeRow[] }) {
   const [err, setErr] = useState<string | null>(null);
 
   const visible = useMemo(
-    () => rows.filter((r) => matches(r, q) && (showReceived || q.trim().length >= 3 || r.hubReceipt?.status !== "received")),
+    () =>
+      rows.filter(
+        (r) =>
+          matches(r, q) &&
+          (showReceived ||
+            q.trim().length >= 3 ||
+            r.hubReceipt?.status !== "received" ||
+            r.heldItems.some((it) => it.status === "held")),
+      ),
     [rows, q, showReceived],
   );
 
@@ -64,7 +74,12 @@ export function AdminIntakeBoard({ rows: initialRows }: { rows: IntakeRow[] }) {
       setRows((prev) =>
         prev.map((r) =>
           r.id === row.id
-            ? { ...r, hubReceipt: o?.hubReceipt ?? null, retailerOrderNumbers: o?.retailerOrderNumbers ?? r.retailerOrderNumbers }
+            ? {
+                ...r,
+                hubReceipt: o?.hubReceipt ?? null,
+                retailerOrderNumbers: o?.retailerOrderNumbers ?? r.retailerOrderNumbers,
+                heldItems: o?.heldItems ?? r.heldItems,
+              }
             : r,
         ),
       );
@@ -115,6 +130,7 @@ function IntakeCard({
 }) {
   const [note, setNote] = useState("");
   const [ref, setRef] = useState("");
+  const [extra, setExtra] = useState("");
   const receipt = row.hubReceipt;
   return (
     <li className="rounded-xl border border-[#1a2744]/25 bg-white p-4 shadow-sm">
@@ -129,7 +145,9 @@ function IntakeCard({
             {row.retailerOrderNumbers.length ? (
               <strong className="font-mono">{row.retailerOrderNumbers.join(", ")}</strong>
             ) : (
-              <span className="text-amber-700">not captured</span>
+              <span className={row.missingRetailerOrder ? "font-bold text-rose-700" : "text-amber-700"}>
+                {row.missingRetailerOrder ? "none since yesterday, check with shopper" : "not captured"}
+              </span>
             )}
           </p>
           <p className="text-sm">
@@ -198,6 +216,61 @@ function IntakeCard({
           Add
         </button>
       </form>
+      <form
+        className="mt-2 flex flex-wrap gap-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!extra.trim()) return;
+          if (!window.confirm(`Hold "${extra.trim()}" for pickup? The shopper gets an email and text asking them to call within 48 hours.`)) return;
+          onAct({ action: "hold-item", description: extra });
+          setExtra("");
+        }}
+      >
+        <input
+          value={extra}
+          onChange={(e) => setExtra(e.target.value)}
+          placeholder="Extra item in the package, not for wrapping"
+          className="min-w-[16rem] rounded border px-3 py-1.5 text-sm"
+        />
+        <button type="submit" disabled={busy} className="rounded border border-amber-400 px-3 py-1.5 text-sm font-semibold text-amber-900">
+          Hold for pickup
+        </button>
+      </form>
+      {row.heldItems.length ? (
+        <ul className="mt-2 space-y-1 text-sm">
+          {row.heldItems.map((it) => (
+            <li key={it.id} className="flex flex-wrap items-center gap-2 rounded bg-amber-50 px-2 py-1">
+              <span>
+                Held: <strong>{it.description}</strong> · pickup by {new Date(it.pickupBy).toLocaleString()}
+                {it.status === "held" ? "" : ` · ${it.status === "picked_up" ? "picked up" : "closed"}${it.note ? `: ${it.note}` : ""}`}
+              </span>
+              {it.status === "held" ? (
+                <>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => onAct({ action: "resolve-item", itemId: it.id, status: "picked_up" })}
+                    className="rounded bg-emerald-700 px-2 py-1 text-xs font-bold text-white"
+                  >
+                    Picked up
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => {
+                      const n = window.prompt("What happened to the item? (for example: not collected after 48 hours, returned to shopper by mail)");
+                      if (n && n.trim()) onAct({ action: "resolve-item", itemId: it.id, status: "closed", note: n });
+                    }}
+                    className="rounded border px-2 py-1 text-xs"
+                  >
+                    Close
+                  </button>
+                </>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      ) : null}
     </li>
   );
 }

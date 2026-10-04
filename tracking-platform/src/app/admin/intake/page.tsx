@@ -5,6 +5,7 @@ import { requireAdminSession } from "@/lib/auth";
 import { listAllOrders } from "@/lib/data";
 import { toInstantDate } from "@/lib/ny-date";
 import { AdminIntakeBoard, type IntakeRow } from "@/components/admin-intake-board";
+import { etLabel, isMissingRetailerOrder, openHeldItems } from "@/lib/hub-exceptions";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +14,11 @@ const DONE = new Set(["delivered", "cancelled", "refunded"]);
 export default async function AdminIntakePage() {
   const session = await requireAdminSession();
   if (!session) redirect("/admin?next=/admin/intake");
-  const orders = (await listAllOrders()).filter((o) => !DONE.has(o.status));
+  const all = await listAllOrders();
+  const orders = all.filter((o) => !DONE.has(o.status));
+  const now = new Date();
+  const missingRef = orders.filter((o) => isMissingRetailerOrder(o, false, now));
+  const held = openHeldItems(all, now);
   const rows: IntakeRow[] = orders
     .sort((a, b) => a.scheduledFor.localeCompare(b.scheduledFor))
     .map((o) => ({
@@ -28,6 +33,8 @@ export default async function AdminIntakePage() {
       wrapDay: formatInTimeZone(toInstantDate(o.scheduledFor), "America/New_York", "EEE MMM d"),
       status: o.status,
       hubReceipt: o.hubReceipt || null,
+      heldItems: o.heldItems || [],
+      missingRetailerOrder: isMissingRetailerOrder(o, false, now),
     }));
 
   return (
@@ -42,6 +49,46 @@ export default async function AdminIntakePage() {
           the wrap day. When unsure, set the package on the hold shelf and mark it Partly received with a note.
         </p>
       </div>
+      {missingRef.length ? (
+        <section className="rounded-xl border-2 border-rose-300 bg-rose-50 p-4">
+          <h2 className="font-bold text-rose-900">Paid, but no retailer order yet ({missingRef.length})</h2>
+          <p className="mt-1 text-sm text-rose-900">
+            Placed before today with no retailer order number and no package. Call or email the shopper; if they did not
+            place the retailer order, refund it from the order page.
+          </p>
+          <ul className="mt-2 space-y-1 text-sm">
+            {missingRef.map((o) => (
+              <li key={o.id}>
+                <Link href={`/admin/orders/${encodeURIComponent(o.id)}`} className="font-semibold text-blue-800 underline">
+                  {o.externalOrderId}
+                </Link>{" "}
+                · {o.retailer || "retailer ?"} · {o.customerName} · {o.customerPhone || o.customerEmail || ""} · placed{" "}
+                {etLabel(o.createdAt)}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+      {held.length ? (
+        <section className="rounded-xl border-2 border-amber-300 bg-amber-50 p-4">
+          <h2 className="font-bold text-amber-950">Extra items waiting for pickup ({held.length})</h2>
+          <p className="mt-1 text-sm text-amber-950">
+            Not for wrapping. The shopper was asked to call Customer Service within 48 hours to arrange pickup.
+          </p>
+          <ul className="mt-2 space-y-1 text-sm">
+            {held.map(({ order, item, overdue }) => (
+              <li key={item.id} className={overdue ? "font-semibold text-rose-800" : ""}>
+                <Link href={`/admin/orders/${encodeURIComponent(order.id)}`} className="text-blue-800 underline">
+                  {order.externalOrderId || order.id}
+                </Link>{" "}
+                · {item.description} · {order.customerName} · {order.customerPhone || ""} · pickup by {etLabel(item.pickupBy)}
+                {overdue ? " · PAST 48 HOURS" : ""}
+                {item.customerNotifiedAt ? "" : " · shopper NOT notified, call them"}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
       <AdminIntakeBoard rows={rows} />
     </div>
   );

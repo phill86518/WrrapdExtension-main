@@ -236,6 +236,32 @@ export function refundIssuedEmailHtml(input: {
   return wrap(inner);
 }
 
+export function heldItemPickupEmailHtml(input: {
+  customerName: string;
+  customerGreetingName?: string;
+  orderRef: string;
+  description: string;
+  pickupByLabel: string;
+  phoneLabel: string;
+  phoneE164: string;
+}): string {
+  const inner = `
+<tr><td style="background:#0c0638;padding:24px;text-align:center;">
+  <img src="${escapeAttr(WRRAPD_LOGO_URL)}" alt="Wrrapd" style="display:block;margin:0 auto 6px;max-width:150px;height:auto;"/>
+  <h1 style="margin:10px 0 0;font-size:24px;font-weight:600;color:#fff;line-height:1.2;">An item is ready for pickup</h1>
+</td></tr>
+<tr><td style="padding:24px 28px 12px;">
+  <p style="margin:0;font-size:16px;color:#1a1a1a;">Hi ${escapeHtml(firstName(input.customerGreetingName || input.customerName))},</p>
+  <p style="margin:12px 0 0;font-size:15px;line-height:1.55;color:#333;">We received an item with your order that is not part of your gift-wrapping: <strong>${escapeHtml(input.description)}</strong>.</p>
+  <p style="margin:12px 0 0;font-size:15px;line-height:1.55;color:#333;">Please call Wrrapd Customer Service at <a href="tel:${escapeAttr(input.phoneE164)}" style="color:#162a52;font-weight:700;">${escapeHtml(input.phoneLabel)}</a> by <strong>${escapeHtml(input.pickupByLabel)}</strong> to arrange pickup.</p>
+  <p style="margin:8px 0 0;font-size:13px;color:#6b6560;">Order ${escapeHtml(input.orderRef)}</p>
+</td></tr>
+<tr><td style="padding:12px 28px 28px;font-size:13px;color:#777;line-height:1.5;">
+  With gratitude,<br/><span style="color:#0c0638;font-weight:600;">Team Wrrapd</span>
+</td></tr>`;
+  return wrap(inner);
+}
+
 export function deliveryChoiceEmailHtml(input: {
   customerName: string;
   customerGreetingName?: string;

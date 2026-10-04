@@ -1,5 +1,5 @@
 /**
- * Canonical Wrrapd Terms & Conditions, mirroring the full 17-point Amazon
+ * Canonical Wrrapd Terms & Conditions, mirroring the full 18-point Amazon
  * checkout T&C (content-legacy.js) but parameterized by retailer so every
  * retailer surface shows the same complete legal text, customized.
  */
@@ -13,7 +13,7 @@ function escapeHtml(value) {
 }
 
 /**
- * Returns the inner HTML for the scrollable T&C body (heading + 17 clauses).
+ * Returns the inner HTML for the scrollable T&C body (heading + 18 clauses).
  * @param {string} retailerLabel e.g. "Etsy", "Sephora", "LEGO"
  */
 export function buildWrrapdTermsHtml(retailerLabel) {
@@ -37,9 +37,10 @@ export function buildWrrapdTermsHtml(retailerLabel) {
       ${p(11, `No Product Inspection: Wrrapd does not inspect, open, or handle the contents of ${r}-purchased items prior to the wrapping stage. Wrrapd is not responsible for any damage to the underlying product, defects, missing parts, or incorrect items sent by ${r} or its sellers.`)}
       ${p(12, `Indemnification: You agree to indemnify and hold harmless Wrrapd Inc. from any claims or losses arising from the condition or quality of the underlying product, your use of the service, or your violation of these Terms.`)}
       ${p(13, `Product Issues &amp; Returns: All issues relating to the product itself must be addressed directly with ${r} or the seller. Since you remain the owner of the product, you are responsible for initiating any returns through ${r}&apos;s standard channels using our provided video evidence if necessary.`)}
-      ${p(14, `Refund Policy: Gift-wrapping fees are non-refundable except in limited cases: (a) damage to the gift-wrap itself during transit; or (b) failure to ship the wrapped item within our promised window. Service fees are not refundable once the wrapping process has been documented.`)}
-      ${p(15, `Prohibited Conduct: You agree not to provide false or misleading information or use the service for any fraudulent or illegal purposes.`)}
-      ${p(16, `Warranties and Liability: The service is provided &quot;AS IS.&quot; Wrrapd&apos;s total liability is limited to the service fee paid. We are not liable for indirect, incidental, or consequential damages.`)}
-      ${p(17, `Dispute Resolution &amp; Governing Law: Any disputes will be resolved through binding individual arbitration in St. Petersburg, Florida. You waive the right to a jury trial or class action. These Terms are governed by the laws of the State of Florida, USA.`)}
+      ${p(14, `Items Not Selected for Gift-Wrapping: Any item delivered to Wrrapd that you did not select for Wrrapd gift-wrapping remains your responsibility. Please call Wrrapd Customer Service at (844) 638-5484 within 48 hours of its delivery to Wrrapd to arrange pickup. Wrrapd is not responsible for items not arranged for pickup within that time.`)}
+      ${p(15, `Refund Policy: Gift-wrapping fees are non-refundable except in limited cases: (a) damage to the gift-wrap itself during transit; or (b) failure to ship the wrapped item within our promised window. Service fees are not refundable once the wrapping process has been documented.`)}
+      ${p(16, `Prohibited Conduct: You agree not to provide false or misleading information or use the service for any fraudulent or illegal purposes.`)}
+      ${p(17, `Warranties and Liability: The service is provided &quot;AS IS.&quot; Wrrapd&apos;s total liability is limited to the service fee paid. We are not liable for indirect, incidental, or consequential damages.`)}
+      ${p(18, `Dispute Resolution &amp; Governing Law: Any disputes will be resolved through binding individual arbitration in St. Petersburg, Florida. You waive the right to a jury trial or class action. These Terms are governed by the laws of the State of Florida, USA.`)}
     </div>`;
 }
