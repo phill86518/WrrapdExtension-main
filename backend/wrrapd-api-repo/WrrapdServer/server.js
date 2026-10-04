@@ -2642,6 +2642,15 @@ app.post('/api/internal/refund-order', async (req, res) => {
     }
 });
 
+/** Command Center → anonymous extension installs (id, version, first/last seen; email only after a paid order). */
+app.get('/api/internal/extension-installs', (req, res) => {
+    if (!req.isApiDomain) return res.status(403).json({ error: 'Forbidden' });
+    if (!internalClaimSecretMatches(String(req.get('x-wrrapd-internal-key') || ''))) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+    return res.json({ installs: extensionInstalls.listInstalls() });
+});
+
 app.post('/extension-heartbeat', (req, res) => {
     if (!req.isApiDomain) {
         return res.status(403).json({ ok: false });

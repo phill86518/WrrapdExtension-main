@@ -18,9 +18,9 @@ Chargebacks are handled separately: answer in Helcim with the evidence packet (w
 ## How to refund (normal path)
 
 1. Command Center → **Orders** → open the order.
-2. **Refund** box → amount (leave empty for the full remaining amount) → reason → **Issue refund** → confirm.
+2. **Refund** section → amount (leave empty for the full remaining amount) → reason → **Issue refund** → confirm.
 3. The pay server refunds through Helcim (or Stripe for older orders), records it on the order, and the shopper gets a short refund email. A full refund sets the order to **refunded**.
-4. The refund is listed in the same box with amount, time, reason and who issued it.
+4. The refund is listed in the same section with amount, time, reason and who issued it.
 
 Retrying after an error is safe: the same click reuses one request id, so it cannot refund twice.
 

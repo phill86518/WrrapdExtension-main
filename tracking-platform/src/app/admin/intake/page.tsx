@@ -39,7 +39,7 @@ export default async function AdminIntakePage() {
         <h1 className="mt-2 text-3xl font-bold text-[#0f172a]">Hub intake</h1>
         <p className="mt-1 text-sm text-slate-600">
           Type the order number from the packing slip. If there is no slip, search by item or shopper name and check
-          the wrap day. When unsure, set the box on the hold shelf and mark it Partly received with a note.
+          the wrap day. When unsure, set the package on the hold shelf and mark it Partly received with a note.
         </p>
       </div>
       <AdminIntakeBoard rows={rows} />

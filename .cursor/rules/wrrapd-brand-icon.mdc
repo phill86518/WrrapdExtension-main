@@ -1,22 +1,21 @@
 ---
-description: Canonical Wrrapd brand icon — centered grounded red-W + gold bow (icon-focus), never the floating-W pack.
+description: Wrrapd square brand icon — the live wrrapd.com rounded red W + gold bow
 alwaysApply: true
 ---
 
 # Wrrapd brand icon (canonical)
 
-**Always use** the centered, grounded red-W + gold-bow mark — **never** the older floating-W icon.
+**Always use** the icon that is live on wrrapd.com (browser tab / home screen): the **rounded red W with the gold bow**. Roger approved it on Oct 4, 2026. Do not use the older blocky "focus" W or the floating-W icon.
 
 | Asset | Path |
 |---|---|
-| Source of truth | `wordpress/icons/favicon/icon-focus-512.png` |
-| Derived sizes | `wordpress/icons/favicon/icon-{16,32,48,64,96,128,180,192,256,512,1024,2048}.png`, `favicon.ico` |
+| Source of truth | `wordpress/icons/favicon/android-chrome-512x512.png` (byte-identical to live `wp-content/mu-plugins/icons/favicon/android-chrome-512x512.png`) |
+| Live tab icons (copied from live, do not regenerate) | `favicon.ico`, `icon-16.png`, `icon-32.png`, `icon-180.png`, `icon-192.png` |
+| Other sizes (resized from the source) | `icon-{48,64,96,128,256,512,1024,2048}.png`; `icon-focus-512.png` is kept as a copy of the source for old references |
 | Live MU path | `wp-content/mu-plugins/icons/favicon/` |
-| Media Library (Site Icon) | `wrrapd-bow-favicon-180.png` (from focus pack) |
 
 ## Rules for agents
 
-- When adding favicons, PWA icons, apple-touch icons, admin/chrome marks, or any square Wrrapd “app icon,” use the **focus** pack above.
-- Do **not** resurrect or link the pre-focus floating-W PNGs.
-- Full wordmark (`Wrrapd_f-Logo-800-x-458-px.png`) is separate — use for header/footer **word** branding only; square icon contexts use the focus W.
-- After regenerating sizes from `icon-focus-512.png`, redeploy `wordpress/icons/favicon/` to SiteGround `mu-plugins/icons/favicon/`.
+- Favicons, PWA icons, apple-touch icons, PDF covers, admin marks, any square Wrrapd "app icon": use the files above.
+- The full wordmark (`Wrrapd_f-Logo-800-x-458-px.png`) is for header/footer **word** branding only.
+- If the live files ever change, copy them from live into the repo first, then resize the others from `android-chrome-512x512.png`. Never push repo icons over live ones without comparing checksums.

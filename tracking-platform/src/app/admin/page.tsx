@@ -35,7 +35,7 @@ const MODULE_GROUPS = [
       {
         href: "/admin/intake",
         title: "Hub intake",
-        body: "Check in arriving boxes by packing-slip order number.",
+        body: "Check in arriving packages by packing-slip order number.",
       },
       {
         href: "/admin/orders/calendar",
@@ -119,6 +119,11 @@ const MODULE_GROUPS = [
         href: "/admin/zip-codes",
         title: "Allowed ZIP codes",
         body: "Where we accept a gift.",
+      },
+      {
+        href: "/admin/extension-installs",
+        title: "Extension installs",
+        body: "How many shoppers have the extension, and which version.",
       },
       {
         href: "/admin/printer-coverage",

@@ -11,5 +11,6 @@ Included with the 3.0.11 store package (box charge for loose items).
 - Heartbeat once per day to `https://api.wrrapd.com/extension-heartbeat` with `{ installId, extensionVersion, firstSeen }` only.
 - `installId` is attached on `process-payment` only after the shopper already sends an email.
 - Privacy page §1a already allows extension version and limited usage signals.
+- Viewer: Command Center → **Extension installs** (`/admin/extension-installs`), read through the pay server's `GET /api/internal/extension-installs` (internal key).
 
 Do not ping on every product page, scrape the Chrome Web Store, or treat the local `WRRAPD_PING` as install tracking.

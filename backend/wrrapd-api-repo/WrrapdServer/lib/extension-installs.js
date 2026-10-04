@@ -56,4 +56,10 @@ function attachPayer(installId, email) {
     writeMap(map);
 }
 
-module.exports = { recordHeartbeat, attachPayer };
+function listInstalls() {
+    return Object.values(readMap())
+        .filter((r) => r && validId(r.installId))
+        .sort((a, b) => String(b.lastSeen || '').localeCompare(String(a.lastSeen || '')));
+}
+
+module.exports = { recordHeartbeat, attachPayer, listInstalls };
