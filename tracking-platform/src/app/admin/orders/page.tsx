@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { AdminCreateDeliverySection } from "@/components/admin-create-delivery-section";
+import { AdminMissingOrders } from "@/components/admin-missing-orders";
 import { AdminOrdersBoard } from "@/components/admin-orders-board";
+import { findPaidOrdersMissingFromCommandCenter } from "@/lib/pay-reconcile";
 import { SameOriginLogoutLink } from "@/components/same-origin-logout-link";
 import { createOrderAction } from "@/app/admin/orders/actions";
 import { getSession } from "@/lib/auth";
@@ -43,6 +45,11 @@ export default async function AdminOrdersPage({
   let wrapstars: Awaited<ReturnType<typeof listWrapstars>>;
   let drivers: Awaited<ReturnType<typeof listCourierDrivers>>;
   let waiting: Awaited<ReturnType<typeof listAllocationQueue>>;
+  const reconcile = await findPaidOrdersMissingFromCommandCenter(30).catch((e) => ({
+    missing: [],
+    checked: 0,
+    error: e instanceof Error ? e.message : String(e),
+  }));
 
   try {
     await ensureDemoStaffing();
@@ -134,11 +141,13 @@ export default async function AdminOrdersPage({
         ) : null}
       </div>
 
+      <AdminMissingOrders rows={reconcile.missing} error={reconcile.error} />
+
       {waiting.length > 0 ? (
         <section className="rounded-2xl border-2 border-amber-300 bg-amber-50 p-5 shadow-md">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <h2 className="text-lg font-bold text-amber-950">
-              Waiting for a WrapStar ({waiting.length})
+              Needs a WrapStar ({waiting.length})
             </h2>
             <Link href="/admin/allocations" className="text-sm font-semibold text-amber-900 underline">
               Assign in Allocations

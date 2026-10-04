@@ -83,6 +83,9 @@ td.box {{ text-align: center; font-size: 11pt; width: 0.32in; color: {NAVY}; }}
 .st-RED {{ background: #fbd9dc; color: #a1121f; }}
 .st-GREY {{ background: #e7e7ea; color: #444; }}
 
+.diagram {{ page-break-before: always; page-break-inside: avoid; }}
+.diagram img {{ width: 100%; }}
+
 .signoff {{ page-break-before: always; }}
 .signoff table td {{ height: 0.32in; }}
 """

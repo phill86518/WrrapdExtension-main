@@ -1,0 +1,129 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="1330" viewBox="0 0 1240 1330" font-family="Arial, Helvetica, sans-serif">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#0c0638"/>
+    </marker>
+  </defs>
+  <rect width="1240" height="1330" fill="#faf8f4"/>
+  <rect x="0" y="0" width="1240" height="92" fill="#0c0638"/>
+  <text x="40" y="52" font-size="30" font-weight="700" fill="#ffffff">Wrrapd order flow</text>
+  <text x="40" y="78" font-size="15" fill="#f6b933">From the retailer cart to the giftee&#8217;s door</text>
+
+  <g font-size="12" font-weight="700">
+    <rect x="760" y="30" width="80" height="22" rx="11" fill="#f6b933"/><text x="800" y="45" text-anchor="middle" fill="#0f0351">SHOPPER</text>
+    <rect x="848" y="30" width="80" height="22" rx="11" fill="#162a52"/><text x="888" y="45" text-anchor="middle" fill="#fff">SYSTEM</text>
+    <rect x="936" y="30" width="60" height="22" rx="11" fill="#2d6a4f"/><text x="966" y="45" text-anchor="middle" fill="#fff">HUB</text>
+    <rect x="1004" y="30" width="96" height="22" rx="11" fill="#9d174d"/><text x="1052" y="45" text-anchor="middle" fill="#fff">WRAPSTAR</text>
+    <rect x="1108" y="30" width="96" height="22" rx="11" fill="#5b21b6"/><text x="1156" y="45" text-anchor="middle" fill="#fff">DELIVERY</text>
+  </g>
+
+  <g font-size="15" fill="#0f172a">
+    <rect x="40" y="120" width="720" height="92" rx="12" fill="#fff" stroke="#f6b933" stroke-width="3"/>
+    <rect x="56" y="134" width="84" height="22" rx="11" fill="#f6b933"/><text x="98" y="149" text-anchor="middle" font-size="12" font-weight="700" fill="#0f0351">SHOPPER</text>
+    <text x="156" y="151" font-size="17" font-weight="700">1. Shops on Amazon or 9 other stores</text>
+    <text x="56" y="182">Adds the gift to the cart and clicks Wrrapd gift-wrapping (Chrome extension).</text>
+
+    <rect x="40" y="236" width="720" height="92" rx="12" fill="#fff" stroke="#f6b933" stroke-width="3"/>
+    <rect x="56" y="250" width="84" height="22" rx="11" fill="#f6b933"/><text x="98" y="265" text-anchor="middle" font-size="12" font-weight="700" fill="#0f0351">SHOPPER</text>
+    <text x="156" y="267" font-size="17" font-weight="700">2. Chooses the wrap</text>
+    <text x="56" y="298">Giftee ZIP (Duval County) &#183; paper or design &#183; message &#183; flowers &#183; accepts Terms.</text>
+
+    <rect x="40" y="352" width="720" height="92" rx="12" fill="#fff" stroke="#f6b933" stroke-width="3"/>
+    <rect x="56" y="366" width="84" height="22" rx="11" fill="#f6b933"/><text x="98" y="381" text-anchor="middle" font-size="12" font-weight="700" fill="#0f0351">SHOPPER</text>
+    <text x="156" y="383" font-size="17" font-weight="700">3. Pays Wrrapd at pay.wrrapd.com</text>
+    <text x="56" y="414">Card charged through Helcim. The retailer ship-to is set to the Wrrapd hub.</text>
+
+    <rect x="40" y="468" width="720" height="108" rx="12" fill="#fff" stroke="#162a52" stroke-width="3"/>
+    <rect x="56" y="482" width="84" height="22" rx="11" fill="#162a52"/><text x="98" y="497" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">SYSTEM</text>
+    <text x="156" y="499" font-size="17" font-weight="700">4. Order recorded and sent to Command Center</text>
+    <text x="56" y="528">Shopper gets a thank-you email and text; ops gets a new-order email.</text>
+    <text x="56" y="553">If the hand-off fails it is resent every 5 minutes, and an hourly check emails ops.</text>
+
+    <rect x="40" y="600" width="720" height="92" rx="12" fill="#fff" stroke="#f6b933" stroke-width="3"/>
+    <rect x="56" y="614" width="84" height="22" rx="11" fill="#f6b933"/><text x="98" y="629" text-anchor="middle" font-size="12" font-weight="700" fill="#0f0351">SHOPPER</text>
+    <text x="156" y="631" font-size="17" font-weight="700">5. Places the retailer order</text>
+    <text x="56" y="662">The extension reads the retailer order number from the thank-you page.</text>
+
+    <rect x="40" y="716" width="720" height="92" rx="12" fill="#fff" stroke="#162a52" stroke-width="3"/>
+    <rect x="56" y="730" width="84" height="22" rx="11" fill="#162a52"/><text x="98" y="745" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">SYSTEM</text>
+    <text x="156" y="747" font-size="17" font-weight="700">6. WrapStar assigned</text>
+    <text x="56" y="778">Auto-assigned near the giftee ZIP, or shown under &#8220;Needs a WrapStar&#8221; in Orders.</text>
+
+    <rect x="40" y="832" width="720" height="108" rx="12" fill="#fff" stroke="#2d6a4f" stroke-width="3"/>
+    <rect x="56" y="846" width="84" height="22" rx="11" fill="#2d6a4f"/><text x="98" y="861" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">HUB</text>
+    <text x="156" y="863" font-size="17" font-weight="700">7. Package arrives and is checked in</text>
+    <text x="56" y="892">JoyRider collects from the hub / PO Box. Hub intake: match the packing-slip order #,</text>
+    <text x="56" y="917">then mark Received, Partly received, Damaged or Missing.</text>
+
+    <rect x="40" y="964" width="720" height="92" rx="12" fill="#fff" stroke="#9d174d" stroke-width="3"/>
+    <rect x="56" y="978" width="96" height="22" rx="11" fill="#9d174d"/><text x="104" y="993" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">WRAPSTAR</text>
+    <text x="168" y="995" font-size="17" font-weight="700">8. Wraps on video</text>
+    <text x="56" y="1026">7:45 AM wrap sheet &#183; records the wrap &#183; prints the QR label &#183; ready for delivery.</text>
+
+    <rect x="40" y="1080" width="720" height="108" rx="12" fill="#fff" stroke="#5b21b6" stroke-width="3"/>
+    <rect x="56" y="1094" width="96" height="22" rx="11" fill="#5b21b6"/><text x="104" y="1109" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">DELIVERY</text>
+    <text x="168" y="1111" font-size="17" font-weight="700">9. Delivered to the giftee</text>
+    <text x="56" y="1140">WrapStar or JoyRider delivers on the Wrrapd date. &#8220;Out for delivery&#8221; text,</text>
+    <text x="56" y="1165">door photo, then &#8220;Delivered&#8221; email and text to the shopper.</text>
+
+    <rect x="40" y="1212" width="720" height="92" rx="12" fill="#fff" stroke="#162a52" stroke-width="3"/>
+    <rect x="56" y="1226" width="84" height="22" rx="11" fill="#162a52"/><text x="98" y="1241" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">SYSTEM</text>
+    <text x="156" y="1243" font-size="17" font-weight="700">10. Contractors paid</text>
+    <text x="56" y="1274">Hours from wrap shifts and deliveries &#183; weekly payout every Thursday at 6 PM.</text>
+  </g>
+
+  <g stroke="#0c0638" stroke-width="2.5" marker-end="url(#arr)">
+    <line x1="400" y1="212" x2="400" y2="232"/>
+    <line x1="400" y1="328" x2="400" y2="348"/>
+    <line x1="400" y1="444" x2="400" y2="464"/>
+    <line x1="400" y1="576" x2="400" y2="596"/>
+    <line x1="400" y1="692" x2="400" y2="712"/>
+    <line x1="400" y1="808" x2="400" y2="828"/>
+    <line x1="400" y1="940" x2="400" y2="960"/>
+    <line x1="400" y1="1056" x2="400" y2="1076"/>
+    <line x1="400" y1="1188" x2="400" y2="1208"/>
+  </g>
+
+  <rect x="790" y="120" width="410" height="1184" rx="14" fill="#fff4f4" stroke="#e11d48" stroke-width="2"/>
+  <text x="810" y="156" font-size="20" font-weight="700" fill="#9f1239">When something goes wrong</text>
+  <g font-size="14" fill="#0f172a">
+    <text x="810" y="200" font-weight="700" fill="#9f1239">Charged, not in Command Center</text>
+    <text x="810" y="222">Red banner on Orders and an hourly email.</text>
+    <text x="810" y="242">Click &#8220;Bring into Command Center&#8221;.</text>
+
+    <text x="810" y="290" font-weight="700" fill="#9f1239">No WrapStar nearby</text>
+    <text x="810" y="312">Order still shows on Orders under</text>
+    <text x="810" y="332">&#8220;Needs a WrapStar&#8221;. Assign in Allocations.</text>
+
+    <text x="810" y="380" font-weight="700" fill="#9f1239">No retailer order by end of day</text>
+    <text x="810" y="402">Red flag in Hub intake and the 11:30 PM email.</text>
+    <text x="810" y="422">Call the shopper; refund if they did not order.</text>
+
+    <text x="810" y="470" font-weight="700" fill="#9f1239">Refund</text>
+    <text x="810" y="492">Order page &#8594; Refund (empty = full amount).</text>
+    <text x="810" y="512">Same-day payments are reversed in full.</text>
+    <text x="810" y="532">Shopper gets an email; order shows Refunded.</text>
+
+    <text x="810" y="580" font-weight="700" fill="#9f1239">Package damaged or partly received</text>
+    <text x="810" y="602">Hub intake with a note.</text>
+    <text x="810" y="622">Contact the shopper before wrapping.</text>
+
+    <text x="810" y="670" font-weight="700" fill="#9f1239">Package missing</text>
+    <text x="810" y="692">Mark Missing. Shopper follows up with the</text>
+    <text x="810" y="712">retailer; reschedule or refund the wrap.</text>
+
+    <text x="810" y="760" font-weight="700" fill="#9f1239">Extra item, not for wrapping</text>
+    <text x="810" y="782">Hub intake &#8594; Hold for pickup. Shopper gets an</text>
+    <text x="810" y="802">email and text to call (844) 638-5484 within</text>
+    <text x="810" y="822">48 hours. Mark Picked up or Close.</text>
+
+    <text x="810" y="870" font-weight="700" fill="#9f1239">Past the scheduled day</text>
+    <text x="810" y="892">Shows as Delinquent on Orders.</text>
+    <text x="810" y="912">Restaff or update the status.</text>
+
+    <text x="810" y="960" font-weight="700" fill="#9f1239">Daily safety net</text>
+    <text x="810" y="982">7:45 AM wrap sheets &#183; hourly order check &#183;</text>
+    <text x="810" y="1002">11:30 PM hub exceptions email &#183; uptime alerts</text>
+    <text x="810" y="1022">to admin@wrrapd.com.</text>
+  </g>
+</svg>

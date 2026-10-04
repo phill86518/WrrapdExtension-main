@@ -132,9 +132,9 @@ export default async function AdminWrapriderDetailPage({
         <label className="block text-sm">
           Status
           <select name="status" defaultValue={wraprider.status} className="mt-1 w-full rounded border px-3 py-2">
-            <option value="pending">pending</option>
-            <option value="approved">approved</option>
-            <option value="rejected">rejected</option>
+            <option value="pending">Pending review</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Not approved</option>
           </select>
         </label>
         <label className="block text-sm">

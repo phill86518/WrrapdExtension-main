@@ -175,8 +175,8 @@ export default async function AdminWrapstarDetailPage({
               defaultValue={wrapstar.wrapOnly || wrapstar.canDeliver === false ? "no" : "yes"}
               className="mt-1 w-full rounded border px-3 py-2"
             >
-              <option value="yes">Yes (hybrid — self-delivery)</option>
-              <option value="no">No (wrap-only — needs JoyRider)</option>
+              <option value="yes">Yes, wraps and delivers the gift</option>
+              <option value="no">No, wraps only (a JoyRider delivers)</option>
             </select>
           </label>
           <label className="text-sm">

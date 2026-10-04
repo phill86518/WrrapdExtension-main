@@ -134,6 +134,12 @@ Launching publicly before Black Friday matters: it gives us ~3 calm weeks to fin
 
 ---
 
+## 1.6 Order flow and role workflows
+
+<div class="diagram"><img src="docs/diagrams/order-flow.svg" alt="Wrrapd order flow"></div>
+
+<div class="diagram"><img src="docs/diagrams/role-workflows.svg" alt="Wrrapd workflows by role"></div>
+
 # 2. Business model review
 
 ## 2.1 The model as built

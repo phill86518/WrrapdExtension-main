@@ -706,11 +706,10 @@ export async function listOrdersByStatus(status: OrderBoardBucket) {
   const now = new Date();
 
   if (status === "delinquent") {
-    return orders.filter((o) => isAllocationReleasedToModules(o) && isOrderDelinquent(o, now));
+    return orders.filter((o) => isOrderDelinquent(o, now));
   }
   if (status === "active") {
     return orders.filter((o) => {
-      if (!isAllocationReleasedToModules(o)) return false;
       if (isOrderDelinquent(o, now)) return false;
       const st = normalizeOrderStatus(o.status);
       return (
@@ -723,16 +722,18 @@ export async function listOrdersByStatus(status: OrderBoardBucket) {
   }
   if (status === "scheduled") {
     return orders.filter((o) => {
-      if (!isAllocationReleasedToModules(o)) return false;
       if (isOrderDelinquent(o, now)) return false;
       const st = normalizeOrderStatus(o.status);
       return st === "scheduled" || st === "pending";
     });
   }
-  return orders.filter((o) => {
-    const st = normalizeOrderStatus(o.status);
-    return st === "delivered" || st === "cancelled" || st === "refunded";
-  });
+  if (status === "past") {
+    return orders.filter((o) => {
+      const st = normalizeOrderStatus(o.status);
+      return st === "delivered" || st === "cancelled" || st === "refunded";
+    });
+  }
+  return orders;
 }
 
 export async function listAllOrders(): Promise<Order[]> {

@@ -199,28 +199,38 @@ export default async function AdminDriversPage() {
                           defaultValue={d.status}
                           className="rounded border px-2 py-1 text-xs"
                         >
-                          <option value="pending">pending</option>
-                          <option value="approved">approved</option>
-                          <option value="rejected">rejected</option>
+                          <option value="pending">Pending review</option>
+                          <option value="approved">Approved</option>
+                          <option value="rejected">Not approved</option>
                         </select>
                         <input
                           name="notes"
                           defaultValue={d.notes || ""}
-                          placeholder="Notes"
+                          placeholder="Internal note"
                           className="w-full rounded border px-2 py-1 text-xs"
                         />
-                        <button type="submit" className="text-xs text-blue-700 underline">
-                          Save
+                        <button type="submit" className="rounded border px-2 py-1 text-xs font-semibold">
+                          Save status
                         </button>
                       </form>
                     </td>
-                    <td className="px-3 py-3">
-                      <form action={deleteAction}>
-                        <input type="hidden" name="driverId" value={d.id} />
-                        <button type="submit" className="text-xs text-red-700 underline">
-                          Delete
-                        </button>
-                      </form>
+                    <td className="w-48 space-y-2 px-3 py-3">
+                      <Link
+                        href={`/admin/drivers/${d.id}`}
+                        className="block rounded-lg bg-slate-900 px-3 py-1.5 text-center text-xs font-semibold text-white"
+                      >
+                        Open profile
+                      </Link>
+                      <details className="rounded-lg border border-rose-200 px-2 py-1.5">
+                        <summary className="cursor-pointer text-xs font-semibold text-rose-800">Remove JoyRider</summary>
+                        <form action={deleteAction} className="mt-2 space-y-1">
+                          <input type="hidden" name="driverId" value={d.id} />
+                          <p className="text-[11px] text-slate-600">Reassign their open deliveries first.</p>
+                          <button type="submit" className="rounded bg-rose-700 px-2 py-1 text-xs font-bold text-white">
+                            Yes, remove
+                          </button>
+                        </form>
+                      </details>
                     </td>
                   </tr>
                 );

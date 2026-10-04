@@ -30,6 +30,7 @@ export default async function AdminIntakePage() {
       recipientName: o.recipientName,
       customerEmail: o.customerEmail || null,
       items: (o.lineItems || []).map((li) => li.title || "").filter(Boolean),
+      images: (o.lineItems || []).map((li) => li.imageUrl || "").filter(Boolean).slice(0, 4),
       wrapDay: formatInTimeZone(toInstantDate(o.scheduledFor), "America/New_York", "EEE MMM d"),
       status: o.status,
       hubReceipt: o.hubReceipt || null,

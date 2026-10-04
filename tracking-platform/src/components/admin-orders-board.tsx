@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { SelectAllOrdersButton } from "@/components/select-all-orders-button";
 import {
@@ -13,7 +14,13 @@ import { formatDateKeyNy, toInstantDate } from "@/lib/ny-date";
 import { wrrapdScheduledInstantIsoForUi } from "@/lib/order-schedule-display";
 import { maxStopSequenceByRouteKey } from "@/lib/route-optimization";
 import type { DeliveryDriver, Order, WrapStar } from "@/lib/types";
-import { orderWrapstarId, resolveFulfillmentMode } from "@/lib/types";
+import {
+  ORDER_STATUS_LABEL,
+  ORDER_STATUS_MENU,
+  orderStatusLabel,
+  orderWrapstarId,
+  resolveFulfillmentMode,
+} from "@/lib/types";
 import { wrapPhaseBadgeClass, wrapPhaseLabel } from "@/lib/wrap-status-display";
 import { formatInTimeZone } from "date-fns-tz";
 
@@ -287,7 +294,7 @@ function BoardColumn({
         >
           {group.items.map((order) => {
             const displayScheduledIso = wrrapdScheduledInstantIsoForUi(order);
-            const wsSelected = orderWrapstarId(order) || taylorId;
+            const wsSelected = orderWrapstarId(order) || "";
             const assignedWs = wrapstars.find((w) => w.id === orderWrapstarId(order));
             const fulfillmentMode = resolveFulfillmentMode(order, assignedWs);
             const needsCourier = fulfillmentMode === "driver_final_mile";
@@ -319,9 +326,12 @@ function BoardColumn({
                       className="h-4 w-4 shrink-0 rounded border-[#1a2744]/40 text-amber-600 focus:ring-2 focus:ring-amber-500"
                       title={`Select ${order.id} for deletion`}
                     />
-                    <p className="min-w-0 flex-1 whitespace-nowrap font-semibold leading-none tracking-tight text-[#0f172a]">
+                    <Link
+                      href={`/admin/orders/${encodeURIComponent(order.id)}`}
+                      className="min-w-0 flex-1 whitespace-nowrap font-semibold leading-none tracking-tight text-[#0f172a] underline decoration-[#c9a227]/60 underline-offset-2"
+                    >
                       {order.externalOrderId?.trim() || order.id}
-                    </p>
+                    </Link>
                   </div>
                   <div className="flex flex-wrap items-center gap-2 pl-6">
                     {order.stopSequence != null && (
@@ -363,14 +373,14 @@ function BoardColumn({
                       </span>
                     ) : null}
                     <p className="text-xs font-bold uppercase tracking-wide text-[#1e3a5f]">
-                      {order.status}
+                      {orderStatusLabel(order.status)}
                     </p>
                     <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-                      {fulfillmentMode === "self_delivery" ? "Hybrid self-delivery" : "JoyRider final-mile"}
+                      {fulfillmentMode === "self_delivery" ? "WrapStar delivers" : "JoyRider delivers"}
                     </p>
                   </div>
                 </div>
-                {isDelinquentCol && unassigned ? (
+                {unassigned && !["delivered", "cancelled", "refunded"].includes(order.status) ? (
                   <p className="mt-2 rounded-lg bg-rose-100 px-2 py-1 text-xs font-bold text-rose-900">
                     Needs staffing —{" "}
                     {missingWs && missingCourier
@@ -379,6 +389,23 @@ function BoardColumn({
                         ? "WrapStar missing"
                         : "JoyRider missing"}
                   </p>
+                ) : null}
+                {order.lineItems?.some((li) => li.imageUrl) ? (
+                  <div className="mt-2 flex gap-1.5">
+                    {order.lineItems
+                      .filter((li) => li.imageUrl)
+                      .slice(0, 4)
+                      .map((li, i) => (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          key={i}
+                          src={li.imageUrl}
+                          alt={li.title || ""}
+                          referrerPolicy="no-referrer"
+                          className="h-12 w-12 rounded border border-slate-200 bg-white object-contain"
+                        />
+                      ))}
+                  </div>
                 ) : null}
                 <p className="mt-2 text-sm font-medium text-[#0f172a]">{order.recipientName}</p>
                 <p className="text-sm text-[#2d4a38]">
@@ -424,15 +451,11 @@ function BoardColumn({
                     defaultValue={order.status === "en_route" ? "in_progress" : order.status}
                     className="min-w-[10rem] flex-1 rounded-xl border-2 border-[#1a2744]/25 bg-white px-3 py-2 text-sm font-medium text-[#0f172a] shadow-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-400/50"
                   >
-                    <option value="pending">pending</option>
-                    <option value="scheduled">scheduled</option>
-                    <option value="assigned">assigned</option>
-                    <option value="accepted">accepted</option>
-                    <option value="in_progress">in_progress</option>
-                    <option value="out_for_delivery">out_for_delivery</option>
-                    <option value="delivered">delivered</option>
-                    <option value="cancelled">cancelled</option>
-                    <option value="refunded">refunded</option>
+                    {ORDER_STATUS_MENU.map((s) => (
+                      <option key={s} value={s}>
+                        {ORDER_STATUS_LABEL[s]}
+                      </option>
+                    ))}
                   </select>
                   <button
                     className="rounded-xl bg-gradient-to-b from-amber-400 to-amber-600 px-4 py-2 text-sm font-bold text-[#1a1a1a] shadow-lg shadow-amber-900/25 ring-1 ring-white/40 transition hover:from-amber-300 hover:to-amber-500 active:scale-[0.98]"
@@ -470,20 +493,23 @@ function BoardColumn({
                       defaultValue={wsSelected}
                       className="mt-1 w-full rounded-xl border-2 border-[#1a2744]/25 bg-white px-3 py-2 text-sm font-medium text-[#0f172a] shadow-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-400/50"
                     >
+                      <option value="" disabled>
+                        Choose a WrapStar
+                      </option>
                       {wrapstars.map((w) => (
                         <option key={w.id} value={w.id}>
                           {w.name}
-                          {w.id === taylorId ? " (demo)" : ""} ·{" "}
-                          {w.wrapOnly || w.canDeliver === false ? "wrap-only" : "hybrid"} ·{" "}
-                          {w.displayId || w.id} · ZIP {w.homePostalCode}
+                          {w.id === taylorId ? " (demo)" : ""} —{" "}
+                          {w.wrapOnly || w.canDeliver === false ? "wraps only" : "wraps and delivers"} — ZIP{" "}
+                          {w.homePostalCode}
                         </option>
                       ))}
                     </select>
                   </label>
                   <label className="block text-xs font-semibold uppercase tracking-wide text-[#1a2744]">
                     {needsCourier
-                      ? "JoyRider — required for wrap-only"
-                      : "JoyRider — optional for hybrid"}
+                      ? "JoyRider (needed: this WrapStar only wraps)"
+                      : "JoyRider (optional: the WrapStar delivers)"}
                     <select
                       name="courierDriverId"
                       required={needsCourier}
@@ -493,9 +519,7 @@ function BoardColumn({
                       className="mt-1 w-full rounded-xl border-2 border-[#1a2744]/25 bg-white px-3 py-2 text-sm font-medium text-[#0f172a] shadow-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-400/50"
                     >
                       <option value="">
-                        {needsCourier
-                          ? "— Select courier (required for wrap-only) —"
-                          : "— Self-delivery (no courier) —"}
+                        {needsCourier ? "Choose a JoyRider" : "None, the WrapStar delivers"}
                       </option>
                       {driverOptions.map((d) => (
                         <option key={d.id} value={d.id}>

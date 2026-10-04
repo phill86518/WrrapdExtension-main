@@ -9,6 +9,7 @@ import {
   orderWrapstarId,
   orderWrapstarName,
   resolveFulfillmentMode,
+  ORDER_STATUS_LABEL,
   type OrderStatus,
 } from "@/lib/types";
 import { findWrapstarById } from "@/lib/wrapstar-registry";
@@ -278,7 +279,7 @@ export default async function AdminOrderDetailPage({
               <select name="status" defaultValue={status} className="ml-2 rounded border px-2 py-1.5">
                 {STATUSES.map((s) => (
                   <option key={s} value={s}>
-                    {s}
+                    {ORDER_STATUS_LABEL[s]}
                   </option>
                 ))}
               </select>
@@ -350,13 +351,22 @@ export default async function AdminOrderDetailPage({
                   : "No extra box.";
               return (
               <li key={i} className="flex gap-3 border-b border-slate-100 pb-3 last:border-0">
-                {li.imageUrl || li.wrappingDesignImageUrl ? (
-                  <Image
-                    src={li.wrappingDesignImageUrl || li.imageUrl || ""}
-                    alt=""
-                    width={64}
-                    height={64}
-                    className="h-16 w-16 rounded object-cover"
+                {li.imageUrl ? (
+                  // Retailer product photos come from many store CDNs, so a plain img (not next/image).
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={li.imageUrl}
+                    alt={li.title || "Item"}
+                    referrerPolicy="no-referrer"
+                    className="h-20 w-20 shrink-0 rounded border border-slate-200 bg-white object-contain"
+                  />
+                ) : null}
+                {li.wrappingDesignImageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={li.wrappingDesignImageUrl}
+                    alt="Wrapping design"
+                    className="h-20 w-20 shrink-0 rounded border border-slate-200 object-cover"
                   />
                 ) : null}
                 <div className="text-sm">

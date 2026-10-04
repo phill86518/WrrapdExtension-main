@@ -2533,6 +2533,103 @@ function recordRefundOnOrder(orderNumber, refund) {
     return hit.data;
 }
 
+/** Records the Command Center hand-off on the order JSON so failed sends can be retried and audited. */
+function setOrderIngestState(orderNumber, patch) {
+    const hit = findOrderFileByNumber(orderNumber);
+    if (!hit) return null;
+    const prev = hit.data.trackingIngest && typeof hit.data.trackingIngest === 'object' ? hit.data.trackingIngest : {};
+    hit.data.trackingIngest = { ...prev, ...patch, at: new Date().toISOString() };
+    const tmp = `${hit.fp}.tmp`;
+    fs.writeFileSync(tmp, JSON.stringify(hit.data, null, 2));
+    fs.renameSync(tmp, hit.fp);
+    return hit.data;
+}
+
+/** Re-sends a saved order to Command Center. Customer emails already went out from the pay server, so skip them. */
+async function resendOrderToTracking(orderNumber) {
+    const hit = findOrderFileByNumber(orderNumber);
+    const ti = hit && hit.data.trackingIngest;
+    if (!ti || !ti.payload) return { ok: false, reason: 'No saved order details to resend' };
+    const r = await ingestOrderIntoTracking({ ...ti.payload, skipCustomerNotifications: true });
+    setOrderIngestState(orderNumber, {
+        ok: !!r.ok,
+        attempts: (Number(ti.attempts) || 1) + 1,
+        reason: r.ok ? '' : String(r.reason || 'unknown').slice(0, 300),
+    });
+    return r;
+}
+
+const INGEST_RETRY_MAX_ATTEMPTS = 288;
+let ingestRetryRunning = false;
+async function retryFailedTrackingIngests() {
+    if (ingestRetryRunning) return;
+    ingestRetryRunning = true;
+    try {
+        const ordersDir = path.join(__dirname, 'orders');
+        if (!fs.existsSync(ordersDir)) return;
+        for (const file of fs.readdirSync(ordersDir)) {
+            if (!file.startsWith('order_') || !file.endsWith('.json')) continue;
+            let data;
+            try {
+                data = JSON.parse(fs.readFileSync(path.join(ordersDir, file), 'utf8'));
+            } catch (_) {
+                continue;
+            }
+            const ti = data && data.trackingIngest;
+            if (!ti || ti.ok !== false || !ti.payload || (Number(ti.attempts) || 0) >= INGEST_RETRY_MAX_ATTEMPTS) continue;
+            const r = await resendOrderToTracking(data.orderNumber);
+            console.log(`[ingest-retry] ${data.orderNumber} ${r.ok ? 'delivered to Command Center' : `still failing: ${r.reason}`}`);
+        }
+    } finally {
+        ingestRetryRunning = false;
+    }
+}
+setInterval(() => {
+    retryFailedTrackingIngests().catch((e) => console.error('[ingest-retry]', e));
+}, 5 * 60 * 1000).unref();
+
+/** Command Center reconciliation: every paid order on this server in the last `days` days. */
+app.get('/api/internal/paid-orders', (req, res) => {
+    if (!req.isApiDomain || !internalClaimSecretMatches(req)) return res.status(401).json({ error: 'Unauthorized' });
+    const days = Math.min(Math.max(Number(req.query.days) || 30, 1), 365);
+    const cutoff = Date.now() - days * 86400000;
+    const ordersDir = path.join(__dirname, 'orders');
+    const orders = [];
+    if (fs.existsSync(ordersDir)) {
+        for (const file of fs.readdirSync(ordersDir)) {
+            if (!file.startsWith('order_') || !file.endsWith('.json')) continue;
+            try {
+                const d = JSON.parse(fs.readFileSync(path.join(ordersDir, file), 'utf8'));
+                const ts = Date.parse(d.timestamp || '');
+                if (!d.orderNumber || !d.payment || !d.payment.id || !(ts >= cutoff)) continue;
+                orders.push({
+                    orderNumber: d.orderNumber,
+                    timestamp: d.timestamp,
+                    amountCents: Math.round(Number(d.payment.amount) || 0),
+                    refundedCents: Math.round(Number(d.refundedCents) || 0),
+                    retailer: d.retailer || '',
+                    customerEmail: (d.customer && d.customer.email) || '',
+                    ingestOk: d.trackingIngest ? d.trackingIngest.ok !== false : null,
+                    canResend: !!(d.trackingIngest && d.trackingIngest.payload),
+                });
+            } catch (_) {
+                // ignore malformed historical files
+            }
+        }
+    }
+    orders.sort((a, b) => String(b.timestamp).localeCompare(String(a.timestamp)));
+    res.json({ orders });
+});
+
+app.post('/api/internal/resend-order', async (req, res) => {
+    if (!req.isApiDomain || !internalClaimSecretMatches(req)) return res.status(401).json({ error: 'Unauthorized' });
+    const orderNumber = String((req.body && req.body.orderNumber) || '').trim();
+    if (!orderNumber) return res.status(400).json({ error: 'orderNumber required' });
+    const r = await resendOrderToTracking(orderNumber);
+    if (!r.ok) return res.status(502).json({ error: r.reason || 'Resend failed' });
+    res.json({ ok: true });
+});
+
 /**
  * Extension → retailer order number read from the retailer's confirmation page after Pay Wrrapd.
  * Body: { orderNumber, retailerOrderNumber, retailer }. The Wrrapd order must be paid and recent.
@@ -3355,6 +3452,16 @@ app.post('/process-payment', async (req, res) => {
                 };
             }
             const ingestResult = await ingestOrderIntoTracking(ingestPayload);
+            try {
+                setOrderIngestState(orderNumber, {
+                    ok: !!ingestResult.ok,
+                    attempts: 1,
+                    reason: ingestResult.ok ? '' : String(ingestResult.reason || 'unknown').slice(0, 300),
+                    payload: ingestPayload,
+                });
+            } catch (e) {
+                console.error('[process-payment] could not record Command Center hand-off', orderNumber, e && e.message);
+            }
             const retailerYmd =
                 ingestPayload.retailerEstimatedDeliveryDate ||
                 (Array.isArray(ingestPayload.amazonDeliveryDays) &&

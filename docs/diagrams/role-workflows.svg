@@ -1,0 +1,144 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="1400" viewBox="0 0 1400 1400" font-family="Arial, Helvetica, sans-serif">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#0c0638"/>
+    </marker>
+    <g id="arrows" stroke="#0c0638" stroke-width="2.5" marker-end="url(#a)">
+      <line x1="202" y1="0" x2="222" y2="0"/>
+      <line x1="398" y1="0" x2="418" y2="0"/>
+      <line x1="594" y1="0" x2="614" y2="0"/>
+      <line x1="790" y1="0" x2="810" y2="0"/>
+      <line x1="986" y1="0" x2="1006" y2="0"/>
+      <line x1="1182" y1="0" x2="1202" y2="0"/>
+    </g>
+  </defs>
+  <rect width="1400" height="1400" fill="#faf8f4"/>
+  <rect x="0" y="0" width="1400" height="80" fill="#0c0638"/>
+  <text x="30" y="50" font-size="28" font-weight="700" fill="#fff">Wrrapd workflows by role</text>
+  <text x="1370" y="50" font-size="15" text-anchor="end" fill="#f6b933">One row per role, left to right</text>
+
+  <!-- SHOPPER -->
+  <g transform="translate(0,100)">
+    <rect x="30" y="0" width="1340" height="240" rx="14" fill="#fff" stroke="#f6b933" stroke-width="3"/>
+    <rect x="30" y="0" width="1340" height="42" rx="14" fill="#f6b933"/>
+    <rect x="30" y="28" width="1340" height="14" fill="#f6b933"/>
+    <text x="50" y="29" font-size="19" font-weight="700" fill="#0f0351">Shopper (gifter)</text>
+    <g font-size="13" fill="#0f172a">
+      <rect x="40" y="62" width="160" height="160" rx="10" fill="#fffaf0" stroke="#f6b933"/>
+      <text x="52" y="88" font-size="15" font-weight="700">1. Install</text><text x="52" y="112">Adds the Wrrapd</text><text x="52" y="130">Chrome extension.</text>
+      <rect x="236" y="62" width="160" height="160" rx="10" fill="#fffaf0" stroke="#f6b933"/>
+      <text x="248" y="88" font-size="15" font-weight="700">2. Shop</text><text x="248" y="112">Amazon or 9 other</text><text x="248" y="130">stores. Clicks Wrrapd</text><text x="248" y="148">at the cart.</text>
+      <rect x="432" y="62" width="160" height="160" rx="10" fill="#fffaf0" stroke="#f6b933"/>
+      <text x="444" y="88" font-size="15" font-weight="700">3. Choose</text><text x="444" y="112">Giftee ZIP, wrap,</text><text x="444" y="130">message, flowers.</text><text x="444" y="148">Accepts Terms.</text>
+      <rect x="628" y="62" width="160" height="160" rx="10" fill="#fffaf0" stroke="#f6b933"/>
+      <text x="640" y="88" font-size="15" font-weight="700">4. Pay Wrrapd</text><text x="640" y="112">At pay.wrrapd.com.</text><text x="640" y="130">Gets a thank-you</text><text x="640" y="148">email and text.</text>
+      <rect x="824" y="62" width="160" height="160" rx="10" fill="#fffaf0" stroke="#f6b933"/>
+      <text x="836" y="88" font-size="15" font-weight="700">5. Retailer order</text><text x="836" y="112">Places it with ship-to</text><text x="836" y="130">set to the Wrrapd hub.</text><text x="836" y="148">Order # read for us.</text>
+      <rect x="1020" y="62" width="160" height="160" rx="10" fill="#fffaf0" stroke="#f6b933"/>
+      <text x="1032" y="88" font-size="15" font-weight="700">6. Follow along</text><text x="1032" y="112">Tracking link,</text><text x="1032" y="130">&#8220;Out for delivery&#8221;</text><text x="1032" y="148">text.</text>
+      <rect x="1216" y="62" width="144" height="160" rx="10" fill="#fffaf0" stroke="#f6b933"/>
+      <text x="1228" y="88" font-size="15" font-weight="700">7. Delivered</text><text x="1228" y="112">Door photo and</text><text x="1228" y="130">&#8220;Delivered&#8221;</text><text x="1228" y="148">email + text.</text>
+    </g>
+    <use href="#arrows" y="142"/>
+  </g>
+
+  <!-- WRAPSTAR -->
+  <g transform="translate(0,360)">
+    <rect x="30" y="0" width="1340" height="240" rx="14" fill="#fff" stroke="#9d174d" stroke-width="3"/>
+    <rect x="30" y="0" width="1340" height="42" rx="14" fill="#9d174d"/>
+    <rect x="30" y="28" width="1340" height="14" fill="#9d174d"/>
+    <text x="50" y="29" font-size="19" font-weight="700" fill="#fff">&#8220;WrapStar&#8221; (gift-wrapper)</text>
+    <g font-size="13" fill="#0f172a">
+      <rect x="40" y="62" width="160" height="160" rx="10" fill="#fdf2f8" stroke="#9d174d"/>
+      <text x="52" y="88" font-size="15" font-weight="700">1. Apply</text><text x="52" y="112">At apply.wrrapd.com.</text>
+      <rect x="236" y="62" width="160" height="160" rx="10" fill="#fdf2f8" stroke="#9d174d"/>
+      <text x="248" y="88" font-size="15" font-weight="700">2. Onboard</text><text x="248" y="112">Agreements, W-9,</text><text x="248" y="130">payout account.</text><text x="248" y="148">Approved in</text><text x="248" y="166">Command Center.</text>
+      <rect x="432" y="62" width="160" height="160" rx="10" fill="#fdf2f8" stroke="#9d174d"/>
+      <text x="444" y="88" font-size="15" font-weight="700">3. Availability</text><text x="444" y="112">Marks the days</text><text x="444" y="130">they can wrap.</text>
+      <rect x="628" y="62" width="160" height="160" rx="10" fill="#fdf2f8" stroke="#9d174d"/>
+      <text x="640" y="88" font-size="15" font-weight="700">4. Morning sheet</text><text x="640" y="112">7:45 AM email with</text><text x="640" y="130">the day&#8217;s gifts.</text>
+      <rect x="824" y="62" width="160" height="160" rx="10" fill="#fdf2f8" stroke="#9d174d"/>
+      <text x="836" y="88" font-size="15" font-weight="700">5. Wrap on video</text><text x="836" y="112">Starts the shift,</text><text x="836" y="130">records each wrap,</text><text x="836" y="148">prints the QR label.</text>
+      <rect x="1020" y="62" width="160" height="160" rx="10" fill="#fdf2f8" stroke="#9d174d"/>
+      <text x="1032" y="88" font-size="15" font-weight="700">6. Hand off</text><text x="1032" y="112">JoyRider picks up,</text><text x="1032" y="130">or the WrapStar</text><text x="1032" y="148">delivers with a</text><text x="1032" y="166">door photo.</text>
+      <rect x="1216" y="62" width="144" height="160" rx="10" fill="#fdf2f8" stroke="#9d174d"/>
+      <text x="1228" y="88" font-size="15" font-weight="700">7. Get paid</text><text x="1228" y="112">Hourly, weekly</text><text x="1228" y="130">payout on</text><text x="1228" y="148">Thursday.</text>
+    </g>
+    <use href="#arrows" y="142"/>
+  </g>
+
+  <!-- JOYRIDER -->
+  <g transform="translate(0,620)">
+    <rect x="30" y="0" width="1340" height="240" rx="14" fill="#fff" stroke="#5b21b6" stroke-width="3"/>
+    <rect x="30" y="0" width="1340" height="42" rx="14" fill="#5b21b6"/>
+    <rect x="30" y="28" width="1340" height="14" fill="#5b21b6"/>
+    <text x="50" y="29" font-size="19" font-weight="700" fill="#fff">&#8220;JoyRider&#8221; (pickup and delivery driver)</text>
+    <g font-size="13" fill="#0f172a">
+      <rect x="40" y="62" width="160" height="160" rx="10" fill="#f5f3ff" stroke="#5b21b6"/>
+      <text x="52" y="88" font-size="15" font-weight="700">1. Apply</text><text x="52" y="112">At apply.wrrapd.com.</text>
+      <rect x="236" y="62" width="160" height="160" rx="10" fill="#f5f3ff" stroke="#5b21b6"/>
+      <text x="248" y="88" font-size="15" font-weight="700">2. Onboard</text><text x="248" y="112">Agreements, W-9,</text><text x="248" y="130">payout account,</text><text x="248" y="148">driver checks.</text>
+      <rect x="432" y="62" width="160" height="160" rx="10" fill="#f5f3ff" stroke="#5b21b6"/>
+      <text x="444" y="88" font-size="15" font-weight="700">3. Availability</text><text x="444" y="112">Marks the days</text><text x="444" y="130">they can drive.</text>
+      <rect x="628" y="62" width="160" height="160" rx="10" fill="#f5f3ff" stroke="#5b21b6"/>
+      <text x="640" y="88" font-size="15" font-weight="700">4. Collect</text><text x="640" y="112">Picks up packages</text><text x="640" y="130">at the hub / PO Box</text><text x="640" y="148">for check-in.</text>
+      <rect x="824" y="62" width="160" height="160" rx="10" fill="#f5f3ff" stroke="#5b21b6"/>
+      <text x="836" y="88" font-size="15" font-weight="700">5. To the WrapStar</text><text x="836" y="112">Brings the packages</text><text x="836" y="130">to the WrapStar.</text>
+      <rect x="1020" y="62" width="160" height="160" rx="10" fill="#f5f3ff" stroke="#5b21b6"/>
+      <text x="1032" y="88" font-size="15" font-weight="700">6. Deliver</text><text x="1032" y="112">Picks up the</text><text x="1032" y="130">wrapped gift, scans</text><text x="1032" y="148">the QR, delivers,</text><text x="1032" y="166">takes a door photo.</text>
+      <rect x="1216" y="62" width="144" height="160" rx="10" fill="#f5f3ff" stroke="#5b21b6"/>
+      <text x="1228" y="88" font-size="15" font-weight="700">7. Get paid</text><text x="1228" y="112">Hourly, weekly</text><text x="1228" y="130">payout on</text><text x="1228" y="148">Thursday.</text>
+    </g>
+    <use href="#arrows" y="142"/>
+  </g>
+
+  <!-- WRAPRIDER -->
+  <g transform="translate(0,880)">
+    <rect x="30" y="0" width="1340" height="240" rx="14" fill="#fff" stroke="#b45309" stroke-width="3"/>
+    <rect x="30" y="0" width="1340" height="42" rx="14" fill="#b45309"/>
+    <rect x="30" y="28" width="1340" height="14" fill="#b45309"/>
+    <text x="50" y="29" font-size="19" font-weight="700" fill="#fff">&#8220;WrapRider&#8221; (collects, wraps and delivers)</text>
+    <g font-size="13" fill="#0f172a">
+      <rect x="40" y="62" width="160" height="160" rx="10" fill="#fffbeb" stroke="#b45309"/>
+      <text x="52" y="88" font-size="15" font-weight="700">1. Apply</text><text x="52" y="112">At apply.wrrapd.com.</text>
+      <rect x="236" y="62" width="160" height="160" rx="10" fill="#fffbeb" stroke="#b45309"/>
+      <text x="248" y="88" font-size="15" font-weight="700">2. Onboard</text><text x="248" y="112">Agreements, W-9,</text><text x="248" y="130">payout account,</text><text x="248" y="148">driver checks.</text>
+      <rect x="432" y="62" width="160" height="160" rx="10" fill="#fffbeb" stroke="#b45309"/>
+      <text x="444" y="88" font-size="15" font-weight="700">3. Availability</text><text x="444" y="112">Marks the days</text><text x="444" y="130">they can work.</text>
+      <rect x="628" y="62" width="160" height="160" rx="10" fill="#fffbeb" stroke="#b45309"/>
+      <text x="640" y="88" font-size="15" font-weight="700">4. Collect</text><text x="640" y="112">Picks up packages</text><text x="640" y="130">at the hub / PO Box.</text>
+      <rect x="824" y="62" width="160" height="160" rx="10" fill="#fffbeb" stroke="#b45309"/>
+      <text x="836" y="88" font-size="15" font-weight="700">5. Wrap on video</text><text x="836" y="112">Records each wrap,</text><text x="836" y="130">prints the QR label.</text>
+      <rect x="1020" y="62" width="160" height="160" rx="10" fill="#fffbeb" stroke="#b45309"/>
+      <text x="1032" y="88" font-size="15" font-weight="700">6. Deliver</text><text x="1032" y="112">Delivers on the</text><text x="1032" y="130">Wrrapd date and</text><text x="1032" y="148">takes a door photo.</text>
+      <rect x="1216" y="62" width="144" height="160" rx="10" fill="#fffbeb" stroke="#b45309"/>
+      <text x="1228" y="88" font-size="15" font-weight="700">7. Get paid</text><text x="1228" y="112">Hourly, weekly</text><text x="1228" y="130">payout on</text><text x="1228" y="148">Thursday.</text>
+    </g>
+    <use href="#arrows" y="142"/>
+  </g>
+
+  <!-- ADMIN -->
+  <g transform="translate(0,1140)">
+    <rect x="30" y="0" width="1340" height="240" rx="14" fill="#fff" stroke="#0c0638" stroke-width="3"/>
+    <rect x="30" y="0" width="1340" height="42" rx="14" fill="#0c0638"/>
+    <rect x="30" y="28" width="1340" height="14" fill="#0c0638"/>
+    <text x="50" y="29" font-size="19" font-weight="700" fill="#f6b933">Wrrapd ops (Command Center)</text>
+    <g font-size="13" fill="#0f172a">
+      <rect x="40" y="62" width="160" height="160" rx="10" fill="#eef2ff" stroke="#0c0638"/>
+      <text x="52" y="88" font-size="15" font-weight="700">1. Morning check</text><text x="52" y="112">Orders page: clear</text><text x="52" y="130">any red or amber</text><text x="52" y="148">banners first.</text>
+      <rect x="236" y="62" width="160" height="160" rx="10" fill="#eef2ff" stroke="#0c0638"/>
+      <text x="248" y="88" font-size="15" font-weight="700">2. Assign</text><text x="248" y="112">Allocations: pick a</text><text x="248" y="130">WrapStar and, if</text><text x="248" y="148">needed, a JoyRider.</text>
+      <rect x="432" y="62" width="160" height="160" rx="10" fill="#eef2ff" stroke="#0c0638"/>
+      <text x="444" y="88" font-size="15" font-weight="700">3. Hub intake</text><text x="444" y="112">Check in packages,</text><text x="444" y="130">add missing order #s,</text><text x="444" y="148">hold extra items.</text>
+      <rect x="628" y="62" width="160" height="160" rx="10" fill="#eef2ff" stroke="#0c0638"/>
+      <text x="640" y="88" font-size="15" font-weight="700">4. Watch the day</text><text x="640" y="112">Wrap progress and</text><text x="640" y="130">out-for-delivery</text><text x="640" y="148">on the Orders board.</text>
+      <rect x="824" y="62" width="160" height="160" rx="10" fill="#eef2ff" stroke="#0c0638"/>
+      <text x="836" y="88" font-size="15" font-weight="700">5. Exceptions</text><text x="836" y="112">Refunds, damaged or</text><text x="836" y="130">missing packages,</text><text x="836" y="148">delinquent orders.</text>
+      <rect x="1020" y="62" width="160" height="160" rx="10" fill="#eef2ff" stroke="#0c0638"/>
+      <text x="1032" y="88" font-size="15" font-weight="700">6. End of day</text><text x="1032" y="112">11:30 PM email:</text><text x="1032" y="130">no retailer order,</text><text x="1032" y="148">items for pickup.</text>
+      <rect x="1216" y="62" width="144" height="160" rx="10" fill="#eef2ff" stroke="#0c0638"/>
+      <text x="1228" y="88" font-size="15" font-weight="700">7. Thursday</text><text x="1228" y="112">Weekly payouts</text><text x="1228" y="130">run at 6 PM;</text><text x="1228" y="148">check any holds.</text>
+    </g>
+    <use href="#arrows" y="142"/>
+  </g>
+</svg>

@@ -13,6 +13,7 @@ export type IntakeRow = {
   recipientName: string;
   customerEmail: string | null;
   items: string[];
+  images: string[];
   wrapDay: string;
   status: string;
   hubReceipt: HubReceipt | null;
@@ -154,6 +155,20 @@ function IntakeCard({
             Shopper <strong>{row.customerName}</strong> → giftee <strong>{row.recipientName}</strong> · wrap day {row.wrapDay}
           </p>
           {row.items.length ? <p className="mt-1 text-sm text-slate-700">{row.items.join(" · ")}</p> : null}
+          {row.images.length ? (
+            <div className="mt-2 flex gap-2">
+              {row.images.map((src) => (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  key={src}
+                  src={src}
+                  alt=""
+                  referrerPolicy="no-referrer"
+                  className="h-16 w-16 rounded border border-slate-200 bg-white object-contain"
+                />
+              ))}
+            </div>
+          ) : null}
         </div>
         <div className="text-right text-sm">
           {receipt ? (

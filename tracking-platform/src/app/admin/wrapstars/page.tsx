@@ -154,9 +154,9 @@ export default async function AdminWrapstarsPage() {
               <th className="px-3 py-2">ID</th>
               <th className="px-3 py-2">Name</th>
               <th className="px-3 py-2">Home ZIP</th>
-              <th className="px-3 py-2">Mode</th>
+              <th className="px-3 py-2">Does</th>
               <th className="px-3 py-2">Printer</th>
-              <th className="px-3 py-2">Status</th>
+              <th className="px-3 py-2">Approval</th>
               <th className="px-3 py-2">Open orders</th>
               <th className="px-3 py-2">Lifetime</th>
               <th className="px-3 py-2">Unpaid</th>
@@ -175,9 +175,11 @@ export default async function AdminWrapstarsPage() {
                 <td className="px-3 py-3">{w.homePostalCode}</td>
                 <td className="px-3 py-3 text-xs">
                   {w.wrapOnly || w.canDeliver === false ? (
-                    <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-indigo-900">wrap-only</span>
+                    <span className="whitespace-nowrap rounded-full bg-indigo-100 px-2 py-0.5 text-indigo-900">Wraps only</span>
                   ) : (
-                    <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-emerald-900">hybrid</span>
+                    <span className="whitespace-nowrap rounded-full bg-emerald-100 px-2 py-0.5 text-emerald-900">
+                      Wraps and delivers
+                    </span>
                   )}
                 </td>
                 <td className="px-3 py-3 text-xs">
@@ -202,46 +204,67 @@ export default async function AdminWrapstarsPage() {
                       defaultValue={p.onboardingStatus}
                       className="rounded border px-2 py-1 text-xs"
                     >
-                      <option value="pending">pending</option>
-                      <option value="approved">approved</option>
-                      <option value="rejected">rejected</option>
+                      <option value="pending">Pending review</option>
+                      <option value="approved">Approved</option>
+                      <option value="rejected">Not approved</option>
                     </select>
                     <input
                       name="notes"
                       defaultValue={p.notes || ""}
-                      placeholder="Notes"
+                      placeholder="Internal note"
                       className="w-full rounded border px-2 py-1 text-xs"
                     />
-                    <button type="submit" className="text-xs text-blue-700 underline">
-                      Save
+                    <button type="submit" className="rounded border px-2 py-1 text-xs font-semibold">
+                      Save status
                     </button>
                   </form>
                 </td>
                 <td className="px-3 py-3">{open}</td>
                 <td className="px-3 py-3">{lifetime}</td>
                 <td className="px-3 py-3">{formatUsdCents(wallet.unpaidCents)}</td>
-                <td className="px-3 py-3 space-y-2">
-                  <form action={forceDatesAction} className="space-y-1">
-                    <input type="hidden" name="wrapstarId" value={w.id} />
-                    <input
-                      name="forcedDates"
-                      defaultValue={(p.forcedAvailableDates || []).join(", ")}
-                      placeholder="Force dates YYYY-MM-DD"
-                      className="w-40 rounded border px-2 py-1 text-xs"
-                    />
-                    <button type="submit" className="block text-xs text-blue-700 underline">
-                      Save forced dates
-                    </button>
-                  </form>
-                  {w.id !== founderWrapstarId() ? (
-                    <form action={deleteAction}>
+                <td className="w-56 space-y-2 px-3 py-3">
+                  <Link
+                    href={`/admin/wrapstars/${w.id}`}
+                    className="block rounded-lg bg-slate-900 px-3 py-1.5 text-center text-xs font-semibold text-white"
+                  >
+                    Open profile
+                  </Link>
+                  <details className="rounded-lg border border-slate-200 px-2 py-1.5">
+                    <summary className="cursor-pointer text-xs font-semibold text-slate-800">
+                      Extra work days
+                      {(p.forcedAvailableDates || []).length ? ` (${(p.forcedAvailableDates || []).length})` : ""}
+                    </summary>
+                    <form action={forceDatesAction} className="mt-2 space-y-1">
                       <input type="hidden" name="wrapstarId" value={w.id} />
-                      <button type="submit" className="text-xs text-red-700 underline">
-                        Delete
+                      <p className="text-[11px] text-slate-500">
+                        Days they can take orders even if not on their calendar. Example: 2026-10-12, 2026-10-13
+                      </p>
+                      <input
+                        name="forcedDates"
+                        defaultValue={(p.forcedAvailableDates || []).join(", ")}
+                        placeholder="2026-10-12, 2026-10-13"
+                        className="w-full rounded border px-2 py-1 text-xs"
+                      />
+                      <button type="submit" className="rounded border px-2 py-1 text-xs font-semibold">
+                        Save days
                       </button>
                     </form>
+                  </details>
+                  {w.id !== founderWrapstarId() ? (
+                    <details className="rounded-lg border border-rose-200 px-2 py-1.5">
+                      <summary className="cursor-pointer text-xs font-semibold text-rose-800">Remove WrapStar</summary>
+                      <form action={deleteAction} className="mt-2 space-y-1">
+                        <input type="hidden" name="wrapstarId" value={w.id} />
+                        <p className="text-[11px] text-slate-600">
+                          Removes {w.name} from Command Center. Reassign their open orders first.
+                        </p>
+                        <button type="submit" className="rounded bg-rose-700 px-2 py-1 text-xs font-bold text-white">
+                          Yes, remove
+                        </button>
+                      </form>
+                    </details>
                   ) : (
-                    <span className="text-xs text-slate-400">Founder protected</span>
+                    <p className="text-[11px] text-slate-400">Founder account (cannot be removed)</p>
                   )}
                 </td>
               </tr>

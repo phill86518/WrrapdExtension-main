@@ -11,6 +11,36 @@ export type OrderStatus =
   /** @deprecated Prefer in_progress — kept for legacy Firestore rows */
   | "en_route";
 
+export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
+  pending: "New",
+  scheduled: "Scheduled",
+  assigned: "Assigned",
+  accepted: "Accepted by WrapStar",
+  in_progress: "Wrapping",
+  out_for_delivery: "Out for delivery",
+  delivered: "Delivered",
+  cancelled: "Cancelled",
+  refunded: "Refunded",
+  en_route: "Wrapping",
+};
+
+/** Statuses an admin can set from a menu, in workflow order. */
+export const ORDER_STATUS_MENU: OrderStatus[] = [
+  "pending",
+  "scheduled",
+  "assigned",
+  "accepted",
+  "in_progress",
+  "out_for_delivery",
+  "delivered",
+  "cancelled",
+  "refunded",
+];
+
+export function orderStatusLabel(status: string | undefined): string {
+  return ORDER_STATUS_LABEL[status as OrderStatus] || "Scheduled";
+}
+
 /** @deprecated Use OrderStatus */
 export type DeliveryStatus = OrderStatus;
 
