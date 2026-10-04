@@ -12,39 +12,37 @@ const POLL_MS = 1000;
 const POLL_TRIES = 30;
 const WRRAPD_ORDER_RE = /^[A-Z]{2}-[0-9A-Z]{9}-[0-9A-Z]{6}$/;
 
-/** Confirmation-page URL test + order-number patterns, most specific first. */
+/** The page says an order was just placed (every retailer's thank-you page has one of these). */
+const CONFIRMATION_TEXT =
+  /thank(s| you)[^.\n]{0,40}\border\b|\border (has been |is |was )?(placed|confirmed|received|complete)|we('ve| have) (got|received) your order|order confirmation|your order number is/i;
+
+/**
+ * Retailer order-number shapes (researched Oct 2026 from confirmation emails / order pages):
+ * Amazon 112-3456789-1234567 · Target 912002895833290 (15 digits, 9120/9020/1020…) · Walmart 13–15 digits
+ * or 2000123-45678901 · Best Buy BBY01-806587123456 · Kohl's 6514816483 (10) · Nordstrom 818411566 (9) ·
+ * Sephora US 22900944454 (11; older 10) · Ulta K190000004 (letter + 9) · LEGO T461059900 (T/TS + 9–10) ·
+ * Etsy receipt 3123456789 (10).
+ * `shape` must match the whole candidate; `bare` may be found anywhere on the confirmation page because the
+ * shape is unmistakable; other shapes need an "Order #/number" label right before them.
+ */
 const RETAILERS = {
-  amazon: {
-    url: /\/gp\/buy\/thankyou|\/checkout\/.*thank|thankyou|purchaseId=/i,
-    patterns: [/\b(\d{3}-\d{7}-\d{7})\b/],
-  },
-  target: {
-    url: /\/(checkout|order)[-/]?confirmation|\/co-thankyou|thank/i,
-    patterns: [/order\s*(?:#|number)\s*:?\s*(\d{9,16})/i],
-  },
-  walmart: {
-    url: /\/checkout\/thankyou|\/orders\/\d|thank/i,
-    patterns: [/order\s*(?:#|number)\s*:?\s*(\d{7}-\d{8})/i, /order\s*(?:#|number)\s*:?\s*(\d{12,18})/i],
-  },
-  bestbuy: {
-    url: /thank-?you|confirmation/i,
-    patterns: [/\b(BBY\d{2}-\d{9,14})\b/i],
-  },
-  lego: {
-    url: /confirmation|thank/i,
-    patterns: [/order\s*(?:#|number)\s*:?\s*([A-Z]?\d{8,12})/i],
-  },
-  etsy: {
-    url: /thank|confirmation|\/your\/purchases|receipt/i,
-    patterns: [/order\s*(?:#|number)\s*:?\s*(\d{9,12})/i],
-  },
-  kohls: { url: /confirmation|thank/i, patterns: [] },
-  nordstrom: { url: /confirmation|thank/i, patterns: [] },
-  sephora: { url: /confirmation|thank/i, patterns: [] },
-  ulta: { url: /confirmation|thank/i, patterns: [] },
+  amazon: { shape: /^\d{3}-\d{7}-\d{7}$/, bare: /\b(\d{3}-\d{7}-\d{7})\b/ },
+  target: { shape: /^\d{15}$/, bare: /\b((?:9[01]2|102)\d{12})\b/ },
+  walmart: { shape: /^(?:\d{7}-\d{8}|\d{13,15})$/, bare: /\b(\d{7}-\d{8})\b/ },
+  bestbuy: { shape: /^BBY\d{2}-\d{9,14}$/, bare: /\b(BBY\d{2}-\d{9,14})\b/i },
+  kohls: { shape: /^\d{10}$/ },
+  nordstrom: { shape: /^\d{9,10}$/ },
+  sephora: { shape: /^(?:\d{10,12}|LX[A-Z0-9]{6,14})$/ },
+  ulta: { shape: /^[A-Z]\d{9}$/ },
+  lego: { shape: /^(?:TS?\d{9,10}|\d{10})$/, bare: /\b(TS?\d{9,10})\b/ },
+  etsy: { shape: /^\d{9,12}$/ },
 };
 
-const GENERIC_PATTERN = /order\s*(?:#|no\.?|number|id)\s*:?\s*#?\s*([A-Z]{0,6}\d[A-Z0-9-]{5,24})/i;
+/** "Order #: X", "Order number X", "Order No. X", "Order ID: X", "Order# X". */
+const LABELED = /\border\s*(?:#|no\.?|number|num|id|confirmation(?:\s*number)?)\s*(?:is)?\s*[:#]?\s*#?\s*([A-Z]{0,5}[- ]?\d[\dA-Z-]{4,24})/gi;
+
+/** Analytics / page data embedded in the confirmation page, e.g. "orderId":"912002895833290". */
+const EMBEDDED = /["'](?:orderId|orderNumber|order_id|order_number|transactionId|transaction_id|purchaseId|confirmationNumber)["']\s*:\s*["']?([A-Z0-9-]{6,30})/gi;
 
 function storage() {
   try {
@@ -91,15 +89,54 @@ export async function rememberPaidOrderForCapture(retailerKey, orderNumber) {
   }
 }
 
-export function extractRetailerOrderNumber(retailerKey, text) {
+function clean(raw) {
+  return String(raw || "")
+    .toUpperCase()
+    .replace(/\s+/g, "")
+    .replace(/-+$/, "");
+}
+
+/**
+ * @param {string} retailerKey
+ * @param {string} text visible page text
+ * @param {string} [embedded] text of inline page-data scripts (optional fallback)
+ */
+export function extractRetailerOrderNumber(retailerKey, text, embedded = "") {
   const cfg = RETAILERS[retailerKey];
+  if (!cfg) return null;
   const body = String(text || "");
-  for (const re of [...(cfg?.patterns || []), GENERIC_PATTERN]) {
-    const m = body.match(re);
-    const val = m && m[1] ? m[1].toUpperCase() : "";
-    if (val && !WRRAPD_ORDER_RE.test(val) && /\d/.test(val)) return val;
+  if (!CONFIRMATION_TEXT.test(body)) return null;
+  const ok = (v) => v && !WRRAPD_ORDER_RE.test(v) && cfg.shape.test(v);
+
+  for (const m of body.matchAll(LABELED)) {
+    const v = clean(m[1]);
+    if (ok(v)) return v;
+  }
+  if (cfg.bare) {
+    const m = body.match(cfg.bare);
+    const v = m ? clean(m[1]) : "";
+    if (ok(v)) return v;
+  }
+  for (const m of String(embedded || "").matchAll(EMBEDDED)) {
+    const v = clean(m[1]);
+    if (ok(v)) return v;
   }
   return null;
+}
+
+function embeddedPageData() {
+  try {
+    let out = "";
+    for (const s of document.querySelectorAll('script[type="application/ld+json"], script[type="application/json"], script:not([src])')) {
+      const t = s.textContent || "";
+      if (t.length > 400_000 || !/order|transaction|purchase/i.test(t)) continue;
+      out += t + "\n";
+      if (out.length > 1_500_000) break;
+    }
+    return out;
+  } catch {
+    return "";
+  }
 }
 
 async function send(entry, retailerOrderNumber) {
@@ -115,15 +152,14 @@ async function send(entry, retailerOrderNumber) {
 export function startRetailerOrderCapture(retailerKey) {
   try {
     const key = String(retailerKey || "").toLowerCase().replace(/[^a-z]/g, "");
-    const cfg = RETAILERS[key];
-    if (!cfg || typeof window === "undefined") return;
-    if (!cfg.url.test(window.location.pathname + window.location.search)) return;
+    if (!RETAILERS[key] || typeof window === "undefined") return;
     void (async () => {
       const pending = (await readPending()).filter((e) => e.retailer === key);
       if (!pending.length) return;
       const entry = pending[pending.length - 1];
       for (let i = 0; i < POLL_TRIES; i++) {
-        const num = extractRetailerOrderNumber(key, document.body ? document.body.innerText : "");
+        const text = document.body ? document.body.innerText : "";
+        const num = CONFIRMATION_TEXT.test(text) ? extractRetailerOrderNumber(key, text, embeddedPageData()) : null;
         if (num) {
           try {
             if (await send(entry, num)) {

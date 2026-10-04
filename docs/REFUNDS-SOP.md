@@ -34,5 +34,5 @@ Allowed, but always add the Wrrapd order number as the invoice number. With the 
 
 ## One-time setup (owner)
 
-- Helcim → **All Tools → Integrations → Webhooks**: URL `https://api.wrrapd.com/api/helcim-webhook`, event **Card transactions**. Copy the **verifier token** into the VM `.env` as `HELCIM_WEBHOOK_VERIFIER_TOKEN=…`, then `pm2 restart wrrapd-server`.
+- Helcim → **All Tools → Integrations → Webhooks**: URL `https://api.wrrapd.com/api/payment-events`, event **Card transactions**. Copy the **verifier token** into the VM `.env` as `HELCIM_WEBHOOK_VERIFIER_TOKEN=…`, then `pm2 restart wrrapd-server`.
 - Before launch: one real $1 test charge and refund (master readiness doc, Exhibit A).

@@ -162,11 +162,12 @@ app.get('/checkout/:retailer', (req, res) => {
 });
 
 /**
- * Helcim webhook (configure in Helcim → Integrations → Webhooks, URL https://api.wrrapd.com/api/helcim-webhook,
- * verifier token in HELCIM_WEBHOOK_VERIFIER_TOKEN). Refunds or reversals made in the Helcim dashboard are
- * recorded on the matching order so Command Center and support see them.
+ * Helcim webhook (configure in Helcim → Integrations → Webhooks, URL https://api.wrrapd.com/api/payment-events —
+ * Helcim rejects URLs containing "helcim"; the old path stays as an alias). Verifier token in
+ * HELCIM_WEBHOOK_VERIFIER_TOKEN. Refunds or reversals made in the Helcim dashboard are recorded on the matching
+ * order so Command Center and support see them.
  */
-app.post('/api/helcim-webhook', express.raw({ type: '*/*', limit: '64kb' }), async (req, res) => {
+app.post(['/api/payment-events', '/api/helcim-webhook'], express.raw({ type: '*/*', limit: '64kb' }), async (req, res) => {
     const rawBody = Buffer.isBuffer(req.body) ? req.body.toString('utf8') : '';
     const verified = helcim.verifyWebhook({
         rawBody,
