@@ -53,8 +53,11 @@ export const WRAP_GIFTS_PER_DOZEN = 12;
 export const WRAP_BONUS_EVERY = 100;
 export const WRAP_BONUS_CENTS = 1500;
 
-/** Planned stop time used for JoyRider and WrapRider delivery estimates (Amazon Flex-style). */
-export const DELIVERY_MINUTES_PER_STOP = 15;
+/**
+ * Door time on a smart route. Drive time is added separately.
+ * 12 stops × 5 min + ~25 miles at 25 mph ≈ 2 hours, about $60 at $30/hr.
+ */
+export const DELIVERY_MINUTES_PER_STOP = 5;
 
 /** Planned drive speed used for JoyRider and WrapRider delivery estimates. */
 export const DELIVERY_ASSUMED_MPH = 25;

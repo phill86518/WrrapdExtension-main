@@ -98,7 +98,7 @@ Launching publicly before Black Friday matters: it gives us ~3 calm weeks to fin
 | R7 → YELLOW | **Oct 3:** all three onboarding pages work on `apply.wrrapd.com` (`/onboarding/`, `/wraprider-onboarding/`, `/driver-onboarding/`), and Command Center now shows those links. **Roger, one step:** in SiteGround File Manager for the **apply** site, add `define( 'WRRAPD_WRAPSTARS_PROS_HOST', 'apply.wrrapd.com' );` to `wp-config.php` above "That's all, stop editing" — approval emails then link to `apply`. (Alternative: make `pros.wrrapd.com` a parked domain of the apply site.) Original finding: **`pros.wrrapd.com` is still "Under construction"**; `pros.wrrapd.com/wraprider-onboarding/` returns **404**. | Every approval email sends new contractors to a dead link. Not blocking Roger, blocking every hire. | Small (DNS / SiteGround) |
 | R8 → GREEN | **Florida sales tax: closed.** Registered with Florida DOR, annual filer (Roger files every year), 2026 resale certificate on file. Checkout charges 7.5% on Wrrapd lines. | — | Done |
 | R9 | **Insurance — none bound as of Oct 3.** Holding customers' goods (bailee), driving for business, and handling payments needs coverage. Agreements conflict (WrapStar agreement says no insurance mandate; onboarding demands a $1M general liability + inland marine certificate). | One crash or one stolen box of electronics without coverage could end the company. **Now the top non-software blocker.** | Broker call this week |
-| R10 → YELLOW | **Free final delivery is a launch / CAC choice**, not a math error. Wrapping is $30/dozen ($2.50 each, prorated) plus $15 every 100 boxes. A 10–12 stop Amazon Flex-style route costs about $9–$11 per stop at $30/hr planned hours — not $17–$22 per solo drive. Wrap $6.99 is priced for conversion. Flowers are sold at a bouquet price that already includes a $2 internal markup (shoppers never see an "upcharge" line). See §2.3. Fine while density is being proven; revisit a delivery fee or ZIP-cluster days with beta route data. | Publishing a delivery fee too early fights acquisition. Publishing none forever after density is proven leaves money on the table. | Business decision after beta data |
+| R10 → YELLOW | **Free final delivery is a launch / CAC choice**, not a math error. Wrapping is $30/dozen ($2.50 each, prorated) plus $15 every 100 boxes. A 10–12 stop Amazon Flex-style route is about 2 hours, about $60 at $30/hr, about $5 per stop — not $120, and not $17–$22 per solo drive. Wrap $6.99 is priced for conversion. Flowers are sold at a bouquet price that already includes a $2 internal markup (shoppers never see an "upcharge" line). See §2.3. Fine while density is being proven; revisit a delivery fee or ZIP-cluster days with beta route data. | Publishing a delivery fee too early fights acquisition. Publishing none forever after density is proven leaves money on the table. | Business decision after beta data |
 
 ## 1.4 Important but not blocking (YELLOW, fix during beta)
 
@@ -171,7 +171,7 @@ Launching publicly before Black Friday matters: it gives us ~3 calm weeks to fin
 The Oct 3 draft treated every order as a **solo delivery** and counted wrapping labor plus a whole florist bill against a $6.99 wrap fee. That is the wrong unit. Five facts change the picture:
 
 1. **Wrapping pay is $30.00 per dozen** finished wraps ($2.50 each), **prorated** when the count is under or over a dozen. A **$15.00 bonus** is paid each time a WrapStar or WrapRider crosses another **100** finished wraps. Clock time does not change wrapping pay.
-2. **Delivery is Amazon Flex-style.** Command Center builds a **smart route** of typically **10–12 stops**. The driver is paid for planned stops (15 min each) plus planned miles at 25 mph.
+2. **Delivery is Amazon Flex-style.** Command Center builds a **smart route** of typically **10–12 stops**. That route is one block of about **2 hours**, often less. The driver is paid for that planned block (about 5 minutes at each door, plus the drive at 25 mph), not for a separate trip per gift.
 3. **JoyRiders and WrapRiders keep 100% of tips** given at delivery (cash, card, or in the app). Tips sit on top of route pay. They are not Wrrapd revenue and they are not a Wrrapd cost.
 4. **The wrap fee is a customer-acquisition price.** Marketing and CAC are why $6.99 can sit near wrapping labor. Contribution is judged on the **route**.
 5. **Flowers are one bouquet price.** That price is the store price plus **$2.00**. The shopper is not told there is an upcharge. Wrrapd keeps the $2.00. The rest of the bouquet price pays the store. It is not a $15–$22 loss against the wrap fee.
@@ -194,42 +194,60 @@ $30.00 / 12 wraps = **$2.50 per finished wrap**. Six wraps pay $15.00. Twenty-fo
 
 ### Delivery labor (Amazon Flex model)
 
-A Jacksonville route of **12 stops**, ~25 planned miles:
+A Jacksonville smart route of **12 stops** and about **25 miles** is one block:
 
-| Piece | Plan | At $30/hr |
+| Piece | How it is counted | Time |
 |---|---|---|
-| 12 stops × 15 min | 3.0 h | $90 |
-| 25 miles ÷ 25 mph | 1.0 h | $30 |
-| **Route total** | **4.0 h** | **$120** |
-| **Per stop** | | **~$10** |
+| At the door | 12 stops × about 5 minutes | 1.0 h |
+| Driving | 25 miles ÷ 25 mph | 1.0 h |
+| **Planned route** | door + drive, same trip | **about 2.0 h, often less** |
+| **Delivery pay at $30/hr** | 2.0 × $30 | **about $60** |
+| **Per stop** | $60 ÷ 12 | **about $5** |
 
-A 10-stop, 20-mile route is about $90, or **~$9 per stop**. The old table's $17–$22 delivery line assumed one gift = one dedicated drive. That is not how Flex (or Wrrapd) pays a route. A tip on a stop is extra money for the driver, not an extra Wrrapd expense.
+The earlier **$120** figure was wrong. It paid **15 minutes at every stop** (12 × 15 min = 3 hours = $90) and then **added the drive again** (1 hour = $30), as if the driver stood at each door for a quarter hour and the miles were a second job. On a smart route the doors and the miles are the same two hours.
 
-PO Box / hub pickup is one extra stop on the same route.
+A tip at the door is the driver's. It is not part of the $60.
 
-### Contribution on a 12-stop route (illustrative)
+### Worked example: one 12-stop route
 
-Assume 12 standard wraps, 6 bouquets, 4 boxes, card ~3%+$0.30. A 12-wrap route has not yet hit the 100-wrap bonus.
+Assumptions, all stated:
 
-| | Amount |
-|---|---|
-| Wrap fees 12 × $6.99 | $83.88 |
-| Flower margin 6 × $2.00 | $12.00 |
-| Boxes 4 × $0.99 | $3.96 |
-| **Wrrapd's own lines** | **~$100** |
-| Wrapping pay 12 × $2.50 | −$30 |
-| 100-wrap bonus | $0 on this route |
-| Delivery pay (route above) | −$120 |
-| Paper / box / label | −~$6 |
-| Card processing on Wrrapd lines | −~$4 |
-| **Cash on wrap + delivery + flower margin, before CAC** | **negative, because delivery is free** |
+- 12 gifts, each with standard wrap at **$6.99**.
+- 6 of those gifts include flowers. Example store price **$15.00**. The shopper is charged **$17.00** (the extra $2.00 is Wrrapd's). The screen shows $17.00, not a separate fee.
+- 4 gifts are loose and get the **$0.99** box charge.
+- Delivery is the 2-hour route above, **$60**.
+- This contractor has not reached 100 finished wraps, so the **$15** bonus is **$0**. The bonus pays at wrap 100, 200, and so on, not on every route.
+- Wrapping paper, ribbon, and tape are the contractor's. They are not a Wrrapd cost in this table.
+- Card fees below are an estimate of **3% + $0.30 per shopper charge**, on 12 separate checkouts. Helcim's live rate can differ.
 
-Read this correctly:
+**What shoppers pay Wrrapd**
 
-- **We are not spending $22–$30 to collect $6.99.** Wrapping labor is $2.50. The florist bill is paid by the bouquet price the shopper already paid. Wrrapd's flower result is about **$2.00 per bouquet**.
-- **The $6.99 wrap fee is the acquisition price.** It is close to wrapping labor and is not meant to carry a solo delivery.
-- **Delivery is the expensive line, and it is batched.** Per-stop cost on a 10–12 stop Flex route is about **$9–$11**, not $17–$22.
-- **Free final delivery is a launch choice**, the same family as free shipping while a market is being built. Revisit a delivery fee, ZIP-cluster days, or a minimum once beta data is in (stops per route, miles, flower attach rate). Contractor dollar amounts stay off wrrapd.com and the apply landings.
+| Line | Math | Amount |
+|---|---|---|
+| Gift wrap | 12 × $6.99 | $83.88 |
+| Flowers, full price | 6 × $17.00 | $102.00 |
+| Gift box | 4 × $0.99 | $3.96 |
+| **Charged to shoppers** | | **$189.84** |
+
+**Where that money goes**
+
+| Line | Math | Amount |
+|---|---|---|
+| Florist (the store price inside the bouquet) | 6 × $15.00 | −$90.00 |
+| Wrapping pay | 12 × $2.50, which is one dozen at $30.00 | −$30.00 |
+| 100-wrap bonus | not reached (12 wraps, bonus starts at 100) | $0.00 |
+| Delivery pay | about 2 hours × $30/hr | −$60.00 |
+| Card processing (estimate) | 3% × $189.84 = $5.70, plus 12 × $0.30 = $3.60 | −$9.30 |
+| **Left on this route, before ads** | $189.84 − $90 − $30 − $60 − $9.30 | **about $0.50** |
+
+The old “Wrrapd's own lines ~$100” label was the wrap fees ($83.88), the flower $2 only ($12.00), and the boxes ($3.96) added together, with the florist's $90 and the shoppers' $102 flower payments left out. That is why the row was hard to read. The table above shows every dollar the shopper paid and every dollar it pays for.
+
+Read the result this way:
+
+- Wrapping labor on these 12 gifts is **$30**, not $22–$30 of mystery cost. The wrap fees are **$83.88**.
+- The florist's **$90** is paid out of the **$102** the shoppers already paid for the bouquets. Wrrapd keeps **$12** (6 × $2).
+- Delivery on this route is **about $60** (about **$5 a stop**), not $120.
+- Before advertising, this example route is roughly a wash. The **$6.99** wrap price is still the acquisition price: ads and the cost of getting the customer are not in the table. Free delivery stays a launch choice while Duval density is being proven. Contractor dollar amounts stay off wrrapd.com and the apply landings.
 
 **B. Independent-contractor classification.** Piece-rate wrapping ($30/dozen, prorated, plus a milestone bonus) is a cleaner IC factor than hourly wrapping. Delivery remains planned-hours (Flex-style). Tips are the contractor's. Video proof, availability windows, and borrowed kits still need Florida employment counsel **before the first non-founder hire**.
 

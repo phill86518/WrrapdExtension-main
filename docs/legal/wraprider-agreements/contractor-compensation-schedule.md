@@ -37,7 +37,7 @@ Time spent wrapping does not add hourly pay on top of the per-dozen amount.
 Delivery pay follows an Amazon Flex-style model. Command Center builds a **smart
 route** (typically 10–12 stops). Delivery pay is the WrapRider hourly rate times
 **planned hours** for each route actually started. The plan uses planned stops
-(15 minutes each) plus planned drive distance at 25 miles per hour, and is fixed
+(about 5 minutes at the door) plus planned drive distance at 25 miles per hour, and is fixed
 when the route is assigned.
 
 Traffic, congestion, detours, weather, parking, waiting, and any other delay do

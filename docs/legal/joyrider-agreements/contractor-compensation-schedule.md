@@ -39,7 +39,7 @@ the amount of a tip given to Contractor.
 
 ## 5. Estimated hours, and no extra pay for delay
 
-Delivery pay is the hourly rate times **estimated hours** for each route the JoyRider actually starts. The estimate uses planned stops (15 minutes each) plus planned drive distance at 25 miles per hour. It is fixed when the route is assigned.
+Delivery pay is the hourly rate times **estimated hours** for each route the JoyRider actually starts. The estimate uses a short door stop (about 5 minutes) plus planned drive distance at 25 miles per hour. A route of about 12 stops is planned at about 2 hours, often less. It is fixed when the route is assigned.
 
 Traffic, congestion, detours, weather, parking, waiting, and any other delay do **not** increase the hours or the pay. Actual elapsed time is not the measure of pay. A route that is not started is unpaid.
 
