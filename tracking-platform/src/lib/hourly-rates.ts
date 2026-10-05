@@ -5,6 +5,7 @@ export const DEFAULT_WRAPSTAR_HOURLY_CENTS = 3000;
 export const DEFAULT_JOYRIDER_HOURLY_CENTS = 3000;
 /** WrapRider — third hire track with its own hourly rate (not a blend of the other two). */
 export const DEFAULT_WRAPRIDER_HOURLY_CENTS = 3000;
+/** Finished gifts that make one $30 wrapping payment. Not an hourly pace. */
 export const WRAPSTAR_PACE_GIFTS_PER_HOUR = 12;
 
 /** Three distinct pay structures — one per hire track. */
@@ -30,9 +31,9 @@ function rowCents(row: HourlyZipRate, role: ContractorPayRole): number | undefin
 }
 
 /**
- * Resolve hourly rate in cents:
+ * Resolve delivery (JoyRider / WrapRider) hourly rate in cents:
  * person override → exact ZIP → 3-digit prefix → role default ($30/hr unless Finance changed it).
- * See docs/CONTRACTOR-HOURLY-PAY.md.
+ * WrapStars are not paid this rate; they are paid $30 per dozen finished wraps.
  */
 export function hourlyRateCents(
   cfg: PayoutConfig,
@@ -65,16 +66,13 @@ export function hourlyRateCents(
   return roleDefaultCents(cfg, role);
 }
 
-/** Reduction for a WrapStar hour that finished fewer than pace gifts. */
+/** @deprecated Wrapping pay has no shortfall deduction. Always 0. */
 export function wrapstarPaceReductionCents(
-  hourlyCents: number,
-  giftsFinished: number,
-  pace = WRAPSTAR_PACE_GIFTS_PER_HOUR,
+  _hourlyCents: number,
+  _giftsFinished: number,
+  _pace = WRAPSTAR_PACE_GIFTS_PER_HOUR,
 ): number {
-  const finished = Math.max(0, Math.floor(giftsFinished));
-  const shortfall = Math.max(0, pace - finished);
-  if (shortfall === 0 || pace <= 0) return 0;
-  return Math.round(shortfall * (hourlyCents / pace));
+  return 0;
 }
 
 export async function hourlyRateCentsForZip(

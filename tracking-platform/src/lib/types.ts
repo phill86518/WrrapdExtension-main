@@ -602,13 +602,13 @@ export type PayoutConfig = {
   platformTakeWrapPercent: number;
   /** @deprecated Revenue-split model retired 2026-09-13. */
   platformTakeFlowersPercent: number;
-  /** Default WrapStar hourly rate (cents). ZIP overrides win. */
+  /** Unused for wrapping (WrapStars are paid $30/dozen). Kept so older ZIP tables still load. */
   wrapstarHourlyCents: number;
-  /** Default JoyRider hourly rate (cents). ZIP overrides win. */
+  /** Default JoyRider delivery rate (cents) for the planned Amazon Flex-style route. */
   joyriderHourlyCents: number;
-  /** Default WrapRider hourly rate (cents) — third pay structure. ZIP overrides win. */
+  /** Default WrapRider delivery rate (cents) for the planned route. Wrapping is $30/dozen. */
   wrapriderHourlyCents?: number;
-  /** Expected finished gifts per WrapStar hour. Reduction = (rate / this) per shortfall. */
+  /** @deprecated Wrapping pay has no pace reduction. Kept on older config rows. */
   wrapstarPaceGiftsPerHour: number;
   /** Exact ZIP or 3-digit prefix overrides. */
   hourlyByZip: HourlyZipRate[];

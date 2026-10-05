@@ -991,7 +991,7 @@ function wrrapd_drivers_process_onboarding_step() {
 	if ( ! wrrapd_drivers_can_access_step( $app->ID, $step ) ) {
 		return;
 	}
-	$placeholders = array( 'policies', 'background', 'identity', 'tax_1099', 'bank_payout', 'w9' );
+	$placeholders = array( 'policies', 'background', 'identity', 'tax_1099', 'bank_payout' );
 	if ( $step === 'welcome' ) {
 		wrrapd_drivers_mark_step_complete( $app->ID, 'welcome' );
 		wp_safe_redirect( wrrapd_drivers_onboarding_step_url( 'agreement' ) );
@@ -1040,6 +1040,20 @@ function wrrapd_drivers_process_onboarding_step() {
 		wrrapd_drivers_set_meta( $app->ID, 'insurance_file', $upload['path'] );
 		wrrapd_drivers_mark_step_complete( $app->ID, 'insurance' );
 		wp_safe_redirect( wrrapd_drivers_onboarding_step_url( 'identity' ) );
+		exit;
+	}
+	if ( $step === 'w9' ) {
+		if ( ! function_exists( 'wrrapd_w9_submit_for_app' ) ) {
+			$GLOBALS['wrrapd_drv_ob_error'] = 'W-9 module missing. Contact support.';
+			return;
+		}
+		$w9 = wrrapd_w9_submit_for_app( 'joyrider', $app->ID );
+		if ( empty( $w9['ok'] ) ) {
+			$GLOBALS['wrrapd_drv_ob_error'] = $w9['error'] ?? 'We could not save your W-9.';
+			return;
+		}
+		wrrapd_drivers_mark_step_complete( $app->ID, 'w9' );
+		wp_safe_redirect( wrrapd_drivers_onboarding_step_url( wrrapd_drivers_next_onboarding_step( 'w9' ) ) );
 		exit;
 	}
 }
@@ -1556,7 +1570,7 @@ function wrrapd_drivers_shortcode_landing() {
 				<p class="wrrapd-wrapstars-cinema-hero__kicker">Now accepting applications · Florida &amp; Georgia</p>
 				<h1>Become a JoyRider</h1>
 				<p class="wrrapd-wrapstars-cinema-hero__tagline">Deliver joy on your schedule.</p>
-				<p class="wrrapd-wrapstars-cinema-hero__sub">Pick up beautifully wrapped gifts from WrapStars and deliver smiles to the door — when it works for you.</p>
+				<p class="wrrapd-wrapstars-cinema-hero__sub">Carry finished gifts to the door on a planned route, when it works for you. You keep 100% of the tips given to you when you deliver.</p>
 				<a class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--xl wrrapd-wrapstars-btn--hero" href="<?php echo esc_url( $apply ); ?>">Start your application</a>
 			</div>
 		</section>
@@ -1568,12 +1582,12 @@ function wrrapd_drivers_shortcode_landing() {
 					<p>See delivery offers when you are ready. Accept the ones that fit — no shifts, no floor managers.</p>
 				</div>
 				<div class="wrrapd-wrapstars-dasher-band__item wrrapd-wrapstars-dasher-box">
-					<h2>Gifts, not groceries</h2>
-					<p>You deliver finished wrap orders. WrapStars handle the wrapping — you bring the final-mile magic.</p>
+					<h2>Earn for the route</h2>
+					<p>You earn for each planned delivery route you accept. You keep 100% of tips given to you when you deliver — tips are yours, on top of your route pay.</p>
 				</div>
 				<div class="wrrapd-wrapstars-dasher-band__item wrrapd-wrapstars-dasher-box">
-					<h2>Clear stops</h2>
-					<p>See pickup and drop-off in the app. Simple, local, and on your schedule.</p>
+					<h2>Finished gifts, happy doors</h2>
+					<p>You carry beautifully wrapped gifts to the recipient and brighten someone&rsquo;s day at the door.</p>
 				</div>
 			</section>
 
@@ -1617,7 +1631,7 @@ function wrrapd_drivers_shortcode_landing() {
 				<h2 class="wrrapd-wrapstars-section-title">Frequently asked questions</h2>
 				<details class="wrrapd-wrapstars-faq-dd__item">
 					<summary>What does a JoyRider do?</summary>
-					<p>JoyRiders pick up finished, wrapped gifts from WrapStars and deliver them to recipients. You focus on careful final-mile delivery on a schedule that works for you.</p>
+					<p>JoyRiders pick up finished, wrapped gifts and deliver them to the recipient. You focus on a careful doorstep delivery on a schedule that works for you, and you keep 100% of tips given to you when you deliver.</p>
 				</details>
 				<details class="wrrapd-wrapstars-faq-dd__item">
 					<summary>How long does the application process take?</summary>
@@ -1629,15 +1643,19 @@ function wrrapd_drivers_shortcode_landing() {
 				</details>
 				<details class="wrrapd-wrapstars-faq-dd__item">
 					<summary>How are JoyRiders paid?</summary>
-					<p>JoyRiders are independent contractors paid an hourly rate for active delivery time. Your personal rate is confirmed when you are approved and may vary by market.</p>
+					<p>You are an independent contractor paid for each planned delivery route you accept. You keep 100% of tips given to you when you deliver. Tips are yours, on top of your route pay. Your rate is confirmed when you are approved.</p>
 				</details>
 				<details class="wrrapd-wrapstars-faq-dd__item">
 					<summary>Are there incentives or milestone bonuses?</summary>
-					<p>Yes. Milestone incentives may be offered for completing onboarding, completing your first deliveries, and participating during peak gifting seasons. Details are shared during onboarding and may change as programs evolve.</p>
+					<p>Yes. Discretionary incentives may be offered for peak gifting seasons and for milestones you reach on the road. Details are shared when you are approved and may change as programs evolve.</p>
 				</details>
 				<details class="wrrapd-wrapstars-faq-dd__item">
 					<summary>When and how do I receive payouts?</summary>
 					<p>Approved earnings are paid on a regular schedule to the bank account you provide during onboarding. You can review activity and payout status in the JoyRider app after you are activated.</p>
+				</details>
+				<details class="wrrapd-wrapstars-faq-dd__item">
+					<summary>Do I keep my tips?</summary>
+					<p>Yes. You keep 100% of tips given to you when you deliver, whether in cash, by card, or in the app. Tips are yours, on top of your route pay.</p>
 				</details>
 				<details class="wrrapd-wrapstars-faq-dd__item">
 					<summary>Do JoyRiders wrap the gifts?</summary>
@@ -1830,6 +1848,23 @@ function wrrapd_drivers_shortcode_onboarding( $atts ) {
 				wrrapd_drivers_render_step_insurance( $app->ID );
 			} elseif ( $step === 'activation' ) {
 				wrrapd_drivers_render_step_activation( $app->ID );
+			} elseif ( $step === 'w9' ) {
+				if ( function_exists( 'wrrapd_w9_render' ) ) {
+					wrrapd_w9_render(
+						array(
+							'suite'        => 'joyrider',
+							'app_id'       => $app->ID,
+							'nonce_action' => 'wrrapd_drv_onboarding',
+							'nonce_field'  => 'wrrapd_drv_nonce',
+							'action_name'  => 'wrrapd_drv_action',
+							'action_value' => 'onboarding_step',
+							'step'         => 'w9',
+							'next_url'     => wrrapd_drivers_onboarding_step_url( wrrapd_drivers_next_onboarding_step( 'w9' ) ),
+						)
+					);
+				} else {
+					echo '<div class="wrrapd-wrapstars-alert wrrapd-wrapstars-alert--err">W-9 module missing.</div>';
+				}
 			} else {
 				wrrapd_drivers_render_step_placeholder( $app->ID, $step );
 			}

@@ -143,17 +143,15 @@ Wrrapd does **not** require Contractor to purchase commercial general liability 
 
 ## 8. Compensation
 
-8.1 **Two kinds of pay.** Wrapping pay is the per-gift amount in the WrapRider Compensation Schedule, currently **two dollars and fifty cents ($2.50) per finished gift**, unless that Schedule states a different amount. Delivery pay is the WrapRider hourly rate multiplied by the **estimated hours** for each accepted route that Contractor actually starts. The hourly rate may differ by ZIP.
+8.1 **Two kinds of pay.** Wrapping pay is **thirty dollars ($30.00) per dozen** finished gift-wraps that meet published standards (pro-rated), as set out in the WrapRider Compensation Schedule. There is no hourly wrapping rate and no deduction from wrapping pay for clock time or pace. Wrrapd may also pay discretionary bonus compensation as described in Section 8.4. Delivery pay is the WrapRider hourly rate multiplied by the **planned hours** of each accepted smart route that Contractor actually starts. The delivery hourly rate may differ by ZIP.
 
-8.2 **Finished gift.** A gift is finished when wrapped to published standards, documented (live session and proof), labeled (including the delivery barcode), and ready for delivery. Time spent wrapping does not add hourly pay on top of the per-gift amount.
+8.2 **Finished gift.** A gift is finished when wrapped to published standards, documented (live session and proof), labeled (including the delivery barcode), and ready for delivery. Time spent wrapping does not add hourly pay on top of the per-dozen amount.
 
-8.3 **Estimated delivery hours; no extra pay for delay.** Wrrapd calculates estimated delivery hours from the planned stops and planned drive distance and shows them in the WrapRider App. The estimate is fixed when the route is assigned. **Traffic, congestion, detours, weather, parking, waiting on a recipient, and any other delay do not increase the hours or the delivery pay.** Actual time on the road is not the measure of delivery pay. A route Contractor does not start is unpaid.
+8.3 **Planned delivery hours; Amazon Flex-style; no extra pay for delay.** Command Center builds a smart route (typically 10–12 stops). Wrrapd calculates planned delivery hours from the planned stops and planned drive distance and shows them in the WrapRider App. The plan is fixed when the route is assigned. **Traffic, congestion, detours, weather, parking, waiting on a recipient, and any other delay do not increase the hours or the delivery pay.** Actual time on the road is not the measure of delivery pay. A route Contractor does not start is unpaid.
 
-8.4 **Incentive compensation.** From time to time — particularly during higher-demand periods — Wrrapd may offer **discretionary incentive or bonus compensation**, including peak-period bonuses or other incentives published in the Compensation Schedule, Command Center, or WrapRider App. Incentive terms apply only for the periods stated and create no ongoing entitlement afterward.
+8.4 **Incentive compensation.** From time to time Wrrapd may offer **discretionary incentive or bonus compensation**, including peak-period bonuses and milestone bonuses (for example, every 100 wrapped boxes). This Agreement does not state a bonus dollar amount. Terms, eligibility, and duration are set solely by Wrrapd, apply only for the periods stated, and create no ongoing entitlement afterward.
 
-8.5 Wrrapd may offset or withhold for fraud, failed proof, skipped live session, overpayment, no-show costs under Section 16A, amounts under Section 5A, or other amounts Contractor owes Wrrapd.
-
-8.6 Contractor is not entitled to employee benefits. Tips, if any, follow the then-current Schedule; unless the Schedule says otherwise, wrapping hours do not include customer tips.
+8.5 **Tips.** Contractor retains **one hundred percent (100%)** of any tip or gratuity given for Contractor’s benefit upon delivery, whether in cash, by card, or through the Platform. Tips are **in addition to** wrapping pay, delivery pay, and any incentive compensation described in this Section. Wrrapd does not retain any portion of those tips. The amount of a tip does not reduce, offset, or vary what Wrrapd pays Contractor. Wrrapd has no right to interfere with the amount of a tip given to Contractor. Contractor is not entitled to employee benefits. Wrrapd does not deduct wrapping pay for pace.
 
 ## 9. Confidentiality; Data; Devices
 

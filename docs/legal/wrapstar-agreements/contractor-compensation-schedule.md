@@ -2,7 +2,7 @@
 
 **Do not paste this file onto `wrrapd.com` or the public apply landings.**
 
-Effective: 2026-09-22 until superseded in Command Center → Finance → Hourly rates.
+Effective: 2026-10-05 until superseded in Command Center → Finance → Pay rates.
 
 **Notice / legal address:** 7901 4th Street N, Ste. 300, St. Petersburg, FL 33702-4399
 
@@ -10,47 +10,35 @@ Effective: 2026-09-22 until superseded in Command Center → Finance → Hourly 
 
 ## 1. Form of pay
 
-Wrrapd pays WrapStars an **hourly rate**. Wrrapd does **not** pay a per-order piece rate.
-Dollar amounts are published in Command Center and, once activated, in the WrapStar App.
-Amounts may differ by **ZIP code** (exact ZIP or 3-digit prefix).
+Wrrapd pays WrapStars **thirty dollars ($30.00) per dozen** finished gift-wraps that meet
+published standards (prorated for fewer or more than a dozen; $2.50 per finished wrap).
+Wrrapd does **not** pay WrapStars an hourly rate. There is **no deduction** from wrapping
+pay for clock time, pace, or finishing fewer than twelve wraps in an hour. Wrrapd may also
+pay **discretionary** milestone bonuses as described in Section 4.
 
-## 2. ZIP lookup
+## 2. Finished wrap
 
-For the contractor’s home / assigned work ZIP: exact ZIP override, else 3-digit
-prefix override, else the WrapStar default.
+A gift is finished when it is wrapped to published standards, documented (live session
+and proof), labeled (including the delivery barcode), and ready for collection.
 
-## 3. Clock time, half-hour floor, twelve-an-hour cap
+## 3. Examples
 
-Paid time for a wrap window that was started and has at least one finished gift
-runs from the App clock-in timestamp to the App clock-out timestamp, including
-fractions of an hour.
+| Finished wraps | Pay |
+|----------------|-----|
+| 12 | $30.00 |
+| 6 | $15.00 |
+| 1 | $2.50 |
+| 24 | $60.00 |
 
-That paid time is:
-
-1. **not less than one-half hour**, and
-2. **not more than** finished gifts ÷ 12.
-
-Extra time beyond twelve finished gifts an hour is unpaid. Finishing faster than
-that pace pays the actual clock time, still subject to the half-hour floor.
-
-**Examples**
-
-| Clock | Finished gifts | Paid time |
-|-------|----------------|-----------|
-| 2 hours | 12 | 1 hour (pace cap) |
-| 40 minutes | 12 | 40 minutes |
-| 20 minutes | 3 | 30 minutes (half-hour floor) |
-
-A gift is “finished” when it is wrapped to published standards, documented (live
-session and proof), labeled (including the delivery barcode), and ready for collection.
+Clock time does not change these amounts.
 
 ## 4. Incentive compensation
 
-From time to time — especially in higher-demand periods — Wrrapd may publish
-**discretionary incentive or bonus compensation**, including extra pay for wrapping
-above the twelve-gifts-per-hour pace, peak-period bonuses, or other incentives.
-Terms, amounts, and windows are set in Command Center or the WrapStar App, apply only
-for the stated period, and create no ongoing entitlement after that period ends.
+From time to time Wrrapd may publish **discretionary incentive or bonus compensation**,
+including peak-period bonuses and milestone bonuses (for example, every 100 wrapped
+boxes). This Schedule does not state a bonus dollar amount. Terms, eligibility, and
+windows are set in Command Center or the WrapStar App, apply only for the stated period,
+and create no ongoing entitlement after that period ends.
 
 ## 5. Materials
 
@@ -60,12 +48,10 @@ states that Wrrapd will supply a material.
 
 ## 6. Accrual and pay calendar
 
-Wrapping pay is calculated under Section 3 from App timestamps, the half-hour floor,
-and the twelve-gifts-an-hour cap. Wrrapd pays on the then-published payout calendar (direct deposit). Wrrapd may
-offset or withhold for fraud, failed proof, skipped live session, overpayment,
-no-show reassignment cost, or amounts the contractor owes Wrrapd.
-
-A late cancel or silent no-show of an accepted window is unpaid.
+Wrapping pay is calculated under Section 1 from finished wraps in the pay week
+(Friday through Thursday). Wrrapd pays on the then-published payout calendar
+(direct deposit, Thursday at 6:00 p.m. Eastern). A late cancel or silent no-show
+of an accepted window is unpaid. Wrrapd does not deduct wrapping pay for pace.
 
 ## 7. Independent contractor
 
@@ -74,7 +60,6 @@ except as required by law and may issue Form 1099-NEC.
 
 ## 8. Changes
 
-Wrrapd may update this Schedule prospectively by changing Command Center rates or
-publishing a revised Schedule in the WrapStar App. Material methodology changes
-(for example, returning to per-order pay) require notice via the app or email and
-apply only going forward.
+Wrrapd may update this Schedule prospectively by publishing a revised Schedule in
+the WrapStar App. Material methodology changes require notice via the app or email
+and apply only going forward.

@@ -8,6 +8,9 @@ Each contractor packet uses a **role-only** schedule so one role’s PDF never l
 | JoyRider | [joyrider-agreements/contractor-compensation-schedule.md](./joyrider-agreements/contractor-compensation-schedule.md) |
 | WrapRider | [wraprider-agreements/contractor-compensation-schedule.md](./wraprider-agreements/contractor-compensation-schedule.md) |
 
-Shared dollar logic (ops only — not copied into applicant PDFs): default **$30/hr** in Command Center (`DEFAULT_*_HOURLY_CENTS = 3000`), ZIP lookup (person override → exact ZIP → 3-digit prefix → role default), 15-minute accrual, 12-gifts/hour pace on **wrapping hours only**. See [docs/CONTRACTOR-HOURLY-PAY.md](../CONTRACTOR-HOURLY-PAY.md).
+Shared dollar logic (ops only — not copied into applicant PDFs): wrapping is **$30.00 per dozen**
+finished wraps (WrapStar and WrapRider; pro-rated; no pace deduction). JoyRider and WrapRider
+**delivery** is planned hours on an Amazon Flex-style smart route (15 min/stop + miles/25 mph × ZIP
+hourly). See [docs/CONTRACTOR-HOURLY-PAY.md](../CONTRACTOR-HOURLY-PAY.md).
 
-Effective: 2026-09-20 until superseded in Command Center → Finance → Hourly rates.
+Effective: 2026-10-05 until superseded in Command Center → Finance → Pay rates.

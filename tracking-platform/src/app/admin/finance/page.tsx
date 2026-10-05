@@ -188,8 +188,10 @@ export default async function AdminFinancePage({
               <tr>
                 <th className="py-1 pr-3">Contractor</th>
                 <th className="py-1 pr-3">Role</th>
-                <th className="py-1 pr-3">Rate</th>
-                <th className="py-1 pr-3">Hours</th>
+                <th className="py-1 pr-3">Wraps</th>
+                <th className="py-1 pr-3">Wrap pay</th>
+                <th className="py-1 pr-3">Bonus</th>
+                <th className="py-1 pr-3">Delivery hours</th>
                 <th className="py-1 pr-3">Amount</th>
                 <th className="py-1 pr-3">Status</th>
               </tr>
@@ -197,7 +199,7 @@ export default async function AdminFinancePage({
             <tbody>
               {weekly.lines.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-3 text-slate-500">
+                  <td colSpan={8} className="py-3 text-slate-500">
                     No approved contractors yet.
                   </td>
                 </tr>
@@ -206,8 +208,14 @@ export default async function AdminFinancePage({
                   <tr key={line.id} className="border-t border-slate-100">
                     <td className="py-2 pr-3">{line.name}</td>
                     <td className="py-2 pr-3">{line.role}</td>
-                    <td className="py-2 pr-3">{formatUsdCents(line.hourlyRateCents)}</td>
-                    <td className="py-2 pr-3">{line.paidHours.toFixed(2)}</td>
+                    <td className="py-2 pr-3">{line.finishedGifts || "—"}</td>
+                    <td className="py-2 pr-3">
+                      {line.wrappingCents > 0 ? formatUsdCents(line.wrappingCents) : "—"}
+                    </td>
+                    <td className="py-2 pr-3">
+                      {(line.wrappingBonusCents || 0) > 0 ? formatUsdCents(line.wrappingBonusCents) : "—"}
+                    </td>
+                    <td className="py-2 pr-3">{line.deliveryHours > 0 ? line.deliveryHours.toFixed(2) : "—"}</td>
                     <td className="py-2 pr-3">{formatUsdCents(line.amountCents)}</td>
                     <td className="py-2 pr-3">
                       {line.status}
@@ -285,13 +293,13 @@ export default async function AdminFinancePage({
         </div>
         <div className="rounded-xl border bg-white p-4 shadow-sm">
           <p className="text-xs uppercase text-slate-500">Hourly defaults</p>
-          <p className="mt-1 text-2xl font-semibold">
-            ${((config.wrapstarHourlyCents || 3000) / 100).toFixed(0)} WS · $
-            {((config.joyriderHourlyCents || 3000) / 100).toFixed(0)} JR · $
-            {((config.wrapriderHourlyCents || 3000) / 100).toFixed(0)} WR
+          <p className="mt-1 text-2xl font-semibold">$30 / dozen wraps</p>
+          <p className="mt-1 text-sm text-slate-600">
+            JoyRider ${((config.joyriderHourlyCents || 3000) / 100).toFixed(0)}/hr · WrapRider delivery $
+            {((config.wrapriderHourlyCents || 3000) / 100).toFixed(0)}/hr
           </p>
           <Link href="/admin/finance/rates" className="text-xs text-blue-700 underline">
-            Edit hourly rates
+            Edit delivery rates
           </Link>
         </div>
       </div>
@@ -464,7 +472,7 @@ export default async function AdminFinancePage({
 
       <p className="mt-6 text-sm text-slate-600">
         <Link href="/admin/finance/rates" className="text-blue-700 underline">
-          Edit hourly rates by ZIP
+            Edit delivery rates by ZIP
         </Link>
       </p>
     </div>

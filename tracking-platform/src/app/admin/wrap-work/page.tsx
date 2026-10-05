@@ -35,10 +35,12 @@ export default async function WrapWorkPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Wrap hours</h1>
+          <h1 className="text-2xl font-semibold text-slate-900">Wrap work</h1>
           <p className="mt-1 max-w-2xl text-sm text-slate-600">
-            Clock-in and clock-out for each WrapStar, the gifts they wrapped, and the code stuck on
-            each box. Pace is 12 gifts an hour.
+            Clock-in and clock-out for the live session record, the gifts they wrapped, and the code
+            stuck on each box. Pay is $30.00 per dozen finished wraps (prorated for fewer or more
+            than a dozen), plus a $15.00 bonus upon every 100 wrapped boxes — clock time is not
+            deducted.
           </p>
         </div>
         <form action={sendSheetsAction}>
@@ -95,8 +97,7 @@ export default async function WrapWorkPage() {
                     <dt className="text-slate-500">Wrapped</dt>
                     <dd>
                       {pace.wrapped} / {pace.itemCount}
-                      {pace.hours > 0 ? ` · ${pace.perHour.toFixed(1)} / hr` : ""}
-                      {pace.behind > 0 ? ` · ${pace.behind} behind pace` : ""}
+                      {pace.hours > 0 ? ` · ${pace.perHour.toFixed(1)} / hr (session only)` : ""}
                     </dd>
                   </div>
                 </dl>

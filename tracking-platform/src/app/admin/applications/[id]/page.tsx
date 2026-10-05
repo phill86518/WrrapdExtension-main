@@ -48,13 +48,15 @@ async function actionForm(formData: FormData) {
   const bgStatus = String(formData.get("bgStatus") || "");
   const gigEvidenceStatus = String(formData.get("gigEvidenceStatus") || "");
   const gigEvidenceNotes = String(formData.get("gigEvidenceNotes") || "");
-  const { parseHourlyRateDollarsInput, DEFAULT_WRAPSTAR_HOURLY_CENTS } = await import(
-    "@/lib/hourly-rates"
-  );
+  const { parseHourlyRateDollarsInput, DEFAULT_JOYRIDER_HOURLY_CENTS, DEFAULT_WRAPRIDER_HOURLY_CENTS } =
+    await import("@/lib/hourly-rates");
   const parsedRate = parseHourlyRateDollarsInput(formData.get("hourlyRateDollars"));
-  /** At activate: form default is $30/hr; empty → system default; admin may override. */
   const activateHourlyCents =
-    action === "activate" ? parsedRate ?? DEFAULT_WRAPSTAR_HOURLY_CENTS : undefined;
+    action === "activate"
+      ? role === "wrapstar"
+        ? undefined
+        : parsedRate ?? (role === "wraprider" ? DEFAULT_WRAPRIDER_HOURLY_CENTS : DEFAULT_JOYRIDER_HOURLY_CENTS)
+      : undefined;
   if (!id || !action) return;
 
   // Each hire track has its own CPT + ops routes — never cross-read.

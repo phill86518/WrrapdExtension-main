@@ -154,7 +154,7 @@ export default async function AdminDriverDetailPage({
           />
         </label>
         <label className="block text-sm">
-          Hourly rate ($ / hour)
+          Delivery rate ($ / hour for the planned route)
           <input
             name="hourlyRateDollars"
             type="number"
@@ -166,7 +166,7 @@ export default async function AdminDriverDetailPage({
             className="mt-1 w-full rounded border px-3 py-2"
           />
           <span className="mt-1 block text-xs text-slate-500">
-            Person rate set at onboarding. Change here to override for this JoyRider.
+            Amazon Flex-style: the planned stops and miles set the hours. Traffic does not add pay.
           </span>
         </label>
         <label className="block text-sm">

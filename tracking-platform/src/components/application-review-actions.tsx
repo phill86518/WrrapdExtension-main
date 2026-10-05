@@ -389,20 +389,33 @@ export function ApplicationReviewActions({
             <>
               <label className="flex w-full flex-col gap-1 rounded-lg border border-emerald-200 bg-emerald-50/60 px-3 py-2 text-sm text-slate-800">
                 <span className="font-semibold text-emerald-900">
-                  Hourly rate for this {roleLabel} ($ / hour)
+                  {roleLabel === "WrapStar"
+                    ? "Wrapping pay"
+                    : `Delivery rate for this ${roleLabel} ($ / hour)`}
                 </span>
-                <input
-                  name="hourlyRateDollars"
-                  type="number"
-                  step="0.01"
-                  min={1}
-                  defaultValue="30.00"
-                  required
-                  className="max-w-[10rem] rounded border border-emerald-300 bg-white px-2 py-1.5"
-                />
-                <span className="text-xs text-slate-600">
-                  Default is $30.00. Change only if this hire is approved at a different rate.
-                </span>
+                {roleLabel === "WrapStar" ? (
+                  <span className="text-sm text-slate-700">
+                    $30.00 per dozen finished wraps (prorated for fewer or more than a dozen), plus a
+                    $15.00 bonus upon every 100 wrapped boxes. There is no hourly rate to set.
+                  </span>
+                ) : (
+                  <>
+                    <input
+                      name="hourlyRateDollars"
+                      type="number"
+                      step="0.01"
+                      min={1}
+                      defaultValue="30.00"
+                      required
+                      className="max-w-[10rem] rounded border border-emerald-300 bg-white px-2 py-1.5"
+                    />
+                    <span className="text-xs text-slate-600">
+                      {roleLabel === "WrapRider"
+                        ? "Wrapping is always $30.00 per dozen (prorated) plus a $15.00 bonus every 100 wrapped boxes. This rate is only for the planned delivery route."
+                        : "Amazon Flex-style: the planned stops and miles set the hours. Traffic does not add pay."}
+                    </span>
+                  </>
+                )}
               </label>
               <button
                 type="submit"

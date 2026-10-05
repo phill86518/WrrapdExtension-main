@@ -30,7 +30,7 @@ const DEFAULT_CONFIG: PayoutConfig = {
   platformFeeCents: 0,
   platformTakeWrapPercent: 28,
   platformTakeFlowersPercent: 15,
-  wrapstarHourlyCents: 3000,
+  wrapstarHourlyCents: 0,
   joyriderHourlyCents: 3000,
   wrapriderHourlyCents: 3000,
   wrapstarPaceGiftsPerHour: 12,

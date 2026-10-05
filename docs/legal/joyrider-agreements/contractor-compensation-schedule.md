@@ -28,7 +28,16 @@ address and flower pairing; and final delivery of gifts and/or flowers.
 
 A wrapping-pace rule does **not** apply to JoyRider hours.
 
-## 4. Estimated hours, and no extra pay for delay
+## 4. Tips
+
+Contractor retains **one hundred percent (100%)** of any tip or gratuity given for
+Contractor’s benefit upon delivery, whether in cash, by card, or through the
+Platform. Tips are **in addition to** delivery pay and any incentive compensation.
+Wrrapd does not retain any portion of those tips. The amount of a tip does not
+reduce, offset, or vary what Wrrapd pays. Wrrapd has no right to interfere with
+the amount of a tip given to Contractor.
+
+## 5. Estimated hours, and no extra pay for delay
 
 Delivery pay is the hourly rate times **estimated hours** for each route the JoyRider actually starts. The estimate uses planned stops (15 minutes each) plus planned drive distance at 25 miles per hour. It is fixed when the route is assigned.
 
@@ -38,21 +47,21 @@ From time to time — especially in higher-demand periods — Wrrapd may publish
 **discretionary incentive or bonus compensation** (peak-period or completion bonuses).
 Terms apply only for the stated period.
 
-## 5. Accrual and pay calendar
+## 6. Accrual and pay calendar
 
-Pay follows the estimated hours in Section 4. Wrrapd pays on
+Pay follows the estimated hours in Section 5. Wrrapd pays on
 the then-published payout calendar (direct deposit). Wrrapd may offset or withhold
 for fraud, failed scans or proof, overpayment, no-show reassignment cost, or amounts
 the contractor owes Wrrapd.
 
 A late cancel or silent no-show of an accepted window is unpaid.
 
-## 6. Independent contractor
+## 7. Independent contractor
 
 Contractors are not employees. Wrrapd does not withhold income or payroll taxes
 except as required by law and may issue Form 1099-NEC.
 
-## 7. Changes
+## 8. Changes
 
 Wrrapd may update this Schedule prospectively by changing Command Center rates or
 publishing a revised Schedule in the JoyRider App. Material methodology changes

@@ -3974,13 +3974,16 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                             /* ignore */
                         }
                         if (flowerFinePrintEl) {
-                            if (cat.disclaimer || cat.source === 'classic_backup') {
+                            const photoNote =
+                                cat.disclaimer || cat.source === 'classic_backup'
+                                    ? 'Actual bouquets might differ slightly from the photos shown.'
+                                    : '';
+                            if (photoNote) {
                                 flowerFinePrintEl.style.display = 'block';
-                                flowerFinePrintEl.textContent =
-                                    cat.disclaimer ||
-                                    'Actual bouquets might differ slightly from the photos shown.';
+                                flowerFinePrintEl.textContent = photoNote;
                             } else {
                                 flowerFinePrintEl.style.display = 'none';
+                                flowerFinePrintEl.textContent = '';
                             }
                         }
                     }
@@ -10274,32 +10277,17 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             color: #2c3e50;
         `;
         
-        // Terms & Conditions content
-        scrollableContent.innerHTML = `
-                        <h1 style="margin-top: 0; margin-bottom: 8px; color: #2c3e50; font-size: 28px; text-align: center; font-weight: 600; letter-spacing: 0.5px;">Wrrapd Inc. Terms & Conditions</h1>
-            <p style="margin-top: 0; margin-bottom: 22px; text-align: center;"><em>Last Updated: April 6, 2026</em></p>
-            <div style="font-size: 15px; line-height: 1.9;">
-                <p style="margin-bottom: 16px;"><strong>1.</strong> Scope of Service: These Terms & Conditions ("Terms") apply solely to the gift-wrapping and related fulfillment services provided by Wrrapd Inc. ("Wrrapd"). Your purchase of any underlying items is governed solely by Amazon's Terms & Conditions.</p>
-                <p style="margin-bottom: 16px;"><strong>2.</strong> Eligibility: You must be at least 18 years old or the age of majority in your jurisdiction to utilize the Wrrapd gift-wrapping service.</p>
-                <p style="margin-bottom: 16px;"><strong>3.</strong> Privacy Policy: Your use of the service is subject to Wrrapd's Privacy Policy, found at <a href="https://www.wrrapd.com/privacy" target="_blank" style="color: #0066c0; text-decoration: none;">https://www.wrrapd.com/privacy</a>.</p>
-                <p style="margin-bottom: 16px;"><strong>4.</strong> Limited Agency Appointment: By using the Wrrapd browser extension and clicking the agreement button, you explicitly appoint Wrrapd Inc. as your Limited Agent and Attorney-in-Fact for the sole purpose of navigating the Amazon interface and entering delivery information on your behalf. Wrrapd acts only at your specific direction and under your direct supervision.</p>
-                <p style="margin-bottom: 16px;"><strong>5.</strong> Platform Risk & Account Health: You acknowledge that Amazon's March 4, 2026 Agent Policy is an evolving platform rule. You agree to assume all risks regarding your Amazon account status, including potential flags or the voiding of Amazon-specific guarantees once an item is delivered to our hub.</p>
-                <p style="margin-bottom: 16px;"><strong>6.</strong> Description of Service: You acknowledge that Wrrapd provides professional exterior gift-wrapping and may include personalized options (e.g., messages, custom/AI designs, or tags).</p>
-                <p style="margin-bottom: 16px;"><strong>7.</strong> Fees and Taxes: You acknowledge that the Wrrapd service fee and any applicable taxes are clearly displayed at the time of selection, and by completing the order, you accept and agree to pay these amounts.</p>
-                <p style="margin-bottom: 16px;"><strong>8.</strong> Delivery Timelines: Selecting Wrrapd may add at least one business day to Amazon's estimated delivery date. An additional day is often required for the wrapping process, particularly for items received after 2:00 p.m. local time.</p>
-                <p style="margin-bottom: 16px;"><strong>9.</strong> Third-Party Delays: You agree not to hold Wrrapd responsible for any delays resulting from the late delivery of items from Amazon or its third-party sellers to Wrrapd's facilities.</p>
-                <p style="margin-bottom: 16px;"><strong>10.</strong> Video Audit Trail: Wrrapd provides high-fidelity Video Proof for every order, including (a) receipt of the Amazon package, (b) the unpackaging process, (c) the gift-wrapping process, and (d) final delivery to the outbound carrier. This record serves as definitive evidence of our service fulfillment.</p>
-                <p style="margin-bottom: 16px;"><strong>11.</strong> No Product Inspection: Wrrapd does not inspect, open, or handle the contents of Amazon-purchased items prior to the wrapping stage. Wrrapd is not responsible for any damage to the underlying product, defects, missing parts, or incorrect items sent by Amazon.</p>
-                <p style="margin-bottom: 16px;"><strong>12.</strong> Indemnification: You agree to indemnify and hold harmless Wrrapd Inc. from any claims or losses arising from the condition or quality of the underlying product, your use of the service, or your violation of these Terms.</p>
-                <p style="margin-bottom: 16px;"><strong>13.</strong> Product Issues & Returns: All issues relating to the product itself must be addressed directly with Amazon or the seller. Since you remain the owner of the product, you are responsible for initiating any returns through Amazon's standard channels using our provided video evidence if necessary.</p>
-                <p style="margin-bottom: 16px;"><strong>14.</strong> Items Not Selected for Gift-Wrapping: Any item delivered to Wrrapd that you did not select for Wrrapd gift-wrapping remains your responsibility. Please call Wrrapd Customer Service at (844) 638-5484 within 48 hours of its delivery to Wrrapd to arrange pickup. Wrrapd is not responsible for items not arranged for pickup within that time.</p>
-                <p style="margin-bottom: 16px;"><strong>15.</strong> Refund Policy: Gift-wrapping fees are non-refundable except in limited cases: (a) damage to the gift-wrap itself during transit; or (b) failure to ship the wrapped item within our promised window. Service fees are not refundable once the wrapping process has been documented.</p>
-                <p style="margin-bottom: 16px;"><strong>16.</strong> Prohibited Conduct: You agree not to provide false or misleading information or use the service for any fraudulent or illegal purposes.</p>
-                <p style="margin-bottom: 16px;"><strong>17.</strong> Warranties and Liability: The service is provided "AS IS." Wrrapd's total liability is limited to the service fee paid. We are not liable for indirect, incidental, or consequential damages.</p>
-                <p style="margin-bottom: 16px;"><strong>18.</strong> Dispute Resolution & Governing Law: Any disputes will be resolved through binding individual arbitration in St. Petersburg, Florida. You waive the right to a jury trial or class action. These Terms are governed by the laws of the State of Florida, USA.</p>
-            </div>
-        `;
-        
+        scrollableContent.textContent = 'Loading…';
+        fetch('https://api.wrrapd.com/api/shopper-terms?retailer=' + encodeURIComponent('Amazon'))
+            .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
+            .then(function (data) {
+                if (!data || typeof data.html !== 'string' || !data.html.trim()) throw new Error('terms');
+                scrollableContent.innerHTML = data.html;
+            })
+            .catch(function () {
+                scrollableContent.textContent = 'Please refresh and try again.';
+            });
+
         content.appendChild(scrollableContent);
         
         // Create agreement text container

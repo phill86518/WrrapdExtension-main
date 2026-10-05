@@ -218,10 +218,8 @@ function toOffers(selected) {
       )
       .digest('hex')
       .slice(0, 24);
-    const charged =
-      c.chargedPrice != null && Number.isFinite(Number(c.chargedPrice))
-        ? Math.round(Number(c.chargedPrice) * 100) / 100
-        : chargedPrice(c.retailPrice);
+    // Always retail + $2.00 Wrrapd upcharge — never trust a pre-set chargedPrice that skipped markup.
+    const charged = chargedPrice(c.retailPrice);
     const offer = {
       offerId,
       retailer: c.retailer,

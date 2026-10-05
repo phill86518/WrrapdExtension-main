@@ -89,7 +89,7 @@ async function sendOneMorningSheet(
     <div style="font-family:Georgia,serif;color:#0f172a;">
       <p>Good morning${wrapstar.name ? `, ${escapeHtml(wrapstar.name.split(" ")[0] || "")}` : ""}.</p>
       <p>These are today's gifts. Each one has its own code. Scan that code in the WrapStar app to open it. When the gift is wrapped, print that same code and stick it on the outside of the original packaging. Do not tape the box yet.</p>
-      <p>Open the app and tap <strong>Start shift</strong> when you begin. Keep a pace of 12 gifts an hour.</p>
+      <p>Open the app and tap <strong>Start shift</strong> when you begin. Pay is $30.00 per dozen finished wraps (prorated for fewer or more than a dozen), plus a $15.00 bonus upon every 100 wrapped boxes. Clock time does not change it.</p>
       <p>If a gift needs a box, pick that box up after the camera is on and before you cut the paper.</p>
       <ul style="list-style:none;padding:0;">${items.map(itemBlock).join("")}</ul>
     </div>`;

@@ -47,29 +47,44 @@ export function payableWeek(now: Date = new Date()): PayWeek {
   return previousPayWeek(current);
 }
 
-/** WrapStar floor: a started window with finished gifts pays at least half an hour. */
-export const WRAP_MIN_HOURS = 0.5;
+/** WrapStars and WrapRiders are paid $30.00 for every 12 finished wraps (pro-rated), plus a $15.00 bonus every 100 wraps. */
+export const WRAP_DOZEN_CENTS = 3000;
+export const WRAP_GIFTS_PER_DOZEN = 12;
+export const WRAP_BONUS_EVERY = 100;
+export const WRAP_BONUS_CENTS = 1500;
 
-/** Planned stop time used for JoyRider and WrapRider delivery estimates. */
+/** Planned stop time used for JoyRider and WrapRider delivery estimates (Amazon Flex-style). */
 export const DELIVERY_MINUTES_PER_STOP = 15;
 
 /** Planned drive speed used for JoyRider and WrapRider delivery estimates. */
 export const DELIVERY_ASSUMED_MPH = 25;
 
-/** WrapRider wrapping pay. Delivery hours are separate and use the hourly rate. */
-export const WRAPRIDER_GIFT_CENTS = 250;
+/** @deprecated Use wrappingPayCents. Kept so older weekly rows still import. */
+export const WRAPRIDER_GIFT_CENTS = Math.round(WRAP_DOZEN_CENTS / WRAP_GIFTS_PER_DOZEN);
+
+/** Pay for finished wraps that meet published standards. Partial dozens are pro-rated. No pace reduction. */
+export function wrappingPayCents(finishedGifts: number, dozenCents = WRAP_DOZEN_CENTS): number {
+  const gifts = Math.max(0, Math.floor(finishedGifts));
+  if (gifts <= 0 || dozenCents <= 0) return 0;
+  return Math.round((gifts / WRAP_GIFTS_PER_DOZEN) * dozenCents);
+}
 
 /**
- * WrapStar paid hours for one started window.
- * Clock time, including fractions, floored at half an hour and capped at gifts ÷ 12.
- * Missing clock time falls back to the pace cap (still floored at half an hour).
+ * $15.00 for each 100-wrap milestone crossed between `giftsBefore` (exclusive) and `giftsBefore + giftsAdded`.
+ * 95 then +20 this week → one bonus; 0 then +250 → two bonuses.
  */
-export function paidWrapShiftHours(clockHours: number, finishedGifts: number): number {
-  const gifts = Math.max(0, Math.floor(finishedGifts));
-  if (gifts <= 0) return 0;
-  const paceCap = gifts / 12;
-  const clock = Number.isFinite(clockHours) && clockHours > 0 ? clockHours : paceCap;
-  return Math.max(WRAP_MIN_HOURS, Math.min(clock, paceCap));
+export function wrappingMilestoneBonusCents(giftsBefore: number, giftsAdded: number): number {
+  const before = Math.max(0, Math.floor(giftsBefore));
+  const added = Math.max(0, Math.floor(giftsAdded));
+  if (added <= 0) return 0;
+  const after = before + added;
+  const crossed = Math.floor(after / WRAP_BONUS_EVERY) - Math.floor(before / WRAP_BONUS_EVERY);
+  return Math.max(0, crossed) * WRAP_BONUS_CENTS;
+}
+
+/** @deprecated Wrapping is no longer hourly. Returns 0. */
+export function paidWrapShiftHours(_clockHours: number, _finishedGifts: number): number {
+  return 0;
 }
 
 /**

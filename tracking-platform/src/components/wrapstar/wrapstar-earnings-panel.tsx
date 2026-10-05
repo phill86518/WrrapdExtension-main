@@ -29,7 +29,10 @@ export function WrapstarEarningsPanel({
     <section className="space-y-4">
       <div>
         <h2 className="text-xl font-semibold text-slate-900">Earnings</h2>
-        <p className="mt-1 text-sm text-slate-600">Your wrap pay summary (read-only).</p>
+        <p className="mt-1 text-sm text-slate-600">
+          $30.00 per dozen finished wraps (prorated for fewer or more than a dozen), plus a $15.00
+          bonus upon every 100 wrapped boxes. Clock time does not change it.
+        </p>
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">

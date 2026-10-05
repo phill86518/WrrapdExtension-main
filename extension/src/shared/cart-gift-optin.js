@@ -19,7 +19,7 @@ import {
   writeCartFingerprint,
 } from "./cart-gift-sync.js";
 import { buildOccasionSelect, isValidOccasion } from "./occasions.js";
-import { buildWrrapdTermsHtml } from "./wrrapd-terms.js";
+import { loadWrrapdTermsHtml } from "./wrrapd-terms.js";
 import { createWrrapdBrandLogo } from "./wrrapd-brand.js";
 import { generateWrrapdOrderNumber } from "./wrrapd-order-code.js";
 import {
@@ -313,7 +313,14 @@ function openGenericTermsModal(config, onAccepted) {
   const scrollable = document.createElement("div");
   scrollable.style.cssText =
     "padding:36px 28px 20px;overflow-y:auto;flex:1;font-family:Georgia,'Times New Roman',serif;line-height:1.75;color:#0f172a;font-size:15px;";
-  scrollable.innerHTML = buildWrrapdTermsHtml(retailer);
+  scrollable.textContent = "Loading…";
+  loadWrrapdTermsHtml(retailer)
+    .then((html) => {
+      scrollable.innerHTML = html;
+    })
+    .catch(() => {
+      scrollable.textContent = "Please refresh and try again.";
+    });
 
   const agreement = document.createElement("div");
   agreement.style.cssText =
@@ -814,12 +821,14 @@ function openGiftChoicesModal(config, cartSnapshot) {
     flowersMsg.style.display = "none";
     flowersGrid.style.display = "grid";
     renderLiveFlowerGrid(cat.choices);
-    if (cat.disclaimer || cat.source === "classic_backup") {
+    flowersFinePrint.style.display = "none";
+    flowersFinePrint.textContent = "";
+    const photoNote = cat.disclaimer || cat.source === "classic_backup"
+      ? "Actual bouquets might differ slightly from the photos shown."
+      : "";
+    if (photoNote) {
       flowersFinePrint.style.display = "block";
-      flowersFinePrint.textContent =
-        cat.disclaimer || "Actual bouquets might differ slightly from the photos shown.";
-    } else {
-      flowersFinePrint.style.display = "none";
+      flowersFinePrint.textContent = photoNote;
     }
   }
 

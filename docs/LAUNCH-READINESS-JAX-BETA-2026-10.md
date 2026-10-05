@@ -56,7 +56,7 @@ Launching publicly before Black Friday matters: it gives us ~3 calm weeks to fin
 - **Duval ZIP gating** is live (34 ZIPs) and shown to shoppers before they invest time.
 - **Amazon flow** is the most mature path and was frozen as golden on Sep 19.
 - **Server-side repricing** exists for the Helcim path (the server, not the browser, decides most of the charge).
-- **Command Center** has a real order lifecycle, auto-allocation within 15 miles, an allocation approval board, wrap shift recording with video, signed QR box labels for couriers, a public tracking page, a Twilio service desk, hourly-by-ZIP pay, weekly Stripe Connect payouts on a Thursday scheduler, and annual 1099 statements.
+- **Command Center** has a real order lifecycle, auto-allocation within 15 miles, an allocation approval board, wrap shift recording with video, signed QR box labels for couriers, a public tracking page, a Twilio service desk, **$30/dozen wrapping pay** (WrapStar / WrapRider) plus Amazon Flex-style planned-route delivery pay, weekly Stripe Connect payouts on a Thursday scheduler, annual 1099 statements, and electronic Form W-9 onboarding.
 - **Hire funnel** has three separate tracks with apply forms, fit scoring, clickwrap agreements, and Command Center review.
 - **Media design is fundamentally right**: photos and videos go to object storage with only a pointer in the database. That is the single most important decision for avoiding the "Uber wall" (see §4), and it was made correctly.
 
@@ -81,6 +81,9 @@ Launching publicly before Black Friday matters: it gives us ~3 calm weeks to fin
 | Oct 4 | **Never miss an order.** Every order shows under Orders, with or without a WrapStar ("Needs staffing" badge) | A charged order that is not in Command Center shows in a red box on Orders with "Bring into Command Center"; the pay server resends failed hand-offs every 5 minutes; an hourly check (`wrrapd-order-reconcile`) emails ops if anything is missing or the check fails |
 | Oct 4 | **Extra items not for wrapping**: shopper must call Customer Service within 48 hours to arrange pickup (Terms §13 website, §14 extension) | Hub intake "Hold for pickup" emails + texts the shopper; 11:30 PM email (`wrrapd-hub-exceptions`) lists held items and paid orders with no retailer order # |
 | Oct 4 | Same-day refunds reverse the full charge (Helcim cannot refund an unsettled batch) | Partial refunds work after the nightly settlement |
+| Oct 5 | **Wrapping pay is $30.00 per dozen** finished wraps (WrapStar and WrapRider), prorated, plus a **$15.00 bonus every 100 wrapped boxes**. No hourly wrapping rate, no pace deduction. Delivery stays Amazon Flex-style (smart route, planned hours). Legal agreements name a discretionary milestone bonus (e.g. every 100 wrapped boxes) without a dollar amount | Agreements, Command Center Finance / weekly pay, and contractor apps updated. Electronic Form W-9 (IRS Rev. March 2024) is now the live onboarding step for WrapStar, WrapRider, and JoyRider |
+| Oct 5 | **JoyRiders and WrapRiders keep 100% of delivery tips** (cash, card, or in the app), on top of route pay. Hire landings say so. Legal agreements use that rule and do not let a tip change Wrrapd's pay | Tips are not in weekly-pay math. Apply pages do not show the $30 or $15 figures |
+| Oct 5 | **§2.3 unit economics** use a 10–12 stop Flex route. Wrap $6.99 is an acquisition price. Flower margin is $2.00 inside the bouquet price (not shown as an upcharge). The florist bill is paid by that bouquet price | R10 stays a watch item (free delivery as CAC) |
 
 ## 1.3 The launch blockers (RED), in priority order
 
@@ -95,7 +98,7 @@ Launching publicly before Black Friday matters: it gives us ~3 calm weeks to fin
 | R7 → YELLOW | **Oct 3:** all three onboarding pages work on `apply.wrrapd.com` (`/onboarding/`, `/wraprider-onboarding/`, `/driver-onboarding/`), and Command Center now shows those links. **Roger, one step:** in SiteGround File Manager for the **apply** site, add `define( 'WRRAPD_WRAPSTARS_PROS_HOST', 'apply.wrrapd.com' );` to `wp-config.php` above "That's all, stop editing" — approval emails then link to `apply`. (Alternative: make `pros.wrrapd.com` a parked domain of the apply site.) Original finding: **`pros.wrrapd.com` is still "Under construction"**; `pros.wrrapd.com/wraprider-onboarding/` returns **404**. | Every approval email sends new contractors to a dead link. Not blocking Roger, blocking every hire. | Small (DNS / SiteGround) |
 | R8 → GREEN | **Florida sales tax: closed.** Registered with Florida DOR, annual filer (Roger files every year), 2026 resale certificate on file. Checkout charges 7.5% on Wrrapd lines. | — | Done |
 | R9 | **Insurance — none bound as of Oct 3.** Holding customers' goods (bailee), driving for business, and handling payments needs coverage. Agreements conflict (WrapStar agreement says no insurance mandate; onboarding demands a $1M general liability + inland marine certificate). | One crash or one stolen box of electronics without coverage could end the company. **Now the top non-software blocker.** | Broker call this week |
-| R10 | **Unit economics of "free final delivery"** (see §2.3) | At the placeholder $30/hour contractor rate, a single-gift delivery costs far more than the $6.99 wrap fee. Fine while Roger delivers; not fine once hires do. | Business decision |
+| R10 → YELLOW | **Free final delivery is a launch / CAC choice**, not a math error. Wrapping is $30/dozen ($2.50 each, prorated) plus $15 every 100 boxes. A 10–12 stop Amazon Flex-style route costs about $9–$11 per stop at $30/hr planned hours — not $17–$22 per solo drive. Wrap $6.99 is priced for conversion. Flowers are sold at a bouquet price that already includes a $2 internal markup (shoppers never see an "upcharge" line). See §2.3. Fine while density is being proven; revisit a delivery fee or ZIP-cluster days with beta route data. | Publishing a delivery fee too early fights acquisition. Publishing none forever after density is proven leaves money on the table. | Business decision after beta data |
 
 ## 1.4 Important but not blocking (YELLOW, fix during beta)
 
@@ -110,7 +113,7 @@ Launching publicly before Black Friday matters: it gives us ~3 calm weeks to fin
 - **FIXED Oct 3 — privacy policy:** updated for all 10 retailers, Helcim, texts/calls, proof of delivery, and Chrome Web Store Limited Use (live, "Last updated: October 3, 2026").
 - **FIXED Oct 3 — monitoring + tests:** uptime checks on wrrapd.com, api health, pay checkout, apply, Command Center, and order-backup freshness, emailing admin@wrrapd.com; GitHub Actions runs pay-server tests (pricing, rate limits, Helcim webhook), Command Center type-check, and the extension build + fixture checks on every push. **Roger:** send a mobile number to add text alerts.
 - **PARTLY FIXED Oct 3 — VM firewall:** remote desktop (3389) closed. SSH (22) is key-only but still open to the internet (about 2,700 bot attempts a day, all failing). **Roger:** choose "your home IP + Google IAP only" or leave key-only.
-- Hire funnel: background check (Checkr), identity (Persona), and BoldSign W-9 are placeholders or need keys for JoyRider/WrapRider tracks.
+- Hire funnel: background check (Checkr) and identity (Persona) still need vendor keys. Electronic W-9 is live (no BoldSign).
 
 ## 1.5 Overall readiness scorecard
 
@@ -154,7 +157,7 @@ Launching publicly before Black Friday matters: it gives us ~3 calm weeks to fin
 5. Retailer ships to the hub. A JoyRider (or WrapRider) collects from the PO Box/hub.
 6. A WrapStar wraps on video (or the WrapRider does), prints/attaches a signed QR label.
 7. JoyRider/WrapRider delivers to the giftee on the retailer date + 1 day, with a door photo.
-8. Contractors are paid hourly by ZIP weekly via Stripe Connect; 1099s annually.
+8. Contractors: WrapStars and WrapRiders are paid **$30.00 per dozen** finished wraps (prorated for fewer or more than a dozen; **$15.00 bonus every 100 wrapped boxes**). No hourly wrapping rate, no pace deduction. JoyRiders and WrapRider delivery use an Amazon Flex-style planned route. Weekly Stripe Connect payouts Thursday 6 PM ET; 1099s annually. Electronic Form W-9 (IRS Rev. March 2024) is filled and signed during onboarding.
 
 ## 2.2 What is smart about it
 
@@ -163,30 +166,78 @@ Launching publicly before Black Friday matters: it gives us ~3 calm weeks to fin
 - **Gift-presentation premium.** Retailer gift wrap (where it exists) is poor; Wrrapd's video-documented, hand-delivered wrap is a real step up.
 - **Duval-only beta** keeps the delivery radius drivable by one person.
 
-## 2.3 Business-judgment concerns (please read)
+## 2.3 Unit economics (rewritten Oct 5)
 
-**A. Delivery is the expensive part, and it is currently free.**
-Rough per-order cost at the placeholder $30/hour contractor rate (estimates, not accounting):
+The Oct 3 draft treated every order as a **solo delivery** and counted wrapping labor plus a whole florist bill against a $6.99 wrap fee. That is the wrong unit. Five facts change the picture:
 
-| Cost item | Estimate per single-gift order |
+1. **Wrapping pay is $30.00 per dozen** finished wraps ($2.50 each), **prorated** when the count is under or over a dozen. A **$15.00 bonus** is paid each time a WrapStar or WrapRider crosses another **100** finished wraps. Clock time does not change wrapping pay.
+2. **Delivery is Amazon Flex-style.** Command Center builds a **smart route** of typically **10–12 stops**. The driver is paid for planned stops (15 min each) plus planned miles at 25 mph.
+3. **JoyRiders and WrapRiders keep 100% of tips** given at delivery (cash, card, or in the app). Tips sit on top of route pay. They are not Wrrapd revenue and they are not a Wrrapd cost.
+4. **The wrap fee is a customer-acquisition price.** Marketing and CAC are why $6.99 can sit near wrapping labor. Contribution is judged on the **route**.
+5. **Flowers are one bouquet price.** That price is the store price plus **$2.00**. The shopper is not told there is an upcharge. Wrrapd keeps the $2.00. The rest of the bouquet price pays the store. It is not a $15–$22 loss against the wrap fee.
+
+### What the shopper pays Wrrapd (not the retailer)
+
+| Line | Amount | Role |
+|---|---|---|
+| Standard wrap | $6.99 | Acquisition / conversion price |
+| AI wrap design (optional) | +$2.99 | Margin |
+| Upload wrap design (optional) | +$1.99 | Margin |
+| Gift box (loose items) | $0.99 | Covers the box |
+| Flowers (optional) | One bouquet price | Store price plus $2.00, shown as the bouquet price. The $2.00 is Wrrapd's. |
+
+Retailer merchandise is paid to Amazon (or the other store) separately.
+
+### Wrapping labor (contractor)
+
+$30.00 / 12 wraps = **$2.50 per finished wrap**. Six wraps pay $15.00. Twenty-four pay $60.00. The $15.00 bonus is separate and lands when lifetime finished wraps cross 100, 200, and so on. Clock time does not change these amounts.
+
+### Delivery labor (Amazon Flex model)
+
+A Jacksonville route of **12 stops**, ~25 planned miles:
+
+| Piece | Plan | At $30/hr |
+|---|---|---|
+| 12 stops × 15 min | 3.0 h | $90 |
+| 25 miles ÷ 25 mph | 1.0 h | $30 |
+| **Route total** | **4.0 h** | **$120** |
+| **Per stop** | | **~$10** |
+
+A 10-stop, 20-mile route is about $90, or **~$9 per stop**. The old table's $17–$22 delivery line assumed one gift = one dedicated drive. That is not how Flex (or Wrrapd) pays a route. A tip on a stop is extra money for the driver, not an extra Wrrapd expense.
+
+PO Box / hub pickup is one extra stop on the same route.
+
+### Contribution on a 12-stop route (illustrative)
+
+Assume 12 standard wraps, 6 bouquets, 4 boxes, card ~3%+$0.30. A 12-wrap route has not yet hit the 100-wrap bonus.
+
+| | Amount |
 |---|---|
-| Wrapping labor (1/12 hour at $30) | ~$2.50 |
-| Paper, tape, tissue, box, label | ~$1.00–$2.00 |
-| Delivery labor (15 min stop + ~20–30 min drive in Duval at $30/hr) | ~$17–$22 |
-| PO Box run share | ~$1–$3 |
-| Card processing (~3% + $0.30) | ~$0.55 |
-| **Total cost** | **~$22–$30** |
-| **Revenue (wrap $6.99 + box $0.99)** | **~$8** |
+| Wrap fees 12 × $6.99 | $83.88 |
+| Flower margin 6 × $2.00 | $12.00 |
+| Boxes 4 × $0.99 | $3.96 |
+| **Wrrapd's own lines** | **~$100** |
+| Wrapping pay 12 × $2.50 | −$30 |
+| 100-wrap bonus | $0 on this route |
+| Delivery pay (route above) | −$120 |
+| Paper / box / label | −~$6 |
+| Card processing on Wrrapd lines | −~$4 |
+| **Cash on wrap + delivery + flower margin, before CAC** | **negative, because delivery is free** |
 
-While Roger is the WrapRider, labor is founder time and this is fine for learning. **Before paying contractors to deliver, choose one:** a delivery fee (e.g., a flat local delivery fee), a minimum order, scheduled delivery days per ZIP cluster (batching 6–10 stops per route), or a premium price for same-day/hand delivery. The data from the beta (stops per hour, gifts per stop) should drive this decision. Do not publish any of these numbers until decided.
+Read this correctly:
 
-**B. Independent-contractor classification risk.** Paying hourly, setting schedules/availability windows, requiring a video-recorded process, and potentially supplying equipment are all factors that push toward "employee" under IRS and Florida tests. This does not mean "don't do it" — it means have Florida employment counsel review the WrapStar/JoyRider/WrapRider structure **before the first non-founder hire**, especially the hourly model and equipment (§5).
+- **We are not spending $22–$30 to collect $6.99.** Wrapping labor is $2.50. The florist bill is paid by the bouquet price the shopper already paid. Wrrapd's flower result is about **$2.00 per bouquet**.
+- **The $6.99 wrap fee is the acquisition price.** It is close to wrapping labor and is not meant to carry a solo delivery.
+- **Delivery is the expensive line, and it is batched.** Per-stop cost on a 10–12 stop Flex route is about **$9–$11**, not $17–$22.
+- **Free final delivery is a launch choice**, the same family as free shipping while a market is being built. Revisit a delivery fee, ZIP-cluster days, or a minimum once beta data is in (stops per route, miles, flower attach rate). Contractor dollar amounts stay off wrrapd.com and the apply landings.
+
+**B. Independent-contractor classification.** Piece-rate wrapping ($30/dozen, prorated, plus a milestone bonus) is a cleaner IC factor than hourly wrapping. Delivery remains planned-hours (Flex-style). Tips are the contractor's. Video proof, availability windows, and borrowed kits still need Florida employment counsel **before the first non-founder hire**.
 
 **C. Retailer dependency.** The extension automates checkout pages and rewrites ship-to addresses. Amazon can change its pages any day (fragility) or object to the practice (policy risk). The Terms already shift account risk to shoppers. Keep `docs/ALTERNATIVE-EXTERNAL-FLOW.md` (wrap ordered on wrrapd.com) warm as Plan B.
 
-**D. Capacity of one WrapRider.** Roger alone can realistically handle about **10–15 delivery stops/day** plus one PO Box run, and roughly 30–40 wraps on a wrap-heavy day. The beta needs a **daily order cap** (see Exhibit A, station CAPCOM). Emptying the ZIP allowlist is today's only "kill switch" — it should be tested.
+**D. Capacity of one WrapRider.** Roger alone can realistically handle about **10–15 delivery stops/day** plus one PO Box run, and roughly 30–40 wraps on a wrap-heavy day. That is one Flex-sized route, not 10–15 dedicated drives. The beta needs a **daily order cap** (see Exhibit A, station CAPCOM). Emptying the ZIP allowlist is today's only "kill switch" — it should be tested.
 
-**E. The pay-then-abandon case.** A shopper can pay Wrrapd and then not finish (or cancel) the retailer order. Without inbound package tracking, Roger only discovers this when the package never shows up. Need: "expected by" date per order, a daily "not arrived" report, and a refund SOP.
+**E. The pay-then-abandon case.** A shopper can pay Wrrapd and then not finish (or cancel) the retailer order. Hub intake now flags paid orders with no retailer order number by end of day; refund SOP is live (same-day reverse). Remaining: inbound package tracking.
 
 **F. Gift privacy.** Amazon gift orders hide prices, but packing slips may still contain shopper names and messages. Wrrapd staff see everything. The Code of Conduct should cover confidentiality; giftee address data must be protected.
 
@@ -333,7 +384,7 @@ Each system lists subsystems, current state, risks, and what must happen before 
 | Command Center review / interview / move stream / activate | GREEN | |
 | `pros.wrrapd.com` onboarding host | YELLOW (R7) | Onboarding works on apply.wrrapd.com; one wp-config line for approval emails (§1.3) |
 | Clickwrap agreements | GREEN | Entity name "Wrrapd, Inc." vs LLC still flagged in memos — confirm |
-| BoldSign W-9 | YELLOW | Needs template IDs/keys in hire `wp-config.php` |
+| Electronic Form W-9 (IRS Rev. March 2024) | GREEN | Fill-and-sign on WrapStar, WrapRider, and JoyRider onboarding; pay server stamps the official PDF, stores it encrypted, last-four only in WordPress. BoldSign is no longer required for W-9 |
 | Background check | YELLOW | Consent captured; no vendor. For beta: run manually via a vendor account (e.g., Checkr) — drivers need an MVR |
 | Identity | YELLOW | Selfie with ID, manual review |
 | Insurance certificate upload | YELLOW | Requirement conflicts between agreement and onboarding |
@@ -344,9 +395,11 @@ Each system lists subsystems, current state, risks, and what must happen before 
 
 | Subsystem | State | Notes |
 |---|---|---|
-| Hourly rates by ZIP (3 roles) | YELLOW | Defaults are $30 placeholders — set real rates before first hire |
-| Weekly pay calculation from shifts + route estimate | GREEN | |
-| Manual / Automatic Thursday payouts | GREEN | Scheduler `wrrapd-weekly-payouts` (Thu 18:00 UTC) enabled |
+| Wrapping pay $30.00 / dozen (WrapStar + WrapRider) | GREEN | Prorated. $15.00 bonus each time finished wraps cross another 100. No pace deduction |
+| Delivery tips (JoyRider + WrapRider) | GREEN | Contractor keeps 100%. Not in weekly-pay math. In the agreements Oct 5 |
+| Delivery rates by ZIP (JoyRider + WrapRider planned route) | YELLOW | Defaults $30/hr planned hours (Amazon Flex-style). Set real delivery rates before first hire |
+| Weekly pay from finished wraps + planned route | GREEN | |
+| Manual / Automatic Thursday payouts | GREEN | Scheduler `wrrapd-weekly-payouts` (Thu 18:00 ET) enabled |
 | Stripe Connect live | GREEN | Live key on Cloud Run; fund the platform balance before first payout |
 | Holds, wallets | GREEN | |
 | Annual statements / 1099-NEC | YELLOW | Internal statements; IRS filing still needs a filing service (e.g., Stripe 1099 or Track1099) |
@@ -400,13 +453,13 @@ See §4 for the full analysis. Summary: two sources of truth (VM JSON + Firestor
 
 ## System 17 — Flowers add-on (ON for beta — decision Oct 3)
 
-How it works (`WrrapdServer/lib/flowers/`): giftee ZIP → nearest Publix + Sam's Club → fetch bouquet prices → Grok picks 4–8 → shopper sees "Bouquet #N" at **retail + markup**; the server re-validates the chosen offer at payment. Target is paused as a floral supplier.
+How it works (`WrrapdServer/lib/flowers/`): giftee ZIP → nearest Publix + Sam's Club → fetch bouquet prices → Grok picks 4–8 → shopper sees "Bouquet #N" at one price. That price is the store price plus **$2.00**. The modal does not mention an upcharge. The server re-validates the chosen offer at payment. Target is paused as a floral supplier.
 
 Audit on Oct 3 (live calls for 32218, 32256, 32207, 32250):
 
 | Check | Finding | Status |
 |---|---|---|
-| Markup | Was **$1.49**, now **$2.00** (`scrape.js` `MARKUP`) — deployed Oct 3 | GREEN |
+| Markup | **$2.00** on every bouquet (`catalog.js` always adds `MARKUP`). Shoppers see one price. The modal does not say "upcharge" | GREEN |
 | Live Publix prices | Old product API returns 403. **Fixed Oct 4:** Publix's store locator finds the real nearest store number, then that store's floral shelf prices and photos are read from publix.com (cached 6 h). Live for 32218, 32256, 32207, 32250, 32210, 32277 | GREEN |
 | Live Sam's Club prices | **Bot wall (HTTP 412)** every request, same for Walmart. Stored Member's Mark list still used | YELLOW — Publix covers every tested ZIP |
 | Target / Big Y | Target's online catalog has no fresh-cut bouquets (artificial and LEGO only), so it stays paused. Big Y has no Florida stores | Note |
@@ -819,11 +872,11 @@ Columns: `ID` · Check · How to verify · Pass criterion · 1st ☐ · 2nd ☐
 | CR-02 | Approval email links resolve for all 3 tracks | Click | No 404 | ☐ | ☐ |
 | CR-03 | Apply → review → approve → onboarding → activate for a test WrapRider | End-to-end | Pass | ☐ | ☐ |
 | CR-04 | Clickwrap agreements show correct entity name | Read | Matches Sunbiz | ☐ | ☐ |
-| CR-05 | W-9 collection works (BoldSign keys/templates set) | Test | Signed W-9 stored | ☐ | ☐ |
+| CR-05 | Electronic W-9 (IRS Rev. March 2024) fill-and-sign works on all 3 tracks | Test applicant | Signed filled PDF stored; last-four only in WordPress | ☐ | ☐ |
 | CR-06 | Background check + MVR process works (vendor or manual) | Test candidate | Result recorded | ☐ | ☐ |
 | CR-07 | Insurance requirement consistent across agreement, onboarding, orientation | Read | No conflict | ☐ | ☐ |
 | CR-08 | Sensitive uploads (ID, license, COI) not publicly accessible | Try direct URL logged out | Denied | ☐ | ☐ |
-| CR-09 | Hourly rates set (not placeholders) for Duval ZIPs | Finance → Rates | Set | ☐ | ☐ |
+| CR-09 | Delivery rates set for Duval (JoyRider / WrapRider); wrapping is $30/dozen prorated plus $15 every 100 wraps | Finance → Pay rates and a sample week | Dozen pay and the 100-wrap bonus both show | ☐ | ☐ |
 | CR-10 | Stripe Connect onboarding for a test contractor | Do it | Bank verified | ☐ | ☐ |
 | CR-11 | Platform Stripe balance funded for first payout | Stripe | Sufficient | ☐ | ☐ |
 | CR-12 | Weekly payout (manual mode first) pays correct amount | Test week | Exact | ☐ | ☐ |

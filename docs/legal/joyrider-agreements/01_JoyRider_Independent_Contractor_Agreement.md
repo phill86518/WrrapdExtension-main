@@ -136,7 +136,7 @@ By signing, Contractor acknowledges that Contractor has read, understands, and a
 
 8.3 **Incentive compensation.** From time to time — particularly during higher-demand periods — Wrrapd may offer **discretionary incentive or bonus compensation** (for example, peak-period or completion bonuses) as published in the Compensation Schedule, Command Center, or JoyRider App. Incentive terms apply only for the periods stated and create no ongoing entitlement afterward.
 
-8.4 Tips, if ever enabled for JoyRiders, follow the then-current Compensation Schedule.
+8.4 **Tips.** Contractor retains **one hundred percent (100%)** of any tip or gratuity given for Contractor’s benefit upon delivery, whether in cash, by card, or through the Platform. Tips are **in addition to** the delivery pay and any incentive compensation described in this Section. Wrrapd does not retain any portion of those tips. The amount of a tip does not reduce, offset, or vary what Wrrapd pays Contractor. Wrrapd has no right to interfere with the amount of a tip given to Contractor.
 
 8.5 Wrrapd may withhold, offset, or claw back compensation for fraud, failed or fabricated proof, failed scans used to conceal a miss, chargebacks, negligence under Section 5 or 5A, overpayments, no-show costs under Section 16A, or other amounts Contractor owes Wrrapd.
 

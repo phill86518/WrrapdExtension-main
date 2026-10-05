@@ -22,8 +22,11 @@ const flowerStores = require(path.join(__dirname, 'lib', 'flowers', 'stores'));
 const flowerCatalog = require(path.join(__dirname, 'lib', 'flowers', 'catalog'));
 const orderEmails = require(path.join(__dirname, 'lib', 'order-emails'));
 const helcim = require(path.join(__dirname, 'lib', 'helcim'));
+const w9 = require(path.join(__dirname, 'lib', 'w9'));
 const facebookScheduler = require(path.join(__dirname, 'lib', 'facebook-scheduler'));
 const extensionInstalls = require(path.join(__dirname, 'lib', 'extension-installs'));
+const retiredExtension = require(path.join(__dirname, 'lib', 'retired-extension'));
+const shopperTerms = require(path.join(__dirname, 'lib', 'shopper-terms'));
 
 // Initialize Google Cloud Storage
 let storageOptions = {
@@ -132,19 +135,19 @@ app.get('/cancel', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'cancel.html'));
 });
 
-app.get('/checkout', (req, res) => {
+function sendPayCheckout(req, res) {
     if (!req.isPayDomain) {
         return res.status(403).send('Access forbidden.');
     }
-    res.sendFile(path.join(__dirname, 'public', 'checkout.html'));
-});
+    if (retiredExtension.checkoutQueryHasRetiredHub(req)) {
+        return res.status(403).type('html').send(retiredExtension.retiredExtensionHtml());
+    }
+    return res.sendFile(path.join(__dirname, 'public', 'checkout.html'));
+}
 
-app.get('/checkout/lego', (req, res) => {
-    if (!req.isPayDomain) {
-        return res.status(403).send('Access forbidden.');
-    }
-    res.sendFile(path.join(__dirname, 'public', 'checkout.html'));
-});
+app.get('/checkout', sendPayCheckout);
+
+app.get('/checkout/lego', sendPayCheckout);
 
 /**
  * Generic per-retailer checkout (e.g. /checkout/sephora, /checkout/walmart).
@@ -152,13 +155,10 @@ app.get('/checkout/lego', (req, res) => {
  * name for non-Amazon retailers). Retailer slug must be simple alphanumerics.
  */
 app.get('/checkout/:retailer', (req, res) => {
-    if (!req.isPayDomain) {
-        return res.status(403).send('Access forbidden.');
-    }
     if (!/^[a-z0-9_-]{2,32}$/i.test(String(req.params.retailer || ''))) {
         return res.status(404).send('Unknown checkout.');
     }
-    res.sendFile(path.join(__dirname, 'public', 'checkout.html'));
+    return sendPayCheckout(req, res);
 });
 
 /**
@@ -209,6 +209,31 @@ app.post(['/api/payment-events', '/api/helcim-webhook'], express.raw({ type: '*/
 // Increase body size limit to handle large base64 images (50MB)
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
+
+const RETIRED_EXTENSION_POSTS = new Set([
+    '/api/helcim-purchase',
+    '/api/checkout-quote',
+    '/process-payment',
+    '/create-payment-intent',
+    '/create-checkout-session',
+    '/api/store-final-shipping-address',
+]);
+app.use((req, res, next) => {
+    if (req.method !== 'POST' || !RETIRED_EXTENSION_POSTS.has(req.path)) return next();
+    if (!retiredExtension.bodyHasRetiredHub(req.body)) return next();
+    return res.status(403).json({
+        error: 'Please install the current Wrrapd extension, then try again.',
+    });
+});
+
+app.get('/api/shopper-terms', (req, res) => {
+    if (!req.isApiDomain) {
+        return res.status(403).send('Access forbidden.');
+    }
+    const retailer = String(req.query.retailer || 'the retailer').trim().slice(0, 40) || 'the retailer';
+    res.set('Cache-Control', 'public, max-age=300');
+    return res.status(200).json({ html: shopperTerms.shopperTermsHtml(retailer) });
+});
 
 const mailgun = new Mailgun(FormData);
 const mg = mailgun.client({
@@ -2634,6 +2659,73 @@ app.post('/api/internal/resend-order', async (req, res) => {
     const r = await resendOrderToTracking(orderNumber);
     if (!r.ok) return res.status(502).json({ error: r.reason || 'Resend failed' });
     res.json({ ok: true });
+});
+
+function w9SubmitKeyMatches(req) {
+    const got = String(
+        req.get('x-wrrapd-ops-key') || req.get('x-wrrapd-wrapstars-ops-key') || '',
+    ).trim();
+    const candidates = [
+        process.env.W9_SUBMIT_KEY,
+        process.env.WRRAPD_WRAPSTARS_OPS_API_KEY,
+        process.env.WRRAPD_ADMIN_API_KEY,
+    ]
+        .map((s) => String(s || '').trim())
+        .filter(Boolean);
+    return candidates.some((expected) => {
+        if (!got || got.length !== expected.length) return false;
+        return crypto.timingSafeEqual(Buffer.from(got), Buffer.from(expected));
+    });
+}
+
+/** WordPress onboarding (server-side) → electronic W-9. Body: { suite, applicationId, email, ip, userAgent, fields }. */
+app.post('/api/w9/submit', express.json({ limit: '64kb' }), async (req, res) => {
+    if (!req.isApiDomain || !w9SubmitKeyMatches(req)) return res.status(401).json({ error: 'Unauthorized' });
+    try {
+        const b = req.body || {};
+        const r = await w9.submit({
+            suite: String(b.suite || ''),
+            applicationId: String(b.applicationId || ''),
+            email: String(b.email || ''),
+            ip: String(b.ip || ''),
+            userAgent: String(b.userAgent || ''),
+            fields: b.fields,
+        });
+        if (!r.ok) return res.status(400).json({ error: r.error });
+        const { ip, userAgent, ...safe } = r.w9;
+        res.json({ ok: true, w9: safe });
+    } catch (e) {
+        console.error('[w9] submit failed', e && e.message);
+        res.status(500).json({ error: 'The W-9 could not be saved. Please try again.' });
+    }
+});
+
+/** Signed W-9 PDF: WordPress (the signer's own copy, ops key) or Command Center (internal key). */
+app.get('/api/w9/:id/pdf', (req, res) => {
+    const internal = internalClaimSecretMatches(String(req.get('x-wrrapd-internal-key') || ''));
+    if (!req.isApiDomain || !(internal || w9SubmitKeyMatches(req))) return res.status(401).json({ error: 'Unauthorized' });
+    try {
+        const hit = w9.readPdf(req.params.id);
+        if (!hit) return res.status(404).json({ error: 'Not found' });
+        const owner = String(req.query.email || '').trim().toLowerCase();
+        if (!internal && owner !== hit.row.email) return res.status(404).json({ error: 'Not found' });
+        res.set('Content-Type', 'application/pdf');
+        res.set('Content-Disposition', `inline; filename="W-9-${hit.row.name.replace(/[^A-Za-z0-9]+/g, '-')}.pdf"`);
+        res.set('Cache-Control', 'no-store');
+        res.send(hit.pdf);
+    } catch (e) {
+        console.error('[w9] read failed', req.params.id, e && e.message);
+        res.status(500).json({ error: 'The W-9 could not be opened.' });
+    }
+});
+
+/** Command Center: W-9s on file (no TIN beyond the last four). Query: email (optional). */
+app.get('/api/internal/w9', (req, res) => {
+    if (!req.isApiDomain || !internalClaimSecretMatches(String(req.get('x-wrrapd-internal-key') || ''))) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+    const rows = w9.list({ email: String(req.query.email || '') }).map(({ userAgent, ...r }) => r);
+    res.json({ w9s: rows });
 });
 
 /**

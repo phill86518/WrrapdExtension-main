@@ -2272,6 +2272,19 @@ function wrrapd_wrapstars_process_onboarding_step() {
 			$done( 'workspace' );
 			break;
 
+		case 'w9':
+			if ( ! function_exists( 'wrrapd_w9_submit_for_app' ) ) {
+				$fail( 'W-9 module missing. Contact support.' );
+				return;
+			}
+			$w9 = wrrapd_w9_submit_for_app( 'wrapstar', $app_id );
+			if ( empty( $w9['ok'] ) ) {
+				$fail( $w9['error'] ?? 'We could not save your W-9.' );
+				return;
+			}
+			$done( 'w9' );
+			break;
+
 		case 'tax_1099':
 			if ( empty( $_POST['tax_ack_ic'] ) || empty( $_POST['tax_ack_withholding'] ) || empty( $_POST['tax_ack_w9'] ) ) {
 				$fail( 'Please confirm each tax acknowledgment to continue.' );
@@ -3280,8 +3293,8 @@ add_action( 'wp_footer', 'wrrapd_wrapstars_output_theme_cleanup_css', 1 );
  *
  * Edit text here; `wrrapd_wrapstars_shortcode_landing()` only renders it.
  * Rules: see docs/WRAPSTARS-OPERATIONS-MODEL.md §2 — no tips, no delivery/pickup by
- * WrapStars, no description of how orders are routed. High-level hourly pay and
- * milestone incentives may appear in FAQ when applicants ask about compensation.
+ * WrapStars, no description of how orders are routed. Pay is confirmed at approval
+ * (wrapping is per dozen). Milestone incentives may appear in FAQ when applicants ask.
  * Strings may contain <strong>/<em>; they are printed through wp_kses_post().
  *
  * @return array<string, mixed>
@@ -3292,7 +3305,7 @@ function wrrapd_wrapstars_landing_content() {
 			'kicker'  => 'Now accepting applications · Florida &amp; Georgia',
 			'title'   => 'Become a WrapStar',
 			'tagline' => 'Turn your gift-wrapping talent into something people remember.',
-			'sub'     => 'Wrap beautiful gifts from your own space, on your own schedule. We bring the packages to you and collect them when you&rsquo;re done — you bring the magic.',
+			'sub'     => 'Wrap beautiful gifts from your own space, on your own schedule. You earn for every finished wrap, and milestone bonuses can grow with your volume.',
 			'cta'     => 'Start your application',
 			'note'    => '',
 		),
@@ -3306,8 +3319,8 @@ function wrrapd_wrapstars_landing_content() {
 				'text'  => 'You wrap in your own space, with your own hands. Holidays, birthdays, and weddings keep the work coming — you bring the finish that makes the unwrap special.',
 			),
 			array(
-				'title' => 'Make the moment',
-				'text'  => 'Every box is someone&rsquo;s surprise. You are the hands behind the ribbon that makes unwrapping unforgettable.',
+				'title' => 'Earn for every wrap',
+				'text'  => 'You are paid for finished wraps that meet our standards, counted by the dozen and adjusted when you wrap fewer or more. Milestone bonuses may be offered as you reach every 100 wrapped boxes. Your pay is confirmed when you are approved.',
 			),
 		),
 		'how'       => array(
@@ -3322,7 +3335,7 @@ function wrrapd_wrapstars_landing_content() {
 		'perks'     => array(
 			'title' => 'Why WrapStars love it',
 			'items' => array(
-				array( 'title' => 'Flexible windows', 'text' => 'Tell us when you&rsquo;re available. Wrap around your life, not the other way around.' ),
+				array( 'title' => 'Earn for the craft', 'text' => 'Finished wraps are paid by the dozen, adjusted when the count is higher or lower, with discretionary milestone bonuses (for example, every 100 wrapped boxes).' ),
 				array( 'title' => 'Focus on the craft', 'text' => 'No customer calls, no doorsteps, no deliveries. Just you, the paper, and the ribbon.' ),
 				array( 'title' => 'Standards &amp; support', 'text' => 'Clear presentation guides, supply recommendations, and a team that has your back.' ),
 				array( 'title' => 'Seasons that sparkle', 'text' => 'Holidays, birthdays, graduations, and weddings keep the orders coming all year long.' ),
@@ -3378,11 +3391,11 @@ function wrrapd_wrapstars_landing_content() {
 				),
 				array(
 					'q' => 'How are WrapStars paid?',
-					'a' => 'WrapStars are independent contractors paid an hourly rate for active wrapping time. Your personal rate is confirmed when you are approved and may vary by market.',
+					'a' => 'You are an independent contractor. Finished wraps that meet our standards are paid by the dozen, and the amount is adjusted when you wrap fewer or more than a dozen. Discretionary milestone bonuses may be offered as you reach every 100 wrapped boxes. Your pay is confirmed when you are approved.',
 				),
 				array(
 					'q' => 'Are there incentives or milestone bonuses?',
-					'a' => 'Yes. Milestone incentives may be offered for completing onboarding, finishing your first set of orders, and participating during peak gifting seasons. Details are shared during onboarding and may change as programs evolve.',
+					'a' => 'Yes. Wrrapd may offer discretionary milestone bonuses (for example, every 100 wrapped boxes) and peak-season incentives. Details are shared during onboarding and may change as programs evolve.',
 				),
 				array(
 					'q' => 'When and how do I receive payouts?',
@@ -3849,7 +3862,22 @@ function wrrapd_wrapstars_shortcode_onboarding( $atts ) {
 			wrrapd_wrapstars_render_step_workspace( $app->ID );
 			break;
 		case 'w9':
-			echo do_shortcode( '[wrrapd_wrapstar_sign doc="w9"]' );
+			if ( function_exists( 'wrrapd_w9_render' ) ) {
+				wrrapd_w9_render(
+					array(
+						'suite'        => 'wrapstar',
+						'app_id'       => $app->ID,
+						'nonce_action' => 'wrrapd_ws_onboarding',
+						'nonce_field'  => 'wrrapd_ws_nonce',
+						'action_name'  => 'wrrapd_ws_action',
+						'action_value' => 'onboarding_step',
+						'step'         => 'w9',
+						'next_url'     => wrrapd_wrapstars_onboarding_step_url( wrrapd_wrapstars_next_onboarding_step( 'w9' ) ),
+					)
+				);
+			} else {
+				echo '<div class="wrrapd-wrapstars-alert wrrapd-wrapstars-alert--err">W-9 module missing.</div>';
+			}
 			break;
 		case 'tax_1099':
 			wrrapd_wrapstars_render_step_tax_1099( $app->ID );

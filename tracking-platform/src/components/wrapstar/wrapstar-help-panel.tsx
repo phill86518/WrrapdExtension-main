@@ -12,7 +12,9 @@ export function WrapstarHelpPanel() {
         </p>
         <p>
           <strong className="text-slate-900">Clock:</strong> tap Start shift when you begin and End
-          shift when you finish. Keep a pace of 12 gifts an hour.
+          shift when you finish. Pay is $30.00 per dozen finished wraps (prorated for fewer or more
+          than a dozen), plus a $15.00 bonus upon every 100 wrapped boxes — clock time does not
+          change it.
         </p>
         <p>
           <strong className="text-slate-900">Each gift:</strong> match it to the email, scan the code

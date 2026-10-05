@@ -141,21 +141,19 @@ By signing, Contractor acknowledges that Contractor has read, understands, and a
 
 ## 8. Compensation
 
-8.1 Contractor is paid an **hourly rate**, not a per-order piece rate. The rate is determined by the **Compensation Schedule** then published in the WrapStar App or on the Platform (including ZIP-specific rates: exact ZIP, then 3-digit prefix, then the WrapStar default). Wrrapd may change published rates prospectively.
+8.1 Contractor is paid **thirty dollars ($30.00) per dozen** finished gift-wraps that meet published standards, as set out in the **Compensation Schedule**. Partial dozens are paid in proportion. Wrrapd does **not** pay WrapStars an hourly rate. There is **no deduction** from wrapping pay for clock time or pace. Wrrapd may also pay discretionary bonus compensation as described in Section 8.4. Wrrapd may change the published per-dozen amount prospectively.
 
-8.2 **Clock time, with a half-hour floor.** For each accepted wrap window Contractor actually starts and in which at least one gift is finished, paid time runs from the App clock-in timestamp to the App clock-out timestamp, including fractions of an hour. Paid time for that window is **not less than one-half (1/2) hour**.
+8.2 **Finished wrap.** A gift is finished only when it is wrapped to published standards, documented under Section 6, labeled (including the delivery barcode), and ready for collection. Clock time does not change wrapping pay.
 
-8.3 **Pace cap of twelve gifts an hour.** Paid time for that window cannot exceed finished gifts ÷ 12. If Contractor takes longer than twelve finished gifts per hour, the extra time is unpaid. If Contractor finishes faster than that pace, pay follows the actual timestamps, still subject to the half-hour floor. **Examples:** two hours on the clock and twelve finished gifts pay one hour; forty minutes on the clock and twelve finished gifts pay forty minutes; twenty minutes on the clock and three finished gifts pay one-half hour. A gift is finished only when it is wrapped to published standards, documented under Section 6, labeled (including the delivery barcode), and ready for collection.
+8.3 **Examples.** Twelve finished wraps pay thirty dollars; six pay fifteen dollars; one pays two dollars and fifty cents.
 
-8.4 **Incentive compensation.** From time to time — particularly during higher-demand periods — Wrrapd may offer **discretionary incentive or bonus compensation**, including additional pay for wrapping above the twelve-gifts-per-hour pace, peak-period bonuses, or other incentives published in the Compensation Schedule, Command Center, or WrapStar App. Incentive terms, amounts, eligibility, and duration are set solely by Wrrapd, apply only for the periods stated, and create no ongoing entitlement after an incentive period ends.
+8.4 **Incentive compensation.** From time to time Wrrapd may offer **discretionary incentive or bonus compensation**, including peak-period bonuses and milestone bonuses (for example, every 100 wrapped boxes). This Agreement does not state a bonus dollar amount. Terms, eligibility, and duration are set solely by Wrrapd, apply only for the periods stated, and create no ongoing entitlement after an incentive period ends.
 
 8.5 **Materials.** Ordinary wrapping supplies — including gift-wrapping paper, small boxes when needed, scissors, cutters, and tape — are Contractor’s responsibility unless Wrrapd expressly provides a material or reimbursement in writing for a given order.
 
-8.6 Wrrapd may withhold, offset, or claw back compensation for fraud, failed or fabricated proof, skipped live session, chargebacks, amounts attributable to Contractor’s negligence or willful misconduct under Section 5 or 5A, overpayments, no-show costs under Section 16A, or other amounts Contractor owes Wrrapd.
+8.6 Contractor is solely responsible for all taxes on compensation. Contractor shall complete Form W-9 (or equivalent) before payouts. Wrrapd does not deduct wrapping pay for pace.
 
-8.7 Contractor is solely responsible for all taxes on compensation. Contractor shall complete Form W-9 (or equivalent) before payouts.
-
-8.8 Tips are not part of WrapStar compensation unless the Compensation Schedule later states otherwise.
+8.7 Tips are not part of WrapStar compensation unless the Compensation Schedule later states otherwise.
 
 ## 9. Background Checks and Onboarding
 

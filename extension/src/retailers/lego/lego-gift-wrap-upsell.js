@@ -539,12 +539,14 @@ export function openLegoGiftServiceModal() {
     flowersMsg.style.display = "none";
     flowersGrid.style.display = "grid";
     renderLiveFlowerGrid(cat.choices);
-    if (cat.disclaimer || cat.source === "classic_backup") {
+    flowersFinePrint.style.display = "none";
+    flowersFinePrint.textContent = "";
+    const photoNote = cat.disclaimer || cat.source === "classic_backup"
+      ? "Actual bouquets might differ slightly from the photos shown."
+      : "";
+    if (photoNote) {
       flowersFinePrint.style.display = "block";
-      flowersFinePrint.textContent =
-        cat.disclaimer || "Actual bouquets might differ slightly from the photos shown.";
-    } else {
-      flowersFinePrint.style.display = "none";
+      flowersFinePrint.textContent = photoNote;
     }
   }
 

@@ -519,7 +519,7 @@ async function scrapeSams(store) {
 /**
  * Classic Wrrapd 4-bouquet backup (same designs as the extension assets).
  * Used when live retailer scrape fails (e.g. HTTP 403).
- * Price = Wrrapd flowers unit price (geo), not retail + MARKUP.
+ * retailPrice is the estimated store price; catalog.js always adds MARKUP ($2.00).
  */
 function classicFourBouquets(store, flowerUnitPrice) {
   const price = Number(flowerUnitPrice);
@@ -529,14 +529,15 @@ function classicFourBouquets(store, flowerUnitPrice) {
   const images = PUBLIX_FALLBACK.map((row) => row.imageUrl);
   const s = store || {};
   return [1, 2, 3, 4].map((n, i) => {
-    const charged = Math.round(Math.max(8.99, base + offsets[i]) * 100) / 100;
+    const retail = Math.round(Math.max(8.99, base + offsets[i]) * 100) / 100;
+    const charged = Math.round((retail + MARKUP) * 100) / 100;
     return {
       retailer: s.retailer || 'publix',
       sku: `flowers-${n}`,
       designKey: `flowers-${n}`,
       title: `Bouquet #${n}`,
       imageUrl: images[i],
-      retailPrice: charged,
+      retailPrice: retail,
       chargedPrice: charged,
       productUrl: 'https://www.wrrapd.com/',
       isRose: false,

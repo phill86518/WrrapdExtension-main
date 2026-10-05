@@ -1043,7 +1043,7 @@ function wrrapd_wrapriders_process_onboarding_step() {
 	if ( ! wrrapd_wrapriders_can_access_step( $app->ID, $step ) ) {
 		return;
 	}
-	$placeholders = array( 'policies', 'background', 'identity', 'tax_1099', 'bank_payout', 'w9' );
+	$placeholders = array( 'policies', 'background', 'identity', 'tax_1099', 'bank_payout' );
 	if ( $step === 'welcome' ) {
 		wrrapd_wrapriders_mark_step_complete( $app->ID, 'welcome' );
 		wp_safe_redirect( wrrapd_wrapriders_onboarding_step_url( 'agreement' ) );
@@ -1118,6 +1118,20 @@ function wrrapd_wrapriders_process_onboarding_step() {
 		wrrapd_wrapriders_set_meta( $app->ID, 'workspace_confirmed_at', gmdate( 'c' ) );
 		wrrapd_wrapriders_mark_step_complete( $app->ID, 'workspace' );
 		wp_safe_redirect( wrrapd_wrapriders_onboarding_step_url( 'w9' ) );
+		exit;
+	}
+	if ( $step === 'w9' ) {
+		if ( ! function_exists( 'wrrapd_w9_submit_for_app' ) ) {
+			$GLOBALS['wrrapd_wr_ob_error'] = 'W-9 module missing. Contact support.';
+			return;
+		}
+		$w9 = wrrapd_w9_submit_for_app( 'wraprider', $app->ID );
+		if ( empty( $w9['ok'] ) ) {
+			$GLOBALS['wrrapd_wr_ob_error'] = $w9['error'] ?? 'We could not save your W-9.';
+			return;
+		}
+		wrrapd_wrapriders_mark_step_complete( $app->ID, 'w9' );
+		wp_safe_redirect( wrrapd_wrapriders_onboarding_step_url( wrrapd_wrapriders_next_onboarding_step( 'w9' ) ) );
 		exit;
 	}
 }
@@ -1728,7 +1742,7 @@ function wrrapd_wrapriders_shortcode_landing() {
 				<p class="wrrapd-wrapriders-landing-hero__kicker">Now accepting applications · Florida &amp; Georgia</p>
 				<h1>Become a WrapRider</h1>
 				<p class="wrrapd-wrapriders-landing-hero__tagline">Craft the gift. Carry the joy.</p>
-				<p class="wrrapd-wrapriders-landing-hero__sub">Turn an ordinary box into something unforgettable in your own space, then bring that finished surprise to the door yourself.</p>
+				<p class="wrrapd-wrapriders-landing-hero__sub">Turn an ordinary box into something unforgettable in your own space, then bring that finished surprise to the door yourself. You keep 100% of the tips given to you when you deliver.</p>
 				<a class="wrrapd-wrapstars-btn wrrapd-wrapstars-btn--xl wrrapd-wrapstars-btn--hero" href="<?php echo esc_url( $apply ); ?>">Start your application</a>
 			</div>
 			<figure class="wrrapd-wrapriders-landing-hero__visual">
@@ -1768,8 +1782,8 @@ function wrrapd_wrapriders_shortcode_landing() {
 					<p>Manage end-to-end, giftwrap items beautifully and deliver them yourself and brighten someone's special day!</p>
 				</div>
 				<div class="wrrapd-wrapstars-dasher-band__item wrrapd-wrapstars-dasher-box">
-					<h2>Make someone light up</h2>
-					<p>Enjoy the whole arc — the quiet art of wrapping, then the moment joy lands at the door.</p>
+					<h2>Earn for both</h2>
+					<p>You earn for every finished wrap, counted by the dozen and adjusted when you wrap fewer or more, plus pay for the planned route you deliver. You keep 100% of tips given to you at the door. Milestone bonuses may be offered as you reach every 100 wrapped boxes.</p>
 				</div>
 			</section>
 
@@ -1825,15 +1839,19 @@ function wrrapd_wrapriders_shortcode_landing() {
 				</details>
 				<details class="wrrapd-wrapstars-faq-dd__item">
 					<summary>How are WrapRiders paid?</summary>
-					<p>WrapRiders are independent contractors paid an hourly rate for active wrapping and delivery time. Your personal rate is confirmed when you are approved and may vary by market.</p>
+					<p>You are an independent contractor. Finished wraps are paid by the dozen and adjusted when you wrap fewer or more. You also earn for each planned delivery route you accept, and you keep 100% of tips given to you when you deliver. Discretionary milestone bonuses may be offered as you reach every 100 wrapped boxes. Your pay is confirmed when you are approved.</p>
 				</details>
 				<details class="wrrapd-wrapstars-faq-dd__item">
 					<summary>Are there incentives or milestone bonuses?</summary>
-					<p>Yes. Milestone incentives may be offered for completing onboarding, finishing your first set of orders, and participating during peak gifting seasons. Details are shared during onboarding and may change as programs evolve.</p>
+					<p>Yes. Wrrapd may offer discretionary milestone bonuses (for example, every 100 wrapped boxes) and peak-season incentives. Details are shared during onboarding and may change as programs evolve.</p>
 				</details>
 				<details class="wrrapd-wrapstars-faq-dd__item">
 					<summary>When and how do I receive payouts?</summary>
 					<p>Approved earnings are paid on a regular schedule to the bank account you provide during onboarding. You can review activity and payout status in the WrapRider app after you are activated.</p>
+				</details>
+				<details class="wrrapd-wrapstars-faq-dd__item">
+					<summary>Do I keep my tips?</summary>
+					<p>Yes. You keep 100% of tips given to you when you deliver, whether in cash, by card, or in the app. Tips are yours, on top of your wrapping pay and your route pay.</p>
 				</details>
 				<details class="wrrapd-wrapstars-faq-dd__item">
 					<summary>Do I need gift-wrapping experience?</summary>
@@ -2037,6 +2055,23 @@ function wrrapd_wrapriders_shortcode_onboarding( $atts ) {
 				wrrapd_wrapriders_render_step_workspace( $app->ID );
 			} elseif ( $step === 'activation' ) {
 				wrrapd_wrapriders_render_step_activation( $app->ID );
+			} elseif ( $step === 'w9' ) {
+				if ( function_exists( 'wrrapd_w9_render' ) ) {
+					wrrapd_w9_render(
+						array(
+							'suite'        => 'wraprider',
+							'app_id'       => $app->ID,
+							'nonce_action' => 'wrrapd_wr_onboarding',
+							'nonce_field'  => 'wrrapd_wr_nonce',
+							'action_name'  => 'wrrapd_wr_action',
+							'action_value' => 'onboarding_step',
+							'step'         => 'w9',
+							'next_url'     => wrrapd_wrapriders_onboarding_step_url( wrrapd_wrapriders_next_onboarding_step( 'w9' ) ),
+						)
+					);
+				} else {
+					echo '<div class="wrrapd-wrapstars-alert wrrapd-wrapstars-alert--err">W-9 module missing.</div>';
+				}
 			} else {
 				wrrapd_wrapriders_render_step_placeholder( $app->ID, $step );
 			}

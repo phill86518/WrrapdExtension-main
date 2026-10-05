@@ -163,7 +163,7 @@ export default async function AdminWrapriderDetailPage({
           />
         </label>
         <label className="block text-sm">
-          Hourly rate ($ / hour)
+          Delivery rate ($ / hour for the planned route)
           <input
             name="hourlyRateDollars"
             type="number"
@@ -175,7 +175,8 @@ export default async function AdminWrapriderDetailPage({
             className="mt-1 w-full rounded border px-3 py-2"
           />
           <span className="mt-1 block text-xs text-slate-500">
-            Person rate set at onboarding. Change here to override for this WrapRider.
+            Wrapping is always $30.00 per dozen (prorated) plus a $15.00 bonus every 100 wrapped
+            boxes. This rate is only for the planned delivery route.
           </span>
         </label>
         <label className="block text-sm">

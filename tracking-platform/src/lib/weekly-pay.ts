@@ -13,11 +13,11 @@ import { formatDateKeyNy, hourNy } from "./ny-date";
 import {
   amountCentsForHours,
   estimatedDeliveryHours,
-  paidWrapShiftHours,
+  wrappingPayCents,
+  wrappingMilestoneBonusCents,
   payableWeek,
   payWeekContaining,
   payWeekId,
-  WRAPRIDER_GIFT_CENTS,
   type PayWeek,
 } from "./pay-week";
 import { getStripeConnectAccount, sendStripePayout, stripeConfigured } from "./stripe-connect";
@@ -46,6 +46,8 @@ export type WeeklyPayLine = {
   deliveryHours: number;
   paidHours: number;
   finishedGifts: number;
+  wrappingCents: number;
+  wrappingBonusCents: number;
   deliveryWindows: number;
   amountCents: number;
   status: WeeklyPayStatus;
@@ -67,24 +69,35 @@ type RosterPerson = {
   approved: boolean;
 };
 
-function shiftClockHours(shift: WrapStarShift): number {
-  const start = new Date(shift.startedAt).getTime();
-  let end = shift.endedAt ? new Date(shift.endedAt).getTime() : NaN;
-  if (!Number.isFinite(end) && shift.status === "active") end = Date.now();
-  if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return 0;
-  return (end - start) / 3_600_000;
+function dayInRange(day: string, fromKey: string | null, toKey: string | null): boolean {
+  if (!day) return false;
+  if (fromKey && day < fromKey) return false;
+  if (toKey && day > toKey) return false;
+  return true;
 }
 
-function shiftCounts(shifts: WrapStarShift[], orders: Order[], wrapstarId: string, week: PayWeek): { hours: number; gifts: number } {
+function priorDateKey(key: string): string {
+  const [y, m, d] = key.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, (m || 1) - 1, d || 1));
+  dt.setUTCDate(dt.getUTCDate() - 1);
+  return dt.toISOString().slice(0, 10);
+}
+
+function shiftCounts(
+  shifts: WrapStarShift[],
+  orders: Order[],
+  wrapstarId: string,
+  fromKey: string | null,
+  toKey: string | null,
+): { hours: number; gifts: number } {
   const relevant = shifts.filter((shift) => {
     if (shift.wrapstarId !== wrapstarId) return false;
     if (shift.status === "cancelled" || shift.status === "sheet") return false;
     const day = shift.dateKey || formatDateKeyNy(shift.startedAt);
-    return day >= week.startKey && day <= week.endKey;
+    return dayInRange(day, fromKey, toKey);
   });
   const covered = new Set<string>();
   let gifts = 0;
-  let hours = 0;
   for (const shift of relevant) {
     let n = 0;
     for (const item of shift.items || []) {
@@ -92,22 +105,16 @@ function shiftCounts(shifts: WrapStarShift[], orders: Order[], wrapstarId: strin
       if (item.phase === "wrapped" || item.phase === "done" || item.wrappedAt || item.labeledAt) n += 1;
     }
     gifts += n;
-    hours += paidWrapShiftHours(shiftClockHours(shift), n);
   }
-  const extrasByDay = new Map<string, number>();
   for (const order of orders) {
     if ((order.wrapstarId || order.driverId) !== wrapstarId) continue;
     if (covered.has(order.id)) continue;
     if (order.wrapPhase !== "complete" && !order.wrapFinishedAt) continue;
     const day = formatDateKeyNy(order.wrapFinishedAt || order.updatedAt);
-    if (day < week.startKey || day > week.endKey) continue;
-    extrasByDay.set(day, (extrasByDay.get(day) || 0) + Math.max(1, order.lineItems?.length || 1));
+    if (!dayInRange(day, fromKey, toKey)) continue;
+    gifts += Math.max(1, order.lineItems?.length || 1);
   }
-  for (const n of extrasByDay.values()) {
-    gifts += n;
-    hours += paidWrapShiftHours(0, n);
-  }
-  return { hours, gifts };
+  return { hours: 0, gifts };
 }
 
 function deliveryCounts(orders: Order[], week: PayWeek): { hours: number; windows: number } {
@@ -247,12 +254,10 @@ export async function previewWeeklyPay(now: Date = new Date(), weekOverride?: Pa
       continue;
     }
     const wrap = person.wrapstarId
-      ? shiftCounts(
-          shifts,
-          orders,
-          person.wrapstarId,
-          week,
-        )
+      ? shiftCounts(shifts, orders, person.wrapstarId, week.startKey, week.endKey)
+      : { hours: 0, gifts: 0 };
+    const wrapBefore = person.wrapstarId
+      ? shiftCounts(shifts, orders, person.wrapstarId, null, priorDateKey(week.startKey))
       : { hours: 0, gifts: 0 };
     const delivery = person.courierId
       ? deliveryCounts(
@@ -260,12 +265,16 @@ export async function previewWeeklyPay(now: Date = new Date(), weekOverride?: Pa
           week,
         )
       : { hours: 0, windows: 0 };
-    const wrapHours = person.role === "wrapstar" ? wrap.hours : 0;
+    const wrapHours = 0;
     const deliveryHours = person.role === "wrapstar" ? 0 : delivery.hours;
-    const paidHours = wrapHours + deliveryHours;
+    const paidHours = deliveryHours;
     const hourlyRateCentsValue = hourlyRateCents(cfg, person.role, person.homePostalCode, person.personRateCents);
-    const pieceCents = person.role === "wraprider" ? wrap.gifts * WRAPRIDER_GIFT_CENTS : 0;
-    const amountCents = pieceCents + amountCentsForHours(paidHours, hourlyRateCentsValue);
+    const wrappingCents = person.role === "wrapstar" || person.role === "wraprider" ? wrappingPayCents(wrap.gifts) : 0;
+    const wrappingBonusCents =
+      person.role === "wrapstar" || person.role === "wraprider"
+        ? wrappingMilestoneBonusCents(wrapBefore.gifts, wrap.gifts)
+        : 0;
+    const amountCents = wrappingCents + wrappingBonusCents + amountCentsForHours(paidHours, hourlyRateCentsValue);
     const hold =
       (await getPayoutHold(person.contractorId)) ||
       (person.wrapstarId ? await getPayoutHold(person.wrapstarId) : null);
@@ -291,6 +300,8 @@ export async function previewWeeklyPay(now: Date = new Date(), weekOverride?: Pa
       deliveryHours,
       paidHours,
       finishedGifts: person.role === "joyrider" ? 0 : wrap.gifts,
+      wrappingCents,
+      wrappingBonusCents,
       deliveryWindows: person.role === "wrapstar" ? 0 : delivery.windows,
       amountCents,
       status,

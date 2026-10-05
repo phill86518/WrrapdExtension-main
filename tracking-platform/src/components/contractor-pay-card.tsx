@@ -33,16 +33,18 @@ export async function ContractorPayCard({
       <h2 className="text-lg font-semibold text-slate-900">This week</h2>
       <p className="mt-1 text-sm text-slate-600">
         {role === "wraprider"
-          ? `$2.50 per finished gift, plus ${formatUsdCents(line.hourlyRateCents)} an hour for estimated delivery time. Traffic does not add pay`
+          ? `$30.00 per dozen finished wraps (prorated for fewer or more than a dozen), plus a $15.00 bonus upon every 100 wrapped boxes, plus ${formatUsdCents(line.hourlyRateCents)} an hour for the planned delivery route. Traffic does not add pay`
           : role === "wrapstar"
-            ? `${formatUsdCents(line.hourlyRateCents)} an hour from your clock-in and clock-out. At least half an hour, and no more than 12 finished gifts an hour`
-            : `${formatUsdCents(line.hourlyRateCents)} an hour for estimated delivery time. Traffic does not add pay`}
+            ? "$30.00 per dozen finished wraps (prorated for fewer or more than a dozen), plus a $15.00 bonus upon every 100 wrapped boxes. Clock time does not change wrapping pay"
+            : `${formatUsdCents(line.hourlyRateCents)} an hour for the planned delivery route. Traffic does not add pay`}
         .
       </p>
       <p className="mt-3 text-3xl font-semibold text-slate-900">{formatUsdCents(line.amountCents)}</p>
       <p className="mt-1 text-sm text-slate-600">
-        {line.weekStart} to {line.weekEnd} · {hoursText(line.paidHours)}
-        {line.finishedGifts > 0 ? ` · ${line.finishedGifts} gifts` : ""}
+        {line.weekStart} to {line.weekEnd}
+        {line.finishedGifts > 0 ? ` · ${line.finishedGifts} wraps` : ""}
+        {(line.wrappingBonusCents || 0) > 0 ? ` · ${formatUsdCents(line.wrappingBonusCents)} bonus` : ""}
+        {line.paidHours > 0 ? ` · ${hoursText(line.paidHours)} planned delivery` : ""}
         {line.deliveryWindows > 0 ? ` · ${line.deliveryWindows} delivery windows` : ""}
       </p>
       <p className="mt-2 text-sm text-slate-600">
