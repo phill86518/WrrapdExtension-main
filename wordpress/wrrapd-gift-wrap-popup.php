@@ -9,7 +9,47 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_GIFT_POPUP_BUILD', '2026-10-01-amazon-contrast' );
+define( 'WRRAPD_GIFT_POPUP_BUILD', '2026-10-05-intro-video' );
+
+/**
+ * Homepage popup intro clip (Media Library, muted autoplay then copy).
+ *
+ * @return string URL or empty.
+ */
+function wrrapd_gift_wrap_popup_video_url() {
+	if ( defined( 'WRRAPD_GIFT_POPUP_VIDEO' ) && WRRAPD_GIFT_POPUP_VIDEO !== '' ) {
+		return esc_url( (string) WRRAPD_GIFT_POPUP_VIDEO );
+	}
+
+	$by_id = wp_get_attachment_url( 7382 );
+	if ( is_string( $by_id ) && $by_id !== '' ) {
+		return $by_id;
+	}
+
+	$fallback = 'https://wrrapd.com/wp-content/uploads/2026/10/Gift-Wrapped-in-a-Flash_-A-Quick-Flashy-Finish.mp4';
+	$needle   = 'gift-wrapped-in-a-flash';
+	$atts     = get_posts(
+		array(
+			'post_type'      => 'attachment',
+			'post_mime_type' => 'video',
+			'posts_per_page' => 20,
+			'post_status'    => 'inherit',
+			'orderby'        => 'date',
+			'order'          => 'DESC',
+		)
+	);
+	foreach ( $atts as $att ) {
+		$hay = strtolower( (string) $att->post_title . ' ' . (string) $att->post_name . ' ' . (string) get_attached_file( $att->ID ) );
+		if ( strpos( $hay, $needle ) !== false ) {
+			$url = wp_get_attachment_url( $att->ID );
+			if ( is_string( $url ) && $url !== '' ) {
+				return $url;
+			}
+		}
+	}
+
+	return $fallback;
+}
 
 /**
  * Accent color per retailer slug (logos come from mu-plugins/logos/).
@@ -128,6 +168,7 @@ function wrrapd_gift_wrap_popup_enqueue_assets() {
 			array(
 				'retailers' => wrrapd_gift_wrap_popup_retailers(),
 				'build'     => WRRAPD_GIFT_POPUP_BUILD,
+				'videoUrl'  => wrrapd_gift_wrap_popup_video_url(),
 				'storeUrl'  => function_exists( 'wrrapd_chrome_extension_install_url' ) ? wrrapd_chrome_extension_install_url() : 'https://chromewebstore.google.com/detail/wrrapd/ckjeddmjkhjnkmldknbeakjonfnjocpg',
 			)
 		);
@@ -150,11 +191,13 @@ function wrrapd_gift_wrap_popup_render() {
 
 	$first    = $retailers[0];
 	$store    = function_exists( 'wrrapd_chrome_extension_install_url' ) ? wrrapd_chrome_extension_install_url() : 'https://chromewebstore.google.com/detail/wrrapd/ckjeddmjkhjnkmldknbeakjonfnjocpg';
+	$video    = wrrapd_gift_wrap_popup_video_url();
 	?>
-	<div id="wrrapd-gift-popup" class="wrrapd-gift-popup" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="wrrapd-gift-popup-title">
+	<div id="wrrapd-gift-popup" class="wrrapd-gift-popup<?php echo $video ? ' has-intro' : ''; ?>" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="wrrapd-gift-popup-title">
 		<div class="wrrapd-gift-popup__panel">
 			<button type="button" class="wrrapd-gift-popup__close" id="wrrapd-gift-popup-close" aria-label="<?php esc_attr_e( 'Close', 'wrrapd' ); ?>">&times;</button>
 
+			<div class="wrrapd-gift-popup__copy" id="wrrapd-gift-popup-copy">
 			<p class="wrrapd-gift-popup__eyebrow"><?php esc_html_e( 'Wrapping Happiness', 'wrrapd' ); ?></p>
 
 			<div class="wrrapd-gift-popup__hero" id="wrrapd-gift-popup-title">
@@ -178,6 +221,14 @@ function wrrapd_gift_wrap_popup_render() {
 			<a class="wrrapd-gift-popup__cta" href="<?php echo esc_url( $store ); ?>" target="_blank" rel="noopener">
 				<?php esc_html_e( 'Get the free Chrome extension', 'wrrapd' ); ?>
 			</a>
+			</div>
+			<?php if ( $video ) : ?>
+			<div class="wrrapd-gift-popup__video" id="wrrapd-gift-popup-video" hidden>
+				<video id="wrrapd-gift-popup-player" muted playsinline preload="auto" disablepictureinpicture>
+					<source src="<?php echo esc_url( $video ); ?>" type="video/mp4" />
+				</video>
+			</div>
+			<?php endif; ?>
 		</div>
 	</div>
 	<?php

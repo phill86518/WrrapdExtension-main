@@ -38,6 +38,7 @@
 	transform: translateY(10px) scale(0.98);
 	transition: transform 0.4s cubic-bezier(0.23, 1, 0.32, 1);
 	text-align: center;
+	overflow: hidden;
 }
 
 .wrrapd-gift-popup.is-open .wrrapd-gift-popup__panel {
@@ -191,6 +192,37 @@
 .wrrapd-gift-popup__cta:focus-visible {
 	filter: brightness(1.04);
 	outline: none;
+}
+
+.wrrapd-gift-popup__video {
+	position: absolute;
+	inset: 0;
+	z-index: 1;
+	border-radius: inherit;
+	overflow: hidden;
+	background: var(--wgp-navy);
+}
+
+.wrrapd-gift-popup__video[hidden] {
+	display: none !important;
+}
+
+.wrrapd-gift-popup__video video {
+	display: block;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	object-position: center;
+}
+
+.wrrapd-gift-popup.is-intro .wrrapd-gift-popup__copy,
+.wrrapd-gift-popup.is-intro .wrrapd-gift-popup__panel > :not(.wrrapd-gift-popup__close):not(.wrrapd-gift-popup__video) {
+	visibility: hidden;
+}
+
+.wrrapd-gift-popup.is-intro .wrrapd-gift-popup__close {
+	z-index: 3;
+	background: rgba(12, 6, 56, 0.45);
 }
 
 html.wrrapd-ext-installed .wrrapd-gift-popup {

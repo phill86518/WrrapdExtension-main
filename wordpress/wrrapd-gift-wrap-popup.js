@@ -19,11 +19,38 @@
 	var logoEl = document.getElementById('wrrapd-gift-popup-logo');
 	var closeBtn = document.getElementById('wrrapd-gift-popup-close');
 	var ctaEl = root.querySelector('.wrrapd-gift-popup__cta');
+	var videoUrl = config.videoUrl || 'https://wrrapd.com/wp-content/uploads/2026/10/Gift-Wrapped-in-a-Flash_-A-Quick-Flashy-Finish.mp4';
+	var videoWrap = document.getElementById('wrrapd-gift-popup-video');
+	var videoEl = document.getElementById('wrrapd-gift-popup-player');
+	var panelEl = root.querySelector('.wrrapd-gift-popup__panel');
+
+	if (videoUrl && panelEl && !videoEl) {
+		videoWrap = document.createElement('div');
+		videoWrap.className = 'wrrapd-gift-popup__video';
+		videoWrap.id = 'wrrapd-gift-popup-video';
+		videoWrap.hidden = true;
+		videoEl = document.createElement('video');
+		videoEl.id = 'wrrapd-gift-popup-player';
+		videoEl.muted = true;
+		videoEl.playsInline = true;
+		videoEl.setAttribute('playsinline', '');
+		videoEl.preload = 'auto';
+		videoEl.setAttribute('disablepictureinpicture', '');
+		var src = document.createElement('source');
+		src.src = videoUrl;
+		src.type = 'video/mp4';
+		videoEl.appendChild(src);
+		videoWrap.appendChild(videoEl);
+		panelEl.appendChild(videoWrap);
+		root.classList.add('has-intro');
+	}
 
 	var cyclingTimer = null;
 	var openTimer = null;
+	var introTimer = null;
 	var currentIndex = 0;
 	var isOpen = false;
+	var introDone = false;
 
 	if (ctaEl && config.storeUrl) {
 		ctaEl.setAttribute('href', config.storeUrl);
@@ -139,6 +166,67 @@
 		}
 	}
 
+	function prefersReducedMotion() {
+		return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+	}
+
+	function finishIntro() {
+		if (introTimer) {
+			window.clearTimeout(introTimer);
+			introTimer = null;
+		}
+		if (introDone) {
+			return;
+		}
+		introDone = true;
+		root.classList.remove('is-intro');
+		if (videoWrap) {
+			videoWrap.hidden = true;
+		}
+		if (videoEl) {
+			try {
+				videoEl.pause();
+			} catch (e) {}
+		}
+		startCycling();
+	}
+
+	function playIntro(thenStart) {
+		if (!videoEl || !videoUrl || prefersReducedMotion()) {
+			if (thenStart) {
+				thenStart();
+			} else {
+				startCycling();
+			}
+			return false;
+		}
+
+		introDone = false;
+		root.classList.add('is-intro');
+		if (videoWrap) {
+			videoWrap.hidden = false;
+		}
+
+		function onEnded() {
+			finishIntro();
+		}
+		videoEl.addEventListener('ended', onEnded, { once: true });
+		videoEl.muted = true;
+		try {
+			videoEl.currentTime = 0;
+		} catch (e) {}
+
+		var playAttempt = videoEl.play();
+		if (playAttempt && typeof playAttempt.then === 'function') {
+			playAttempt.catch(function () {
+				finishIntro();
+			});
+		}
+
+		introTimer = window.setTimeout(finishIntro, 12000);
+		return true;
+	}
+
 	function openPopup() {
 		if (isOpen || extensionInstalled() || isDismissed()) {
 			return;
@@ -147,7 +235,9 @@
 		isOpen = true;
 		root.classList.add('is-open');
 		root.setAttribute('aria-hidden', 'false');
-		startCycling();
+		if (!playIntro(startCycling)) {
+			startCycling();
+		}
 	}
 
 	function closePopup(persist) {
@@ -156,8 +246,21 @@
 		}
 
 		isOpen = false;
-		root.classList.remove('is-open');
+		introDone = true;
+		if (introTimer) {
+			window.clearTimeout(introTimer);
+			introTimer = null;
+		}
+		root.classList.remove('is-open', 'is-intro');
 		root.setAttribute('aria-hidden', 'true');
+		if (videoEl) {
+			try {
+				videoEl.pause();
+			} catch (e) {}
+		}
+		if (videoWrap) {
+			videoWrap.hidden = true;
+		}
 		stopCycling();
 
 		if (persist) {
