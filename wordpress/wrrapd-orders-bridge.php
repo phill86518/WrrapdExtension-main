@@ -257,10 +257,11 @@ add_filter( 'body_class', 'wrrapd_body_class_site_pages' );
 function wrrapd_brand_favicon_url( $file = 'icon-192.png' ) {
 	$file  = ltrim( (string) $file, '/' );
 	$local = dirname( __FILE__ ) . '/icons/favicon/' . $file;
+	$ver   = '20261005';
 	if ( is_readable( $local ) ) {
-		return content_url( 'mu-plugins/icons/favicon/' . $file );
+		return add_query_arg( 'v', $ver, content_url( 'mu-plugins/icons/favicon/' . $file ) );
 	}
-	return 'https://wrrapd.com/wp-content/mu-plugins/icons/favicon/' . $file;
+	return add_query_arg( 'v', $ver, 'https://wrrapd.com/wp-content/mu-plugins/icons/favicon/' . $file );
 }
 
 /**
@@ -308,13 +309,15 @@ function wrrapd_output_site_favicons() {
 	}
 	// Kill core Site Icon tags so old Media Library / floating-W uploads cannot win.
 	remove_action( 'wp_head', 'wp_site_icon', 99 );
-	$ico = wrrapd_brand_favicon_url( 'favicon.ico' );
-	$p32 = wrrapd_brand_favicon_url( 'icon-32.png' );
+	$ico  = wrrapd_brand_favicon_url( 'favicon.ico' );
+	$p32  = wrrapd_brand_favicon_url( 'icon-32.png' );
 	$p192 = wrrapd_brand_favicon_url( 'icon-192.png' );
 	$p180 = wrrapd_brand_favicon_url( 'icon-180.png' );
+	$p512 = wrrapd_brand_favicon_url( 'icon-512.png' );
 	echo '<link rel="icon" href="' . esc_url( $ico ) . '" sizes="any" />' . "\n";
 	echo '<link rel="icon" type="image/png" href="' . esc_url( $p32 ) . '" sizes="32x32" />' . "\n";
 	echo '<link rel="icon" type="image/png" href="' . esc_url( $p192 ) . '" sizes="192x192" />' . "\n";
+	echo '<link rel="icon" type="image/png" href="' . esc_url( $p512 ) . '" sizes="512x512" />' . "\n";
 	echo '<link rel="apple-touch-icon" href="' . esc_url( $p180 ) . '" />' . "\n";
 }
 add_action( 'wp_head', 'wrrapd_output_site_favicons', 2 );

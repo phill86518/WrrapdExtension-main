@@ -434,3 +434,65 @@ if ( ! has_action( 'init', 'wrrapd_serve_public_sitemap' ) ) {
 	add_action( 'wp_head', 'wrrapd_seo_output_head', 1 );
 	add_filter( 'robots_txt', 'wrrapd_seo_robots_txt', 99, 2 );
 }
+
+if ( ! function_exists( 'wrrapd_output_focus_icon_tags' ) ) {
+	function wrrapd_output_focus_icon_tags() {
+		if ( is_admin() ) {
+			return;
+		}
+		$icon = esc_url( 'https://wrrapd.com/wp-content/mu-plugins/icons/favicon/icon-192.png?v=20261005' );
+		$ico  = esc_url( 'https://wrrapd.com/wp-content/mu-plugins/icons/favicon/favicon.ico?v=20261005' );
+		$p32  = esc_url( 'https://wrrapd.com/wp-content/mu-plugins/icons/favicon/icon-32.png?v=20261005' );
+		$p180 = esc_url( 'https://wrrapd.com/wp-content/mu-plugins/icons/favicon/icon-180.png?v=20261005' );
+		$p512 = esc_url( 'https://wrrapd.com/wp-content/mu-plugins/icons/favicon/icon-512.png?v=20261005' );
+		echo '<link rel="icon" href="' . $ico . '" sizes="any" />' . "\n";
+		echo '<link rel="icon" type="image/png" href="' . $p32 . '" sizes="32x32" />' . "\n";
+		echo '<link rel="icon" type="image/png" href="' . $icon . '" sizes="192x192" />' . "\n";
+		echo '<link rel="icon" type="image/png" href="' . $p512 . '" sizes="512x512" />' . "\n";
+		echo '<link rel="apple-touch-icon" href="' . $p180 . '" />' . "\n";
+		if ( ! is_singular() ) {
+			return;
+		}
+		$post = get_queried_object();
+		if ( ! $post || (int) $post->ID !== 7372 ) {
+			return;
+		}
+		$og = esc_url( 'https://wrrapd.com/wp-content/uploads/2026/10/wrrapd-focus-og.jpg' );
+		echo '<meta property="og:image" content="' . $og . '" />' . "\n";
+		echo '<meta property="og:image:width" content="1200" />' . "\n";
+		echo '<meta property="og:image:height" content="630" />' . "\n";
+		echo '<meta property="og:image:alt" content="Wrrapd" />' . "\n";
+		echo '<meta name="twitter:card" content="summary_large_image" />' . "\n";
+		echo '<meta name="twitter:image" content="' . $og . '" />' . "\n";
+	}
+}
+if ( ! function_exists( 'wrrapd_strip_legacy_favicon_tags' ) ) {
+	function wrrapd_strip_legacy_favicon_tags() {
+		global $wp_filter;
+		if ( ! isset( $wp_filter['wp_head'] ) || ! is_object( $wp_filter['wp_head'] ) ) {
+			return;
+		}
+		$drop = array(
+			'wrrapd_output_site_favicons',
+			'wp_site_icon',
+			'wrrapd_force_focus_favicon_head',
+			'wrrapd_force_focus_favicon_print',
+			'wrrapd_wrapstars_output_favicon',
+		);
+		foreach ( $wp_filter['wp_head']->callbacks as $priority => $cbs ) {
+			foreach ( $cbs as $cb ) {
+				$fn   = $cb['function'];
+				$name = is_string( $fn ) ? $fn : ( is_array( $fn ) ? (string) end( $fn ) : '' );
+				if ( in_array( $name, $drop, true ) ) {
+					remove_action( 'wp_head', $fn, (int) $priority );
+				}
+			}
+		}
+	}
+}
+if ( ! has_action( 'wp_head', 'wrrapd_strip_legacy_favicon_tags' ) ) {
+	add_action( 'wp_head', 'wrrapd_strip_legacy_favicon_tags', -999 );
+}
+if ( ! has_action( 'wp_head', 'wrrapd_output_focus_icon_tags' ) ) {
+	add_action( 'wp_head', 'wrrapd_output_focus_icon_tags', 99 );
+}
