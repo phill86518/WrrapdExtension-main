@@ -1,25 +1,50 @@
 /**
- * Whether a gift needs a cardboard box and tissue before the paper is cut.
- * Boxed retail packages (books, LEGO, laptops, headphones) do not.
- * Folded clothes always do — use a shirt box, not the garment measurements.
+ * Loose-item box decisions stay on the server. This module only asks.
  */
 
-export const BOX_CHARGE_USD = 0.99;
+const QUOTE_URL = "https://api.wrrapd.com/api/gift-box-quote";
 
+let chargeUsd = 0;
+const needsByTitle = new Map();
+
+export function boxChargeUsd() {
+  return chargeUsd;
+}
+
+export function itemNeedsBox(input) {
+  const title = String(input?.title || "").trim().toLowerCase();
+  if (!title) return input?.needsGiftBox === true && needsByTitle.get("") === true;
+  return needsByTitle.get(title) === true;
+}
+
+/** @deprecated use itemNeedsBox. Kept so older call shapes still compile during this version. */
 export function looseItemNeedsBox(input) {
-  const title = String(input?.title || "");
-  const category = String(input?.category || input?.itemCategory || "");
-  const text = `${category} ${title}`.toLowerCase();
-  if (input?.flowers === true) return false;
-  if (!title.trim() && !category.trim()) return input?.needsGiftBox === true;
-  if (/\b(bouquet|flowers)\b/.test(text)) return false;
-  if (/\b(book|paperback|hardcover|novel|manga)\b/.test(text)) return false;
-  if (/\b(lego|board game|jigsaw|puzzle|boxed set)\b/.test(text)) return false;
-  if (/\b(laptop|monitor|printer|headphone|earbud|earbuds|speaker|tablet|kindle)\b/.test(text)) return false;
-  return true;
+  return itemNeedsBox(input);
+}
+
+export async function refreshBoxQuote(items) {
+  const list = (Array.isArray(items) ? items : []).slice(0, 40).map((item) => ({
+    title: String(item?.title || "").slice(0, 300),
+    category: String(item?.category || item?.itemCategory || "").slice(0, 120),
+    flowers: item?.flowers === true,
+    needsGiftBox: item?.needsGiftBox === true,
+  }));
+  const response = await fetch(QUOTE_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ items: list }),
+  });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error("box");
+  chargeUsd = Number(body.boxChargeUsd) > 0 ? Number(body.boxChargeUsd) : 0;
+  needsByTitle.clear();
+  for (const row of Array.isArray(body.items) ? body.items : []) {
+    needsByTitle.set(String(row.title || "").trim().toLowerCase(), row.needsBox === true);
+  }
+  return { boxCount: Number(body.boxCount) || 0, boxChargeUsd: chargeUsd };
 }
 
 export function countLooseBoxes(lines) {
   const list = Array.isArray(lines) ? lines : [];
-  return list.filter((line) => looseItemNeedsBox(line)).length;
+  return list.filter((line) => itemNeedsBox(line)).length;
 }

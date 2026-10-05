@@ -2,12 +2,7 @@
  * Shared Wrrapd unit prices for gift modals and checkout summaries.
  * Fetches geo-aware prices from /api/pricing-preview when possible.
  */
-export const UNIT_PRICES_FALLBACK = Object.freeze({
-  giftWrapBase: 6.99,
-  customDesignAi: 2.99,
-  customDesignUpload: 1.99,
-  flowers: 17.99,
-});
+/** Prices come from /api/pricing-preview. There is no local price table. */
 
 const PRICE_REFRESH_TTL_MS = 5 * 60 * 1000;
 
@@ -26,7 +21,7 @@ export function createUnitPricingState() {
 }
 
 export function getActiveUnitPrices(state) {
-  return state?.unitPriceOverride || UNIT_PRICES_FALLBACK;
+  return state?.unitPriceOverride || null;
 }
 
 /** @returns {{ customDesignAvailable: boolean }} */

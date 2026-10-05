@@ -105,7 +105,7 @@ export function mountGifteeZipEstimateBar(opts) {
   input.inputMode = "numeric";
   input.autocomplete = "postal-code";
   input.maxLength = 10;
-  input.placeholder = "e.g. 32226";
+  input.placeholder = "ZIP code";
   input.value = prefilledZip;
   input.style.cssText =
     "width:8rem;padding:8px 10px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;font-weight:600;";

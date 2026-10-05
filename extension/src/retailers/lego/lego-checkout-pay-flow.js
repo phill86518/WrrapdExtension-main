@@ -1,8 +1,11 @@
 import { rememberPaidOrderForCapture } from "../../shared/retailer-order-capture.js";
+import { ensureExtensionConfig } from "../../shared/extension-config.js";
 import {
-  WRRAPD_HUB_ADDRESS_OBJECT,
-  WRRAPD_HUB_SHIP_LINES,
-} from "./constants.js";
+  getHubAddress,
+  getHubShipLines,
+  hubAsPaymentAddress,
+  hubPostal5,
+} from "../../shared/wrrapd-hub.js";
 import {
   readGiftChoicesSaved,
   readGiftLegalTermsAccepted,
@@ -18,13 +21,13 @@ import {
 } from "./lego-session-state.js";
 import { readLegoCartSnapshot, syncLegoCartGiftState } from "./lego-cart-extract.js";
 import { refreshLegoGifteeShippingAddressFill } from "./lego-giftee-shipping-fill.js";
-import { buildWrrapdTermsHtml } from "../../shared/wrrapd-terms.js";
+import { loadWrrapdTermsHtml } from "../../shared/wrrapd-terms.js";
 import { buildGiftWrapInvoiceRows } from "../../shared/wrrapd-invoice-lines.js";
-import { BOX_CHARGE_USD, countLooseBoxes, looseItemNeedsBox } from "../../shared/gift-box.js";
+import { boxChargeUsd, countLooseBoxes, looseItemNeedsBox, refreshBoxQuote } from "../../shared/gift-box.js";
 import { readInstallId } from "../../shared/install-id.js";
 import { resolveFlowerChargeDollars } from "../../shared/flowers-catalog.js";
 import { generateWrrapdOrderNumber } from "../../shared/wrrapd-order-code.js";
-import { resolveTaxRatePercent, taxPostalForPricing, WRRAPD_DEFAULT_TAX_RATE_PERCENT } from "../../shared/wrrapd-tax.js";
+import { resolveTaxRatePercent, taxPostalForPricing } from "../../shared/wrrapd-tax.js";
 import {
   hydrateUnitPricesFromSession,
   writePersistedUnitPrices,
@@ -35,16 +38,9 @@ const HUB_MODAL_ID = "wrrapd-lego-hub-modal";
 const SUMMARY_HOST_ATTR = "data-wrrapd-lego-pay-summary-host";
 const SUMMARY_ROOT_ID = "wrrapd-lego-payment-summary-root";
 
-const WRRAPD_CHECKOUT_UNIT_PRICES_FALLBACK = Object.freeze({
-  giftWrapBase: 6.99,
-  customDesignAi: 2.99,
-  customDesignUpload: 1.99,
-  flowers: 17.99,
-});
-
 let wrrapdCheckoutUnitPriceOverride = null;
-/** Whole-number sales-tax percent from api.wrrapd.com/pricing-preview, or Duval default. */
-let legoPreviewTaxPercent = WRRAPD_DEFAULT_TAX_RATE_PERCENT;
+/** Sales-tax percent from api.wrrapd.com/pricing-preview. */
+let legoPreviewTaxPercent = null;
 let legoPricingFetchComplete = false;
 
 function findCheckoutSecurelyButtons() {
@@ -96,7 +92,16 @@ export function applyCheckoutSecurelyGate() {
 }
 
 function getActiveCheckoutUnitPrices() {
-  return wrrapdCheckoutUnitPriceOverride || WRRAPD_CHECKOUT_UNIT_PRICES_FALLBACK;
+  const override = wrrapdCheckoutUnitPriceOverride;
+  if (!override || typeof override !== "object") return null;
+  const next = {
+    giftWrapBase: Number(override.giftWrapBase),
+    customDesignAi: Number(override.customDesignAi),
+    customDesignUpload: Number(override.customDesignUpload),
+    flowers: Number(override.flowers),
+  };
+  if (Object.values(next).some((n) => !Number.isFinite(n) || n < 0)) return null;
+  return next;
 }
 
 async function refreshCheckoutUnitPricesFromServer(geo) {
@@ -122,7 +127,7 @@ async function refreshCheckoutUnitPricesFromServer(geo) {
       legoPreviewTaxPercent = j.estimatedSalesTaxPercent;
       gotTax = true;
     } else {
-      legoPreviewTaxPercent = WRRAPD_DEFAULT_TAX_RATE_PERCENT;
+      legoPreviewTaxPercent = null;
     }
     const up = j && j.unitPrices && typeof j.unitPrices === "object" ? j.unitPrices : null;
     if (!up) return gotTax || Boolean(wrrapdCheckoutUnitPriceOverride);
@@ -151,22 +156,7 @@ async function refreshCheckoutUnitPricesFromServer(geo) {
 }
 
 function hubPostalForPricing() {
-  const raw = String(WRRAPD_HUB_ADDRESS_OBJECT.postalCode || "").trim();
-  const m = raw.match(/^(\d{5})/);
-  return m ? m[1] : "32226";
-}
-
-function hubAsPaymentAddress() {
-  const h = WRRAPD_HUB_ADDRESS_OBJECT;
-  return {
-    name: `${h.recipientFirstName} ${h.recipientLastName}`.trim(),
-    street: h.addressLine1,
-    city: h.city,
-    state: h.state,
-    postalCode: h.postalCode,
-    country: "United States",
-    phone: "",
-  };
+  return hubPostal5();
 }
 
 /** 5-digit ZIP used for sales tax (LEGO bag estimate field). */
@@ -236,6 +226,7 @@ function persistGifteeAddressFromPayMessage(eventData) {
 
 function computeServiceSubtotalCents() {
   const p = getActiveCheckoutUnitPrices();
+  if (!p) return 0;
   const allChoices = readLegoItemChoices();
   const lines = readLegoCartSnapshot();
   const n = allChoices.length;
@@ -253,7 +244,7 @@ function computeServiceSubtotalCents() {
       });
     }
     if (looseItemNeedsBox({ title: lines[i]?.title, flowers: ch.flowers === true })) {
-      dollars += BOX_CHARGE_USD;
+      dollars += boxChargeUsd();
     }
   }
   return Math.round(dollars * 100);
@@ -267,7 +258,7 @@ function round2(n) {
 function computeLegoTotalBreakdown() {
   const sub = computeServiceSubtotalCents() / 100;
   const tr = resolveTaxRatePercent(legoPreviewTaxPercent);
-  const tax = round2(sub * (tr / 100));
+  const tax = tr == null ? 0 : round2(sub * (tr / 100));
   const total = round2(sub + tax);
   return {
     subtotalUsd: sub,
@@ -295,14 +286,14 @@ function buildLegoPricingCart() {
         ? resolveFlowerChargeDollars({
             flowerPrice: ch.flowerPrice,
             flowerOfferId: ch.flowerOfferId,
-            unitFallback: getActiveCheckoutUnitPrices().flowers,
+            unitFallback: getActiveCheckoutUnitPrices()?.flowers,
           }) || null
         : null,
     }],
   }));
   return {
     items,
-    taxRatePercent: tr,
+    ...(typeof tr === "number" ? { taxRatePercent: tr } : {}),
     postalCode: zipForTax,
     state: "",
     country: "US",
@@ -310,7 +301,7 @@ function buildLegoPricingCart() {
   };
 }
 
-function generateLegoOrderNumber() {
+async function generateLegoOrderNumber() {
   return generateWrrapdOrderNumber("lego");
 }
 
@@ -328,10 +319,12 @@ function setNativeInputValue(el, value) {
 /**
  * Best-effort: set common autocomplete / Shopify-style shipping fields to the Wrrapd hub.
  */
-export function tryApplyLegoHubShippingFields() {
-  const h = WRRAPD_HUB_ADDRESS_OBJECT;
-  const first = h.recipientFirstName || "WRRAPD";
-  const last = h.recipientLastName || "INC";
+export async function tryApplyLegoHubShippingFields() {
+  await ensureExtensionConfig();
+  const h = getHubAddress() || {};
+  if (!h.addressLine1) return 0;
+  const first = h.recipientFirstName || "";
+  const last = h.recipientLastName || "";
   const pairs = [
     ['input[autocomplete="given-name"]', first],
     ['input[autocomplete="family-name"]', last],
@@ -393,7 +386,14 @@ export function openLegoTermsModal(onAccepted) {
   scrollable.style.cssText = `
     padding:36px 28px 20px;overflow-y:auto;flex:1;font-family:Georgia,'Times New Roman',serif;
     line-height:1.75;color:#0f172a;font-size:15px;`;
-  scrollable.innerHTML = buildWrrapdTermsHtml("LEGO");
+  scrollable.textContent = "Loading…";
+  loadWrrapdTermsHtml("LEGO")
+    .then((html) => {
+      scrollable.innerHTML = html;
+    })
+    .catch(() => {
+      scrollable.textContent = "Please refresh and try again.";
+    });
 
   const agreement = document.createElement("div");
   agreement.style.cssText =
@@ -442,8 +442,9 @@ export function openLegoTermsModal(onAccepted) {
   document.body.appendChild(modal);
 }
 
-function openLegoHubConfirmModal(onAccept) {
+async function openLegoHubConfirmModal(onAccept) {
   if (document.getElementById(HUB_MODAL_ID)) return;
+  await ensureExtensionConfig();
 
   const modal = document.createElement("div");
   modal.id = HUB_MODAL_ID;
@@ -469,7 +470,7 @@ function openLegoHubConfirmModal(onAccept) {
   const addr = document.createElement("pre");
   addr.style.cssText =
     "margin:0 0 16px;padding:12px 14px;background:#f8fafc;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;line-height:1.45;white-space:pre-wrap;color:#0f172a;";
-  addr.textContent = WRRAPD_HUB_SHIP_LINES.join("\n");
+  addr.textContent = getHubShipLines().join("\n");
 
   const row = document.createElement("div");
   row.style.cssText = "display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;";
@@ -635,7 +636,7 @@ function buildLegoOrderDataForProcessPayment() {
         ? resolveFlowerChargeDollars({
             flowerPrice: ch.flowerPrice,
             flowerOfferId: ch.flowerOfferId,
-            unitFallback: getActiveCheckoutUnitPrices().flowers,
+            unitFallback: getActiveCheckoutUnitPrices()?.flowers,
           }) || null
         : null,
       flower_title: flowers ? (ch.flowerTitle || null) : null,
@@ -749,6 +750,7 @@ function bindPayMessageOnce() {
 
 function buildSummaryLinesAndTotal() {
   const p = getActiveCheckoutUnitPrices();
+  if (!p) return { invoiceRows: [], totalCents: 0 };
   const allChoices = readLegoItemChoices();
   const invoiceRows = buildGiftWrapInvoiceRows(
     allChoices,
@@ -775,6 +777,14 @@ async function openLegoPaymentPopup() {
     country: "US",
   };
   await refreshCheckoutUnitPricesFromServer(geo);
+  const payChoices = readLegoItemChoices();
+  const payLines = readLegoCartSnapshot();
+  await refreshBoxQuote(
+    payChoices.map((ch, i) => ({
+      title: payLines[i]?.title,
+      flowers: ch.flowers === true,
+    })),
+  ).catch(() => null);
   const br = computeLegoTotalBreakdown();
   const totalCents = br.totalCents;
   const pricingCart = buildLegoPricingCart();
@@ -782,7 +792,7 @@ async function openLegoPaymentPopup() {
     alert("Please return to your cart and choose Wrrapd again.");
     return;
   }
-  const orderNumber = generateLegoOrderNumber();
+  const orderNumber = await generateLegoOrderNumber();
   try {
     sessionStorage.setItem("wrrapd-lego-order-number", orderNumber);
   } catch {
@@ -835,6 +845,14 @@ async function ensurePaymentSummaryUi() {
     state: "FL",
     country: "US",
   });
+  const quoteChoices = readLegoItemChoices();
+  const quoteLines = readLegoCartSnapshot();
+  await refreshBoxQuote(
+    quoteChoices.map((ch, i) => ({
+      title: quoteLines[i]?.title,
+      flowers: ch.flowers === true,
+    })),
+  ).catch(() => null);
   const paid = readLegoPaymentSuccess();
   const payReady = legoPricingFetchComplete === true;
   const { invoiceRows, totalCents } = buildSummaryLinesAndTotal();

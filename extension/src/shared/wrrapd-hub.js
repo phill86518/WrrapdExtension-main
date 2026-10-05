@@ -5,27 +5,31 @@
  * model auto-fill this address into the retailer's own shipping form. Keep in
  * sync with the LEGO copy in src/retailers/lego/constants.js (WRRAPD_HUB_*).
  */
-export const WRRAPD_HUB_SHIP_LINES = [
-  "WRRAPD INC",
-  "150 BUSCH DR #26067",
-  "JACKSONVILLE FL 32218",
-];
+import { ensureExtensionConfig, extensionConfig } from "./extension-config.js";
 
-/**
- * USPS Street Addressing for PO Box 26067 so UPS, FedEx, and Amazon Logistics
- * can deliver. The box number must stay on line 1 ("#26067") — carriers drop line 2.
- */
-export const WRRAPD_HUB_ADDRESS = Object.freeze({
-  organization: "WRRAPD INC",
-  recipientFirstName: "WRRAPD",
-  recipientLastName: "INC",
-  addressLine1: "150 BUSCH DR #26067",
-  addressLine2: "",
-  city: "JACKSONVILLE",
-  state: "FL",
-  postalCode: "32218",
-  country: "US",
-});
+function hubRecord() {
+  return extensionConfig()?.hub || null;
+}
+
+export function getHubAddress() {
+  return hubRecord();
+}
+
+/** @deprecated read getHubAddress() after ensureExtensionConfig() */
+export const WRRAPD_HUB_ADDRESS = new Proxy(
+  {},
+  {
+    get(_target, prop) {
+      const hub = hubRecord();
+      return hub ? hub[prop] : "";
+    },
+  },
+);
+
+export function getHubShipLines() {
+  const hub = hubRecord();
+  return Array.isArray(hub?.shipLines) ? hub.shipLines : [];
+}
 
 const HUB_LOCK_ATTR = "data-wrrapd-hub-locked";
 
@@ -62,13 +66,13 @@ const SHIPPING_FIELD_SELECTORS = [
 
 /** 5-digit hub ZIP for pricing fallbacks. */
 export function hubPostal5() {
-  const m = String(WRRAPD_HUB_ADDRESS.postalCode || "").match(/^(\d{5})/);
-  return m ? m[1] : "32218";
+  const m = String(hubRecord()?.postalCode || "").match(/^(\d{5})/);
+  return m ? m[1] : "";
 }
 
 /** Hub as a pay.wrrapd.com `address` (billing) object. */
 export function hubAsPaymentAddress() {
-  const h = WRRAPD_HUB_ADDRESS;
+  const h = hubRecord() || {};
   return {
     name: `${h.recipientFirstName} ${h.recipientLastName}`.trim(),
     street: h.addressLine1,
@@ -147,9 +151,11 @@ export function lockHubShippingFields(root = document) {
  *
  * @param {{ overwrite?: boolean }} [options]
  */
-export function fillHubShippingFieldsByAutocomplete(options = {}) {
+export async function fillHubShippingFieldsByAutocomplete(options = {}) {
+  await ensureExtensionConfig().catch(() => null);
   const overwrite = options.overwrite === true;
-  const h = WRRAPD_HUB_ADDRESS;
+  const h = hubRecord();
+  if (!h) return 0;
   const zip5 = String(h.postalCode || "").replace(/\D/g, "").slice(0, 5);
   const pairs = [
     ['[autocomplete="given-name"]', h.recipientFirstName],
@@ -191,7 +197,7 @@ export function fillHubShippingFieldsByAutocomplete(options = {}) {
 }
 
 /** Fill hub address into the retailer form, then lock shipping fields. */
-export function fillAndLockHubShippingFields(options = {}) {
-  fillHubShippingFieldsByAutocomplete(options);
+export async function fillAndLockHubShippingFields(options = {}) {
+  await fillHubShippingFieldsByAutocomplete(options);
   lockHubShippingFields();
 }

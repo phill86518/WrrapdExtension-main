@@ -27,6 +27,8 @@ const facebookScheduler = require(path.join(__dirname, 'lib', 'facebook-schedule
 const extensionInstalls = require(path.join(__dirname, 'lib', 'extension-installs'));
 const retiredExtension = require(path.join(__dirname, 'lib', 'retired-extension'));
 const shopperTerms = require(path.join(__dirname, 'lib', 'shopper-terms'));
+const extensionConfig = require(path.join(__dirname, 'lib', 'extension-config'));
+const giftBox = require(path.join(__dirname, 'lib', 'gift-box'));
 
 // Initialize Google Cloud Storage
 let storageOptions = {
@@ -223,6 +225,32 @@ app.use((req, res, next) => {
     if (!retiredExtension.bodyHasRetiredHub(req.body)) return next();
     return res.status(403).json({
         error: 'Please install the current Wrrapd extension, then try again.',
+    });
+});
+
+app.get('/api/extension-config', (req, res) => {
+    if (!req.isApiDomain) {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
+    res.set('Cache-Control', 'no-store');
+    return res.status(200).json(extensionConfig.publicExtensionConfig());
+});
+
+app.post('/api/gift-box-quote', (req, res) => {
+    if (!req.isApiDomain) {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
+    const items = Array.isArray(req.body && req.body.items) ? req.body.items.slice(0, 40) : [];
+    const quoted = items.map((item) => ({
+        title: String((item && item.title) || '').slice(0, 300),
+        needsBox: giftBox.looseItemNeedsBox(item),
+    }));
+    const boxCount = quoted.filter((row) => row.needsBox).length;
+    return res.status(200).json({
+        ok: true,
+        boxChargeUsd: giftBox.BOX_CHARGE_USD,
+        boxCount,
+        items: quoted,
     });
 });
 

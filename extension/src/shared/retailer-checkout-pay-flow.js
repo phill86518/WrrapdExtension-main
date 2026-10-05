@@ -35,21 +35,16 @@ import {
 } from "./cart-gift-sync.js";
 import { hubAsPaymentAddress } from "./wrrapd-hub.js";
 import { buildGiftWrapInvoiceRows } from "./wrrapd-invoice-lines.js";
-import { BOX_CHARGE_USD, countLooseBoxes, looseItemNeedsBox } from "./gift-box.js";
+import { boxChargeUsd, countLooseBoxes, looseItemNeedsBox, refreshBoxQuote } from "./gift-box.js";
 import { readInstallId } from "./install-id.js";
 import { resolveFlowerChargeDollars } from "./flowers-catalog.js";
 import { captureRetailerDeliveryDate } from "./retailer-delivery-date.js";
 import { generateWrrapdOrderNumber } from "./wrrapd-order-code.js";
-import {
-  resolveTaxRatePercent,
-  taxPostalForPricing,
-  WRRAPD_DEFAULT_TAX_RATE_PERCENT,
-} from "./wrrapd-tax.js";
+import { resolveTaxRatePercent, taxPostalForPricing } from "./wrrapd-tax.js";
 import {
   createUnitPricingState,
   getActiveUnitPrices,
   hydrateUnitPricesFromSession,
-  UNIT_PRICES_FALLBACK,
   writePersistedUnitPrices,
 } from "./wrrapd-unit-pricing.js";
 
@@ -79,7 +74,7 @@ function gifteeZip5(prefix) {
   }
 }
 
-function generateOrderNumber(retailerName) {
+async function generateOrderNumber(retailerName) {
   return generateWrrapdOrderNumber(retailerName);
 }
 
@@ -99,7 +94,7 @@ function readSession(key) {
 
 function createPricingState() {
   const state = createUnitPricingState();
-  state.taxPercent = WRRAPD_DEFAULT_TAX_RATE_PERCENT;
+  state.taxPercent = null;
   state.pricingFetchComplete = false;
   state.priceFetchPromise = null;
   return state;
@@ -169,6 +164,7 @@ async function ensureUnitPrices(state, geo, retailer, sessionPrefix) {
 
 function computeServiceSubtotalCents(state, prefix, cartLines) {
   const p = getActiveUnitPrices(state);
+  if (!p) return 0;
   const choices = readItemChoices(prefix);
   const n = choices.length;
   if (n <= 0) return 0;
@@ -187,7 +183,7 @@ function computeServiceSubtotalCents(state, prefix, cartLines) {
     }
     const line = lines[i] || {};
     if (looseItemNeedsBox({ title: line.title, category: line.category, flowers: ch.flowers === true })) {
-      dollars += BOX_CHARGE_USD;
+      dollars += boxChargeUsd();
     }
   }
   return Math.round(dollars * 100);
@@ -196,7 +192,7 @@ function computeServiceSubtotalCents(state, prefix, cartLines) {
 function computeTotalBreakdown(state, prefix, cartLines) {
   const subtotalCents = computeServiceSubtotalCents(state, prefix, cartLines);
   const pct = resolveTaxRatePercent(state.taxPercent);
-  const taxCents = Math.round(subtotalCents * (pct / 100));
+  const taxCents = pct == null ? 0 : Math.round(subtotalCents * (pct / 100));
   return {
     subtotalCents,
     taxCents,
@@ -256,7 +252,7 @@ function buildOrderData(config) {
         ? resolveFlowerChargeDollars({
             flowerPrice: ch.flowerPrice,
             flowerOfferId: ch.flowerOfferId,
-            unitFallback: UNIT_PRICES_FALLBACK.flowers,
+            unitFallback: p.flowers,
           }) || null
         : null,
       flower_title: flowers ? (ch.flowerTitle || null) : null,
@@ -540,6 +536,14 @@ async function openPaymentPopup(config, state) {
     return null;
   }
   const choices = readItemChoices(config.sessionPrefix);
+  const payLines = config.getCartSnapshot?.()?.items || [];
+  await refreshBoxQuote(
+    choices.map((ch, i) => ({
+      title: payLines[i]?.title,
+      category: payLines[i]?.category,
+      flowers: ch.flowers === true,
+    })),
+  ).catch(() => null);
   const pricingCart = buildPricingCart(
     state,
     config.sessionPrefix,
@@ -564,7 +568,7 @@ async function openPaymentPopup(config, state) {
   // Reuse the order number created during the wizard (e.g. when an AI design was
   // saved to GCS) so the design and payment share one order number.
   const orderNumber =
-    readSession(orderNumberKey(config.sessionPrefix)) || generateOrderNumber(config.retailerName);
+    readSession(orderNumberKey(config.sessionPrefix)) || (await generateOrderNumber(config.retailerName));
   try {
     sessionStorage.setItem(orderNumberKey(config.sessionPrefix), orderNumber);
   } catch {
@@ -712,6 +716,15 @@ export function initRetailerCheckoutPayFlow(config) {
       config.payRoute,
       config.sessionPrefix,
     );
+    const quoteChoices = readItemChoices(config.sessionPrefix);
+    const quoteLines = config.getCartSnapshot?.()?.items || [];
+    await refreshBoxQuote(
+      quoteChoices.map((ch, i) => ({
+        title: quoteLines[i]?.title,
+        category: quoteLines[i]?.category,
+        flowers: ch.flowers === true,
+      })),
+    ).catch(() => null);
     const paid = readPaymentSuccess(config.sessionPrefix);
     const payReady = state.pricingFetchComplete === true;
     const { invoiceRows, totalCents } = buildSummaryLinesAndTotal(

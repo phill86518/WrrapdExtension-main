@@ -70,27 +70,8 @@ export const LEGO_SHIPPING_OVERLAY_SEEN_KEY = "wrrapdLegoShippingHintSeen";
 export const LEGO_GIFT_INTENT_SESSION_KEY = "wrrapdLegoGiftIntent";
 
 /**
- * Canonical Wrrapd hub ship-to lines (US), aligned with Amazon ingest hints.
- * Display as a block; guests paste into LEGO shipping fields.
+ * Hub ship-to is loaded from /api/extension-config (see shared/wrrapd-hub.js).
  */
-export const WRRAPD_HUB_SHIP_LINES = [
-  "WRRAPD INC",
-  "150 BUSCH DR #26067",
-  "JACKSONVILLE FL 32218",
-];
-
-/** Structured hub ship-to for programmatic fill on retailer checkout forms. */
-export const WRRAPD_HUB_ADDRESS_OBJECT = {
-  organization: "WRRAPD INC",
-  /** Shown as recipient first / last name when LEGO has no company-only path. */
-  recipientFirstName: "WRRAPD",
-  recipientLastName: "INC",
-  addressLine1: "150 BUSCH DR #26067",
-  city: "JACKSONVILLE",
-  state: "FL",
-  postalCode: "32218",
-  country: "US",
-};
 
 export const LEGO_CHECKOUT_URL_HINTS = ["/checkout", "/checkouts", "/cart"];
 

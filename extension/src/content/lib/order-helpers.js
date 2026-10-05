@@ -21,9 +21,9 @@ export function getElementValue(container, selector) {
   return element ? element.textContent.trim() : null;
 }
 
-export function generateOrderNumber(_zipCode) {
-  // Identical fixed-length shape for every retailer: AZ-TTTTTTTTT-RRRRRR.
-  const orderNumber = generateWrrapdOrderNumber('amazon');
+export async function generateOrderNumber(_zipCode) {
+  // Identical fixed-length shape for every retailer: CC-TTTTTTTTT-RRRRRR.
+  const orderNumber = await generateWrrapdOrderNumber('amazon');
   console.log(`[generateOrderNumber] Generated order number: ${orderNumber}`);
   return orderNumber;
 }

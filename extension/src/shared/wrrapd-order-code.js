@@ -8,19 +8,13 @@
  * deliberately distinct from the retailer's own order number.
  */
 
-/** Ordered so the first substring/prefix match wins. */
-const RETAILER_ORDER_CODES = [
-  ["amazon", "AZ"],
-  ["target", "TG"],
-  ["nordstrom", "NS"],
-  ["sephora", "SF"],
-  ["walmart", "WM"],
-  ["bestbuy", "BB"],
-  ["kohls", "KS"],
-  ["etsy", "EC"],
-  ["ulta", "UT"],
-  ["lego", "LG"],
-];
+import { ensureExtensionConfig, extensionConfig } from "./extension-config.js";
+
+function retailerCodeEntries() {
+  const map = extensionConfig()?.retailerCodes;
+  if (!map || typeof map !== "object") return [];
+  return Object.entries(map);
+}
 
 /**
  * Map a retailer name ("Sephora", "Best Buy") or session prefix
@@ -35,7 +29,7 @@ export function wrrapdRetailerCode(input) {
     .replace(/[^a-z]/g, "")
     .replace(/^wrrapd/, "");
   if (norm.length >= 2) {
-    for (const [key, code] of RETAILER_ORDER_CODES) {
+    for (const [key, code] of retailerCodeEntries()) {
       if (norm.includes(key) || key.startsWith(norm)) return code;
     }
   }
@@ -60,7 +54,8 @@ function randBase36(n) {
  * @param {string} input retailer name or session prefix
  * @returns {string}
  */
-export function generateWrrapdOrderNumber(input) {
+export async function generateWrrapdOrderNumber(input) {
+  await ensureExtensionConfig().catch(() => null);
   const code = wrrapdRetailerCode(input);
   const time = Date.now().toString(36).toUpperCase().padStart(9, "0").slice(-9);
   const rand = randBase36(6);

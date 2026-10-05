@@ -5,7 +5,7 @@
  */
 
 import { resolveFlowerChargeDollars } from "./flowers-catalog.js";
-import { BOX_CHARGE_USD } from "./gift-box.js";
+import { boxChargeUsd } from "./gift-box.js";
 
 /**
  * @param {Array<{ wrapPref?: string, flowers?: boolean, flowerPrice?: number|null, flowerOfferId?: string|null }>} choices
@@ -15,6 +15,7 @@ import { BOX_CHARGE_USD } from "./gift-box.js";
  */
 export function buildGiftWrapInvoiceRows(choices, unitPrices, boxCount = 0) {
   const p = unitPrices;
+  if (!p || typeof p.giftWrapBase !== "number") return [];
   const list = Array.isArray(choices) && choices.length > 0 ? choices : [{ wrapPref: "wrrapd", flowers: false }];
 
   let stdCount = 0;
@@ -76,7 +77,7 @@ export function buildGiftWrapInvoiceRows(choices, unitPrices, boxCount = 0) {
     const xB = boxes > 1 ? ` (×${boxes})` : "";
     rows.push({
       label: `Box charges (loose item)${xB}`,
-      amount: `$${(BOX_CHARGE_USD * boxes).toFixed(2)}`,
+      amount: `$${(boxChargeUsd() * boxes).toFixed(2)}`,
     });
   }
 

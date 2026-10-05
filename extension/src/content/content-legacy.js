@@ -30,7 +30,8 @@ import { wrrapdTrace } from './lib/wrrapd-debug.js';
 import { getValueByLabel, getElementValue, generateOrderNumber } from './lib/order-helpers.js';
 import { ensureWrrapdSummaryAlignment } from './lib/summary-alignment.js';
 import { enrichStoredAmazonItemFacts } from '../shared/amazon-item-facts.js';
-import { BOX_CHARGE_USD, looseItemNeedsBox } from '../shared/gift-box.js';
+import { boxChargeUsd, looseItemNeedsBox, refreshBoxQuote } from '../shared/gift-box.js';
+import { ensureExtensionConfig, extensionConfig } from '../shared/extension-config.js';
 import { readInstallId } from '../shared/install-id.js';
 import { isZipCodeAllowed } from './lib/zip-codes.js';
 import { WRRAPD_RETAILER_AMAZON } from '../retailers/amazon/constants.js';
@@ -65,14 +66,6 @@ import { formatUsd } from '../shared/wrrapd-unit-pricing.js';
 
     const WRRAPD_MANUAL_ADDRESS_TAPS_KEY = 'wrrapd-require-manual-address-taps';
 
-    /** Default catalog when api.wrrapd.com pricing-preview is unavailable. */
-    const WRRAPD_CHECKOUT_UNIT_PRICES_FALLBACK = Object.freeze({
-        giftWrapBase: 6.99,
-        customDesignAi: 2.99,
-        customDesignUpload: 1.99,
-        flowers: 17.99,
-    });
-
     /** Last successful `/api/pricing-preview` unit prices (geo + surge rules). */
     let wrrapdCheckoutUnitPriceOverride = null;
     let wrrapdCheckoutUnitPriceGeoKey = '';
@@ -81,19 +74,83 @@ import { formatUsd } from '../shared/wrrapd-unit-pricing.js';
     let wrrapdCheckoutGifteeTaxPercent = null;
 
     function getActiveCheckoutUnitPrices() {
-        const fallback = WRRAPD_CHECKOUT_UNIT_PRICES_FALLBACK;
         const override = wrrapdCheckoutUnitPriceOverride;
-        if (!override || typeof override !== 'object') return fallback;
+        if (!override || typeof override !== 'object') return null;
         const pick = (key) => {
             const n = Number(override[key]);
-            return Number.isFinite(n) && n >= 0 && n < 100000 ? n : fallback[key];
+            return Number.isFinite(n) && n >= 0 && n < 100000 ? n : null;
         };
-        return {
+        const prices = {
             giftWrapBase: pick('giftWrapBase'),
             customDesignAi: pick('customDesignAi'),
             customDesignUpload: pick('customDesignUpload'),
             flowers: pick('flowers'),
         };
+        if (Object.values(prices).some((n) => n == null)) return null;
+        return prices;
+    }
+
+    function priceLabel(key) {
+        const n = getActiveCheckoutUnitPrices()?.[key];
+        return typeof n === 'number' ? n.toFixed(2) : '…';
+    }
+
+    function hubCityTitle(city) {
+        return String(city || '').toLowerCase().replace(/\b[a-z]/g, (c) => c.toUpperCase());
+    }
+
+    async function readHubForAmazonForm() {
+        await ensureExtensionConfig();
+        const h = extensionConfig()?.hub || {};
+        return {
+            name: h.displayName || h.recipientFirstName || '',
+            phone: h.phone || '',
+            street: h.addressLine1 || '',
+            city: hubCityTitle(h.city),
+            postal: h.postalCode || '',
+            stateName: h.stateName || '',
+        };
+    }
+
+    function textLooksLikeHub(text) {
+        const raw = String(text || '');
+        const t = raw.toUpperCase().replace(/\u00A0/g, ' ').replace(/\s+/g, ' ');
+        const h = extensionConfig()?.hub || {};
+        const street = String(h.addressLine1 || '').toUpperCase();
+        const zip = String(h.postalCode || '').replace(/\D/g, '').slice(0, 5);
+        const city = String(h.city || '').toUpperCase();
+        const unit = (street.match(/(\d{4,6})/) || [])[1] || '';
+        if (!street && !zip) return false;
+        const hasBrand = t.includes('WRRAPD');
+        const hasStreet = street && t.includes(street);
+        const hasUnit = unit && t.includes(unit);
+        const hasZip = zip && t.includes(zip);
+        const hasCity = city && t.includes(city);
+        return Boolean(
+            (hasBrand && (hasStreet || hasZip || hasCity)) ||
+            (hasUnit && (hasZip || hasCity)) ||
+            (hasStreet && hasCity),
+        );
+    }
+
+    async function refreshAmazonBoxQuoteFromStorage() {
+        try {
+            const items = collectWrrapdItemsForCheckout();
+            const rows = [];
+            for (const item of Object.values(items || {})) {
+                if (!item || !Array.isArray(item.options)) continue;
+                for (const option of item.options) {
+                    rows.push({
+                        title: item.title,
+                        category: item.itemCategory,
+                        flowers: option?.checkbox_flowers === true,
+                    });
+                }
+            }
+            if (rows.length) await refreshBoxQuote(rows);
+        } catch (_) {
+            /* summary repaints after the next successful quote */
+        }
     }
 
     function amazonGifteeZipForPricing() {
@@ -102,9 +159,10 @@ import { formatUsd } from '../shared/wrrapd-unit-pricing.js';
 
     /**
      * Hydrate from modal-persisted prices, then refresh pricing-preview for the giftee ZIP.
-     * Payment summary must never show Duval $6.99 when the shopper confirmed Miami-Dade (etc.).
+     * Payment summary uses the giftee ZIP prices from pricing-preview.
      */
     async function ensureAmazonCheckoutUnitPricesForSummary() {
+        await refreshAmazonBoxQuoteFromStorage();
         const zip = amazonGifteeZipForPricing();
         const geo = {
             postalCode: zip.length === 5 ? zip : undefined,
@@ -231,7 +289,7 @@ import { formatUsd } from '../shared/wrrapd-unit-pricing.js';
                           ? resolveFlowerChargeDollars({
                                 flowerAmount: o.flower_amount,
                                 flowerOfferId: o.flower_offer_id,
-                                unitFallback: getActiveCheckoutUnitPrices().flowers,
+                                unitFallback: getActiveCheckoutUnitPrices()?.flowers,
                             }) || null
                           : null,
                   })),
@@ -264,14 +322,13 @@ import { formatUsd } from '../shared/wrrapd-unit-pricing.js';
         const cached = freshItems.length === 0 ? readCachedPricingCart() : null;
         const items = freshItems.length > 0 ? freshItems : cached?.items || [];
         const ao = addressObject && typeof addressObject === 'object' ? addressObject : {};
-        // Always price + tax from the giftee ZIP (modal), never the Wrrapd warehouse
-        // address Amazon ships to. Warehouse 32218 + Miami wrap prices is what
-        // blew up "Total does not match server pricing".
+        // Always price + tax from the giftee ZIP (modal), never the hub address Amazon ships to.
         const gifteeZip = amazonGifteeZipForPricing();
         const postalCode = gifteeZip || String(ao.postalCode || '').replace(/\D/g, '').slice(0, 5);
+        const taxRatePercent = getWrrapdGifteeTaxRatePercent();
         const cart = {
             items,
-            taxRatePercent: getWrrapdGifteeTaxRatePercent(),
+            ...(typeof taxRatePercent === 'number' ? { taxRatePercent } : {}),
             ...(postalCode ? { postalCode } : {}),
             country: 'US',
             retailer: 'amazon',
@@ -2674,8 +2731,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
         const addressesBelowItems = document.querySelectorAll('[class*="address"], [class*="shipping"], [data-testid*="address"]').length > 0 ||
                                    Array.from(document.querySelectorAll('span, div, p, a')).some(el => {
                                        const text = (el.textContent || el.innerText || '').trim();
-                                       return text.includes('Shipping to:') && 
-                                              (text.includes('26067') || text.includes('Wrrapd'));
+                                       return text.includes('Shipping to:') && textLooksLikeHub(text);
                                    });
         
         if (addressesBelowItems) {
@@ -2688,12 +2744,12 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                                   Array.from(document.querySelectorAll('div, section, header')).find(el => {
                                       const text = (el.textContent || el.innerText || '').trim();
                                       return (text.includes('Shipping address') || text.includes('Delivery address')) &&
-                                             (text.includes('26067') || text.includes('Wrrapd'));
+                                             textLooksLikeHub(text);
                                   });
         
         if (topAddressSection) {
             const sectionText = (topAddressSection.textContent || topAddressSection.innerText || '').trim();
-            if (sectionText.includes('26067') || sectionText.includes('Wrrapd')) {
+            if (textLooksLikeHub(sectionText)) {
                 return true;
             }
         }
@@ -2741,18 +2797,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
             .replace(/\s+/g, ' ')
             .trim();
         if (!t) return false;
-        const compact = t.replace(/[^A-Z0-9]/g, '');
-        const hasBrand = t.includes('WRRAPD');
-        const hasPo =
-            (t.includes('PO BOX') || compact.includes('POBOX') || compact.includes('BOX26067')) &&
-            compact.includes('26067');
-        const hasJax = t.includes('JACKSONVILLE');
-        const hasZip = t.includes('32218') || t.includes('32226');
-        const hasFl = t.includes(' FL ') || t.endsWith(' FL') || t.includes(', FL') || t.includes('FLORIDA');
-        if (hasBrand && (hasJax || hasZip || hasPo || hasFl)) return true;
-        if (hasPo && (hasJax || hasZip || hasFl || hasBrand)) return true;
-        if (compact.includes('26067') && (hasBrand || hasJax || hasZip)) return true;
-        return false;
+        return textLooksLikeHub(t);
     }
 
     function wrrapdListTitlesWithAnyWrrapdGiftWrap(allItems) {
@@ -3569,7 +3614,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                             <label style="display: contents;">
                                 <input type="checkbox" id="wrrapd-checkbox-${i}" style="margin-right: 5px; width: 18px; height: 18px; min-width: 18px; min-height: 18px;">
                                 <span class="a-label a-checkbox-label" style="padding: 0;">
-                                    Go beyond the bag!&nbsp;&nbsp;Gift-wrap the box and/or deliver with flowers by Wrrapd - $${getActiveCheckoutUnitPrices().giftWrapBase.toFixed(2)}
+                                    Go beyond the bag!&nbsp;&nbsp;Gift-wrap the box and/or deliver with flowers by Wrrapd - $${priceLabel('giftWrapBase')}
                                 </span>
                             </label>
                         </div>
@@ -3653,7 +3698,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                                         <label data-wrrapd-custom-design="upload" style="display: none; align-items: start;">
                                             <input type="radio" name="wrapping-option-${i}" value="upload" style="margin-right: 10px; ">
                                             <div>
-                                                <div style="font-weight: bold;">Upload your own design (+$${getActiveCheckoutUnitPrices().customDesignUpload.toFixed(2)})</div>
+                                                <div style="font-weight: bold;">Upload your own design (+$${priceLabel('customDesignUpload')})</div>
                                                 <input type="file" id="design-upload-${i}" accept="image/*" style="margin-top: 10px; display: none;">
                                                 <button id="upload-btn-${i}" class="a-button" style="margin-top: 10px; padding: 5px 10px; display: none;">
                                                     Upload
@@ -3668,7 +3713,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                                         <label data-wrrapd-custom-design="ai" style="display: none; align-items: start;">
                                             <input type="radio" name="wrapping-option-${i}" value="ai" style="margin-right: 10px;">
                                                 <div style="width: 100%;">
-                                                    <div style="font-weight: bold;">Generate AI designs (+$${getActiveCheckoutUnitPrices().customDesignAi.toFixed(2)})</div>
+                                                    <div style="font-weight: bold;">Generate AI designs (+$${priceLabel('customDesignAi')})</div>
                                                     <div id="ai-options-${i}" style="display: none; margin-top: 10px; width: 100%;">
                                                         <div style="margin-bottom: 8px; color: #666;">What's the occasion?  Who is the giftee?  What do they like?  Please feel free to suggest any themes...</div>
                                                         <input type="text" id="occasion-input-${i}" 
@@ -4131,7 +4176,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                                 const charged = resolveFlowerChargeDollars({
                                     flowerAmount: subItem.flower_amount,
                                     flowerOfferId: subItem.flower_offer_id,
-                                    unitFallback: getActiveCheckoutUnitPrices().flowers,
+                                    unitFallback: getActiveCheckoutUnitPrices()?.flowers,
                                 });
                                 if (charged > 0) subItem.flower_amount = charged;
                             }
@@ -4496,7 +4541,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                                         if (!orderNumber) {
                                             // Generate order number early (will use default zip if not available)
                                             const zipCode = subItem.shippingAddress?.postalCode || "00000";
-                                            orderNumber = generateOrderNumber(zipCode);
+                                            orderNumber = await generateOrderNumber(zipCode);
                                             localStorage.setItem('wrrapd-order-number', orderNumber);
                                             console.log('[AI Design Generation] Generated order number:', orderNumber);
                                         }
@@ -4785,7 +4830,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
     }
 
     // Parses a single one-line US address string of the form:
-    //   "123 Main St, Jacksonville, FL, 32218-6002, US"
+    //   "123 Main St, City, ST, 00000-0000, US"
     // Returns { street, city, state, postalCode, country } or null.
     function parseAmazonAddressLine(line) {
         if (!line) return null;
@@ -5334,10 +5379,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                 
                 // Check current address in dropdown
                 const currentDropdownText = dropdown.textContent?.trim() || dropdown.innerText?.trim() || '';
-                const hasPOBox = currentDropdownText.includes('26067');
-                const hasJacksonville = currentDropdownText.includes('JACKSONVILLE') || currentDropdownText.includes('Jacksonville');
-                const hasZip = currentDropdownText.includes('32218') || currentDropdownText.includes('32226');
-                const isWrrapd = hasPOBox && hasJacksonville && hasZip;
+                const isWrrapd = textLooksLikeHub(currentDropdownText);
                 
                 // Check if current address matches requirements
                 const addressIsCorrect = (itemRequirements.needsWrrapd && isWrrapd) || (!itemRequirements.needsWrrapd && !isWrrapd);
@@ -6162,7 +6204,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                         let best = null;
                         for (const opt of sel.options) {
                             const t = opt.textContent || opt.value || '';
-                            if (/wrrapd|26067|32226/i.test(t)) { best = opt; break; }
+                            if (textLooksLikeHub(t)) { best = opt; break; }
                         }
                         if (best) {
                             sel.value = best.value;
@@ -6196,7 +6238,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                     let best = null;
                     for (const opt of nearSel.options) {
                         const t = opt.textContent || opt.value || '';
-                        if (/wrrapd|26067|32226/i.test(t)) { best = opt; break; }
+                        if (textLooksLikeHub(t)) { best = opt; break; }
                     }
                     if (best) {
                         nearSel.value = best.value;
@@ -6223,13 +6265,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
             // Helper function to check if option is Wrrapd address (defined early for use throughout)
             function isWrrapdOption(text) {
                 if (!text || text.length < 10) return false;
-                const textLower = text.toLowerCase();
-                const hasWrrapd = textLower.trim().startsWith('wrrapd') || textLower.includes('wrrapd');
-                const hasPOBox = text.includes('26067') || text.includes('P.O. BOX 26067') || text.includes('26067');
-                const hasJacksonville = text.includes('JACKSONVILLE') || text.includes('Jacksonville');
-                const hasFL = text.includes(' FL ') || text.includes(', FL') || text.includes('FL 32218') || text.includes('FL 32226');
-                const hasZip = text.includes('32218') || text.includes('32226');
-                return hasWrrapd || (hasPOBox && hasJacksonville && (hasFL || hasZip));
+                return textLooksLikeHub(text);
             }
             
             // OPTIMIZATION: Use cached Wrrapd address data-value directly (it's always available)
@@ -6692,7 +6728,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                         const errorText = errorPrompt?.textContent?.trim() || errorPrompt?.innerText?.trim() || '';
                         
                         console.warn("[selectWrrapdAddressFromDropdown] ⚠️ Selection verification failed after polling.");
-                        console.warn("[selectWrrapdAddressFromDropdown] Expected: Wrrapd 150 BUSCH DR #26067");
+                        console.warn("[selectWrrapdAddressFromDropdown] Expected the Wrrapd hub address.");
                         console.warn("[selectWrrapdAddressFromDropdown] Got:", errorText.substring(0, 100));
                         
                         // Try one more time with a different approach - click the parent container
@@ -7496,8 +7532,7 @@ Return ONLY the JSON array, nothing else.`;
             let targetOption = null;
             
             if (needsWrrapd) {
-                // Looking for Wrrapd address: "Wrrapd, 150 BUSCH DR #26067, Jacksonville, FL, 32218"
-                console.log("[selectAddressFromDropdown] Searching for Wrrapd address (#26067, Jacksonville)...");
+                console.log("[selectAddressFromDropdown] Searching for the Wrrapd hub address...");
                 const wrrapdAddress = buildWrrapdAddress();
                 
                 // Log all available options for debugging
@@ -7512,39 +7547,12 @@ Return ONLY the JSON array, nothing else.`;
                     const optionTextLower = option.textContent.trim().toLowerCase();
                     
                     // Strategy 1: Match by PO Box number (most reliable identifier)
-                    const hasPOBox = optionText.includes("26067") || 
-                                   optionText.includes("P.O. BOX 26067") ||
-                                   optionText.includes("POBOX 26067") ||
-                                   optionText.includes("26067");
-                    
-                    // Strategy 2: Match by city
-                    const hasJacksonville = optionText.includes("JACKSONVILLE");
-                    
-                    // Strategy 3: Match by name (Wrrapd)
-                    const hasWrrapdName = optionTextLower.includes("wrrapd") || 
-                                        optionTextLower.includes("wrrapd.com");
-                    
-                    // Strategy 4: Match by zip codes (both possible formats)
-                    const hasCorrectZip = optionText.includes("32218") || 
-                                        optionText.includes("32226") ||
-                                        optionText.includes("32218-") ||
-                                        optionText.includes("32226-");
-                    
-                    // Strategy 5: Match by state and city combination
-                    const hasFLJacksonville = optionText.includes("FL") && hasJacksonville;
-                    
-                    // Match if we have PO Box OR (Wrrapd name AND Jacksonville) OR (PO Box number AND Jacksonville)
-                    // This is more flexible but still accurate
-                    const isMatch = (hasPOBox && hasJacksonville) || // PO Box + Jacksonville = definite match
-                                  (hasPOBox && hasCorrectZip) ||    // PO Box + correct zip = definite match
-                                  (hasWrrapdName && hasJacksonville) || // Wrrapd name + Jacksonville = match
-                                  (hasWrrapdName && hasPOBox) ||     // Wrrapd name + PO Box = match
-                                  (hasPOBox && hasFLJacksonville);   // PO Box + FL + Jacksonville = match
+                    const isMatch = textLooksLikeHub(optionText);
                     
                     if (isMatch) {
                         targetOption = option;
                         console.log(`[selectAddressFromDropdown] ✓ FOUND Wrrapd address: "${option.textContent.trim().substring(0, 100)}"`);
-                        console.log(`[selectAddressFromDropdown] Match criteria: POBox=${hasPOBox}, Jacksonville=${hasJacksonville}, Wrrapd=${hasWrrapdName}, Zip=${hasCorrectZip}`);
+                        console.log("[selectAddressFromDropdown] Match criteria: hub address from extension config.");
                         break;
                     }
                 }
@@ -7557,13 +7565,14 @@ Return ONLY the JSON array, nothing else.`;
                             `[${idx}] ${opt.textContent.trim()}`
                         ).join('\n');
                         
+                        const hubAddr = buildWrrapdAddress();
                         const geminiPrompt = `I need to identify which of these Amazon shipping addresses is the Wrrapd address. 
 The Wrrapd address should be:
-- Name: Wrrapd or Wrrapd.com
-- Street: 150 BUSCH DR #26067 (older saved copies may say PO BOX 26067)
-- City: JACKSONVILLE
-- State: FL
-- Zip: 32218 or 32226
+- Name: ${hubAddr.name}
+- Street: ${hubAddr.street}
+- City: ${hubAddr.city}
+- State: ${hubAddr.state}
+- Zip: ${hubAddr.postalCode}
 
 Here are the available addresses:
 ${optionsText}
@@ -7688,7 +7697,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             for (const option of dropdownOptions) {
                 const optionText = option.textContent.trim();
                 if (needsWrrapd) {
-                    if (optionText.includes("Wrrapd.com") && optionText.includes("26067")) {
+                    if (textLooksLikeHub(optionText)) {
                         targetOption = option;
                         break;
                     }
@@ -7800,7 +7809,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             
             if (needsWrrapd) {
                 // Look for Wrrapd address with improved matching
-                console.log(`[selectAddressInCustomDropdown] Searching for Wrrapd address (#26067, JACKSONVILLE)...`);
+                console.log("[selectAddressInCustomDropdown] Searching for the Wrrapd hub address...");
                 
                 // Log all available options for debugging
                 console.log(`[selectAddressInCustomDropdown] Available options (${dropdownOptions.length}):`);
@@ -7813,24 +7822,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                     const optionTextLower = option.textContent.trim().toLowerCase();
                     
                     // Improved matching logic (same as selectAddressFromDropdown)
-                    const hasPOBox = optionText.includes("26067") || 
-                                   optionText.includes("P.O. BOX 26067") ||
-                                   optionText.includes("POBOX 26067") ||
-                                   optionText.includes("26067");
-                    const hasJacksonville = optionText.includes("JACKSONVILLE");
-                    const hasWrrapdName = optionTextLower.includes("wrrapd") || 
-                                        optionTextLower.includes("wrrapd.com");
-                    const hasCorrectZip = optionText.includes("32218") || 
-                                        optionText.includes("32226") ||
-                                        optionText.includes("32218-") ||
-                                        optionText.includes("32226-");
-                    const hasFLJacksonville = optionText.includes("FL") && hasJacksonville;
-                    
-                    const isMatch = (hasPOBox && hasJacksonville) ||
-                                  (hasPOBox && hasCorrectZip) ||
-                                  (hasWrrapdName && hasJacksonville) ||
-                                  (hasWrrapdName && hasPOBox) ||
-                                  (hasPOBox && hasFLJacksonville);
+                    const isMatch = textLooksLikeHub(optionText);
                     
                     if (isMatch) {
                         targetOption = option;
@@ -7940,7 +7932,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             let targetValue = null;
             
             if (needsWrrapd) {
-                console.log(`[selectAddressInNativeSelect] Searching for Wrrapd address (#26067, JACKSONVILLE)...`);
+                console.log("[selectAddressInNativeSelect] Searching for the Wrrapd hub address...");
                 
                 // Log all available options for debugging
                 console.log(`[selectAddressInNativeSelect] Available options (${options.length}):`);
@@ -7955,24 +7947,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                     const optionValue = option.value;
                     
                     // Improved matching logic (same as other functions)
-                    const hasPOBox = optionText.includes("26067") || 
-                                   optionText.includes("P.O. BOX 26067") ||
-                                   optionText.includes("POBOX 26067") ||
-                                   optionText.includes("26067");
-                    const hasJacksonville = optionText.includes("JACKSONVILLE");
-                    const hasWrrapdName = optionTextLower.includes("wrrapd") || 
-                                        optionTextLower.includes("wrrapd.com");
-                    const hasCorrectZip = optionText.includes("32218") || 
-                                        optionText.includes("32226") ||
-                                        optionText.includes("32218-") ||
-                                        optionText.includes("32226-");
-                    const hasFLJacksonville = optionText.includes("FL") && hasJacksonville;
-                    
-                    const isMatch = (hasPOBox && hasJacksonville) ||
-                                  (hasPOBox && hasCorrectZip) ||
-                                  (hasWrrapdName && hasJacksonville) ||
-                                  (hasWrrapdName && hasPOBox) ||
-                                  (hasPOBox && hasFLJacksonville);
+                    const isMatch = textLooksLikeHub(optionText);
                     
                     if (isMatch) {
                         targetOption = option;
@@ -8126,8 +8101,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                 // Look for Wrrapd address
                 for (const option of dropdownOptions) {
                     const optionText = option.textContent.trim();
-                    if ((optionText.includes("Wrrapd.com") || optionText.includes("Wrrapd")) && 
-                        (optionText.includes("26067") || optionText.includes("26067"))) {
+                    if (textLooksLikeHub(optionText)) {
                         targetOption = option;
                         console.log("[selectAddressInDropdown] Found Wrrapd address option.");
                         break;
@@ -9177,7 +9151,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             const blob = Array.from(sel.options)
                 .map((o) => o.textContent || '')
                 .join(' ');
-            if (/JACKSONVILLE|PO BOX|Wrrapd|\d{5}/i.test(blob)) {
+            if (/ship to|add new address|deliver/i.test(blob) || textLooksLikeHub(blob)) {
                 return sel;
             }
         }
@@ -9191,18 +9165,9 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
         let wrrapdOption = null;
         for (const o of sel.options) {
             const t = o.textContent || '';
-            if (t.includes('Wrrapd.com') && t.includes('26067')) {
+            if (textLooksLikeHub(t)) {
                 wrrapdOption = o;
                 break;
-            }
-        }
-        if (!wrrapdOption) {
-            for (const o of sel.options) {
-                const t = (o.textContent || '').toLowerCase();
-                if (t.includes('wrrapd') && (t.includes('26067') || t.includes('po box'))) {
-                    wrrapdOption = o;
-                    break;
-                }
             }
         }
 
@@ -9299,10 +9264,9 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                     for (const option of dropdownOptions) {
                         const text = option.textContent.trim();
                         if (
-                            text.includes('JACKSONVILLE') ||
                             text.includes('Ship to a new address') ||
-                            text.includes('Wrrapd.com') ||
-                            text.includes('PO BOX')
+                            text.includes('Add new address') ||
+                            textLooksLikeHub(text)
                         ) {
                             foundAddressOption = true;
                             break;
@@ -9334,7 +9298,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
 
             for (const option of dropdownOptions) {
                 const optionText = option.textContent.trim();
-                if (optionText.includes('Wrrapd.com') && optionText.includes('26067')) {
+                if (textLooksLikeHub(optionText)) {
                     wrrapdLink = option;
                 }
                 if (optionText.includes('Ship to a new address')) {
@@ -9396,16 +9360,20 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                 return false;
             }
             
-            // Fill Wrrapd address data with small delays between fields (matching old code)
-            nameField.value = 'Wrrapd';
+            const hubForm = await readHubForAmazonForm();
+            if (!hubForm.street || !hubForm.postal) {
+                console.error("[fillWrrapdAddressInModal] Hub address is not available yet.");
+                return false;
+            }
+            nameField.value = hubForm.name;
             await new Promise(r => setTimeout(r, 500));
-            phoneField.value = '(904) 515-2034';
+            phoneField.value = hubForm.phone;
             await new Promise(r => setTimeout(r, 500));
-            addressLine1Field.value = '150 BUSCH DR #26067';
+            addressLine1Field.value = hubForm.street;
             await new Promise(r => setTimeout(r, 500));
-            cityField.value = 'Jacksonville';
+            cityField.value = hubForm.city;
             await new Promise(r => setTimeout(r, 500));
-            postalCodeField.value = '32218';
+            postalCodeField.value = hubForm.postal;
             await new Promise(r => setTimeout(r, 500));
             
             // Try selecting "Florida" state (matching old code)
@@ -9485,16 +9453,20 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                 return false;
             }
 
-            // Fill Wrrapd address data with small delays between fields
-            nameField.value = 'Wrrapd';
+            const hubForm = await readHubForAmazonForm();
+            if (!hubForm.street || !hubForm.postal) {
+                console.error("[addWrrapdAddress] Hub address is not available yet.");
+                return false;
+            }
+            nameField.value = hubForm.name;
             await new Promise(r => setTimeout(r, 500));
-            phoneField.value = '(904) 515-2034';
+            phoneField.value = hubForm.phone;
             await new Promise(r => setTimeout(r, 500));
-            addressLine1Field.value = '150 BUSCH DR #26067';
+            addressLine1Field.value = hubForm.street;
             await new Promise(r => setTimeout(r, 500));
-            cityField.value = 'Jacksonville';
+            cityField.value = hubForm.city;
             await new Promise(r => setTimeout(r, 500));
-            postalCodeField.value = '32218';
+            postalCodeField.value = hubForm.postal;
             await new Promise(r => setTimeout(r, 500));
 
             // Try selecting "Florida"
@@ -9543,14 +9515,15 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
      * Helper / Utility Examples
      *************************************************************/
     function buildWrrapdAddress() {
+        const h = extensionConfig()?.hub || {};
         return {
-            name: 'Wrrapd',
-            street: '150 BUSCH DR #26067',
-            city: 'Jacksonville',
-            state: 'FL',
-            postalCode: '32218',
+            name: h.displayName || h.recipientFirstName || '',
+            street: h.addressLine1 || '',
+            city: hubCityTitle(h.city),
+            state: h.state || '',
+            postalCode: h.postalCode || '',
             country: 'United States',
-            phone: '(904) 515-2034' // EXACT phone number
+            phone: h.phone || '',
         };
     }
 
@@ -9928,13 +9901,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                     const addressContainer = radio.closest('.a-box, .a-box-inner, [class*="address"], label') || radio.parentElement;
                     const addressText = addressContainer ? addressContainer.textContent?.trim() || '' : '';
                     
-                    const hasWrrapd = addressText.includes("Wrrapd") || addressText.includes("Wrrapd.com");
-                    const hasPOBox = addressText.includes("26067");
-                    const hasJacksonville = addressText.includes("JACKSONVILLE") || addressText.includes("Jacksonville");
-                    const hasZip = addressText.includes("32218") || addressText.includes("32226");
-                    const hasState = addressText.includes("FL") || addressText.includes("Florida");
-                    
-                    if ((hasWrrapd || hasPOBox) && hasJacksonville && hasZip && hasState) {
+                    if (textLooksLikeHub(addressText)) {
                         newWrrapdRadio = radio;
                         break;
                     }
@@ -10033,15 +10000,20 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                 // Don't trigger blur - it causes elementFromPoint errors with Amazon's scripts
             };
             
-            triggerInputEvent(nameField, 'Wrrapd');
+            const hubForm = await readHubForAmazonForm();
+            if (!hubForm.street || !hubForm.postal) {
+                console.error("[addWrrapdAddressSinglePage] Hub address is not available yet.");
+                return false;
+            }
+            triggerInputEvent(nameField, hubForm.name);
             await new Promise(r => setTimeout(r, 500));
-            triggerInputEvent(phoneField, '(904) 515-2034');
+            triggerInputEvent(phoneField, hubForm.phone);
             await new Promise(r => setTimeout(r, 500));
-            triggerInputEvent(addressLine1Field, '150 BUSCH DR #26067');
+            triggerInputEvent(addressLine1Field, hubForm.street);
             await new Promise(r => setTimeout(r, 500));
-            triggerInputEvent(cityField, 'Jacksonville');
+            triggerInputEvent(cityField, hubForm.city);
             await new Promise(r => setTimeout(r, 500));
-            triggerInputEvent(postalCodeField, '32218');
+            triggerInputEvent(postalCodeField, hubForm.postal);
             await new Promise(r => setTimeout(r, 500));
             
             // Select "Florida" state
@@ -10138,10 +10110,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
     function isSubItemWrrapdOnAmazon(subItem) {
         if (!subItem.amazonShippingAddress) return false;
         const a = subItem.amazonShippingAddress;
-        return (
-            a.name === 'Wrrapd.com' && 
-            a.street.includes('26067')
-        );
+        return textLooksLikeHub(`${a.name || ''} ${a.street || ''} ${a.city || ''} ${a.postalCode || ''}`);
     }
     
     
@@ -10179,7 +10148,8 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             if (stateOptions && stateOptions.length > 0) {
                 console.log(`[selectStateFlorida] Found ${stateOptions.length} state options.`);
                 for (const option of stateOptions) {
-                    if (option.innerText.includes('Florida')) {
+                    const stateName = (await readHubForAmazonForm()).stateName;
+                    if (stateName && option.innerText.includes(stateName)) {
                         console.log("[selectStateFlorida] Found 'Florida' in the options. Selecting it.");
                         option.click();
                         await new Promise(resolve => setTimeout(resolve, 1000)); // Pausa tras seleccionar
@@ -10899,11 +10869,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             const containerText = container.textContent || '';
             
             // Check if delivery recipient is "Wrrapd" - look for multiple patterns
-            const hasWrrapdRecipient = containerText.includes('Delivering to Wrrapd') || 
-                                     (containerText.includes('Wrrapd') && containerText.includes('26067')) ||
-                                     (containerText.includes('Wrrapd') && containerText.includes('32226-6067')) ||
-                                     (containerText.includes('Wrrapd') && containerText.includes('JACKSONVILLE')) ||
-                                     containerText.includes('Wrrapd PO BOX 26067');
+            const hasWrrapdRecipient = containerText.includes('Delivering to Wrrapd') || textLooksLikeHub(containerText);
             
             // Also check if it does NOT contain non-Wrrapd recipient names (but be more lenient)
             const hasNonWrrapdRecipient = (containerText.includes('Delivering to') && 
@@ -12060,6 +12026,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                         state: gifteeOriginalAddress.state || addressObject.state,
                         country: gifteeOriginalAddress.country || addressObject.country,
                     });
+                    await refreshAmazonBoxQuoteFromStorage();
                     if (wrrapdCheckoutUnitPriceOverride) {
                         writePersistedUnitPrices(
                             'wrrapdAmazon',
@@ -12094,7 +12061,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                     }
 
                     // Generate the order number
-                    const orderNumber = generateOrderNumber(zipCode);
+                    const orderNumber = await generateOrderNumber(zipCode);
                     
                     // Store the order number for later use
                     localStorage.setItem('wrrapd-order-number', orderNumber);
@@ -12319,7 +12286,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                                     }
                                     
                                     // Generate a new order number
-                                    orderNumber = generateOrderNumber(zipCode);
+                                    orderNumber = await generateOrderNumber(zipCode);
                                     localStorage.setItem('wrrapd-order-number', orderNumber);
                                 }
                                 
@@ -12552,7 +12519,12 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
      * Every cart option row is listed with 0 for unused billable dimensions (DB / Elementor mapping).
      */
     function computeWrrapdCheckoutBreakdown(itemsInCurrentCheckout) {
-        const p = getActiveCheckoutUnitPrices();
+        const p = getActiveCheckoutUnitPrices() || {
+            giftWrapBase: 0,
+            customDesignAi: 0,
+            customDesignUpload: 0,
+            flowers: 0,
+        };
         let giftWrapTotal = 0;
         let designAiTotal = 0;
         let designUploadTotal = 0;
@@ -12590,8 +12562,8 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                         qtyDesignUpload += 1;
                     }
                     if (looseItemNeedsBox({ title: item.title, category: item.itemCategory, flowers: option.checkbox_flowers === true })) {
-                        boxCharge = BOX_CHARGE_USD;
-                        boxTotal += BOX_CHARGE_USD;
+                        boxCharge = boxChargeUsd();
+                        boxTotal += boxChargeUsd();
                         qtyBoxes += 1;
                     }
                 }
@@ -12627,7 +12599,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
         });
 
         const taxRatePercent = getWrrapdGifteeTaxRatePercent();
-        const taxRate = taxRatePercent / 100;
+        const taxRate = (typeof taxRatePercent === 'number' ? taxRatePercent : 0) / 100;
         const subtotal = roundMoney2(giftWrapTotal + designAiTotal + designUploadTotal + flowersTotal + boxTotal);
         const estimatedTax = roundMoney2(subtotal * taxRate);
         const total = roundMoney2(subtotal + estimatedTax);
@@ -12690,7 +12662,12 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                 amount: roundMoney2(estimatedTax),
             });
 
-            const pc = getActiveCheckoutUnitPrices();
+            const pc = getActiveCheckoutUnitPrices() || {
+                giftWrapBase: 0,
+                customDesignAi: 0,
+                customDesignUpload: 0,
+                flowers: 0,
+            };
             const aggregateLines = [
                 {
                     code: 'WRPD_GIFT_WRAP_BASE',
@@ -12724,7 +12701,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                     code: 'WRPD_BOX_CHARGE',
                     label: 'Box charges (loose item)',
                     quantity: b.qtyBoxes,
-                    unitPrice: BOX_CHARGE_USD,
+                    unitPrice: boxChargeUsd(),
                     amount: roundMoney2(b.boxTotal),
                 },
                 {
@@ -12900,8 +12877,6 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
     
     /**
      * Sales tax on Wrrapd fees is the giftee ZIP rate from pricing-preview.
-     * Do not scrape Amazon's order-summary tax — that is the warehouse / Amazon-item
-     * rate (Duval 7.5%) and will not match Miami-Dade 7% (etc.).
      */
     function getWrrapdGifteeTaxRatePercent() {
         if (
@@ -12921,7 +12896,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
         ) {
             return persisted.estimatedSalesTaxPercent;
         }
-        return 7.5;
+        return null;
     }
 
     // Legacy Amazon-page scrape (kept for debug; not used for Wrrapd totals).

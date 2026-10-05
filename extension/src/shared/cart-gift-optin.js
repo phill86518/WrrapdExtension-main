@@ -21,7 +21,9 @@ import {
 import { buildOccasionSelect, isValidOccasion } from "./occasions.js";
 import { loadWrrapdTermsHtml } from "./wrrapd-terms.js";
 import { createWrrapdBrandLogo } from "./wrrapd-brand.js";
+import { ensureExtensionConfig } from "./extension-config.js";
 import { generateWrrapdOrderNumber } from "./wrrapd-order-code.js";
+import { refreshOccasionSelect } from "./occasions.js";
 import {
   analyzeCartFulfillment,
   buildMixedFulfillmentNotice,
@@ -37,12 +39,12 @@ function normalizeWhitespace(value) {
 }
 
 /** Stable per-session order number, shared with the checkout pay flow. */
-function getOrCreateOrderNumber(prefix) {
+async function getOrCreateOrderNumber(prefix) {
   const key = `${prefix}OrderNumber`;
   try {
     let on = sessionStorage.getItem(key);
     if (!on) {
-      on = generateWrrapdOrderNumber(prefix);
+      on = await generateWrrapdOrderNumber(prefix);
       sessionStorage.setItem(key, on);
     }
     return on;
@@ -444,6 +446,7 @@ function openGiftChoicesModal(config, cartSnapshot) {
   wrrapdText.style.cssText = "font-weight:600;";
   wrrapdText.textContent = "Allow Wrrapd to choose the wrapping";
   const occasionSelect = buildOccasionSelect({ id: `${config.modalId}-occasion` });
+  void ensureExtensionConfig().then(() => refreshOccasionSelect(occasionSelect, currentOccasion));
   occasionSelect.style.cssText =
     "margin-left:auto;padding:6px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;color:#0f172a;background:#fff;max-width:50%;";
   occasionSelect.addEventListener("change", () => {
@@ -552,7 +555,7 @@ function openGiftChoicesModal(config, cartSnapshot) {
           designTitle: design.title,
           designDescription: design.description || "",
           itemTitle: itemTitle || `${config.retailerName || config.retailerLabel} item`,
-          orderNumber: getOrCreateOrderNumber(config.sessionPrefix),
+          orderNumber: await getOrCreateOrderNumber(config.sessionPrefix),
           prompt: currentAiPrompt || "",
           folder: "designs",
           shouldUpscale: true,
@@ -893,6 +896,7 @@ function openGiftChoicesModal(config, cartSnapshot) {
 
   const applyModalPrices = (prices, _zip, capabilities) => {
     const p = prices || getActiveUnitPrices(createUnitPricingState());
+    if (!p) return;
     wrrapdText.textContent = `Allow Wrrapd to choose the wrapping — ${formatUsd(p.giftWrapBase)}`;
     uploadPriceNote.textContent = `(+${formatUsd(p.customDesignUpload)})`;
     aiPriceNote.textContent = `(+${formatUsd(p.customDesignAi)})`;
@@ -1051,7 +1055,7 @@ function openGiftChoicesModal(config, cartSnapshot) {
       const charged = resolveFlowerChargeDollars({
         flowerPrice: currentFlowerPrice,
         flowerOfferId: currentFlowerOfferId,
-        unitFallback: getActiveUnitPrices(createUnitPricingState()).flowers,
+        unitFallback: getActiveUnitPrices(createUnitPricingState())?.flowers,
       });
       if (!(charged > 0)) {
         flowersMsg.style.display = "block";

@@ -1,4 +1,5 @@
 import { wrrapdIsAmazonAccountSignedIn } from './amazon-account-signed-in.js';
+import { extensionConfig } from '../../shared/extension-config.js';
 
 /**
  * Scrapes Amazon checkout for **Wrrapd-address line items only** (never other recipients’ dates).
@@ -13,11 +14,15 @@ const STORAGE_KEY = 'wrrapd-amazon-delivery-hints-v1';
 
 function isWrrapdItemContainer(container) {
   const containerText = container.textContent || '';
+  const hub = extensionConfig()?.hub || {};
+  const street = String(hub.addressLine1 || '').toUpperCase();
+  const zip = String(hub.postalCode || '').replace(/\D/g, '').slice(0, 5);
+  const city = String(hub.city || '').toUpperCase();
+  const upper = containerText.toUpperCase();
   const hasWrrapdRecipient =
     containerText.includes('Delivering to Wrrapd') ||
-    (containerText.includes('Wrrapd') && containerText.includes('26067')) ||
-    (containerText.includes('Wrrapd') && containerText.includes('32226-6067')) ||
-    (containerText.includes('Wrrapd') && containerText.includes('JACKSONVILLE'));
+    (upper.includes('WRRAPD') &&
+      ((street && upper.includes(street)) || (zip && upper.includes(zip)) || (city && upper.includes(city))));
   if (!hasWrrapdRecipient) return false;
   /** Reject merged DOM regions that also describe shipment to someone other than Wrrapd. */
   if (/Delivering to\s/i.test(containerText)) {
