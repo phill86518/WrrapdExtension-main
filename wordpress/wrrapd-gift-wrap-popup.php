@@ -128,7 +128,7 @@ function wrrapd_gift_wrap_popup_enqueue_assets() {
 			array(
 				'retailers' => wrrapd_gift_wrap_popup_retailers(),
 				'build'     => WRRAPD_GIFT_POPUP_BUILD,
-				'storeUrl'  => function_exists( 'wrrapd_chrome_extension_install_url' ) ? wrrapd_chrome_extension_install_url() : 'https://chromewebstore.google.com/detail/wrrapd/kdfcahdcgpaoohpgagpmpbgcmkdbocbg',
+				'storeUrl'  => function_exists( 'wrrapd_chrome_extension_install_url' ) ? wrrapd_chrome_extension_install_url() : 'https://chromewebstore.google.com/detail/wrrapd/ckjeddmjkhjnkmldknbeakjonfnjocpg',
 			)
 		);
 	}
@@ -149,7 +149,7 @@ function wrrapd_gift_wrap_popup_render() {
 	}
 
 	$first    = $retailers[0];
-	$store    = function_exists( 'wrrapd_chrome_extension_install_url' ) ? wrrapd_chrome_extension_install_url() : 'https://chromewebstore.google.com/detail/wrrapd/kdfcahdcgpaoohpgagpmpbgcmkdbocbg';
+	$store    = function_exists( 'wrrapd_chrome_extension_install_url' ) ? wrrapd_chrome_extension_install_url() : 'https://chromewebstore.google.com/detail/wrrapd/ckjeddmjkhjnkmldknbeakjonfnjocpg';
 	?>
 	<div id="wrrapd-gift-popup" class="wrrapd-gift-popup" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="wrrapd-gift-popup-title">
 		<div class="wrrapd-gift-popup__panel">
