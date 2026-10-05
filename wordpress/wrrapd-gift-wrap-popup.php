@@ -189,9 +189,8 @@ function wrrapd_gift_wrap_popup_render() {
 		return;
 	}
 
-	$first    = $retailers[0];
-	$store    = function_exists( 'wrrapd_chrome_extension_install_url' ) ? wrrapd_chrome_extension_install_url() : 'https://chromewebstore.google.com/detail/wrrapd/ckjeddmjkhjnkmldknbeakjonfnjocpg';
-	$video    = wrrapd_gift_wrap_popup_video_url();
+	$first = $retailers[0];
+	$video = wrrapd_gift_wrap_popup_video_url();
 	?>
 	<div id="wrrapd-gift-popup" class="wrrapd-gift-popup<?php echo $video ? ' has-intro' : ''; ?>" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="wrrapd-gift-popup-title">
 		<div class="wrrapd-gift-popup__panel">
@@ -217,14 +216,10 @@ function wrrapd_gift_wrap_popup_render() {
 			</div>
 
 			<p class="wrrapd-gift-popup__lede"><?php esc_html_e( 'Confirm shipping to the Wrrapd hub', 'wrrapd' ); ?></p>
-
-			<a class="wrrapd-gift-popup__cta" href="<?php echo esc_url( $store ); ?>" target="_blank" rel="noopener">
-				<?php esc_html_e( 'Get the free Chrome extension', 'wrrapd' ); ?>
-			</a>
 			</div>
 			<?php if ( $video ) : ?>
 			<div class="wrrapd-gift-popup__video" id="wrrapd-gift-popup-video" hidden>
-				<video id="wrrapd-gift-popup-player" muted playsinline preload="auto" disablepictureinpicture>
+				<video id="wrrapd-gift-popup-player" playsinline preload="auto" disablepictureinpicture>
 					<source src="<?php echo esc_url( $video ); ?>" type="video/mp4" />
 				</video>
 			</div>

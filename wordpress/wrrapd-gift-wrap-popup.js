@@ -31,7 +31,9 @@
 		videoWrap.hidden = true;
 		videoEl = document.createElement('video');
 		videoEl.id = 'wrrapd-gift-popup-player';
-		videoEl.muted = true;
+		videoEl.muted = false;
+		videoEl.defaultMuted = false;
+		videoEl.volume = 1;
 		videoEl.playsInline = true;
 		videoEl.setAttribute('playsinline', '');
 		videoEl.preload = 'auto';
@@ -211,7 +213,9 @@
 			finishIntro();
 		}
 		videoEl.addEventListener('ended', onEnded, { once: true });
-		videoEl.muted = true;
+		videoEl.muted = false;
+		videoEl.defaultMuted = false;
+		videoEl.volume = 1;
 		try {
 			videoEl.currentTime = 0;
 		} catch (e) {}
