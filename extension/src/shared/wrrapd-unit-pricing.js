@@ -147,9 +147,6 @@ export function hydrateUnitPricesFromSession(state, sessionPrefix, expectedZip) 
   if (data.estimatedSalesTaxPercent != null) {
     state.estimatedSalesTaxPercent = data.estimatedSalesTaxPercent;
   }
-  if (data.volumeDiscount) {
-    rememberVolumeDiscountFromPreview({ volumeDiscount: data.volumeDiscount });
-  }
   return true;
 }
 

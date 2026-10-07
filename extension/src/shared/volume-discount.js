@@ -11,6 +11,8 @@ export const MULTI_ITEM_DISCOUNT_LABEL = "Multi-item base discount";
 export const MULTI_ITEM_DISCOUNT_CODE = "WRPD_MULTI_ITEM_DISCOUNT";
 
 const STORAGE_KEY = "wrrapdVolumeDiscount";
+/** Last tiers actually returned by pricing-preview. Session hydration must not overwrite this. */
+let confirmedTiers = null;
 
 export const ZERO_VOLUME_DISCOUNT = Object.freeze({
   twoItemsPercent: 0,
@@ -75,11 +77,16 @@ export function volumeDiscountNudgeText(tiers, wrappedCount) {
   return `Gift-wrap another item to get a ${next}% discount!`;
 }
 
+export function hasConfirmedVolumeDiscount() {
+  return confirmedTiers != null;
+}
+
 /** Remember the tiers from a /api/pricing-preview response. A body with no tiers keeps the last good ones. */
 export function rememberVolumeDiscountFromPreview(previewJson) {
   const raw = previewJson && previewJson.volumeDiscount;
   if (!raw || typeof raw !== "object") return readVolumeDiscount();
   const tiers = normalizeVolumeDiscount(raw);
+  confirmedTiers = tiers;
   try {
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify(tiers));
   } catch {
@@ -89,6 +96,7 @@ export function rememberVolumeDiscountFromPreview(previewJson) {
 }
 
 export function readVolumeDiscount() {
+  if (confirmedTiers) return { ...confirmedTiers };
   try {
     const raw = sessionStorage.getItem(STORAGE_KEY);
     if (raw) return normalizeVolumeDiscount(JSON.parse(raw));

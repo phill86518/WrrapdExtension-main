@@ -24,6 +24,7 @@ import { refreshLegoGifteeShippingAddressFill } from "./lego-giftee-shipping-fil
 import { loadWrrapdTermsHtml } from "../../shared/wrrapd-terms.js";
 import { buildGiftWrapInvoiceRows } from "../../shared/wrrapd-invoice-lines.js";
 import {
+  hasConfirmedVolumeDiscount,
   multiItemDiscountFor,
   readVolumeDiscount,
   rememberVolumeDiscountFromPreview,
@@ -52,6 +53,8 @@ let legoPricingFetchedAt = 0;
 let legoPricingFetchedZip = "";
 let summaryRefreshJob = null;
 let summaryRefreshAgain = false;
+/** Keep the same panel node so a LEGO re-render cannot swap in a copy with no discount. */
+let heldSummaryHost = null;
 
 function findCheckoutSecurelyButtons() {
   /** @type {HTMLElement[]} */
@@ -118,6 +121,15 @@ async function refreshCheckoutUnitPricesFromServer(geo) {
   const zip = String(geo?.postalCode || "")
     .replace(/\D/g, "")
     .slice(0, 5);
+  if (
+    getActiveCheckoutUnitPrices() &&
+    hasConfirmedVolumeDiscount() &&
+    legoPricingFetchedZip === zip &&
+    Date.now() - legoPricingFetchedAt < 60 * 1000
+  ) {
+    legoPricingFetchComplete = true;
+    return true;
+  }
   const hydrated = { unitPriceOverride: null };
   if (hydrateUnitPricesFromSession(hydrated, "wrrapdLego", zip)) {
     wrrapdCheckoutUnitPriceOverride = hydrated.unitPriceOverride;
@@ -156,6 +168,10 @@ async function refreshCheckoutUnitPricesFromServer(geo) {
       wrrapdCheckoutUnitPriceOverride = next;
       writePersistedUnitPrices("wrrapdLego", next, zip);
       pricesOk = true;
+    }
+    if (pricesOk) {
+      legoPricingFetchedAt = Date.now();
+      legoPricingFetchedZip = zip;
     }
     return pricesOk || gotTax || Boolean(wrrapdCheckoutUnitPriceOverride);
   } catch (e) {
@@ -517,6 +533,7 @@ async function openLegoHubConfirmModal(onAccept) {
 }
 
 function removeLegoPaymentSummary() {
+  heldSummaryHost = null;
   document.querySelectorAll(`[${SUMMARY_HOST_ATTR}]`).forEach((n) => n.remove());
   const root = document.getElementById(SUMMARY_ROOT_ID);
   if (root) root.remove();
@@ -611,8 +628,16 @@ function mountSummaryNearButton(btn, invoiceRows, totalCents, paid, payReady = t
 
   const parent = btn.parentElement;
   if (parent) parent.insertBefore(host, btn);
+  heldSummaryHost = host;
 
   return { payBtn, status };
+}
+
+function reattachHeldSummary(btn) {
+  if (!heldSummaryHost || !btn?.parentElement) return false;
+  if (heldSummaryHost.isConnected && heldSummaryHost.parentElement === btn.parentElement) return true;
+  btn.parentElement.insertBefore(heldSummaryHost, btn);
+  return true;
 }
 
 let payMessageBound = false;
@@ -884,10 +909,11 @@ async function refreshPaymentSummaryOnce() {
     };
   };
 
-  // Already showing this total: do not call the API again. LEGO re-renders constantly,
-  // and a fetch on every mutation both flickers the discount line and rate-limits ZIP checks.
+  // LEGO re-renders the checkout column and deletes nodes it does not own. Put the same
+  // panel back. Do not rebuild it, and do not call the API, when the total is unchanged.
+  reattachHeldSummary(btn);
   const first = paint();
-  const existing = document.getElementById(SUMMARY_ROOT_ID);
+  const existing = heldSummaryHost && heldSummaryHost.isConnected ? heldSummaryHost : null;
   if (first.payReady && existing?.getAttribute("data-wrrapd-summary-sig") === first.sig) return;
 
   const zip = gifteeZip5();
@@ -914,8 +940,14 @@ async function refreshPaymentSummaryOnce() {
   ).catch(() => null);
 
   const next = paint();
-  const hostNow = document.getElementById(SUMMARY_ROOT_ID);
+  reattachHeldSummary(btn);
+  const hostNow = heldSummaryHost && heldSummaryHost.isConnected ? heldSummaryHost : null;
   if (hostNow?.getAttribute("data-wrrapd-summary-sig") === next.sig) return;
+  const shown = hostNow?.getAttribute("data-wrrapd-summary-sig") || "";
+  const nextHasDiscount = next.invoiceRows.some((r) => r.label === "Multi-item base discount");
+  if (shown.includes("Multi-item base discount") && !nextHasDiscount && hasConfirmedVolumeDiscount()) {
+    return;
+  }
   const { payBtn } = mountSummaryNearButton(btn, next.invoiceRows, next.totalCents, next.paid, next.payReady);
   const host = document.getElementById(SUMMARY_ROOT_ID);
   if (host) host.setAttribute("data-wrrapd-summary-sig", next.sig);

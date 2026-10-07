@@ -263,6 +263,7 @@ app.post('/api/gift-box-quote', (req, res) => {
         needsBox: giftBox.looseItemNeedsBox(item),
     }));
     const boxCount = quoted.filter((row) => row.needsBox).length;
+    res.set("Cache-Control", "no-store");
     return res.status(200).json({
         ok: true,
         boxChargeUsd: giftBox.BOX_CHARGE_USD,
@@ -425,6 +426,7 @@ app.get('/api/pricing-preview', (req, res) => {
     const customDesign = requestedZip.length === 5
         ? printerCoverage.publicAvailability(requestedZip)
         : { postalCode: '', available: false, radiusMiles: printerCoverage.getRadiusMiles() };
+    res.set("Cache-Control", "no-store");
     res.status(200).json({
         ok: true,
         unitPrices: r.unitPrices,

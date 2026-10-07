@@ -144,7 +144,7 @@ Membership discount is **not** in this version.
 
 Editor notes: `docs/VOLUME-DISCOUNT.md`.
 
-**Checkout rebuild loop (fixed same day, before submit):** LEGO was asking for prices again on every page update, so the discount line flashed and the API started refusing requests. A refused ZIP check was shown as “we can’t deliver to that ZIP.” The summary now stays put when the total has not changed, and a failed ZIP check says to try again. 32218 is still on the allowlist.
+**Checkout rebuild loop:** LEGO deletes the injected summary and asks for prices again, so the discount line flashed and the API started refusing requests. A refused ZIP check was shown as “we can’t deliver to that ZIP.” The panel is now put back as the same node (tiers from the last real price response stay), and a failed ZIP check says to try again. 32218 is still on the allowlist. Disable the Chrome Web Store copy of the extension while testing this unpacked build, or the two copies fight over the same panel.
 
 ### Checks run on the VM for 3.0.14
 
