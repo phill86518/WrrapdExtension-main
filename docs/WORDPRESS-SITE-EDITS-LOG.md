@@ -11,7 +11,12 @@ WordPress + Elementor + Hello theme content mostly lives **in the production dat
 ### 2026-10-07 — Volume discount on Your orders payment summary
 
 - MU `wrrapd-orders-bridge.php` (`WRRAPD_MU_BUILD` `2026-10-07-volume-discount`): combined payment summary can show **Multi-item base discount** (negative, pre-tax) under gift wrap. Omitted when the amount is zero. Negative money prints as `-$1.40`.
+- Keep live CWS links on **3.0.13** item `ofokdnajfbjmpbeocibingpiadnoccfc`; previous listing `ckjeddmjkhjnkmldknbeakjonfnjocpg` (3.0.12); `$latest_version` **3.0.13** until 3.0.14 is public. Do not copy a file that still points at the 3.0.12 id.
 - Copy `wrrapd-orders-bridge.php` to SiteGround `mu-plugins/` and purge W3 cache. Rates themselves are set in Command Center → Checkout pricing → Volume Discounting (see `docs/VOLUME-DISCOUNT.md`).
+
+### 2026-10-06 — 3.0.13 live on Chrome Web Store
+
+- Google published 3.0.13, item **`ofokdnajfbjmpbeocibingpiadnoccfc`**. Homepage / header / footer install links and the extension ping use that id; `$latest_version` = `3.0.13`. Build marker on the live site before volume-discount: `2026-10-06-cws-3.0.13`.
 
 ### 2026-10-03 — How it works: hub address blurred in Steps 4 and 5
 

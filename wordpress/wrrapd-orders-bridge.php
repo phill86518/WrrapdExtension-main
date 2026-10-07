@@ -16,14 +16,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 /** Bump when account UI / header polish changes — view-source should contain this string. */
 define( 'WRRAPD_MU_BUILD', '2026-10-07-volume-discount' );
 
-/** Published Chrome Web Store item id (Wrrapd 3.0.12). */
+/** Published Chrome Web Store item id (Wrrapd 3.0.13). Upload 3.0.14 to this same listing. */
 if ( ! defined( 'WRRAPD_CHROME_EXTENSION_ID' ) ) {
-	define( 'WRRAPD_CHROME_EXTENSION_ID', 'ckjeddmjkhjnkmldknbeakjonfnjocpg' );
+	define( 'WRRAPD_CHROME_EXTENSION_ID', 'ofokdnajfbjmpbeocibingpiadnoccfc' );
 }
 
-/** Previous public listing (3.0.10). Still probed so those installs see the update nudge. */
+/** Previous public listing (3.0.12). Still probed so those installs see the update nudge. */
 if ( ! defined( 'WRRAPD_CHROME_EXTENSION_ID_PREVIOUS' ) ) {
-	define( 'WRRAPD_CHROME_EXTENSION_ID_PREVIOUS', 'kdfcahdcgpaoohpgagpmpbgcmkdbocbg' );
+	define( 'WRRAPD_CHROME_EXTENSION_ID_PREVIOUS', 'ckjeddmjkhjnkmldknbeakjonfnjocpg' );
 }
 
 /** Wordmark gold — letters “p” and “d” in the Wrrapd logo. Never neon #f7ff00 / #fff300. */
@@ -1812,7 +1812,7 @@ function wrrapd_output_extension_detection_script() {
 	$cws             = wrrapd_chrome_extension_install_url();
 	$ext_id          = WRRAPD_CHROME_EXTENSION_ID;
 	$ext_id_previous = WRRAPD_CHROME_EXTENSION_ID_PREVIOUS;
-	$latest_version  = '3.0.12';
+	$latest_version  = '3.0.13';
 
 	echo '<style id="wrrapd-ext-detected-css">';
 	echo 'html.wrrapd-ext-installed .elementor-element-7f1bdc1,html.wrrapd-ext-installed .elementor-element-eb0b235,html.wrrapd-ext-installed .elementor-location-header a.elementor-button[href*="chromewebstore"]{display:none!important;}';

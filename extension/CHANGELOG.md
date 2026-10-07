@@ -10,8 +10,7 @@ Build for the store on Windows: `npm run build:store` → upload `extension/wrra
 
 ## 3.0.14 — not yet submitted (as of Oct 7, 2026)
 
-3.0.13 is in Chrome Web Store review and does **not** contain any of this. The wrrapd.com
-install nudge stays at 3.0.12 until a newer listing is public.
+3.0.13 is **live** on the Chrome Web Store (item `ofokdnajfbjmpbeocibingpiadnoccfc`, published Oct 6) and does **not** contain any of this. Upload 3.0.14 to **that same listing**. The wrrapd.com install nudge stays at **3.0.13** until 3.0.14 is public.
 
 ### A. Business rules moved to the server (Oct 5 · commit `e236b2a`)
 
@@ -156,7 +155,9 @@ Editor notes: `docs/VOLUME-DISCOUNT.md`.
 
 ---
 
-## 3.0.13 — submitted to Chrome Web Store review (Oct 3)
+## 3.0.13 — published on Chrome Web Store (approved Oct 6)
+
+Item ID **`ofokdnajfbjmpbeocibingpiadnoccfc`**. Website install links and `$latest_version` point here.
 
 - Reads the retailer order number on each retailer's confirmation ("thank you") page after Pay Wrrapd, using each
   retailer's real order-number format (Amazon, Target, Walmart, Best Buy, Kohl's, Nordstrom, Sephora, Ulta, LEGO, Etsy).
