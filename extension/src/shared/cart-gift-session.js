@@ -92,6 +92,7 @@ export function clearGiftServiceFlags(prefix) {
   writeGiftLegalTermsAccepted(prefix, false);
   try {
     sessionStorage.removeItem(itemChoicesKey(prefix));
+    sessionStorage.removeItem(`${prefix}ValidatedEstimateZip`);
   } catch {
     /* ignore */
   }

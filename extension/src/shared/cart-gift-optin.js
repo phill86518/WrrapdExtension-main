@@ -382,6 +382,10 @@ function openGiftChoicesModal(config, cartSnapshot) {
   while (allChoices.length > totalItems) allChoices.pop();
 
   let currentIdx = 0;
+  // Once the shopper leaves the first item, or reopens a saved order, the ZIP cannot change.
+  let zipFrozen =
+    readGiftChoicesSaved(config.sessionPrefix) &&
+    readValidatedEstimateZip(config.sessionPrefix).length === 5;
 
   const overlay = document.createElement("div");
   overlay.id = config.modalId;
@@ -928,8 +932,13 @@ function openGiftChoicesModal(config, cartSnapshot) {
   function renderItem(idx) {
     const line = lines[idx];
     const ch = allChoices[idx] || emptyChoice(line.title);
-    const orderZip = zipBar.getZip() || readValidatedEstimateZip(config.sessionPrefix);
-    void zipBar.setLocked(idx > 0 ? orderZip : "");
+    const orderZip = readValidatedEstimateZip(config.sessionPrefix) || zipBar.getZip();
+    if (idx > 0 || zipFrozen) {
+      if (orderZip) void zipBar.setLocked(orderZip);
+      else zipBar.seal();
+    } else {
+      zipBar.unlock();
+    }
     if (ch.flowerOfferId && ch.flowerZip && orderZip && ch.flowerZip !== orderZip) {
       ch.flowerOfferId = "";
       ch.flowerDesign = "";
@@ -1089,6 +1098,7 @@ function openGiftChoicesModal(config, cartSnapshot) {
     captureCurrentChoices();
 
     if (currentIdx < totalItems - 1) {
+      if (currentIdx === 0) zipFrozen = true;
       currentIdx++;
       renderItem(currentIdx);
       panel.scrollTop = 0;

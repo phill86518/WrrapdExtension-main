@@ -68,6 +68,7 @@ export function mountGifteeZipEstimateBar(opts) {
   let currentZip = "";
   let ready = false;
   let locked = false;
+  let lockedZip = "";
 
   const gatedNodes = []
     .concat(gatedContent || [])
@@ -96,9 +97,11 @@ export function mountGifteeZipEstimateBar(opts) {
   label.style.cssText = "display:block;font-size:14px;font-weight:700;color:#0f172a;margin:0 0 6px;";
   label.textContent = "Giftee / gift-recipient's zip code:";
 
+  const OPEN_HINT = "This helps us with a faster checkout!";
+  const LOCKED_HINT = "Same ZIP for every item in this order.";
   const hint = document.createElement("p");
   hint.style.cssText = "margin:0 0 10px;font-size:13px;line-height:1.4;color:#64748b;";
-  hint.textContent = "This helps us with a faster checkout!";
+  hint.textContent = OPEN_HINT;
 
   const row = document.createElement("div");
   row.style.cssText = "display:flex;flex-wrap:wrap;gap:8px;align-items:center;";
@@ -162,9 +165,12 @@ export function mountGifteeZipEstimateBar(opts) {
   };
 
   const submitZip = async () => {
-    const zip = normalizePostal5(input.value);
+    if (locked) input.value = lockedZip || input.value;
+    const zip = normalizePostal5(locked && lockedZip ? lockedZip : input.value);
     input.value = zip;
+    if (locked && !lockedZip) return false;
     if (zip.length !== 5) {
+      if (locked) return false;
       clearReady();
       writeValidatedEstimateZip(sessionPrefix, "");
       setStatus("Please enter a valid 5-digit ZIP code.");
@@ -184,6 +190,11 @@ export function mountGifteeZipEstimateBar(opts) {
       }
       const allowed = await isPostalCodeAllowed(zip);
       if (!allowed) {
+        if (locked) {
+          input.value = lockedZip || zip;
+          setStatus("We couldn't verify that ZIP right now. Please try again.");
+          return false;
+        }
         clearReady();
         writeValidatedEstimateZip(sessionPrefix, "");
         setStatus(OUT_OF_AREA_MSG);
@@ -211,31 +222,61 @@ export function mountGifteeZipEstimateBar(opts) {
    * Later Wrrapd items in the same order reuse the first item's giftee ZIP (one hub, one tax
    * rate, one flower area). Locked: ZIP shown read-only and confirmed automatically.
    */
+  const paintLocked = (z) => {
+    locked = true;
+    lockedZip = z || lockedZip;
+    input.disabled = true;
+    input.readOnly = true;
+    if (lockedZip) input.value = lockedZip;
+    input.style.background = "#f1f5f9";
+    input.style.color = "#334155";
+    btn.style.display = "none";
+    hint.textContent = LOCKED_HINT;
+  };
+
+  const unlock = () => {
+    locked = false;
+    lockedZip = "";
+    input.disabled = false;
+    input.readOnly = false;
+    input.style.background = "";
+    input.style.color = "";
+    btn.style.display = "";
+    hint.textContent = OPEN_HINT;
+  };
+
+  /**
+   * A 5-digit ZIP locks the field. An empty ZIP with no lock yet leaves the field alone
+   * so the first item can still type one. Call unlock() to open a locked field.
+   */
   const setLocked = (zip) => {
     const z = normalizePostal5(zip || "");
     if (z.length !== 5) {
-      locked = false;
-      input.readOnly = false;
-      input.style.background = "";
-      input.style.color = "";
-      btn.style.display = "";
+      if (lockedZip) {
+        paintLocked(lockedZip);
+        return Promise.resolve(ready);
+      }
+      unlock();
       return Promise.resolve(ready);
     }
-    locked = true;
-    input.readOnly = true;
-    input.value = z;
-    input.style.background = "#f1f5f9";
-    input.style.color = "#334155";
-    if (ready && currentZip === z) {
-      btn.style.display = "none";
-      return Promise.resolve(true);
-    }
-    btn.style.display = "none";
+    paintLocked(z);
+    if (ready && currentZip === z) return Promise.resolve(true);
     return submitZip();
   };
 
+  const rejectLockedEdit = (e) => {
+    if (!locked) return;
+    e.preventDefault();
+    if (lockedZip) input.value = lockedZip;
+  };
+  input.addEventListener("beforeinput", rejectLockedEdit);
+  input.addEventListener("paste", rejectLockedEdit);
+  input.addEventListener("drop", rejectLockedEdit);
   input.addEventListener("input", () => {
-    if (locked) return;
+    if (locked) {
+      if (lockedZip) input.value = lockedZip;
+      return;
+    }
     input.style.borderColor = "#cbd5e1";
     if (ready) {
       clearReady();
@@ -243,12 +284,19 @@ export function mountGifteeZipEstimateBar(opts) {
     }
   });
   input.addEventListener("keydown", (e) => {
+    if (locked) {
+      if (e.key !== "Tab" && e.key !== "Escape") e.preventDefault();
+      return;
+    }
     if (e.key === "Enter") {
       e.preventDefault();
       void submitZip();
     }
   });
-  btn.addEventListener("click", () => void submitZip());
+  btn.addEventListener("click", () => {
+    if (locked && ready) return;
+    void submitZip();
+  });
 
   row.append(input, btn);
   root.append(label, hint, row, status);
@@ -264,7 +312,7 @@ export function mountGifteeZipEstimateBar(opts) {
 
   return {
     root,
-    getZip: () => currentZip || (ready ? readValidatedEstimateZip(sessionPrefix) : ""),
+    getZip: () => currentZip || lockedZip || readValidatedEstimateZip(sessionPrefix),
     isReady: () => ready && currentZip.length === 5,
     getCapabilities: () => getUnitPricingCapabilities(pricingState),
     requireValidZip: () => {
@@ -278,5 +326,9 @@ export function mountGifteeZipEstimateBar(opts) {
     },
     submitZip,
     setLocked,
+    unlock,
+    seal() {
+      paintLocked(lockedZip || "");
+    },
   };
 }

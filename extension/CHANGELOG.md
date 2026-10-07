@@ -110,8 +110,8 @@ order has one hub, one tax rate, and one flower area.
 
 - Later items show that ZIP read-only, with no Submit button; it is confirmed automatically.
 - Target / Walmart / Best Buy / Kohl's / Nordstrom / Sephora / Ulta / Etsy and LEGO (one modal,
-  "Item N of M"): item 1 is editable; items 2+ are locked. Going Back to item 1 unlocks it, and a
-  new ZIP there carries to the other items.
+  "Item N of M"): the ZIP is entered on item 1. From item 2 on, including Back and Edit, that ZIP
+  stays locked. Choose No to clear it and start over.
 - Amazon (one modal per item): when another item already has Wrrapd checked, the new item's
   modal is locked to the order ZIP. Unchecking the other Wrrapd items unlocks it.
 - A bouquet picked under a different ZIP is cleared, so the shopper picks again from the

@@ -4105,9 +4105,10 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                                     p.options.some((o) => o && o !== subItem && o.checkbox_wrrapd === true),
                             );
                             if (amazonZipBar) {
-                                void amazonZipBar.setLocked(
-                                    otherWrrapdItem ? readValidatedEstimateZip('wrrapdAmazon') : '',
-                                );
+                                const orderZip = readValidatedEstimateZip('wrrapdAmazon');
+                                if (otherWrrapdItem && orderZip) void amazonZipBar.setLocked(orderZip);
+                                else if (otherWrrapdItem) amazonZipBar.seal();
+                                else amazonZipBar.unlock();
                             }
                         } else {
                             modal.style.display = 'none';

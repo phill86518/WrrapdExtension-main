@@ -198,6 +198,7 @@ export function openLegoGiftServiceModal() {
   while (allChoices.length > totalItems) allChoices.pop();
 
   let currentIdx = 0;
+  let zipFrozen = readGiftChoicesSaved() && readValidatedEstimateZip("wrrapdLego").length === 5;
 
   // Overlay
   const overlay = document.createElement("div");
@@ -660,8 +661,13 @@ export function openLegoGiftServiceModal() {
   function renderItem(idx) {
     const line = lines[idx];
     const ch = allChoices[idx];
-    const orderZip = zipBar.getZip() || readValidatedEstimateZip("wrrapdLego");
-    void zipBar.setLocked(idx > 0 ? orderZip : "");
+    const orderZip = readValidatedEstimateZip("wrrapdLego") || zipBar.getZip();
+    if (idx > 0 || zipFrozen) {
+      if (orderZip) void zipBar.setLocked(orderZip);
+      else zipBar.seal();
+    } else {
+      zipBar.unlock();
+    }
     if (ch.flowerOfferId && ch.flowerZip && orderZip && ch.flowerZip !== orderZip) {
       ch.flowerOfferId = "";
       ch.flowerDesign = "";
@@ -823,6 +829,7 @@ export function openLegoGiftServiceModal() {
     captureCurrentChoices();
 
     if (currentIdx < totalItems - 1) {
+      if (currentIdx === 0) zipFrozen = true;
       currentIdx++;
       renderItem(currentIdx);
       panel.scrollTop = 0;

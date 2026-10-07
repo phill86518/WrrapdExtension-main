@@ -158,6 +158,7 @@ export function clearLegoGiftServiceFlags() {
     sessionStorage.removeItem(LEGO_GIFT_GIFTEE_NAME_KEY);
     sessionStorage.removeItem(LEGO_GIFTEE_ADDRESS_SESSION_KEY);
     sessionStorage.removeItem(LEGO_ITEM_CHOICES_KEY);
+    sessionStorage.removeItem("wrrapdLegoValidatedEstimateZip");
   } catch {
     /* ignore */
   }
