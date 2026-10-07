@@ -5091,6 +5091,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
     let wrrapdAddressCache = null;
     
     async function selectAddressesForItemsSimple(allItems) {
+        await ensureExtensionConfig().catch(() => null);
         // CRITICAL: Prevent duplicate calls
         if (isSelectingAddresses) {
             console.warn("[selectAddressesForItemsSimple] Already selecting addresses - preventing duplicate call!");
@@ -6194,6 +6195,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
      * Select Wrrapd address from dropdown
      */
     async function selectWrrapdAddressFromDropdown(dropdownActivator) {
+        await ensureExtensionConfig().catch(() => null);
         try {
             // Each checkout line has its own dropdown; cached data-value/DOM from another row is invalid.
             wrrapdAddressCache = null;
@@ -7498,6 +7500,7 @@ Return ONLY the JSON array, nothing else.`;
      * Selects an address from the dropdown - opens dropdown and selects the target address
      */
     async function selectAddressFromDropdown(dropdownActivator, needsWrrapd, targetAddress) {
+        await ensureExtensionConfig().catch(() => null);
         try {
             console.log(`[selectAddressFromDropdown] Starting. NeedsWrrapd: ${needsWrrapd}`);
             
@@ -7670,6 +7673,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
      * Simplified version of processAddressChange - based on original working code
      */
     async function processAddressChangeSimple(row, dropdownActivator, needsWrrapd, targetAddress) {
+        await ensureExtensionConfig().catch(() => null);
         try {
             console.log(`[processAddressChangeSimple] Starting address change. NeedsWrrapd: ${needsWrrapd}`);
             
@@ -9171,6 +9175,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
     }
 
     async function trySelectWrrapdNativeSelectInRow(row, titleKey) {
+        await ensureExtensionConfig().catch(() => null);
         const sel = findNativeAddressSelectInRow(row);
         if (!sel) return false;
 
@@ -9221,6 +9226,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
     }
 
     async function processAddressChange(row, titleKey, subIndex) {
+        await ensureExtensionConfig().catch(() => null);
         try {
             console.log(`[processAddressChange] Starting address change for "${titleKey}" (row-scoped)...`);
 
@@ -9449,6 +9455,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
     }
 
     async function addWrrapdAddress(titleKey, subIndex) {
+        await ensureExtensionConfig().catch(() => null);
         console.log(`[addWrrapdAddress] Creating Wrrapd address for subItem #${subIndex} of "${titleKey}".`);
 
         try {
@@ -9547,6 +9554,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
      * Step 4: If mixed - click "Deliver to multiple addresses"
      */
     async function handleWrrapdAddressSelection() {
+        await ensureExtensionConfig().catch(() => null);
         // CRITICAL: Prevent duplicate calls
         if (isHandlingWrrapdAddressSelection) {
             console.warn("[handleWrrapdAddressSelection] Already handling address selection - preventing duplicate call!");

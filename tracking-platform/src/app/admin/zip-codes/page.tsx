@@ -1,3 +1,4 @@
+import { AdminDeliveryHubs } from "@/components/admin-delivery-hubs";
 import { AdminZipCodesEditor } from "@/components/admin-zip-codes-editor";
 import { WrrapdLogo } from "@/components/wrrapd-logo";
 import { getSession } from "@/lib/auth";
@@ -11,6 +12,16 @@ import {
   seedLaunchMetroZipCodes,
   type AllowedZipCodesPayload,
 } from "@/lib/wrrapd-zip-codes-admin";
+import {
+  checkDeliveryHubZip,
+  fetchDeliveryHubReport,
+  removeDeliveryHub,
+  setDefaultDeliveryHub,
+  setDeliveryHubActive,
+  upsertDeliveryHub,
+  type DeliveryHubInput,
+  type DeliveryHubReport,
+} from "@/lib/delivery-hubs-admin";
 import { notFound } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
@@ -105,6 +116,55 @@ async function seedLaunchMetrosAction() {
   }
 }
 
+type HubReportResult = { ok: true; report: DeliveryHubReport } | { ok: false; error: string };
+
+async function hubAction(fn: () => Promise<DeliveryHubReport>, fallback: string): Promise<HubReportResult> {
+  const session = await getSession();
+  if (!session || session.role !== "admin") {
+    return { ok: false, error: "Unauthorized" };
+  }
+  try {
+    const report = await fn();
+    revalidatePath("/admin/zip-codes");
+    return { ok: true, report };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : fallback };
+  }
+}
+
+async function upsertHubAction(input: DeliveryHubInput) {
+  "use server";
+  return hubAction(() => upsertDeliveryHub(input), "Failed to save hub");
+}
+
+async function removeHubAction(id: string) {
+  "use server";
+  return hubAction(() => removeDeliveryHub(id), "Failed to remove hub");
+}
+
+async function setHubActiveAction(id: string, active: boolean) {
+  "use server";
+  return hubAction(() => setDeliveryHubActive(id, active), "Failed to update hub");
+}
+
+async function setDefaultHubAction(id: string) {
+  "use server";
+  return hubAction(() => setDefaultDeliveryHub(id), "Failed to set default hub");
+}
+
+async function checkHubAction(zip: string) {
+  "use server";
+  const session = await getSession();
+  if (!session || session.role !== "admin") {
+    return { ok: false as const, error: "Unauthorized" };
+  }
+  try {
+    return { ok: true as const, result: await checkDeliveryHubZip(zip) };
+  } catch (e) {
+    return { ok: false as const, error: e instanceof Error ? e.message : "Failed to check ZIP" };
+  }
+}
+
 export default async function AdminZipCodesPage() {
   const session = await getSession();
   if (!session || session.role !== "admin") notFound();
@@ -115,6 +175,14 @@ export default async function AdminZipCodesPage() {
     initial = await fetchAllowedZipCodes();
   } catch (e) {
     loadError = e instanceof Error ? e.message : "Failed to load allowed ZIP codes";
+  }
+
+  let hubReport: DeliveryHubReport | null = null;
+  let hubError: string | null = null;
+  try {
+    hubReport = await fetchDeliveryHubReport();
+  } catch (e) {
+    hubError = e instanceof Error ? e.message : "Failed to load delivery hubs";
   }
 
   return (
@@ -144,6 +212,22 @@ export default async function AdminZipCodesPage() {
           onCheck={checkAction}
           onSeedFlGa={seedFlGaAction}
           onSeedLaunchMetros={seedLaunchMetrosAction}
+        />
+      ) : null}
+
+      {hubError ? (
+        <p className="mt-10 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+          Could not load delivery hubs: {hubError}
+        </p>
+      ) : null}
+      {hubReport ? (
+        <AdminDeliveryHubs
+          initial={hubReport}
+          onUpsert={upsertHubAction}
+          onRemove={removeHubAction}
+          onSetActive={setHubActiveAction}
+          onSetDefault={setDefaultHubAction}
+          onCheck={checkHubAction}
         />
       ) : null}
     </div>

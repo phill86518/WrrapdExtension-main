@@ -1,9 +1,6 @@
 /**
- * Canonical Wrrapd U.S. hub ship-to.
- *
- * Retailers that use the "ship to hub → Wrrapd wraps → Wrrapd ships to giftee"
- * model auto-fill this address into the retailer's own shipping form. Keep in
- * sync with the LEGO copy in src/retailers/lego/constants.js (WRRAPD_HUB_*).
+ * Delivery-hub ship-to from api.wrrapd.com (closest active hub to the giftee ZIP).
+ * Retailers that ship to a hub auto-fill this into the retailer's shipping form.
  */
 import { ensureExtensionConfig, extensionConfig } from "./extension-config.js";
 

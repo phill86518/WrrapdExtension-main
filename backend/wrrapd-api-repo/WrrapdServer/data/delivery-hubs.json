@@ -1,0 +1,24 @@
+{
+  "defaultHubId": "jax-1",
+  "updatedAt": "2026-10-07T03:24:11.153Z",
+  "hubs": [
+    {
+      "id": "jax-1",
+      "name": "Jacksonville",
+      "kind": "premium-po-box",
+      "organization": "WRRAPD INC",
+      "displayName": "Wrrapd",
+      "recipientFirstName": "WRRAPD",
+      "recipientLastName": "INC",
+      "addressLine1": "150 BUSCH DR #26067",
+      "addressLine2": "",
+      "city": "JACKSONVILLE",
+      "state": "FL",
+      "postalCode": "32218",
+      "phone": "(904) 515-2034",
+      "active": true,
+      "notes": "Premium PO Box 26067 with street addressing.",
+      "updatedAt": "2026-10-07T03:24:11.154Z"
+    }
+  ]
+}

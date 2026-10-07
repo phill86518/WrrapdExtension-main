@@ -16,6 +16,7 @@ import {
   writePersistedUnitPrices,
 } from "./wrrapd-unit-pricing.js";
 import { prefetchFlowersCatalog } from "./flowers-catalog.js";
+import { assignDeliveryHubForZip } from "./extension-config.js";
 
 const OUT_OF_AREA_MSG =
   "We're sorry — we can't deliver to that ZIP yet. We're constantly adding new areas and hope to be near you soon.";
@@ -184,6 +185,7 @@ export function mountGifteeZipEstimateBar(opts) {
       currentZip = writeValidatedEstimateZip(sessionPrefix, zip);
       input.style.borderColor = "#6ee7b7";
       void prefetchFlowersCatalog(currentZip);
+      void assignDeliveryHubForZip(currentZip);
       await applyPrices(currentZip);
       return true;
     } catch {

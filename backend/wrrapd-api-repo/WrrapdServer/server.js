@@ -28,6 +28,7 @@ const extensionInstalls = require(path.join(__dirname, 'lib', 'extension-install
 const retiredExtension = require(path.join(__dirname, 'lib', 'retired-extension'));
 const shopperTerms = require(path.join(__dirname, 'lib', 'shopper-terms'));
 const extensionConfig = require(path.join(__dirname, 'lib', 'extension-config'));
+const deliveryHubs = require(path.join(__dirname, 'lib', 'delivery-hubs'));
 const giftBox = require(path.join(__dirname, 'lib', 'gift-box'));
 
 // Initialize Google Cloud Storage
@@ -234,6 +235,21 @@ app.get('/api/extension-config', (req, res) => {
     }
     res.set('Cache-Control', 'no-store');
     return res.status(200).json(extensionConfig.publicExtensionConfig());
+});
+
+/** Hub closest to the giftee ZIP — the ship-to the extension fills into the retailer checkout. */
+app.get('/api/delivery-hub', (req, res) => {
+    if (!req.isApiDomain) {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
+    res.set('Cache-Control', 'no-store');
+    const zip = typeof req.query.postalCode === 'string' ? req.query.postalCode : '';
+    try {
+        return res.status(200).json({ ok: true, ...deliveryHubs.publicHubForZip(zip) });
+    } catch (e) {
+        console.error('[delivery-hub] lookup failed', e && e.message ? e.message : e);
+        return res.status(500).json({ error: 'Hub lookup failed' });
+    }
 });
 
 app.post('/api/gift-box-quote', (req, res) => {
@@ -706,6 +722,109 @@ app.post('/api/admin/allowed-zip-codes/seed-launch-metros', express.json(), (req
         console.error('[admin/allowed-zip-codes/seed-launch-metros] failed', e);
         res.status(500).json({ error: 'Failed to seed launch metro ZIP codes' });
     }
+});
+
+// ─── Delivery hubs — admin ────────────────────────────────────────────────────
+
+function deliveryHubReport() {
+    deliveryHubs.loadHubs({ force: true });
+    return deliveryHubs.getAdminReport(allowedZipCodesLib.loadAllowedZipCodes().allowedZipCodes);
+}
+
+/** Admin: hubs + how many allowed giftee ZIPs each one serves. */
+app.get('/api/admin/delivery-hubs', (req, res) => {
+    if (!req.isApiDomain) {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
+    if (!requireWrrapdAdminKey(req, res)) return;
+    try {
+        res.status(200).json({ ok: true, report: deliveryHubReport() });
+    } catch (e) {
+        console.error('[admin/delivery-hubs] report failed', e);
+        res.status(500).json({ error: 'Failed to load delivery hubs' });
+    }
+});
+
+/** Admin: add a hub, or edit one by id. */
+app.post('/api/admin/delivery-hubs/upsert', express.json(), (req, res) => {
+    if (!req.isApiDomain) {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
+    if (!requireWrrapdAdminKey(req, res)) return;
+    try {
+        const body = req.body && typeof req.body === 'object' ? req.body : {};
+        const { hub } = deliveryHubs.upsertHub({
+            id: body.id,
+            name: body.name,
+            kind: body.kind,
+            organization: body.organization,
+            recipientFirstName: body.recipientFirstName,
+            recipientLastName: body.recipientLastName,
+            addressLine1: body.addressLine1,
+            addressLine2: body.addressLine2,
+            city: body.city,
+            state: body.state,
+            postalCode: body.postalCode,
+            phone: body.phone,
+            active: body.active,
+            notes: body.notes,
+        });
+        res.status(200).json({ ok: true, hub, report: deliveryHubReport() });
+    } catch (e) {
+        console.error('[admin/delivery-hubs/upsert] failed', e && e.message ? e.message : e);
+        res.status(400).json({ error: e && e.message ? e.message : 'Failed to save hub' });
+    }
+});
+
+app.post('/api/admin/delivery-hubs/remove', express.json(), (req, res) => {
+    if (!req.isApiDomain) {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
+    if (!requireWrrapdAdminKey(req, res)) return;
+    try {
+        const { removed } = deliveryHubs.removeHub(req.body && req.body.id);
+        res.status(200).json({ ok: true, removed, report: deliveryHubReport() });
+    } catch (e) {
+        res.status(400).json({ error: e && e.message ? e.message : 'Failed to remove hub' });
+    }
+});
+
+/** Admin: pause / resume a hub without deleting it. */
+app.post('/api/admin/delivery-hubs/active', express.json(), (req, res) => {
+    if (!req.isApiDomain) {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
+    if (!requireWrrapdAdminKey(req, res)) return;
+    try {
+        const { updated } = deliveryHubs.setHubActive(req.body && req.body.id, req.body && req.body.active !== false);
+        res.status(200).json({ ok: true, updated, report: deliveryHubReport() });
+    } catch (e) {
+        res.status(400).json({ error: e && e.message ? e.message : 'Failed to update hub' });
+    }
+});
+
+/** Admin: hub used when a giftee ZIP has no known location. */
+app.post('/api/admin/delivery-hubs/default', express.json(), (req, res) => {
+    if (!req.isApiDomain) {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
+    if (!requireWrrapdAdminKey(req, res)) return;
+    try {
+        deliveryHubs.setDefaultHub(req.body && req.body.id);
+        res.status(200).json({ ok: true, report: deliveryHubReport() });
+    } catch (e) {
+        res.status(400).json({ error: e && e.message ? e.message : 'Failed to set default hub' });
+    }
+});
+
+/** Admin: which hub serves a giftee ZIP, and how far every hub is. */
+app.get('/api/admin/delivery-hubs/check', (req, res) => {
+    if (!req.isApiDomain) {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
+    if (!requireWrrapdAdminKey(req, res)) return;
+    const zip = typeof req.query.postalCode === 'string' ? req.query.postalCode : '';
+    res.status(200).json({ ok: true, result: deliveryHubs.checkZip(zip) });
 });
 
 // ─── Custom-design (printer) coverage — admin ─────────────────────────────────
@@ -2128,6 +2247,7 @@ function isLikelyWrrapdWarehouseAddressObj(addr) {
     if (!addr || typeof addr !== 'object') return false;
     const blob = `${addr.name || ''} ${addr.street || ''} ${addr.line1 || ''}`.toLowerCase();
     return (
+        deliveryHubs.isHubAddress(addr) ||
         blob.includes('wrrapd') ||
         blob.includes('26067') ||
         blob.includes('150 busch') ||
@@ -3611,6 +3731,14 @@ app.post('/process-payment', async (req, res) => {
                     scheduledFor: scheduledForNonAmazon,
                     ...(retailerDeliveryYmd ? { retailerEstimatedDeliveryDate: retailerDeliveryYmd } : {}),
                 };
+            }
+            try {
+                const servingHub = deliveryHubs.nearestHub(ingestCommon.gifteeAddress.postalCode).hub;
+                if (servingHub) {
+                    ingestPayload.sourceNote = `${ingestPayload.sourceNote} Hub: ${servingHub.name} (${servingHub.postalCode}).`;
+                }
+            } catch (e) {
+                console.error('[process-payment] hub lookup for order note failed', orderNumber, e && e.message);
             }
             const ingestResult = await ingestOrderIntoTracking(ingestPayload);
             try {
