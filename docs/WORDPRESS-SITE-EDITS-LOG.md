@@ -8,6 +8,11 @@ WordPress + Elementor + Hello theme content mostly lives **in the production dat
 
 ## Recent changes
 
+### 2026-10-07 — Volume discount on Your orders payment summary
+
+- MU `wrrapd-orders-bridge.php` (`WRRAPD_MU_BUILD` `2026-10-07-volume-discount`): combined payment summary can show **Multi-item base discount** (negative, pre-tax) under gift wrap. Omitted when the amount is zero. Negative money prints as `-$1.40`.
+- Copy `wrrapd-orders-bridge.php` to SiteGround `mu-plugins/` and purge W3 cache. Rates themselves are set in Command Center → Checkout pricing → Volume Discounting (see `docs/VOLUME-DISCOUNT.md`).
+
 ### 2026-10-03 — How it works: hub address blurred in Steps 4 and 5
 
 - Step 4 and Step 5 screenshots showed the old "PO BOX 26067 … 32226-6067" hub address. Replaced with blurred copies: media **7367** `uploads/2026/10/wrrapd-howto-004-v2.jpg`, **7368** `uploads/2026/10/wrrapd-howto-005-v2.jpg` (also in `wordpress/howto/`). Swapped `src` in `_elementor_data` (post 4857); Elementor cache cleared; W3TC flushed.

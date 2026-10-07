@@ -5,7 +5,9 @@ import {
   fetchWrrapdPricingConfig,
   fetchZipCountyIndex,
   saveWrrapdPricingConfig,
+  saveWrrapdVolumeDiscount,
   type PricingConfig,
+  type VolumeDiscount,
   type ZipCountyIndex,
 } from "@/lib/wrrapd-pricing-admin";
 import { notFound } from "next/navigation";
@@ -27,6 +29,24 @@ async function savePricingAction(config: PricingConfig) {
     return {
       ok: false as const,
       error: e instanceof Error ? e.message : "Failed to save pricing",
+    };
+  }
+}
+
+async function saveVolumeDiscountAction(volumeDiscount: VolumeDiscount) {
+  "use server";
+  const session = await getSession();
+  if (!session || session.role !== "admin") {
+    return { ok: false as const, error: "Unauthorized" };
+  }
+  try {
+    const saved = await saveWrrapdVolumeDiscount(volumeDiscount);
+    revalidatePath("/admin/pricing");
+    return { ok: true as const, config: saved };
+  } catch (e) {
+    return {
+      ok: false as const,
+      error: e instanceof Error ? e.message : "Failed to save volume discount",
     };
   }
 }
@@ -80,6 +100,7 @@ export default async function AdminPricingPage() {
         <AdminPricingEditor
           initialConfig={config}
           saveAction={savePricingAction}
+          saveVolumeDiscountAction={saveVolumeDiscountAction}
           loadZipCountyIndexAction={loadZipCountyIndexAction}
         />
       )}

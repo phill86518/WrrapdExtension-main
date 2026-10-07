@@ -36,6 +36,12 @@ import {
 import { hubAsPaymentAddress } from "./wrrapd-hub.js";
 import { ensureExtensionConfig } from "./extension-config.js";
 import { buildGiftWrapInvoiceRows } from "./wrrapd-invoice-lines.js";
+import {
+  multiItemDiscountFor,
+  readVolumeDiscount,
+  rememberVolumeDiscountFromPreview,
+  volumeDiscountNudgeText,
+} from "./volume-discount.js";
 import { boxChargeUsd, countLooseBoxes, looseItemNeedsBox, refreshBoxQuote } from "./gift-box.js";
 import { readInstallId } from "./install-id.js";
 import { resolveFlowerChargeDollars } from "./flowers-catalog.js";
@@ -46,6 +52,7 @@ import {
   createUnitPricingState,
   getActiveUnitPrices,
   hydrateUnitPricesFromSession,
+  readPersistedUnitPrices,
   writePersistedUnitPrices,
 } from "./wrrapd-unit-pricing.js";
 
@@ -112,6 +119,7 @@ async function refreshUnitPricesFromServer(state, geo, retailer) {
     const r = await fetch(u.toString(), { credentials: "omit", signal });
     if (!r.ok) return;
     const j = await r.json();
+    rememberVolumeDiscountFromPreview(j);
     state.taxPercent = resolveTaxRatePercent(
       typeof j.estimatedSalesTaxPercent === "number" ? j.estimatedSalesTaxPercent : null,
     );
@@ -170,6 +178,7 @@ function computeServiceSubtotalCents(state, prefix, cartLines) {
   const n = choices.length;
   if (n <= 0) return 0;
   let dollars = p.giftWrapBase * n;
+  dollars -= multiItemDiscountFor(p.giftWrapBase, n).discountUsd;
   const lines = Array.isArray(cartLines) ? cartLines : [];
   for (let i = 0; i < n; i++) {
     const ch = choices[i];
@@ -213,7 +222,10 @@ function buildSummaryLinesAndTotal(state, prefix, cartLines) {
       flowers: ch.flowers === true,
     })),
   );
-  const rows = buildGiftWrapInvoiceRows(choices, p, boxCount);
+  const disc = multiItemDiscountFor(p?.giftWrapBase, choices.length);
+  const rows = buildGiftWrapInvoiceRows(choices, p, boxCount, disc.discountCents);
+  const nudge = volumeDiscountNudgeText(readVolumeDiscount(), choices.length);
+  if (nudge) rows.push({ label: nudge, amount: null });
   const br = computeTotalBreakdown(state, prefix, cartLines);
   if (br.taxUsd > 0) rows.push({ label: "Sales tax", amount: `$${br.taxUsd.toFixed(2)}` });
   return { invoiceRows: rows, totalCents: br.totalCents };
@@ -227,6 +239,7 @@ function buildOrderData(config) {
     ? snapshot.items
     : [{ title: `${config.retailerName} order`, itemId: "", imageUrl: "" }];
   const choices = readItemChoices(config.sessionPrefix);
+  const flowerFallback = readPersistedUnitPrices(config.sessionPrefix)?.unitPrices?.flowers;
   // Retailer's own promised delivery date (Wrrapd schedules its delivery for this + 1 day).
   // Some retailers (e.g. Kohl's) let the shopper change shipping speed / expedite at checkout,
   // so any concrete date we scrape is unreliable — those set `captureDeliveryDate:false` and the
@@ -253,7 +266,7 @@ function buildOrderData(config) {
         ? resolveFlowerChargeDollars({
             flowerPrice: ch.flowerPrice,
             flowerOfferId: ch.flowerOfferId,
-            unitFallback: p?.flowers,
+            unitFallback: flowerFallback,
           }) || null
         : null,
       flower_title: flowers ? (ch.flowerTitle || null) : null,
@@ -309,6 +322,7 @@ function buildPricingCart(state, prefix, retailer, cartLines) {
     state: "",
     country: "US",
     retailer: retailer ? String(retailer).trim().slice(0, 32) : "",
+    multiItemDiscountAware: true,
   };
 }
 
@@ -423,6 +437,13 @@ function mountSummaryPanel(mountAnchor, invoiceRows, totalCents, paid, payReady,
   const linesWrap = document.createElement("div");
   linesWrap.style.cssText = "margin:0 0 4px;display:flex;flex-direction:column;gap:8px;";
   for (const row of invoiceRows) {
+    if (row.amount === null || row.amount === undefined) {
+      const note = document.createElement("div");
+      note.style.cssText = "font-size:13px;color:#0f172a;margin-top:2px;";
+      note.textContent = row.label;
+      linesWrap.appendChild(note);
+      continue;
+    }
     const line = document.createElement("div");
     line.style.cssText = "display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:16px;align-items:baseline;";
     const lbl = document.createElement("span");
@@ -612,7 +633,7 @@ async function openPaymentPopup(config, state) {
   return popup;
 }
 
-async function postProcessPayment(config, eventData) {
+async function postProcessPayment(config, eventData, state) {
   const orderNumber =
     (typeof eventData.orderNumber === "string" && eventData.orderNumber.trim()) ||
     readSession(orderNumberKey(config.sessionPrefix));
@@ -637,6 +658,16 @@ async function postProcessPayment(config, eventData) {
         gifterFullName: String(eventData.gifterFullName || "").trim() || undefined,
         finalShippingAddress: eventData.finalShippingAddress || null,
         gifteeOriginalAddress: gifteeStub(config.sessionPrefix),
+        ...(state
+          ? {
+              pricingCart: buildPricingCart(
+                state,
+                config.sessionPrefix,
+                config.payRoute,
+                config.getCartSnapshot?.()?.items,
+              ),
+            }
+          : {}),
       }),
     });
     const result = await resp.json().catch(() => ({}));
@@ -798,7 +829,7 @@ export function initRetailerCheckoutPayFlow(config) {
       releaseCheckoutGate(config);
       void ensureSummaryUi();
 
-      const ok = await postProcessPayment(config, event.data);
+      const ok = await postProcessPayment(config, event.data, state);
       if (!ok) {
         writePaymentSuccess(config.sessionPrefix, false);
         applyCheckoutGate(config, giftFlowReady(), false);

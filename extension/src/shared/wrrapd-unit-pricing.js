@@ -3,6 +3,7 @@
  * Fetches geo-aware prices from /api/pricing-preview when possible.
  */
 /** Prices come from /api/pricing-preview. There is no local price table. */
+import { readVolumeDiscount, rememberVolumeDiscountFromPreview } from "./volume-discount.js";
 
 const PRICE_REFRESH_TTL_MS = 5 * 60 * 1000;
 
@@ -72,6 +73,7 @@ export function writePersistedUnitPrices(sessionPrefix, prices, postalCode, capa
       Number.isFinite(Number(capabilities?.estimatedSalesTaxPercent))
         ? Number(capabilities.estimatedSalesTaxPercent)
         : undefined,
+    volumeDiscount: readVolumeDiscount(),
     at: Date.now(),
   };
   if (
@@ -110,6 +112,7 @@ export function readPersistedUnitPrices(sessionPrefix) {
       unitPrices,
       customDesignAvailable: parsed.customDesignAvailable === true,
       estimatedSalesTaxPercent: Number.isFinite(taxPct) && taxPct >= 0 && taxPct <= 20 ? taxPct : undefined,
+      volumeDiscount: parsed.volumeDiscount,
       at: Number(parsed.at) || 0,
     };
   } catch {
@@ -144,6 +147,9 @@ export function hydrateUnitPricesFromSession(state, sessionPrefix, expectedZip) 
   if (data.estimatedSalesTaxPercent != null) {
     state.estimatedSalesTaxPercent = data.estimatedSalesTaxPercent;
   }
+  if (data.volumeDiscount) {
+    rememberVolumeDiscountFromPreview({ volumeDiscount: data.volumeDiscount });
+  }
   return true;
 }
 
@@ -158,6 +164,7 @@ async function refreshUnitPricesFromServer(state, geo, retailer) {
     const r = await fetch(u.toString(), { credentials: "omit", signal });
     if (!r.ok) return false;
     const j = await r.json();
+    rememberVolumeDiscountFromPreview(j);
     const up = j && typeof j.unitPrices === "object" ? j.unitPrices : null;
     if (!up) return false;
     const next = {

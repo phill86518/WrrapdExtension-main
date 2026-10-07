@@ -44,6 +44,16 @@ import {
     writePersistedUnitPrices,
 } from '../shared/wrrapd-unit-pricing.js';
 import { formatUsd } from '../shared/wrrapd-unit-pricing.js';
+import {
+    allocateDiscountCents,
+    computeMultiItemBaseDiscount,
+    formatDiscountUsd,
+    MULTI_ITEM_DISCOUNT_CODE,
+    MULTI_ITEM_DISCOUNT_LABEL,
+    readVolumeDiscount,
+    rememberVolumeDiscountFromPreview,
+    volumeDiscountNudgeText,
+} from '../shared/volume-discount.js';
 
 (function () {
 
@@ -232,6 +242,7 @@ import { formatUsd } from '../shared/wrrapd-unit-pricing.js';
             const r = await fetch(u.toString(), { credentials: 'omit' });
             if (!r.ok) return false;
             const j = await r.json();
+            rememberVolumeDiscountFromPreview(j);
             const up = j && j.unitPrices && typeof j.unitPrices === 'object' ? j.unitPrices : null;
             if (!up) return false;
             const next = {
@@ -338,6 +349,7 @@ import { formatUsd } from '../shared/wrrapd-unit-pricing.js';
             ...(postalCode ? { postalCode } : {}),
             country: 'US',
             retailer: 'amazon',
+            multiItemDiscountAware: true,
         };
         cachePricingCart(cart);
         return cart;
@@ -12517,6 +12529,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                                         ...(checkoutInvoicePayload
                                             ? { checkoutInvoice: checkoutInvoicePayload }
                                             : {}),
+                                        pricingCart: buildPricingCartForPayment(null),
                                     }),
                                 });
 
@@ -12645,7 +12658,22 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
 
         const taxRatePercent = getWrrapdGifteeTaxRatePercent();
         const taxRate = (typeof taxRatePercent === 'number' ? taxRatePercent : 0) / 100;
-        const subtotal = roundMoney2(giftWrapTotal + designAiTotal + designUploadTotal + flowersTotal + boxTotal);
+        const disc = computeMultiItemBaseDiscount(p.giftWrapBase, qtyGiftWrap, readVolumeDiscount());
+        const multiItemDiscount = disc.discountCents / 100;
+        const multiItemDiscountPercent = disc.discountCents > 0 ? disc.percent : 0;
+        if (disc.discountCents > 0 && qtyGiftWrap > 0) {
+            const shares = allocateDiscountCents(disc.discountCents, qtyGiftWrap);
+            let si = 0;
+            for (const row of perOptionLines) {
+                if (row.giftWrapBase > 0) {
+                    const c = shares[si++] || 0;
+                    if (c > 0) row.multiItemDiscount = roundMoney2(-c / 100);
+                }
+            }
+        }
+        const subtotal = roundMoney2(
+            giftWrapTotal - multiItemDiscount + designAiTotal + designUploadTotal + flowersTotal + boxTotal,
+        );
         const estimatedTax = roundMoney2(subtotal * taxRate);
         const total = roundMoney2(subtotal + estimatedTax);
         return {
@@ -12659,6 +12687,8 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             qtyFlowers,
             qtyBoxes,
             boxTotal: roundMoney2(boxTotal),
+            multiItemDiscount: roundMoney2(multiItemDiscount),
+            multiItemDiscountPercent,
             subtotal,
             estimatedTax,
             total,
@@ -12688,6 +12718,12 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             const lines = [];
             if (b.giftWrapTotal > 0) {
                 lines.push({ label: 'Gift-wrapping', amount: roundMoney2(b.giftWrapTotal) });
+            }
+            if (b.multiItemDiscount > 0) {
+                lines.push({
+                    label: MULTI_ITEM_DISCOUNT_LABEL,
+                    amount: roundMoney2(-b.multiItemDiscount),
+                });
             }
             if (customDesignCombined > 0) {
                 lines.push({
@@ -12721,6 +12757,18 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                     unitPrice: pc.giftWrapBase,
                     amount: roundMoney2(b.giftWrapTotal),
                 },
+                ...(b.multiItemDiscount > 0
+                    ? [
+                          {
+                              code: MULTI_ITEM_DISCOUNT_CODE,
+                              label: MULTI_ITEM_DISCOUNT_LABEL,
+                              quantity: b.qtyGiftWrap,
+                              unitPrice: null,
+                              percent: b.multiItemDiscountPercent,
+                              amount: roundMoney2(-b.multiItemDiscount),
+                          },
+                      ]
+                    : []),
                 {
                     code: 'WRPD_CUSTOM_DESIGN_AI',
                     label: 'Custom design (AI)',
@@ -12783,6 +12831,9 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                 customDesignAi: roundMoney2(row.customDesignAi),
                 customDesignUpload: roundMoney2(row.customDesignUpload),
                 flowers: roundMoney2(row.flowers),
+                ...(typeof row.multiItemDiscount === 'number' && row.multiItemDiscount < 0
+                    ? { multiItemDiscount: roundMoney2(row.multiItemDiscount) }
+                    : {}),
             }));
 
             return {
@@ -12858,6 +12909,9 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             if (giftWrapTotal > 0) {
                 addSummaryLineItem(wrrapdSummaryItems, 'Gift-wrapping', giftWrapTotal);
             }
+            if (br.multiItemDiscount > 0) {
+                addSummaryLineItem(wrrapdSummaryItems, MULTI_ITEM_DISCOUNT_LABEL, -br.multiItemDiscount);
+            }
             if (customDesignTotal > 0) {
                 addSummaryLineItem(wrrapdSummaryItems, 'Custom Design Fee', customDesignTotal);
             }
@@ -12866,6 +12920,14 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             }
             if (br.boxTotal > 0) {
                 addSummaryLineItem(wrrapdSummaryItems, 'Box charges (loose item)', br.boxTotal);
+            }
+            const nudge = volumeDiscountNudgeText(readVolumeDiscount(), br.qtyGiftWrap);
+            if (nudge) {
+                const nudgeEl = document.createElement('div');
+                nudgeEl.className = 'a-row wrrapd-summary-nudge';
+                nudgeEl.style.cssText = 'margin-top:6px;font-size:13px;color:#0f172a;';
+                nudgeEl.textContent = nudge;
+                wrrapdSummaryItems.appendChild(nudgeEl);
             }
             // Add grey dividing line before "Total before tax:"
             const dividerBeforeTax = document.createElement('hr');
@@ -12902,22 +12964,23 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
     // Adds a line item to the Wrrapd summary with a description and amount
     // forceShow: if true, always show the line item even if amount is 0
     function addSummaryLineItem(container, description, amount, forceShow = false) {
-        if (amount > 0 || forceShow) {
-            console.log(`[addSummaryLineItem] Adding line item: ${description} - $${amount.toFixed(2)}`);
-            
-            // Simplified - alignment is handled by ensureWrrapdSummaryAlignment() common function
-            const item = document.createElement('div');
-            item.className = 'a-row wrrapd-summary-line';
-            item.style.cssText =
-                'display:flex!important;flex-direction:row!important;justify-content:space-between!important;align-items:baseline!important;width:100%!important;gap:10px;box-sizing:border-box;';
-            item.innerHTML = `
-                <span class="a-size-base" style="text-align:left;flex:1;min-width:0;word-break:break-word;">${description}</span>
-                <span class="a-size-base a-text-right" style="text-align:right;white-space:nowrap;flex:0 0 auto;">$${amount.toFixed(2)}</span>
-            `;
-            container.appendChild(item);
-        } else {
-            console.log(`[addSummaryLineItem] Skipping line item: ${description} - $${amount.toFixed(2)} (amount is zero).`);
+        const n = Number(amount);
+        if (!Number.isFinite(n)) return;
+        if (n === 0 && !forceShow) {
+            console.log(`[addSummaryLineItem] Skipping line item: ${description} - $0.00 (amount is zero).`);
+            return;
         }
+        const amtText = n < 0 ? formatDiscountUsd(Math.round(-n * 100)) : `$${n.toFixed(2)}`;
+        console.log(`[addSummaryLineItem] Adding line item: ${description} - ${amtText}`);
+        const item = document.createElement('div');
+        item.className = 'a-row wrrapd-summary-line';
+        item.style.cssText =
+            'display:flex!important;flex-direction:row!important;justify-content:space-between!important;align-items:baseline!important;width:100%!important;gap:10px;box-sizing:border-box;';
+        item.innerHTML = `
+                <span class="a-size-base" style="text-align:left;flex:1;min-width:0;word-break:break-word;">${description}</span>
+                <span class="a-size-base a-text-right" style="text-align:right;white-space:nowrap;flex:0 0 auto;">${amtText}</span>
+            `;
+        container.appendChild(item);
     }
     
     /**

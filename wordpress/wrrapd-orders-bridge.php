@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /** Bump when account UI / header polish changes — view-source should contain this string. */
-define( 'WRRAPD_MU_BUILD', '2026-10-05-cws-3.0.12' );
+define( 'WRRAPD_MU_BUILD', '2026-10-07-volume-discount' );
 
 /** Published Chrome Web Store item id (Wrrapd 3.0.12). */
 if ( ! defined( 'WRRAPD_CHROME_EXTENSION_ID' ) ) {
@@ -3768,7 +3768,11 @@ function wrrapd_studio_design_kind_label( array $ln ) {
  * @param float|int $n Dollar amount.
  */
 function wrrapd_money_usd( $n ) {
-	return '$' . number_format( (float) $n, 2, '.', ',' );
+	$n = (float) $n;
+	if ( $n < 0 ) {
+		return '-$' . number_format( abs( $n ), 2, '.', ',' );
+	}
+	return '$' . number_format( $n, 2, '.', ',' );
 }
 
 /**
@@ -3917,6 +3921,7 @@ function wrrapd_checkout_aggregate_code_label( $code ) {
 	$code = trim( (string) $code );
 	$map  = array(
 		'WRPD_GIFT_WRAP_BASE'       => __( 'Gift wrap', 'wrrapd' ),
+		'WRPD_MULTI_ITEM_DISCOUNT'  => __( 'Multi-item base discount', 'wrrapd' ),
 		'WRPD_CUSTOM_DESIGN_AI'     => __( 'AI design add-on', 'wrrapd' ),
 		'WRPD_CUSTOM_DESIGN_UPLOAD' => __( 'Upload design add-on', 'wrrapd' ),
 		'WRPD_FLOWERS'              => __( 'Flowers add-on', 'wrrapd' ),
@@ -3962,6 +3967,7 @@ function wrrapd_studio_order_summary_html( array $order, array $lines ) {
 	if ( $use_agg ) {
 		$order_codes = array(
 			'WRPD_GIFT_WRAP_BASE',
+			'WRPD_MULTI_ITEM_DISCOUNT',
 			'WRPD_CUSTOM_DESIGN_AI',
 			'WRPD_CUSTOM_DESIGN_UPLOAD',
 			'WRPD_FLOWERS',
@@ -3987,6 +3993,9 @@ function wrrapd_studio_order_summary_html( array $order, array $lines ) {
 			if ( $amt_f === null ) {
 				continue;
 			}
+			if ( $code === 'WRPD_MULTI_ITEM_DISCOUNT' && $amt_f >= 0 ) {
+				continue;
+			}
 			$lab = wrrapd_checkout_aggregate_code_label( $code );
 			echo '<div class="wrrapd-amz-inv-row">';
 			echo '<span class="wrrapd-amz-inv-lab">' . esc_html( $lab ) . '</span>';
@@ -4008,6 +4017,9 @@ function wrrapd_studio_order_summary_html( array $order, array $lines ) {
 				$lab = __( 'Gift wrap', 'wrrapd' );
 			}
 			if ( $lab === '' ) {
+				continue;
+			}
+			if ( strcasecmp( $lab_raw, 'Multi-item base discount' ) === 0 && ( $amt_f === null || $amt_f >= 0 ) ) {
 				continue;
 			}
 			echo '<div class="wrrapd-amz-inv-row">';

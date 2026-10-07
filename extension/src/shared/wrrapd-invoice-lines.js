@@ -6,14 +6,16 @@
 
 import { resolveFlowerChargeDollars } from "./flowers-catalog.js";
 import { boxChargeUsd } from "./gift-box.js";
+import { formatDiscountUsd, MULTI_ITEM_DISCOUNT_LABEL } from "./volume-discount.js";
 
 /**
  * @param {Array<{ wrapPref?: string, flowers?: boolean, flowerPrice?: number|null, flowerOfferId?: string|null }>} choices
  * @param {{ giftWrapBase: number, customDesignAi: number, customDesignUpload: number, flowers: number }} unitPrices
  * @param {number} [boxCount]
+ * @param {number} [multiItemDiscountCents] shown directly under the first gift-wrap row; omitted when 0
  * @returns {Array<{ label: string, amount: string }>}
  */
-export function buildGiftWrapInvoiceRows(choices, unitPrices, boxCount = 0) {
+export function buildGiftWrapInvoiceRows(choices, unitPrices, boxCount = 0, multiItemDiscountCents = 0) {
   const p = unitPrices;
   if (!p || typeof p.giftWrapBase !== "number") return [];
   const list = Array.isArray(choices) && choices.length > 0 ? choices : [{ wrapPref: "wrrapd", flowers: false }];
@@ -41,10 +43,17 @@ export function buildGiftWrapInvoiceRows(choices, unitPrices, boxCount = 0) {
 
   /** @type {Array<{ label: string, amount: string }>} */
   const rows = [];
+  const discCents = Math.max(0, Math.floor(Number(multiItemDiscountCents) || 0));
+  const pushWrapRow = (row) => {
+    rows.push(row);
+    if (rows.length === 1 && discCents > 0) {
+      rows.push({ label: MULTI_ITEM_DISCOUNT_LABEL, amount: formatDiscountUsd(discCents) });
+    }
+  };
 
   if (stdCount > 0) {
     const xN = stdCount > 1 ? ` (×${stdCount})` : "";
-    rows.push({
+    pushWrapRow({
       label: `Gift-wrapping${xN}`,
       amount: `$${(p.giftWrapBase * stdCount).toFixed(2)}`,
     });
@@ -52,7 +61,7 @@ export function buildGiftWrapInvoiceRows(choices, unitPrices, boxCount = 0) {
   if (aiCount > 0) {
     const xN = aiCount > 1 ? ` (×${aiCount})` : "";
     const unit = p.giftWrapBase + p.customDesignAi;
-    rows.push({
+    pushWrapRow({
       label: `Gift-wrapping (AI assisted)${xN}`,
       amount: `$${(unit * aiCount).toFixed(2)}`,
     });
@@ -60,7 +69,7 @@ export function buildGiftWrapInvoiceRows(choices, unitPrices, boxCount = 0) {
   if (uploadCount > 0) {
     const xN = uploadCount > 1 ? ` (×${uploadCount})` : "";
     const unit = p.giftWrapBase + p.customDesignUpload;
-    rows.push({
+    pushWrapRow({
       label: `Gift-wrapping (custom)${xN}`,
       amount: `$${(unit * uploadCount).toFixed(2)}`,
     });

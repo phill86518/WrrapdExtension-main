@@ -201,6 +201,14 @@ function parseLineItems(v: unknown, invalidFields: string[]): OrderLineItem[] | 
     const packageDimensions = str(row.packageDimensions);
     const productDimensions = str(row.productDimensions);
     const itemCategory = str(row.itemCategory);
+    const wrapBaseCentsRaw = Number(row.wrapBaseCents);
+    const wrapBaseCents =
+      Number.isFinite(wrapBaseCentsRaw) && wrapBaseCentsRaw >= 0 ? Math.round(wrapBaseCentsRaw) : undefined;
+    const wrapDiscountCentsRaw = Number(row.wrapDiscountCents);
+    const wrapDiscountCents =
+      Number.isFinite(wrapDiscountCentsRaw) && wrapDiscountCentsRaw > 0
+        ? Math.round(wrapDiscountCentsRaw)
+        : undefined;
     const box = giftBoxForLine({
       title,
       flowers,
@@ -234,6 +242,8 @@ function parseLineItems(v: unknown, invalidFields: string[]): OrderLineItem[] | 
       ...(box.needsBox ? { needsGiftBox: true } : {}),
       ...(box.boxSize ? { giftBoxSize: box.boxSize } : {}),
       ...(box.boxSize ? { giftBoxSource: box.source } : {}),
+      ...(wrapBaseCents != null ? { wrapBaseCents } : {}),
+      ...(wrapDiscountCents != null ? { wrapDiscountCents } : {}),
     });
   }
   return out.length ? out : undefined;

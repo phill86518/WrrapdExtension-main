@@ -21,13 +21,58 @@ export type PricingRule = {
   multiplier?: number;
 };
 
+export type VolumeDiscount = {
+  twoItemsPercent: number;
+  threeToNineItemsPercent: number;
+  tenPlusItemsPercent: number;
+};
+
+export const ZERO_VOLUME_DISCOUNT: VolumeDiscount = {
+  twoItemsPercent: 0,
+  threeToNineItemsPercent: 0,
+  tenPlusItemsPercent: 0,
+};
+
 export type PricingConfig = {
   version: string;
   defaultUnitPrices: UnitPrices;
   globalMultiplier: number;
   rules: PricingRule[];
   retailers: Record<string, UnitPrices>;
+  volumeDiscount: VolumeDiscount;
 };
+
+function wholePercent(v: unknown): number {
+  const n = typeof v === "number" ? v : parseFloat(String(v ?? ""));
+  if (!Number.isFinite(n) || n < 0) return 0;
+  return Math.min(99, Math.round(n));
+}
+
+export function normalizeVolumeDiscount(raw: unknown): VolumeDiscount {
+  const src = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  return {
+    twoItemsPercent: wholePercent(src.twoItemsPercent),
+    threeToNineItemsPercent: wholePercent(src.threeToNineItemsPercent),
+    tenPlusItemsPercent: wholePercent(src.tenPlusItemsPercent),
+  };
+}
+
+/** 10+ ≥ 3–9 ≥ 2. Null when the order is valid. */
+export function volumeDiscountOrderError(tiers: VolumeDiscount): string | null {
+  const t = normalizeVolumeDiscount(tiers);
+  if (t.threeToNineItemsPercent < t.twoItemsPercent) {
+    return '"3 to 9 items" discount must be greater than or equal to "2 items" discount.';
+  }
+  if (t.tenPlusItemsPercent < t.threeToNineItemsPercent) {
+    return '"10+ items" discount must be greater than or equal to "3 to 9 items" discount.';
+  }
+  return null;
+}
+
+function withVolumeDiscount(cfg: PricingConfig): PricingConfig {
+  cfg.volumeDiscount = normalizeVolumeDiscount(cfg.volumeDiscount);
+  return cfg;
+}
 
 export type ZipCountyIndex = {
   version: string | null;
@@ -65,7 +110,7 @@ export async function fetchWrrapdPricingConfig(): Promise<PricingConfig> {
   }
   const cfg = body.config as PricingConfig;
   cfg.rules = Array.isArray(cfg.rules) ? (cfg.rules as PricingRule[]) : [];
-  return cfg;
+  return withVolumeDiscount(cfg);
 }
 
 export async function saveWrrapdPricingConfig(config: PricingConfig): Promise<PricingConfig> {
@@ -83,7 +128,27 @@ export async function saveWrrapdPricingConfig(config: PricingConfig): Promise<Pr
   }
   const cfg = body.config as PricingConfig;
   cfg.rules = Array.isArray(cfg.rules) ? (cfg.rules as PricingRule[]) : [];
-  return cfg;
+  return withVolumeDiscount(cfg);
+}
+
+export async function saveWrrapdVolumeDiscount(volumeDiscount: VolumeDiscount): Promise<PricingConfig> {
+  const orderErr = volumeDiscountOrderError(volumeDiscount);
+  if (orderErr) throw new Error(orderErr);
+  const r = await fetch(`${apiBase()}/api/admin/volume-discount`, {
+    method: "PUT",
+    headers: adminHeaders(),
+    body: JSON.stringify({ volumeDiscount: normalizeVolumeDiscount(volumeDiscount) }),
+  });
+  const body = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    throw new Error(typeof body.error === "string" ? body.error : `HTTP ${r.status}`);
+  }
+  if (!body.config || typeof body.config !== "object") {
+    throw new Error("Invalid save response");
+  }
+  const cfg = body.config as PricingConfig;
+  cfg.rules = Array.isArray(cfg.rules) ? (cfg.rules as PricingRule[]) : [];
+  return withVolumeDiscount(cfg);
 }
 
 export async function fetchZipCountyIndex(): Promise<ZipCountyIndex> {

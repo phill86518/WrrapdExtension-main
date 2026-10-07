@@ -2,17 +2,29 @@
 
 import { useCallback, useMemo, useState } from "react";
 import {
+  normalizeVolumeDiscount,
   priceFieldKeys,
   priceFieldLabel,
   RETAILER_LABELS,
+  volumeDiscountOrderError,
+  ZERO_VOLUME_DISCOUNT,
   type PricingConfig,
   type UnitPrices,
+  type VolumeDiscount,
   type ZipCountyIndex,
 } from "@/lib/wrrapd-pricing-admin";
 import { GeoPricingModal } from "@/components/geo-pricing-modal";
 
 type SaveResult = { ok: true; config: PricingConfig } | { ok: false; error: string };
 type IndexResult = { ok: true; index: ZipCountyIndex } | { ok: false; error: string };
+
+function parseWholePercent(value: string): number {
+  const digits = value.replace(/\D/g, "").slice(0, 2);
+  if (digits === "") return 0;
+  const n = parseInt(digits, 10);
+  if (!Number.isFinite(n) || n < 0) return 0;
+  return Math.min(99, n);
+}
 
 function cloneConfig(config: PricingConfig): PricingConfig {
   return JSON.parse(JSON.stringify(config)) as PricingConfig;
@@ -60,16 +72,22 @@ function PriceInputs({
 export function AdminPricingEditor({
   initialConfig,
   saveAction,
+  saveVolumeDiscountAction,
   loadZipCountyIndexAction,
 }: {
   initialConfig: PricingConfig;
   saveAction: (config: PricingConfig) => Promise<SaveResult>;
+  saveVolumeDiscountAction: (volumeDiscount: VolumeDiscount) => Promise<SaveResult>;
   loadZipCountyIndexAction: () => Promise<IndexResult>;
 }) {
   const [config, setConfig] = useState<PricingConfig>(() => cloneConfig(initialConfig));
   const [saving, setSaving] = useState(false);
+  const [savingVolume, setSavingVolume] = useState(false);
   const [geoOpen, setGeoOpen] = useState(false);
   const [message, setMessage] = useState<{ type: "ok" | "err"; text: string } | null>(null);
+  const [volumeMessage, setVolumeMessage] = useState<{ type: "ok" | "err"; text: string } | null>(null);
+
+  const volumeDiscount = config.volumeDiscount || ZERO_VOLUME_DISCOUNT;
 
   const retailerSlugs = useMemo(
     () => Object.keys(config.retailers || {}).sort((a, b) => a.localeCompare(b)),
@@ -99,7 +117,50 @@ export function AdminPricingEditor({
     }));
   };
 
+  const updateVolumePercent = (key: keyof VolumeDiscount, value: number) => {
+    setConfig((prev) => ({
+      ...prev,
+      volumeDiscount: {
+        ...(prev.volumeDiscount || ZERO_VOLUME_DISCOUNT),
+        [key]: value,
+      },
+    }));
+    setVolumeMessage(null);
+  };
+
+  const onSaveVolume = async () => {
+    const tiers = normalizeVolumeDiscount(config.volumeDiscount);
+    const orderErr = volumeDiscountOrderError(tiers);
+    if (orderErr) {
+      setVolumeMessage({ type: "err", text: orderErr });
+      return;
+    }
+    setSavingVolume(true);
+    setVolumeMessage(null);
+    try {
+      const result = await saveVolumeDiscountAction(tiers);
+      if (result.ok) {
+        setConfig(cloneConfig(result.config));
+        setVolumeMessage({
+          type: "ok",
+          text: "Volume discounting saved. New rates apply on the next checkout pricing refresh.",
+        });
+      } else {
+        setVolumeMessage({ type: "err", text: result.error });
+      }
+    } catch (e) {
+      setVolumeMessage({ type: "err", text: e instanceof Error ? e.message : "Save failed" });
+    } finally {
+      setSavingVolume(false);
+    }
+  };
+
   const onSave = async () => {
+    const orderErr = volumeDiscountOrderError(normalizeVolumeDiscount(config.volumeDiscount));
+    if (orderErr) {
+      setMessage({ type: "err", text: orderErr });
+      return;
+    }
     setSaving(true);
     setMessage(null);
     try {
@@ -173,6 +234,55 @@ export function AdminPricingEditor({
             className="mt-1 w-full rounded border border-slate-300 px-2 py-1.5 text-sm"
           />
         </label>
+      </section>
+
+      <section className="rounded-xl border bg-white p-5 shadow-sm">
+        <h2 className="text-lg font-semibold text-slate-900">Volume Discounting</h2>
+        <p className="mt-1 text-sm text-slate-600">
+          Percent off the gift-wrap base when this checkout has more than one wrapped item. AI, upload,
+          flowers, and box charges stay full price. 0 means no discount.
+        </p>
+        <div className="mt-4 flex flex-wrap items-end gap-6">
+          {(
+            [
+              ["twoItemsPercent", "2"],
+              ["threeToNineItemsPercent", "3 to 9"],
+              ["tenPlusItemsPercent", "10+"],
+            ] as Array<[keyof VolumeDiscount, string]>
+          ).map(([key, label]) => (
+            <label key={key} className="block text-sm">
+              <span className="font-medium text-slate-700">{label}</span>
+              <div className="mt-1 flex items-center gap-1">
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={2}
+                  name={`volumeDiscount.${key}`}
+                  value={String(volumeDiscount[key] ?? 0)}
+                  onChange={(e) => updateVolumePercent(key, parseWholePercent(e.target.value))}
+                  className="w-16 rounded border border-slate-300 px-2 py-1.5 text-right text-sm tabular-nums"
+                  aria-label={`${label} items percent`}
+                />
+                <span className="text-slate-600">%</span>
+              </div>
+            </label>
+          ))}
+        </div>
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            disabled={savingVolume}
+            onClick={() => void onSaveVolume()}
+            className="rounded bg-black px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+          >
+            {savingVolume ? "Saving…" : "Save"}
+          </button>
+          {volumeMessage && (
+            <p className={`text-sm ${volumeMessage.type === "ok" ? "text-green-700" : "text-red-700"}`}>
+              {volumeMessage.text}
+            </p>
+          )}
+        </div>
       </section>
 
       <section className="space-y-4">

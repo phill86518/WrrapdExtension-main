@@ -122,13 +122,36 @@ order has one hub, one tax rate, and one flower area.
 - Tested: locked bar against live `api.wrrapd.com` (read-only, auto-confirmed, typing ignored,
   unlock restores Submit); shared 2-item modal (item 2 locked to 32218, Back unlocks item 1).
 
+### E. Volume discounting (Oct 7)
+
+Membership discount is **not** in this version.
+
+**What the shopper sees** (only after Command Center rates are saved above 0):
+
+- Gift-wrapping still shows the full base (example: 2 × $6.99 = **$13.98**).
+- Directly under that line: **Multi-item base discount** (example: **-$1.40** at 10%). Never shown when the amount is $0.
+- Tax is calculated **after** the discount.
+- If one more wrap would raise the tier: *Gift-wrap another item to get a x% discount!*
+
+**Tiers** (Command Center → Checkout pricing → Volume Discounting): **2**, **3 to 9**, **10+** whole percents 0–99. Save requires 10+ ≥ 3–9 ≥ 2. Defaults **0 / 0 / 0** (no discount until you save rates). Applies only to the wrap **base**, not AI, upload, flowers, or the box charge. Count is wrapped units in this Pay Wrrapd checkout (same giftee ZIP). The retailer order number is not known before the payment summary.
+
+**Where it lives**
+
+- Admin UI: `tracking-platform/src/components/admin-pricing-editor.tsx` (own Save → `PUT /api/admin/volume-discount`).
+- Server math: `WrrapdServer/lib/volume-discount.js`, `lib/wrrapd-pricing.js` (pre-tax; older extensions without `multiItemDiscountAware` are not discounted so their charge still matches their summary).
+- Extension: `src/shared/volume-discount.js`, invoice rows, Amazon + LEGO + other-retailer payment summaries.
+- Shopper Your orders: combined summary on the right (`wrrapd-orders-bridge.php`).
+- Command Center order detail: discount split across separately listed items.
+
+Editor notes: `docs/VOLUME-DISCOUNT.md`.
+
 ### Checks run on the VM for 3.0.14
 
 - All 10 bundles load in simulated retailer pages against live `api.wrrapd.com` with zero errors; also with the API unreachable.
 - Target cart with a submitted giftee ZIP in session calls `/api/delivery-hub` and stores Jacksonville (`jax-1`, 150 BUSCH DR #26067).
 - Live `GET /api/delivery-hub?postalCode=32218` (and 30309, while only Jacksonville is active) returns the Jacksonville hub with Amazon CORS.
 - Hub switch tested with a mocked second hub (Atlanta): hub fill, Pay Wrrapd address and tax fallback all moved to it; a failed lookup fell back to Jacksonville; an expired pick (over 3 days) was ignored.
-- `npm run build`, `npm run build:prod`, Best Buy / Kohl's / order-capture fixture checks, server `npm test` (16 tests) all pass.
+- `npm run build`, `npm run build:prod`, Best Buy / Kohl's / order-capture fixture checks, server `npm test` (including `test/volume-discount.test.js`) all pass.
 - Built bundles contain no hub address, hub ZIP, hub phone, or price constants.
 
 ---

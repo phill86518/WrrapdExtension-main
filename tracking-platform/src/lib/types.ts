@@ -151,6 +151,10 @@ export type OrderLineItem = {
   itemCategory?: string;
   /** Optional unit price in USD cents when known from checkout */
   unitPriceCents?: number;
+  /** Gift-wrap base for this unit in USD cents (before volume discount). */
+  wrapBaseCents?: number;
+  /** This unit's share of a multi-item wrap-base discount, in USD cents. */
+  wrapDiscountCents?: number;
 };
 
 export type Order = {

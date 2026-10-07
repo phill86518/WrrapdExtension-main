@@ -14,6 +14,7 @@ const QRCode = require('qrcode');
 const https = require('https');
 const http = require('http');
 const wrrapdPricing = require(path.join(__dirname, 'lib', 'wrrapd-pricing'));
+const volumeDiscountLib = require(path.join(__dirname, 'lib', 'volume-discount'));
 const salesTaxZip = require(path.join(__dirname, 'lib', 'sales-tax-zip'));
 const allowedZipCodesLib = require(path.join(__dirname, 'lib', 'allowed-zip-codes'));
 const printerCoverage = require(path.join(__dirname, 'lib', 'printer-coverage'));
@@ -433,6 +434,7 @@ app.get('/api/pricing-preview', (req, res) => {
         retailer: r.retailer,
         geo: r.geo || null,
         customDesign,
+        volumeDiscount: r.volumeDiscount,
         ...(estimatedSalesTaxPercent !== null ? { estimatedSalesTaxPercent } : {}),
     });
 });
@@ -545,8 +547,25 @@ app.put('/api/admin/pricing-config', express.json(), (req, res) => {
         const saved = wrrapdPricing.savePricingConfigFromAdmin(req.body && req.body.config ? req.body.config : req.body);
         res.status(200).json({ ok: true, config: saved });
     } catch (e) {
+        if (e && e.statusCode === 400) return res.status(400).json({ error: e.message });
         console.error('[admin/pricing-config] save failed', e);
         res.status(500).json({ error: 'Failed to save pricing config' });
+    }
+});
+
+/** Admin: save only the volume-discount tiers (2 / 3–9 / 10+ items). */
+app.put('/api/admin/volume-discount', express.json(), (req, res) => {
+    if (!req.isApiDomain) {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
+    if (!requireWrrapdAdminKey(req, res)) return;
+    try {
+        const saved = wrrapdPricing.saveVolumeDiscountFromAdmin(req.body && req.body.volumeDiscount);
+        res.status(200).json({ ok: true, config: saved });
+    } catch (e) {
+        if (e && e.statusCode === 400) return res.status(400).json({ error: e.message });
+        console.error('[admin/volume-discount] save failed', e);
+        res.status(500).json({ error: 'Failed to save volume discount' });
     }
 });
 
@@ -1417,6 +1436,8 @@ const CHECKOUT_INVOICE_AGGREGATE_CODES = new Set([
     'WRPD_ESTIMATED_TAX',
     'WRPD_ORDER_TOTAL',
 ]);
+/** Present only when a volume discount applied (amount is negative). */
+const CHECKOUT_INVOICE_OPTIONAL_CODES = new Set(['WRPD_MULTI_ITEM_DISCOUNT']);
 
 function sanitizeMoneyField(v) {
     if (typeof v !== 'number' || !Number.isFinite(v)) return null;
@@ -1473,10 +1494,13 @@ function sanitizeCheckoutInvoiceCompleteForStorage(raw) {
     for (const row of aggIn.slice(0, 24)) {
         if (!row || typeof row !== 'object') continue;
         const code = typeof row.code === 'string' ? row.code.trim().slice(0, 48) : '';
-        if (!CHECKOUT_INVOICE_AGGREGATE_CODES.has(code)) continue;
+        const optional = CHECKOUT_INVOICE_OPTIONAL_CODES.has(code);
+        if (!CHECKOUT_INVOICE_AGGREGATE_CODES.has(code) && !optional) continue;
+        if (aggregateLines.some((l) => l.code === code)) continue;
         const label = typeof row.label === 'string' ? row.label.trim().slice(0, 160) : '';
         const amount = sanitizeMoneyField(row.amount);
         if (amount === null) continue;
+        if (optional && amount >= 0) continue;
         const o = { code, amount };
         if (label) o.label = label;
         const qty = row.quantity;
@@ -1485,10 +1509,14 @@ function sanitizeCheckoutInvoiceCompleteForStorage(raw) {
         }
         const unitPrice = sanitizeMoneyField(row.unitPrice);
         if (unitPrice !== null) o.unitPrice = unitPrice;
+        const pct = row.percent;
+        if (optional && typeof pct === 'number' && Number.isInteger(pct) && pct > 0 && pct <= 99) {
+            o.percent = pct;
+        }
         aggregateLines.push(o);
     }
-    if (aggregateLines.length !== CHECKOUT_INVOICE_AGGREGATE_CODES.size) return null;
-    if (new Set(aggregateLines.map((l) => l.code)).size !== CHECKOUT_INVOICE_AGGREGATE_CODES.size) return null;
+    const requiredCount = aggregateLines.filter((l) => CHECKOUT_INVOICE_AGGREGATE_CODES.has(l.code)).length;
+    if (requiredCount !== CHECKOUT_INVOICE_AGGREGATE_CODES.size) return null;
 
     const subtotal = sanitizeMoneyField(raw.subtotal);
     const estimatedTax = sanitizeMoneyField(raw.estimatedTax);
@@ -1510,6 +1538,7 @@ function sanitizeCheckoutInvoiceCompleteForStorage(raw) {
                 ? Math.floor(row.optionIndex)
                 : null;
         if (optionIndex === null || optionIndex > 500) continue;
+        const lineDiscount = sanitizeMoneyField(row.multiItemDiscount);
         perOptionLines.push({
             ...(asin ? { asin } : {}),
             ...(productTitle ? { productTitle } : {}),
@@ -1522,6 +1551,7 @@ function sanitizeCheckoutInvoiceCompleteForStorage(raw) {
             customDesignAi: sanitizeMoneyField(row.customDesignAi) ?? 0,
             customDesignUpload: sanitizeMoneyField(row.customDesignUpload) ?? 0,
             flowers: sanitizeMoneyField(row.flowers) ?? 0,
+            ...(lineDiscount !== null && lineDiscount < 0 ? { multiItemDiscount: lineDiscount } : {}),
         });
     }
 
@@ -1576,7 +1606,42 @@ function sanitizeCheckoutInvoiceForStorage(raw) {
     return out;
 }
 
-/** Pre-tax wrap (base+AI+upload) and flowers totals in cents from checkout invoice aggregates. */
+/** Spread the wrap-base discount across wrapped line items when Command Center lists them separately. */
+function applyWrapDiscountToLineItems(lineItems, checkoutInvoice, pricingCart) {
+    if (!Array.isArray(lineItems) || !lineItems.length) return lineItems;
+    const complete =
+        (checkoutInvoice && checkoutInvoice.complete) ||
+        (checkoutInvoice && checkoutInvoice.schemaVersion === 1 ? checkoutInvoice : null);
+    const catalog = complete && complete.priceCatalog;
+    let base = catalog && typeof catalog.giftWrapBase === 'number' ? catalog.giftWrapBase : null;
+    let discountCents = 0;
+    const agg = complete && Array.isArray(complete.aggregateLines) ? complete.aggregateLines : [];
+    const discRow = agg.find((l) => l && l.code === 'WRPD_MULTI_ITEM_DISCOUNT');
+    if (discRow && typeof discRow.amount === 'number' && discRow.amount < 0) {
+        discountCents = Math.round(-discRow.amount * 100);
+    }
+    if ((base == null || !Number.isFinite(base) || base <= 0) && pricingCart && typeof pricingCart === 'object') {
+        const cart = wrrapdPricing.sanitizePricingCartFromRequest(pricingCart);
+        if (cart) {
+            const priced = wrrapdPricing.computeTotalUsdFromPricingCart(cart);
+            if (priced && priced.unitPrices && Number.isFinite(priced.unitPrices.giftWrapBase)) {
+                base = priced.unitPrices.giftWrapBase;
+            }
+            if (priced && priced.breakdown && Number.isFinite(priced.breakdown.multiItemDiscount)) {
+                discountCents = Math.round(priced.breakdown.multiItemDiscount * 100);
+            }
+        }
+    }
+    if (base == null || !Number.isFinite(base) || base <= 0) return lineItems;
+    const wrapBaseCents = Math.round(base * 100);
+    const shares = volumeDiscountLib.allocateDiscountCents(discountCents, lineItems.length);
+    for (let i = 0; i < lineItems.length; i++) {
+        lineItems[i].wrapBaseCents = wrapBaseCents;
+        if (shares[i] > 0) lineItems[i].wrapDiscountCents = shares[i];
+    }
+    return lineItems;
+}
+
 function revenueCentsFromCheckoutInvoice(checkoutInvoice) {
     const complete =
         sanitizeCheckoutInvoiceCompleteForStorage(checkoutInvoice) ||
@@ -1596,6 +1661,7 @@ function revenueCentsFromCheckoutInvoice(checkoutInvoice) {
         const cents = Math.round(amount * 100);
         if (
             code === 'WRPD_GIFT_WRAP_BASE' ||
+            code === 'WRPD_MULTI_ITEM_DISCOUNT' ||
             code === 'WRPD_CUSTOM_DESIGN_AI' ||
             code === 'WRPD_CUSTOM_DESIGN_UPLOAD'
         ) {
@@ -3055,6 +3121,7 @@ app.post('/process-payment', async (req, res) => {
         gifteeOriginalAddress,
         finalShippingAddress: finalShippingAddressFromClient,
         checkoutInvoice,
+        pricingCart,
     } = req.body;
 
     // Validate that all parameters are present
@@ -3584,6 +3651,7 @@ app.post('/process-payment', async (req, res) => {
                     itemCategory: it.itemCategory ? String(it.itemCategory) : '',
                 };
             });
+            applyWrapDiscountToLineItems(lineItems, checkoutInvoice, pricingCart);
             const wrappedAmazonDays = [...new Set(
                 wrappedOnly
                     .map((it) => amazonDateKeyFromItem(it))

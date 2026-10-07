@@ -374,6 +374,14 @@ export default async function AdminOrderDetailPage({
                   {li.giftMessage ? <p className="text-slate-600">Message: {li.giftMessage}</p> : null}
                   {li.occasion ? <p className="text-slate-600">Occasion: {li.occasion}</p> : null}
                   {li.wrappingOption ? <p className="text-slate-600">Wrap: {li.wrappingOption}</p> : null}
+                  {li.wrapBaseCents != null ? (
+                    <p className="text-slate-600">
+                      Gift wrap: {formatUsdCents(li.wrapBaseCents)}
+                      {li.wrapDiscountCents
+                        ? ` · Multi-item base discount: -$${(li.wrapDiscountCents / 100).toFixed(2)}`
+                        : null}
+                    </p>
+                  ) : null}
                   <p className="text-slate-600">{boxLine}</p>
                   {li.itemCategory ? <p className="text-slate-500">Category: {li.itemCategory}</p> : null}
                 </div>

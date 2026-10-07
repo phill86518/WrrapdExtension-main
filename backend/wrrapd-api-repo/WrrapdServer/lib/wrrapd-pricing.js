@@ -13,12 +13,15 @@ const DEFAULT_UNIT = Object.freeze({
     flowers: 17.99,
 });
 
+const volumeDiscount = require('./volume-discount');
+
 const DEFAULT_CONFIG = Object.freeze({
     version: 'default',
     defaultUnitPrices: { ...DEFAULT_UNIT },
     globalMultiplier: 1,
     rules: [],
     retailers: {},
+    volumeDiscount: { ...volumeDiscount.ZERO_VOLUME_DISCOUNT },
 });
 
 const PRICING_CONFIG_PATH = path.join(__dirname, '..', 'data', 'wrrapd-pricing-config.json');
@@ -130,6 +133,7 @@ function normalizePricingConfig(parsed) {
         globalMultiplier,
         rules,
         retailers,
+        volumeDiscount: volumeDiscount.normalizeVolumeDiscount(src.volumeDiscount),
     };
 }
 
@@ -163,7 +167,14 @@ function loadPricingConfig() {
         }
     }
 
-    cachedConfig = parsed ? normalizePricingConfig(parsed) : { ...DEFAULT_CONFIG, defaultUnitPrices: { ...DEFAULT_UNIT }, retailers: {} };
+    cachedConfig = parsed
+        ? normalizePricingConfig(parsed)
+        : {
+              ...DEFAULT_CONFIG,
+              defaultUnitPrices: { ...DEFAULT_UNIT },
+              retailers: {},
+              volumeDiscount: { ...volumeDiscount.ZERO_VOLUME_DISCOUNT },
+          };
     cachedConfigSignature = signature;
     return cachedConfig;
 }
@@ -377,23 +388,36 @@ function resolveWrrapdUnitPrices(geo, retailer) {
             state: stateNorm || null,
             county: countyNorm || null,
         },
+        volumeDiscount: volumeDiscount.normalizeVolumeDiscount(cfg.volumeDiscount),
     };
 }
 
 /**
  * @param {Array<{ options?: Array<{ checkbox_wrrapd?: boolean, selected_wrapping_option?: string, checkbox_flowers?: boolean }> }>} items
  * @param {{ giftWrapBase: number, customDesignAi: number, customDesignUpload: number, flowers: number }} unitPrices
+ * @param {{ twoItemsPercent: number, threeToNineItemsPercent: number, tenPlusItemsPercent: number }} [volumeTiers]
  */
-function computeSubtotalFromPricingCartItems(items, unitPrices) {
+function computeSubtotalFromPricingCartItems(items, unitPrices, volumeTiers) {
     const p = unitPrices;
     let giftWrapTotal = 0;
+    let giftWrapCount = 0;
     let designAiTotal = 0;
     let designUploadTotal = 0;
     let flowersTotal = 0;
     let boxTotal = 0;
     let boxCount = 0;
     if (!Array.isArray(items)) {
-        return { giftWrapTotal, designAiTotal, designUploadTotal, flowersTotal, boxTotal, boxCount };
+        return {
+            giftWrapTotal,
+            giftWrapCount,
+            multiItemDiscountPercent: 0,
+            multiItemDiscount: 0,
+            designAiTotal,
+            designUploadTotal,
+            flowersTotal,
+            boxTotal,
+            boxCount,
+        };
     }
     for (const item of items) {
         if (!item || typeof item !== 'object') continue;
@@ -402,6 +426,7 @@ function computeSubtotalFromPricingCartItems(items, unitPrices) {
             if (!option || typeof option !== 'object') continue;
             if (option.checkbox_wrrapd) {
                 giftWrapTotal += p.giftWrapBase;
+                giftWrapCount += 1;
                 if (option.selected_wrapping_option === 'ai') {
                     designAiTotal += p.customDesignAi;
                 } else if (option.selected_wrapping_option === 'upload') {
@@ -429,8 +454,12 @@ function computeSubtotalFromPricingCartItems(items, unitPrices) {
             }
         }
     }
+    const disc = volumeDiscount.computeMultiItemBaseDiscount(p.giftWrapBase, giftWrapCount, volumeTiers);
     return {
         giftWrapTotal: round2(giftWrapTotal),
+        giftWrapCount,
+        multiItemDiscountPercent: disc.discountCents > 0 ? disc.percent : 0,
+        multiItemDiscount: disc.discountCents / 100,
         designAiTotal: round2(designAiTotal),
         designUploadTotal: round2(designUploadTotal),
         flowersTotal: round2(flowersTotal),
@@ -458,9 +487,19 @@ function computeTotalUsdFromPricingCart(pricingCart) {
     };
     const resolved = resolveWrrapdUnitPrices(geo, geo.retailer);
     const { unitPrices, configVersion, appliedRuleIds, timeZone } = resolved;
-    const br = computeSubtotalFromPricingCartItems(pricingCart && pricingCart.items, unitPrices);
+    // Older extension builds do not show the discount line; keep their charge equal to their summary.
+    const volumeTiers =
+        pricingCart && pricingCart.multiItemDiscountAware === true
+            ? resolved.volumeDiscount
+            : volumeDiscount.ZERO_VOLUME_DISCOUNT;
+    const br = computeSubtotalFromPricingCartItems(pricingCart && pricingCart.items, unitPrices, volumeTiers);
     const subtotal = round2(
-        br.giftWrapTotal + br.designAiTotal + br.designUploadTotal + br.flowersTotal + (br.boxTotal || 0),
+        br.giftWrapTotal -
+            br.multiItemDiscount +
+            br.designAiTotal +
+            br.designUploadTotal +
+            br.flowersTotal +
+            (br.boxTotal || 0),
     );
     const estimatedTax = round2(subtotal * (taxRatePercent / 100));
     const total = round2(subtotal + estimatedTax);
@@ -565,6 +604,7 @@ function sanitizePricingCartFromRequest(body) {
             typeof body.retailer === 'string'
                 ? normalizeRetailerSlug(body.retailer)
                 : undefined,
+        multiItemDiscountAware: body.multiItemDiscountAware === true,
     };
 }
 
@@ -572,12 +612,13 @@ function getPricingConfigForAdmin() {
     return loadPricingConfig();
 }
 
-function savePricingConfigFromAdmin(body) {
-    const next = normalizePricingConfig(body);
-    next.version =
-        typeof body.version === 'string' && body.version.trim()
-            ? body.version.trim().slice(0, 64)
-            : new Date().toISOString().slice(0, 10);
+function badRequest(message) {
+    const err = new Error(message);
+    err.statusCode = 400;
+    return err;
+}
+
+function writePricingConfig(next) {
     fs.mkdirSync(path.dirname(PRICING_CONFIG_PATH), { recursive: true });
     fs.writeFileSync(PRICING_CONFIG_PATH, `${JSON.stringify(next, null, 2)}\n`, 'utf8');
     cachedConfig = next;
@@ -585,15 +626,53 @@ function savePricingConfigFromAdmin(body) {
     return next;
 }
 
+function savePricingConfigFromAdmin(body) {
+    const src = body && typeof body === 'object' ? body : {};
+    const next = normalizePricingConfig(src);
+    // A save that omits the section must not wipe live discount rates.
+    if (!src.volumeDiscount || typeof src.volumeDiscount !== 'object') {
+        next.volumeDiscount = volumeDiscount.normalizeVolumeDiscount(loadPricingConfig().volumeDiscount);
+    }
+    const orderErr = volumeDiscount.volumeDiscountOrderError(next.volumeDiscount);
+    if (orderErr) throw badRequest(orderErr);
+    next.version =
+        typeof src.version === 'string' && src.version.trim()
+            ? src.version.trim().slice(0, 64)
+            : new Date().toISOString().slice(0, 10);
+    return writePricingConfig(next);
+}
+
+/** Admin: update only the volume-discount tiers; every other pricing field stays as saved. */
+function saveVolumeDiscountFromAdmin(raw) {
+    if (!raw || typeof raw !== 'object') throw badRequest('volumeDiscount is required');
+    for (const key of Object.keys(volumeDiscount.ZERO_VOLUME_DISCOUNT)) {
+        const n = Number(raw[key]);
+        if (!Number.isInteger(n) || n < 0 || n > 99) {
+            throw badRequest('Each discount must be a whole number from 0 to 99.');
+        }
+    }
+    const tiers = volumeDiscount.normalizeVolumeDiscount(raw);
+    const orderErr = volumeDiscount.volumeDiscountOrderError(tiers);
+    if (orderErr) throw badRequest(orderErr);
+    const current = loadPricingConfig();
+    return writePricingConfig({
+        ...current,
+        version: new Date().toISOString().slice(0, 10),
+        volumeDiscount: tiers,
+    });
+}
+
 module.exports = {
     resolveWrrapdUnitPrices,
     computeTotalCentsFromPricingCart,
     computeTotalUsdFromPricingCart,
+    computeSubtotalFromPricingCartItems,
     sanitizePricingCartFromRequest,
     parseConfigFromEnv,
     loadPricingConfig,
     getPricingConfigForAdmin,
     savePricingConfigFromAdmin,
+    saveVolumeDiscountFromAdmin,
     normalizeRetailerSlug,
     DEFAULT_UNIT,
     zipCounty,

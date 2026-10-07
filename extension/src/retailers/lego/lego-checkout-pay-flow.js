@@ -23,6 +23,12 @@ import { readLegoCartSnapshot, syncLegoCartGiftState } from "./lego-cart-extract
 import { refreshLegoGifteeShippingAddressFill } from "./lego-giftee-shipping-fill.js";
 import { loadWrrapdTermsHtml } from "../../shared/wrrapd-terms.js";
 import { buildGiftWrapInvoiceRows } from "../../shared/wrrapd-invoice-lines.js";
+import {
+  multiItemDiscountFor,
+  readVolumeDiscount,
+  rememberVolumeDiscountFromPreview,
+  volumeDiscountNudgeText,
+} from "../../shared/volume-discount.js";
 import { boxChargeUsd, countLooseBoxes, looseItemNeedsBox, refreshBoxQuote } from "../../shared/gift-box.js";
 import { readInstallId } from "../../shared/install-id.js";
 import { resolveFlowerChargeDollars } from "../../shared/flowers-catalog.js";
@@ -122,6 +128,7 @@ async function refreshCheckoutUnitPricesFromServer(geo) {
     const r = await fetch(u.toString(), { credentials: "omit" });
     if (!r.ok) return Boolean(wrrapdCheckoutUnitPriceOverride);
     const j = await r.json();
+    rememberVolumeDiscountFromPreview(j);
     let gotTax = false;
     if (typeof j.estimatedSalesTaxPercent === "number" && Number.isFinite(j.estimatedSalesTaxPercent)) {
       legoPreviewTaxPercent = j.estimatedSalesTaxPercent;
@@ -232,6 +239,7 @@ function computeServiceSubtotalCents() {
   const n = allChoices.length;
   if (n <= 0) return 0;
   let dollars = p.giftWrapBase * n;
+  dollars -= multiItemDiscountFor(p.giftWrapBase, n).discountUsd;
   for (let i = 0; i < n; i++) {
     const ch = allChoices[i];
     if (ch.wrapPref === "ai") dollars += p.customDesignAi;
@@ -298,6 +306,7 @@ function buildLegoPricingCart() {
     state: "",
     country: "US",
     retailer: "lego",
+    multiItemDiscountAware: true,
   };
 }
 
@@ -676,6 +685,7 @@ async function postLegoProcessPayment(eventData) {
         gifterFullName: String(eventData.gifterFullName || "").trim() || undefined,
         finalShippingAddress: eventData.finalShippingAddress || null,
         gifteeOriginalAddress: gifteeStubFromSession(),
+        pricingCart: buildLegoPricingCart(),
       }),
     });
     const result = await response.json().catch(() => ({}));
@@ -752,13 +762,17 @@ function buildSummaryLinesAndTotal() {
   const p = getActiveCheckoutUnitPrices();
   if (!p) return { invoiceRows: [], totalCents: 0 };
   const allChoices = readLegoItemChoices();
+  const disc = multiItemDiscountFor(p.giftWrapBase, allChoices.length);
   const invoiceRows = buildGiftWrapInvoiceRows(
     allChoices,
     p,
     countLooseBoxes(
       allChoices.map((ch, i) => ({ title: readLegoCartSnapshot()[i]?.title, flowers: ch.flowers === true })),
     ),
+    disc.discountCents,
   );
+  const nudge = volumeDiscountNudgeText(readVolumeDiscount(), allChoices.length);
+  if (nudge) invoiceRows.push({ label: nudge, amount: null });
   const br = computeLegoTotalBreakdown();
   if (br.taxUsd > 0) {
     invoiceRows.push({ label: "Sales tax", amount: `$${br.taxUsd.toFixed(2)}` });
