@@ -144,7 +144,7 @@ Membership discount is **not** in this version.
 
 Editor notes: `docs/VOLUME-DISCOUNT.md`.
 
-**Checkout rebuild loop:** LEGO’s page watcher was calling the price API on every animation frame, so the discount line flashed and Chrome ran out of connections (`ERR_INSUFFICIENT_RESOURCES`, then 429). The watcher now only puts the existing panel back. Prices are requested once, then at most every 15 seconds if that request failed. Disable every other Wrrapd extension while testing — a second copy still injects `content-lego.js` and keeps calling the API.
+**Checkout rebuild loop:** LEGO’s page watcher was calling the price API on every animation frame, so the discount line flashed and Chrome ran out of connections (`ERR_INSUFFICIENT_RESOURCES`, then 429). The watcher now only puts the existing panel back. Prices are requested once. If that request fails, it is tried again immediately, then every 2 seconds until it succeeds. Disable every other Wrrapd extension while testing — a second copy still injects `content-lego.js` and keeps calling the API.
 
 ### Checks run on the VM for 3.0.14
 

@@ -932,28 +932,13 @@ async function refreshPaymentSummaryOnce() {
   }
 
   const zip = gifteeZip5();
-  const sinceFetch = Date.now() - legoPricingFetchedAt;
   const needPrices =
     !getActiveCheckoutUnitPrices() ||
     !hasConfirmedVolumeDiscount() ||
     legoPricingFetchedZip !== zip;
-  // A failed preview used to look "not ready" and was retried on the next animation frame.
-  if (needPrices && sinceFetch >= 15000) {
-    legoPricingFetchedAt = Date.now();
-    legoPricingFetchedZip = zip;
-    await refreshCheckoutUnitPricesFromServer({
-      postalCode: taxPostalForPricing(zip),
-      state: "FL",
-      country: "US",
-    });
-    const quoteChoices = readLegoItemChoices();
-    const quoteLines = readLegoCartSnapshot();
-    await refreshBoxQuote(
-      quoteChoices.map((ch, i) => ({
-        title: quoteLines[i]?.title,
-        flowers: ch.flowers === true,
-      })),
-    ).catch(() => null);
+  if (needPrices) {
+    await fetchCheckoutPrices(zip);
+    if (!checkoutPricesReady()) await fetchCheckoutPrices(zip);
   }
 
   const next = paint();
@@ -973,9 +958,29 @@ async function refreshPaymentSummaryOnce() {
       openLegoPaymentPopup();
     });
   }
-  if (!getActiveCheckoutUnitPrices() || !hasConfirmedVolumeDiscount()) {
-    schedulePriceRetry();
-  }
+  if (!checkoutPricesReady()) schedulePriceRetry();
+}
+
+function checkoutPricesReady() {
+  return Boolean(getActiveCheckoutUnitPrices()) && hasConfirmedVolumeDiscount();
+}
+
+async function fetchCheckoutPrices(zip) {
+  legoPricingFetchedAt = Date.now();
+  legoPricingFetchedZip = zip;
+  await refreshCheckoutUnitPricesFromServer({
+    postalCode: taxPostalForPricing(zip),
+    state: "FL",
+    country: "US",
+  });
+  const quoteChoices = readLegoItemChoices();
+  const quoteLines = readLegoCartSnapshot();
+  await refreshBoxQuote(
+    quoteChoices.map((ch, i) => ({
+      title: quoteLines[i]?.title,
+      flowers: ch.flowers === true,
+    })),
+  ).catch(() => null);
 }
 
 function schedulePriceRetry() {
@@ -983,9 +988,9 @@ function schedulePriceRetry() {
   priceRetryTimer = window.setTimeout(() => {
     priceRetryTimer = 0;
     if (!summaryArmed) return;
-    if (getActiveCheckoutUnitPrices() && hasConfirmedVolumeDiscount()) return;
+    if (checkoutPricesReady()) return;
     void ensurePaymentSummaryUi();
-  }, 15000);
+  }, 2000);
 }
 
 function ensurePaymentSummaryUi() {
