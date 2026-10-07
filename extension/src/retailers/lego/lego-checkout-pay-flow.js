@@ -52,7 +52,7 @@ let legoPricingFetchComplete = false;
 let legoPricingFetchedAt = 0;
 let legoPricingFetchedZip = "";
 let summaryRefreshJob = null;
-let summaryRefreshAgain = false;
+let priceRetryTimer = 0;
 /** Keep the same panel node so a LEGO re-render cannot swap in a copy with no discount. */
 let heldSummaryHost = null;
 
@@ -80,6 +80,9 @@ function findCheckoutSecurelyButton() {
   return findCheckoutSecurelyButtons()[0] || null;
 }
 
+/** True after the summary has been asked for once. The page watcher must not ask again every frame. */
+let summaryArmed = false;
+
 export function applyCheckoutSecurelyGate() {
   const radio = readGiftRadio();
   const ready = readGiftChoicesSaved() && readGiftLegalTermsAccepted();
@@ -95,11 +98,17 @@ export function applyCheckoutSecurelyGate() {
       btn.removeAttribute("data-wrrapd-lego-checkout-gated");
     }
   }
-  // Mount the real Wrrapd invoice (gift-wrap + flowers) as soon as choices are saved —
-  // do not leave shoppers staring at LEGO's order total alone.
+  // LEGO rewrites the checkout column constantly. This function runs on those
+  // rewrites. It may put the existing panel back. It must not call the API.
   if (radio === "yes" && ready) {
-    void ensurePaymentSummaryUi();
-  } else {
+    const btn = findCheckoutSecurelyButton();
+    if (btn) reattachHeldSummary(btn);
+    if (!summaryArmed) {
+      summaryArmed = true;
+      void ensurePaymentSummaryUi();
+    }
+  } else if (summaryArmed || heldSummaryHost) {
+    summaryArmed = false;
     removeLegoPaymentSummary();
   }
 }
@@ -914,30 +923,38 @@ async function refreshPaymentSummaryOnce() {
   reattachHeldSummary(btn);
   const first = paint();
   const existing = heldSummaryHost && heldSummaryHost.isConnected ? heldSummaryHost : null;
-  if (first.payReady && existing?.getAttribute("data-wrrapd-summary-sig") === first.sig) return;
+  if (
+    first.payReady &&
+    hasConfirmedVolumeDiscount() &&
+    existing?.getAttribute("data-wrrapd-summary-sig") === first.sig
+  ) {
+    return;
+  }
 
   const zip = gifteeZip5();
-  const stale =
-    !first.payReady ||
-    legoPricingFetchedZip !== zip ||
-    Date.now() - legoPricingFetchedAt > 60 * 1000;
-  if (stale) {
+  const sinceFetch = Date.now() - legoPricingFetchedAt;
+  const needPrices =
+    !getActiveCheckoutUnitPrices() ||
+    !hasConfirmedVolumeDiscount() ||
+    legoPricingFetchedZip !== zip;
+  // A failed preview used to look "not ready" and was retried on the next animation frame.
+  if (needPrices && sinceFetch >= 15000) {
+    legoPricingFetchedAt = Date.now();
+    legoPricingFetchedZip = zip;
     await refreshCheckoutUnitPricesFromServer({
       postalCode: taxPostalForPricing(zip),
       state: "FL",
       country: "US",
     });
-    legoPricingFetchedAt = Date.now();
-    legoPricingFetchedZip = zip;
+    const quoteChoices = readLegoItemChoices();
+    const quoteLines = readLegoCartSnapshot();
+    await refreshBoxQuote(
+      quoteChoices.map((ch, i) => ({
+        title: quoteLines[i]?.title,
+        flowers: ch.flowers === true,
+      })),
+    ).catch(() => null);
   }
-  const quoteChoices = readLegoItemChoices();
-  const quoteLines = readLegoCartSnapshot();
-  await refreshBoxQuote(
-    quoteChoices.map((ch, i) => ({
-      title: quoteLines[i]?.title,
-      flowers: ch.flowers === true,
-    })),
-  ).catch(() => null);
 
   const next = paint();
   reattachHeldSummary(btn);
@@ -956,23 +973,26 @@ async function refreshPaymentSummaryOnce() {
       openLegoPaymentPopup();
     });
   }
+  if (!getActiveCheckoutUnitPrices() || !hasConfirmedVolumeDiscount()) {
+    schedulePriceRetry();
+  }
+}
+
+function schedulePriceRetry() {
+  if (priceRetryTimer) return;
+  priceRetryTimer = window.setTimeout(() => {
+    priceRetryTimer = 0;
+    if (!summaryArmed) return;
+    if (getActiveCheckoutUnitPrices() && hasConfirmedVolumeDiscount()) return;
+    void ensurePaymentSummaryUi();
+  }, 15000);
 }
 
 function ensurePaymentSummaryUi() {
-  if (summaryRefreshJob) {
-    summaryRefreshAgain = true;
-    return summaryRefreshJob;
-  }
-  summaryRefreshJob = (async () => {
-    try {
-      do {
-        summaryRefreshAgain = false;
-        await refreshPaymentSummaryOnce();
-      } while (summaryRefreshAgain);
-    } finally {
-      summaryRefreshJob = null;
-    }
-  })();
+  if (summaryRefreshJob) return summaryRefreshJob;
+  summaryRefreshJob = refreshPaymentSummaryOnce().finally(() => {
+    summaryRefreshJob = null;
+  });
   return summaryRefreshJob;
 }
 
@@ -992,6 +1012,8 @@ function migrateLegacyGiftTcFlag() {
  * Capture Checkout Securely: hub confirmation → payment summary → pay.wrrapd.com/checkout/lego.
  */
 export function initLegoCheckoutPayFlow() {
+  if (window.__WRRAPD_LEGO_PAY_FLOW__) return;
+  window.__WRRAPD_LEGO_PAY_FLOW__ = true;
   migrateLegacyGiftTcFlag();
   bindPayMessageOnce();
 

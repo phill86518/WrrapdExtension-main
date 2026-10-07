@@ -144,7 +144,7 @@ Membership discount is **not** in this version.
 
 Editor notes: `docs/VOLUME-DISCOUNT.md`.
 
-**Checkout rebuild loop:** LEGO deletes the injected summary and asks for prices again, so the discount line flashed and the API started refusing requests. A refused ZIP check was shown as “we can’t deliver to that ZIP.” The panel is now put back as the same node (tiers from the last real price response stay), and a failed ZIP check says to try again. 32218 is still on the allowlist. Disable the Chrome Web Store copy of the extension while testing this unpacked build, or the two copies fight over the same panel.
+**Checkout rebuild loop:** LEGO’s page watcher was calling the price API on every animation frame, so the discount line flashed and Chrome ran out of connections (`ERR_INSUFFICIENT_RESOURCES`, then 429). The watcher now only puts the existing panel back. Prices are requested once, then at most every 15 seconds if that request failed. Disable every other Wrrapd extension while testing — a second copy still injects `content-lego.js` and keeps calling the API.
 
 ### Checks run on the VM for 3.0.14
 

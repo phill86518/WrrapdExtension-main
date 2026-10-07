@@ -1030,10 +1030,23 @@ function tryMountGiftUpsell() {
 }
 
 export function initLegoGiftWrapUpsell() {
+  if (window.__WRRAPD_LEGO_UPSELL__) return;
+  window.__WRRAPD_LEGO_UPSELL__ = true;
   let raf = 0;
   const schedule = () => {
     if (raf) return;
-    raf = window.requestAnimationFrame(() => { raf = 0; tryMountGiftUpsell(); });
+    raf = window.requestAnimationFrame(() => {
+      raf = 0;
+      const path = (window.location.pathname || "").toLowerCase();
+      const isCheckout = path.includes("/checkout") || path.includes("/checkouts");
+      // Checkout mutations are LEGO redrawing the column. Re-gate the button and
+      // put the panel back. Do not rebuild the cart UI, and do not fetch prices.
+      if (isCheckout) {
+        applyCheckoutSecurelyGate();
+        return;
+      }
+      tryMountGiftUpsell();
+    });
   };
 
   window.addEventListener("wrrapd-lego-payment-updated", () => {
