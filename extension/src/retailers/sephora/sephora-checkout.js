@@ -1,14 +1,12 @@
 import { initRetailerCheckoutPayFlow } from "../../shared/retailer-checkout-pay-flow.js";
-import { WRRAPD_HUB_ADDRESS, lockHubShippingFields } from "../../shared/wrrapd-hub.js";
+import { getHubAddress, lockHubShippingFields } from "../../shared/wrrapd-hub.js";
+import { ensureExtensionConfig } from "../../shared/extension-config.js";
 import {
   SEPHORA_BASKET_URL_HINTS,
   SEPHORA_CHECKOUT_URL_HINTS,
   SEPHORA_SESSION_PREFIX,
 } from "./constants.js";
 import { extractSephoraCartSnapshot } from "./retailer-bootstrap.js";
-
-/** Phone shown to the retailer for hub delivery questions (Sephora requires a phone). */
-const HUB_PHONE = "904-204-0617";
 
 const SEPHORA_PAY_SLOT_ID = "wrrapd-sephora-pay-slot";
 
@@ -86,8 +84,10 @@ function findSephoraSummaryMountAnchor() {
  * Sephora derives city/state from the street + ZIP via address verification,
  * so we only set the fields the form actually exposes.
  */
-function fillSephoraHubShippingFields() {
-  const h = WRRAPD_HUB_ADDRESS;
+async function fillSephoraHubShippingFields() {
+  await ensureExtensionConfig().catch(() => null);
+  const h = getHubAddress();
+  if (!h) return;
   const zip5 = String(h.postalCode || "").replace(/\D/g, "").slice(0, 5);
 
   const first = document.querySelector('[data-at="first_name_input"], #firstName');
@@ -98,7 +98,7 @@ function fillSephoraHubShippingFields() {
 
   if (first) setNativeInputValue(first, h.recipientFirstName);
   if (last) setNativeInputValue(last, h.recipientLastName);
-  if (phone) setNativeInputValue(phone, HUB_PHONE);
+  if (phone && h.phone) setNativeInputValue(phone, h.phone);
   if (street) setNativeInputValue(street, h.addressLine1);
   if (zip) setNativeInputValue(zip, zip5);
   lockHubShippingFields();

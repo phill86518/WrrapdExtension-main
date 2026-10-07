@@ -90,9 +90,9 @@ import { formatUsd } from '../shared/wrrapd-unit-pricing.js';
         return prices;
     }
 
-    function priceLabel(key) {
+    function priceText(key, before, after = '') {
         const n = getActiveCheckoutUnitPrices()?.[key];
-        return typeof n === 'number' ? n.toFixed(2) : '…';
+        return typeof n === 'number' ? `${before}$${n.toFixed(2)}${after}` : '';
     }
 
     function hubCityTitle(city) {
@@ -162,7 +162,13 @@ import { formatUsd } from '../shared/wrrapd-unit-pricing.js';
      * Payment summary uses the giftee ZIP prices from pricing-preview.
      */
     async function ensureAmazonCheckoutUnitPricesForSummary() {
-        await refreshAmazonBoxQuoteFromStorage();
+        const boxQuote = refreshAmazonBoxQuoteFromStorage();
+        const ok = await ensureAmazonCheckoutUnitPricesOnly();
+        await boxQuote;
+        return ok;
+    }
+
+    async function ensureAmazonCheckoutUnitPricesOnly() {
         const zip = amazonGifteeZipForPricing();
         const geo = {
             postalCode: zip.length === 5 ? zip : undefined,
@@ -1066,8 +1072,10 @@ import { formatUsd } from '../shared/wrrapd-unit-pricing.js';
         setInterval(checkURLAndExecute, 1000);
     }
     
-    // Inicializar monitoreo
-    monitorURLChanges();
+    // Hub address matching needs /api/extension-config before any address step runs.
+    ensureExtensionConfig()
+        .catch(() => null)
+        .finally(() => monitorURLChanges());
 
     // ----------------------------------------------------- CART PAGE -----------------------------------------------------
 
@@ -3355,6 +3363,10 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
             console.log('[insertWrrapdOptions] Amazon session not signed in — skip.');
             return;
         }
+        await Promise.all([
+            ensureExtensionConfig().catch(() => null),
+            ensureAmazonCheckoutUnitPricesOnly().catch(() => false),
+        ]);
 
         // Key: title, Value: next sub-item index to use.
         let subItemIndexTracker = {};
@@ -3614,7 +3626,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                             <label style="display: contents;">
                                 <input type="checkbox" id="wrrapd-checkbox-${i}" style="margin-right: 5px; width: 18px; height: 18px; min-width: 18px; min-height: 18px;">
                                 <span class="a-label a-checkbox-label" style="padding: 0;">
-                                    Go beyond the bag!&nbsp;&nbsp;Gift-wrap the box and/or deliver with flowers by Wrrapd - $${priceLabel('giftWrapBase')}
+                                    Go beyond the bag!&nbsp;&nbsp;Gift-wrap the box and/or deliver with flowers by Wrrapd${priceText('giftWrapBase', ' - ')}
                                 </span>
                             </label>
                         </div>
@@ -3698,7 +3710,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                                         <label data-wrrapd-custom-design="upload" style="display: none; align-items: start;">
                                             <input type="radio" name="wrapping-option-${i}" value="upload" style="margin-right: 10px; ">
                                             <div>
-                                                <div style="font-weight: bold;">Upload your own design (+$${priceLabel('customDesignUpload')})</div>
+                                                <div style="font-weight: bold;">Upload your own design${priceText('customDesignUpload', ' (+', ')')}</div>
                                                 <input type="file" id="design-upload-${i}" accept="image/*" style="margin-top: 10px; display: none;">
                                                 <button id="upload-btn-${i}" class="a-button" style="margin-top: 10px; padding: 5px 10px; display: none;">
                                                     Upload
@@ -3713,7 +3725,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                                         <label data-wrrapd-custom-design="ai" style="display: none; align-items: start;">
                                             <input type="radio" name="wrapping-option-${i}" value="ai" style="margin-right: 10px;">
                                                 <div style="width: 100%;">
-                                                    <div style="font-weight: bold;">Generate AI designs (+$${priceLabel('customDesignAi')})</div>
+                                                    <div style="font-weight: bold;">Generate AI designs${priceText('customDesignAi', ' (+', ')')}</div>
                                                     <div id="ai-options-${i}" style="display: none; margin-top: 10px; width: 100%;">
                                                         <div style="margin-bottom: 8px; color: #666;">What's the occasion?  Who is the giftee?  What do they like?  Please feel free to suggest any themes...</div>
                                                         <input type="text" id="occasion-input-${i}" 
@@ -12021,12 +12033,14 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
                         };
                     }
 
-                    await refreshWrrapdCheckoutUnitPricesFromServer({
-                        postalCode: modalZip || gifteeOriginalAddress.postalCode || addressObject.postalCode,
-                        state: gifteeOriginalAddress.state || addressObject.state,
-                        country: gifteeOriginalAddress.country || addressObject.country,
-                    });
-                    await refreshAmazonBoxQuoteFromStorage();
+                    await Promise.all([
+                        refreshWrrapdCheckoutUnitPricesFromServer({
+                            postalCode: modalZip || gifteeOriginalAddress.postalCode || addressObject.postalCode,
+                            state: gifteeOriginalAddress.state || addressObject.state,
+                            country: gifteeOriginalAddress.country || addressObject.country,
+                        }),
+                        refreshAmazonBoxQuoteFromStorage(),
+                    ]);
                     if (wrrapdCheckoutUnitPriceOverride) {
                         writePersistedUnitPrices(
                             'wrrapdAmazon',

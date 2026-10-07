@@ -146,6 +146,7 @@ export function mountGifteeZipEstimateBar(opts) {
       { sessionPrefix },
     );
     const prices = getActiveUnitPrices(pricingState);
+    if (!prices) throw new Error("prices");
     // Capabilities (e.g. custom-design paper) ride along with the geo prices so every
     // modal decides "show Upload / AI?" from the same server answer for this ZIP.
     const capabilities = getUnitPricingCapabilities(pricingState);

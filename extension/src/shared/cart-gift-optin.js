@@ -446,7 +446,9 @@ function openGiftChoicesModal(config, cartSnapshot) {
   wrrapdText.style.cssText = "font-weight:600;";
   wrrapdText.textContent = "Allow Wrrapd to choose the wrapping";
   const occasionSelect = buildOccasionSelect({ id: `${config.modalId}-occasion` });
-  void ensureExtensionConfig().then(() => refreshOccasionSelect(occasionSelect, currentOccasion));
+  void ensureExtensionConfig()
+    .then(() => refreshOccasionSelect(occasionSelect, currentOccasion))
+    .catch(() => undefined);
   occasionSelect.style.cssText =
     "margin-left:auto;padding:6px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;color:#0f172a;background:#fff;max-width:50%;";
   occasionSelect.addEventListener("change", () => {

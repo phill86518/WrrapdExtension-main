@@ -74,11 +74,11 @@ export function hubPostal5() {
 export function hubAsPaymentAddress() {
   const h = hubRecord() || {};
   return {
-    name: `${h.recipientFirstName} ${h.recipientLastName}`.trim(),
-    street: h.addressLine1,
-    city: h.city,
-    state: h.state,
-    postalCode: h.postalCode,
+    name: [h.recipientFirstName, h.recipientLastName].filter(Boolean).join(" "),
+    street: h.addressLine1 || "",
+    city: h.city || "",
+    state: h.state || "",
+    postalCode: h.postalCode || "",
     country: "United States",
     phone: "",
   };

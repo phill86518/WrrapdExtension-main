@@ -1,7 +1,9 @@
 import { hubPostal5 } from "./wrrapd-hub.js";
 
-/** Wrrapd hub ZIP (Duval County, FL) — default for sales-tax estimates on all retailers for now. */
-export const WRRAPD_TAX_POSTAL_CODE = hubPostal5();
+/** Hub ZIP from /api/extension-config — used for tax estimates when no giftee ZIP is known. */
+function hubTaxPostal() {
+  return hubPostal5();
+}
 
 /** @param {number | null | undefined} fetchedPercent */
 export function resolveTaxRatePercent(fetchedPercent) {
@@ -17,5 +19,5 @@ export function taxPostalForPricing(gifteeZip) {
     .replace(/\D/g, "")
     .slice(0, 5);
   if (z.length === 5) return z;
-  return WRRAPD_TAX_POSTAL_CODE;
+  return hubTaxPostal();
 }

@@ -11,10 +11,12 @@ export function boxChargeUsd() {
   return chargeUsd;
 }
 
+function boxKey(title, flowers) {
+  return `${flowers === true ? 1 : 0}|${String(title || "").slice(0, 300).trim().toLowerCase()}`;
+}
+
 export function itemNeedsBox(input) {
-  const title = String(input?.title || "").trim().toLowerCase();
-  if (!title) return input?.needsGiftBox === true && needsByTitle.get("") === true;
-  return needsByTitle.get(title) === true;
+  return needsByTitle.get(boxKey(input?.title, input?.flowers)) === true;
 }
 
 /** @deprecated use itemNeedsBox. Kept so older call shapes still compile during this version. */
@@ -29,18 +31,23 @@ export async function refreshBoxQuote(items) {
     flowers: item?.flowers === true,
     needsGiftBox: item?.needsGiftBox === true,
   }));
+  if (!list.length) return { boxCount: 0, boxChargeUsd: chargeUsd };
+  const signal = typeof AbortSignal?.timeout === "function" ? AbortSignal.timeout(4000) : undefined;
   const response = await fetch(QUOTE_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
+    credentials: "omit",
     body: JSON.stringify({ items: list }),
+    signal,
   });
   const body = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error("box");
   chargeUsd = Number(body.boxChargeUsd) > 0 ? Number(body.boxChargeUsd) : 0;
   needsByTitle.clear();
-  for (const row of Array.isArray(body.items) ? body.items : []) {
-    needsByTitle.set(String(row.title || "").trim().toLowerCase(), row.needsBox === true);
-  }
+  const rows = Array.isArray(body.items) ? body.items : [];
+  list.forEach((item, i) => {
+    needsByTitle.set(boxKey(item.title, item.flowers), rows[i]?.needsBox === true);
+  });
   return { boxCount: Number(body.boxCount) || 0, boxChargeUsd: chargeUsd };
 }
 

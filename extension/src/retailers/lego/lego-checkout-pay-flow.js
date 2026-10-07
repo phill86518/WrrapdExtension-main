@@ -792,6 +792,12 @@ async function openLegoPaymentPopup() {
     alert("Please return to your cart and choose Wrrapd again.");
     return;
   }
+  await ensureExtensionConfig().catch(() => null);
+  const hubAddress = hubAsPaymentAddress();
+  if (!hubAddress.street) {
+    alert("Please refresh the page and try again.");
+    return;
+  }
   const orderNumber = await generateLegoOrderNumber();
   try {
     sessionStorage.setItem("wrrapd-lego-order-number", orderNumber);
@@ -800,7 +806,7 @@ async function openLegoPaymentPopup() {
   }
   const payload = {
     total: totalCents,
-    address: hubAsPaymentAddress(),
+    address: hubAddress,
     gifteeOriginalAddress: gifteeStubFromSession(),
     orderNumber,
     pricingCart,

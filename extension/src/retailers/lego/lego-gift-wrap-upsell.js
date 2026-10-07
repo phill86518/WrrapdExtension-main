@@ -35,7 +35,8 @@ import {
   writeLegoItemChoices,
   writeLegoPaymentSuccess,
 } from "./lego-session-state.js";
-import { buildOccasionSelect, isValidOccasion } from "../../shared/occasions.js";
+import { buildOccasionSelect, isValidOccasion, refreshOccasionSelect } from "../../shared/occasions.js";
+import { ensureExtensionConfig } from "../../shared/extension-config.js";
 import { formatUsd, getActiveUnitPrices, createUnitPricingState } from "../../shared/wrrapd-unit-pricing.js";
 import {
   mountGifteeZipEstimateBar,
@@ -255,6 +256,9 @@ export function openLegoGiftServiceModal() {
 
   // Required occasion dropdown shown on the right of "Allow Wrrapd to choose"
   const occasionSelect = buildOccasionSelect({ id: "wrrapd-lego-occasion" });
+  void ensureExtensionConfig()
+    .then(() => refreshOccasionSelect(occasionSelect, currentOccasion))
+    .catch(() => undefined);
   occasionSelect.style.cssText = "margin-left:auto;flex:0 0 auto;padding:5px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;color:#0f172a;background:#fff;max-width:55%;";
   occasionSelect.addEventListener("change", () => { currentOccasion = occasionSelect.value; occasionSelect.style.borderColor = "#d1d5db"; });
 
@@ -618,6 +622,7 @@ export function openLegoGiftServiceModal() {
 
   const applyModalPrices = (prices, _zip, capabilities) => {
     const p = prices || getActiveUnitPrices(createUnitPricingState());
+    if (!p) return;
     if (wrapLabelSpans.wrrapd) {
       wrapLabelSpans.wrrapd.textContent = `Allow Wrrapd to choose the design — ${formatUsd(p.giftWrapBase)}`;
     }
@@ -785,7 +790,7 @@ export function openLegoGiftServiceModal() {
       const charged = resolveFlowerChargeDollars({
         flowerPrice: currentFlowerPrice,
         flowerOfferId: currentFlowerOfferId,
-        unitFallback: getActiveUnitPrices(createUnitPricingState()).flowers,
+        unitFallback: getActiveUnitPrices(createUnitPricingState())?.flowers,
       });
       if (!(charged > 0)) {
         flowersMsg.style.display = "block";

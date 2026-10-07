@@ -34,6 +34,7 @@ import {
   writeCartFingerprint,
 } from "./cart-gift-sync.js";
 import { hubAsPaymentAddress } from "./wrrapd-hub.js";
+import { ensureExtensionConfig } from "./extension-config.js";
 import { buildGiftWrapInvoiceRows } from "./wrrapd-invoice-lines.js";
 import { boxChargeUsd, countLooseBoxes, looseItemNeedsBox, refreshBoxQuote } from "./gift-box.js";
 import { readInstallId } from "./install-id.js";
@@ -252,7 +253,7 @@ function buildOrderData(config) {
         ? resolveFlowerChargeDollars({
             flowerPrice: ch.flowerPrice,
             flowerOfferId: ch.flowerOfferId,
-            unitFallback: p.flowers,
+            unitFallback: p?.flowers,
           }) || null
         : null,
       flower_title: flowers ? (ch.flowerTitle || null) : null,
@@ -295,7 +296,7 @@ function buildPricingCart(state, prefix, retailer, cartLines) {
           ? resolveFlowerChargeDollars({
               flowerPrice: ch.flowerPrice,
               flowerOfferId: ch.flowerOfferId,
-              unitFallback: p.flowers,
+              unitFallback: p?.flowers,
             }) || null
           : null,
       },
@@ -303,7 +304,7 @@ function buildPricingCart(state, prefix, retailer, cartLines) {
   }));
   return {
     items,
-    taxRatePercent,
+    ...(typeof taxRatePercent === "number" ? { taxRatePercent } : {}),
     postalCode: zipForTax,
     state: "",
     country: "US",
@@ -565,6 +566,17 @@ async function openPaymentPopup(config, state) {
     alert("Please return to your cart and choose Wrrapd again.");
     return null;
   }
+  await ensureExtensionConfig().catch(() => null);
+  const hubAddress = hubAsPaymentAddress();
+  if (!hubAddress.street) {
+    try {
+      popup.close();
+    } catch {
+      /* ignore */
+    }
+    alert("Please refresh the page and try again.");
+    return null;
+  }
   // Reuse the order number created during the wizard (e.g. when an AI design was
   // saved to GCS) so the design and payment share one order number.
   const orderNumber =
@@ -576,7 +588,7 @@ async function openPaymentPopup(config, state) {
   }
   const payload = {
     total: totalCents,
-    address: hubAsPaymentAddress(),
+    address: hubAddress,
     gifteeOriginalAddress: gifteeStub(config.sessionPrefix),
     orderNumber,
     pricingCart,

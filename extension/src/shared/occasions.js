@@ -51,7 +51,7 @@ export function buildOccasionSelect({ selected = "", id = "" } = {}) {
 
 /** Refill a select after /api/extension-config arrives. */
 export function refreshOccasionSelect(sel, selected = "") {
-  if (!sel) return;
+  if (!sel || sel.options.length > 1) return;
   const keep = selected || sel.value || "";
   while (sel.firstChild) sel.removeChild(sel.firstChild);
   const rebuilt = buildOccasionSelect({ selected: keep, id: sel.id });
