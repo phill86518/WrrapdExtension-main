@@ -4,6 +4,7 @@
  * and refreshes unit prices via pricing-preview.
  */
 import {
+  allowedZipListReady,
   isPostalCodeAllowed,
   loadAllowedZipCodes,
   normalizePostal5,
@@ -174,7 +175,13 @@ export function mountGifteeZipEstimateBar(opts) {
     btn.textContent = "Checking…";
     setStatus("");
     try {
-      await loadAllowedZipCodes({ force: true });
+      try {
+        await loadAllowedZipCodes({ force: true });
+      } catch (err) {
+        // A refresh that fails (rate limit, network) must not wipe a list we already have,
+        // and must not be shown as "we don't deliver there."
+        if (!allowedZipListReady()) throw err;
+      }
       const allowed = await isPostalCodeAllowed(zip);
       if (!allowed) {
         clearReady();

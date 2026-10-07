@@ -749,6 +749,27 @@ export function initRetailerCheckoutPayFlow(config) {
   const ensureSummaryUi = async () => {
     const mountAnchor = resolveSummaryMountAnchor(config);
     if (!mountAnchor?.parent) return;
+    const paidNow = readPaymentSuccess(config.sessionPrefix);
+    const payReadyNow = state.pricingFetchComplete === true && !!getActiveUnitPrices(state);
+    if (payReadyNow) {
+      const preview = buildSummaryLinesAndTotal(
+        state,
+        config.sessionPrefix,
+        config.getCartSnapshot?.()?.items,
+      );
+      const previewSig = `${paidNow ? 1 : 0}|1|${preview.totalCents}|${buildCartFingerprint(config.getCartSnapshot?.())}|${preview.invoiceRows
+        .map((r) => `${r?.label ?? ""}=${r?.amount ?? r?.cents ?? ""}`)
+        .join("~")}`;
+      const already = document.querySelector(`[${SUMMARY_HOST_ATTR}]`);
+      if (
+        already &&
+        already.isConnected &&
+        already.dataset.wrrapdRenderSig === previewSig &&
+        already.parentElement === mountAnchor.parent
+      ) {
+        return;
+      }
+    }
     await ensureUnitPrices(
       state,
       {
@@ -919,7 +940,14 @@ export function initRetailerCheckoutPayFlow(config) {
     });
   };
   schedule();
-  const observer = new MutationObserver(schedule);
+  const observer = new MutationObserver((mutations) => {
+    const onlyOurs = mutations.every((m) => {
+      const node = m.target?.nodeType === 1 ? m.target : m.target?.parentElement;
+      return !!node?.closest?.(`[${SUMMARY_HOST_ATTR}], [data-wrrapd-giftee-zip-bar]`);
+    });
+    if (onlyOurs) return;
+    schedule();
+  });
   observer.observe(document.documentElement, { childList: true, subtree: true });
   window.addEventListener("popstate", () => setTimeout(schedule, 200));
   window.addEventListener(WRRAPD_GIFT_RADIO_CHANGE_EVENT, (event) => {

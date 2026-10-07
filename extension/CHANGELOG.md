@@ -144,6 +144,8 @@ Membership discount is **not** in this version.
 
 Editor notes: `docs/VOLUME-DISCOUNT.md`.
 
+**Checkout rebuild loop (fixed same day, before submit):** LEGO was asking for prices again on every page update, so the discount line flashed and the API started refusing requests. A refused ZIP check was shown as “we can’t deliver to that ZIP.” The summary now stays put when the total has not changed, and a failed ZIP check says to try again. 32218 is still on the allowlist.
+
 ### Checks run on the VM for 3.0.14
 
 - All 10 bundles load in simulated retailer pages against live `api.wrrapd.com` with zero errors; also with the API unreachable.

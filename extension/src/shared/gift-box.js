@@ -6,6 +6,11 @@ const QUOTE_URL = "https://api.wrrapd.com/api/gift-box-quote";
 
 let chargeUsd = 0;
 const needsByTitle = new Map();
+let quoteCacheKey = "";
+let quoteCacheAt = 0;
+let quoteInflight = null;
+let quoteInflightKey = "";
+const QUOTE_TTL_MS = 30 * 1000;
 
 export function boxChargeUsd() {
   return chargeUsd;
@@ -32,23 +37,48 @@ export async function refreshBoxQuote(items) {
     needsGiftBox: item?.needsGiftBox === true,
   }));
   if (!list.length) return { boxCount: 0, boxChargeUsd: chargeUsd };
-  const signal = typeof AbortSignal?.timeout === "function" ? AbortSignal.timeout(4000) : undefined;
-  const response = await fetch(QUOTE_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "omit",
-    body: JSON.stringify({ items: list }),
-    signal,
-  });
-  const body = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error("box");
-  chargeUsd = Number(body.boxChargeUsd) > 0 ? Number(body.boxChargeUsd) : 0;
-  needsByTitle.clear();
-  const rows = Array.isArray(body.items) ? body.items : [];
-  list.forEach((item, i) => {
-    needsByTitle.set(boxKey(item.title, item.flowers), rows[i]?.needsBox === true);
-  });
-  return { boxCount: Number(body.boxCount) || 0, boxChargeUsd: chargeUsd };
+  const key = JSON.stringify(list);
+  if (quoteCacheKey === key && Date.now() - quoteCacheAt < QUOTE_TTL_MS) {
+    return {
+      boxCount: countLooseBoxes(list.map((item) => ({ title: item.title, flowers: item.flowers }))),
+      boxChargeUsd: chargeUsd,
+    };
+  }
+  if (quoteInflight && quoteInflightKey === key) return quoteInflight;
+
+  const run = (async () => {
+    const signal = typeof AbortSignal?.timeout === "function" ? AbortSignal.timeout(4000) : undefined;
+    const response = await fetch(QUOTE_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "omit",
+      cache: "no-store",
+      body: JSON.stringify({ items: list }),
+      signal,
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error("box");
+    chargeUsd = Number(body.boxChargeUsd) > 0 ? Number(body.boxChargeUsd) : 0;
+    needsByTitle.clear();
+    const rows = Array.isArray(body.items) ? body.items : [];
+    list.forEach((item, i) => {
+      needsByTitle.set(boxKey(item.title, item.flowers), rows[i]?.needsBox === true);
+    });
+    quoteCacheKey = key;
+    quoteCacheAt = Date.now();
+    return { boxCount: Number(body.boxCount) || 0, boxChargeUsd: chargeUsd };
+  })();
+
+  quoteInflight = run;
+  quoteInflightKey = key;
+  try {
+    return await run;
+  } finally {
+    if (quoteInflight === run) {
+      quoteInflight = null;
+      quoteInflightKey = "";
+    }
+  }
 }
 
 export function countLooseBoxes(lines) {

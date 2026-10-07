@@ -48,6 +48,10 @@ let wrrapdCheckoutUnitPriceOverride = null;
 /** Sales-tax percent from api.wrrapd.com/pricing-preview. */
 let legoPreviewTaxPercent = null;
 let legoPricingFetchComplete = false;
+let legoPricingFetchedAt = 0;
+let legoPricingFetchedZip = "";
+let summaryRefreshJob = null;
+let summaryRefreshAgain = false;
 
 function findCheckoutSecurelyButtons() {
   /** @type {HTMLElement[]} */
@@ -125,8 +129,8 @@ async function refreshCheckoutUnitPricesFromServer(geo) {
     if (geo && geo.state) u.searchParams.set("state", String(geo.state).trim().slice(0, 16));
     if (geo && geo.country) u.searchParams.set("country", String(geo.country).trim().slice(0, 8));
     u.searchParams.set("retailer", "lego");
-    const r = await fetch(u.toString(), { credentials: "omit" });
-    if (!r.ok) return Boolean(wrrapdCheckoutUnitPriceOverride);
+    const r = await fetch(u.toString(), { credentials: "omit", cache: "no-store" });
+    if (!r.ok || r.status === 304) return Boolean(wrrapdCheckoutUnitPriceOverride);
     const j = await r.json();
     rememberVolumeDiscountFromPreview(j);
     let gotTax = false;
@@ -856,15 +860,50 @@ async function openLegoPaymentPopup() {
   popup.focus();
 }
 
-async function ensurePaymentSummaryUi() {
+function paymentSummarySignature(paid, payReady, invoiceRows, totalCents) {
+  return `${paid ? 1 : 0}|${payReady ? 1 : 0}|${totalCents}|${invoiceRows
+    .map((r) => `${r.label}:${r.amount ?? ""}`)
+    .join("|")}`;
+}
+
+async function refreshPaymentSummaryOnce() {
   if (!readLegoPaymentSuccess()) syncLegoCartGiftState();
   const btn = findCheckoutSecurelyButton();
   if (!btn?.parentElement) return;
-  await refreshCheckoutUnitPricesFromServer({
-    postalCode: taxPostalForPricing(gifteeZip5()),
-    state: "FL",
-    country: "US",
-  });
+
+  const paint = () => {
+    const paid = readLegoPaymentSuccess();
+    const payReady = legoPricingFetchComplete === true && !!getActiveCheckoutUnitPrices();
+    const { invoiceRows, totalCents } = buildSummaryLinesAndTotal();
+    return {
+      paid,
+      payReady,
+      invoiceRows,
+      totalCents,
+      sig: paymentSummarySignature(paid, payReady, invoiceRows, totalCents),
+    };
+  };
+
+  // Already showing this total: do not call the API again. LEGO re-renders constantly,
+  // and a fetch on every mutation both flickers the discount line and rate-limits ZIP checks.
+  const first = paint();
+  const existing = document.getElementById(SUMMARY_ROOT_ID);
+  if (first.payReady && existing?.getAttribute("data-wrrapd-summary-sig") === first.sig) return;
+
+  const zip = gifteeZip5();
+  const stale =
+    !first.payReady ||
+    legoPricingFetchedZip !== zip ||
+    Date.now() - legoPricingFetchedAt > 60 * 1000;
+  if (stale) {
+    await refreshCheckoutUnitPricesFromServer({
+      postalCode: taxPostalForPricing(zip),
+      state: "FL",
+      country: "US",
+    });
+    legoPricingFetchedAt = Date.now();
+    legoPricingFetchedZip = zip;
+  }
   const quoteChoices = readLegoItemChoices();
   const quoteLines = readLegoCartSnapshot();
   await refreshBoxQuote(
@@ -873,22 +912,36 @@ async function ensurePaymentSummaryUi() {
       flowers: ch.flowers === true,
     })),
   ).catch(() => null);
-  const paid = readLegoPaymentSuccess();
-  const payReady = legoPricingFetchComplete === true;
-  const { invoiceRows, totalCents } = buildSummaryLinesAndTotal();
-  const sig = `${paid}|${payReady}|${totalCents}|${invoiceRows.map((r) => `${r.label}:${r.amount}`).join("|")}`;
-  const existing = document.getElementById(SUMMARY_ROOT_ID);
-  if (existing && existing.getAttribute("data-wrrapd-summary-sig") === sig) {
-    return;
-  }
-  const { payBtn } = mountSummaryNearButton(btn, invoiceRows, totalCents, paid, payReady);
+
+  const next = paint();
+  const hostNow = document.getElementById(SUMMARY_ROOT_ID);
+  if (hostNow?.getAttribute("data-wrrapd-summary-sig") === next.sig) return;
+  const { payBtn } = mountSummaryNearButton(btn, next.invoiceRows, next.totalCents, next.paid, next.payReady);
   const host = document.getElementById(SUMMARY_ROOT_ID);
-  if (host) host.setAttribute("data-wrrapd-summary-sig", sig);
-  if (!paid && payReady) {
+  if (host) host.setAttribute("data-wrrapd-summary-sig", next.sig);
+  if (!next.paid && next.payReady) {
     payBtn.addEventListener("click", () => {
       openLegoPaymentPopup();
     });
   }
+}
+
+function ensurePaymentSummaryUi() {
+  if (summaryRefreshJob) {
+    summaryRefreshAgain = true;
+    return summaryRefreshJob;
+  }
+  summaryRefreshJob = (async () => {
+    try {
+      do {
+        summaryRefreshAgain = false;
+        await refreshPaymentSummaryOnce();
+      } while (summaryRefreshAgain);
+    } finally {
+      summaryRefreshJob = null;
+    }
+  })();
+  return summaryRefreshJob;
 }
 
 function migrateLegacyGiftTcFlag() {

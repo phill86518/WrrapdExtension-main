@@ -161,7 +161,7 @@ async function refreshUnitPricesFromServer(state, geo, retailer) {
     if (geo?.country) u.searchParams.set("country", String(geo.country).trim().slice(0, 8));
     if (retailer) u.searchParams.set("retailer", String(retailer).trim().slice(0, 32));
     const signal = typeof AbortSignal?.timeout === "function" ? AbortSignal.timeout(8000) : undefined;
-    const r = await fetch(u.toString(), { credentials: "omit", signal });
+    const r = await fetch(u.toString(), { credentials: "omit", cache: "no-store", signal });
     if (!r.ok) return false;
     const j = await r.json();
     rememberVolumeDiscountFromPreview(j);

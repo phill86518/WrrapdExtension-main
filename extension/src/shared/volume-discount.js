@@ -75,9 +75,11 @@ export function volumeDiscountNudgeText(tiers, wrappedCount) {
   return `Gift-wrap another item to get a ${next}% discount!`;
 }
 
-/** Remember the tiers from a /api/pricing-preview response (missing → no discount). */
+/** Remember the tiers from a /api/pricing-preview response. A body with no tiers keeps the last good ones. */
 export function rememberVolumeDiscountFromPreview(previewJson) {
-  const tiers = normalizeVolumeDiscount(previewJson && previewJson.volumeDiscount);
+  const raw = previewJson && previewJson.volumeDiscount;
+  if (!raw || typeof raw !== "object") return readVolumeDiscount();
+  const tiers = normalizeVolumeDiscount(raw);
   try {
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify(tiers));
   } catch {

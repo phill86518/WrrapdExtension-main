@@ -62,10 +62,11 @@ function readLegoEstimateZip() {
     'input[name*="zip" i]', 'input[id*="zip" i]',
   ];
   for (const sel of cands) {
-    const el = document.querySelector(sel);
-    if (!el) continue;
-    const m = String(el.value || "").match(/\b(\d{5})(?:-\d{4})?\b/);
-    if (m) return m[1];
+    for (const el of document.querySelectorAll(sel)) {
+      if (el.closest?.("[data-wrrapd-giftee-zip-bar]")) continue;
+      const m = String(el.value || "").match(/\b(\d{5})(?:-\d{4})?\b/);
+      if (m) return m[1];
+    }
   }
   return "";
 }
@@ -1041,7 +1042,16 @@ export function initLegoGiftWrapUpsell() {
   });
 
   tryMountGiftUpsell();
-  const observer = new MutationObserver(schedule);
+  const observer = new MutationObserver((mutations) => {
+    const onlyOurs = mutations.every((m) => {
+      const node = m.target?.nodeType === 1 ? m.target : m.target?.parentElement;
+      return !!node?.closest?.(
+        "[data-wrrapd-lego-pay-panel], [data-wrrapd-lego-pay-summary-host], [data-wrrapd-giftee-zip-bar], #wrrapd-lego-gift-service-modal",
+      );
+    });
+    if (onlyOurs) return;
+    schedule();
+  });
   observer.observe(document.documentElement, { childList: true, subtree: true });
   window.addEventListener("popstate", schedule);
 }

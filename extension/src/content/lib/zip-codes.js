@@ -4,6 +4,7 @@
 
 let allowedZipCodes = [];
 let zipCodesLoaded = false;
+let loadPromise = null;
 
 export function normalizePostal5(value) {
   return String(value || "")
@@ -11,29 +12,42 @@ export function normalizePostal5(value) {
     .slice(0, 5);
 }
 
+/** True after a successful allowlist fetch. A failed fetch does not count. */
+export function allowedZipListReady() {
+  return zipCodesLoaded;
+}
+
 export async function loadAllowedZipCodes({ force = false } = {}) {
   if (zipCodesLoaded && !force) return allowedZipCodes;
+  if (loadPromise && !force) return loadPromise;
 
-  try {
+  const run = (async () => {
     const response = await fetch("https://api.wrrapd.com/api/allowed-zip-codes", {
       cache: "no-store",
     });
-    if (response.ok) {
-      const data = await response.json();
-      allowedZipCodes = Array.isArray(data.allowedZipCodes) ? data.allowedZipCodes : [];
-      zipCodesLoaded = true;
-    } else {
-      console.error("[Content] Failed to load zip codes from API. Response status:", response.status);
-      allowedZipCodes = [];
-      zipCodesLoaded = true;
+    if (!response.ok) {
+      const err = new Error(`zip-list ${response.status}`);
+      err.status = response.status;
+      throw err;
     }
+    const data = await response.json();
+    if (!Array.isArray(data.allowedZipCodes)) throw new Error("zip-list");
+    allowedZipCodes = data.allowedZipCodes
+      .map((z) => normalizePostal5(z))
+      .filter((z) => z.length === 5);
+    zipCodesLoaded = true;
+    return allowedZipCodes;
+  })();
+
+  loadPromise = run;
+  try {
+    return await run;
   } catch (error) {
     console.error("[Content] Error loading zip codes:", error);
-    allowedZipCodes = [];
-    zipCodesLoaded = true;
+    throw error;
+  } finally {
+    if (loadPromise === run) loadPromise = null;
   }
-
-  return allowedZipCodes;
 }
 
 export async function isPostalCodeAllowed(postalCode) {
@@ -49,4 +63,4 @@ export async function isZipCodeAllowed(subItem) {
   return isPostalCodeAllowed(zipCode);
 }
 
-void loadAllowedZipCodes();
+void loadAllowedZipCodes().catch(() => {});
