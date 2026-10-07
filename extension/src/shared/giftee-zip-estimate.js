@@ -66,6 +66,7 @@ export function mountGifteeZipEstimateBar(opts) {
   const prefilledZip = readValidatedEstimateZip(sessionPrefix);
   let currentZip = "";
   let ready = false;
+  let locked = false;
 
   const gatedNodes = []
     .concat(gatedContent || [])
@@ -195,10 +196,39 @@ export function mountGifteeZipEstimateBar(opts) {
     } finally {
       btn.disabled = false;
       btn.textContent = "Submit";
+      btn.style.display = locked && ready ? "none" : "";
     }
   };
 
+  /**
+   * Later Wrrapd items in the same order reuse the first item's giftee ZIP (one hub, one tax
+   * rate, one flower area). Locked: ZIP shown read-only and confirmed automatically.
+   */
+  const setLocked = (zip) => {
+    const z = normalizePostal5(zip || "");
+    if (z.length !== 5) {
+      locked = false;
+      input.readOnly = false;
+      input.style.background = "";
+      input.style.color = "";
+      btn.style.display = "";
+      return Promise.resolve(ready);
+    }
+    locked = true;
+    input.readOnly = true;
+    input.value = z;
+    input.style.background = "#f1f5f9";
+    input.style.color = "#334155";
+    if (ready && currentZip === z) {
+      btn.style.display = "none";
+      return Promise.resolve(true);
+    }
+    btn.style.display = "none";
+    return submitZip();
+  };
+
   input.addEventListener("input", () => {
+    if (locked) return;
     input.style.borderColor = "#cbd5e1";
     if (ready) {
       clearReady();
@@ -232,12 +262,14 @@ export function mountGifteeZipEstimateBar(opts) {
     getCapabilities: () => getUnitPricingCapabilities(pricingState),
     requireValidZip: () => {
       if (ready && currentZip.length === 5) return true;
-      setStatus("Please enter the giftee ZIP and click Submit.");
+      setStatus(locked ? "We couldn't verify that ZIP right now. Please try again." : "Please enter the giftee ZIP and click Submit.");
+      if (locked) btn.style.display = "";
       input.focus();
       input.style.borderColor = "#dc2626";
       setGatedVisible(false);
       return false;
     },
     submitZip,
+    setLocked,
   };
 }

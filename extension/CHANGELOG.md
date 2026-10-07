@@ -104,6 +104,24 @@ needed — the next giftee ZIP submitted near that hub gets it. Add that metro's
 **Known limit:** if the shopper's gift goes to a different hub than the order note says (only possible when the hub
 lookup failed and the default hub was used), the package arrives at the default hub. With one hub this cannot happen.
 
+### D. One giftee ZIP per order (Oct 7)
+
+The first Wrrapd item's giftee ZIP locks every later Wrrapd item in the same order, so the
+order has one hub, one tax rate, and one flower area.
+
+- Later items show that ZIP read-only, with no Submit button; it is confirmed automatically.
+- Target / Walmart / Best Buy / Kohl's / Nordstrom / Sephora / Ulta / Etsy and LEGO (one modal,
+  "Item N of M"): item 1 is editable; items 2+ are locked. Going Back to item 1 unlocks it, and a
+  new ZIP there carries to the other items.
+- Amazon (one modal per item): when another item already has Wrrapd checked, the new item's
+  modal is locked to the order ZIP. Unchecking the other Wrrapd items unlocks it.
+- A bouquet picked under a different ZIP is cleared, so the shopper picks again from the
+  current ZIP's bouquets (new `flowerZip` / `flower_zip` on saved choices).
+- Files: `src/shared/giftee-zip-estimate.js` (`setLocked`), `src/shared/cart-gift-optin.js`,
+  `src/retailers/lego/lego-gift-wrap-upsell.js`, `src/content/content-legacy.js`, all bundles.
+- Tested: locked bar against live `api.wrrapd.com` (read-only, auto-confirmed, typing ignored,
+  unlock restores Submit); shared 2-item modal (item 2 locked to 32218, Back unlocks item 1).
+
 ### Checks run on the VM for 3.0.14
 
 - All 10 bundles load in simulated retailer pages against live `api.wrrapd.com` with zero errors; also with the API unreachable.

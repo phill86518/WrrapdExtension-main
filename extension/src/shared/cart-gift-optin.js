@@ -720,6 +720,7 @@ function openGiftChoicesModal(config, cartSnapshot) {
   let currentFlowerPrice = null;
   let currentFlowerTitle = "";
   let currentFlowerImageUrl = "";
+  let currentFlowerZip = "";
   let liveFlowerChoices = [];
   const flowersLabel = document.createElement("label");
   flowersLabel.style.cssText =
@@ -740,6 +741,7 @@ function openGiftChoicesModal(config, cartSnapshot) {
     "display:none;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;margin:4px 0 14px 24px;";
 
   function clearFlowerSelection() {
+    currentFlowerZip = "";
     currentFlowerDesign = "";
     currentFlowerOfferId = "";
     currentFlowerPrice = null;
@@ -774,6 +776,7 @@ function openGiftChoicesModal(config, cartSnapshot) {
       const imgUrl = resolveFlowerImageUrl(c);
       r.addEventListener("change", () => {
         if (!r.checked) return;
+        currentFlowerZip = zipBar.getZip();
         currentFlowerOfferId = c.offerId;
         currentFlowerPrice = Number(c.price);
         currentFlowerTitle = c.title || `Bouquet #${idx + 1}`;
@@ -914,11 +917,26 @@ function openGiftChoicesModal(config, cartSnapshot) {
     retailerLabel: config.retailerLabel || config.retailerName || "",
     gatedContent: gatedBody,
     onPricesReady: applyModalPrices,
+    onZipAllowed: (zip) => {
+      if (currentFlowerOfferId && currentFlowerZip && currentFlowerZip !== zip) {
+        clearFlowerSelection();
+        if (currentFlowers) void ensureFlowersUi();
+      }
+    },
   });
 
   function renderItem(idx) {
     const line = lines[idx];
     const ch = allChoices[idx] || emptyChoice(line.title);
+    const orderZip = zipBar.getZip() || readValidatedEstimateZip(config.sessionPrefix);
+    void zipBar.setLocked(idx > 0 ? orderZip : "");
+    if (ch.flowerOfferId && ch.flowerZip && orderZip && ch.flowerZip !== orderZip) {
+      ch.flowerOfferId = "";
+      ch.flowerDesign = "";
+      ch.flowerPrice = null;
+      ch.flowerTitle = "";
+      ch.flowerImageUrl = "";
+    }
 
     title.textContent =
       totalItems > 1 ? `Item ${idx + 1} of ${totalItems} — Gift wrap with Wrrapd` : "Gift wrap with Wrrapd";
@@ -964,6 +982,7 @@ function openGiftChoicesModal(config, cartSnapshot) {
     currentFlowers = ch.flowers || false;
     currentFlowerDesign = ch.flowerDesign || "";
     currentFlowerOfferId = ch.flowerOfferId || "";
+    currentFlowerZip = currentFlowerOfferId ? ch.flowerZip || "" : "";
     currentFlowerPrice = ch.flowerPrice != null ? Number(ch.flowerPrice) : null;
     currentFlowerTitle = ch.flowerTitle || "";
     currentFlowerImageUrl = ch.flowerImageUrl || "";
@@ -1009,6 +1028,7 @@ function openGiftChoicesModal(config, cartSnapshot) {
       flowerPrice: currentFlowerPrice,
       flowerTitle: currentFlowerTitle,
       flowerImageUrl: currentFlowerImageUrl,
+      flowerZip: currentFlowerOfferId ? currentFlowerZip || zipBar.getZip() : "",
       message: msgInput.value.trim(),
     };
   }

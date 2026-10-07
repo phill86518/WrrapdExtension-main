@@ -3861,6 +3861,13 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                               retailerLabel: "Amazon",
                               gatedContent: amazonGatedBody,
                               onPricesReady: applyAmazonModalPrices,
+                              onZipAllowed: (zip) => {
+                                  if (subItem.flower_offer_id && subItem.flower_zip && subItem.flower_zip !== zip) {
+                                      clearAmazonFlowerSelection();
+                                      saveItemToLocalStorage(productObj);
+                                      if (combineWithFlowersCheckbox?.checked) void ensureAmazonFlowersUi();
+                                  }
+                              },
                           })
                         : null;
                     const wrrapdCheckbox = document.getElementById(`wrrapd-checkbox-${i}`);
@@ -3917,6 +3924,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                     const flowerFinePrintEl = document.getElementById(`flower-fineprint-${i}`);
 
                     function clearAmazonFlowerSelection() {
+                        subItem.flower_zip = null;
                         subItem.selected_flower_design = null;
                         subItem.flower_offer_id = null;
                         subItem.flower_amount = null;
@@ -3964,6 +3972,10 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                             const imgUrl = resolveAmazonFlowerImageUrl(c);
                             r.addEventListener('change', () => {
                                 if (!r.checked) return;
+                                subItem.flower_zip =
+                                    (amazonZipBar && amazonZipBar.getZip && amazonZipBar.getZip()) ||
+                                    readValidatedEstimateZip('wrrapdAmazon') ||
+                                    null;
                                 subItem.flower_offer_id = c.offerId;
                                 subItem.flower_amount = Number(c.price);
                                 subItem.flower_title = c.title || `Bouquet #${idx + 1}`;
@@ -4074,6 +4086,17 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                             // Update storage when checkbox is checked
                             subItem.checkbox_wrrapd = true;
                             saveItemToLocalStorage(productObj);
+                            // Later Wrrapd items in this order reuse the first item's giftee ZIP.
+                            const otherWrrapdItem = Object.values(allItems || {}).some(
+                                (p) =>
+                                    Array.isArray(p?.options) &&
+                                    p.options.some((o) => o && o !== subItem && o.checkbox_wrrapd === true),
+                            );
+                            if (amazonZipBar) {
+                                void amazonZipBar.setLocked(
+                                    otherWrrapdItem ? readValidatedEstimateZip('wrrapdAmazon') : '',
+                                );
+                            }
                         } else {
                             modal.style.display = 'none';
                             // Update storage when checkbox is unchecked
