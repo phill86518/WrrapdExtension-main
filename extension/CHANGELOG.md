@@ -8,9 +8,9 @@ Build for the store on Windows: `npm run build:store` → upload `extension/wrra
 
 ---
 
-## 3.0.14 — not yet submitted (as of Oct 7, 2026)
+## 3.0.14 — published on Chrome Web Store (approved Oct 8, 2026)
 
-3.0.13 is **live** on the Chrome Web Store (item `ofokdnajfbjmpbeocibingpiadnoccfc`, published Oct 6) and does **not** contain any of this. Upload 3.0.14 to **that same listing**. The wrrapd.com install nudge stays at **3.0.13** until 3.0.14 is public.
+Item ID **`lobngnjcjeimefihnobdmocicopikoip`**: [Wrrapd on the Chrome Web Store](https://chromewebstore.google.com/detail/wrrapd/lobngnjcjeimefihnobdmocicopikoip). Website install links and `$latest_version` point here. 3.0.13 remains item `ofokdnajfbjmpbeocibingpiadnoccfc` and is still probed so those installs see the update nudge.
 
 ### A. Business rules moved to the server (Oct 5 · commit `e236b2a`)
 

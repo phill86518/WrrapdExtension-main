@@ -14,16 +14,16 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /** Bump when account UI / header polish changes — view-source should contain this string. */
-define( 'WRRAPD_MU_BUILD', '2026-10-07-volume-discount' );
+define( 'WRRAPD_MU_BUILD', '2026-10-08-cws-3.0.14' );
 
-/** Published Chrome Web Store item id (Wrrapd 3.0.13). Upload 3.0.14 to this same listing. */
+/** Published Chrome Web Store item id (Wrrapd 3.0.14, approved Oct 8, 2026). */
 if ( ! defined( 'WRRAPD_CHROME_EXTENSION_ID' ) ) {
-	define( 'WRRAPD_CHROME_EXTENSION_ID', 'ofokdnajfbjmpbeocibingpiadnoccfc' );
+	define( 'WRRAPD_CHROME_EXTENSION_ID', 'lobngnjcjeimefihnobdmocicopikoip' );
 }
 
-/** Previous public listing (3.0.12). Still probed so those installs see the update nudge. */
+/** Immediate previous public listing (3.0.13). */
 if ( ! defined( 'WRRAPD_CHROME_EXTENSION_ID_PREVIOUS' ) ) {
-	define( 'WRRAPD_CHROME_EXTENSION_ID_PREVIOUS', 'ckjeddmjkhjnkmldknbeakjonfnjocpg' );
+	define( 'WRRAPD_CHROME_EXTENSION_ID_PREVIOUS', 'ofokdnajfbjmpbeocibingpiadnoccfc' );
 }
 
 /** Wordmark gold — letters “p” and “d” in the Wrrapd logo. Never neon #f7ff00 / #fff300. */
@@ -1811,8 +1811,12 @@ function wrrapd_output_extension_detection_script() {
 	}
 	$cws             = wrrapd_chrome_extension_install_url();
 	$ext_id          = WRRAPD_CHROME_EXTENSION_ID;
-	$ext_id_previous = WRRAPD_CHROME_EXTENSION_ID_PREVIOUS;
-	$latest_version  = '3.0.13';
+	$ext_ids_previous = array(
+		WRRAPD_CHROME_EXTENSION_ID_PREVIOUS, // 3.0.13
+		'ckjeddmjkhjnkmldknbeakjonfnjocpg', // 3.0.12
+		'kdfcahdcgpaoohpgagpmpbgcmkdbocbg', // 3.0.10
+	);
+	$latest_version  = '3.0.14';
 
 	echo '<style id="wrrapd-ext-detected-css">';
 	echo 'html.wrrapd-ext-installed .elementor-element-7f1bdc1,html.wrrapd-ext-installed .elementor-element-eb0b235,html.wrrapd-ext-installed .elementor-location-header a.elementor-button[href*="chromewebstore"]{display:none!important;}';
@@ -1831,7 +1835,7 @@ function wrrapd_output_extension_detection_script() {
 
 	echo '<script id="wrrapd-ext-detect-js">';
 	echo '(function(){';
-	echo 'var EXT_ID=' . wp_json_encode( $ext_id ) . ',OLD_ID=' . wp_json_encode( $ext_id_previous ) . ',LATEST=' . wp_json_encode( $latest_version ) . ',cws=' . wp_json_encode( $cws ) . ',MARKER="wrrapd_ext_detected",OUTDATED="wrrapd_ext_outdated_dismissed";';
+	echo 'var EXT_ID=' . wp_json_encode( $ext_id ) . ',OLD_IDS=' . wp_json_encode( array_values( $ext_ids_previous ) ) . ',LATEST=' . wp_json_encode( $latest_version ) . ',cws=' . wp_json_encode( $cws ) . ',MARKER="wrrapd_ext_detected",OUTDATED="wrrapd_ext_outdated_dismissed";';
 	echo 'var extInstalled=false,extVersion="";';
 	echo 'function parseVersion(v){return(v||"").split(".").map(function(n){return parseInt(n,10)||0;});}';
 	echo 'function versionLt(a,b){var x=parseVersion(a),y=parseVersion(b),i;for(i=0;i<Math.max(x.length,y.length);i++){var d=(x[i]||0)-(y[i]||0);if(d!==0)return d<0;}return false;}';
@@ -1841,7 +1845,7 @@ function wrrapd_output_extension_detection_script() {
 	echo 'function showUpdateNudge(){if(!extVersion||!versionLt(extVersion,LATEST))return;try{if(sessionStorage.getItem(OUTDATED)==="1")return;}catch(e){}var n=document.getElementById("wrrapd-ext-update-nudge");if(!n)return;n.hidden=false;document.documentElement.classList.add("wrrapd-ext-outdated");}';
 	echo 'function onDetected(resp){var ver=resp&&resp.version?String(resp.version):"";markInstalled(ver);hideInstallCopy();showUpdateNudge();}';
 	echo 'function rewriteCwsLinks(){var re=/chromewebstore\\.google\\.com\\/detail\\/wrrapd\\/[a-z]{32}/i;document.querySelectorAll("a[href*=\\"chromewebstore.google.com/detail/wrrapd/\\"]").forEach(function(a){var h=a.getAttribute("href")||"";if(re.test(h)&&h.indexOf(EXT_ID)<0)a.setAttribute("href",cws);});}';
-	echo 'function probeLegacy(){try{chrome.runtime.sendMessage(OLD_ID,{type:"WRRAPD_PING"},function(resp){if(chrome.runtime.lastError){showCtas();return;}if(resp&&(resp.ok||resp.wrrapd))onDetected(resp);else showCtas();});}catch(e){showCtas();}}';
+	echo 'function probeLegacy(i){i=i||0;if(!OLD_IDS[i]){showCtas();return;}try{chrome.runtime.sendMessage(OLD_IDS[i],{type:"WRRAPD_PING"},function(resp){if(chrome.runtime.lastError||!(resp&&(resp.ok||resp.wrrapd))){probeLegacy(i+1);return;}onDetected(resp);});}catch(e){probeLegacy(i+1);}}';
 	echo 'function probe(){showCtas();rewriteCwsLinks();try{if(window.chrome&&chrome.runtime&&chrome.runtime.sendMessage){chrome.runtime.sendMessage(EXT_ID,{type:"WRRAPD_PING"},function(resp){if(chrome.runtime.lastError||!(resp&&(resp.ok||resp.wrrapd))){probeLegacy();return;}onDetected(resp);});return;}}catch(e){}showCtas();}';
 	echo 'var dismiss=document.getElementById("wrrapd-ext-update-dismiss");if(dismiss){dismiss.addEventListener("click",function(){var n=document.getElementById("wrrapd-ext-update-nudge");if(n)n.hidden=true;document.documentElement.classList.remove("wrrapd-ext-outdated");try{sessionStorage.setItem(OUTDATED,"1");}catch(e){}});}';
 	echo 'window.wrrapdExtIsInstalled=function(){return extInstalled;};';

@@ -8,6 +8,12 @@ WordPress + Elementor + Hello theme content mostly lives **in the production dat
 
 ## Recent changes
 
+### 2026-10-08 — Chrome Web Store 3.0.14
+
+- Google published **3.0.14** on a new item, **`lobngnjcjeimefihnobdmocicopikoip`**: https://chromewebstore.google.com/detail/wrrapd/lobngnjcjeimefihnobdmocicopikoip
+- MU `wrrapd-orders-bridge.php` (`WRRAPD_MU_BUILD` `2026-10-08-cws-3.0.14`): install URL, footer CTA, wheel promos, and the extension ping use that id. `$latest_version` = `3.0.14`. Older installs are still probed: `ofokdnajfbjmpbeocibingpiadnoccfc` (3.0.13), `ckjeddmjkhjnkmldknbeakjonfnjocpg` (3.0.12), `kdfcahdcgpaoohpgagpmpbgcmkdbocbg` (3.0.10).
+- Elementor install buttons on homepage **4857**, header **6078**, and welcome **5576** store the new listing id.
+
 ### 2026-10-07 — Volume discount on Your orders payment summary
 
 - MU `wrrapd-orders-bridge.php` (`WRRAPD_MU_BUILD` `2026-10-07-volume-discount`): combined payment summary can show **Multi-item base discount** (negative, pre-tax) under gift wrap. Omitted when the amount is zero. Negative money prints as `-$1.40`.

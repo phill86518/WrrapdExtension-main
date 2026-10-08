@@ -1,7 +1,7 @@
 /** Public marketing / extension links (set in Cloud Run env). */
 
 const DEFAULT_CHROME_WEB_STORE_URL =
-  "https://chromewebstore.google.com/detail/wrrapd/kdfcahdcgpaoohpgagpmpbgcmkdbocbg";
+  "https://chromewebstore.google.com/detail/wrrapd/lobngnjcjeimefihnobdmocicopikoip";
 
 /** Live listing; override with `NEXT_PUBLIC_CHROME_WEB_STORE_URL` if you ship a new item id. */
 export function chromeWebStoreUrl(): string {

@@ -2,7 +2,7 @@
 
 Membership discount is **not** implemented. This file is the editor / agent note for the wrap-base volume discount that ships with extension **3.0.14**.
 
-Live CWS (Oct 6): **3.0.13**, item `ofokdnajfbjmpbeocibingpiadnoccfc`. 3.0.14 is the next upload to that listing.
+Live CWS (Oct 8): **3.0.14**, item `lobngnjcjeimefihnobdmocicopikoip`.
 
 ## Turn it on
 
@@ -51,4 +51,4 @@ The retailer order number is **not** known before the Wrrapd Payment Summary. Th
 
 ## Deploy
 
-Pay server (this VM): `pm2 restart wrrapd-server`. Command Center: Cloud Run image for `tracking-platform`. Extension: Windows pull + `npm run build` + Chrome Reload, then CWS zip from `npm run build:store`. Upload that zip to the **live 3.0.13 listing** (`ofokdnajfbjmpbeocibingpiadnoccfc`), not the older 3.0.12 item. Shopper orders MU: copy `wrrapd-orders-bridge.php` to SiteGround `mu-plugins/` (keep CWS id `ofokdnaj…` and `$latest_version` **3.0.13** until 3.0.14 is public) and purge W3 cache.
+Pay server (this VM): `pm2 restart wrrapd-server`. Command Center: Cloud Run image for `tracking-platform`. Extension: Windows pull + `npm run build` + Chrome Reload, then CWS zip from `npm run build:store`. Upload that zip to the **live 3.0.13 listing** (`ofokdnajfbjmpbeocibingpiadnoccfc`), not the older 3.0.12 item. Shopper orders MU: copy `wrrapd-orders-bridge.php` to SiteGround `mu-plugins/` (CWS id `lobngnjcjeimefihnobdmocicopikoip`, `$latest_version` **3.0.14**) and purge W3 cache.

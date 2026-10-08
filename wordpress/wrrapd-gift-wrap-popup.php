@@ -169,7 +169,7 @@ function wrrapd_gift_wrap_popup_enqueue_assets() {
 				'retailers' => wrrapd_gift_wrap_popup_retailers(),
 				'build'     => WRRAPD_GIFT_POPUP_BUILD,
 				'videoUrl'  => wrrapd_gift_wrap_popup_video_url(),
-				'storeUrl'  => function_exists( 'wrrapd_chrome_extension_install_url' ) ? wrrapd_chrome_extension_install_url() : 'https://chromewebstore.google.com/detail/wrrapd/ckjeddmjkhjnkmldknbeakjonfnjocpg',
+				'storeUrl'  => function_exists( 'wrrapd_chrome_extension_install_url' ) ? wrrapd_chrome_extension_install_url() : 'https://chromewebstore.google.com/detail/wrrapd/lobngnjcjeimefihnobdmocicopikoip',
 			)
 		);
 	}

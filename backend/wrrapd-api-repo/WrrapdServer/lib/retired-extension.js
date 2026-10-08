@@ -5,7 +5,7 @@
 
 const RETIRED_HUB_RE = /p\.?\s*o\.?\s*box\s*26067/i;
 
-const INSTALL_URL = 'https://chromewebstore.google.com/detail/wrrapd/ckjeddmjkhjnkmldknbeakjonfnjocpg';
+const INSTALL_URL = 'https://chromewebstore.google.com/detail/wrrapd/lobngnjcjeimefihnobdmocicopikoip';
 
 function textHasRetiredHub(value) {
     return RETIRED_HUB_RE.test(String(value || ''));
