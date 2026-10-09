@@ -4771,6 +4771,17 @@ app.post('/api/store-final-shipping-address', (req, res) => {
     res.status(200).json({ success: true });
 });
 
+/** Shopper allowlist: stored ZIPs that are within 50 miles of an active hub. */
+function publicAllowedZipCodes() {
+    const data = allowedZipCodesLib.loadAllowedZipCodes();
+    const allowedZipCodes = deliveryHubs.filterZipsWithinHubRadius(data.allowedZipCodes);
+    return {
+        allowedZipCodes,
+        count: allowedZipCodes.length,
+        updatedAt: data.updatedAt,
+    };
+}
+
 // Endpoint to get allowed zip codes
 app.get('/api/allowed-zip-codes', (req, res) => {
     // Allow CORS for this endpoint (needed for checkout.html + extension)
@@ -4780,12 +4791,8 @@ app.get('/api/allowed-zip-codes', (req, res) => {
     res.header('Cache-Control', 'no-store');
     res.header('Content-Type', 'application/json');
     try {
-        const data = allowedZipCodesLib.loadAllowedZipCodes();
-        res.status(200).json({
-            allowedZipCodes: data.allowedZipCodes,
-            count: data.allowedZipCodes.length,
-            updatedAt: data.updatedAt,
-        });
+        const data = publicAllowedZipCodes();
+        res.status(200).json(data);
     } catch (e) {
         console.error('[API] allowed-zip-codes failed', e);
         res.status(500).json({ error: 'Failed to load zip codes' });
@@ -4798,12 +4805,7 @@ app.get('/data/allowed-zip-codes.json', (req, res) => {
     res.header('Content-Type', 'application/json');
     res.header('Cache-Control', 'no-store');
     try {
-        const data = allowedZipCodesLib.loadAllowedZipCodes();
-        res.status(200).json({
-            allowedZipCodes: data.allowedZipCodes,
-            count: data.allowedZipCodes.length,
-            updatedAt: data.updatedAt,
-        });
+        res.status(200).json(publicAllowedZipCodes());
     } catch (e) {
         res.status(500).json({ error: 'Failed to load zip codes' });
     }

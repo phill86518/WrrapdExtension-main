@@ -61,6 +61,17 @@ test('rejects incomplete or unmappable addresses', () => {
     assert.throws(() => hubs.upsertHub({ addressLine1: 'PO BOX 1', city: 'X', state: 'GA', postalCode: '00000' }), /ZIP location index/);
 });
 
+test('shopper allowlist keeps only ZIPs within 50 miles of an active hub', () => {
+    const live = require('../data/allowed-zip-codes.json');
+    const served = hubs.filterZipsWithinHubRadius(live.allowedZipCodes);
+    assert.deepEqual(served, live.allowedZipCodes);
+
+    const mixed = hubs.filterZipsWithinHubRadius(['32202', '32256', '30303', '33101', '00000', '']);
+    assert.deepEqual(mixed, ['32202', '32256']);
+    assert.equal(hubs.zipWithinActiveHubRadius('30303'), false);
+    assert.equal(hubs.HUB_SERVICE_RADIUS_MILES, 50);
+});
+
 test('recognizes any hub address on an order', () => {
     assert.equal(hubs.isHubAddress({ street: '150 Busch Dr #26067', postalCode: '32218' }), true);
     assert.equal(hubs.isHubAddress({ street: '12 Oak St', postalCode: '32218' }), false);

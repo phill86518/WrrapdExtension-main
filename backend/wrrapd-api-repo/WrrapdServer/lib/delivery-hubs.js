@@ -9,6 +9,9 @@
  * Stored in data/delivery-hubs.json — edited from Command Center → Allowed ZIP codes →
  * Delivery hubs. The extension asks GET /api/delivery-hub?postalCode= after the shopper
  * submits the giftee ZIP in the gift modal.
+ *
+ * A giftee ZIP is deliverable only when it is also within HUB_SERVICE_RADIUS_MILES of an
+ * active hub. The public allowlist is filtered to that set. The stored allowlist is not.
  */
 const fs = require('fs');
 const path = require('path');
@@ -17,6 +20,9 @@ const zipCounty = require('./zip-county');
 
 const DATA_PATH =
   process.env.WRRAPD_DELIVERY_HUBS_PATH || path.join(__dirname, '..', 'data', 'delivery-hubs.json');
+
+/** Shoppers farther than this from every active hub get the out-of-area ZIP message. */
+const HUB_SERVICE_RADIUS_MILES = 50;
 
 const HUB_KINDS = Object.freeze({
   'premium-po-box': 'Premium PO Box (street address)',
@@ -233,6 +239,43 @@ function nearestHub(postalCode) {
   return { hub: best.hub, distanceMiles: Math.round(best.distanceMiles * 10) / 10, matched: 'nearest' };
 }
 
+function activeHubPoints() {
+  const points = [];
+  for (const h of activeHubs()) {
+    const at = zipCentroids.coordsForZip(h.postalCode);
+    if (at) points.push(at);
+  }
+  return points;
+}
+
+/** True when the ZIP center is within 50 miles of an active hub. Unknown ZIPs are not. */
+function zipWithinActiveHubRadius(postalCode, hubPoints) {
+  const origin = zipCentroids.coordsForZip(normZip(postalCode));
+  if (!origin) return false;
+  const points = hubPoints || activeHubPoints();
+  const latDelta = HUB_SERVICE_RADIUS_MILES / 69.0;
+  const cosLat = Math.max(0.05, Math.cos((origin.lat * Math.PI) / 180));
+  const lngDelta = HUB_SERVICE_RADIUS_MILES / (69.172 * cosLat);
+  for (const at of points) {
+    if (Math.abs(at.lat - origin.lat) > latDelta) continue;
+    if (Math.abs(at.lng - origin.lng) > lngDelta) continue;
+    if (zipCentroids.haversineMiles(origin, at) <= HUB_SERVICE_RADIUS_MILES) return true;
+  }
+  return false;
+}
+
+/** Allowlist ZIPs a shopper may use: on the stored list and within range of a hub. */
+function filterZipsWithinHubRadius(zips) {
+  const points = activeHubPoints();
+  if (!points.length) return [];
+  const out = [];
+  for (const raw of zips || []) {
+    const z = normZip(raw);
+    if (z.length === 5 && zipWithinActiveHubRadius(z, points)) out.push(z);
+  }
+  return out;
+}
+
 /** Shopper-safe answer for the extension. */
 function publicHubForZip(postalCode) {
   const zip = normZip(postalCode);
@@ -339,6 +382,7 @@ function getAdminReport(allowedZipCodes = []) {
   const served = new Map(data.hubs.map((h) => [h.id, 0]));
   const farthest = new Map();
   for (const z of allowedZipCodes) {
+    if (!zipWithinActiveHubRadius(z)) continue;
     const pick = nearestHub(z);
     served.set(pick.hub.id, (served.get(pick.hub.id) || 0) + 1);
     if (pick.distanceMiles != null && (farthest.get(pick.hub.id) || 0) < pick.distanceMiles) {
@@ -364,6 +408,7 @@ function getAdminReport(allowedZipCodes = []) {
 
 module.exports = {
   DATA_PATH,
+  HUB_SERVICE_RADIUS_MILES,
   HUB_KINDS,
   SEED_HUB,
   normZip,
@@ -374,6 +419,8 @@ module.exports = {
   publicHub,
   nearestHub,
   publicHubForZip,
+  zipWithinActiveHubRadius,
+  filterZipsWithinHubRadius,
   isHubAddress,
   upsertHub,
   removeHub,
