@@ -30,6 +30,9 @@
     variantDraft: {},
   };
 
+  var TRASH_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
+    '<path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>';
+
   /* ---------- helpers ---------- */
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
@@ -157,7 +160,7 @@
         (l.retailerName ? extLine('Prefer to buy it yourself? Add gift-wrap at checkout with the extension.') : '');
     }
     var remove = S.view === 'items' && !(S.batch.refresh && S.batch.refresh.state === 'running')
-      ? '<button type="button" class="wb-x" data-act="remove" data-line="' + esc(l.id) + '" aria-label="Delete item">×</button>' : '';
+      ? '<button type="button" class="wb-trash" data-act="remove" data-line="' + esc(l.id) + '" aria-label="Delete item" title="Delete item">' + TRASH_SVG + '</button>' : '';
     return '<div class="wb-row wb-row-' + esc(state) + '">' + img + '<div class="wb-row-main"><p class="wb-row-title">' + esc(title) + '</p>' + linkNote +
       (l.retailerName && l.product ? '<p class="wb-muted">' + esc(l.retailerName) + (l.product.isElectronics ? ' · Electronics' : '') + '</p>' : '') + body + '</div>' + remove + '</div>';
   }

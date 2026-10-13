@@ -6,6 +6,7 @@ const path = require('path');
 const store = require('./store');
 const config = require('./config');
 const resolveLink = require('./resolve-link');
+const categories = require('./categories');
 const retailers = require('./retailers');
 const terms = require('./terms');
 const billing = require('./billing');
@@ -803,6 +804,77 @@ module.exports = function mountBuyForYou(app, deps) {
         });
     });
 
+    const backfillCategories = async (rows) => {
+        let budget = 8;
+        for (const b of rows) {
+            const missing = b.lines.filter((l) => l.product && !l.removed && l.product.amazonCategory === undefined);
+            if (!missing.length || budget <= 0) continue;
+            const found = {};
+            for (const l of missing) {
+                if (budget-- <= 0) break;
+                const r = retailers.byId(l.retailer);
+                found[l.id] = await categories
+                    .categorize({ retailer: '', retailerName: r ? r.name : l.retailer, title: l.product.title, brand: l.product.brand, category: l.product.category })
+                    .catch(() => null);
+            }
+            await store.update(b.id, (x) => {
+                for (const l of x.lines) if (l.id in found && l.product) l.product.amazonCategory = found[l.id];
+                return x;
+            });
+        }
+    };
+
+    app.get('/api/admin/buy/purchases', async (req, res) => {
+        if (!admin(req, res)) return;
+        const paid = () => store.list({ limit: 500 }).filter((b) => b.payment);
+        await backfillCategories(paid());
+        const items = [];
+        for (const b of paid()) {
+            const p = b.payment;
+            const billItems = new Map();
+            for (const g of (b.paidBill && b.paidBill.groups) || []) for (const it of g.items) billItems.set(it.lineId, { ...it, shipping: g.shipping });
+            for (const l of b.lines) {
+                const it = billItems.get(l.id);
+                if (!it) continue;
+                const placement = b.placements[l.retailer] || null;
+                const bundle = Object.values(b.bundles || {}).find((x) => x.lineIds.includes(l.id)) || null;
+                const ret = b.returns && b.returns[l.id];
+                const r = retailers.byId(l.retailer);
+                items.push({
+                    batchId: b.id,
+                    lineId: l.id,
+                    title: l.product.title,
+                    variant: l.variantLabel || '',
+                    imageUrl: l.product.imageUrl || '',
+                    productUrl: l.canonicalUrl || l.url || '',
+                    brand: l.product.brand || '',
+                    retailer: l.retailer,
+                    retailerName: r ? r.name : l.retailer,
+                    retailerCategory: l.product.category || '',
+                    amazonCategory: l.product.amazonCategory || null,
+                    itemPriceCents: it.cents,
+                    shippingLabel: it.shipping ? it.shipping.label : '',
+                    wrapCents: b.paidBill.wrap && b.paidBill.wrap.perLine && b.paidBill.wrap.perLine[l.id] ? b.paidBill.wrap.perLine[l.id].wrapBaseCents : null,
+                    gifter: { name: p.gifterName || '', email: p.email || '', phone: p.phone || '' },
+                    giftee: p.giftee || null,
+                    status: l.cancelled ? 'cancelled' : ret && ret.refunded ? 'returned' : placement && placement.state === 'placed' ? 'placed' : 'to_place',
+                    retailerOrderNumber: placement && placement.retailerOrderNumber ? placement.retailerOrderNumber : '',
+                    externalOrderId: bundle ? bundle.externalOrderId : '',
+                    sentToOrders: !!(bundle && bundle.ingest && bundle.ingest.ok),
+                    dates: {
+                        created: b.createdAt,
+                        paid: p.paidAt || null,
+                        placed: placement && placement.placedAt ? placement.placedAt : null,
+                        hubArrival: (placement && placement.arrivalDate) || (it.shipping && it.shipping.arrivalDate) || null,
+                        delivery: bundle && bundle.arrivalDate ? billing.ymdPlusOne(bundle.arrivalDate) : null,
+                    },
+                });
+            }
+        }
+        items.sort((a, b) => String(b.dates.paid || '').localeCompare(String(a.dates.paid || '')));
+        res.json({ ok: true, items, categories: categories.tree() });
+    });
+
     app.get('/api/admin/buy/batches/:id', async (req, res) => {
         if (!admin(req, res)) return;
         const b = store.read(req.params.id);
@@ -897,7 +969,7 @@ module.exports = function mountBuyForYou(app, deps) {
                 giftMessage: w.giftMessage || '',
                 senderName: w.senderName || '',
                 occasion: w.occasion || '',
-                itemCategory: l.product.category || '',
+                itemCategory: (l.product.amazonCategory && l.product.amazonCategory.path) || l.product.category || '',
                 packageDimensions: l.product.packageDimensions || '',
                 wrapBaseCents: pl.wrapBaseCents,
                 ...(pl.wrapDiscountCents ? { wrapDiscountCents: pl.wrapDiscountCents } : {}),

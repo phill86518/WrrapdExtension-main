@@ -5,6 +5,7 @@
  */
 const grokClient = require('../grok-client');
 const retailers = require('./retailers');
+const categories = require('./categories');
 
 const UA =
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36';
@@ -304,13 +305,16 @@ async function readProduct({ retailer, url }) {
     const taxUsd = Number(facts.taxUsd);
     const taxCents = Number.isFinite(taxUsd) && taxUsd >= 0 && taxOnPage(page.html, taxUsd) ? Math.round(taxUsd * 100) : null;
     const pageOffer = pagePriceCents && applicable.length && taxCents != null ? { itemPriceCents: pagePriceCents, shippingOptions: applicable, taxCents } : null;
+    const brand = String(facts.brand || '').trim().slice(0, 120);
+    const amazonCategory = await categories.categorize({ retailer, retailerName: r.name, html: page.html, title, brand, category });
     return {
         ok: true,
         product: {
             title,
-            brand: String(facts.brand || '').trim().slice(0, 120),
+            brand,
             imageUrl: safeImageUrl(facts.imageUrl) || safeImageUrl(meta.image) || imageFallback(page.html),
             category,
+            amazonCategory,
             packageDimensions: String(facts.packageDimensions || '').trim().slice(0, 120),
             pagePriceCents,
             pageOffer,

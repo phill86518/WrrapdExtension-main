@@ -81,6 +81,7 @@ export type BuyLine = {
     brand?: string;
     imageUrl?: string;
     category?: string;
+    amazonCategory?: AmazonCategory | null;
     isElectronics?: boolean;
     pagePriceCents?: number | null;
     variantGroups?: Array<{ name: string; options: string[]; selected: string | null }>;
@@ -258,6 +259,42 @@ export async function postBuyAction(id: string, action: string, body: Record<str
     `/api/admin/buy/batches/${encodeURIComponent(id)}/${action}`,
     body,
   );
+}
+
+export type AmazonCategory = { department: string; subcategory: string; path: string; source: "amazon_page" | "grok" };
+
+export type BuyPurchase = {
+  batchId: string;
+  lineId: string;
+  title: string;
+  variant: string;
+  imageUrl: string;
+  productUrl: string;
+  brand: string;
+  retailer: string;
+  retailerName: string;
+  retailerCategory: string;
+  amazonCategory: AmazonCategory | null;
+  itemPriceCents: number;
+  shippingLabel: string;
+  wrapCents: number | null;
+  gifter: { name: string; email: string; phone: string };
+  giftee: { name: string; line1: string; line2?: string; city: string; state: string; postalCode: string; phone?: string } | null;
+  status: "to_place" | "placed" | "cancelled" | "returned";
+  retailerOrderNumber: string;
+  externalOrderId: string;
+  sentToOrders: boolean;
+  dates: { created: string; paid: string | null; placed: string | null; hubArrival: string | null; delivery: string | null };
+};
+
+export async function listBuyPurchases() {
+  return call<{ items: BuyPurchase[]; categories: Record<string, string[]> }>("/api/admin/buy/purchases");
+}
+
+export function ymdLabel(ymd?: string | null): string {
+  if (!ymd) return "—";
+  const d = new Date(`${ymd}T12:00:00Z`);
+  return Number.isNaN(d.getTime()) ? ymd : d.toLocaleDateString("en-US", { timeZone: "UTC", dateStyle: "medium" });
 }
 
 export async function fetchWorkflows() {

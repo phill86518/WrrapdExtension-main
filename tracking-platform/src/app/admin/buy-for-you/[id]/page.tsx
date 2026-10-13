@@ -70,7 +70,7 @@ function ItemRow({ line, priceCents }: { line: BuyLine; priceCents?: number | nu
           {line.reason ? ` (${line.reason})` : ""}
           {line.readFailure ? ` · read: ${line.readFailure}` : ""}
           {line.product?.isElectronics ? " · electronics" : ""}
-          {line.product?.category ? ` · ${line.product.category}` : ""}
+          {line.product?.amazonCategory ? ` · ${line.product.amazonCategory.path}` : line.product?.category ? ` · ${line.product.category}` : ""}
         </p>
         {w ? (
           <p className="text-slate-600">

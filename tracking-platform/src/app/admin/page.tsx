@@ -38,11 +38,6 @@ const MODULE_GROUPS = [
         body: "Check in arriving packages by packing-slip order number.",
       },
       {
-        href: "/admin/buy-for-you",
-        title: "We buy it",
-        body: "Quote desk, paid orders to place at the retailer, and returns for wrrapd.com/buy.",
-      },
-      {
         href: "/admin/orders/calendar",
         title: "Calendar",
         body: "Every order by Eastern calendar day.",
@@ -66,6 +61,27 @@ const MODULE_GROUPS = [
         href: "/admin/wrap-work",
         title: "Wrap hours",
         body: "Clock-in, gifts wrapped, and the codes on each box.",
+      },
+    ],
+  },
+  {
+    title: "Website orders — Wrrapd buys",
+    blurb: "Orders from wrrapd.com/buy, where Wrrapd buys the items at the retailer.",
+    modules: [
+      {
+        href: "/admin/buy-for-you",
+        title: "Website order queue",
+        body: "Quotes to confirm, paid orders to place at the retailer, cancellations, and returns.",
+      },
+      {
+        href: "/admin/buy-for-you/purchases",
+        title: "Items we purchased",
+        body: "Every item, its category, the gifter, the giftee name and address, and each date.",
+      },
+      {
+        href: "/admin/buy-for-you/settings",
+        title: "Website order settings",
+        body: "On/off, preview code, purchase limits, stores, and retailer checkout workflows.",
       },
     ],
   },

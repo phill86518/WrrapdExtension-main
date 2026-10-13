@@ -14,7 +14,7 @@ const DEFAULTS = Object.freeze({
     previewCode: '',
     maxLinks: 5,
     merchandiseCapCents: 30000,
-    perItemCapCents: 30000,
+    perItemCapCents: 10000,
     quoteWaitMinutes: 20,
     allowElectronics: true,
     allowedRetailers: retailers.ALL_IDS.slice(),
