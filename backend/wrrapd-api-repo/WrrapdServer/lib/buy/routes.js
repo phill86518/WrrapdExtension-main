@@ -5,6 +5,7 @@
 const path = require('path');
 const store = require('./store');
 const config = require('./config');
+const resolveLink = require('./resolve-link');
 const retailers = require('./retailers');
 const terms = require('./terms');
 const billing = require('./billing');
@@ -25,6 +26,7 @@ const RETURN_DAYS = config.RETURN_WINDOW_DAYS;
 const REASON_TEXT = {
     retailer_not_supported: 'Please paste a link from one of the stores listed.',
     not_a_product_page: 'Please paste the link to a single product page.',
+    product_list: 'This link opens a list of items. Paste the link to one product.',
     not_a_link: 'Please paste a product link.',
     too_long: 'Please paste a product link.',
     duplicate: 'This item is already on your list.',
@@ -83,6 +85,7 @@ function publicLine(l) {
                   title: p.title || '',
                   imageUrl: p.imageUrl || '',
                   isElectronics: p.isElectronics === true,
+                  pagePriceCents: p.pagePriceCents || null,
                   variantGroups: l.state === 'needs_variant' ? p.variantGroups || [] : [],
               }
             : null,
@@ -256,11 +259,20 @@ module.exports = function mountBuyForYou(app, deps) {
         if (raw.length > cfg.maxLinks) return res.status(400).json({ error: `Please paste up to ${cfg.maxLinks} links.` });
         const seen = new Set();
         const now = new Date().toISOString();
-        const lines = raw.map((text, i) => {
-            const parsed = retailers.parseProductLink(text, cfg.allowedRetailers);
+        const opened = await Promise.all(raw.map((text) => resolveLink.resolveLink(text, cfg.allowedRetailers)));
+        const lines = opened.map((parsed, i) => {
+            const text = raw[i];
+            const named = retailers.byId(parsed.retailer);
             const base = { id: `L${i + 1}`, addedAt: now, url: text.slice(0, 2000), wrap: null };
             if (!parsed.ok) {
-                return { ...base, retailer: parsed.retailer || 'none', retailerName: '', state: 'unavailable', reason: parsed.reason, message: REASON_TEXT[parsed.reason] || quotes.UNAVAILABLE };
+                return {
+                    ...base,
+                    retailer: parsed.retailer || 'none',
+                    retailerName: named ? named.name : '',
+                    state: 'unavailable',
+                    reason: parsed.reason,
+                    message: REASON_TEXT[parsed.reason] || quotes.UNAVAILABLE,
+                };
             }
             if (seen.has(parsed.canonicalUrl)) {
                 return { ...base, retailer: parsed.retailer, retailerName: parsed.retailerName, state: 'unavailable', reason: 'duplicate', message: REASON_TEXT.duplicate };

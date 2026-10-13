@@ -1,0 +1,26 @@
+---
+description: wrrapd.com shopper UI uses Fraunces as the default font for headings and body.
+alwaysApply: true
+---
+
+# Wrrapd.com default font (shopper site)
+
+**Scope:** `wrrapd.com` shopper UI (pages, header, footer, account, login/register, `/buy/`, `pay.wrrapd.com`). Contractor portals (`apply` / `pros`) keep their own CSS.
+
+## Default face
+
+**Fraunces** for headings and body. New and updated shopper text uses Fraunces. Do not add a second face (Source Sans, DM Sans, Inter, Arial) on a new shopper page.
+
+| Use | Weight |
+|---|---|
+| Headlines | 560 |
+| Body | 460 |
+| Buttons and labels | 650 |
+
+Load it from Google Fonts with optical sizing:
+
+`Fraunces:ital,opsz,wght@0,9..144,460;0,9..144,560;0,9..144,650`
+
+Stack: `Fraunces, Georgia, "Times New Roman", serif`. Set `font-optical-sizing: auto`.
+
+Elementor and plugin CSS often set their own family with `!important`. Shopper snippets that must win use the same `!important` on the Wrrapd root, the way `/buy/` does on `.wrrapd-buy`.

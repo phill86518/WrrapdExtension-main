@@ -6,11 +6,15 @@
 <meta name="robots" content="noindex, nofollow">
 <title>Wrrapd — Review and pay</title>
 <link rel="icon" href="https://wrrapd.com/wp-content/mu-plugins/icons/favicon/favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,460;0,9..144,560;0,9..144,650&display=swap">
 <script src="https://secure.myhelcim.com/js/version2.js"></script>
 <style>
   :root { --navy:#0c0638; --ink:#162a52; --gold:#f6b933; --btn-text:#0f0351; --line:#e4e1d8; }
   * { box-sizing:border-box; }
-  body { margin:0; background:#f6f4ef; color:var(--ink); font:16px/1.45 Arial, Helvetica, sans-serif; }
+  body { margin:0; background:#f6f4ef; color:var(--ink); font:16px/1.45 Fraunces, Georgia, "Times New Roman", serif; font-optical-sizing:auto; }
+  h1, h2, button, input, label, p, a { font-family: Fraunces, Georgia, "Times New Roman", serif; }
   header { background:#fff; border-bottom:4px solid var(--navy); padding:12px 20px; text-align:center; }
   header img { max-height:56px; max-width:200px; }
   main { max-width:720px; margin:0 auto; padding:20px 16px 60px; }
@@ -32,7 +36,7 @@
   input { width:100%; padding:10px 12px; border:1px solid #c9c5ba; border-radius:8px; font-size:16px; }
   input[readonly] { background:#f1efe9; }
   .card-row { display:grid; grid-template-columns:2fr 1fr 1fr; gap:10px; }
-  .pay { width:100%; padding:15px; border:0; border-radius:10px; background:var(--gold); color:var(--btn-text); font-size:18px; font-weight:700; cursor:pointer; }
+  .pay { width:100%; padding:15px; border:0; border-radius:12px; background:var(--gold); color:var(--btn-text); font-size:18px; font-weight:650; cursor:pointer; font-family:Fraunces, Georgia, serif; }
   .pay[disabled] { opacity:.6; cursor:default; }
   .status { min-height:22px; margin:10px 0; font-size:15px; }
   .status.err { color:#b42318; }

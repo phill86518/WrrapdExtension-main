@@ -12,7 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_BUY_BUILD', '2026-10-13-buy-v1' );
+define( 'WRRAPD_BUY_BUILD', '2026-10-13-buy-v2' );
 
 function wrrapd_buy_is_request() {
 	$path = wp_parse_url( isset( $_SERVER['REQUEST_URI'] ) ? (string) wp_unslash( $_SERVER['REQUEST_URI'] ) : '', PHP_URL_PATH );
@@ -64,7 +64,13 @@ function wrrapd_buy_render() {
 	);
 
 	$base = content_url( 'mu-plugins/' );
-	wp_enqueue_style( 'wrrapd-buy', $base . 'wrrapd-buy-for-you.css', array(), WRRAPD_BUY_BUILD );
+	wp_enqueue_style(
+		'wrrapd-buy-font',
+		'https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,460;0,9..144,560;0,9..144,650;1,9..144,560&display=swap',
+		array(),
+		null
+	);
+	wp_enqueue_style( 'wrrapd-buy', $base . 'wrrapd-buy-for-you.css', array( 'wrrapd-buy-font' ), WRRAPD_BUY_BUILD );
 	wp_enqueue_script( 'wrrapd-buy', $base . 'wrrapd-buy-for-you.js', array(), WRRAPD_BUY_BUILD, true );
 	wp_localize_script(
 		'wrrapd-buy',

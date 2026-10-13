@@ -37,6 +37,16 @@
     });
   }
   function usd(c) { return '$' + (Number(c || 0) / 100).toFixed(2); }
+  function shortUrl(raw) {
+    try {
+      var u = new URL(raw);
+      var path = u.pathname.replace(/\/$/, '');
+      if (path.length > 36) path = path.slice(0, 34) + '…';
+      return u.hostname.replace(/^www\./, '') + path;
+    } catch (e) {
+      return String(raw || '').slice(0, 48);
+    }
+  }
   function usdNum(n) { return '$' + Number(n || 0).toFixed(2); }
   function fmtDate(ymd) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(ymd || '')) return '';
@@ -105,7 +115,7 @@
       '<input class="wb-input wb-zip" id="wb-zip" inputmode="numeric" maxlength="5" autocomplete="off">' +
       '<label class="wb-label">Product links</label><div class="wb-links">' + links + '</div>' +
       (S.linkCount < S.config.maxLinks ? '<button type="button" class="wb-link-btn" data-act="add-link">+ Add another link</button>' : '') +
-      '<p class="wb-muted">' + esc(stores) + '</p>' +
+      '<p class="wb-stores">' + (S.config ? S.config.retailers.map(function (r) { return '<span>' + esc(r.name) + '</span>'; }).join('') : esc(stores)) + '</p>' +
       (S.error ? '<p class="wb-error">' + esc(S.error) + '</p>' : '') +
       '<button type="button" class="wb-btn" data-act="create"' + (S.busy ? ' disabled' : '') + '>' + (S.busy ? 'Checking…' : 'Check my items') + '</button></section>';
     return h;
@@ -117,12 +127,19 @@
 
   function lineRow(l) {
     var g = groupFor(l.retailer);
-    var title = l.product && l.product.title ? l.product.title : l.url;
+    var title = l.product && l.product.title ? l.product.title : (l.retailerName || 'Item');
+    var linkNote = !l.product && l.url ? '<p class="wb-linkline">' + esc(shortUrl(l.url)) + '</p>' : '';
     var img = l.product && l.product.imageUrl ? '<img src="' + esc(l.product.imageUrl) + '" alt="">' : '<span class="wb-img-ph"></span>';
     var body = '';
     var state = l.state;
     if (state === 'reading') body = '<p class="wb-status"><span class="wb-spin"></span>Reading the product page…</p>';
-    else if (state === 'quoting') body = '<p class="wb-status"><span class="wb-spin"></span>Checking price and shipping with ' + esc(l.retailerName) + '…</p>';
+    else if (state === 'quoting') {
+      var shelf = l.product && l.product.pagePriceCents;
+      var confirming = g && g.state === 'needs_person';
+      body = (shelf ? '<p class="wb-price">' + usd(shelf) + '</p>' : '') +
+        '<p class="wb-status"><span class="wb-spin"></span>' +
+        (confirming ? 'Confirming shipping with ' : 'Checking price and shipping with ') + esc(l.retailerName) + '…</p>';
+    }
     else if (state === 'needs_variant') {
       body = '<div class="wb-variants">';
       (l.product.variantGroups || []).forEach(function (vg) {
@@ -139,8 +156,8 @@
     }
     var remove = state !== 'unavailable' && S.view === 'items' && !(S.batch.refresh && S.batch.refresh.state === 'running')
       ? '<button type="button" class="wb-remove" data-act="remove" data-line="' + esc(l.id) + '" aria-label="Remove">Remove</button>' : '';
-    return '<div class="wb-row wb-row-' + esc(state) + '">' + img + '<div class="wb-row-main"><p class="wb-row-title">' + esc(title) + '</p>' +
-      (l.retailerName ? '<p class="wb-muted">' + esc(l.retailerName) + (l.product && l.product.isElectronics ? ' · Electronics' : '') + '</p>' : '') + body + '</div>' + remove + '</div>';
+    return '<div class="wb-row wb-row-' + esc(state) + '">' + img + '<div class="wb-row-main"><p class="wb-row-title">' + esc(title) + '</p>' + linkNote +
+      (l.retailerName && l.product ? '<p class="wb-muted">' + esc(l.retailerName) + (l.product.isElectronics ? ' · Electronics' : '') + '</p>' : '') + body + '</div>' + remove + '</div>';
   }
 
   function groupBlock(g) {

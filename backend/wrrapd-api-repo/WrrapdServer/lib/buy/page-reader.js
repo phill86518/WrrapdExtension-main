@@ -13,12 +13,14 @@ const BLOCK_MARKERS = /captcha|robot check|are you a human|access denied|pardon 
 const ELECTRONICS_WORDS =
     /\b(electronics?|computers?|laptops?|tablets?|ipad|iphone|smartphones?|cell phones?|headphones?|earbuds|airpods|speakers?|televisions?|tvs?|monitors?|cameras?|camcorders?|drones?|smart ?watch(?:es)?|wearables?|video game consoles?|gaming consoles?|playstation|xbox|nintendo switch|e-?readers?|kindle|routers?|printers?|projectors?|smart home)\b/i;
 
-function hostAllowed(retailerId, host) {
+function hostAllowed(retailerId, host, extraHosts) {
+    const h = String(host || '').toLowerCase().replace(/\.$/, '');
     const r = retailers.byId(retailerId);
-    return !!r && r.hosts.includes(String(host || '').toLowerCase());
+    const allowed = new Set([...(r ? r.hosts : []), ...(extraHosts || [])]);
+    return allowed.has(h);
 }
 
-async function fetchPage(retailerId, url) {
+async function fetchPage(retailerId, url, extraHosts) {
     let current = url;
     for (let hop = 0; hop < 5; hop++) {
         const ctrl = new AbortController();
@@ -41,7 +43,7 @@ async function fetchPage(retailerId, url) {
             const loc = resp.headers.get('location');
             if (!loc) return { ok: false, reason: 'redirect_without_location' };
             const next = new URL(loc, current);
-            if (!hostAllowed(retailerId, next.hostname)) return { ok: false, reason: 'redirect_off_site' };
+            if (!hostAllowed(retailerId, next.hostname, extraHosts)) return { ok: false, reason: 'redirect_off_site' };
             current = next.toString();
             continue;
         }
@@ -143,7 +145,10 @@ function imageFallback(html) {
 
 function looksElectronic(retailerId, ...texts) {
     if (retailerId === 'bestbuy') return true;
-    return texts.some((t) => ELECTRONICS_WORDS.test(String(t || '')));
+    const blob = texts.join(' ');
+    // Printer paper and sticker sheets mention "printer" and are not electronics.
+    if (/\b(sticker|printer|photo|inkjet|label)\s+paper\b/i.test(blob)) return false;
+    return ELECTRONICS_WORDS.test(blob);
 }
 
 const SYSTEM_PROMPT = [
@@ -153,7 +158,7 @@ const SYSTEM_PROMPT = [
     '"inStock":bool|null,"category":string,"isElectronics":bool,"variantGroups":[{"name":string,"options":[string],"selected":string|null}],',
     '"packageDimensions":string}',
     'variantGroups lists choices the buyer must make (size, color, style, capacity). Leave it empty when none.',
-    'isElectronics is true for powered devices and gadgets (phones, computers, audio, TVs, cameras, game consoles, smart home, wearables).',
+    'isElectronics is true for powered devices and gadgets (phones, computers, audio, TVs, cameras, game consoles, smart home, wearables). Printer paper, sticker paper, ink, and labels are not electronics.',
 ].join(' ');
 
 async function askGrok({ retailerName, url, html }) {
@@ -229,7 +234,9 @@ async function readProduct({ retailer, url }) {
             packageDimensions: String(facts.packageDimensions || '').trim().slice(0, 120),
             pagePriceCents: priceSeen ? Math.round(priceUsd * 100) : null,
             inStock: facts.inStock === false ? false : facts.inStock === true ? true : null,
-            isElectronics: facts.isElectronics === true || looksElectronic(retailer, category, title),
+            isElectronics: /\b(sticker|printer|photo|inkjet|label)\s+paper\b/i.test(`${category} ${title}`)
+                ? false
+                : facts.isElectronics === true || looksElectronic(retailer, category, title),
             variantGroups: cleanVariantGroups(facts.variantGroups),
             readAt: new Date().toISOString(),
             readBy: 'grok',
