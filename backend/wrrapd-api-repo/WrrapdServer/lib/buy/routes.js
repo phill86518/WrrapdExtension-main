@@ -88,9 +88,11 @@ function publicLine(l) {
                   imageUrl: p.imageUrl || '',
                   isElectronics: p.isElectronics === true,
                   pagePriceCents: p.pagePriceCents || null,
-                  standardShip: p.pageOffer && p.pageOffer.shippingOptions && p.pageOffer.shippingOptions[0]
-                      ? { cents: p.pageOffer.shippingOptions[0].cents, arrivalDate: p.pageOffer.shippingOptions[0].arrivalDate || null }
-                      : null,
+                  standardShip: p.standardShip && (p.standardShip.cents != null || p.standardShip.arrivalDate)
+                      ? { cents: p.standardShip.cents, arrivalDate: p.standardShip.arrivalDate || null, note: p.standardShip.note || '' }
+                      : (p.pageOffer && p.pageOffer.shippingOptions && p.pageOffer.shippingOptions[0]
+                          ? { cents: p.pageOffer.shippingOptions[0].cents, arrivalDate: p.pageOffer.shippingOptions[0].arrivalDate || null, note: '' }
+                          : null),
                   variantGroups: l.state === 'needs_variant' ? p.variantGroups || [] : [],
               }
             : null,

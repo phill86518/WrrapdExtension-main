@@ -216,6 +216,36 @@ function shippingApplies(option, itemCents) {
     return true;
 }
 
+const MONTHS = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
+
+/** Regular delivery printed on the page. Skips Prime and other membership sentences. No extra request. */
+function standardFromPage(html, itemCents) {
+    const text = visibleText(html).replace(/\s+/g, ' ');
+    const re = /((?:free\s+)?delivery)\s+(?:on\s+)?(?:[A-Za-z]+,\s+)?([A-Za-z]+)\s+(\d{1,2})([^.]{0,100})/gi;
+    const now = new Date();
+    let m;
+    while ((m = re.exec(text))) {
+        const window = m[0];
+        if (membershipOnly(window)) continue;
+        const mon = MONTHS[m[2].toLowerCase().slice(0, 3)];
+        const day = Number(m[3]);
+        if (!mon || day < 1 || day > 31) continue;
+        let year = now.getFullYear();
+        if (mon < now.getMonth() + 1 || (mon === now.getMonth() + 1 && day < now.getDate() - 1)) year += 1;
+        const arrivalDate = `${year}-${String(mon).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const over = window.match(/over\s+\$(\d+)/i);
+        const free = /free/i.test(window);
+        if (free && over && itemCents < Number(over[1]) * 100) {
+            return { label: 'Standard shipping', cents: null, arrivalDate, note: `Free on orders over $${over[1]}` };
+        }
+        if (free) return { label: 'Standard shipping', cents: 0, arrivalDate, note: '' };
+        const dollars = window.match(/\$\s?(\d+(?:\.\d{2})?)/);
+        if (dollars) return { label: 'Standard shipping', cents: Math.round(Number(dollars[1]) * 100), arrivalDate, note: '' };
+        return { label: 'Standard shipping', cents: null, arrivalDate, note: '' };
+    }
+    return null;
+}
+
 /** The regular option: the one marked standard or default, otherwise the cheapest. Dated options win. */
 function standardChoice(options) {
     if (!options.length) return null;
@@ -321,8 +351,8 @@ async function readProduct({ retailer, url }) {
         ? [{ label: facts.standardShipping.label || 'Standard shipping', priceUsd: facts.standardShipping.priceUsd, arrivalDate: facts.standardShipping.arrivalDate }]
         : facts.shippingOptions;
     const applicable = cleanShipping(page.html, offered).filter((o) => shippingApplies(o, pagePriceCents || 0));
-    const chosen = standardChoice(applicable);
-    const pageOffer = pagePriceCents && chosen ? { itemPriceCents: pagePriceCents, shippingOptions: [chosen] } : null;
+    const chosen = standardChoice(applicable) || standardFromPage(page.html, pagePriceCents || 0);
+    const pageOffer = pagePriceCents && chosen && chosen.cents != null ? { itemPriceCents: pagePriceCents, shippingOptions: [chosen] } : null;
     const brand = String(facts.brand || '').trim().slice(0, 120);
     const amazonCategory = await categories.categorize({ retailer, retailerName: r.name, html: page.html, title, brand, category });
     return {
@@ -336,6 +366,7 @@ async function readProduct({ retailer, url }) {
             packageDimensions: String(facts.packageDimensions || '').trim().slice(0, 120),
             pagePriceCents,
             pageOffer,
+            standardShip: chosen ? { cents: chosen.cents, arrivalDate: chosen.arrivalDate || null, note: chosen.note || '' } : null,
             pageNotes: [],
             inStock: facts.inStock === false ? false : facts.inStock === true ? true : null,
             isElectronics: /\b(sticker|printer|photo|inkjet|label)\s+paper\b/i.test(`${category} ${title}`)
@@ -348,4 +379,4 @@ async function readProduct({ retailer, url }) {
     };
 }
 
-module.exports = { readProduct, askGrok, looksElectronic, priceAppearsInPage, jsonLdProducts, visibleText, fetchPage };
+module.exports = { readProduct, askGrok, looksElectronic, priceAppearsInPage, jsonLdProducts, visibleText, fetchPage, standardFromPage };

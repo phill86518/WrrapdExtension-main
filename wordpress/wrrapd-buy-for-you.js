@@ -170,14 +170,15 @@
 
   function shipOf(l) {
     var s = l.product && l.product.standardShip;
-    if (s && s.cents != null) return s;
+    if (s && (s.cents != null || s.arrivalDate || s.note)) return s;
     return null;
   }
 
   function shippingCell(l) {
     var s = shipOf(l);
     if (s) {
-      return '<span class="wb-price">' + (s.cents ? usd(s.cents) : 'Free') + '</span>' +
+      var price = s.cents == null ? (s.note ? esc(s.note) : '—') : (s.cents ? usd(s.cents) : 'Free');
+      return '<span class="wb-price">' + price + '</span>' +
         '<span class="wb-arrive">To Wrrapd ' + (s.arrivalDate ? esc(fmtDate(s.arrivalDate)) : 'date to follow') + '*</span>';
     }
     if (l.state === 'reading' || ((l.state === 'quoting' || l.state === 'needs_variant') && !l.product)) {
@@ -197,7 +198,7 @@
       var c = knownCents(l);
       if (c != null) itemSum += c;
       var s = shipOf(l);
-      if (s) shipSum += s.cents;
+      if (s && s.cents != null) shipSum += s.cents;
     });
     var tax = g && g.taxCents != null ? g.taxCents : (S.batch.salesTaxPercent != null ? Math.round((itemSum + shipSum) * S.batch.salesTaxPercent / 100) : null);
     var gross = itemSum + shipSum + (tax || 0);
