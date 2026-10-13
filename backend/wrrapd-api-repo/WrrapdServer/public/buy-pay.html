@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Wrrapd — Review and pay</title>
+<link rel="icon" href="https://wrrapd.com/wp-content/mu-plugins/icons/favicon/favicon.ico">
+<script src="https://secure.myhelcim.com/js/version2.js"></script>
+<style>
+  :root { --navy:#0c0638; --ink:#162a52; --gold:#f6b933; --btn-text:#0f0351; --line:#e4e1d8; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:#f6f4ef; color:var(--ink); font:16px/1.45 Arial, Helvetica, sans-serif; }
+  header { background:#fff; border-bottom:4px solid var(--navy); padding:12px 20px; text-align:center; }
+  header img { max-height:56px; max-width:200px; }
+  main { max-width:720px; margin:0 auto; padding:20px 16px 60px; }
+  h1 { font-size:24px; color:var(--btn-text); margin:6px 0 14px; }
+  h2 { font-size:17px; color:var(--btn-text); margin:22px 0 10px; }
+  .card { background:#fff; border:1px solid var(--line); border-radius:12px; padding:16px; margin-bottom:14px; }
+  .bill-row { display:flex; justify-content:space-between; gap:12px; padding:5px 0; }
+  .bill-row.item { align-items:center; }
+  .bill-row.item img { width:44px; height:44px; object-fit:contain; border-radius:6px; background:#faf9f6; margin-right:10px; }
+  .bill-row .lbl { flex:1; display:flex; align-items:center; }
+  .bill-row.total { border-top:2px solid var(--navy); margin-top:8px; padding-top:10px; font-weight:700; font-size:18px; }
+  .muted { color:#5b6478; font-size:14px; }
+  .retailer { font-weight:700; margin-top:10px; }
+  .changes { background:#fff7e0; border:1px solid var(--gold); border-radius:10px; padding:12px 14px; margin-bottom:14px; }
+  .changes p { margin:4px 0; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .grid .full { grid-column:1 / -1; }
+  label { display:block; font-size:14px; margin-bottom:4px; }
+  input { width:100%; padding:10px 12px; border:1px solid #c9c5ba; border-radius:8px; font-size:16px; }
+  input[readonly] { background:#f1efe9; }
+  .card-row { display:grid; grid-template-columns:2fr 1fr 1fr; gap:10px; }
+  .pay { width:100%; padding:15px; border:0; border-radius:10px; background:var(--gold); color:var(--btn-text); font-size:18px; font-weight:700; cursor:pointer; }
+  .pay[disabled] { opacity:.6; cursor:default; }
+  .status { min-height:22px; margin:10px 0; font-size:15px; }
+  .status.err { color:#b42318; }
+  .ext { font-size:14px; background:#fff; border:1px dashed #c9c5ba; border-radius:10px; padding:10px 14px; margin-top:16px; }
+  .ext a { color:var(--ink); font-weight:700; }
+  .done { text-align:center; padding:30px 10px; }
+  .done h1 { font-size:28px; }
+  #helcimResults, #buttonProcess { display:none; }
+  .check { display:flex; gap:8px; align-items:center; font-size:14px; margin:6px 0 2px; }
+  .check input { width:auto; }
+  @media (max-width:560px) { .grid { grid-template-columns:1fr; } .card-row { grid-template-columns:1fr 1fr; } .card-row .pan { grid-column:1 / -1; } }
+</style>
+</head>
+<body>
+<header><img src="/img/wrrapd-logo-1-small.png" alt="Wrrapd"></header>
+<main id="app">
+  <p class="muted" id="loading">Loading your order…</p>
+</main>
+
+<form id="helcimForm" onsubmit="return false" style="display:none">
+  <input type="hidden" id="token" value="">
+  <input type="hidden" id="dontSubmit" value="1">
+  <input type="hidden" id="amount" value="0.00">
+  <input type="hidden" id="cardNumber" value="">
+  <input type="hidden" id="cardExpiryMonth" value="">
+  <input type="hidden" id="cardExpiryYear" value="">
+  <input type="hidden" id="cardCVV" value="">
+  <input type="hidden" id="cardHolderName" value="">
+  <input type="hidden" id="cardHolderAddress" value="">
+  <input type="hidden" id="cardHolderPostalCode" value="">
+  <button type="button" id="buttonProcess">Process</button>
+</form>
+<div id="helcimResults"></div>
+
+<script>
+(function () {
+  var API = 'https://api.wrrapd.com';
+  var CWS = 'https://chromewebstore.google.com/detail/wrrapd/lobngnjcjeimefihnobdmocicopikoip';
+  var qs = new URLSearchParams(location.search);
+  var id = qs.get('b') || '';
+  var token = qs.get('t') || '';
+  var app = document.getElementById('app');
+  var batch = null;
+  var termsVersion = '';
+  var acceptedRefreshId = null;
+  var busy = false;
+
+  function usd(c) { return '$' + (Number(c || 0) / 100).toFixed(2); }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (ch) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]; }); }
+  function fmtDate(ymd) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(ymd || '')) return '';
+    var p = ymd.split('-').map(Number);
+    return new Date(Date.UTC(p[0], p[1] - 1, p[2], 12)).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' });
+  }
+  function api(path, opts) {
+    opts = opts || {};
+    var init = { method: opts.method || 'GET', headers: { 'Content-Type': 'application/json' } };
+    if (opts.body) init.body = JSON.stringify(Object.assign({ t: token }, opts.body));
+    var url = API + path + (init.method === 'GET' ? (path.indexOf('?') < 0 ? '?' : '&') + 't=' + encodeURIComponent(token) : '');
+    return fetch(url, init).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (j) { j.__status = r.status; j.__ok = r.ok; return j; });
+    });
+  }
+  function setStatus(text, err) {
+    var el = document.getElementById('status');
+    if (!el) return;
+    el.textContent = text || '';
+    el.className = 'status' + (err ? ' err' : '');
+  }
+  function backLink() {
+    return 'https://www.wrrapd.com/buy/?b=' + encodeURIComponent(id) + '&t=' + encodeURIComponent(token);
+  }
+
+  function billHtml(bill) {
+    if (!bill) return '<p class="muted">' + esc((batch && batch.billError) || 'Your total is being prepared.') + '</p>';
+    var h = '';
+    bill.groups.forEach(function (g) {
+      h += '<div class="retailer">' + esc(g.retailerName) + '</div>';
+      g.items.forEach(function (it) {
+        h += '<div class="bill-row item"><span class="lbl">' + (it.imageUrl ? '<img src="' + esc(it.imageUrl) + '" alt="">' : '') +
+          '<span>' + esc(it.title) + (it.variant ? '<br><span class="muted">' + esc(it.variant) + '</span>' : '') + '</span></span><span>' + usd(it.cents) + '</span></div>';
+      });
+      h += '<div class="bill-row"><span class="lbl">Shipping: ' + esc(g.shipping.label) + (g.shipping.arrivalDate ? ' <span class="muted">&nbsp;(arrives ' + esc(fmtDate(g.shipping.arrivalDate)) + ')</span>' : '') + '</span><span>' + usd(g.shipping.cents) + '</span></div>';
+      h += '<div class="bill-row"><span class="lbl">' + esc(g.retailerName) + ' tax</span><span>' + usd(g.taxCents) + '</span></div>';
+    });
+    var w = bill.wrap;
+    h += '<div class="retailer">Wrrapd</div>';
+    h += '<div class="bill-row"><span class="lbl">Gift-wrap (' + (w.giftWrapCount || 0) + ')</span><span>' + usd(w.giftWrapCents) + '</span></div>';
+    if (w.discountCents) h += '<div class="bill-row"><span class="lbl">Multi-item discount</span><span>-' + usd(w.discountCents) + '</span></div>';
+    if (w.designAiCents) h += '<div class="bill-row"><span class="lbl">AI design</span><span>' + usd(w.designAiCents) + '</span></div>';
+    if (w.designUploadCents) h += '<div class="bill-row"><span class="lbl">Your design</span><span>' + usd(w.designUploadCents) + '</span></div>';
+    if (w.flowersCents) h += '<div class="bill-row"><span class="lbl">Flowers</span><span>' + usd(w.flowersCents) + '</span></div>';
+    if (w.boxCents) h += '<div class="bill-row"><span class="lbl">Gift box</span><span>' + usd(w.boxCents) + '</span></div>';
+    h += '<div class="bill-row"><span class="lbl">Tax on gift-wrap</span><span>' + usd(w.serviceTaxCents) + '</span></div>';
+    h += '<div class="bill-row total"><span>Total</span><span>' + usd(bill.totalCents) + '</span></div>';
+    if (bill.bundles && bill.bundles.length) {
+      h += '<h2 style="margin-top:16px">Deliveries</h2>';
+      bill.bundles.forEach(function (b) {
+        h += '<p class="muted" style="margin:4px 0">' + (b.deliveryDate ? 'Estimated ' + esc(fmtDate(b.deliveryDate)) : 'Date to follow') + ': ' + esc(b.titles.join(', ')) + '</p>';
+      });
+    }
+    return h;
+  }
+
+  function field(id, label, opts) {
+    opts = opts || {};
+    return '<div class="' + (opts.full ? 'full' : '') + '"><label for="' + id + '">' + esc(label) + '</label><input id="' + id + '"' +
+      (opts.type ? ' type="' + opts.type + '"' : '') + (opts.ac ? ' autocomplete="' + opts.ac + '"' : '') +
+      (opts.value ? ' value="' + esc(opts.value) + '"' : '') + (opts.readonly ? ' readonly' : '') + (opts.max ? ' maxlength="' + opts.max + '"' : '') + '></div>';
+  }
+
+  function render() {
+    if (batch.status === 'paid' || batch.status === 'closed') return renderDone();
+    var changes = batch.refresh && batch.refresh.state === 'done' && batch.refresh.changes.length
+      ? '<div class="changes">' + batch.refresh.changes.map(function (t) { return '<p>' + esc(t) + '</p>'; }).join('') + '</div>' : '';
+    app.innerHTML =
+      '<h1>Review and pay</h1>' +
+      '<div id="changes">' + changes + '</div>' +
+      '<div class="card" id="bill">' + billHtml(batch.bill) + '</div>' +
+      '<p class="muted"><a href="' + backLink() + '">Change gift-wrap or items</a></p>' +
+      '<h2>Your contact information</h2><div class="card grid">' +
+        field('gName', 'Your name', { ac: 'name', max: 80 }) + field('gPhone', 'Your phone', { type: 'tel', ac: 'tel', max: 20 }) +
+        field('gEmail', 'Your email', { type: 'email', ac: 'email', full: true, max: 120 }) +
+      '</div>' +
+      '<h2>Giftee delivery address</h2><div class="card grid">' +
+        field('rName', 'Giftee name', { full: true, max: 80 }) +
+        field('rLine1', 'Street address', { full: true, ac: 'shipping address-line1', max: 120 }) +
+        field('rLine2', 'Apt, suite (optional)', { full: true, ac: 'shipping address-line2', max: 120 }) +
+        field('rCity', 'City', { ac: 'shipping address-level2', max: 80 }) + field('rState', 'State (2 letters)', { ac: 'shipping address-level1', max: 2 }) +
+        field('rZip', 'ZIP code', { value: batch.gifteeZip, readonly: true }) + field('rPhone', 'Giftee phone (optional)', { type: 'tel', max: 20 }) +
+      '</div>' +
+      '<h2>Billing address</h2><div class="card grid">' +
+        field('bName', 'Name on card', { full: true, ac: 'cc-name', max: 80 }) +
+        field('bLine1', 'Street address', { full: true, ac: 'billing address-line1', max: 120 }) +
+        field('bCity', 'City', { ac: 'billing address-level2', max: 80 }) + field('bState', 'State (2 letters)', { ac: 'billing address-level1', max: 2 }) +
+        field('bZip', 'ZIP code', { ac: 'billing postal-code', max: 10 }) +
+      '</div>' +
+      '<h2>Card</h2><div class="card"><div class="card-row">' +
+        '<div class="pan"><label for="cNum">Card number</label><input id="cNum" inputmode="numeric" autocomplete="cc-number" maxlength="23"></div>' +
+        '<div><label for="cExp">MM / YY</label><input id="cExp" inputmode="numeric" autocomplete="cc-exp" maxlength="7"></div>' +
+        '<div><label for="cCvv">CVC</label><input id="cCvv" inputmode="numeric" autocomplete="cc-csc" maxlength="4"></div>' +
+      '</div></div>' +
+      '<p class="muted">By paying, you agree to the Terms you accepted for this order.</p>' +
+      '<div class="status" id="status"></div>' +
+      '<button class="pay" id="payBtn" type="button">' + (batch.bill ? 'Pay ' + usd(batch.bill.totalCents) : 'Pay') + '</button>' +
+      '<div class="ext">Prefer to check out at the retailer yourself? <a href="' + CWS + '" target="_blank" rel="noopener">Get the free Wrrapd Chrome extension</a> and add gift-wrap at checkout.</div>';
+    restoreForm();
+    document.getElementById('payBtn').addEventListener('click', onPay);
+    app.addEventListener('input', saveForm);
+  }
+
+  var FORM_IDS = ['gName', 'gPhone', 'gEmail', 'rName', 'rLine1', 'rLine2', 'rCity', 'rState', 'rPhone', 'bName', 'bLine1', 'bCity', 'bState', 'bZip'];
+  function saveForm() {
+    var o = {};
+    FORM_IDS.forEach(function (k) { var el = document.getElementById(k); if (el) o[k] = el.value; });
+    try { sessionStorage.setItem('wbPay:' + id, JSON.stringify(o)); } catch (_) {}
+  }
+  function restoreForm() {
+    var o = {};
+    try { o = JSON.parse(sessionStorage.getItem('wbPay:' + id) || '{}'); } catch (_) {}
+    FORM_IDS.forEach(function (k) { var el = document.getElementById(k); if (el && o[k]) el.value = o[k]; });
+  }
+  function val(k) { var el = document.getElementById(k); return el ? el.value.trim() : ''; }
+
+  function renderDone() {
+    app.innerHTML = '<div class="done"><h1>Thank you!</h1><p>Your order number is <b>' + esc(batch.orderNumber || batch.id) + '</b>.</p>' +
+      '<p>We are buying your items, gift-wrapping them, and delivering them. A receipt is on its way to your email.</p>' +
+      '<p class="muted">Questions? Call (844) 638-5484.</p></div>';
+  }
+
+  function readCard() {
+    var pan = val('cNum').replace(/\D/g, '');
+    var exp = val('cExp').replace(/\D/g, '');
+    var cvv = val('cCvv').replace(/\D/g, '');
+    var month = exp.slice(0, 2);
+    var year = exp.length >= 6 ? exp.slice(4, 6) : exp.slice(2, 4);
+    var ok = pan.length >= 13 && pan.length <= 19 && Number(month) >= 1 && Number(month) <= 12 && year.length === 2 && cvv.length >= 3;
+    return { pan: pan, month: month, year: year, cvv: cvv, ok: ok };
+  }
+
+  function formErrors() {
+    if (!val('gName') || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(val('gEmail')) || val('gPhone').replace(/\D/g, '').length < 10) return 'Please enter your name, email, and phone.';
+    if (!val('rName') || !val('rLine1') || !val('rCity') || val('rState').length !== 2) return 'Please complete the giftee’s address.';
+    if (!val('bName') || !val('bLine1') || !val('bCity') || val('bState').length !== 2 || val('bZip').replace(/\D/g, '').length < 5) return 'Please complete the billing address.';
+    if (!readCard().ok) return 'Please finish entering the card number, expiry, and CVC.';
+    return '';
+  }
+
+  function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+
+  async function waitForRefresh() {
+    var started = Date.now();
+    while (Date.now() - started < 4 * 60 * 60 * 1000) {
+      var j = await api('/api/buy/batches/' + encodeURIComponent(id));
+      if (!j.__ok) throw new Error(j.error || 'Please try again.');
+      batch = j.batch;
+      if (batch.refresh && batch.refresh.state === 'done') return batch.refresh;
+      await sleep(4000);
+    }
+    throw new Error('Please try again.');
+  }
+
+  function showBill() {
+    document.getElementById('bill').innerHTML = billHtml(batch.bill);
+    var ch = batch.refresh && batch.refresh.changes.length
+      ? '<div class="changes">' + batch.refresh.changes.map(function (t) { return '<p>' + esc(t) + '</p>'; }).join('') + '</div>' : '';
+    document.getElementById('changes').innerHTML = ch;
+    document.getElementById('payBtn').textContent = batch.bill ? 'Pay ' + usd(batch.bill.totalCents) : 'Pay';
+  }
+
+  async function onPay() {
+    if (busy) return;
+    var err = formErrors();
+    if (err) return setStatus(err, true);
+    busy = true;
+    var btn = document.getElementById('payBtn');
+    btn.disabled = true;
+    try {
+      var r = batch.refresh;
+      var fresh = r && r.state === 'done' && r.id === acceptedRefreshId && Date.now() - Date.parse(r.doneAt) < 9 * 60 * 1000;
+      if (!fresh) {
+        setStatus('Checking the latest prices with the retailer…');
+        var started = await api('/api/buy/batches/' + encodeURIComponent(id) + '/refresh', { method: 'POST', body: {} });
+        if (!started.__ok) throw new Error(started.error || 'Please try again.');
+        batch = started.batch;
+        r = await waitForRefresh();
+        showBill();
+        if (!batch.bill) throw new Error(r.error || batch.billError || 'We can’t buy these items right now.');
+        if (r.changed) {
+          acceptedRefreshId = r.id;
+          setStatus('Please review the new total, then click Pay.');
+          return;
+        }
+        acceptedRefreshId = r.id;
+      }
+      await charge(batch.refresh.billHash);
+    } catch (e) {
+      setStatus((e && e.message) || 'Payment could not complete. Please try again.', true);
+    } finally {
+      busy = false;
+      var b = document.getElementById('payBtn');
+      if (b) b.disabled = false;
+    }
+  }
+
+  async function charge(billHash) {
+    setStatus('Processing your payment…');
+    var card = readCard();
+    document.getElementById('cardNumber').value = card.pan;
+    document.getElementById('cardExpiryMonth').value = card.month;
+    document.getElementById('cardExpiryYear').value = card.year;
+    document.getElementById('cardCVV').value = card.cvv;
+    document.getElementById('cardHolderName').value = val('bName');
+    document.getElementById('cardHolderAddress').value = val('bLine1');
+    document.getElementById('cardHolderPostalCode').value = val('bZip').replace(/\D/g, '').slice(0, 5);
+    document.getElementById('amount').value = (batch.bill.totalCents / 100).toFixed(2);
+    document.getElementById('helcimResults').innerHTML = '';
+    if (typeof helcimProcess !== 'function') throw new Error('The payment form did not load. Please refresh the page.');
+    try { await helcimProcess(); } catch (e) {
+      throw new Error('Card was not accepted. ' + ((document.getElementById('helcimResults').textContent || '').trim()));
+    }
+    var pane = document.getElementById('helcimResults');
+    var get = function (k) { var el = pane.querySelector('[id="' + k + '"]'); return el ? String(el.value || '').trim() : ''; };
+    var cardToken = get('cardToken');
+    if (get('response') !== '1' || !cardToken) throw new Error('Card was not accepted. ' + (get('responseMessage') || ''));
+    var j = await api('/api/buy/batches/' + encodeURIComponent(id) + '/charge', {
+      method: 'POST',
+      body: {
+        cardToken: cardToken,
+        billHash: billHash,
+        termsVersion: termsVersion,
+        gifter: { name: val('gName'), email: val('gEmail'), phone: val('gPhone') },
+        giftee: { name: val('rName'), line1: val('rLine1'), line2: val('rLine2'), city: val('rCity'), state: val('rState').toUpperCase(), postalCode: batch.gifteeZip, phone: val('rPhone') },
+        billing: { name: val('bName'), email: val('gEmail'), phone: val('gPhone'), address: { line1: val('bLine1'), city: val('bCity'), state: val('bState').toUpperCase(), postal_code: val('bZip') } },
+      },
+    });
+    if (j.__status === 409 && (j.code === 'refresh_needed' || j.code === 'bill_changed')) {
+      acceptedRefreshId = null;
+      var again = await api('/api/buy/batches/' + encodeURIComponent(id));
+      if (again.__ok) { batch = again.batch; showBill(); }
+      throw new Error(j.error);
+    }
+    if (!j.__ok || !j.orderNumber) throw new Error(j.error || 'Payment could not complete. Please try again.');
+    try { sessionStorage.removeItem('wbPay:' + id); } catch (_) {}
+    batch.status = 'paid';
+    batch.orderNumber = j.orderNumber;
+    renderDone();
+  }
+
+  async function start() {
+    if (!id || !token) { app.innerHTML = '<p>We could not find this order. <a href="https://www.wrrapd.com/buy/">Start again</a>.</p>'; return; }
+    var cfg = await fetch(API + '/api/helcim-checkout-config').then(function (r) { return r.json(); }).catch(function () { return {}; });
+    if (cfg && cfg.jsToken) document.getElementById('token').value = cfg.jsToken;
+    var t = await fetch(API + '/api/buy/terms').then(function (r) { return r.json(); }).catch(function () { return {}; });
+    termsVersion = (t && t.version) || '';
+    var j = await api('/api/buy/batches/' + encodeURIComponent(id));
+    if (!j.__ok) { app.innerHTML = '<p>' + esc(j.error || 'We could not find this order.') + ' <a href="https://www.wrrapd.com/buy/">Start again</a>.</p>'; return; }
+    batch = j.batch;
+    if (!batch.termsAccepted && batch.status === 'open') { location.href = backLink(); return; }
+    if (!cfg || !cfg.jsToken) { render(); setStatus('Payment is not available right now. Please try again later.', true); document.getElementById('payBtn').disabled = true; return; }
+    render();
+  }
+  start();
+})();
+</script>
+</body>
+</html>

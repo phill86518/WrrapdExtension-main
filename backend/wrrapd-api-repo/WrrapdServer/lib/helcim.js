@@ -69,7 +69,7 @@ function errorText(data) {
     return 'Payment was declined';
 }
 
-async function purchase({ amountCents, cardToken, orderNumber, billing, ipAddress }) {
+async function purchase({ amountCents, cardToken, orderNumber, billing, ipAddress, lineDescription }) {
     const amount = Math.round(Number(amountCents)) / 100;
     const invoiceNumber = String(orderNumber || '').trim().slice(0, 40);
     const body = {
@@ -82,7 +82,7 @@ async function purchase({ amountCents, cardToken, orderNumber, billing, ipAddres
         invoice: {
             invoiceNumber,
             notes: 'Wrrapd',
-            lineItems: [{ description: 'Wrrapd gift wrap', quantity: 1, price: amount }],
+            lineItems: [{ description: String(lineDescription || 'Wrrapd gift wrap').slice(0, 80), quantity: 1, price: amount }],
         },
     };
     return helcimFetch('/payment/purchase', {

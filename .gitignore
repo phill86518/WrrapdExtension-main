@@ -31,6 +31,10 @@ server.log
 
 # WrrapdServer runtime (optional: do not commit customer orders)
 backend/wrrapd-api-repo/WrrapdServer/orders/*.json
+backend/wrrapd-api-repo/WrrapdServer/orders/buy-for-you/
+backend/wrrapd-api-repo/WrrapdServer/data/buy-for-you-config.json
+backend/wrrapd-api-repo/WrrapdServer/data/buy-workflows.json
+backend/wrrapd-api-repo/WrrapdServer/data/buy-browser-profiles/
 backend/wrrapd-api-repo/WrrapdServer/temp_qr_*.png
 
 # Extension / server local-only dirs (from nested .gitignore)

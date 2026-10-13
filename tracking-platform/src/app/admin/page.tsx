@@ -38,6 +38,11 @@ const MODULE_GROUPS = [
         body: "Check in arriving packages by packing-slip order number.",
       },
       {
+        href: "/admin/buy-for-you",
+        title: "We buy it",
+        body: "Quote desk, paid orders to place at the retailer, and returns for wrrapd.com/buy.",
+      },
+      {
         href: "/admin/orders/calendar",
         title: "Calendar",
         body: "Every order by Eastern calendar day.",

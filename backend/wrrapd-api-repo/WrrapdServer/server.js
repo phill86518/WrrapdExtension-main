@@ -4886,6 +4886,38 @@ app.post('/api/admin/facebook/publish', (req, res) => {
         });
 });
 
+/** "We buy it for you" page (wrrapd.com/buy/) and its Command Center module. New routes only. */
+async function sendBuyForYouMail({ to, subject, html, from, replyTo }) {
+    const recipients = orderEmails.filterLiveRecipients(Array.isArray(to) ? to : [to]);
+    const sender = from || (smtpReadyForPay() && process.env.SMTP_FROM_ADMIN?.trim()) || 'Wrrapd <noreply@wrrapd.com>';
+    if (smtpReadyForPay()) {
+        return createPaySmtpTransport().sendMail({ from: sender, to: recipients, subject, html, replyTo: replyTo || undefined });
+    }
+    if (process.env.FORCE_SMTP_ONLY === 'true') throw new Error('SMTP required (FORCE_SMTP_ONLY=true) but SMTP env missing');
+    return mg.messages.create(process.env.MAILGUN_DOMAIN, {
+        from: sender,
+        to: recipients,
+        subject,
+        html,
+        ...(replyTo ? { 'h:Reply-To': replyTo } : {}),
+    });
+}
+
+require(path.join(__dirname, 'lib', 'buy', 'routes'))(app, {
+    helcim,
+    ingestOrderIntoTracking,
+    requireWrrapdAdminKey,
+    clientIpForHelcim,
+    helcimBillingFromClient,
+    wrrapdIsoFromRetailerYmd,
+    sendMail: sendBuyForYouMail,
+    publicWrrapdMediaUrl,
+    normalizeCustomerEmail,
+    getOrCreateWrrapdCustomerId,
+    deliveryHubs,
+    allowedZipCodesLib,
+});
+
 // Health check endpoint for PM2 monitoring
 app.get('/health', (req, res) => {
     res.status(200).json({ 
