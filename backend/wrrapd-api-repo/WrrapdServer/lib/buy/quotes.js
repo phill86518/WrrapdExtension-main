@@ -353,6 +353,7 @@ async function sweep(batchId) {
                 changed = true;
             }
         }
+        if (Object.values(batch.groups || {}).some((g) => g.state === 'empty' && activeLines(batch, g.retailer).length)) kick = true;
         if (changed) maybeFinishRefresh(batch);
         return changed ? batch : null;
     });
