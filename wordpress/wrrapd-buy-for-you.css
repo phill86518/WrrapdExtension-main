@@ -106,12 +106,22 @@
 .wb-muted { color: #5c6578; font-size: 15px; font-weight: 460; margin: 6px 0; }
 .wb-linkline { color: #5c6578; font-size: 14px; margin: 2px 0 0; overflow-wrap: anywhere; }
 .wb-error { color: #9a3412; font-weight: 650; margin: 12px 0 0; }
-.wb-row { display: flex; gap: 14px; align-items: flex-start; padding: 16px 0; border-top: 1px solid var(--wb-line); }
-.wb-row:first-of-type { border-top: 0; padding-top: 8px; }
-.wb-row img, .wb-img-ph { width: 84px; height: 84px; object-fit: contain; border-radius: 12px; background: var(--wb-cream); flex: 0 0 84px; }
-.wb-row-main { flex: 1; min-width: 0; }
+.wb-store { margin: 18px 0 8px; }
+.wb-store-name { margin: 0 0 8px; font-weight: 650; font-size: 20px; color: var(--wb-navy); letter-spacing: .01em; }
+.wb-table { width: 100%; border-collapse: collapse; table-layout: auto; }
+.wb-table th { text-align: left; font-weight: 650; font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: #5c6578; padding: 8px 10px; border-bottom: 2px solid var(--wb-line); }
+.wb-table td { padding: 14px 10px; vertical-align: top; border-bottom: 1px solid var(--wb-line); }
+.wb-table td.wb-num { white-space: nowrap; }
+.wb-table td.wb-shipcell { min-width: 190px; }
+.wb-table td.wb-del { width: 44px; padding-left: 0; padding-right: 0; text-align: right; }
+.wb-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.wb-item { display: flex; gap: 12px; align-items: flex-start; }
+.wb-item img, .wb-img-ph { width: 72px; height: 72px; object-fit: contain; border-radius: 12px; background: var(--wb-cream); flex: 0 0 72px; }
+.wb-item-main { flex: 1; min-width: 0; }
+.wb-shipcell .wb-ship { margin: 0 0 8px; }
+.wb-shipcell small { color: #5c6578; font-size: 13px; }
 .wb-row-title { font-weight: 560; font-size: 18px; line-height: 1.25; margin: 0; overflow-wrap: anywhere; color: var(--wb-navy); }
-.wb-price { font-weight: 650; font-size: 20px; margin: 6px 0 0; color: var(--wb-navy); }
+.wb-price { font-weight: 650; font-size: 18px; margin: 0; color: var(--wb-navy); }
 .wb-status { margin: 8px 0 0; display: flex; align-items: center; gap: 8px; font-weight: 460; }
 .wb-unavailable { margin: 8px 0 0; color: #9a3412; font-weight: 560; }
 .wb-row-unavailable .wb-row-title { color: #5c6578; }
@@ -135,7 +145,7 @@
 .wb-bill-total { border-top: 2px solid var(--wb-deep); margin-top: 10px; padding-top: 12px; font-weight: 650; font-size: 20px; }
 .wb-ext-line { background: var(--wb-cream); border-radius: 12px; padding: 12px 14px; font-size: 15px; margin: 16px 0 0; }
 .wb-ext-line a { color: var(--wb-navy); font-weight: 650; }
-.wb-row .wb-ext-line { margin-top: 8px; }
+.wb-tr .wb-ext-line { margin-top: 8px; }
 .wb-modal { position: fixed; inset: 0; background: rgba(12, 6, 56, .55); z-index: 99999; display: flex; align-items: center; justify-content: center; padding: 16px; }
 .wb-modal-box { background: #fff; border-radius: 18px; max-width: 760px; width: 100%; max-height: 92vh; display: flex; flex-direction: column; padding: 22px; }
 .wb-modal-box h2 { color: var(--wb-navy); margin: 0; font-size: 28px; font-weight: 560; }
@@ -156,6 +166,15 @@
 .wb-tile-on { border-color: var(--wb-gold); box-shadow: 0 0 0 2px var(--wb-gold); }
 textarea.wb-input { resize: vertical; }
 @media (max-width: 700px) {
+  .wb-table, .wb-table tbody, .wb-table tr, .wb-table td { display: block; width: 100%; box-sizing: border-box; }
+  .wb-table thead { display: none; }
+  .wb-table tr { position: relative; padding: 12px 44px 12px 0; border-bottom: 1px solid var(--wb-line); }
+  .wb-table td { padding: 4px 0; border: 0; }
+  .wb-table td[data-label="Price"], .wb-table td[data-label="Shipping"], .wb-table td[data-label="Tax"] { display: grid; grid-template-columns: 84px 1fr; gap: 8px; white-space: normal; }
+  .wb-table td[data-label="Price"]::before, .wb-table td[data-label="Shipping"]::before, .wb-table td[data-label="Tax"]::before { content: attr(data-label); font-weight: 650; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: #5c6578; padding-top: 2px; }
+  .wb-table td.wb-del { position: absolute; top: 12px; right: 0; width: auto; padding: 0; }
+  .wb-table td.wb-shipcell { min-width: 0; }
+
   .wb-wrap { padding: 20px 14px 64px; }
   .wb-options { grid-template-columns: 1fr; }
   .wb-grid { grid-template-columns: repeat(2, 1fr); }

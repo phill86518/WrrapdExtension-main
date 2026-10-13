@@ -95,7 +95,10 @@
     else if (S.view === 'wrap') html = viewWrap();
     else if (S.view === 'review') html = viewReview();
     else if (S.view === 'paid') html = viewPaid();
-    root.innerHTML = '<div class="wb-wrap">' + html + '</div>' + (S.termsOpen ? viewTerms() : '');
+    var next = '<div class="wb-wrap">' + html + '</div>' + (S.termsOpen ? viewTerms() : '');
+    if (next === S.lastHtml) return;
+    S.lastHtml = next;
+    root.innerHTML = next;
     bind();
   }
 
@@ -128,52 +131,97 @@
     return (S.batch.groups || []).filter(function (g) { return g.retailer === retailer; })[0] || null;
   }
 
-  function lineRow(l) {
-    var g = groupFor(l.retailer);
-    var title = l.product && l.product.title ? l.product.title : (l.retailerName || 'Item');
-    var linkNote = !l.product && l.url ? '<p class="wb-linkline">' + esc(shortUrl(l.url)) + '</p>' : '';
-    var img = l.product && l.product.imageUrl ? '<img src="' + esc(l.product.imageUrl) + '" alt="">' : '<span class="wb-img-ph"></span>';
-    var body = '';
-    var state = l.state;
-    if (state === 'reading') body = '<p class="wb-status"><span class="wb-spin"></span>Reading the product page…</p>';
-    else if (state === 'quoting') {
-      var shelf = l.product && l.product.pagePriceCents;
-      var confirming = g && g.state === 'needs_person';
-      var notes = (l.product && l.product.pageNotes) || [];
-      body = (shelf ? '<p class="wb-price">' + usd(shelf) + '</p>' : '') +
-        notes.map(function (n) { return '<p class="wb-muted">' + esc(n) + '</p>'; }).join('') +
-        '<p class="wb-status"><span class="wb-spin"></span>' +
-        (confirming ? 'Confirming shipping with ' : 'Checking price and shipping with ') + esc(l.retailerName) + '…</p>';
-    }
-    else if (state === 'needs_variant') {
-      body = '<div class="wb-variants">';
-      (l.product.variantGroups || []).forEach(function (vg) {
-        body += '<label class="wb-label">' + esc(vg.name) + '</label><select class="wb-input" data-variant="' + esc(l.id) + '" data-group="' + esc(vg.name) + '"><option value="">Choose…</option>' +
-          vg.options.map(function (o) { return '<option' + (S.variantDraft[l.id + '|' + vg.name] === o ? ' selected' : '') + '>' + esc(o) + '</option>'; }).join('') + '</select>';
-      });
-      body += '<button type="button" class="wb-btn wb-btn-sm" data-act="variant" data-line="' + esc(l.id) + '">Confirm</button></div>';
-    } else if (state === 'ready') {
-      var price = g && g.itemPrices ? g.itemPrices[l.id] : null;
-      body = (l.variantLabel ? '<p class="wb-muted">' + esc(l.variantLabel) + '</p>' : '') + '<p class="wb-price">' + usd(price) + '</p>';
-    } else if (state === 'unavailable') {
-      body = '<p class="wb-unavailable">' + esc(l.message || "We can't buy this item right now.") + '</p>' +
-        (l.retailerName ? extLine('Prefer to buy it yourself? Add gift-wrap at checkout with the extension.') : '');
-    }
-    var remove = S.view === 'items' && !(S.batch.refresh && S.batch.refresh.state === 'running')
-      ? '<button type="button" class="wb-trash" data-act="remove" data-line="' + esc(l.id) + '" aria-label="Delete item" title="Delete item">' + TRASH_SVG + '</button>' : '';
-    return '<div class="wb-row wb-row-' + esc(state) + '">' + img + '<div class="wb-row-main"><p class="wb-row-title">' + esc(title) + '</p>' + linkNote +
-      (l.retailerName && l.product ? '<p class="wb-muted">' + esc(l.retailerName) + (l.product.isElectronics ? ' · Electronics' : '') + '</p>' : '') + body + '</div>' + remove + '</div>';
+  var WAIT_ADD = 'Please wait while we add that to your gift-wrapping cart…';
+  var WAIT_DETAILS = 'Getting additional details…';
+
+  function canEdit() {
+    return S.view === 'items' && !(S.batch.refresh && S.batch.refresh.state === 'running');
   }
 
-  function groupBlock(g) {
-    if (g.state !== 'ready' || !g.shippingOptions.length) return '';
-    var opts = g.shippingOptions.map(function (o) {
-      return '<label class="wb-ship"><input type="radio" name="ship-' + esc(g.retailer) + '" value="' + esc(o.id) + '" data-ship="' + esc(g.retailer) + '"' +
-        (o.id === g.selectedShippingId ? ' checked' : '') + '> <span>' + esc(o.label) + ' · ' + (o.cents ? usd(o.cents) : 'Free') +
-        (o.arrivalDate ? ' · reaches us ' + esc(fmtDate(o.arrivalDate)) : '') + '</span></label>';
+  function itemCell(l) {
+    var title = l.product && l.product.title ? l.product.title : 'Item';
+    var img = l.product && l.product.imageUrl ? '<img src="' + esc(l.product.imageUrl) + '" alt="">' : '<span class="wb-img-ph"></span>';
+    var h = '<div class="wb-item">' + img + '<div class="wb-item-main">';
+    if (l.product) h += '<p class="wb-row-title">' + esc(title) + '</p>';
+    else if (l.url) h += '<p class="wb-linkline">' + esc(shortUrl(l.url)) + '</p>';
+    if (l.variantLabel) h += '<p class="wb-muted">' + esc(l.variantLabel) + '</p>';
+    if (l.product && l.product.isElectronics) h += '<p class="wb-muted">Electronics</p>';
+    if (l.state === 'reading') h += '<p class="wb-status"><span class="wb-spin"></span>' + WAIT_ADD + '</p>';
+    if (l.state === 'needs_variant') {
+      h += '<div class="wb-variants">';
+      (l.product.variantGroups || []).forEach(function (vg) {
+        h += '<label class="wb-label">' + esc(vg.name) + '</label><select class="wb-input" data-variant="' + esc(l.id) + '" data-group="' + esc(vg.name) + '"><option value="">Choose…</option>' +
+          vg.options.map(function (o) { return '<option' + (S.variantDraft[l.id + '|' + vg.name] === o ? ' selected' : '') + '>' + esc(o) + '</option>'; }).join('') + '</select>';
+      });
+      h += '<button type="button" class="wb-btn wb-btn-sm" data-act="variant" data-line="' + esc(l.id) + '">Confirm</button></div>';
+    }
+    if (l.state === 'unavailable') {
+      h += '<p class="wb-unavailable">' + esc(l.message || "We can't buy this item right now.") + '</p>' +
+        (l.retailerName ? extLine('Prefer to buy it yourself? Add gift-wrap at checkout with the extension.') : '');
+    }
+    return h + '</div></div>';
+  }
+
+  function priceCell(l) {
+    if (l.state === 'unavailable' || l.state === 'reading') return '—';
+    var c = knownCents(l);
+    return c != null ? '<span class="wb-price">' + usd(c) + '</span>' : '<span class="wb-muted">' + WAIT_DETAILS + '</span>';
+  }
+
+  function shippingCell(g, lines) {
+    if (g && g.state === 'ready' && g.shippingOptions.length) {
+      return g.shippingOptions.map(function (o) {
+        return '<label class="wb-ship"><input type="radio" name="ship-' + esc(g.retailer) + '" value="' + esc(o.id) + '" data-ship="' + esc(g.retailer) + '"' +
+          (o.id === g.selectedShippingId ? ' checked' : '') + '> <span>' + esc(o.label) + ' · ' + (o.cents ? usd(o.cents) : 'Free') +
+          (o.arrivalDate ? '<br><small>Reaches us ' + esc(fmtDate(o.arrivalDate)) + '</small>' : '') + '</span></label>';
+      }).join('');
+    }
+    var active = lines.filter(function (l) { return l.state === 'quoting' || l.state === 'needs_variant'; });
+    if (!active.length) return '—';
+    var notes = [];
+    active.forEach(function (l) { ((l.product && l.product.pageNotes) || []).forEach(function (n) { if (notes.indexOf(n) < 0) notes.push(n); }); });
+    return notes.map(function (n) { return '<p class="wb-muted">' + esc(n) + '</p>'; }).join('') +
+      '<p class="wb-status"><span class="wb-spin"></span>' + WAIT_DETAILS + '</p>';
+  }
+
+  function taxCell(g, lines) {
+    if (g && g.state === 'ready') return usd(g.taxCents);
+    return lines.some(function (l) { return l.state === 'quoting' || l.state === 'needs_variant'; }) ? '<span class="wb-muted">' + WAIT_DETAILS + '</span>' : '—';
+  }
+
+  function retailerTable(name, retailer, lines) {
+    var g = retailer ? groupFor(retailer) : null;
+    var edit = canEdit();
+    var h = '<div class="wb-store"><p class="wb-store-name">' + esc(name) + '</p><table class="wb-table"><thead><tr>' +
+      '<th scope="col">Item</th><th scope="col">Price</th><th scope="col">Shipping</th><th scope="col">Tax</th>' + (edit ? '<th scope="col"><span class="wb-sr">Delete</span></th>' : '') +
+      '</tr></thead><tbody>';
+    lines.forEach(function (l, i) {
+      h += '<tr class="wb-tr wb-row-' + esc(l.state) + '">' +
+        '<td data-label="Item">' + itemCell(l) + '</td>' +
+        '<td data-label="Price" class="wb-num">' + priceCell(l) + '</td>';
+      if (i === 0) {
+        var span = lines.length > 1 ? ' rowspan="' + lines.length + '"' : '';
+        h += '<td data-label="Shipping"' + span + ' class="wb-shipcell">' + (retailer ? shippingCell(g, lines) : '—') + '</td>' +
+          '<td data-label="Tax"' + span + ' class="wb-num">' + (retailer ? taxCell(g, lines) : '—') + '</td>';
+      }
+      if (edit) h += '<td class="wb-del"><button type="button" class="wb-trash" data-act="remove" data-line="' + esc(l.id) + '" aria-label="Delete item" title="Delete item">' + TRASH_SVG + '</button></td>';
+      h += '</tr>';
+    });
+    return h + '</tbody></table></div>';
+  }
+
+  function itemTables(lines) {
+    var order = [];
+    var by = {};
+    lines.forEach(function (l) {
+      var key = l.retailerName ? l.retailer : '_other';
+      if (!by[key]) { by[key] = []; order.push(key); }
+      by[key].push(l);
+    });
+    return order.map(function (key) {
+      var first = by[key][0];
+      return key === '_other' ? retailerTable('Other links', null, by[key]) : retailerTable(first.retailerName, first.retailer, by[key]);
     }).join('');
-    return '<div class="wb-group"><p class="wb-group-title">Shipping from ' + esc(g.retailerName) + '</p>' + opts +
-      '<p class="wb-muted">' + esc(g.retailerName) + ' tax: ' + usd(g.taxCents) + '</p></div>';
   }
 
   function stillWorking() {
@@ -205,7 +253,7 @@
       var name = l.product && l.product.title ? l.product.title : (l.retailerName || 'Item');
       var c = knownCents(l);
       if (c != null) sum += c;
-      var right = l.state === 'unavailable' ? '—' : (c != null ? usd(c) : 'Checking');
+      var right = l.state === 'unavailable' ? '—' : (c != null ? usd(c) : 'Getting details');
       h += '<div class="wb-bill-row"><span>' + esc(name) + '</span><span>' + esc(right) + '</span></div>';
     });
     h += '<div class="wb-bill-row wb-bill-total"><span>Item prices so far</span><span>' + usd(sum) + '</span></div>';
@@ -216,8 +264,7 @@
   function viewItems() {
     var b = S.batch;
     var lines = visibleLines();
-    var rows = lines.map(lineRow).join('');
-    var groups = (b.groups || []).map(groupBlock).join('');
+    var rows = itemTables(lines);
     var ready = readyLines().length;
     var canGo = ready > 0 && !stillWorking() && b.bill;
     var room = lines.length < (S.config ? S.config.maxLinks : 5);
@@ -227,7 +274,6 @@
       (rows || '<p class="wb-muted">Add a product link to start.</p>') +
       (room ? '<div class="wb-add"><input class="wb-input" id="wb-add-link" type="url" placeholder="Paste another product link" aria-label="Another product link"><button type="button" class="wb-btn wb-btn-sm" data-act="add-item">Add</button></div>' : '') +
       '</section>';
-    if (groups) h += '<section class="wb-card"><h2>Shipping to our gift-wrap studio</h2>' + groups + '</section>';
     h += '<section class="wb-card">' + detailsBlock() + '</section>';
     if (b.bill) h += '<section class="wb-card">' + billBlock(b.bill, false) + '</section>';
     else if (b.billError && !stillWorking() && ready) h += '<p class="wb-error">' + esc(b.billError) + '</p>';
@@ -362,8 +408,13 @@
   }
 
   /* ---------- actions ---------- */
+  root.addEventListener('click', function (e) {
+    var el = e.target && e.target.closest ? e.target.closest('[data-act]') : null;
+    if (!el || !root.contains(el) || el.disabled) return;
+    onAct({ currentTarget: el, preventDefault: function () { e.preventDefault(); } });
+  });
+
   function bind() {
-    $all('[data-act]').forEach(function (el) { el.addEventListener('click', onAct); });
     var zipEdit = $('#wb-zip-edit');
     if (zipEdit) zipEdit.addEventListener('change', onZip);
     $all('[data-ship]').forEach(function (el) { el.addEventListener('change', onShip); });
@@ -422,7 +473,7 @@
     S.error = '';
     if (act === 'add-link') { keepLinks(function () { S.linkCount = Math.min(S.config.maxLinks, S.linkCount + 1); }); return; }
     if (act === 'create') return create();
-    if (act === 'remove') return change('/remove', { lineId: el.getAttribute('data-line') });
+    if (act === 'remove') return removeLine(el.getAttribute('data-line'));
     if (act === 'add-item') return addItem();
     if (act === 'variant') return submitVariant(el.getAttribute('data-line'));
     if (act === 'to-terms') { S.termsOpen = true; S.termsScrolled = false; render(); return; }
@@ -514,6 +565,15 @@
     var url = el ? el.value.trim() : '';
     if (!url) { S.error = 'Please paste a product link.'; render(); return; }
     change('/link', { url: url });
+  }
+
+  function removeLine(lineId) {
+    var l = S.batch.lines.filter(function (x) { return x.id === lineId; })[0];
+    if (!l || l.state === 'removed') return;
+    var was = l.state;
+    l.state = 'removed';
+    render();
+    return change('/remove', { lineId: lineId }).catch(function () { l.state = was; render(); });
   }
 
   function change(path, body) {

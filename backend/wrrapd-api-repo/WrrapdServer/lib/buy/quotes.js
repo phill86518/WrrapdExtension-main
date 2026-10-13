@@ -125,6 +125,7 @@ async function kickGroups(batchId, kind) {
     await store.update(batchId, (batch) => {
         for (const retailerId of [...new Set(batch.lines.map((l) => l.retailer))].filter((id) => retailers.byId(id))) {
             const g = ensureGroup(batch, retailerId);
+            if (g.state === 'empty' && activeLines(batch, retailerId).length) g.state = 'waiting';
             if (g.state !== 'waiting') continue;
             const req = openQuoteRequest(batch, retailerId, kind || 'initial');
             if (req) reqs.push(req);

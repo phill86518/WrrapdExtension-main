@@ -459,7 +459,7 @@ module.exports = function mountBuyForYou(app, deps) {
                         retailerName: parsed.retailerName,
                         state: 'reading',
                     });
-                    quotes.ensureGroup(b, parsed.retailer);
+                    quotes.ensureGroup(b, parsed.retailer).state = 'waiting';
                 }
                 store.addLog(b, 'shopper', `Added a link (${id})`);
                 return b;

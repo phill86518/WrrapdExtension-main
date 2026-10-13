@@ -12,7 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_BUY_BUILD', '2026-10-13-buy-v4' );
+define( 'WRRAPD_BUY_BUILD', '2026-10-13-buy-v5' );
 
 function wrrapd_buy_is_request() {
 	$path = wp_parse_url( isset( $_SERVER['REQUEST_URI'] ) ? (string) wp_unslash( $_SERVER['REQUEST_URI'] ) : '', PHP_URL_PATH );
@@ -58,10 +58,20 @@ function wrrapd_buy_render() {
 	add_filter(
 		'body_class',
 		function ( $classes ) {
+			$kit       = (int) get_option( 'elementor_active_kit' );
 			$classes[] = 'wrrapd-buy-page';
-			return $classes;
+			$classes[] = 'page';
+			$classes[] = 'elementor-default';
+			$classes[] = 'elementor-template-full-width';
+			if ( $kit ) {
+				$classes[] = 'elementor-kit-' . $kit;
+			}
+			return array_unique( $classes );
 		}
 	);
+
+	add_action( 'wp_head', 'wrrapd_buy_header_match_css', 10000 );
+	add_action( 'wp_body_open', 'wrrapd_buy_retailer_strip', 6 );
 
 	$base = content_url( 'mu-plugins/' );
 	wp_enqueue_style(
@@ -91,3 +101,24 @@ function wrrapd_buy_render() {
 	exit;
 }
 add_action( 'template_redirect', 'wrrapd_buy_render', 1 );
+
+/** Same guest logo size the landing page uses (wrrapd_output_header_layout_css scopes it to body.home). */
+function wrrapd_buy_header_match_css() {
+	$logo = 'body.wrrapd-buy-page:not(.logged-in) .elementor-location-header .elementor-element-68a38868.elementor-widget img';
+	echo '<style id="wrrapd-buy-header-match">';
+	echo $logo . '{max-height:none!important;max-width:min(19.2rem,54vw)!important;width:auto!important;height:auto!important;}';
+	echo '@media(max-width:1100px),(hover:none) and (pointer:coarse){' . $logo . '{max-width:100%!important;max-height:clamp(4.2rem,22vw,5.5rem)!important;}}';
+	echo '</style>';
+}
+
+/** The landing page's retailer strip under the header; that function only prints on the front page. */
+function wrrapd_buy_retailer_strip() {
+	global $wp_query;
+	if ( ! function_exists( 'wrrapd_output_retailer_wheel_strip' ) || ! $wp_query ) {
+		return;
+	}
+	$was               = $wp_query->is_home;
+	$wp_query->is_home = true;
+	wrrapd_output_retailer_wheel_strip();
+	$wp_query->is_home = $was;
+}
