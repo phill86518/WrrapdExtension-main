@@ -188,7 +188,9 @@ textarea.wb-input { resize: vertical; }
   .wb-table td { padding: 4px 0; border: 0; }
   .wb-table td[data-label="Expected delivery"], .wb-table td[data-label="Shipping cost"], .wb-table td[data-label="Price"] { display: grid; grid-template-columns: 9.5rem 1fr; gap: 8px; white-space: normal; width: auto; }
   .wb-table td[data-label="Expected delivery"]::before, .wb-table td[data-label="Shipping cost"]::before, .wb-table td[data-label="Price"]::before { content: attr(data-label); font-weight: 650; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: #5c6578; padding-top: 2px; }
-  .wb-zip-row { flex-wrap: wrap; }
+  .wb-zip-row { flex-wrap: nowrap; gap: 8px; }
+  .wb-zip-row .wb-label { font-size: 13px; }
+  .wb-zip { width: 5.5rem; max-width: 5.5rem; flex-basis: 5.5rem; }
   .wb-table tfoot, .wb-table tfoot tr, .wb-table tfoot td { display: block; width: 100%; }
   .wb-table tfoot tr { display: flex; justify-content: space-between; padding: 2px 0; }
   .wb-table tfoot td { border: 0; padding: 0; width: auto; }
