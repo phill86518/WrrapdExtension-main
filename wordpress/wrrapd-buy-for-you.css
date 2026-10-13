@@ -124,6 +124,7 @@ body.wrrapd-buy-page main.wrrapd-buy { max-width: none !important; width: 100% !
 .wb-table th { text-align: left; font-weight: 650; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: #5c6578; padding: 6px 8px; border-bottom: 2px solid var(--wb-line); }
 .wb-table td { padding: 8px; vertical-align: top; border-bottom: 1px solid var(--wb-line); font-size: 15px; }
 .wb-table td.wb-num { white-space: nowrap; }
+.wb-table td.wb-shipcost { white-space: normal; line-height: 1.25; }
 .wb-arrive { display: block; color: #5c6578; font-size: 13px; margin-top: 2px; }
 .wb-asterisk { margin: 6px 0 0; color: #5c6578; font-size: 13px; }
 .wb-table tfoot td { border-bottom: 0; padding-top: 6px; padding-bottom: 2px; font-weight: 560; }

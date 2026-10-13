@@ -217,7 +217,7 @@
       h += '<tr class="wb-tr wb-row-' + esc(l.state) + '">' +
         '<td data-label="Item">' + itemCell(l) + '</td>' +
         '<td data-label="Expected delivery">' + (retailer ? deliveryCell(l) : '—') + '</td>' +
-        '<td data-label="Shipping cost" class="wb-num">' + (retailer ? costCell(l) : '—') + '</td>' +
+        '<td data-label="Shipping cost" class="wb-shipcost">' + (retailer ? costCell(l) : '—') + '</td>' +
         '<td data-label="Price" class="wb-num">' + priceCell(l) + '</td>';
       if (edit) h += '<td class="wb-del"><button type="button" class="wb-trash" data-act="remove" data-line="' + esc(l.id) + '" aria-label="Delete item" title="Delete item">' + TRASH_SVG + '</button></td>';
       h += '</tr>';
