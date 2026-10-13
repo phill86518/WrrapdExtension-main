@@ -83,9 +83,9 @@
     history.replaceState(null, '', u.toString());
   }
 
-  var extLine = function (text) {
-    return '<p class="wb-ext-line">' + esc(text) + ' <a href="' + esc(EXT) + '" target="_blank" rel="noopener">Get the free Wrrapd Chrome extension</a>.</p>';
-  };
+  function extLine() {
+    return '<p class="wb-ext-line">Prefer to buy it yourself and have us gift-wrap? Simply add the free <a href="' + esc(EXT) + '" target="_blank" rel="noopener">Wrrapd Chrome extension</a> and select us for gift-wrapping at retailer checkout.</p>';
+  }
 
   /* ---------- views ---------- */
   function render() {
@@ -117,8 +117,8 @@
       links += '<input class="wb-input wb-link" type="url" inputmode="url" placeholder="Paste a product link" aria-label="Product link ' + (i + 1) + '">';
     }
     h += '<section class="wb-card" id="wb-start"><h2>Your gift</h2>' +
-      '<label class="wb-label" for="wb-zip">Giftee / gift-recipient\'s zip code:</label>' +
-      '<input class="wb-input wb-zip" id="wb-zip" inputmode="numeric" maxlength="5" autocomplete="off">' +
+      '<div class="wb-zip-row"><label class="wb-label" for="wb-zip">Giftee / gift-recipient\'s zip code:</label>' +
+      '<input class="wb-input wb-zip" id="wb-zip" inputmode="numeric" maxlength="5" autocomplete="off"></div>' +
       '<label class="wb-label">Paste the product links for gift-wrapping below.</label><div class="wb-links">' + links + '</div>' +
       (S.linkCount < S.config.maxLinks ? '<button type="button" class="wb-link-btn" data-act="add-link">+ Add another link</button>' : '') +
       '<p class="wb-stores">' + (S.config ? S.config.retailers.map(function (r) { return '<span>' + esc(r.name) + '</span>'; }).join('') : esc(stores)) + '</p>' +
@@ -157,7 +157,7 @@
     }
     if (l.state === 'unavailable') {
       h += '<p class="wb-unavailable">' + esc(l.message || "We can't buy this item right now.") + '</p>' +
-        (l.retailerName ? extLine('Prefer to buy it yourself? Add gift-wrap at checkout with the extension.') : '');
+        (l.retailerName ? extLine() : '');
     }
     return h + '</div></div>';
   }
@@ -174,23 +174,27 @@
     return null;
   }
 
-  function shippingCell(l) {
+  function waiting(l) {
+    return l.state === 'reading' || ((l.state === 'quoting' || l.state === 'needs_variant') && !l.product);
+  }
+
+  function deliveryCell(l) {
     var s = shipOf(l);
-    if (s) {
-      var price = s.cents == null ? (s.note ? esc(s.note) : '—') : (s.cents ? usd(s.cents) : 'Free');
-      return '<span class="wb-price">' + price + '</span>' +
-        '<span class="wb-arrive">To Wrrapd ' + (s.arrivalDate ? esc(fmtDate(s.arrivalDate)) : 'date to follow') + '*</span>';
-    }
-    if (l.state === 'reading' || ((l.state === 'quoting' || l.state === 'needs_variant') && !l.product)) {
-      return '<span class="wb-status"><span class="wb-spin"></span>' + WAIT_DETAILS + '</span>';
-    }
+    if (s) return 'To Wrrapd ' + (s.arrivalDate ? esc(fmtDate(s.arrivalDate)) : 'date to follow') + '*';
+    if (waiting(l)) return '<span class="wb-status"><span class="wb-spin"></span>' + WAIT_DETAILS + '</span>';
     return '—';
+  }
+
+  function costCell(l) {
+    var s = shipOf(l);
+    if (!s) return '—';
+    if (s.cents == null) return s.note ? esc(s.note) : '—';
+    return s.cents ? usd(s.cents) : 'Free';
   }
 
   function retailerTable(name, retailer, lines) {
     var g = retailer ? groupFor(retailer) : null;
     var edit = canEdit();
-    var cols = edit ? 4 : 3;
     var itemSum = 0;
     var shipSum = 0;
     var shipKnown = false;
@@ -203,23 +207,27 @@
     });
     var tax = g && g.taxCents != null ? g.taxCents : (S.batch.salesTaxPercent != null ? Math.round((itemSum + shipSum) * S.batch.salesTaxPercent / 100) : null);
     var gross = itemSum + shipSum + (tax || 0);
-    var h = '<div class="wb-store"><p class="wb-store-name">' + esc(name) + '</p><table class="wb-table"><thead><tr>' +
-      '<th scope="col">Item</th><th scope="col">Price</th><th scope="col">Shipping</th>' + (edit ? '<th scope="col"><span class="wb-sr">Delete</span></th>' : '') +
+    var h = '<div class="wb-store"><p class="wb-store-name">' + esc(name) + '</p><table class="wb-table"><colgroup>' +
+      '<col class="wb-col-item"><col class="wb-col-when"><col class="wb-col-ship"><col class="wb-col-price">' + (edit ? '<col class="wb-col-del">' : '') +
+      '</colgroup><thead><tr>' +
+      '<th scope="col">Item</th><th scope="col">Expected delivery*</th><th scope="col">Shipping cost</th><th scope="col">Price</th>' +
+      (edit ? '<th scope="col"><span class="wb-sr">Delete</span></th>' : '') +
       '</tr></thead><tbody>';
     lines.forEach(function (l) {
       h += '<tr class="wb-tr wb-row-' + esc(l.state) + '">' +
         '<td data-label="Item">' + itemCell(l) + '</td>' +
-        '<td data-label="Price" class="wb-num">' + priceCell(l) + '</td>' +
-        '<td data-label="Shipping" class="wb-shipcell">' + (retailer ? shippingCell(l) : '—') + '</td>';
+        '<td data-label="Expected delivery">' + (retailer ? deliveryCell(l) : '—') + '</td>' +
+        '<td data-label="Shipping cost" class="wb-num">' + (retailer ? costCell(l) : '—') + '</td>' +
+        '<td data-label="Price" class="wb-num">' + priceCell(l) + '</td>';
       if (edit) h += '<td class="wb-del"><button type="button" class="wb-trash" data-act="remove" data-line="' + esc(l.id) + '" aria-label="Delete item" title="Delete item">' + TRASH_SVG + '</button></td>';
       h += '</tr>';
     });
     var tail = edit ? '<td></td>' : '';
     h += '</tbody><tfoot>' +
-      '<tr class="wb-foot"><td>Item prices</td><td class="wb-num">' + usd(itemSum) + '</td><td class="wb-num">' + (shipKnown ? usd(shipSum) : '—') + '</td>' + tail + '</tr>' +
-      '<tr class="wb-foot"><td>Sales tax</td><td class="wb-num">' + (tax != null ? usd(tax) : '—') + '</td><td colspan="' + (cols - 2) + '"></td></tr>' +
-      '<tr class="wb-foot wb-gross"><td>Gross total</td><td class="wb-num" colspan="' + (cols - 1) + '">' + usd(gross) + '</td></tr>' +
-      '</tfoot></table><p class="wb-asterisk">* Gift delivery to the giftee may add 1 day.</p></div>';
+      '<tr class="wb-foot"><td>Item prices</td><td></td><td class="wb-num">' + (shipKnown ? usd(shipSum) : '—') + '</td><td class="wb-num">' + usd(itemSum) + '</td>' + tail + '</tr>' +
+      '<tr class="wb-foot"><td>Sales tax</td><td></td><td></td><td class="wb-num">' + (tax != null ? usd(tax) : '—') + '</td>' + tail + '</tr>' +
+      '<tr class="wb-foot wb-gross"><td>Gross total</td><td colspan="2"></td><td class="wb-num">' + usd(gross) + '</td>' + tail + '</tr>' +
+      '</tfoot></table><p class="wb-asterisk">* Final gift delivery to the giftee may add 1 day.</p></div>';
     return h;
   }
 
@@ -265,8 +273,8 @@
     var canGo = ready > 0 && !stillWorking() && b.bill;
     var room = lines.length < (S.config ? S.config.maxLinks : 5);
     var h = '<section class="wb-card"><h2>Gift-wrapping shopping cart</h2>' +
-      '<label class="wb-label" for="wb-zip-edit">Giftee / gift-recipient\'s zip code:</label>' +
-      '<input class="wb-input wb-zip" id="wb-zip-edit" inputmode="numeric" maxlength="5" value="' + esc(b.gifteeZip) + '" autocomplete="off">' +
+      '<div class="wb-zip-row"><label class="wb-label" for="wb-zip-edit">Giftee / gift-recipient\'s zip code:</label>' +
+      '<input class="wb-input wb-zip" id="wb-zip-edit" inputmode="numeric" maxlength="5" value="' + esc(b.gifteeZip) + '" autocomplete="off"></div>' +
       (rows || '<p class="wb-muted">Add a product link to start.</p>') +
       (room ? '<p class="wb-ask">Paste the product links for gift-wrapping below.</p><div class="wb-add"><input class="wb-input" id="wb-add-link" type="url" placeholder="Paste a product link" aria-label="Product link"><button type="button" class="wb-btn wb-btn-sm" data-act="add-item">Add</button></div>' : '') +
       '</section>';
@@ -275,7 +283,7 @@
     if (S.error) h += '<p class="wb-error">' + esc(S.error) + '</p>';
     h += '<button type="button" class="wb-btn" data-act="to-terms"' + (canGo ? '' : ' disabled') + '>Continue to gift-wrap</button>';
     if (lines.some(function (l) { return l.state === 'reading'; })) h += '<p class="wb-muted">Please keep this page open.</p>';
-    h += extLine('Prefer to check out at the store yourself?');
+    h += extLine();
     return h;
   }
 
@@ -393,7 +401,7 @@
     if (S.error) h += '<p class="wb-error">' + esc(S.error) + '</p>';
     h += '<div class="wb-actions"><button type="button" class="wb-btn wb-btn-ghost" data-act="review-back">Edit gift-wrap</button>' +
       '<button type="button" class="wb-btn" data-act="to-pay"' + (b.bill ? '' : ' disabled') + '>Review and pay</button></div>';
-    h += extLine('Prefer to check out at the store yourself?');
+    h += extLine();
     return h;
   }
 
