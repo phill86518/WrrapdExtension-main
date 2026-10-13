@@ -119,7 +119,7 @@
     h += '<section class="wb-card" id="wb-start"><h2>Your gift</h2>' +
       '<label class="wb-label" for="wb-zip">Giftee / gift-recipient\'s zip code:</label>' +
       '<input class="wb-input wb-zip" id="wb-zip" inputmode="numeric" maxlength="5" autocomplete="off">' +
-      '<label class="wb-label">Product links</label><div class="wb-links">' + links + '</div>' +
+      '<label class="wb-label">Paste the product links for gift-wrapping below.</label><div class="wb-links">' + links + '</div>' +
       (S.linkCount < S.config.maxLinks ? '<button type="button" class="wb-link-btn" data-act="add-link">+ Add another link</button>' : '') +
       '<p class="wb-stores">' + (S.config ? S.config.retailers.map(function (r) { return '<span>' + esc(r.name) + '</span>'; }).join('') : esc(stores)) + '</p>' +
       (S.error ? '<p class="wb-error">' + esc(S.error) + '</p>' : '') +
@@ -168,45 +168,57 @@
     return c != null ? '<span class="wb-price">' + usd(c) + '</span>' : '—';
   }
 
-  function shippingCell(g, lines) {
-    if (g && g.state === 'ready' && g.shippingOptions.length) {
-      return g.shippingOptions.map(function (o) {
-        return '<label class="wb-ship"><input type="radio" name="ship-' + esc(g.retailer) + '" value="' + esc(o.id) + '" data-ship="' + esc(g.retailer) + '"' +
-          (o.id === g.selectedShippingId ? ' checked' : '') + '> <span>' + esc(o.label) + ' · ' + (o.cents ? usd(o.cents) : 'Free') +
-          (o.arrivalDate ? '<br><small>Reaches us ' + esc(fmtDate(o.arrivalDate)) + '</small>' : '') + '</span></label>';
-      }).join('');
-    }
-    var active = lines.filter(function (l) { return l.state === 'quoting' || l.state === 'needs_variant'; });
-    if (!active.length) return '—';
-    var notes = [];
-    active.forEach(function (l) { ((l.product && l.product.pageNotes) || []).forEach(function (n) { if (notes.indexOf(n) < 0) notes.push(n); }); });
-    return notes.map(function (n) { return '<p class="wb-muted">' + esc(n) + '</p>'; }).join('') +
-      '<p class="wb-status"><span class="wb-spin"></span>' + WAIT_DETAILS + '</p>';
+  function shipOf(l) {
+    var s = l.product && l.product.standardShip;
+    if (s && s.cents != null) return s;
+    return null;
   }
 
-  function taxCell(g, lines) {
-    return g && g.state === 'ready' ? usd(g.taxCents) : '—';
+  function shippingCell(l) {
+    var s = shipOf(l);
+    if (s) {
+      return '<span class="wb-price">' + (s.cents ? usd(s.cents) : 'Free') + '</span>' +
+        '<span class="wb-arrive">To Wrrapd ' + (s.arrivalDate ? esc(fmtDate(s.arrivalDate)) : 'date to follow') + '*</span>';
+    }
+    if (l.state === 'reading' || ((l.state === 'quoting' || l.state === 'needs_variant') && !l.product)) {
+      return '<span class="wb-status"><span class="wb-spin"></span>' + WAIT_DETAILS + '</span>';
+    }
+    return '—';
   }
 
   function retailerTable(name, retailer, lines) {
     var g = retailer ? groupFor(retailer) : null;
     var edit = canEdit();
+    var cols = edit ? 4 : 3;
+    var itemSum = 0;
+    var shipSum = 0;
+    lines.forEach(function (l) {
+      if (l.state === 'unavailable') return;
+      var c = knownCents(l);
+      if (c != null) itemSum += c;
+      var s = shipOf(l);
+      if (s) shipSum += s.cents;
+    });
+    var tax = g && g.taxCents != null ? g.taxCents : (S.batch.salesTaxPercent != null ? Math.round((itemSum + shipSum) * S.batch.salesTaxPercent / 100) : null);
+    var gross = itemSum + shipSum + (tax || 0);
     var h = '<div class="wb-store"><p class="wb-store-name">' + esc(name) + '</p><table class="wb-table"><thead><tr>' +
-      '<th scope="col">Item</th><th scope="col">Price</th><th scope="col">Shipping</th><th scope="col">Tax</th>' + (edit ? '<th scope="col"><span class="wb-sr">Delete</span></th>' : '') +
+      '<th scope="col">Item</th><th scope="col">Price</th><th scope="col">Shipping</th>' + (edit ? '<th scope="col"><span class="wb-sr">Delete</span></th>' : '') +
       '</tr></thead><tbody>';
-    lines.forEach(function (l, i) {
+    lines.forEach(function (l) {
       h += '<tr class="wb-tr wb-row-' + esc(l.state) + '">' +
         '<td data-label="Item">' + itemCell(l) + '</td>' +
-        '<td data-label="Price" class="wb-num">' + priceCell(l) + '</td>';
-      if (i === 0) {
-        var span = lines.length > 1 ? ' rowspan="' + lines.length + '"' : '';
-        h += '<td data-label="Shipping"' + span + ' class="wb-shipcell">' + (retailer ? shippingCell(g, lines) : '—') + '</td>' +
-          '<td data-label="Tax"' + span + ' class="wb-num">' + (retailer ? taxCell(g, lines) : '—') + '</td>';
-      }
+        '<td data-label="Price" class="wb-num">' + priceCell(l) + '</td>' +
+        '<td data-label="Shipping" class="wb-shipcell">' + (retailer ? shippingCell(l) : '—') + '</td>';
       if (edit) h += '<td class="wb-del"><button type="button" class="wb-trash" data-act="remove" data-line="' + esc(l.id) + '" aria-label="Delete item" title="Delete item">' + TRASH_SVG + '</button></td>';
       h += '</tr>';
     });
-    return h + '</tbody></table></div>';
+    var tail = edit ? '<td></td>' : '';
+    h += '</tbody><tfoot>' +
+      '<tr class="wb-foot"><td>Item prices</td><td class="wb-num">' + usd(itemSum) + '</td><td class="wb-num">' + usd(shipSum) + '</td>' + tail + '</tr>' +
+      '<tr class="wb-foot"><td>Sales tax</td><td class="wb-num">' + (tax != null ? usd(tax) : '—') + '</td><td colspan="' + (cols - 2) + '"></td></tr>' +
+      '<tr class="wb-foot wb-gross"><td>Gross total</td><td class="wb-num" colspan="' + (cols - 1) + '">' + usd(gross) + '</td></tr>' +
+      '</tfoot></table><p class="wb-asterisk">* Gift delivery to the giftee may add 1 day.</p></div>';
+    return h;
   }
 
   function itemTables(lines) {
@@ -243,23 +255,6 @@
     var lim = S.batch.limits || {};
     return '<p class="wb-limit">Cumulative purchase limit for item prices: ' + usd(lim.merchandiseCapCents) + ', per item limit of ' + usd(lim.perItemCapCents) + '</p>';
   }
-  function detailsBlock() {
-    var lines = visibleLines();
-    var sum = 0;
-    var h = '<h2>Item details</h2>';
-    if (!lines.length) h += '<p class="wb-muted">No items yet.</p>';
-    lines.forEach(function (l) {
-      var name = l.product && l.product.title ? l.product.title : (l.retailerName || 'Item');
-      var c = knownCents(l);
-      if (c != null) sum += c;
-      var right = l.state === 'unavailable' ? '—' : (c != null ? usd(c) : 'Getting details');
-      h += '<div class="wb-bill-row"><span>' + esc(name) + '</span><span>' + esc(right) + '</span></div>';
-    });
-    h += '<div class="wb-bill-row wb-bill-total"><span>Item prices so far</span><span>' + usd(sum) + '</span></div>';
-    if (!S.batch.bill) h += '<p class="wb-muted">Shipping, tax, and gift-wrap are added when each item is ready.</p>';
-    return h;
-  }
-
   function viewItems() {
     var b = S.batch;
     var lines = visibleLines();
@@ -267,15 +262,13 @@
     var ready = readyLines().length;
     var canGo = ready > 0 && !stillWorking() && b.bill;
     var room = lines.length < (S.config ? S.config.maxLinks : 5);
-    var h = '<section class="wb-card"><h2>Your items</h2>' +
+    var h = '<section class="wb-card"><h2>Gift-wrapping shopping cart</h2>' +
       '<label class="wb-label" for="wb-zip-edit">Giftee / gift-recipient\'s zip code:</label>' +
       '<input class="wb-input wb-zip" id="wb-zip-edit" inputmode="numeric" maxlength="5" value="' + esc(b.gifteeZip) + '" autocomplete="off">' +
       (rows || '<p class="wb-muted">Add a product link to start.</p>') +
-      (room ? '<div class="wb-add"><input class="wb-input" id="wb-add-link" type="url" placeholder="Paste another product link" aria-label="Another product link"><button type="button" class="wb-btn wb-btn-sm" data-act="add-item">Add</button></div>' : '') +
+      (room ? '<p class="wb-ask">Paste the product links for gift-wrapping below.</p><div class="wb-add"><input class="wb-input" id="wb-add-link" type="url" placeholder="Paste a product link" aria-label="Product link"><button type="button" class="wb-btn wb-btn-sm" data-act="add-item">Add</button></div>' : '') +
       '</section>';
-    h += '<section class="wb-card">' + detailsBlock() + '</section>';
-    if (b.bill) h += '<section class="wb-card">' + billBlock(b.bill, false) + '</section>';
-    else if (b.billError && !stillWorking() && ready) h += '<p class="wb-error">' + esc(b.billError) + '</p>';
+    if (!b.bill && b.billError && !stillWorking() && ready) h += '<p class="wb-error">' + esc(b.billError) + '</p>';
     h += limitLine();
     if (S.error) h += '<p class="wb-error">' + esc(S.error) + '</p>';
     h += '<button type="button" class="wb-btn" data-act="to-terms"' + (canGo ? '' : ' disabled') + '>Continue to gift-wrap</button>';

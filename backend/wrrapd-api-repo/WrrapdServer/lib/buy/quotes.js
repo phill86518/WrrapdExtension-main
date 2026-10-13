@@ -9,6 +9,7 @@ const retailers = require('./retailers');
 const pageReader = require('./page-reader');
 const runner = require('./runner');
 const billing = require('./billing');
+const salesTax = require('../sales-tax-zip');
 
 const UNAVAILABLE = "We can't buy this item right now.";
 const READ_STUCK_MS = 3 * 60 * 1000;
@@ -72,17 +73,34 @@ function openQuoteRequest(batch, retailerId, kind) {
     return { retailerId, auto, kind };
 }
 
+function salesTaxPercent(batch) {
+    const zip = batch.hub && (batch.hub.postalCode || batch.hub.zip);
+    const percent = salesTax.getCombinedRateAsTaxPercent(zip);
+    return percent == null ? 7.5 : percent;
+}
+
+/** One regular shipping price per item, read off the product page. Tax is the hub ZIP rate. */
 function pageOfferQuote(batch, retailerId) {
     const lines = activeLines(batch, retailerId);
-    if (lines.length !== 1) return null;
-    const offer = lines[0].product && lines[0].product.pageOffer;
-    if (!offer || !offer.itemPriceCents || !offer.shippingOptions || !offer.shippingOptions.length || offer.taxCents == null) return null;
+    if (!lines.length || lines.some((l) => l.state === 'reading' || l.state === 'needs_variant')) return null;
+    const itemPrices = {};
+    let ship = 0;
+    let arrival = null;
+    for (const l of lines) {
+        const offer = l.product && l.product.pageOffer;
+        const opt = offer && offer.shippingOptions && offer.shippingOptions[0];
+        if (!offer || !offer.itemPriceCents || !opt || opt.cents == null) return null;
+        itemPrices[l.id] = offer.itemPriceCents;
+        ship += opt.cents;
+        if (opt.arrivalDate && (!arrival || opt.arrivalDate > arrival)) arrival = opt.arrivalDate;
+    }
+    const merch = Object.values(itemPrices).reduce((s, c) => s + c, 0);
     return {
-        itemPrices: { [lines[0].id]: offer.itemPriceCents },
-        shippingOptions: offer.shippingOptions.map((o) => ({ label: o.label, cents: o.cents, arrivalDate: o.arrivalDate, taxCents: null })),
-        taxCents: offer.taxCents,
+        itemPrices,
+        shippingOptions: [{ label: 'Standard shipping', cents: ship, arrivalDate: arrival }],
+        taxCents: Math.round((merch + ship) * salesTaxPercent(batch) / 100),
         source: 'page',
-        by: 'grok',
+        by: 'page',
     };
 }
 

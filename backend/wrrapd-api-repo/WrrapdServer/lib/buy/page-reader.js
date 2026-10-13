@@ -158,15 +158,18 @@ const SYSTEM_PROMPT = [
     'kind is "list" when it is a search, category, or promo of many items.',
     'kind is "unknown" when the material does not show which.',
     'productUrl and productId must appear in the material. Use null otherwise.',
-    'priceUsd, each shipping priceUsd, and taxUsd must be numbers printed on the page. Use null when they are not shown.',
-    'A shipping priceUsd of 0 is allowed only when the page says that shipping or delivery is free.',
-    'arrivalDate is YYYY-MM-DD only when a delivery date is shown, otherwise null.',
+    'priceUsd and standardShipping.priceUsd must be numbers printed on the page. Use null when they are not shown.',
+    'standardShipping is the one regular shipping option anyone can buy without a membership.',
+    'Use the option the page marks as standard or default. Otherwise use the cheapest regular option.',
+    'Never use Prime, Prime-member, Walmart+, Target Circle, Beauty Insider, Totaltech, or any club or membership price.',
+    'A priceUsd of 0 is allowed only when regular shipping is free for every shopper, not only for members.',
+    'arrivalDate is the regular delivery date shown for that option, as YYYY-MM-DD. Use null only when no date is shown.',
     'variantGroups lists choices the buyer must make (size, color, style, capacity). Leave it empty when none.',
     'isElectronics is true for powered devices and gadgets. Printer paper, sticker paper, ink, and labels are not electronics.',
     'Return JSON: {"kind":"product"|"list"|"unknown","productUrl":string|null,"productId":string|null,',
     '"title":string,"brand":string,"imageUrl":string,"priceUsd":number|null,"inStock":bool|null,"category":string,',
     '"isElectronics":bool,"variantGroups":[{"name":string,"options":[string],"selected":string|null}],',
-    '"packageDimensions":string,"shippingOptions":[{"label":string,"priceUsd":number|null,"arrivalDate":string|null}],"taxUsd":number|null}',
+    '"packageDimensions":string,"standardShipping":{"label":string,"priceUsd":number|null,"arrivalDate":string|null}}',
 ].join(' ');
 
 function embeddedHints(html) {
@@ -202,11 +205,25 @@ function taxOnPage(html, usd) {
     return priceAppearsInPage(html, usd);
 }
 
+function membershipOnly(label) {
+    return /prime|walmart\s*\+|target\s*circle|\bcircle\b|beauty\s*insider|total\s*tech|totaltech|nordy|\bmember(ship)?\b|rewards\s+member/i.test(label);
+}
+
 function shippingApplies(option, itemCents) {
-    if (/prime member/i.test(option.label)) return false;
+    if (membershipOnly(option.label)) return false;
     const over = option.label.match(/over \$(\d+)/i);
     if (over && itemCents < Number(over[1]) * 100) return false;
     return true;
+}
+
+/** The regular option: the one marked standard or default, otherwise the cheapest. Dated options win. */
+function standardChoice(options) {
+    if (!options.length) return null;
+    const dated = options.filter((o) => o.arrivalDate);
+    const pool = dated.length ? dated : options;
+    const named = pool.filter((o) => /\b(standard|default)\b/i.test(o.label));
+    const list = named.length ? named : pool;
+    return list.slice().sort((a, b) => a.cents - b.cents)[0];
 }
 
 function cleanShipping(html, options) {
@@ -300,11 +317,12 @@ async function readProduct({ retailer, url }) {
     const priceSeen = priceAppearsInPage(page.html, priceUsd);
     const category = String(facts.category || '').trim().slice(0, 120);
     const pagePriceCents = priceSeen ? Math.round(priceUsd * 100) : null;
-    const shippingOptions = cleanShipping(page.html, facts.shippingOptions);
-    const applicable = shippingOptions.filter((o) => shippingApplies(o, pagePriceCents || 0));
-    const taxUsd = Number(facts.taxUsd);
-    const taxCents = Number.isFinite(taxUsd) && taxUsd >= 0 && taxOnPage(page.html, taxUsd) ? Math.round(taxUsd * 100) : null;
-    const pageOffer = pagePriceCents && applicable.length && taxCents != null ? { itemPriceCents: pagePriceCents, shippingOptions: applicable, taxCents } : null;
+    const offered = facts.standardShipping
+        ? [{ label: facts.standardShipping.label || 'Standard shipping', priceUsd: facts.standardShipping.priceUsd, arrivalDate: facts.standardShipping.arrivalDate }]
+        : facts.shippingOptions;
+    const applicable = cleanShipping(page.html, offered).filter((o) => shippingApplies(o, pagePriceCents || 0));
+    const chosen = standardChoice(applicable);
+    const pageOffer = pagePriceCents && chosen ? { itemPriceCents: pagePriceCents, shippingOptions: [chosen] } : null;
     const brand = String(facts.brand || '').trim().slice(0, 120);
     const amazonCategory = await categories.categorize({ retailer, retailerName: r.name, html: page.html, title, brand, category });
     return {
@@ -318,7 +336,7 @@ async function readProduct({ retailer, url }) {
             packageDimensions: String(facts.packageDimensions || '').trim().slice(0, 120),
             pagePriceCents,
             pageOffer,
-            pageNotes: applicable.map((o) => o.label).slice(0, 2),
+            pageNotes: [],
             inStock: facts.inStock === false ? false : facts.inStock === true ? true : null,
             isElectronics: /\b(sticker|printer|photo|inkjet|label)\s+paper\b/i.test(`${category} ${title}`)
                 ? false

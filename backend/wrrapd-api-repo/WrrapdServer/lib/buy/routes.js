@@ -8,6 +8,7 @@ const config = require('./config');
 const resolveLink = require('./resolve-link');
 const categories = require('./categories');
 const retailers = require('./retailers');
+const salesTax = require('../sales-tax-zip');
 const terms = require('./terms');
 const billing = require('./billing');
 const quotes = require('./quotes');
@@ -87,7 +88,9 @@ function publicLine(l) {
                   imageUrl: p.imageUrl || '',
                   isElectronics: p.isElectronics === true,
                   pagePriceCents: p.pagePriceCents || null,
-                  pageNotes: Array.isArray(p.pageNotes) ? p.pageNotes.slice(0, 2) : [],
+                  standardShip: p.pageOffer && p.pageOffer.shippingOptions && p.pageOffer.shippingOptions[0]
+                      ? { cents: p.pageOffer.shippingOptions[0].cents, arrivalDate: p.pageOffer.shippingOptions[0].arrivalDate || null }
+                      : null,
                   variantGroups: l.state === 'needs_variant' ? p.variantGroups || [] : [],
               }
             : null,
@@ -137,6 +140,11 @@ function publicView(batch) {
         bill: bill && bill.ok ? bill.bill : null,
         billError: bill && !bill.ok ? bill.message || bill.error : null,
         limits: { merchandiseCapCents: cfg.merchandiseCapCents, perItemCapCents: cfg.perItemCapCents },
+        salesTaxPercent: (() => {
+            const zip = batch.hub && (batch.hub.postalCode || batch.hub.zip);
+            const percent = salesTax.getCombinedRateAsTaxPercent(zip);
+            return percent == null ? 7.5 : percent;
+        })(),
         orderNumber: batch.status === 'paid' || batch.status === 'closed' ? batch.id : null,
         paidBill: batch.paidBill || null,
     };
