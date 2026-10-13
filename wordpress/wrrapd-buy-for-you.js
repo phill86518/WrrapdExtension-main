@@ -193,12 +193,13 @@
     var cols = edit ? 4 : 3;
     var itemSum = 0;
     var shipSum = 0;
+    var shipKnown = false;
     lines.forEach(function (l) {
       if (l.state === 'unavailable') return;
       var c = knownCents(l);
       if (c != null) itemSum += c;
       var s = shipOf(l);
-      if (s && s.cents != null) shipSum += s.cents;
+      if (s && s.cents != null) { shipSum += s.cents; shipKnown = true; }
     });
     var tax = g && g.taxCents != null ? g.taxCents : (S.batch.salesTaxPercent != null ? Math.round((itemSum + shipSum) * S.batch.salesTaxPercent / 100) : null);
     var gross = itemSum + shipSum + (tax || 0);
@@ -215,7 +216,7 @@
     });
     var tail = edit ? '<td></td>' : '';
     h += '</tbody><tfoot>' +
-      '<tr class="wb-foot"><td>Item prices</td><td class="wb-num">' + usd(itemSum) + '</td><td class="wb-num">' + usd(shipSum) + '</td>' + tail + '</tr>' +
+      '<tr class="wb-foot"><td>Item prices</td><td class="wb-num">' + usd(itemSum) + '</td><td class="wb-num">' + (shipKnown ? usd(shipSum) : '—') + '</td>' + tail + '</tr>' +
       '<tr class="wb-foot"><td>Sales tax</td><td class="wb-num">' + (tax != null ? usd(tax) : '—') + '</td><td colspan="' + (cols - 2) + '"></td></tr>' +
       '<tr class="wb-foot wb-gross"><td>Gross total</td><td class="wb-num" colspan="' + (cols - 1) + '">' + usd(gross) + '</td></tr>' +
       '</tfoot></table><p class="wb-asterisk">* Gift delivery to the giftee may add 1 day.</p></div>';
@@ -273,7 +274,7 @@
     h += limitLine();
     if (S.error) h += '<p class="wb-error">' + esc(S.error) + '</p>';
     h += '<button type="button" class="wb-btn" data-act="to-terms"' + (canGo ? '' : ' disabled') + '>Continue to gift-wrap</button>';
-    if (stillWorking()) h += '<p class="wb-muted">This can take a few minutes. You can keep this page open.</p>';
+    if (lines.some(function (l) { return l.state === 'reading'; })) h += '<p class="wb-muted">Please keep this page open.</p>';
     h += extLine('Prefer to check out at the store yourself?');
     return h;
   }
