@@ -12,7 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_BUY_BUILD', '2026-10-13-buy-v7' );
+define( 'WRRAPD_BUY_BUILD', '2026-10-13-buy-v8' );
 
 function wrrapd_buy_is_request() {
 	$path = wp_parse_url( isset( $_SERVER['REQUEST_URI'] ) ? (string) wp_unslash( $_SERVER['REQUEST_URI'] ) : '', PHP_URL_PATH );
@@ -112,10 +112,9 @@ function wrrapd_buy_header_match_css() {
 	echo $b . ' .elementor-location-header .elementor-element-68a38868.elementor-widget img{max-height:none!important;max-width:min(19.2rem,54vw)!important;width:auto!important;height:auto!important;}';
 	echo $b . ' .elementor-location-header .elementor-element-1c0d63ad img{max-height:none!important;max-width:min(11rem,34vw)!important;width:auto!important;}';
 	echo '@media(max-width:1100px),(hover:none) and (pointer:coarse){' . $b . ' .elementor-location-header .elementor-element-68a38868.elementor-widget img{max-width:100%!important;max-height:clamp(4.2rem,22vw,5.5rem)!important;width:auto!important;height:auto!important;}}';
-	echo '@media(max-width:767px){' . $b . ' .elementor-6078 .elementor-element.elementor-element-68a38868 img{height:3.25rem!important;width:auto!important;object-fit:scale-down!important;}';
-	echo $b . ' .elementor-6078 .elementor-element.elementor-element-1c0d63ad img{max-height:1rem!important;max-width:5.5rem!important;height:auto!important;}}';
+	echo '@media(max-width:767px){' . $b . ' .elementor-6078 .elementor-element.elementor-element-1c0d63ad img{max-height:1rem!important;max-width:5.5rem!important;height:auto!important;}}';
 	echo 'body.wrrapd-buy-page #wrrapd-retailer-wheels-row{margin-bottom:0!important;padding-bottom:0!important;border-bottom:none!important;}';
-	echo 'body.wrrapd-buy-page #wrrapd-retailer-wheels-row .wrrapd-retailer-wheels{padding-top:.28rem!important;padding-bottom:0!important;}';
+	echo '@media(min-width:961px){body.wrrapd-buy-page #wrrapd-retailer-wheels-row .wrrapd-retailer-wheels{padding-top:.28rem!important;padding-bottom:0!important;}}';
 	echo 'body.wrrapd-buy-page .wrrapd-wrap-promo-mobile__features--stack{display:none!important;margin:0!important;padding:0!important;height:0!important;overflow:hidden!important;}';
 	echo '</style>';
 }
