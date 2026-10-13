@@ -165,7 +165,7 @@
   function priceCell(l) {
     if (l.state === 'unavailable' || l.state === 'reading') return '—';
     var c = knownCents(l);
-    return c != null ? '<span class="wb-price">' + usd(c) + '</span>' : '<span class="wb-muted">' + WAIT_DETAILS + '</span>';
+    return c != null ? '<span class="wb-price">' + usd(c) + '</span>' : '—';
   }
 
   function shippingCell(g, lines) {
@@ -185,8 +185,7 @@
   }
 
   function taxCell(g, lines) {
-    if (g && g.state === 'ready') return usd(g.taxCents);
-    return lines.some(function (l) { return l.state === 'quoting' || l.state === 'needs_variant'; }) ? '<span class="wb-muted">' + WAIT_DETAILS + '</span>' : '—';
+    return g && g.state === 'ready' ? usd(g.taxCents) : '—';
   }
 
   function retailerTable(name, retailer, lines) {

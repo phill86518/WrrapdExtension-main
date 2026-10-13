@@ -112,6 +112,7 @@
 .wb-table th { text-align: left; font-weight: 650; font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: #5c6578; padding: 8px 10px; border-bottom: 2px solid var(--wb-line); }
 .wb-table td { padding: 14px 10px; vertical-align: top; border-bottom: 1px solid var(--wb-line); }
 .wb-table td.wb-num { white-space: nowrap; }
+.wb-table th:first-child { width: 48%; }
 .wb-table td.wb-shipcell { min-width: 190px; }
 .wb-table td.wb-del { width: 44px; padding-left: 0; padding-right: 0; text-align: right; }
 .wb-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
