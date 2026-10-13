@@ -12,7 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_BUY_BUILD', '2026-10-13-buy-v5' );
+define( 'WRRAPD_BUY_BUILD', '2026-10-13-buy-v6' );
 
 function wrrapd_buy_is_request() {
 	$path = wp_parse_url( isset( $_SERVER['REQUEST_URI'] ) ? (string) wp_unslash( $_SERVER['REQUEST_URI'] ) : '', PHP_URL_PATH );
@@ -102,12 +102,21 @@ function wrrapd_buy_render() {
 }
 add_action( 'template_redirect', 'wrrapd_buy_render', 1 );
 
-/** Same guest logo size the landing page uses (wrrapd_output_header_layout_css scopes it to body.home). */
+/**
+ * The landing page scopes its header logo, tagline, and retailer-strip spacing to body.home
+ * (header layout CSS, Customizer CSS, home-top tighten). Same rules for /buy/.
+ */
 function wrrapd_buy_header_match_css() {
-	$logo = 'body.wrrapd-buy-page:not(.logged-in) .elementor-location-header .elementor-element-68a38868.elementor-widget img';
+	$b = 'body.wrrapd-buy-page:not(.logged-in)';
 	echo '<style id="wrrapd-buy-header-match">';
-	echo $logo . '{max-height:none!important;max-width:min(19.2rem,54vw)!important;width:auto!important;height:auto!important;}';
-	echo '@media(max-width:1100px),(hover:none) and (pointer:coarse){' . $logo . '{max-width:100%!important;max-height:clamp(4.2rem,22vw,5.5rem)!important;}}';
+	echo $b . ' .elementor-location-header .elementor-element-68a38868.elementor-widget img{max-height:none!important;max-width:min(19.2rem,54vw)!important;width:auto!important;height:auto!important;}';
+	echo $b . ' .elementor-location-header .elementor-element-1c0d63ad img{max-height:none!important;max-width:min(11rem,34vw)!important;width:auto!important;}';
+	echo '@media(max-width:1100px),(hover:none) and (pointer:coarse){' . $b . ' .elementor-location-header .elementor-element-68a38868.elementor-widget img{max-width:100%!important;max-height:clamp(4.2rem,22vw,5.5rem)!important;width:auto!important;height:auto!important;}}';
+	echo '@media(max-width:767px){' . $b . ' .elementor-6078 .elementor-element.elementor-element-68a38868 img{height:3.25rem!important;width:auto!important;object-fit:scale-down!important;}';
+	echo $b . ' .elementor-6078 .elementor-element.elementor-element-1c0d63ad img{max-height:1rem!important;max-width:5.5rem!important;height:auto!important;}}';
+	echo 'body.wrrapd-buy-page #wrrapd-retailer-wheels-row{margin-bottom:0!important;padding-bottom:0!important;border-bottom:none!important;}';
+	echo 'body.wrrapd-buy-page #wrrapd-retailer-wheels-row .wrrapd-retailer-wheels{padding-top:.28rem!important;padding-bottom:0!important;}';
+	echo 'body.wrrapd-buy-page .wrrapd-wrap-promo-mobile__features--stack{display:none!important;margin:0!important;padding:0!important;height:0!important;overflow:hidden!important;}';
 	echo '</style>';
 }
 
