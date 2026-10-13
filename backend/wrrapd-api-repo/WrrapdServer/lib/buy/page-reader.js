@@ -318,7 +318,7 @@ async function readProduct({ retailer, url }) {
             packageDimensions: String(facts.packageDimensions || '').trim().slice(0, 120),
             pagePriceCents,
             pageOffer,
-            pageNotes: shippingOptions.map((o) => o.label).slice(0, 2),
+            pageNotes: applicable.map((o) => o.label).slice(0, 2),
             inStock: facts.inStock === false ? false : facts.inStock === true ? true : null,
             isElectronics: /\b(sticker|printer|photo|inkjet|label)\s+paper\b/i.test(`${category} ${title}`)
                 ? false
