@@ -115,7 +115,12 @@
 .wb-status { margin: 8px 0 0; display: flex; align-items: center; gap: 8px; font-weight: 460; }
 .wb-unavailable { margin: 8px 0 0; color: #9a3412; font-weight: 560; }
 .wb-row-unavailable .wb-row-title { color: #5c6578; }
-.wb-remove { background: none; border: 0; color: #5c6578; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; font-size: 14px; padding-top: 4px; }
+.wb-x { width: 28px; height: 28px; flex: 0 0 28px; margin-top: 2px; border-radius: 50%; border: 1px solid #e4d5c4; background: #fff; color: #9a3412; font-size: 18px; line-height: 1; cursor: pointer; }
+.wb-x:hover { background: #fff4ee; }
+.wb-add { display: flex; gap: 10px; align-items: center; margin-top: 14px; }
+.wb-add .wb-input { flex: 1; }
+.wb-add .wb-btn { margin-top: 0; }
+.wb-limit { color: #5c6578; font-size: 15px; font-weight: 460; margin: 8px 0 0; }
 .wb-spin { width: 14px; height: 14px; border: 2px solid #efe6cf; border-top-color: var(--wb-gold); border-radius: 50%; display: inline-block; animation: wbspin .9s linear infinite; flex: 0 0 14px; }
 @keyframes wbspin { to { transform: rotate(360deg); } }
 .wb-variants select { margin-bottom: 4px; }

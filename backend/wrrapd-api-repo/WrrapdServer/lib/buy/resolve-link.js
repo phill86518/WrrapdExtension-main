@@ -5,6 +5,7 @@
  */
 const retailers = require('./retailers');
 const pageReader = require('./page-reader');
+const grokClient = require('../grok-client');
 
 const SHORT_HOSTS = ['a.co', 'amzn.to'];
 
@@ -64,6 +65,29 @@ function jsonLdUrls(html) {
     return urls;
 }
 
+function idAppears(html, id) {
+    return id && html.toLowerCase().includes(String(id).toLowerCase());
+}
+
+/** Accepts a product URL or id only when Grok read it off the page and the page contains it. */
+function acceptGrokProduct(facts, html, allowedIds, retailer) {
+    if (!facts || facts.kind === 'list') return null;
+    const tries = [];
+    if (facts.productUrl) tries.push(String(facts.productUrl));
+    if (facts.productId && retailer && idAppears(html, facts.productId)) {
+        try {
+            tries.push(retailer.canonical(String(facts.productId)));
+        } catch (_) {
+            /* ignore */
+        }
+    }
+    for (const candidate of tries) {
+        const again = retailers.parseProductLink(candidate, allowedIds);
+        if (again.ok && (idAppears(html, again.productId) || html.includes(again.productId))) return again;
+    }
+    return null;
+}
+
 function shouldOpen(parsed, raw) {
     if (parsed.ok) return false;
     if (parsed.reason === 'not_a_product_page') return true;
@@ -93,6 +117,27 @@ async function resolveLink(raw, allowedIds) {
         if (!candidate) continue;
         const again = retailers.parseProductLink(candidate, allowedIds);
         if (again.ok) return again;
+    }
+    if (grokClient.isConfigured()) {
+        try {
+            const { facts } = await pageReader.askGrok({
+                retailerName: retailer ? retailer.name : 'store',
+                url: page.finalUrl || raw,
+                html: page.html,
+            });
+            const fromGrok = acceptGrokProduct(facts, page.html, allowedIds, retailer);
+            if (fromGrok) return fromGrok;
+            if (facts && facts.kind === 'list') {
+                return {
+                    ok: false,
+                    reason: 'product_list',
+                    retailer: parsed.retailer || '',
+                    retailerName: retailer ? retailer.name : '',
+                };
+            }
+        } catch (_) {
+            /* structural result stands */
+        }
     }
     if (listingPath(page.finalUrl) || listingPath(raw)) {
         return {

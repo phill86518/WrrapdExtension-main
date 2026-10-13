@@ -86,6 +86,7 @@ function publicLine(l) {
                   imageUrl: p.imageUrl || '',
                   isElectronics: p.isElectronics === true,
                   pagePriceCents: p.pagePriceCents || null,
+                  pageNotes: Array.isArray(p.pageNotes) ? p.pageNotes.slice(0, 2) : [],
                   variantGroups: l.state === 'needs_variant' ? p.variantGroups || [] : [],
               }
             : null,
@@ -378,6 +379,91 @@ module.exports = function mountBuyForYou(app, deps) {
                 return b;
             });
             if (regroup) await quotes.kickGroups(batch.id, 'initial');
+            return null;
+        }),
+    );
+
+    app.post(
+        '/api/buy/batches/:id/zip',
+        shopperChange(async (req, batch) => {
+            if (batch.terms) return { error: 'The ZIP code is set for this order.' };
+            const zip = cleanZip(req.body && req.body.gifteeZip);
+            if (zip.length !== 5) return { error: 'Please enter the giftee’s 5-digit ZIP code.' };
+            if (!allowedZipCodesLib.isZipAllowed(zip)) {
+                return { error: 'We are sorry. We do not deliver to this ZIP code yet.' };
+            }
+            const hub = deliveryHubs.publicHubForZip(zip).hub;
+            if (!hub) return { error: 'Please try again in a moment.' };
+            if (zip === batch.gifteeZip) return null;
+            await store.update(batch.id, (b) => {
+                b.gifteeZip = zip;
+                b.hub = hub;
+                for (const g of Object.values(b.groups || {})) {
+                    if (g.state === 'empty' || g.state === 'unavailable') continue;
+                    g.quote = null;
+                    g.selectedShippingId = null;
+                    g.state = 'waiting';
+                }
+                for (const l of b.lines) {
+                    if (l.removed || l.state === 'unavailable' || l.state === 'reading' || l.state === 'needs_variant') continue;
+                    l.state = 'quoting';
+                }
+                store.addLog(b, 'shopper', `Giftee ZIP changed to ${zip}; hub ${hub.displayName}`);
+                return b;
+            });
+            await quotes.kickGroups(batch.id, 'zip');
+            return null;
+        }),
+    );
+
+    app.post(
+        '/api/buy/batches/:id/link',
+        shopperChange(async (req, batch) => {
+            if (batch.terms) return { error: 'Items are set for this order.' };
+            const cfg = config.load();
+            const text = String((req.body && req.body.url) || '').trim();
+            if (!text) return { error: 'Please paste a product link.' };
+            const openCount = batch.lines.filter((l) => !l.removed).length;
+            if (openCount >= cfg.maxLinks) return { error: `Please paste up to ${cfg.maxLinks} links.` };
+            const parsed = await resolveLink.resolveLink(text, cfg.allowedRetailers);
+            const named = retailers.byId(parsed.retailer);
+            await store.update(batch.id, (b) => {
+                const id = `L${b.lines.length + 1}`;
+                const base = { id, addedAt: new Date().toISOString(), url: text.slice(0, 2000), wrap: null };
+                if (!parsed.ok) {
+                    b.lines.push({
+                        ...base,
+                        retailer: parsed.retailer || 'none',
+                        retailerName: named ? named.name : '',
+                        state: 'unavailable',
+                        reason: parsed.reason,
+                        message: REASON_TEXT[parsed.reason] || quotes.UNAVAILABLE,
+                    });
+                } else if (b.lines.some((l) => !l.removed && l.canonicalUrl === parsed.canonicalUrl)) {
+                    b.lines.push({
+                        ...base,
+                        retailer: parsed.retailer,
+                        retailerName: parsed.retailerName,
+                        state: 'unavailable',
+                        reason: 'duplicate',
+                        message: REASON_TEXT.duplicate,
+                    });
+                } else {
+                    b.lines.push({
+                        ...base,
+                        url: parsed.url,
+                        canonicalUrl: parsed.canonicalUrl,
+                        productId: parsed.productId,
+                        retailer: parsed.retailer,
+                        retailerName: parsed.retailerName,
+                        state: 'reading',
+                    });
+                    quotes.ensureGroup(b, parsed.retailer);
+                }
+                store.addLog(b, 'shopper', `Added a link (${id})`);
+                return b;
+            });
+            quotes.processBatch(batch.id).catch((e) => console.error('[buy] processBatch', e && e.message));
             return null;
         }),
     );

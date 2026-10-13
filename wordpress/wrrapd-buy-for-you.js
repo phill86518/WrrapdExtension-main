@@ -136,7 +136,9 @@
     else if (state === 'quoting') {
       var shelf = l.product && l.product.pagePriceCents;
       var confirming = g && g.state === 'needs_person';
+      var notes = (l.product && l.product.pageNotes) || [];
       body = (shelf ? '<p class="wb-price">' + usd(shelf) + '</p>' : '') +
+        notes.map(function (n) { return '<p class="wb-muted">' + esc(n) + '</p>'; }).join('') +
         '<p class="wb-status"><span class="wb-spin"></span>' +
         (confirming ? 'Confirming shipping with ' : 'Checking price and shipping with ') + esc(l.retailerName) + '…</p>';
     }
@@ -154,8 +156,8 @@
       body = '<p class="wb-unavailable">' + esc(l.message || "We can't buy this item right now.") + '</p>' +
         (l.retailerName ? extLine('Prefer to buy it yourself? Add gift-wrap at checkout with the extension.') : '');
     }
-    var remove = state !== 'unavailable' && S.view === 'items' && !(S.batch.refresh && S.batch.refresh.state === 'running')
-      ? '<button type="button" class="wb-remove" data-act="remove" data-line="' + esc(l.id) + '" aria-label="Remove">Remove</button>' : '';
+    var remove = S.view === 'items' && !(S.batch.refresh && S.batch.refresh.state === 'running')
+      ? '<button type="button" class="wb-x" data-act="remove" data-line="' + esc(l.id) + '" aria-label="Delete item">×</button>' : '';
     return '<div class="wb-row wb-row-' + esc(state) + '">' + img + '<div class="wb-row-main"><p class="wb-row-title">' + esc(title) + '</p>' + linkNote +
       (l.retailerName && l.product ? '<p class="wb-muted">' + esc(l.retailerName) + (l.product.isElectronics ? ' · Electronics' : '') + '</p>' : '') + body + '</div>' + remove + '</div>';
   }
@@ -178,17 +180,55 @@
     return S.batch.lines.filter(function (l) { return l.state === 'ready'; });
   }
 
+  function visibleLines() {
+    return S.batch.lines.filter(function (l) { return l.state !== 'removed'; });
+  }
+  function knownCents(l) {
+    var g = groupFor(l.retailer);
+    if (l.state === 'ready' && g && g.itemPrices && g.itemPrices[l.id]) return g.itemPrices[l.id];
+    if (l.state !== 'unavailable' && l.product && l.product.pagePriceCents) return l.product.pagePriceCents;
+    return null;
+  }
+  function limitLine() {
+    var lim = S.batch.limits || {};
+    return '<p class="wb-limit">Cumulative purchase limit for item prices: ' + usd(lim.merchandiseCapCents) + ', per item limit of ' + usd(lim.perItemCapCents) + '</p>';
+  }
+  function detailsBlock() {
+    var lines = visibleLines();
+    var sum = 0;
+    var h = '<h2>Item details</h2>';
+    if (!lines.length) h += '<p class="wb-muted">No items yet.</p>';
+    lines.forEach(function (l) {
+      var name = l.product && l.product.title ? l.product.title : (l.retailerName || 'Item');
+      var c = knownCents(l);
+      if (c != null) sum += c;
+      var right = l.state === 'unavailable' ? '—' : (c != null ? usd(c) : 'Checking');
+      h += '<div class="wb-bill-row"><span>' + esc(name) + '</span><span>' + esc(right) + '</span></div>';
+    });
+    h += '<div class="wb-bill-row wb-bill-total"><span>Item prices so far</span><span>' + usd(sum) + '</span></div>';
+    if (!S.batch.bill) h += '<p class="wb-muted">Shipping, tax, and gift-wrap are added when each item is ready.</p>';
+    return h;
+  }
+
   function viewItems() {
     var b = S.batch;
-    var rows = b.lines.filter(function (l) { return l.state !== 'removed'; }).map(lineRow).join('');
+    var lines = visibleLines();
+    var rows = lines.map(lineRow).join('');
     var groups = (b.groups || []).map(groupBlock).join('');
     var ready = readyLines().length;
     var canGo = ready > 0 && !stillWorking() && b.bill;
-    var h = '<section class="wb-card"><h2>Your items</h2><p class="wb-muted">Giftee ZIP ' + esc(b.gifteeZip) + '</p>' + rows + '</section>';
+    var room = lines.length < (S.config ? S.config.maxLinks : 5);
+    var h = '<section class="wb-card"><h2>Your items</h2>' +
+      '<label class="wb-label" for="wb-zip-edit">Giftee / gift-recipient\'s zip code:</label>' +
+      '<input class="wb-input wb-zip" id="wb-zip-edit" inputmode="numeric" maxlength="5" value="' + esc(b.gifteeZip) + '" autocomplete="off">' +
+      (rows || '<p class="wb-muted">Add a product link to start.</p>') +
+      (room ? '<div class="wb-add"><input class="wb-input" id="wb-add-link" type="url" placeholder="Paste another product link" aria-label="Another product link"><button type="button" class="wb-btn wb-btn-sm" data-act="add-item">Add</button></div>' : '') +
+      '</section>';
     if (groups) h += '<section class="wb-card"><h2>Shipping to our gift-wrap studio</h2>' + groups + '</section>';
+    h += '<section class="wb-card">' + detailsBlock() + '</section>';
     if (b.bill) h += '<section class="wb-card">' + billBlock(b.bill, false) + '</section>';
     else if (b.billError && !stillWorking() && ready) h += '<p class="wb-error">' + esc(b.billError) + '</p>';
-    h += '<p class="wb-muted">Purchase Limit for item prices: ' + usd(b.limits.merchandiseCapCents) + '</p>';
+    h += limitLine();
     if (S.error) h += '<p class="wb-error">' + esc(S.error) + '</p>';
     h += '<button type="button" class="wb-btn" data-act="to-terms"' + (canGo ? '' : ' disabled') + '>Continue to gift-wrap</button>';
     if (stillWorking()) h += '<p class="wb-muted">This can take a few minutes. You can keep this page open.</p>';
@@ -232,7 +272,7 @@
     return '<div class="wb-modal" role="dialog" aria-modal="true" aria-labelledby="wb-terms-title"><div class="wb-modal-box">' +
       '<h2 id="wb-terms-title">' + esc(t.title) + '</h2><p class="wb-terms-sub">' + esc(t.subtitle) + '</p>' +
       t.leads.map(function (x) { return '<p class="wb-terms-lead">' + esc(x) + '</p>'; }).join('') +
-      '<p class="wb-muted">Purchase Limit for item prices on this order: ' + usd(S.batch.limits.merchandiseCapCents) + '</p>' +
+      limitLine() +
       '<div class="wb-terms-body" id="wb-terms-body">' + t.html + '<p class="wb-terms-end">Version ' + esc(t.version) + '</p></div>' +
       (needsElec ? '<label class="wb-check"><input type="checkbox" id="wb-elec"> ' + esc(t.electronicsSentence) + '</label>' : '') +
       '<label class="wb-check"><input type="checkbox" id="wb-agree" disabled> ' + esc(t.agreeLabel) + '</label>' +
@@ -321,6 +361,8 @@
   /* ---------- actions ---------- */
   function bind() {
     $all('[data-act]').forEach(function (el) { el.addEventListener('click', onAct); });
+    var zipEdit = $('#wb-zip-edit');
+    if (zipEdit) zipEdit.addEventListener('change', onZip);
     $all('[data-ship]').forEach(function (el) { el.addEventListener('change', onShip); });
     $all('[data-variant]').forEach(function (el) {
       el.addEventListener('change', function () { S.variantDraft[el.getAttribute('data-variant') + '|' + el.getAttribute('data-group')] = el.value; });
@@ -378,6 +420,7 @@
     if (act === 'add-link') { keepLinks(function () { S.linkCount = Math.min(S.config.maxLinks, S.linkCount + 1); }); return; }
     if (act === 'create') return create();
     if (act === 'remove') return change('/remove', { lineId: el.getAttribute('data-line') });
+    if (act === 'add-item') return addItem();
     if (act === 'variant') return submitVariant(el.getAttribute('data-line'));
     if (act === 'to-terms') { S.termsOpen = true; S.termsScrolled = false; render(); return; }
     if (act === 'close-terms') { S.termsOpen = false; render(); return; }
@@ -445,12 +488,29 @@
       request('/api/buy/batches/' + encodeURIComponent(S.id)).then(function (j) {
         S.batch = j.batch;
         if (S.view === 'items') {
-          var active = document.activeElement && root.contains(document.activeElement) && document.activeElement.tagName === 'SELECT';
-          if (!active) render();
+          var active = document.activeElement;
+          var typing = active && root.contains(active) && (active.tagName === 'SELECT' || active.id === 'wb-zip-edit' || active.id === 'wb-add-link');
+          if (!typing) render();
         }
         poll();
       }).catch(function () { poll(); });
     }, 4000);
+  }
+
+  function onZip() {
+    var el = $('#wb-zip-edit');
+    if (!el || !S.batch) return;
+    var zip = (el.value || '').replace(/\D/g, '');
+    if (zip === S.batch.gifteeZip) return;
+    if (zip.length !== 5) { S.error = 'Please enter the giftee’s 5-digit ZIP code.'; render(); return; }
+    change('/zip', { gifteeZip: zip }).then(function () { loadPricing(); });
+  }
+
+  function addItem() {
+    var el = $('#wb-add-link');
+    var url = el ? el.value.trim() : '';
+    if (!url) { S.error = 'Please paste a product link.'; render(); return; }
+    change('/link', { url: url });
   }
 
   function change(path, body) {

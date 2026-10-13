@@ -72,11 +72,31 @@ function openQuoteRequest(batch, retailerId, kind) {
     return { retailerId, auto, kind };
 }
 
+function pageOfferQuote(batch, retailerId) {
+    const lines = activeLines(batch, retailerId);
+    if (lines.length !== 1) return null;
+    const offer = lines[0].product && lines[0].product.pageOffer;
+    if (!offer || !offer.itemPriceCents || !offer.shippingOptions || !offer.shippingOptions.length || offer.taxCents == null) return null;
+    return {
+        itemPrices: { [lines[0].id]: offer.itemPriceCents },
+        shippingOptions: offer.shippingOptions.map((o) => ({ label: o.label, cents: o.cents, arrivalDate: o.arrivalDate, taxCents: null })),
+        taxCents: offer.taxCents,
+        source: 'page',
+        by: 'grok',
+    };
+}
+
 async function dispatch(batchId, req) {
     if (!req) return;
     if (!req.auto) {
         const b = store.read(batchId);
-        if (b) await alertFn('quote_needed', b, req.retailerId).catch(() => {});
+        const offer = b && pageOfferQuote(b, req.retailerId);
+        if (offer) {
+            const out = await applyQuote(batchId, req.retailerId, offer);
+            if (out && out.ok) return;
+        }
+        const after = store.read(batchId);
+        if (after) await alertFn('quote_needed', after, req.retailerId).catch(() => {});
         return;
     }
     const b = store.read(batchId);
@@ -116,6 +136,7 @@ async function kickGroups(batchId, kind) {
 
 function applyRead(line, read, cfg) {
     if (!read.ok) {
+        if (read.reason === 'product_list') return markUnavailable(line, 'product_list', 'This link opens a list of items. Paste the link to one product.');
         if (!read.needsPerson) return markUnavailable(line, read.reason);
         line.product = null;
         line.readFailure = read.reason;
@@ -279,7 +300,7 @@ async function applyQuote(batchId, retailerId, input) {
             g.quote = {
                 ...cleaned.quote,
                 at: new Date().toISOString(),
-                source: input.source === 'runner' ? 'runner' : 'person',
+                source: input.source === 'runner' ? 'runner' : input.source === 'page' ? 'page' : 'person',
                 by: String(input.by || 'admin').slice(0, 80),
             };
             const same = prevSelected && g.quote.shippingOptions.find((o) => o.label === prevSelected.label);

@@ -152,14 +152,79 @@ function looksElectronic(retailerId, ...texts) {
 }
 
 const SYSTEM_PROMPT = [
-    'You read one retail product page and return facts as JSON. Use only what the page shows.',
-    'Never guess a price. If you cannot find the current selling price for the shown item, use null.',
-    'Return exactly: {"isProductPage":bool,"title":string,"brand":string,"imageUrl":string,"priceUsd":number|null,',
-    '"inStock":bool|null,"category":string,"isElectronics":bool,"variantGroups":[{"name":string,"options":[string],"selected":string|null}],',
-    '"packageDimensions":string}',
+    'You read a retailer page and return only facts that are in the material. Never guess.',
+    'kind is "product" when the page is one item a shopper can buy.',
+    'kind is "list" when it is a search, category, or promo of many items.',
+    'kind is "unknown" when the material does not show which.',
+    'productUrl and productId must appear in the material. Use null otherwise.',
+    'priceUsd, each shipping priceUsd, and taxUsd must be numbers printed on the page. Use null when they are not shown.',
+    'A shipping priceUsd of 0 is allowed only when the page says that shipping or delivery is free.',
+    'arrivalDate is YYYY-MM-DD only when a delivery date is shown, otherwise null.',
     'variantGroups lists choices the buyer must make (size, color, style, capacity). Leave it empty when none.',
-    'isElectronics is true for powered devices and gadgets (phones, computers, audio, TVs, cameras, game consoles, smart home, wearables). Printer paper, sticker paper, ink, and labels are not electronics.',
+    'isElectronics is true for powered devices and gadgets. Printer paper, sticker paper, ink, and labels are not electronics.',
+    'Return JSON: {"kind":"product"|"list"|"unknown","productUrl":string|null,"productId":string|null,',
+    '"title":string,"brand":string,"imageUrl":string,"priceUsd":number|null,"inStock":bool|null,"category":string,',
+    '"isElectronics":bool,"variantGroups":[{"name":string,"options":[string],"selected":string|null}],',
+    '"packageDimensions":string,"shippingOptions":[{"label":string,"priceUsd":number|null,"arrivalDate":string|null}],"taxUsd":number|null}',
 ].join(' ');
+
+function embeddedHints(html) {
+    const bits = [];
+    const next = html.match(/<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/i);
+    if (next) {
+        try {
+            const data = JSON.parse(next[1]);
+            bits.push(JSON.stringify({ page: data.page, query: data.query }).slice(0, 2500));
+        } catch (_) {
+            /* ignore */
+        }
+    }
+    const ids = html.match(/"(?:tcin|sku|asin|productId)"\s*:\s*"?[A-Z0-9]{5,16}"?/gi);
+    if (ids) bits.push([...new Set(ids)].slice(0, 12).join('\n'));
+    const dollars = [];
+    const re = /[^<\n]{0,48}\$\s?\d{1,4}(?:\.\d{2})?[^<\n]{0,48}/g;
+    let m;
+    const plain = visibleText(html);
+    while ((m = re.exec(plain)) && dollars.length < 12) dollars.push(m[0].replace(/\s+/g, ' ').trim());
+    if (dollars.length) bits.push(dollars.join('\n'));
+    return bits.join('\n').slice(0, 8000);
+}
+
+function numberOnPage(html, usd) {
+    if (usd === 0) return /free delivery/i.test(html) || /free shipping(?! option)/i.test(html);
+    return priceAppearsInPage(html, usd);
+}
+
+function taxOnPage(html, usd) {
+    if (!Number.isFinite(usd) || usd < 0 || !/tax/i.test(html)) return false;
+    if (usd === 0) return /(?:no tax|tax[^.\n]{0,40}\$ ?0(?:\.00)?)/i.test(html);
+    return priceAppearsInPage(html, usd);
+}
+
+function shippingApplies(option, itemCents) {
+    if (/prime member/i.test(option.label)) return false;
+    const over = option.label.match(/over \$(\d+)/i);
+    if (over && itemCents < Number(over[1]) * 100) return false;
+    return true;
+}
+
+function cleanShipping(html, options) {
+    if (!Array.isArray(options)) return [];
+    return options
+        .slice(0, 4)
+        .map((o) => {
+            const priceUsd = Number(o && o.priceUsd);
+            const cents = Number.isFinite(priceUsd) && priceUsd >= 0 ? Math.round(priceUsd * 100) : null;
+            if (cents == null || !numberOnPage(html, priceUsd)) return null;
+            const arrival = /^\d{4}-\d{2}-\d{2}$/.test(String((o && o.arrivalDate) || '')) ? o.arrivalDate : null;
+            return {
+                label: String((o && o.label) || '').trim().slice(0, 80) || (cents === 0 ? 'Free shipping' : 'Shipping'),
+                cents,
+                arrivalDate: arrival,
+            };
+        })
+        .filter(Boolean);
+}
 
 async function askGrok({ retailerName, url, html }) {
     const ld = jsonLdProducts(html).slice(0, 3);
@@ -169,15 +234,22 @@ async function askGrok({ retailerName, url, html }) {
         price: metaContent(html, 'product:price:amount') || metaContent(html, 'og:price:amount'),
         availability: metaContent(html, 'product:availability'),
     };
-    const text = visibleText(html).slice(0, 14000);
-    const user = JSON.stringify({ retailer: retailerName, url, meta, jsonLd: ld, pageText: text }).slice(0, 60000);
+    const text = visibleText(html).slice(0, 12000);
+    const user = JSON.stringify({
+        retailer: retailerName,
+        url,
+        meta,
+        jsonLd: ld,
+        embedded: embeddedHints(html),
+        pageText: text,
+    }).slice(0, 60000);
     const { content } = await grokClient.chatCompletions({
         messages: [
             { role: 'system', content: SYSTEM_PROMPT },
             { role: 'user', content: user },
         ],
         temperature: 0,
-        max_tokens: 900,
+        max_tokens: 1200,
         response_format: { type: 'json_object' },
     });
     return { facts: grokClient.parseJsonContent(content), meta };
@@ -218,12 +290,20 @@ async function readProduct({ retailer, url }) {
     } catch (e) {
         return { ok: false, reason: `grok_failed: ${e && e.message ? e.message : e}`, needsPerson: true };
     }
-    if (!facts || facts.isProductPage === false) return { ok: false, reason: 'not_a_product_page', needsPerson: true };
+    if (!facts || facts.kind === 'list') {
+        return { ok: false, reason: 'product_list', needsPerson: false };
+    }
     const title = String(facts.title || meta.title || '').trim().slice(0, 300);
     if (!title) return { ok: false, reason: 'no_title', needsPerson: true };
     const priceUsd = Number(facts.priceUsd);
     const priceSeen = priceAppearsInPage(page.html, priceUsd);
     const category = String(facts.category || '').trim().slice(0, 120);
+    const pagePriceCents = priceSeen ? Math.round(priceUsd * 100) : null;
+    const shippingOptions = cleanShipping(page.html, facts.shippingOptions);
+    const applicable = shippingOptions.filter((o) => shippingApplies(o, pagePriceCents || 0));
+    const taxUsd = Number(facts.taxUsd);
+    const taxCents = Number.isFinite(taxUsd) && taxUsd >= 0 && taxOnPage(page.html, taxUsd) ? Math.round(taxUsd * 100) : null;
+    const pageOffer = pagePriceCents && applicable.length && taxCents != null ? { itemPriceCents: pagePriceCents, shippingOptions: applicable, taxCents } : null;
     return {
         ok: true,
         product: {
@@ -232,7 +312,9 @@ async function readProduct({ retailer, url }) {
             imageUrl: safeImageUrl(facts.imageUrl) || safeImageUrl(meta.image) || imageFallback(page.html),
             category,
             packageDimensions: String(facts.packageDimensions || '').trim().slice(0, 120),
-            pagePriceCents: priceSeen ? Math.round(priceUsd * 100) : null,
+            pagePriceCents,
+            pageOffer,
+            pageNotes: shippingOptions.map((o) => o.label).slice(0, 2),
             inStock: facts.inStock === false ? false : facts.inStock === true ? true : null,
             isElectronics: /\b(sticker|printer|photo|inkjet|label)\s+paper\b/i.test(`${category} ${title}`)
                 ? false
@@ -244,4 +326,4 @@ async function readProduct({ retailer, url }) {
     };
 }
 
-module.exports = { readProduct, looksElectronic, priceAppearsInPage, jsonLdProducts, visibleText, fetchPage };
+module.exports = { readProduct, askGrok, looksElectronic, priceAppearsInPage, jsonLdProducts, visibleText, fetchPage };
