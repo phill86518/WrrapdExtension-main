@@ -113,8 +113,9 @@
     return h + '</div>';
   }
   function buyButton(adding) {
-    var label = S.busy ? 'Checking…' : (adding ? 'Add more items' : 'Buy for me and gift-wrap these items');
-    return '<button type="button" class="wb-btn" data-act="submit-links"' + (S.busy ? ' disabled' : '') + '>' + esc(label) + '</button>';
+    var label = S.busy ? 'Checking…' : (adding ? 'Add these items to list above' : 'Buy for me and gift-wrap these items');
+    var btn = '<button type="button" class="wb-btn' + (adding ? ' wb-btn-add' : '') + '" data-act="submit-links"' + (S.busy ? ' disabled' : '') + '>' + esc(label) + '</button>';
+    return adding ? '<div class="wb-submit">' + btn + '</div>' : btn;
   }
   function viewStart() {
     var open = S.config && S.config.open;
@@ -274,13 +275,16 @@
   }
 
   function excluded(l) {
-    return l.state === 'unavailable' && l.reason === 'over_item_limit';
+    return l.state === 'unavailable';
   }
   function limitMessage(l) {
-    var cap = S.batch && S.batch.limits && S.batch.limits.perItemCapCents;
-    var price = l.product && l.product.pagePriceCents;
-    if (price && cap) return 'This item is over the purchase limit (' + usd(price) + ' versus ' + usd(cap) + ').';
-    return l.message || 'This item is over the purchase limit.';
+    if (l.reason === 'over_item_limit') {
+      var cap = S.batch && S.batch.limits && S.batch.limits.perItemCapCents;
+      var price = l.product && l.product.pagePriceCents;
+      if (price && cap) return 'This item is over the purchase limit (' + usd(price) + ' versus ' + usd(cap) + ').';
+      return l.message || 'This item is over the purchase limit.';
+    }
+    return l.message || "We can't buy this item right now.";
   }
   function itemTables(lines) {
     var order = [];

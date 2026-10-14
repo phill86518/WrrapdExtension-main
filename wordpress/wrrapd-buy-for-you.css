@@ -104,7 +104,15 @@
 }
 .wb-btn[disabled] { opacity: .5; cursor: default; box-shadow: none; }
 .wb-btn-ghost { background: #fff !important; border: 1.5px solid var(--wb-deep); color: var(--wb-deep) !important; box-shadow: none; }
-.wb-btn-sm { padding: 8px 14px; font-size: 15px; margin-top: 8px; box-shadow: none; }
+.wb-btn-add {
+  margin-top: 10px;
+  max-width: 11rem;
+  padding: 8px 12px;
+  font-size: 13px;
+  line-height: 1.25;
+  white-space: normal;
+}
+.wb-submit { display: flex; justify-content: flex-end; }
 .wb-link-btn { background: none; border: 0; color: var(--wb-navy); font-weight: 650; padding: 10px 0 0; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
 .wb-muted { color: #5c6578; font-size: 15px; font-weight: 460; margin: 6px 0; }
 .wb-linkline { color: #5c6578; font-size: 14px; margin: 2px 0 0; overflow-wrap: anywhere; }

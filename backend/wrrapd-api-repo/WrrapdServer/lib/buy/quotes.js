@@ -13,6 +13,7 @@ const salesTax = require('../sales-tax-zip');
 
 const UNAVAILABLE = "We can't buy this item right now.";
 const READ_STUCK_MS = 3 * 60 * 1000;
+const readingBatches = new Set();
 let alertFn = async () => {};
 
 function setAlert(fn) {
@@ -168,7 +169,7 @@ async function kickGroups(batchId, kind) {
 function applyRead(line, read, cfg) {
     if (!read.ok) {
         if (read.reason === 'product_list') return markUnavailable(line, 'product_list', 'This link opens a list of items. Paste the link to one product.');
-        if (!read.needsPerson) return markUnavailable(line, read.reason);
+        if (!read.needsPerson || read.reason === 'blocked' || read.reason === 'no_title') return markUnavailable(line, read.reason);
         line.product = null;
         line.readFailure = read.reason;
         line.state = 'quoting';
@@ -181,7 +182,12 @@ function applyRead(line, read, cfg) {
     if (p.pagePriceCents && p.pagePriceCents > cfg.perItemCapCents) {
         return markUnavailable(line, 'over_item_limit', overLimitMessage(p.pagePriceCents, cfg.perItemCapCents));
     }
-    const open = p.variantGroups.filter((g) => !g.selected || !g.options.includes(g.selected));
+    const open = (p.variantGroups || []).filter((g) => !g.selected || !g.options.includes(g.selected));
+    if (!p.pagePriceCents) {
+        line.variantLabel = p.choicePrompt || 'Choose a size and color on the product page, then add the link again.';
+        line.state = open.length ? 'needs_variant' : 'quoting';
+        return;
+    }
     if (open.length) {
         line.state = 'needs_variant';
         return;
@@ -192,6 +198,16 @@ function applyRead(line, read, cfg) {
 
 /** Reads every product page in the batch (two at a time), then requests quotes. */
 async function processBatch(batchId) {
+    if (readingBatches.has(batchId)) return;
+    readingBatches.add(batchId);
+    try {
+        await processBatchBody(batchId);
+    } finally {
+        readingBatches.delete(batchId);
+    }
+}
+
+async function processBatchBody(batchId) {
     const batch = store.read(batchId);
     if (!batch) return;
     const cfg = config.load();
@@ -367,21 +383,38 @@ async function sweep(batchId) {
         if (batch.status !== 'open') return null;
         let changed = false;
         for (const l of batch.lines) {
-            if (l.removed || l.state !== 'unavailable' || l.reason !== 'quote_timeout') continue;
-            const ship = l.product && l.product.standardShip;
-            if (!l.product || !l.product.pagePriceCents || !ship || !(ship.arrivalDate || ship.note || ship.cents != null)) continue;
-            l.state = 'quoting';
-            l.reason = '';
-            l.message = '';
-            const g = batch.groups && batch.groups[l.retailer];
-            if (g && (g.state === 'unavailable' || g.state === 'empty')) {
-                g.state = 'needs_person';
-                g.deadlineAt = new Date(now + 24 * 3600 * 1000).toISOString();
+            if (!l.removed && l.reason === 'duplicate') {
+                l.removed = true;
+                changed = true;
             }
-            changed = true;
         }
         for (const l of batch.lines) {
-            if (l.state === 'reading' && now - Date.parse(l.addedAt || batch.createdAt) > READ_STUCK_MS) {
+            if (l.removed || l.state !== 'unavailable' || l.reason !== 'quote_timeout') continue;
+            const g = batch.groups && batch.groups[l.retailer];
+            if (l.product && l.product.pagePriceCents) {
+                l.state = 'quoting';
+                l.reason = '';
+                l.message = '';
+                if (g) {
+                    g.state = 'needs_person';
+                    g.deadlineAt = new Date(now + 24 * 3600 * 1000).toISOString();
+                }
+                changed = true;
+                continue;
+            }
+            if (!l.product && (l.readTries || 0) < 1) {
+                l.state = 'reading';
+                l.reason = '';
+                l.message = '';
+                l.readFailure = '';
+                l.readTries = (l.readTries || 0) + 1;
+                l.readStartedAt = new Date(now).toISOString();
+                if (g) g.state = 'waiting';
+                changed = true;
+            }
+        }
+        for (const l of batch.lines) {
+            if (l.state === 'reading' && now - Date.parse(l.readStartedAt || l.addedAt || batch.createdAt) > READ_STUCK_MS) {
                 l.state = 'quoting';
                 l.readFailure = 'read_timeout';
                 changed = true;
@@ -391,11 +424,13 @@ async function sweep(batchId) {
         for (const g of Object.values(batch.groups || {})) {
             if ((g.state === 'quoting' || g.state === 'needs_person') && g.deadlineAt && now > Date.parse(g.deadlineAt)) {
                 const lines = activeLines(batch, g.retailer);
-                const shown = lines.length && lines.every((l) => {
-                    const ship = l.product && l.product.standardShip;
-                    return l.product && l.product.pagePriceCents && ship && (ship.arrivalDate || ship.note || ship.cents != null);
-                });
-                if (shown) continue;
+                const readable = lines.filter((l) => l.product && l.product.pagePriceCents);
+                if (readable.length) {
+                    g.state = 'needs_person';
+                    g.deadlineAt = new Date(now + 24 * 3600 * 1000).toISOString();
+                    changed = true;
+                    continue;
+                }
                 for (const l of lines) markUnavailable(l, 'quote_timeout');
                 if (batch.refresh && batch.refresh.state === 'running' && batch.refresh.retailers.includes(g.retailer)) {
                     for (const l of lines) {

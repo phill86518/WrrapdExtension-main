@@ -336,7 +336,11 @@ module.exports = function mountBuyForYou(app, deps) {
         const batch = loadForShopper(req, res);
         if (!batch) return;
         const swept = await quotes.sweep(batch.id);
-        res.json({ ok: true, batch: publicView(swept || store.read(batch.id)) });
+        const view = swept || store.read(batch.id);
+        if (view && view.lines.some((l) => l.state === 'reading')) {
+            quotes.processBatch(view.id).catch((e) => console.error('[buy] processBatch', e && e.message));
+        }
+        res.json({ ok: true, batch: publicView(view) });
     });
 
     const shopperChange = (handler) => async (req, res) => {
@@ -452,9 +456,15 @@ module.exports = function mountBuyForYou(app, deps) {
                 .map((s) => String(s || '').trim())
                 .filter(Boolean);
             if (!raw.length) return { error: 'Please paste a product link.' };
-            const openCount = batch.lines.filter((l) => !l.removed).length;
-            if (openCount + raw.length > cfg.maxLinks) return { error: `Please paste up to ${cfg.maxLinks} links.` };
             const opened = await Promise.all(raw.map((text) => resolveLink.resolveLink(text, cfg.allowedRetailers)));
+            const openCount = batch.lines.filter((l) => !l.removed).length;
+            const extra = opened.filter((parsed) => {
+                if (!parsed.ok) return true;
+                return !batch.lines.some((l) => !l.removed && l.canonicalUrl === parsed.canonicalUrl);
+            }).length;
+            if (openCount + extra > cfg.maxLinks) return { error: `Please paste up to ${cfg.maxLinks} links.` };
+            let added = 0;
+            let revived = 0;
             await store.update(batch.id, (b) => {
                 const seen = new Set(b.lines.filter((l) => !l.removed && l.canonicalUrl).map((l) => l.canonicalUrl));
                 const now = new Date().toISOString();
@@ -472,32 +482,48 @@ module.exports = function mountBuyForYou(app, deps) {
                             reason: parsed.reason,
                             message: REASON_TEXT[parsed.reason] || quotes.UNAVAILABLE,
                         });
-                    } else if (seen.has(parsed.canonicalUrl)) {
-                        b.lines.push({
-                            ...base,
-                            retailer: parsed.retailer,
-                            retailerName: parsed.retailerName,
-                            state: 'unavailable',
-                            reason: 'duplicate',
-                            message: REASON_TEXT.duplicate,
-                        });
-                    } else {
-                        seen.add(parsed.canonicalUrl);
-                        b.lines.push({
-                            ...base,
-                            url: parsed.url,
-                            canonicalUrl: parsed.canonicalUrl,
-                            productId: parsed.productId,
-                            retailer: parsed.retailer,
-                            retailerName: parsed.retailerName,
-                            state: 'reading',
-                        });
-                        quotes.ensureGroup(b, parsed.retailer).state = 'waiting';
+                        added += 1;
+                        return;
                     }
+                    const existing = b.lines.find((l) => !l.removed && l.canonicalUrl === parsed.canonicalUrl);
+                    if (existing) {
+                        const failed = existing.state === 'unavailable' || !existing.product;
+                        if (!failed) return;
+                        existing.state = 'reading';
+                        existing.reason = '';
+                        existing.message = '';
+                        existing.readFailure = '';
+                        existing.product = null;
+                        existing.variantLabel = '';
+                        existing.url = parsed.url;
+                        existing.readStartedAt = now;
+                        existing.readTries = (existing.readTries || 0) + 1;
+                        for (const other of b.lines) {
+                            if (!other.removed && other.reason === 'duplicate' && parsed.productId && String(other.url || '').includes(parsed.productId)) other.removed = true;
+                        }
+                        quotes.ensureGroup(b, parsed.retailer).state = 'waiting';
+                        revived += 1;
+                        return;
+                    }
+                    seen.add(parsed.canonicalUrl);
+                    b.lines.push({
+                        ...base,
+                        url: parsed.url,
+                        canonicalUrl: parsed.canonicalUrl,
+                        productId: parsed.productId,
+                        retailer: parsed.retailer,
+                        retailerName: parsed.retailerName,
+                        state: 'reading',
+                        readStartedAt: now,
+                    });
+                    quotes.ensureGroup(b, parsed.retailer).state = 'waiting';
+                    added += 1;
                 });
-                store.addLog(b, 'shopper', `Added ${raw.length} link(s)`);
+                if (!added && !revived) return null;
+                store.addLog(b, 'shopper', revived && !added ? `Read ${revived} link(s) again` : `Added ${raw.length} link(s)`);
                 return b;
             });
+            if (!added && !revived) return { error: 'This item is already on your list.' };
             quotes.processBatch(batch.id).catch((e) => console.error('[buy] processBatch', e && e.message));
             return null;
         }),

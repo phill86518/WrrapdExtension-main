@@ -484,6 +484,251 @@ function cleanVariantGroups(groups) {
 /**
  * @returns {Promise<{ ok: true, product: object } | { ok: false, reason: string, needsPerson: boolean }>}
  */
+/** Nordstrom's edge returns a large interstitial that is not the product page. */
+function nordstromShell(html) {
+    const text = String(html || '');
+    if (!/istlWasHere/.test(text)) return false;
+    return !/__INITIAL_CONFIG__/.test(text) && !/property=["']og:title["']/i.test(text);
+}
+
+function nordstromStyleId(url) {
+    const m = String(url || '').match(/\/s\/(?:[^/]+\/)?(\d{5,10})(?:[/?#]|$)/);
+    return m ? m[1] : '';
+}
+
+function nordstromColorId(url) {
+    try { return new URL(url).searchParams.get('color') || ''; } catch { return ''; }
+}
+
+function sliceJsonObject(text, start) {
+    let depth = 0;
+    let inStr = false;
+    let esc = false;
+    for (let i = start; i < text.length; i++) {
+        const c = text[i];
+        if (inStr) {
+            if (esc) esc = false;
+            else if (c === '\\') esc = true;
+            else if (c === '"') inStr = false;
+            continue;
+        }
+        if (c === '"') { inStr = true; continue; }
+        if (c === '{') depth += 1;
+        else if (c === '}') {
+            depth -= 1;
+            if (depth === 0) return text.slice(start, i + 1);
+        }
+    }
+    return '';
+}
+
+function nordstromConfig(html) {
+    const text = String(html || '');
+    const marker = text.indexOf('window.__INITIAL_CONFIG__');
+    if (marker < 0) return null;
+    const brace = text.indexOf('{', text.indexOf('=', marker));
+    if (brace < 0) return null;
+    try { return JSON.parse(sliceJsonObject(text, brace)); } catch { return null; }
+}
+
+function nordstromChoices(entity) {
+    const out = [];
+    for (const product of entity?.coreProducts || []) {
+        for (const choice of product?.coreChoices || []) out.push(choice);
+    }
+    return out;
+}
+
+function nordstromOffer(item) {
+    for (const proposition of item?.sku?.propositions || []) {
+        const soldOut = proposition?.salability?.status === 'SOLD_OUT' || proposition?.availability?.isAvailable === false;
+        const price = proposition?.pricings?.[0]?.sellingRetail?.price;
+        const cents = price == null || price === '' ? null : Math.round(Number(price) * 100);
+        if (!soldOut && Number.isFinite(cents)) return { cents, skuId: item.sku.skuId, sellable: true };
+    }
+    return { cents: null, skuId: item?.sku?.skuId || '', sellable: false };
+}
+
+function nordstromChoiceImage(choice) {
+    const shots = choice?.orderedShots || [];
+    const front = shots.find((shot) => /^front:onFigure/i.test(shot.shotName || '')) || shots[0];
+    return safeImageUrl(front?.imageUrl || front?.thumbnailUrl || '');
+}
+
+const NORDSTROM_SIZE_RANK = ['xx-small', 'xxs', 'x-small', 'xs', 'small', 's', 'medium', 'm', 'large', 'l', 'x-large', 'xl', 'xx-large', 'xxl', '2x', '3x', '4x'];
+
+function nordstromTitleCase(value) {
+    return String(value || '').toLowerCase().replace(/\b[a-z]/g, (letter) => letter.toUpperCase());
+}
+
+function nordstromStandardShip(config, zip, styleId, skuIds) {
+    const rows = config?.storeMode?.promises?.entities?.[`${zip}-${styleId}`]?.promises || [];
+    const wanted = new Set(skuIds.filter(Boolean));
+    const costs = [];
+    let arrivalDate = null;
+    for (const row of rows) {
+        if (wanted.size && !wanted.has(row.sku)) continue;
+        const standard = (row.promises || []).find((promise) => promise.shipType === 'STANDARD_SHIPPING');
+        if (standard?.customerCost == null) continue;
+        const cents = Math.round(Number(standard.customerCost) * 100);
+        if (!Number.isFinite(cents)) continue;
+        costs.push(cents);
+        if (skuIds.length === 1 && standard.minDate) arrivalDate = String(standard.minDate).slice(0, 10);
+    }
+    if (!costs.length) return null;
+    const unique = [...new Set(costs)];
+    return { cents: unique.length === 1 ? unique[0] : Math.min(...unique), arrivalDate };
+}
+
+/**
+ * Reads a real Nordstrom product page (the HTML a browser saves as Page Source).
+ * The selected color's selling price is used. The style-wide sale range is not.
+ */
+function nordstromFromHtml(html, url, zip) {
+    if (nordstromShell(html)) return null;
+    const config = nordstromConfig(html);
+    const styleId = nordstromStyleId(url);
+    const entities = config?.productDisplay?.productDisplaysById?.entities || {};
+    const entity = entities[styleId] || (Object.keys(entities).length === 1 ? entities[Object.keys(entities)[0]] : null);
+    const id = entities[styleId] ? styleId : Object.keys(entities)[0];
+    if (!entity || !id) return null;
+
+    const choices = nordstromChoices(entity).filter((choice) => choice.displayColorDescription || choice.coreChoiceId);
+    const colorId = nordstromColorId(url);
+    const selectedChoice = choices.find((choice) => choice.coreChoiceId === colorId) || null;
+    const pricedChoices = selectedChoice ? [selectedChoice] : [];
+    const offers = [];
+    for (const choice of pricedChoices) {
+        for (const item of choice.items || []) {
+            const offer = nordstromOffer(item);
+            if (offer.sellable) offers.push({ ...offer, item, choice });
+        }
+    }
+    const prices = [...new Set(offers.map((offer) => offer.cents))];
+    const pagePriceCents = prices.length === 1 ? prices[0] : null;
+    const colorNames = choices.map((choice) => nordstromTitleCase(choice.displayColorDescription)).filter(Boolean);
+    const selectedColor = selectedChoice ? nordstromTitleCase(selectedChoice.displayColorDescription) : null;
+    const variantSource = selectedChoice ? (selectedChoice.items || []) : choices.flatMap((choice) => choice.items || []);
+    const sizeTypes = [...new Set(variantSource.map((item) => item?.sizeType?.label).filter(Boolean))];
+    const sizes = [...new Set(variantSource.map((item) => item?.concatenatedDisplaySize || item?.sizeDimension1?.label).filter(Boolean))];
+    sizes.sort((a, b) => {
+        const left = NORDSTROM_SIZE_RANK.indexOf(String(a).toLowerCase());
+        const right = NORDSTROM_SIZE_RANK.indexOf(String(b).toLowerCase());
+        return (left < 0 ? 99 : left) - (right < 0 ? 99 : right);
+    });
+    const groups = [];
+    if (colorNames.length) groups.push({ name: 'Color', options: colorNames, selected: selectedColor });
+    if (sizeTypes.length) groups.push({ name: 'Size type', options: sizeTypes, selected: null });
+    if (sizes.length) groups.push({ name: 'Size', options: sizes, selected: null });
+
+    const skuIds = offers.map((offer) => offer.skuId);
+    let standardShip = nordstromStandardShip(config, zip, id, skuIds);
+    const freeCopy = /Free shipping\.\s*Free returns/i.test(String(html || ''));
+    if (!standardShip && freeCopy) {
+        standardShip = { cents: 0, arrivalDate: null };
+    }
+    const needsSize = sizes.length > 1;
+    if (standardShip && needsSize) standardShip = { ...standardShip, arrivalDate: null };
+    const shipNote = needsSize ? 'Free standard shipping. Delivery date needs a size.' : 'Free standard shipping.';
+    if (standardShip && standardShip.cents === 0) standardShip = { ...standardShip, note: shipNote };
+
+    const page = (config.productDisplay?.pageData?.entities || {})[id] || {};
+    const crumbs = (page.breadcrumb || []).map((crumb) => crumb.name).filter((name) => name && name !== 'Home');
+    const imageUrl = (selectedChoice && nordstromChoiceImage(selectedChoice)) || imageFallback(html);
+    return {
+        title: String(entity.copyProductTitle || '').trim(),
+        brand: String(entity.labelDisplayName || '').trim(),
+        imageUrl,
+        category: crumbs.join(' / '),
+        packageDimensions: null,
+        pagePriceCents,
+        standardShip: standardShip || { cents: null, arrivalDate: null, note: '' },
+        pageNotes: needsSize ? ['Delivery date needs a size.'] : [],
+        inStock: offers.length > 0,
+        isElectronics: looksElectronic('nordstrom', entity.copyProductTitle, crumbs.join(' ')),
+        variantGroups: cleanVariantGroups(groups),
+        choicePrompt: pagePriceCents == null ? 'Choose a size and color on the product page, then add the link again.' : '',
+    };
+}
+
+function geminiKey() {
+    return String(process.env.GEMINI_API_KEY || '').trim();
+}
+
+function parseGeminiJson(text) {
+    const raw = String(text || '').trim();
+    const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
+    const body = fenced ? fenced[1] : raw;
+    const start = body.indexOf('{');
+    const end = body.lastIndexOf('}');
+    if (start < 0 || end <= start) return null;
+    try { return JSON.parse(body.slice(start, end + 1)); } catch { return null; }
+}
+
+/** Asks Gemini to open a public product URL. Used when the retailer sends our server a bot page. */
+async function askGeminiProduct(url) {
+    const key = geminiKey();
+    if (!key) return null;
+    const prompt = [
+        'Look at this exact product page:',
+        url,
+        'Reply with JSON only: {"title":"","priceUsd":null,"shippingUsd":null,"needsChoice":false}',
+        'priceUsd is the one price for the options already chosen in the link, including a selected color.',
+        'If those options still have more than one price, or the page only shows a range, set priceUsd to null.',
+        'shippingUsd is standard shipping. Use 0 when standard shipping is free. Use null when it is not shown.',
+        'needsChoice is true when a size, color, or similar option is still not chosen.',
+        'Do not guess a number that is not on the page.',
+    ].join(' ');
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 28000);
+    try {
+        const resp = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent', {
+            method: 'POST',
+            headers: { 'x-goog-api-key': key, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{ role: 'user', parts: [{ text: prompt }] }],
+                tools: [{ url_context: {} }],
+            }),
+            signal: ctrl.signal,
+        });
+        if (!resp.ok) return null;
+        const data = await resp.json();
+        const parts = (((data.candidates || [])[0] || {}).content || {}).parts || [];
+        const facts = parseGeminiJson(parts.map((part) => part.text || '').join('\n'));
+        const title = String((facts && facts.title) || '').trim();
+        if (!title) return null;
+        const price = Number(facts.priceUsd);
+        const pagePriceCents = Number.isFinite(price) && price > 0 ? Math.round(price * 100) : null;
+        const ship = Number(facts.shippingUsd);
+        const shipCents = facts.shippingUsd === 0 || ship === 0
+            ? 0
+            : (Number.isFinite(ship) && ship > 0 ? Math.round(ship * 100) : null);
+        return {
+            title: title.slice(0, 300),
+            brand: '',
+            imageUrl: '',
+            category: '',
+            packageDimensions: null,
+            pagePriceCents,
+            standardShip: {
+                cents: shipCents,
+                arrivalDate: null,
+                note: shipCents === 0 ? 'Free standard shipping.' : '',
+            },
+            pageNotes: [],
+            inStock: null,
+            isElectronics: looksElectronic('nordstrom', title),
+            variantGroups: [],
+            choicePrompt: pagePriceCents == null ? 'Choose a size and color on the product page, then add the link again.' : '',
+            readBy: 'gemini',
+        };
+    } catch {
+        return null;
+    } finally {
+        clearTimeout(timer);
+    }
+}
+
 async function readProduct({ retailer, url, zip, state }) {
     const r = retailers.byId(retailer);
     if (!r) return { ok: false, reason: 'retailer_not_supported', needsPerson: false };
@@ -494,6 +739,36 @@ async function readProduct({ retailer, url, zip, state }) {
         return { ok: false, reason: `fetch_failed: ${e && e.message ? e.message : e}`, needsPerson: true };
     }
     if (!page.ok) return { ok: false, reason: page.reason, needsPerson: true };
+    if (retailer === 'nordstrom') {
+        const parsed = nordstromShell(page.html) ? null : nordstromFromHtml(page.html, url, zip);
+        const product = parsed || await askGeminiProduct(url);
+        if (product) {
+            const amazonCategory = await categories.categorize({
+                retailer,
+                retailerName: r.name,
+                html: page.html,
+                title: product.title,
+                brand: product.brand,
+                category: product.category,
+            });
+            const ship = product.standardShip;
+            const pageOffer = product.pagePriceCents && ship && ship.cents != null
+                ? { itemPriceCents: product.pagePriceCents, shippingOptions: [ship] }
+                : null;
+            return {
+                ok: true,
+                product: {
+                    ...product,
+                    amazonCategory,
+                    pageOffer,
+                    choicePrompt: product.choicePrompt || '',
+                    readAt: new Date().toISOString(),
+                    readBy: product.readBy || 'nordstrom',
+                },
+            };
+        }
+        if (nordstromShell(page.html)) return { ok: false, reason: 'blocked', needsPerson: true };
+    }
     let facts = null;
     let meta = { title: '', image: '', price: '', availability: '' };
     if (grokClient.isConfigured()) {
@@ -581,4 +856,7 @@ async function readProduct({ retailer, url, zip, state }) {
     };
 }
 
-module.exports = { readProduct, askGrok, looksElectronic, priceAppearsInPage, jsonLdProducts, visibleText, fetchPage, standardFromPage, targetFulfillment };
+module.exports = {
+    readProduct, askGrok, looksElectronic, priceAppearsInPage, jsonLdProducts, visibleText, fetchPage, standardFromPage, targetFulfillment,
+    nordstromShell, nordstromFromHtml,
+};
