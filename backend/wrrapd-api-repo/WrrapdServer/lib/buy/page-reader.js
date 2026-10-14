@@ -694,12 +694,14 @@ async function askGeminiProduct(url, zip) {
         'Read the selected product on this page. Ignore sidebar ads and other products.',
         url,
         zip ? `The shopper ZIP is ${zip}.` : '',
-        'Reply with JSON only: {"title":"","priceUsd":null,"shippingUsd":null,"arrivalDate":null}',
-        'priceUsd is the one price shown for the color and size that are already selected. It is the main price on the product, not a range across other colors and not a price in a recommendation.',
-        'If the page shows one price for that selection, return that number. If it only shows a range and no size or color is selected, set priceUsd to null.',
+        'Reply with JSON only: {"title":"","priceUsd":null,"compareAtUsd":null,"shippingUsd":null,"arrivalDate":null,"shipToZip":null}',
+        'priceUsd is the price the shopper would pay now for the selected color and size. If the page shows New Markdown, a sale price, or a lower price next to a crossed-out price, use that lower price. Do not use the crossed-out price.',
+        'compareAtUsd is the crossed-out original price, or null when there is none.',
+        'If the page shows one current price for that selection, return that number. If it only shows a range and no size or color is selected, set priceUsd to null.',
         'shippingUsd is standard shipping to the shopper ZIP. Use 0 when that shipping is free.',
-        'arrivalDate is the standard arrival date shown for that selection, such as "Free arrives Tue, Oct 20", as YYYY-MM-DD. If the year is missing and the date is still ahead, use 2026.',
-        'Do not leave priceUsd or arrivalDate null when the page shows them. Do not guess a price that is not the selected item.',
+        'arrivalDate is the standard arrival date for that selection. "Free arrives Tue, Oct 20" is 2026-10-20. "Arrives between Thu, Oct 15 and Fri, Oct 16" is the last day, 2026-10-16. If the year is missing and the date is still ahead, use 2026.',
+        'shipToZip is the 5-digit ZIP shown next to Shipping to. Use null when no ZIP is shown.',
+        'Do not leave priceUsd or arrivalDate null when the page shows them. Do not use a sidebar or recommendation price.',
     ].filter(Boolean).join(' ');
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 28000);
@@ -720,12 +722,21 @@ async function askGeminiProduct(url, zip) {
         const title = String((facts && facts.title) || '').trim();
         if (!title) return null;
         const price = Number(facts.priceUsd);
-        const pagePriceCents = Number.isFinite(price) && price > 0 ? Math.round(price * 100) : null;
+        const compareAt = Number(facts.compareAtUsd);
+        let pagePriceCents = Number.isFinite(price) && price > 0 ? Math.round(price * 100) : null;
+        if (Number.isFinite(compareAt) && compareAt > 0 && pagePriceCents && Math.round(compareAt * 100) < pagePriceCents) {
+            pagePriceCents = Math.round(compareAt * 100);
+        }
         const ship = Number(facts.shippingUsd);
         const shipCents = facts.shippingUsd === 0 || ship === 0
             ? 0
             : (Number.isFinite(ship) && ship > 0 ? Math.round(ship * 100) : null);
-        const arrival = /^\d{4}-\d{2}-\d{2}$/.test(String(facts.arrivalDate || '')) ? String(facts.arrivalDate) : null;
+        const shipToZip = /^\d{5}$/.test(String(facts.shipToZip || '')) ? String(facts.shipToZip) : '';
+        const zipMismatch = !!(zip && shipToZip && shipToZip !== String(zip));
+        const arrival = zipMismatch ? null : (/^\d{4}-\d{2}-\d{2}$/.test(String(facts.arrivalDate || '')) ? String(facts.arrivalDate) : null);
+        const choicePrompt = zipMismatch
+            ? `This page ships to ${shipToZip}. Set the page to ${zip}, then add the link again.`
+            : (pagePriceCents == null ? 'Choose a size and color on the product page, then add the link again.' : '');
         return {
             title: title.slice(0, 300),
             brand: '',
@@ -742,7 +753,7 @@ async function askGeminiProduct(url, zip) {
             inStock: null,
             isElectronics: looksElectronic('nordstrom', title),
             variantGroups: [],
-            choicePrompt: pagePriceCents == null ? 'Choose a size and color on the product page, then add the link again.' : '',
+            choicePrompt,
             readBy: 'gemini',
         };
     } catch {

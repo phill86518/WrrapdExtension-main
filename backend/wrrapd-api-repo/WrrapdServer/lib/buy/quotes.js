@@ -194,6 +194,7 @@ function applyRead(line, read, cfg) {
         return;
     }
     line.variantLabel = p.variantGroups.map((g) => `${g.name}: ${g.selected}`).join(', ');
+    if (p.choicePrompt) line.variantLabel = p.choicePrompt;
     line.state = 'quoting';
 }
 

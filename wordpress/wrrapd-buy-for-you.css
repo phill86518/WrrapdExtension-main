@@ -160,7 +160,7 @@
 .wb-table th { text-align: center; vertical-align: middle; font-weight: 560; font-size: 11px; letter-spacing: 0; color: var(--wb-navy); padding: 6px 3px; border-bottom: 2px solid var(--wb-line); white-space: normal; overflow-wrap: break-word; line-height: 1.15; }
 .wb-table td { padding: 6px 8px; vertical-align: top; border-bottom: 1px solid var(--wb-line); font-size: 13px; font-weight: 560; line-height: 1.2; }
 .wb-money { text-align: right; font-variant-numeric: tabular-nums; font-weight: 560; font-size: 13px; }
-.wb-table td.wb-money { padding-left: 2px; padding-right: 2px; }
+.wb-table td.wb-money { padding-left: 2px; padding-right: 2px; overflow: hidden; }
 .wb-retailer { text-align: center; vertical-align: middle; padding: 8px 4px; border-right: 1px solid var(--wb-line); }
 .wb-rname { display: block; font-weight: 650; font-size: 13px; color: var(--wb-navy); }
 .wb-rsub { display: block; margin-top: 4px; font-size: 12px; font-weight: 560; line-height: 1.25; }

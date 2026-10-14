@@ -193,7 +193,7 @@
   function deliveryCell(l) {
     var s = shipOf(l);
     if (s && s.arrivalDate) return esc(fmtDate(s.arrivalDate));
-    if (waiting(l)) return '<span class="wb-status"><span class="wb-spin"></span>' + WAIT_DETAILS + '</span>';
+    if (waiting(l)) return '<span class="wb-spin" aria-hidden="true"></span>';
     return '—';
   }
 
