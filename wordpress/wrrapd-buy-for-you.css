@@ -120,13 +120,31 @@
 .wb-store { margin: 18px 0 8px; }
 .wb-store-name { margin: 8px 0 4px; font-weight: 650; font-size: 15px; color: var(--wb-navy); letter-spacing: .01em; }
 .wb-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-.wb-col-item { width: 32%; }
-.wb-col-when { width: 16%; }
+.wb-col-item { width: 24%; }
+.wb-col-when { width: 13%; }
 .wb-col-price,
 .wb-col-ship,
 .wb-col-wrap,
-.wb-col-flowers { width: 13%; }
+.wb-col-flowers,
+.wb-col-total { width: 11%; }
+.wb-col-qty { width: 8%; }
 .wb-col-del { width: 32px; }
+.wb-qty {
+  width: 3.2rem;
+  max-width: 100%;
+  margin-left: auto;
+  display: block;
+  text-align: right;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 560;
+  padding: 2px 6px;
+  border: 1px solid #e4d5c4;
+  border-radius: 8px;
+  color: var(--wb-navy);
+  background: #fff;
+  box-sizing: border-box;
+}
 .wb-table th { text-align: left; font-weight: 560; font-size: 13px; letter-spacing: 0; color: var(--wb-navy); padding: 6px 8px; border-bottom: 2px solid var(--wb-line); }
 .wb-table td { padding: 6px 8px; vertical-align: top; border-bottom: 1px solid var(--wb-line); font-size: 13px; font-weight: 560; }
 .wb-money, .wb-table th.wb-money { text-align: right; font-variant-numeric: tabular-nums; font-weight: 560; font-size: 13px; }
@@ -198,8 +216,8 @@ textarea.wb-input { resize: vertical; }
   .wb-table thead { display: none; }
   .wb-table tr { position: relative; padding: 12px 28px 12px 0; border-bottom: 1px solid var(--wb-line); }
   .wb-table td { padding: 4px 0; border: 0; }
-  .wb-table td[data-label="Expected delivery"], .wb-table td[data-label="Item price"], .wb-table td[data-label="Shipping cost"], .wb-table td[data-label="Gift-wrapping cost"], .wb-table td[data-label="Floral cost"] { display: grid; grid-template-columns: 9.5rem 1fr; gap: 8px; white-space: normal; width: auto; }
-  .wb-table td[data-label="Expected delivery"]::before, .wb-table td[data-label="Item price"]::before, .wb-table td[data-label="Shipping cost"]::before, .wb-table td[data-label="Gift-wrapping cost"]::before, .wb-table td[data-label="Floral cost"]::before { content: attr(data-label); font-weight: 560; font-size: 13px; color: var(--wb-navy); padding-top: 2px; }
+  .wb-table td[data-label="Expected delivery"], .wb-table td[data-label="Unit price"], .wb-table td[data-label="Qty"], .wb-table td[data-label="Shipping cost"], .wb-table td[data-label="Gift-wrapping cost"], .wb-table td[data-label="Floral cost"], .wb-table td[data-label="Item total"] { display: grid; grid-template-columns: 9.5rem 1fr; gap: 8px; white-space: normal; width: auto; }
+  .wb-table td[data-label="Expected delivery"]::before, .wb-table td[data-label="Unit price"]::before, .wb-table td[data-label="Qty"]::before, .wb-table td[data-label="Shipping cost"]::before, .wb-table td[data-label="Gift-wrapping cost"]::before, .wb-table td[data-label="Floral cost"]::before, .wb-table td[data-label="Item total"]::before { content: attr(data-label); font-weight: 560; font-size: 13px; color: var(--wb-navy); padding-top: 2px; }
   .wb-zip-row { flex-wrap: nowrap; gap: 8px; }
   .wb-zip-row .wb-label { font-size: 13px; }
   .wb-zip { width: 5.5rem; max-width: 5.5rem; flex-basis: 5.5rem; }

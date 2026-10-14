@@ -35,6 +35,11 @@ function linePriceCents(batch, line) {
     return Number.isInteger(c) && c > 0 ? c : null;
 }
 
+function lineQty(line) {
+    const n = Math.round(Number(line && line.qty));
+    return Number.isInteger(n) && n >= 1 && n <= 10 ? n : 1;
+}
+
 function wrapOptionFor(line) {
     const w = line.wrap || {};
     const style = WRAP_STYLES.has(w.style) ? w.style : 'wrrapd';
@@ -163,8 +168,10 @@ function computeBill(batch, cfg) {
             const p = linePriceCents(batch, l);
             if (p == null) return { ok: false, error: 'quote_incomplete', message: 'Prices are still being checked.' };
             if (p > cfg.perItemCapCents) return { ok: false, error: 'over_item_limit', message: `This item is over the purchase limit ($${(p / 100).toFixed(2)} versus $${(cfg.perItemCapCents / 100).toFixed(2)}).`, lineId: l.id };
-            merchandiseCents += p;
-            items.push({ lineId: l.id, title: l.product.title, variant: l.variantLabel || '', imageUrl: l.product.imageUrl || '', cents: p });
+            const qty = lineQty(l);
+            const extended = p * qty;
+            merchandiseCents += extended;
+            items.push({ lineId: l.id, title: l.product.title, variant: l.variantLabel || '', imageUrl: l.product.imageUrl || '', cents: extended, unitCents: p, qty });
         }
         groups.push({
             retailer: retailerId,

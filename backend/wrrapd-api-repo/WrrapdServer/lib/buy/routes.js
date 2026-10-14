@@ -73,10 +73,15 @@ function returnDeadline(deliveredAtIso) {
     return deadline.toISOString();
 }
 
+function lineQty(l) {
+    const n = Math.round(Number(l && l.qty));
+    return Number.isInteger(n) && n >= 1 && n <= 10 ? n : 1;
+}
+
 function countedItemCents(batch, retailer) {
     return (batch.lines || [])
         .filter((l) => l.retailer === retailer && !l.removed && l.state !== 'unavailable')
-        .reduce((sum, l) => sum + ((l.product && l.product.pagePriceCents) || 0), 0);
+        .reduce((sum, l) => sum + ((l.product && l.product.pagePriceCents) || 0) * lineQty(l), 0);
 }
 
 /** Target's "ships free" line is free on a $35 order. Under that, it is not a $0 charge. */
@@ -112,6 +117,7 @@ function publicLine(l, batch) {
               }
             : null,
         variantLabel: l.variantLabel || '',
+        qty: lineQty(l),
         wrap: l.wrap || null,
     };
 }
@@ -291,7 +297,7 @@ module.exports = function mountBuyForYou(app, deps) {
         const lines = opened.map((parsed, i) => {
             const text = raw[i];
             const named = retailers.byId(parsed.retailer);
-            const base = { id: `L${i + 1}`, addedAt: now, url: text.slice(0, 2000), wrap: null };
+            const base = { id: `L${i + 1}`, addedAt: now, url: text.slice(0, 2000), qty: 1, wrap: null };
             if (!parsed.ok) {
                 return {
                     ...base,
@@ -393,6 +399,27 @@ module.exports = function mountBuyForYou(app, deps) {
     );
 
     app.post(
+        '/api/buy/batches/:id/qty',
+        shopperChange(async (req, batch) => {
+            const lineId = String(req.body.lineId || '');
+            const qty = Math.round(Number(req.body.qty));
+            if (!Number.isInteger(qty) || qty < 1 || qty > 10) return { error: 'Please enter a quantity from 1 to 10.' };
+            let err = null;
+            await store.update(batch.id, (b) => {
+                const l = b.lines.find((x) => x.id === lineId);
+                if (!l || l.removed || l.state === 'unavailable') {
+                    err = 'Please refresh the page.';
+                    return null;
+                }
+                l.qty = qty;
+                store.addLog(b, 'shopper', `${l.id} quantity ${qty}`);
+                return b;
+            });
+            return err ? { error: err } : null;
+        }),
+    );
+
+    app.post(
         '/api/buy/batches/:id/remove',
         shopperChange(async (req, batch) => {
             const lineId = String(req.body.lineId || '');
@@ -472,7 +499,7 @@ module.exports = function mountBuyForYou(app, deps) {
                     const text = raw[i];
                     const named = retailers.byId(parsed.retailer);
                     const id = `L${b.lines.length + 1}`;
-                    const base = { id, addedAt: now, url: text.slice(0, 2000), wrap: null };
+                    const base = { id, addedAt: now, url: text.slice(0, 2000), qty: 1, wrap: null };
                     if (!parsed.ok) {
                         b.lines.push({
                             ...base,

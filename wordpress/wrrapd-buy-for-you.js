@@ -236,10 +236,10 @@
     return '—';
   }
   function colgroup(edit) {
-    return '<colgroup><col class="wb-col-item"><col class="wb-col-when"><col class="wb-col-price"><col class="wb-col-ship"><col class="wb-col-wrap"><col class="wb-col-flowers">' + (edit ? '<col class="wb-col-del">' : '') + '</colgroup>';
+    return '<colgroup><col class="wb-col-item"><col class="wb-col-when"><col class="wb-col-price"><col class="wb-col-qty"><col class="wb-col-ship"><col class="wb-col-wrap"><col class="wb-col-flowers"><col class="wb-col-total">' + (edit ? '<col class="wb-col-del">' : '') + '</colgroup>';
   }
   function headRow(edit) {
-    return '<thead><tr><th scope="col">Item</th><th scope="col" class="wb-money">Expected delivery*</th><th scope="col" class="wb-money">Item price</th><th scope="col" class="wb-money">Shipping cost</th><th scope="col" class="wb-money">Gift-wrapping cost</th><th scope="col" class="wb-money">Floral cost</th>' +
+    return '<thead><tr><th scope="col">Item</th><th scope="col" class="wb-money">Expected delivery*</th><th scope="col" class="wb-money">Unit price</th><th scope="col" class="wb-money">Qty</th><th scope="col" class="wb-money">Shipping cost</th><th scope="col" class="wb-money">Gift-wrapping cost</th><th scope="col" class="wb-money">Floral cost</th><th scope="col" class="wb-money">Item total</th>' +
       (edit ? '<th scope="col"><span class="wb-sr">Delete</span></th>' : '') + '</tr></thead>';
   }
 
@@ -250,7 +250,7 @@
     var shipKnown = false;
     lines.forEach(function (l) {
       if (l.state === 'unavailable') return;
-      var c = knownCents(l);
+      var c = lineTotalCents(l);
       if (c != null) itemSum += c;
       var s = shipOf(l);
       if (s && s.cents != null) { shipSum += s.cents; shipKnown = true; }
@@ -260,16 +260,19 @@
       h += '<tr class="wb-tr wb-row-' + esc(l.state) + '">' +
         '<td data-label="Item">' + itemCell(l) + '</td>' +
         '<td data-label="Expected delivery" class="wb-money">' + (retailer ? deliveryCell(l) : '—') + '</td>' +
-        '<td data-label="Item price" class="wb-money">' + priceCell(l) + '</td>' +
+        '<td data-label="Unit price" class="wb-money">' + priceCell(l) + '</td>' +
+        '<td data-label="Qty" class="wb-money">' + qtyCell(l) + '</td>' +
         '<td data-label="Shipping cost" class="wb-money wb-shipcost">' + (retailer ? costCell(l) : '—') + '</td>' +
         '<td data-label="Gift-wrapping cost" class="wb-money">' + wrapCell(l) + '</td>' +
-        '<td data-label="Floral cost" class="wb-money">' + flowerCell(l) + '</td>';
+        '<td data-label="Floral cost" class="wb-money">' + flowerCell(l) + '</td>' +
+        '<td data-label="Item total" class="wb-money">' + totalCell(l) + '</td>';
       if (edit) h += '<td class="wb-del"><button type="button" class="wb-trash" data-act="remove" data-line="' + esc(l.id) + '" aria-label="Delete item" title="Delete item">' + TRASH_SVG + '</button></td>';
       h += '</tr>';
     });
-    var tail = '<td class="wb-money"></td><td class="wb-money"></td>' + (edit ? '<td></td>' : '');
+    var shipCell = shipKnown ? (shipSum ? usd(shipSum) : 'Free') : '—';
     h += '</tbody><tfoot>' +
-      '<tr class="wb-foot"><td>Retailer subtotal</td><td></td><td class="wb-money">' + usd(itemSum) + '</td><td class="wb-money">' + (shipKnown ? (shipSum ? usd(shipSum) : 'Free') : '—') + '</td>' + tail + '</tr>' +
+      '<tr class="wb-foot"><td>Retailer subtotal</td><td></td><td class="wb-money"></td><td></td><td class="wb-money">' + shipCell + '</td><td class="wb-money"></td><td class="wb-money"></td><td class="wb-money">' + usd(itemSum) + '</td>' +
+      (edit ? '<td></td>' : '') + '</tr>' +
       '</tfoot></table></div>';
     return h;
   }
@@ -317,6 +320,24 @@
     if (l.state !== 'unavailable' && l.product && l.product.pagePriceCents) return l.product.pagePriceCents;
     return null;
   }
+  function qtyOf(l) {
+    var n = Math.round(Number(l && l.qty));
+    return n >= 1 && n <= 10 ? n : 1;
+  }
+  function lineTotalCents(l) {
+    var c = knownCents(l);
+    return c == null ? null : c * qtyOf(l);
+  }
+  function qtyCell(l) {
+    if (l.state === 'reading') return '—';
+    if (!canEdit() || l.state === 'unavailable') return String(qtyOf(l));
+    return '<input class="wb-qty" type="number" min="1" max="10" step="1" inputmode="numeric" aria-label="Quantity" data-line="' + esc(l.id) + '" value="' + qtyOf(l) + '">';
+  }
+  function totalCell(l) {
+    if (l.state === 'reading') return '—';
+    var c = lineTotalCents(l);
+    return c != null ? usd(c) : '—';
+  }
   function limitLine() {
     var lim = S.batch.limits || {};
     return '<p class="wb-limit">Cumulative purchase limit for item prices: ' + usd(lim.merchandiseCapCents) + ', per item limit of ' + usd(lim.perItemCapCents) + '</p>';
@@ -354,7 +375,7 @@
     var shipSum = 0;
     lines.forEach(function (l) {
       if (l.state === 'unavailable') return;
-      var c = knownCents(l);
+      var c = lineTotalCents(l);
       if (c != null) itemSum += c;
       var s = shipOf(l);
       if (s && s.cents != null) shipSum += s.cents;
@@ -374,10 +395,12 @@
       h += '<tr class="wb-tr wb-row-excluded">' +
         '<td data-label="Item">' + itemCell(l) + '</td>' +
         '<td data-label="Expected delivery" class="wb-money">NA</td>' +
-        '<td data-label="Item price" class="wb-money">NA</td>' +
+        '<td data-label="Unit price" class="wb-money">NA</td>' +
+        '<td data-label="Qty" class="wb-money">NA</td>' +
         '<td data-label="Shipping cost" class="wb-money">NA</td>' +
         '<td data-label="Gift-wrapping cost" class="wb-money">NA</td>' +
-        '<td data-label="Floral cost" class="wb-money">NA</td>';
+        '<td data-label="Floral cost" class="wb-money">NA</td>' +
+        '<td data-label="Item total" class="wb-money">NA</td>';
       if (edit) h += '<td class="wb-del"><button type="button" class="wb-trash" data-act="remove" data-line="' + esc(l.id) + '" aria-label="Delete item" title="Delete item">' + TRASH_SVG + '</button></td>';
       h += '</tr>';
     });
@@ -520,6 +543,9 @@
   });
 
   function bind() {
+    $all('.wb-qty').forEach(function (el) {
+      el.addEventListener('change', function () { setQty(el.getAttribute('data-line'), el.value); });
+    });
     var zipEdit = $('#wb-zip-edit');
     if (zipEdit) zipEdit.addEventListener('change', onZip);
     $all('[data-ship]').forEach(function (el) { el.addEventListener('change', onShip); });
@@ -706,6 +732,16 @@
     var url = el ? el.value.trim() : '';
     if (!url) { S.error = 'Please paste a product link.'; render(); return; }
     change('/link', { url: url });
+  }
+
+  function setQty(lineId, raw) {
+    var n = Math.round(Number(raw));
+    if (!(n >= 1 && n <= 10)) { render(); return; }
+    var l = S.batch.lines.filter(function (x) { return x.id === lineId; })[0];
+    if (!l || qtyOf(l) === n) return;
+    l.qty = n;
+    render();
+    change('/qty', { lineId: lineId, qty: n }).catch(function () { render(); });
   }
 
   function removeLine(lineId) {
