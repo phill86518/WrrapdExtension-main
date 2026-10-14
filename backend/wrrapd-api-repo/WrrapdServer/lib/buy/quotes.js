@@ -190,7 +190,13 @@ async function processBatch(batchId) {
             const line = todo[i++];
             let read;
             try {
-                read = await pageReader.readProduct({ retailer: line.retailer, url: line.url });
+                const hub = batch.hub || {};
+                read = await pageReader.readProduct({
+                    retailer: line.retailer,
+                    url: line.url,
+                    zip: hub.postalCode || hub.zip || batch.gifteeZip,
+                    state: hub.state,
+                });
             } catch (e) {
                 read = { ok: false, reason: `read_error: ${e && e.message}`, needsPerson: true };
             }

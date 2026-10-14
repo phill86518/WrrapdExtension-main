@@ -352,6 +352,92 @@ async function targetProduct(url) {
     };
 }
 
+const TARGET_PAGE_KEY = '9f36aeafbe60771e321a7cc95a78140772ab3e96';
+
+function quillTexts(node, out = []) {
+    if (!node || typeof node !== 'object') return out;
+    if (node.insert && typeof node.insert.text === 'string') out.push(node.insert.text);
+    for (const kid of Array.isArray(node) ? node : Object.values(node)) quillTexts(kid, out);
+    return out;
+}
+
+function fulfillmentSections(node, out = []) {
+    if (!node || typeof node !== 'object') return out;
+    if (typeof node.fulfillment_type === 'string') out.push(node);
+    for (const kid of Array.isArray(node) ? node : Object.values(node)) fulfillmentSections(kid, out);
+    return out;
+}
+
+/** Date and cost printed on Target's Shipping control, not pickup or same-day delivery. */
+function shipFromFulfillment(json) {
+    const sections = fulfillmentSections(json).filter((s) => s.fulfillment_type === 'SHIPPING' || s.fulfillment_type === 'SINGLE');
+    const section = sections.find((s) => s.fulfillment_type === 'SHIPPING') || sections[0];
+    if (!section) return null;
+    const text = quillTexts(section).join(' ').replace(/\s+/g, ' ');
+    const arrives = text.match(/arrives\s+by\s+(?:[A-Za-z]+,\s+)?([A-Za-z]+)\s+(\d{1,2})/i);
+    const arrivalDate = arrives ? ymdFromMonthDay(arrives[1], arrives[2]) : null;
+    let cents = null;
+    if (/ships\s+free\b/i.test(text)) cents = 0;
+    else {
+        const dollars = text.match(/\$\s?(\d+(?:\.\d{2})?)/);
+        if (dollars) cents = Math.round(Number(dollars[1]) * 100);
+    }
+    if (!arrivalDate && cents == null) return null;
+    return { label: 'Standard shipping', cents, arrivalDate, note: '' };
+}
+
+/** Asks Target for the Shipping button copy (arrival date and ships-free / price). */
+async function targetFulfillment(html, { zip, state, referer } = {}) {
+    const pageContext = (String(html || '').match(/"page_context":"([^"]+)"/) || [])[1];
+    const start = String(html || '').indexOf('"module_type":"ProductDetailFulfillment"');
+    if (!pageContext || start < 0) return null;
+    const slice = html.slice(start, start + 12000);
+    const id = (slice.match(/"module_placement_id":"([^"]+)"/) || [])[1];
+    const enrichment = (slice.match(/"enrichment_context":"([^"]+)"/) || [])[1];
+    const tcin = (html.match(/"tcin":"(\d{5,12})"/) || [])[1];
+    if (!id || !enrichment || !tcin) return null;
+    const qs = new URLSearchParams({
+        tcin,
+        channel: 'WEB',
+        page: `/p/A-${tcin}`,
+        device_type: 'DESKTOP',
+        sapphire_channel: 'WEB',
+        sapphire_page: `/p/A-${tcin}`,
+        timezone: 'America/New_York',
+        country: 'US',
+        key: TARGET_PAGE_KEY,
+    });
+    if (zip) qs.set('zip', String(zip));
+    if (state) qs.set('state', String(state));
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 12000);
+    let resp;
+    try {
+        resp = await fetch(`https://www.target.com/cdui_orchestrations/v1/pages/pdp/deferred_enrichment/modules?${qs}`, {
+            method: 'POST',
+            signal: ctrl.signal,
+            headers: {
+                'User-Agent': UA,
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                Origin: 'https://www.target.com',
+                Referer: referer || 'https://www.target.com/',
+            },
+            body: JSON.stringify({
+                page_context: pageContext,
+                modules: [{ module_placement_id: id, module_type: 'ProductDetailFulfillment', enrichment_context: enrichment }],
+            }),
+        });
+    } catch (_) {
+        return null;
+    } finally {
+        clearTimeout(timer);
+    }
+    if (!resp.ok) return null;
+    const body = await resp.json().catch(() => null);
+    return body ? shipFromFulfillment(body) : null;
+}
+
 async function askGrok({ retailerName, url, html }) {
     const ld = jsonLdProducts(html).slice(0, 3);
     const meta = {
@@ -398,7 +484,7 @@ function cleanVariantGroups(groups) {
 /**
  * @returns {Promise<{ ok: true, product: object } | { ok: false, reason: string, needsPerson: boolean }>}
  */
-async function readProduct({ retailer, url }) {
+async function readProduct({ retailer, url, zip, state }) {
     const r = retailers.byId(retailer);
     if (!r) return { ok: false, reason: 'retailer_not_supported', needsPerson: false };
     let page;
@@ -457,6 +543,15 @@ async function readProduct({ retailer, url }) {
                 };
             } else if (dated) chosen = dated;
         }
+        const button = await targetFulfillment(page.html, { zip, state, referer: url });
+        if (button && (button.arrivalDate || button.cents != null)) {
+            chosen = {
+                label: 'Standard shipping',
+                cents: button.cents != null ? button.cents : chosen && chosen.cents != null ? chosen.cents : null,
+                arrivalDate: button.arrivalDate || (chosen && chosen.arrivalDate) || null,
+                note: (chosen && chosen.note) || '',
+            };
+        }
     }
     if (!title) return { ok: false, reason: 'no_title', needsPerson: true };
     const pageOffer = pagePriceCents && chosen && chosen.cents != null ? { itemPriceCents: pagePriceCents, shippingOptions: [chosen] } : null;
@@ -483,4 +578,4 @@ async function readProduct({ retailer, url }) {
     };
 }
 
-module.exports = { readProduct, askGrok, looksElectronic, priceAppearsInPage, jsonLdProducts, visibleText, fetchPage, standardFromPage };
+module.exports = { readProduct, askGrok, looksElectronic, priceAppearsInPage, jsonLdProducts, visibleText, fetchPage, standardFromPage, targetFulfillment };
