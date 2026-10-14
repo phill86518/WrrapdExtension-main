@@ -236,45 +236,66 @@
     return '—';
   }
   function colgroup(edit) {
-    return '<colgroup><col class="wb-col-item"><col class="wb-col-when"><col class="wb-col-price"><col class="wb-col-qty"><col class="wb-col-ship"><col class="wb-col-wrap"><col class="wb-col-flowers"><col class="wb-col-total">' + (edit ? '<col class="wb-col-del">' : '') + '</colgroup>';
+    return '<colgroup><col class="wb-col-retailer"><col class="wb-col-item"><col class="wb-col-when"><col class="wb-col-price"><col class="wb-col-qty"><col class="wb-col-ship"><col class="wb-col-wrap"><col class="wb-col-flowers"><col class="wb-col-total">' + (edit ? '<col class="wb-col-del">' : '') + '</colgroup>';
   }
   function headRow(edit) {
-    return '<thead><tr><th scope="col">Item</th><th scope="col" class="wb-money">Expected delivery*</th><th scope="col" class="wb-money">Unit price</th><th scope="col" class="wb-money">Qty</th><th scope="col" class="wb-money">Shipping cost</th><th scope="col" class="wb-money">Gift-wrapping cost</th><th scope="col" class="wb-money">Floral cost</th><th scope="col" class="wb-money">Item total</th>' +
+    return '<thead><tr><th scope="col">Retailer</th><th scope="col">Item</th><th scope="col">Expected delivery*</th><th scope="col">Unit price</th><th scope="col">Qty</th><th scope="col">Shipping cost</th><th scope="col">Gift-wrapping cost</th><th scope="col">Floral cost</th><th scope="col">Item total</th>' +
       (edit ? '<th scope="col"><span class="wb-sr">Delete</span></th>' : '') + '</tr></thead>';
   }
-
-  function retailerTable(name, retailer, lines) {
-    var edit = canEdit();
+  function groupLines(lines) {
+    var order = [];
+    var by = {};
+    lines.forEach(function (l) {
+      var key = l.retailerName ? l.retailer : '_other';
+      if (!by[key]) {
+        by[key] = { key: key, name: l.retailerName || 'Other links', retailer: l.retailerName ? l.retailer : null, lines: [] };
+        order.push(key);
+      }
+      by[key].lines.push(l);
+    });
+    return order.map(function (key) { return by[key]; });
+  }
+  function retailerSummary(g) {
     var itemSum = 0;
     var shipSum = 0;
     var shipKnown = false;
-    lines.forEach(function (l) {
-      if (l.state === 'unavailable') return;
+    var anyPrice = false;
+    g.lines.forEach(function (l) {
       var c = lineTotalCents(l);
-      if (c != null) itemSum += c;
+      if (c != null) { itemSum += c; anyPrice = true; }
       var s = shipOf(l);
       if (s && s.cents != null) { shipSum += s.cents; shipKnown = true; }
     });
-    var h = '<div class="wb-store"><p class="wb-store-name">' + esc(name) + '</p><table class="wb-table">' + colgroup(edit) + headRow(edit) + '<tbody>';
-    lines.forEach(function (l) {
-      h += '<tr class="wb-tr wb-row-' + esc(l.state) + '">' +
-        '<td data-label="Item">' + itemCell(l) + '</td>' +
-        '<td data-label="Expected delivery" class="wb-money">' + (retailer ? deliveryCell(l) : '—') + '</td>' +
-        '<td data-label="Unit price" class="wb-money">' + priceCell(l) + '</td>' +
-        '<td data-label="Qty" class="wb-money">' + qtyCell(l) + '</td>' +
-        '<td data-label="Shipping cost" class="wb-money wb-shipcost">' + (retailer ? costCell(l) : '—') + '</td>' +
-        '<td data-label="Gift-wrapping cost" class="wb-money">' + wrapCell(l) + '</td>' +
-        '<td data-label="Floral cost" class="wb-money">' + flowerCell(l) + '</td>' +
-        '<td data-label="Item total" class="wb-money">' + totalCell(l) + '</td>';
-      if (edit) h += '<td class="wb-del"><button type="button" class="wb-trash" data-act="remove" data-line="' + esc(l.id) + '" aria-label="Delete item" title="Delete item">' + TRASH_SVG + '</button></td>';
-      h += '</tr>';
-    });
-    var shipCell = shipKnown ? (shipSum ? usd(shipSum) : 'Free') : '—';
-    h += '</tbody><tfoot>' +
-      '<tr class="wb-foot"><td>Retailer subtotal</td><td></td><td class="wb-money"></td><td></td><td class="wb-money">' + shipCell + '</td><td class="wb-money"></td><td class="wb-money"></td><td class="wb-money">' + usd(itemSum) + '</td>' +
-      (edit ? '<td></td>' : '') + '</tr>' +
-      '</tfoot></table></div>';
+    var ship = shipKnown ? (shipSum ? usd(shipSum) : 'Free') : '—';
+    return '<span class="wb-rname">' + esc(g.name) + '</span>' +
+      '<span class="wb-rsub">Items ' + (anyPrice ? usd(itemSum) : '—') + '</span>' +
+      '<span class="wb-rsub">Shipping ' + ship + '</span>';
+  }
+  function lineCells(l, edit, retailer) {
+    var h = '<td data-label="Item">' + itemCell(l) + '</td>' +
+      '<td data-label="Expected delivery" class="wb-money">' + (retailer ? deliveryCell(l) : '—') + '</td>' +
+      '<td data-label="Unit price" class="wb-money">' + priceCell(l) + '</td>' +
+      '<td data-label="Qty" class="wb-qtycell">' + qtyCell(l) + '</td>' +
+      '<td data-label="Shipping cost" class="wb-money wb-shipcost">' + (retailer ? costCell(l) : '—') + '</td>' +
+      '<td data-label="Gift-wrapping cost" class="wb-money">' + wrapCell(l) + '</td>' +
+      '<td data-label="Floral cost" class="wb-money">' + flowerCell(l) + '</td>' +
+      '<td data-label="Item total" class="wb-money">' + totalCell(l) + '</td>';
+    if (edit) h += '<td class="wb-del"><button type="button" class="wb-trash" data-act="remove" data-line="' + esc(l.id) + '" aria-label="Delete item" title="Delete item">' + TRASH_SVG + '</button></td>';
     return h;
+  }
+  function cartTable(lines) {
+    var active = lines.filter(function (l) { return !excluded(l); });
+    if (!active.length) return '';
+    var edit = canEdit();
+    var h = '<table class="wb-table">' + colgroup(edit) + headRow(edit) + '<tbody>';
+    groupLines(active).forEach(function (g) {
+      g.lines.forEach(function (l, i) {
+        h += '<tr class="wb-tr wb-row-' + esc(l.state) + (i === 0 ? ' wb-group-start' : '') + '">';
+        if (i === 0) h += '<td class="wb-retailer" rowspan="' + g.lines.length + '" data-label="Retailer">' + retailerSummary(g) + '</td>';
+        h += lineCells(l, edit, g.retailer) + '</tr>';
+      });
+    });
+    return h + '</tbody></table>';
   }
 
   function excluded(l) {
@@ -290,18 +311,7 @@
     return l.message || "We can't buy this item right now.";
   }
   function itemTables(lines) {
-    var order = [];
-    var by = {};
-    lines.forEach(function (l) {
-      if (excluded(l)) return;
-      var key = l.retailerName ? l.retailer : '_other';
-      if (!by[key]) { by[key] = []; order.push(key); }
-      by[key].push(l);
-    });
-    return order.map(function (key) {
-      var first = by[key][0];
-      return key === '_other' ? retailerTable('Other links', null, by[key]) : retailerTable(first.retailerName, first.retailer, by[key]);
-    }).join('');
+    return cartTable(lines);
   }
 
   function stillWorking() {
@@ -322,7 +332,7 @@
   }
   function qtyOf(l) {
     var n = Math.round(Number(l && l.qty));
-    return n >= 1 && n <= 10 ? n : 1;
+    return n >= 1 && n <= 5 ? n : 1;
   }
   function lineTotalCents(l) {
     var c = knownCents(l);
@@ -331,7 +341,7 @@
   function qtyCell(l) {
     if (l.state === 'reading') return '—';
     if (!canEdit() || l.state === 'unavailable') return String(qtyOf(l));
-    return '<input class="wb-qty" type="number" min="1" max="10" step="1" inputmode="numeric" aria-label="Quantity" data-line="' + esc(l.id) + '" value="' + qtyOf(l) + '">';
+    return '<input class="wb-qty" type="number" min="1" max="5" step="1" inputmode="numeric" aria-label="Quantity" data-line="' + esc(l.id) + '" value="' + qtyOf(l) + '">';
   }
   function totalCell(l) {
     if (l.state === 'reading') return '—';
@@ -385,27 +395,30 @@
     var edit = canEdit();
     var taxText = tax != null ? usd(tax) : '—';
     return '<table class="wb-table wb-endtable">' + colgroup(edit) + '<tbody>' +
-      '<tr><td colspan="7">Sales tax</td><td class="wb-money">' + taxText + '</td>' + (edit ? '<td></td>' : '') + '</tr>' +
-      '<tr class="wb-bill-total"><td colspan="7">Gross total</td><td class="wb-money">' + usd(gross) + '</td>' + (edit ? '<td></td>' : '') + '</tr>' +
+      '<tr><td colspan="8">Sales tax</td><td class="wb-money">' + taxText + '</td>' + (edit ? '<td></td>' : '') + '</tr>' +
+      '<tr class="wb-bill-total"><td colspan="8">Gross total</td><td class="wb-money">' + usd(gross) + '</td>' + (edit ? '<td></td>' : '') + '</tr>' +
       '</tbody></table>';
   }
   function excludedBlock(lines) {
     var rows = lines.filter(excluded);
     if (!rows.length) return '';
     var edit = canEdit();
-    var h = '<div class="wb-store wb-excluded"><p class="wb-store-name">Items Excluded</p><table class="wb-table">' + colgroup(edit) + headRow(edit) + '<tbody>';
-    rows.forEach(function (l) {
-      h += '<tr class="wb-tr wb-row-excluded">' +
-        '<td data-label="Item">' + itemCell(l) + '</td>' +
-        '<td data-label="Expected delivery" class="wb-money">NA</td>' +
-        '<td data-label="Unit price" class="wb-money">NA</td>' +
-        '<td data-label="Qty" class="wb-money">NA</td>' +
-        '<td data-label="Shipping cost" class="wb-money">NA</td>' +
-        '<td data-label="Gift-wrapping cost" class="wb-money">NA</td>' +
-        '<td data-label="Floral cost" class="wb-money">NA</td>' +
-        '<td data-label="Item total" class="wb-money">NA</td>';
-      if (edit) h += '<td class="wb-del"><button type="button" class="wb-trash" data-act="remove" data-line="' + esc(l.id) + '" aria-label="Delete item" title="Delete item">' + TRASH_SVG + '</button></td>';
-      h += '</tr>';
+    var h = '<div class="wb-store wb-excluded"><p class="wb-store-name">Items Excluded</p><table class="wb-table">' + colgroup(edit) + '<tbody>';
+    groupLines(rows).forEach(function (g) {
+      g.lines.forEach(function (l, i) {
+        h += '<tr class="wb-tr wb-row-excluded' + (i === 0 ? ' wb-group-start' : '') + '">';
+        if (i === 0) h += '<td class="wb-retailer" rowspan="' + g.lines.length + '" data-label="Retailer"><span class="wb-rname">' + esc(g.name) + '</span></td>';
+        h += '<td data-label="Item">' + itemCell(l) + '</td>' +
+          '<td data-label="Expected delivery" class="wb-money">NA</td>' +
+          '<td data-label="Unit price" class="wb-money">NA</td>' +
+          '<td data-label="Qty" class="wb-qtycell">NA</td>' +
+          '<td data-label="Shipping cost" class="wb-money">NA</td>' +
+          '<td data-label="Gift-wrapping cost" class="wb-money">NA</td>' +
+          '<td data-label="Floral cost" class="wb-money">NA</td>' +
+          '<td data-label="Item total" class="wb-money">NA</td>';
+        if (edit) h += '<td class="wb-del"><button type="button" class="wb-trash" data-act="remove" data-line="' + esc(l.id) + '" aria-label="Delete item" title="Delete item">' + TRASH_SVG + '</button></td>';
+        h += '</tr>';
+      });
     });
     return h + '</tbody></table></div>';
   }
@@ -739,7 +752,7 @@
 
   function setQty(lineId, raw) {
     var n = Math.round(Number(raw));
-    if (!(n >= 1 && n <= 10)) { render(); return; }
+    if (!(n >= 1 && n <= 5)) { render(); return; }
     var l = S.batch.lines.filter(function (x) { return x.id === lineId; })[0];
     if (!l || qtyOf(l) === n) return;
     l.qty = n;

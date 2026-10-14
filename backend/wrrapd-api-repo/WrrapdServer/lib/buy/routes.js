@@ -75,7 +75,8 @@ function returnDeadline(deliveredAtIso) {
 
 function lineQty(l) {
     const n = Math.round(Number(l && l.qty));
-    return Number.isInteger(n) && n >= 1 && n <= 10 ? n : 1;
+    if (!Number.isInteger(n) || n < 1) return 1;
+    return Math.min(5, n);
 }
 
 function countedItemCents(batch, retailer) {
@@ -403,7 +404,7 @@ module.exports = function mountBuyForYou(app, deps) {
         shopperChange(async (req, batch) => {
             const lineId = String(req.body.lineId || '');
             const qty = Math.round(Number(req.body.qty));
-            if (!Number.isInteger(qty) || qty < 1 || qty > 10) return { error: 'Please enter a quantity from 1 to 10.' };
+            if (!Number.isInteger(qty) || qty < 1 || qty > 5) return { error: 'Please enter a quantity from 1 to 5.' };
             let err = null;
             await store.update(batch.id, (b) => {
                 const l = b.lines.find((x) => x.id === lineId);

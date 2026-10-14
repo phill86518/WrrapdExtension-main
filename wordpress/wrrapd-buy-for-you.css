@@ -120,28 +120,29 @@
 .wb-store { margin: 18px 0 8px; }
 .wb-store-name { margin: 8px 0 4px; font-weight: 650; font-size: 15px; color: var(--wb-navy); letter-spacing: .01em; }
 .wb-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-.wb-col-item { width: 44%; }
-.wb-col-when { width: 13%; }
-.wb-col-price { width: 11%; }
-.wb-col-qty { width: 8%; }
+.wb-col-retailer { width: 12%; }
+.wb-col-item { width: 42%; }
+.wb-col-when { width: 12%; }
+.wb-col-price,
 .wb-col-ship,
 .wb-col-wrap,
 .wb-col-flowers,
 .wb-col-total { width: 6%; }
+.wb-col-qty { width: 4%; }
 .wb-col-del { width: 32px; }
 .wb-qty {
-  width: 2.1rem;
+  width: 1.05rem;
   min-width: 0;
   height: 1.2em;
-  margin: 0;
-  display: inline-block;
-  vertical-align: baseline;
-  text-align: right;
+  margin: 0 auto;
+  display: block;
+  vertical-align: middle;
+  text-align: center;
   font: inherit;
   font-size: 13px;
   font-weight: 560;
   line-height: 1.2;
-  padding: 0 2px;
+  padding: 0;
   border: 1px solid #e4d5c4;
   border-radius: 4px;
   color: var(--wb-navy);
@@ -152,10 +153,15 @@
 }
 .wb-qty::-webkit-outer-spin-button,
 .wb-qty::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-.wb-table th { text-align: left; font-weight: 560; font-size: 13px; letter-spacing: 0; color: var(--wb-navy); padding: 6px 4px; border-bottom: 2px solid var(--wb-line); white-space: normal; overflow-wrap: break-word; line-height: 1.15; vertical-align: bottom; }
+.wb-table th { text-align: center; vertical-align: middle; font-weight: 560; font-size: 11px; letter-spacing: 0; color: var(--wb-navy); padding: 6px 3px; border-bottom: 2px solid var(--wb-line); white-space: normal; overflow-wrap: break-word; line-height: 1.15; }
 .wb-table td { padding: 6px 8px; vertical-align: top; border-bottom: 1px solid var(--wb-line); font-size: 13px; font-weight: 560; line-height: 1.2; }
-.wb-money, .wb-table th.wb-money { text-align: right; font-variant-numeric: tabular-nums; font-weight: 560; font-size: 13px; }
+.wb-money { text-align: right; font-variant-numeric: tabular-nums; font-weight: 560; font-size: 13px; }
 .wb-table td.wb-money { padding-left: 2px; padding-right: 2px; }
+.wb-retailer { text-align: center; vertical-align: middle; padding: 8px 4px; border-right: 1px solid var(--wb-line); }
+.wb-rname { display: block; font-weight: 650; font-size: 13px; color: var(--wb-navy); }
+.wb-rsub { display: block; margin-top: 4px; font-size: 12px; font-weight: 560; line-height: 1.25; }
+.wb-qtycell { text-align: center; vertical-align: middle; }
+.wb-group-start td { border-top: 1px solid var(--wb-line); }
 .wb-acct-line { display: flex; justify-content: flex-end; gap: 8px; }
 .wb-acct-line span:last-child { min-width: 4.2rem; text-align: right; }
 .wb-table td.wb-num { white-space: nowrap; }
@@ -226,8 +232,8 @@ textarea.wb-input { resize: vertical; }
   .wb-table thead { display: none; }
   .wb-table tr { position: relative; padding: 12px 28px 12px 0; border-bottom: 1px solid var(--wb-line); }
   .wb-table td { padding: 4px 0; border: 0; }
-  .wb-table td[data-label="Expected delivery"], .wb-table td[data-label="Unit price"], .wb-table td[data-label="Qty"], .wb-table td[data-label="Shipping cost"], .wb-table td[data-label="Gift-wrapping cost"], .wb-table td[data-label="Floral cost"], .wb-table td[data-label="Item total"] { display: grid; grid-template-columns: 9.5rem 1fr; gap: 8px; white-space: normal; width: auto; }
-  .wb-table td[data-label="Expected delivery"]::before, .wb-table td[data-label="Unit price"]::before, .wb-table td[data-label="Qty"]::before, .wb-table td[data-label="Shipping cost"]::before, .wb-table td[data-label="Gift-wrapping cost"]::before, .wb-table td[data-label="Floral cost"]::before, .wb-table td[data-label="Item total"]::before { content: attr(data-label); font-weight: 560; font-size: 13px; color: var(--wb-navy); padding-top: 2px; }
+  .wb-table td[data-label="Retailer"], .wb-table td[data-label="Expected delivery"], .wb-table td[data-label="Unit price"], .wb-table td[data-label="Qty"], .wb-table td[data-label="Shipping cost"], .wb-table td[data-label="Gift-wrapping cost"], .wb-table td[data-label="Floral cost"], .wb-table td[data-label="Item total"] { display: grid; grid-template-columns: 9.5rem 1fr; gap: 8px; white-space: normal; width: auto; }
+  .wb-table td[data-label="Retailer"]::before, .wb-table td[data-label="Expected delivery"]::before, .wb-table td[data-label="Unit price"]::before, .wb-table td[data-label="Qty"]::before, .wb-table td[data-label="Shipping cost"]::before, .wb-table td[data-label="Gift-wrapping cost"]::before, .wb-table td[data-label="Floral cost"]::before, .wb-table td[data-label="Item total"]::before { content: attr(data-label); font-weight: 560; font-size: 13px; color: var(--wb-navy); padding-top: 2px; }
   .wb-zip-row { flex-wrap: nowrap; gap: 8px; }
   .wb-zip-row .wb-label { font-size: 13px; }
   .wb-zip { width: 5.5rem; max-width: 5.5rem; flex-basis: 5.5rem; }

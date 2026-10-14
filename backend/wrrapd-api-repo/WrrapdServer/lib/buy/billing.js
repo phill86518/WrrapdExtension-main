@@ -37,7 +37,8 @@ function linePriceCents(batch, line) {
 
 function lineQty(line) {
     const n = Math.round(Number(line && line.qty));
-    return Number.isInteger(n) && n >= 1 && n <= 10 ? n : 1;
+    if (!Number.isInteger(n) || n < 1) return 1;
+    return Math.min(5, n);
 }
 
 function wrapOptionFor(line) {
