@@ -244,7 +244,7 @@
     return '<colgroup><col class="wb-col-retailer"><col class="wb-col-item"><col class="wb-col-when"><col class="wb-col-price"><col class="wb-col-qty"><col class="wb-col-ship"><col class="wb-col-wrap"><col class="wb-col-flowers"><col class="wb-col-total">' + (edit ? '<col class="wb-col-del">' : '') + '</colgroup>';
   }
   function headRow(edit) {
-    return '<thead><tr><th scope="col">Retailer</th><th scope="col">Item</th><th scope="col">Expected Delivery</th><th scope="col">Unit price</th><th scope="col">Qty</th><th scope="col">Shipping cost</th><th scope="col">Gift-wrapping cost</th><th scope="col">Floral cost</th><th scope="col">Item Total</th>' +
+    return '<thead><tr><th scope="col">Retailer</th><th scope="col">Item</th><th scope="col">Estimated Delivery*</th><th scope="col">Unit price</th><th scope="col">Qty</th><th scope="col">Shipping cost</th><th scope="col">Gift-wrapping cost</th><th scope="col">Floral cost</th><th scope="col">Item<br>Total</th>' +
       (edit ? '<th scope="col"><span class="wb-sr">Delete</span></th>' : '') + '</tr></thead>';
   }
   function groupLines(lines) {
@@ -272,7 +272,7 @@
   }
   function lineCells(l, edit, retailer) {
     var h = '<td data-label="Item">' + itemCell(l) + '</td>' +
-      '<td data-label="Expected delivery" class="wb-money">' + (retailer ? deliveryCell(l) : '—') + '</td>' +
+      '<td data-label="Estimated delivery" class="wb-money">' + (retailer ? deliveryCell(l) : '—') + '</td>' +
       '<td data-label="Unit price" class="wb-money">' + priceCell(l) + '</td>' +
       '<td data-label="Qty" class="wb-qtycell">' + qtyCell(l) + '</td>' +
       '<td data-label="Shipping cost" class="wb-money wb-shipcost">' + (retailer ? costCell(l) : '—') + '</td>' +
@@ -294,7 +294,7 @@
         h += lineCells(l, edit, g.retailer) + '</tr>';
       });
     });
-    return h + '</tbody></table>';
+    return h + endTotals(lines) + '</tbody></table>';
   }
 
   function excluded(l) {
@@ -363,18 +363,17 @@
     var draft = S.draftLinks;
     S.draftLinks = null;
     var h = '<section class="wb-card"><h2>Gift-wrapping shopping cart</h2>' +
-      '<div class="wb-zip-row"><label class="wb-label" for="wb-zip-edit">Giftee / gift-recipient\'s zip code:</label>' +
+      '<div class="wb-cart-head"><div class="wb-zip-row"><label class="wb-label" for="wb-zip-edit">Giftee / gift-recipient\'s zip code:</label>' +
       '<input class="wb-input wb-zip" id="wb-zip-edit" inputmode="numeric" maxlength="5" value="' + esc(b.gifteeZip) + '" autocomplete="off"></div>' +
-      extLine() +
+      extLine() + '</div>' +
       (rows || (excludedHtml ? '' : '<p class="wb-muted">Paste a product link to start.</p>')) +
-      (rows ? endTotals(lines) + '<p class="wb-asterisk">* Final gift delivery to the giftee may add 1 day.</p>' : '') +
+      (rows ? '<p class="wb-asterisk">* Final gift delivery to the giftee may add 1 day.</p><p class="wb-ship-note">Shipping prices do not reflect any club membership or other discounts.</p>' : '') +
       excludedHtml +
       (room ? '<p class="wb-ask">' + (lines.length ? 'Add more items for gift-wrapping' : 'Paste the product links for gift-wrapping below.') + '</p>' + linkFields(maxLinks() - lines.length, draft) + buyButton(lines.length > 0) : '') +
       '</section>';
     if (!b.bill && b.billError && !stillWorking() && readyLines().length) h += '<p class="wb-error">' + esc(b.billError) + '</p>';
     h += limitLine();
     if (S.error) h += '<p class="wb-error">' + esc(S.error) + '</p>';
-    h += '<p class="wb-wrap-note">We gift-wrap every item.</p>';
     h += '<button type="button" class="wb-btn" data-act="open-wrap"' + (canGo ? '' : ' disabled') + '>Continue to gift-wrap</button>';
     if (allWrapped) h += '<button type="button" class="wb-btn wb-btn-ghost" data-act="to-review"' + (b.bill ? '' : ' disabled') + '>Review and pay</button>';
     if (lines.some(function (l) { return l.state === 'reading'; })) h += '<p class="wb-muted">Please keep this page open.</p>';
@@ -394,10 +393,10 @@
     var gross = itemSum + shipSum + (tax || 0);
     var edit = canEdit();
     var taxText = tax != null ? usd(tax) : '—';
-    return '<table class="wb-table wb-endtable">' + colgroup(edit) + '<tbody>' +
-      '<tr><td colspan="8">Sales tax</td><td class="wb-money">' + taxText + '</td>' + (edit ? '<td></td>' : '') + '</tr>' +
-      '<tr class="wb-bill-total"><td colspan="8">Gross total</td><td class="wb-money">' + usd(gross) + '</td>' + (edit ? '<td></td>' : '') + '</tr>' +
-      '</tbody></table>';
+    var tail = edit ? '<td></td>' : '';
+    return '<tr class="wb-endrow wb-sum-start"><td colspan="8">Sales tax</td><td class="wb-money">' + taxText + '</td>' + tail + '</tr>' +
+      '<tr class="wb-endrow"><td colspan="8">Total shipping</td><td class="wb-money">' + usd(shipSum) + '</td>' + tail + '</tr>' +
+      '<tr class="wb-endrow wb-bill-total"><td colspan="8">Gross total</td><td class="wb-money">' + usd(gross) + '</td>' + tail + '</tr>';
   }
   function excludedBlock(lines) {
     var rows = lines.filter(excluded);
@@ -409,7 +408,7 @@
         h += '<tr class="wb-tr wb-row-excluded' + (i === 0 ? ' wb-group-start' : '') + '">';
         if (i === 0) h += '<td class="wb-retailer" rowspan="' + g.lines.length + '" data-label="Retailer"><span class="wb-rname">' + esc(g.name) + '</span></td>';
         h += '<td data-label="Item">' + itemCell(l) + '</td>' +
-          '<td data-label="Expected delivery" class="wb-money">NA</td>' +
+          '<td data-label="Estimated delivery" class="wb-money">NA</td>' +
           '<td data-label="Unit price" class="wb-money">NA</td>' +
           '<td data-label="Qty" class="wb-qtycell">NA</td>' +
           '<td data-label="Shipping cost" class="wb-money">NA</td>' +

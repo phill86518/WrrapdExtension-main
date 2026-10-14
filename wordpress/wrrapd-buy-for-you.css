@@ -62,7 +62,10 @@
 .wb-card h2 { color: var(--wb-navy); font-size: 22px; font-weight: 560; margin: 0 0 2px; letter-spacing: -0.02em; }
 .wb-ask { margin: 12px 0 0; font-weight: 560; color: var(--wb-navy); }
 .wb-center { text-align: center; }
+.wb-cart-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 2px 0 6px; }
+.wb-cart-head .wb-ext-line { margin: 0; flex: 1 1 16rem; max-width: 34rem; text-align: right; background: transparent; padding: 0; font-size: 13px; line-height: 1.3; }
 .wb-zip-row { display: flex; align-items: center; gap: 10px; margin: 4px 0 8px; }
+.wb-cart-head .wb-zip-row { margin: 0; flex: 0 1 auto; }
 .wb-zip-row .wb-label { margin: 0; white-space: nowrap; }
 .wb-label { display: block; font-weight: 650; margin: 8px 0 4px; font-size: 14px; color: var(--wb-navy); }
 .wb-input {
@@ -123,7 +126,7 @@
 .wb-error { color: #9a3412; font-weight: 650; margin: 12px 0 0; }
 .wb-store { margin: 18px 0 8px; }
 .wb-store-name { margin: 8px 0 4px; font-weight: 650; font-size: 15px; color: var(--wb-navy); letter-spacing: .01em; }
-.wb-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.wb-table { width: 100%; border-collapse: collapse; table-layout: fixed; margin: 0; }
 .wb-col-retailer { width: 12%; }
 .wb-col-item { width: 42%; }
 .wb-col-when { width: 7%; }
@@ -157,7 +160,7 @@
 }
 .wb-qty::-webkit-outer-spin-button,
 .wb-qty::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-.wb-table th { text-align: center; vertical-align: middle; font-weight: 560; font-size: 11px; letter-spacing: 0; color: var(--wb-navy); padding: 6px 3px; border-bottom: 2px solid var(--wb-line); white-space: normal; overflow-wrap: break-word; line-height: 1.15; }
+.wb-table th { text-align: center; vertical-align: middle; font-weight: 650; font-size: 13px; letter-spacing: 0; color: var(--wb-navy); padding: 6px 3px; border-bottom: 2px solid var(--wb-line); white-space: normal; overflow-wrap: break-word; line-height: 1.15; }
 .wb-table td { padding: 6px 8px; vertical-align: top; border-bottom: 1px solid var(--wb-line); font-size: 13px; font-weight: 560; line-height: 1.2; }
 .wb-money { text-align: right; font-variant-numeric: tabular-nums; font-weight: 560; font-size: 13px; }
 .wb-tbd { display: block; width: 100%; text-align: center; }
@@ -172,7 +175,10 @@
 .wb-table td.wb-num { white-space: nowrap; }
 .wb-table td.wb-shipcost { white-space: normal; line-height: 1.25; }
 .wb-arrive { display: block; color: #5c6578; font-size: 13px; margin-top: 2px; }
-.wb-asterisk { margin: 6px 0 0; color: #5c6578; font-size: 13px; }
+.wb-asterisk, .wb-ship-note { margin: 6px 0 0; color: #5c6578; font-size: 13px; }
+.wb-table tr.wb-endrow td { border-bottom: 0; padding-top: 2px; padding-bottom: 2px; }
+.wb-table tr.wb-sum-start td { border-top: 1px solid var(--wb-line); padding-top: 6px; }
+.wb-table tr.wb-bill-total td { border-top: 2px solid var(--wb-deep); font-weight: 650; padding-top: 6px; }
 .wb-table tfoot td { border-bottom: 0; padding-top: 6px; padding-bottom: 2px; font-weight: 560; }
 .wb-table tr.wb-gross td { border-top: 2px solid var(--wb-deep); font-weight: 650; font-size: 17px; padding-top: 8px; }
 .wb-table td.wb-del { width: 32px; padding: 4px 0; text-align: center; }
@@ -246,8 +252,10 @@ textarea.wb-input { resize: vertical; }
   .wb-table thead { display: none; }
   .wb-table tr { position: relative; padding: 12px 28px 12px 0; border-bottom: 1px solid var(--wb-line); }
   .wb-table td { padding: 4px 0; border: 0; }
-  .wb-table td[data-label="Retailer"], .wb-table td[data-label="Expected delivery"], .wb-table td[data-label="Unit price"], .wb-table td[data-label="Qty"], .wb-table td[data-label="Shipping cost"], .wb-table td[data-label="Gift-wrapping cost"], .wb-table td[data-label="Floral cost"], .wb-table td[data-label="Item total"] { display: grid; grid-template-columns: 9.5rem 1fr; gap: 8px; white-space: normal; width: auto; }
-  .wb-table td[data-label="Retailer"]::before, .wb-table td[data-label="Expected delivery"]::before, .wb-table td[data-label="Unit price"]::before, .wb-table td[data-label="Qty"]::before, .wb-table td[data-label="Shipping cost"]::before, .wb-table td[data-label="Gift-wrapping cost"]::before, .wb-table td[data-label="Floral cost"]::before, .wb-table td[data-label="Item total"]::before { content: attr(data-label); font-weight: 560; font-size: 13px; color: var(--wb-navy); padding-top: 2px; }
+  .wb-table td[data-label="Retailer"], .wb-table td[data-label="Estimated delivery"], .wb-table td[data-label="Unit price"], .wb-table td[data-label="Qty"], .wb-table td[data-label="Shipping cost"], .wb-table td[data-label="Gift-wrapping cost"], .wb-table td[data-label="Floral cost"], .wb-table td[data-label="Item total"] { display: grid; grid-template-columns: 9.5rem 1fr; gap: 8px; white-space: normal; width: auto; }
+  .wb-table td[data-label="Retailer"]::before, .wb-table td[data-label="Estimated delivery"]::before, .wb-table td[data-label="Unit price"]::before, .wb-table td[data-label="Qty"]::before, .wb-table td[data-label="Shipping cost"]::before, .wb-table td[data-label="Gift-wrapping cost"]::before, .wb-table td[data-label="Floral cost"]::before, .wb-table td[data-label="Item total"]::before { content: attr(data-label); font-weight: 650; font-size: 13px; color: var(--wb-navy); padding-top: 2px; }
+  .wb-cart-head { flex-direction: column; align-items: stretch; }
+  .wb-cart-head .wb-ext-line { text-align: left; }
   .wb-zip-row { flex-wrap: nowrap; gap: 8px; }
   .wb-zip-row .wb-label { font-size: 13px; }
   .wb-zip { width: 5.5rem; max-width: 5.5rem; flex-basis: 5.5rem; }
@@ -256,6 +264,10 @@ textarea.wb-input { resize: vertical; }
   .wb-table tfoot td { border: 0; padding: 0; width: auto; }
   .wb-table td.wb-del { position: absolute; top: 12px; right: 0; width: auto; padding: 0; }
   .wb-table td.wb-shipcell { min-width: 0; }
+  .wb-table tr.wb-endrow { display: flex; justify-content: flex-end; align-items: baseline; gap: 12px; padding: 2px 0; }
+  .wb-table tr.wb-endrow td { width: auto; padding: 0; border: 0; }
+  .wb-table tr.wb-endrow td.wb-money { min-width: 5.5rem; text-align: right; }
+  .wb-table tr.wb-endrow td:empty { display: none; }
   .wb-endtable tr { display: flex; justify-content: flex-end; align-items: baseline; gap: 12px; padding: 2px 0 2px 28px; }
   .wb-endtable td { width: auto; padding: 0; }
   .wb-endtable td.wb-money { min-width: 5.5rem; text-align: right; }
