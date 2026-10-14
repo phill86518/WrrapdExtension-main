@@ -154,9 +154,13 @@
     var title = l.product && l.product.title ? l.product.title : 'Item';
     var img = l.product && l.product.imageUrl ? '<img src="' + esc(l.product.imageUrl) + '" alt="">' : '<span class="wb-img-ph"></span>';
     var h = '<div class="wb-item">' + img + '<div class="wb-item-main">';
-    if (l.product) h += '<p class="wb-row-title">' + esc(title) + '</p>';
-    else if (l.url) h += '<p class="wb-linkline">' + esc(shortUrl(l.url)) + '</p>';
-    if (l.variantLabel) h += '<p class="wb-muted">' + esc(l.variantLabel) + '</p>';
+    if (l.product) {
+      var name = esc(title);
+      h += l.url
+        ? '<p class="wb-row-title"><a href="' + esc(l.url) + '" target="_blank" rel="noopener">' + name + '</a></p>'
+        : '<p class="wb-row-title">' + name + '</p>';
+    } else if (l.url) h += '<p class="wb-linkline"><a href="' + esc(l.url) + '" target="_blank" rel="noopener">' + esc(shortUrl(l.url)) + '</a></p>';
+    if (l.variantLabel && !/^\s*size:\s*\d+(\.\d+)?\s*"?\s*x\s*\d+/i.test(l.variantLabel)) h += '<p class="wb-muted">' + esc(l.variantLabel) + '</p>';
     if (l.product && l.product.isElectronics) h += '<p class="wb-muted">Electronics</p>';
     if (l.state === 'reading') h += '<p class="wb-status"><span class="wb-spin"></span>' + WAIT_ADD + '</p>';
     if (l.state === 'needs_variant') {

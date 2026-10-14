@@ -182,6 +182,7 @@
 .wb-shipcell .wb-ship { margin: 0 0 8px; }
 .wb-shipcell small { color: #5c6578; font-size: 13px; }
 .wb-row-title { font-weight: 560; font-size: 13px; line-height: 1.25; margin: 0; overflow-wrap: anywhere; color: var(--wb-navy); }
+.wb-row-title a, .wb-linkline a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
 .wb-price { font-weight: 560; font-size: 13px; margin: 0; color: var(--wb-navy); }
 .wb-status { margin: 8px 0 0; display: flex; align-items: center; gap: 8px; font-weight: 460; }
 .wb-unavailable { margin: 8px 0 0; color: #9a3412; font-weight: 560; }
