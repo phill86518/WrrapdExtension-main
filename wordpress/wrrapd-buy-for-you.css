@@ -120,34 +120,42 @@
 .wb-store { margin: 18px 0 8px; }
 .wb-store-name { margin: 8px 0 4px; font-weight: 650; font-size: 15px; color: var(--wb-navy); letter-spacing: .01em; }
 .wb-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-.wb-col-item { width: 24%; }
+.wb-col-item { width: 44%; }
 .wb-col-when { width: 13%; }
-.wb-col-price,
+.wb-col-price { width: 11%; }
+.wb-col-qty { width: 8%; }
 .wb-col-ship,
 .wb-col-wrap,
 .wb-col-flowers,
-.wb-col-total { width: 11%; }
-.wb-col-qty { width: 8%; }
+.wb-col-total { width: 6%; }
 .wb-col-del { width: 32px; }
 .wb-qty {
-  width: 3.2rem;
-  max-width: 100%;
-  margin-left: auto;
-  display: block;
+  width: 2.1rem;
+  min-width: 0;
+  height: 1.2em;
+  margin: 0;
+  display: inline-block;
+  vertical-align: baseline;
   text-align: right;
   font: inherit;
   font-size: 13px;
   font-weight: 560;
-  padding: 2px 6px;
+  line-height: 1.2;
+  padding: 0 2px;
   border: 1px solid #e4d5c4;
-  border-radius: 8px;
+  border-radius: 4px;
   color: var(--wb-navy);
   background: #fff;
   box-sizing: border-box;
+  -moz-appearance: textfield;
+  appearance: textfield;
 }
-.wb-table th { text-align: left; font-weight: 560; font-size: 13px; letter-spacing: 0; color: var(--wb-navy); padding: 6px 8px; border-bottom: 2px solid var(--wb-line); }
-.wb-table td { padding: 6px 8px; vertical-align: top; border-bottom: 1px solid var(--wb-line); font-size: 13px; font-weight: 560; }
+.wb-qty::-webkit-outer-spin-button,
+.wb-qty::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.wb-table th { text-align: left; font-weight: 560; font-size: 13px; letter-spacing: 0; color: var(--wb-navy); padding: 6px 4px; border-bottom: 2px solid var(--wb-line); white-space: normal; overflow-wrap: break-word; line-height: 1.15; vertical-align: bottom; }
+.wb-table td { padding: 6px 8px; vertical-align: top; border-bottom: 1px solid var(--wb-line); font-size: 13px; font-weight: 560; line-height: 1.2; }
 .wb-money, .wb-table th.wb-money { text-align: right; font-variant-numeric: tabular-nums; font-weight: 560; font-size: 13px; }
+.wb-table td.wb-money { padding-left: 2px; padding-right: 2px; }
 .wb-acct-line { display: flex; justify-content: flex-end; gap: 8px; }
 .wb-acct-line span:last-child { min-width: 4.2rem; text-align: right; }
 .wb-table td.wb-num { white-space: nowrap; }
@@ -184,10 +192,12 @@ button.wb-trash { width: 22px !important; height: 22px !important; min-width: 0 
 .wb-ship, .wb-radio, .wb-check { display: flex; gap: 10px; align-items: flex-start; margin: 8px 0; cursor: pointer; font-weight: 460; }
 .wb-ship input, .wb-radio input, .wb-check input { margin-top: 5px; accent-color: var(--wb-navy); }
 .wb-bill-store { font-weight: 650; margin: 14px 0 4px; color: var(--wb-navy); }
-.wb-endtotals { margin: 8px 0 4px auto; width: 16rem; font-size: 13px; font-weight: 560; }
-.wb-endtotals .wb-money { display: inline-block; min-width: 5.5rem; text-align: right; }
+.wb-endtable { margin: 8px 0 4px; }
+.wb-endtable td { border-bottom: 0; padding-top: 4px; padding-bottom: 4px; }
+.wb-endtable td[colspan] { text-align: right; padding-right: 8px; }
+.wb-endtable tr.wb-bill-total td { border-top: 2px solid var(--wb-deep); padding-top: 8px; font-weight: 650; }
 .wb-bill-row { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; }
-.wb-bill-total { border-top: 2px solid var(--wb-deep); margin-top: 10px; padding-top: 8px; font-weight: 650; font-size: 13px; }
+.wb-bill-row.wb-bill-total { border-top: 2px solid var(--wb-deep); margin-top: 10px; padding-top: 8px; font-weight: 650; font-size: 13px; }
 .wb-ext-line { background: var(--wb-cream); border-radius: 12px; padding: 12px 14px; font-size: 15px; margin: 16px 0 0; }
 .wb-ext-line a { color: var(--wb-navy); font-weight: 650; }
 .wb-tr .wb-ext-line { margin-top: 8px; }
@@ -226,6 +236,10 @@ textarea.wb-input { resize: vertical; }
   .wb-table tfoot td { border: 0; padding: 0; width: auto; }
   .wb-table td.wb-del { position: absolute; top: 12px; right: 0; width: auto; padding: 0; }
   .wb-table td.wb-shipcell { min-width: 0; }
+  .wb-endtable tr { display: flex; justify-content: flex-end; align-items: baseline; gap: 12px; padding: 2px 0 2px 28px; }
+  .wb-endtable td { width: auto; padding: 0; }
+  .wb-endtable td.wb-money { min-width: 5.5rem; text-align: right; }
+  .wb-endtable td:empty { display: none; }
 
   .wb-wrap { padding: 20px 14px 64px; }
   .wb-options { grid-template-columns: 1fr; }

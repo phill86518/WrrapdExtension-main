@@ -382,9 +382,12 @@
     });
     var tax = S.batch.salesTaxPercent != null ? Math.round((itemSum + shipSum) * S.batch.salesTaxPercent / 100) : null;
     var gross = itemSum + shipSum + (tax || 0);
-    return '<div class="wb-endtotals">' +
-      '<div class="wb-bill-row"><span>Sales tax</span><span class="wb-money">' + (tax != null ? usd(tax) : '—') + '</span></div>' +
-      '<div class="wb-bill-row wb-bill-total"><span>Gross total</span><span class="wb-money">' + usd(gross) + '</span></div></div>';
+    var edit = canEdit();
+    var taxText = tax != null ? usd(tax) : '—';
+    return '<table class="wb-table wb-endtable">' + colgroup(edit) + '<tbody>' +
+      '<tr><td colspan="7">Sales tax</td><td class="wb-money">' + taxText + '</td>' + (edit ? '<td></td>' : '') + '</tr>' +
+      '<tr class="wb-bill-total"><td colspan="7">Gross total</td><td class="wb-money">' + usd(gross) + '</td>' + (edit ? '<td></td>' : '') + '</tr>' +
+      '</tbody></table>';
   }
   function excludedBlock(lines) {
     var rows = lines.filter(excluded);
