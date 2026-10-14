@@ -342,8 +342,8 @@ async function targetProduct(url) {
     const image = (JSON.stringify(product).match(/https:\/\/target\.scene7\.com\/is\/image\/Target\/[A-Za-z0-9_-]+/) || [])[0] || '';
     const free = !!(product.free_shipping && product.free_shipping.enabled);
     return {
-        title: title.slice(0, 300),
-        brand: brand.slice(0, 120),
+        title: decodeEntities(title).slice(0, 300),
+        brand: decodeEntities(brand).slice(0, 120),
         imageUrl: image,
         pagePriceCents,
         category: (itemType || typeName).slice(0, 120),
