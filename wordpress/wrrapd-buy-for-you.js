@@ -223,20 +223,21 @@
       return '<div class="wb-acct-line"><span>' + esc(p.label || '') + '</span><span>' + esc(p.amount) + '</span></div>';
     }).join('') + '</div>';
   }
+  function tbd() { return '<span class="wb-tbd">TBD</span>'; }
   function wrapCell(l) {
-    if (!(l.wrap && l.wrap.done)) return 'TBD';
+    if (!(l.wrap && l.wrap.done)) return tbd();
     var pl = wrapPriceOf(l);
-    if (!pl) return 'TBD';
+    if (!pl) return tbd();
     var base = Math.max(0, (pl.wrapBaseCents || 0) - (pl.wrapDiscountCents || 0));
     if (!pl.designCents) return usd(base);
     var design = l.wrap.style === 'upload' ? 'Your design' : 'Custom design';
     return acctLines([{ label: 'Gift-wrap', amount: usd(base) }, { label: design, amount: usd(pl.designCents) }]);
   }
   function flowerCell(l) {
-    if (!(l.wrap && l.wrap.done)) return 'TBD';
+    if (!(l.wrap && l.wrap.done)) return tbd();
     var pl = wrapPriceOf(l);
     if (pl && pl.flowersCents) return usd(pl.flowersCents);
-    if (l.wrap && l.wrap.flowers) return 'TBD';
+    if (l.wrap && l.wrap.flowers) return tbd();
     return '—';
   }
   function colgroup(edit) {
@@ -373,6 +374,7 @@
     if (!b.bill && b.billError && !stillWorking() && readyLines().length) h += '<p class="wb-error">' + esc(b.billError) + '</p>';
     h += limitLine();
     if (S.error) h += '<p class="wb-error">' + esc(S.error) + '</p>';
+    h += '<p class="wb-wrap-note">We gift-wrap every item.</p>';
     h += '<button type="button" class="wb-btn" data-act="open-wrap"' + (canGo ? '' : ' disabled') + '>Continue to gift-wrap</button>';
     if (allWrapped) h += '<button type="button" class="wb-btn wb-btn-ghost" data-act="to-review"' + (b.bill ? '' : ' disabled') + '>Review and pay</button>';
     if (lines.some(function (l) { return l.state === 'reading'; })) h += '<p class="wb-muted">Please keep this page open.</p>';
@@ -482,12 +484,14 @@
     var occ = (S.config.occasions || []).map(function (o) { return '<option' + (w.occasion === o ? ' selected' : '') + '>' + esc(o) + '</option>'; }).join('');
     var ai = S.ai[l.id] || {};
     var title = l.product && l.product.title ? l.product.title : 'Item';
-    var h = '<div class="wb-modal" role="dialog" aria-modal="true" aria-labelledby="wb-wrap-title"><div class="wb-modal-box wb-wrap-modal"><p class="wb-muted">Gift-wrap for item ' + (S.wrapIndex + 1) + ' of ' + lines.length + '</p>' +
+    var h = '<div class="wb-modal" role="dialog" aria-modal="true" aria-labelledby="wb-wrap-title"><div class="wb-modal-box wb-wrap-modal">' +
+      '<button type="button" class="wb-x" data-act="wrap-close" aria-label="Close">×</button>' +
+      '<p class="wb-muted">Gift-wrap for item ' + (S.wrapIndex + 1) + ' of ' + lines.length + '</p>' +
       '<div class="wb-wrap-head">' + (l.product && l.product.imageUrl ? '<img src="' + esc(l.product.imageUrl) + '" alt="">' : '') + '<h2 id="wb-wrap-title">' + esc(title) + '</h2></div>';
     if (!l.product || l.state === 'reading') {
       h += '<p class="wb-status"><span class="wb-spin"></span>' + WAIT_ADD + '</p>' +
         (S.error ? '<p class="wb-error">' + esc(S.error) + '</p>' : '') +
-        '<div class="wb-actions"><button type="button" class="wb-btn wb-btn-ghost" data-act="wrap-back">Back</button></div></div></div>';
+        wrapNav('') + '</div></div>';
       return h;
     }
     h += '<label class="wb-label" for="wb-occ">Occasion</label><select class="wb-input" id="wb-occ"><option value="">Choose…</option>' + occ + '</select>' +
@@ -517,9 +521,12 @@
       if (!S.flowers) h += '<p class="wb-status"><span class="wb-spin"></span>Finding flowers near the giftee…</p>';
       else if (S.flowers.status !== 'ok' || !S.flowers.choices.length) h += '<p class="wb-muted">' + esc(S.flowers.message || 'Flowers are not available for this ZIP code.') + '</p>';
       else {
-        h += '<div class="wb-grid">' + S.flowers.choices.map(function (c) {
+        h += '<div class="wb-grid wb-flowers">' + S.flowers.choices.map(function (c) {
           var on = fl && fl.offerId === c.offerId;
-          return '<button type="button" class="wb-tile' + (on ? ' wb-tile-on' : '') + '" data-act="pick-flower" data-offer="' + esc(c.offerId) + '"><img src="' + esc(c.imageUrl) + '" alt=""><span>' + esc(c.title) + ' · ' + usdNum(c.price) + '</span></button>';
+          return '<label class="wb-flower' + (on ? ' wb-flower-on' : '') + '"><img src="' + esc(c.imageUrl) + '" alt="">' +
+            '<input type="radio" name="wb-flower" value="' + esc(c.offerId) + '"' + (on ? ' checked' : '') + ' aria-label="' + esc(c.title) + '">' +
+            '<span class="wb-flower-name">' + esc(c.title) + '</span>' +
+            '<span class="wb-flower-price">' + usdNum(c.price) + '</span></label>';
         }).join('') + '</div>';
       }
       h += '</div>';
@@ -527,8 +534,7 @@
     h += '<label class="wb-label" for="wb-msg">Gift message (optional)</label><textarea class="wb-input" id="wb-msg" maxlength="300" rows="3">' + esc(w.giftMessage || '') + '</textarea>' +
       '<label class="wb-label" for="wb-from">From (optional)</label><input class="wb-input" id="wb-from" maxlength="80" value="' + esc(w.senderName || '') + '">' +
       (S.error ? '<p class="wb-error">' + esc(S.error) + '</p>' : '') +
-      '<div class="wb-actions"><button type="button" class="wb-btn wb-btn-ghost" data-act="wrap-back">Back</button>' +
-      '<button type="button" class="wb-btn" data-act="wrap-save"' + (S.busy ? ' disabled' : '') + '>' + (S.wrapIndex + 1 < lines.length ? 'Save and next item' : 'Done') + '</button></div></div></div>';
+      wrapNav(S.wrapIndex + 1 < lines.length ? 'Save and next item' : 'Done') + '</div></div>';
     return h;
     function radio(v, label) {
       return '<label class="wb-radio"><input type="radio" name="wb-style" value="' + v + '"' + (style === v ? ' checked' : '') + '> ' + esc(label) + '</label>';
@@ -569,6 +575,9 @@
     $all('input[name="wb-style"]').forEach(function (el) {
       el.addEventListener('change', function () { saveDraft(); currentLine().wrap = Object.assign({}, currentLine().wrap || {}, { style: el.value, done: false }); render(); });
     });
+    $all('input[name="wb-flower"]').forEach(function (el) {
+      el.addEventListener('change', function () { if (el.checked) pickFlower(el.value); });
+    });
     var flw = $('#wb-flowers');
     if (flw) flw.addEventListener('change', function () { saveDraft(); onFlowersToggle(flw.checked); });
     var file = $('#wb-file');
@@ -599,6 +608,16 @@
 
   function currentLine() { return wrapTargets()[S.wrapIndex]; }
 
+  function wrapNav(saveLabel) {
+    var back = S.wrapIndex > 0
+      ? '<button type="button" class="wb-btn wb-btn-ghost" data-act="wrap-back">Back</button>'
+      : '<span></span>';
+    var save = saveLabel
+      ? '<button type="button" class="wb-btn" data-act="wrap-save"' + (S.busy ? ' disabled' : '') + '>' + esc(saveLabel) + '</button>'
+      : '';
+    return '<div class="wb-actions">' + back + save + '</div>';
+  }
+
   function saveDraft() {
     var l = currentLine();
     if (!l) return;
@@ -623,7 +642,8 @@
     if (act === 'to-review') { S.view = 'review'; S.wrapOpen = false; render(); return; }
     if (act === 'close-terms') { S.termsOpen = false; S.wrapOpen = false; render(); return; }
     if (act === 'accept') return accept();
-    if (act === 'wrap-back') { saveDraft(); if (S.wrapIndex > 0) S.wrapIndex--; else S.wrapOpen = false; S.flowersOpen = false; render(); return; }
+    if (act === 'wrap-close') { S.wrapOpen = false; S.flowersOpen = false; render(); return; }
+    if (act === 'wrap-back') { saveDraft(); if (S.wrapIndex > 0) { S.wrapIndex--; S.flowersOpen = false; } render(); return; }
     if (act === 'wrap-save') return saveWrap();
     if (act === 'review-back') { S.view = 'items'; S.wrapOpen = true; S.wrapIndex = Math.max(0, wrapTargets().length - 1); render(); return; }
     if (act === 'to-pay') { location.href = PAY + '?b=' + encodeURIComponent(S.id) + '&t=' + encodeURIComponent(S.token); return; }

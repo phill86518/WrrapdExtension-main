@@ -228,6 +228,12 @@ function shippingApplies(option, itemCents) {
 
 const MONTHS = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
 
+function ymdOffset(days) {
+    const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()).split('-').map(Number);
+    const dt = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2] + days));
+    return dt.toISOString().slice(0, 10);
+}
+
 function ymdFromMonthDay(monName, day) {
     const mon = MONTHS[String(monName || '').toLowerCase().slice(0, 3)];
     const d = Number(day);
@@ -256,6 +262,17 @@ function standardFromPage(html, itemCents) {
             return { label: 'Standard shipping', cents: null, arrivalDate, note: '' };
         }
     }
+    const tomorrow = text.match(/\barrives\s+(?:by\s+)?tomorrow\b/i);
+    if (tomorrow) {
+        const arrivalDate = ymdOffset(1);
+        const window = text.slice(Math.max(0, tomorrow.index - 24), tomorrow.index + 48);
+        if (!membershipOnly(window)) {
+            if (/\bfree\b/i.test(window)) return { label: 'Standard shipping', cents: 0, arrivalDate, note: '' };
+            const dollars = window.match(/\$\s?(\d+(?:\.\d{2})?)/);
+            if (dollars) return { label: 'Standard shipping', cents: Math.round(Number(dollars[1]) * 100), arrivalDate, note: '' };
+            return { label: 'Standard shipping', cents: null, arrivalDate, note: '' };
+        }
+    }
     const re = /((?:free\s+)?delivery)\s+(?:on\s+)?(?:[A-Za-z]+,\s+)?([A-Za-z]+)\s+(\d{1,2})([^.]{0,100})/gi;
     let m;
     while ((m = re.exec(text))) {
@@ -274,6 +291,50 @@ function standardFromPage(html, itemCents) {
         return { label: 'Standard shipping', cents: null, arrivalDate, note: '' };
     }
     return null;
+}
+
+/** Shipping block Walmart prints on the product page. A different ship-to ZIP is not the giftee's date. */
+function walmartShip(html, gifteeZip) {
+    const text = String(html || '');
+    const start = text.indexOf('"__typename":"ShippingOptionV2"');
+    if (start < 0) return null;
+    const block = text.slice(start, start + 1800);
+    const date = (block.match(/"storeDeliveryDate":"(\d{4}-\d{2}-\d{2})/) || block.match(/"deliveryDate":"(\d{4}-\d{2}-\d{2})/) || [])[1] || null;
+    const free = /"freeFulfillment":true/.test(block);
+    let cents = null;
+    if (free) cents = 0;
+    else {
+        const price = block.match(/"fulfillmentPrice":(\{[^}]*\}|null|-?\d+(?:\.\d+)?)/);
+        if (price && price[1] !== 'null') {
+            if (price[1].startsWith('{')) {
+                try {
+                    const obj = JSON.parse(price[1]);
+                    const n = Number(obj.price ?? obj.priceValue ?? obj.amount);
+                    if (Number.isFinite(n) && n >= 0) cents = Math.round(n * 100);
+                    else {
+                        const s = String(obj.priceString || '').match(/\$\s?(\d+(?:\.\d{2})?)/);
+                        if (s) cents = Math.round(Number(s[1]) * 100);
+                    }
+                } catch (_) { /* price object was cut off */ }
+            } else {
+                const n = Number(price[1]);
+                if (Number.isFinite(n) && n >= 0) cents = Math.round(n * 100);
+            }
+        }
+    }
+    const postal = (text.match(/"shippingText":"Shipping"[\s\S]{0,400}?"postalCode":"(\d{5})"/) || block.match(/"locationText":"[^"]*?(\d{5})"/) || [])[1] || '';
+    const giftee = String(gifteeZip || '').replace(/\D/g, '');
+    if (postal && giftee && postal !== giftee) {
+        return {
+            label: 'Standard shipping',
+            cents: null,
+            arrivalDate: null,
+            note: '',
+            choicePrompt: `This page ships to ${postal}. Set the page to ${giftee}, then add the link again.`,
+        };
+    }
+    if (!date && cents == null) return null;
+    return { label: 'Standard shipping', cents, arrivalDate: date, note: cents === 0 ? 'Free standard shipping.' : '', choicePrompt: '' };
 }
 
 /** The regular option: the one marked standard or default, otherwise the cheapest. Dated options win. */
@@ -471,6 +532,10 @@ async function askGrok({ retailerName, url, html }) {
     return { facts: grokClient.parseJsonContent(content), meta };
 }
 
+function looksLikePackage(value) {
+    return /^\s*\d+(\.\d+)?\s*"?\s*x\s*\d+/i.test(String(value || ''));
+}
+
 function cleanVariantGroups(groups) {
     if (!Array.isArray(groups)) return [];
     return groups
@@ -478,9 +543,9 @@ function cleanVariantGroups(groups) {
         .map((g) => ({
             name: String((g && g.name) || '').trim().slice(0, 40),
             options: Array.isArray(g && g.options)
-                ? [...new Set(g.options.map((o) => String(o).trim().slice(0, 80)).filter(Boolean))].slice(0, 40)
+                ? [...new Set(g.options.map((o) => String(o).trim().slice(0, 80)).filter((o) => o && !looksLikePackage(o)))].slice(0, 40)
                 : [],
-            selected: g && g.selected ? String(g.selected).trim().slice(0, 80) : null,
+            selected: g && g.selected && !looksLikePackage(g.selected) ? String(g.selected).trim().slice(0, 80) : null,
         }))
         .filter((g) => g.name && g.options.length > 1);
 }
@@ -912,6 +977,14 @@ async function readProduct({ retailer, url, zip, state, batchId, lineId }) {
             chosen = { ...chosen, cents: null, note: 'Free on orders over $35' };
         }
     }
+    let choicePrompt = '';
+    if (retailer === 'walmart') {
+        const wship = walmartShip(page.html, zip);
+        if (wship) {
+            chosen = { label: 'Standard shipping', cents: wship.cents, arrivalDate: wship.arrivalDate, note: wship.note || '' };
+            choicePrompt = wship.choicePrompt || '';
+        }
+    }
     if (!title) return { ok: false, reason: 'no_title', needsPerson: true };
     const pageOffer = pagePriceCents && chosen && chosen.cents != null ? { itemPriceCents: pagePriceCents, shippingOptions: [chosen] } : null;
     const amazonCategory = await categories.categorize({ retailer, retailerName: r.name, html: page.html, title, brand, category });
@@ -931,6 +1004,7 @@ async function readProduct({ retailer, url, zip, state, batchId, lineId }) {
             inStock: facts.inStock === false ? false : facts.inStock === true ? true : null,
             isElectronics,
             variantGroups: cleanVariantGroups(facts.variantGroups),
+            choicePrompt,
             readAt: new Date().toISOString(),
             readBy: page.fromSavedPage ? 'saved_page' : 'grok',
         },
@@ -938,6 +1012,6 @@ async function readProduct({ retailer, url, zip, state, batchId, lineId }) {
 }
 
 module.exports = {
-    readProduct, askGrok, looksElectronic, priceAppearsInPage, jsonLdProducts, visibleText, fetchPage, standardFromPage, targetFulfillment,
+    readProduct, askGrok, looksElectronic, priceAppearsInPage, jsonLdProducts, visibleText, fetchPage, standardFromPage, walmartShip, targetFulfillment,
     nordstromShell, nordstromFromHtml, savedPageHtml, EXTERNAL_PAGES_DIR,
 };
