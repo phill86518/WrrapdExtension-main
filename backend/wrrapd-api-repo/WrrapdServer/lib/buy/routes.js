@@ -143,6 +143,7 @@ function publicView(batch) {
         bill: bill && bill.ok ? bill.bill : null,
         billError: bill && !bill.ok ? bill.message || bill.error : null,
         limits: { merchandiseCapCents: cfg.merchandiseCapCents, perItemCapCents: cfg.perItemCapCents },
+        wrapPrices: billing.wrapPrices(batch),
         salesTaxPercent: (() => {
             const zip = batch.hub && (batch.hub.postalCode || batch.hub.zip);
             const percent = salesTax.getCombinedRateAsTaxPercent(zip);
@@ -433,46 +434,54 @@ module.exports = function mountBuyForYou(app, deps) {
         shopperChange(async (req, batch) => {
             if (batch.terms) return { error: 'Items are set for this order.' };
             const cfg = config.load();
-            const text = String((req.body && req.body.url) || '').trim();
-            if (!text) return { error: 'Please paste a product link.' };
+            const raw = (Array.isArray(req.body && req.body.links) ? req.body.links : [req.body && req.body.url])
+                .map((s) => String(s || '').trim())
+                .filter(Boolean);
+            if (!raw.length) return { error: 'Please paste a product link.' };
             const openCount = batch.lines.filter((l) => !l.removed).length;
-            if (openCount >= cfg.maxLinks) return { error: `Please paste up to ${cfg.maxLinks} links.` };
-            const parsed = await resolveLink.resolveLink(text, cfg.allowedRetailers);
-            const named = retailers.byId(parsed.retailer);
+            if (openCount + raw.length > cfg.maxLinks) return { error: `Please paste up to ${cfg.maxLinks} links.` };
+            const opened = await Promise.all(raw.map((text) => resolveLink.resolveLink(text, cfg.allowedRetailers)));
             await store.update(batch.id, (b) => {
-                const id = `L${b.lines.length + 1}`;
-                const base = { id, addedAt: new Date().toISOString(), url: text.slice(0, 2000), wrap: null };
-                if (!parsed.ok) {
-                    b.lines.push({
-                        ...base,
-                        retailer: parsed.retailer || 'none',
-                        retailerName: named ? named.name : '',
-                        state: 'unavailable',
-                        reason: parsed.reason,
-                        message: REASON_TEXT[parsed.reason] || quotes.UNAVAILABLE,
-                    });
-                } else if (b.lines.some((l) => !l.removed && l.canonicalUrl === parsed.canonicalUrl)) {
-                    b.lines.push({
-                        ...base,
-                        retailer: parsed.retailer,
-                        retailerName: parsed.retailerName,
-                        state: 'unavailable',
-                        reason: 'duplicate',
-                        message: REASON_TEXT.duplicate,
-                    });
-                } else {
-                    b.lines.push({
-                        ...base,
-                        url: parsed.url,
-                        canonicalUrl: parsed.canonicalUrl,
-                        productId: parsed.productId,
-                        retailer: parsed.retailer,
-                        retailerName: parsed.retailerName,
-                        state: 'reading',
-                    });
-                    quotes.ensureGroup(b, parsed.retailer).state = 'waiting';
-                }
-                store.addLog(b, 'shopper', `Added a link (${id})`);
+                const seen = new Set(b.lines.filter((l) => !l.removed && l.canonicalUrl).map((l) => l.canonicalUrl));
+                const now = new Date().toISOString();
+                opened.forEach((parsed, i) => {
+                    const text = raw[i];
+                    const named = retailers.byId(parsed.retailer);
+                    const id = `L${b.lines.length + 1}`;
+                    const base = { id, addedAt: now, url: text.slice(0, 2000), wrap: null };
+                    if (!parsed.ok) {
+                        b.lines.push({
+                            ...base,
+                            retailer: parsed.retailer || 'none',
+                            retailerName: named ? named.name : '',
+                            state: 'unavailable',
+                            reason: parsed.reason,
+                            message: REASON_TEXT[parsed.reason] || quotes.UNAVAILABLE,
+                        });
+                    } else if (seen.has(parsed.canonicalUrl)) {
+                        b.lines.push({
+                            ...base,
+                            retailer: parsed.retailer,
+                            retailerName: parsed.retailerName,
+                            state: 'unavailable',
+                            reason: 'duplicate',
+                            message: REASON_TEXT.duplicate,
+                        });
+                    } else {
+                        seen.add(parsed.canonicalUrl);
+                        b.lines.push({
+                            ...base,
+                            url: parsed.url,
+                            canonicalUrl: parsed.canonicalUrl,
+                            productId: parsed.productId,
+                            retailer: parsed.retailer,
+                            retailerName: parsed.retailerName,
+                            state: 'reading',
+                        });
+                        quotes.ensureGroup(b, parsed.retailer).state = 'waiting';
+                    }
+                });
+                store.addLog(b, 'shopper', `Added ${raw.length} link(s)`);
                 return b;
             });
             quotes.processBatch(batch.id).catch((e) => console.error('[buy] processBatch', e && e.message));
@@ -542,7 +551,7 @@ module.exports = function mountBuyForYou(app, deps) {
             const lineId = String(req.body.lineId || '');
             const w = req.body.wrap && typeof req.body.wrap === 'object' ? req.body.wrap : {};
             const line = batch.lines.find((l) => l.id === lineId);
-            if (!line || line.state !== 'ready' || line.removed) return { error: 'Please refresh the page.' };
+            if (!line || line.removed || line.state === 'unavailable' || line.state === 'reading' || !line.product) return { error: 'Please wait while we add that to your gift-wrapping cart.' };
             if (!batch.terms || batch.terms.version !== terms.VERSION) return { error: 'Please agree to the Terms first.' };
             const occasion = cleanText(w.occasion, 60);
             if (!extensionConfig.OCCASIONS.includes(occasion)) return { error: 'Please choose an occasion.' };

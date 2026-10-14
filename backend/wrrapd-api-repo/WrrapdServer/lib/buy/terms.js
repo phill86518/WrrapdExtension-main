@@ -4,14 +4,14 @@
  * Draft for counsel review. A changed text must get a new VERSION.
  */
 
-const VERSION = 'buy-terms-2026-10-13-draft';
+const VERSION = 'buy-terms-2026-10-14-draft';
 const PHONE = '(844) 638-5484';
 
 const TITLE = 'Wrrapd Inc. Terms & Conditions';
-const SUBTITLE = 'We buy the item, gift-wrap it, and deliver it';
+const SUBTITLE = 'You order through us. We gift-wrap it and deliver it';
 const LEADS = [
     'Returns are allowed for 15 days after delivery, and only on the conditions in section 19. After that moment, the sale is final. Wrrapd does not make exceptions.',
-    'Wrrapd buys the item for you. We may be the buyer of record. For electronics, phones, and similar goods, a warranty or store protection may not cover the item.',
+    'You order through us. Wrrapd may be the buyer of record. For electronics, phones, and similar goods, a warranty or store protection may not cover the item.',
 ];
 
 const ELECTRONICS_SENTENCE =

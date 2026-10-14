@@ -1,8 +1,8 @@
 <?php
 /**
- * "We buy it for you" page at /buy/.
+ * Order-through-us page at /buy/.
  *
- * Shoppers paste product links; Wrrapd buys the items, gift-wraps every one, and delivers them.
+ * Shoppers paste product links and buy through Wrrapd. Wrrapd gift-wraps every item and delivers it.
  * The page runs in the browser against api.wrrapd.com (lib/buy/ on the pay server); payment is on
  * pay.wrrapd.com/buy/pay. No WordPress page record is needed. Kept out of search until counsel
  * has reviewed the purchasing terms.
@@ -12,7 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_BUY_BUILD', '2026-10-13-buy-v18' );
+define( 'WRRAPD_BUY_BUILD', '2026-10-13-buy-v19' );
 
 function wrrapd_buy_is_request() {
 	$path = wp_parse_url( isset( $_SERVER['REQUEST_URI'] ) ? (string) wp_unslash( $_SERVER['REQUEST_URI'] ) : '', PHP_URL_PATH );
@@ -43,7 +43,7 @@ function wrrapd_buy_render() {
 	add_filter(
 		'pre_get_document_title',
 		function () {
-			return 'We buy it, gift-wrap it, and deliver it | Wrrapd';
+			return 'Order through us | Wrrapd';
 		},
 		99
 	);

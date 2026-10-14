@@ -24,7 +24,7 @@
     pollTimer: null,
     error: '',
     busy: false,
-    linkCount: 1,
+    draftLinks: null,
     flowers: null,
     ai: {},
     variantDraft: {},
@@ -95,35 +95,45 @@
     else if (S.view === 'wrap') html = viewWrap();
     else if (S.view === 'review') html = viewReview();
     else if (S.view === 'paid') html = viewPaid();
-    var next = '<div class="wb-wrap">' + html + '</div>' + (S.termsOpen ? viewTerms() : '');
+    var next = '<div class="wb-wrap">' + html + '</div>' + (S.termsOpen ? viewTerms() : '') + (S.wrapOpen && !S.termsOpen ? viewWrap() : '');
     if (next === S.lastHtml) return;
     S.lastHtml = next;
     root.innerHTML = next;
     bind();
   }
 
+  function maxLinks() {
+    return (S.config && S.config.maxLinks) || 5;
+  }
+  function linkFields(count, values) {
+    var h = '<div class="wb-links">';
+    for (var i = 0; i < count; i++) {
+      h += '<input class="wb-input wb-link" type="url" inputmode="url" placeholder="Paste a product link" aria-label="Product link ' + (i + 1) + '" value="' + esc((values && values[i]) || '') + '">';
+    }
+    return h + '</div>';
+  }
+  function buyButton() {
+    return '<button type="button" class="wb-btn" data-act="submit-links"' + (S.busy ? ' disabled' : '') + '>' + (S.busy ? 'Checking…' : 'Buy for me and gift-wrap these items') + '</button>';
+  }
   function viewStart() {
     var open = S.config && S.config.open;
     var stores = S.config ? S.config.retailers.map(function (r) { return r.name; }).join(', ') : '';
-    var h = '<section class="wb-hero"><h1>We buy it. We wrap it. We deliver it.</h1><p>Pick how you would like to send your gift.</p></section>';
+    var h = '<section class="wb-hero"><h1>Order through us</h1><p>You choose the gifts. We gift-wrap them and deliver them.</p></section>';
     h += '<section class="wb-options">' +
-      '<div class="wb-option"><h2>Buy it yourself</h2><p>Shop at the store and add gift-wrap at checkout with the free Wrrapd Chrome extension.</p>' +
+      '<div class="wb-option"><h2>Chrome extension</h2><p>Shop at the store and add gift-wrap at checkout with the free Wrrapd Chrome extension.</p>' +
       '<a class="wb-btn wb-btn-ghost" href="' + esc(EXT) + '" target="_blank" rel="noopener">Get the extension</a></div>' +
-      '<div class="wb-option wb-option-main"><h2>We buy it for you</h2><p>Paste up to ' + esc(S.config ? S.config.maxLinks : 5) + ' product links. We buy the items, gift-wrap every one, and deliver them.</p>' +
+      '<div class="wb-option wb-option-main"><h2>Order through us</h2><p>Paste up to ' + esc(maxLinks()) + ' product links. You buy through us. We gift-wrap every item and deliver it.</p>' +
       (open ? '<a class="wb-btn" href="#wb-start">Start</a>' : '<p class="wb-soon">Coming soon.</p>') + '</div></section>';
     if (!open) return h;
-    var links = '';
-    for (var i = 0; i < S.linkCount; i++) {
-      links += '<input class="wb-input wb-link" type="url" inputmode="url" placeholder="Paste a product link" aria-label="Product link ' + (i + 1) + '">';
-    }
+    var draft = S.draftLinks;
+    S.draftLinks = null;
     h += '<section class="wb-card" id="wb-start"><h2>Your gift</h2>' +
       '<div class="wb-zip-row"><label class="wb-label" for="wb-zip">Giftee / gift-recipient\'s zip code:</label>' +
       '<input class="wb-input wb-zip" id="wb-zip" inputmode="numeric" maxlength="5" autocomplete="off"></div>' +
-      '<label class="wb-label">Paste the product links for gift-wrapping below.</label><div class="wb-links">' + links + '</div>' +
-      (S.linkCount < S.config.maxLinks ? '<button type="button" class="wb-link-btn" data-act="add-link">+ Add another link</button>' : '') +
+      '<label class="wb-label">Paste the product links for gift-wrapping below.</label>' + linkFields(maxLinks(), draft) +
       '<p class="wb-stores">' + (S.config ? S.config.retailers.map(function (r) { return '<span>' + esc(r.name) + '</span>'; }).join('') : esc(stores)) + '</p>' +
       (S.error ? '<p class="wb-error">' + esc(S.error) + '</p>' : '') +
-      '<button type="button" class="wb-btn" data-act="create"' + (S.busy ? ' disabled' : '') + '>' + (S.busy ? 'Checking…' : 'Check my items') + '</button></section>';
+      buyButton() + '</section>';
     return h;
   }
 
@@ -192,6 +202,45 @@
     return s.cents ? usd(s.cents) : 'Free';
   }
 
+  function wrapTargets() {
+    return (S.batch && S.batch.lines || []).filter(function (l) {
+      return l.state !== 'removed' && l.state !== 'unavailable';
+    });
+  }
+  function wrapPriceOf(l) {
+    var map = (S.batch && S.batch.wrapPrices) || {};
+    return map[l.id] || null;
+  }
+  function acctLines(parts) {
+    if (parts.length === 1 && !parts[0].label) return esc(parts[0].amount);
+    return '<div class="wb-acct">' + parts.map(function (p) {
+      return '<div class="wb-acct-line"><span>' + esc(p.label || '') + '</span><span>' + esc(p.amount) + '</span></div>';
+    }).join('') + '</div>';
+  }
+  function wrapCell(l) {
+    if (!(l.wrap && l.wrap.done)) return 'TBD';
+    var pl = wrapPriceOf(l);
+    if (!pl) return 'TBD';
+    var base = Math.max(0, (pl.wrapBaseCents || 0) - (pl.wrapDiscountCents || 0));
+    if (!pl.designCents) return usd(base);
+    var design = l.wrap.style === 'upload' ? 'Your design' : 'Custom design';
+    return acctLines([{ label: 'Gift-wrap', amount: usd(base) }, { label: design, amount: usd(pl.designCents) }]);
+  }
+  function flowerCell(l) {
+    if (!(l.wrap && l.wrap.done)) return 'TBD';
+    var pl = wrapPriceOf(l);
+    if (pl && pl.flowersCents) return usd(pl.flowersCents);
+    if (l.wrap && l.wrap.flowers) return 'TBD';
+    return '—';
+  }
+  function colgroup(edit) {
+    return '<colgroup><col class="wb-col-item"><col class="wb-col-when"><col class="wb-col-ship"><col class="wb-col-price"><col class="wb-col-wrap"><col class="wb-col-flowers">' + (edit ? '<col class="wb-col-del">' : '') + '</colgroup>';
+  }
+  function headRow(edit) {
+    return '<thead><tr><th scope="col">Item</th><th scope="col" class="wb-money">Expected delivery*</th><th scope="col" class="wb-money">Shipping cost</th><th scope="col" class="wb-money">Price</th><th scope="col" class="wb-money">Gift-wrapping price</th><th scope="col" class="wb-money">Flowers</th>' +
+      (edit ? '<th scope="col"><span class="wb-sr">Delete</span></th>' : '') + '</tr></thead>';
+  }
+
   function retailerTable(name, retailer, lines) {
     var edit = canEdit();
     var itemSum = 0;
@@ -204,22 +253,19 @@
       var s = shipOf(l);
       if (s && s.cents != null) { shipSum += s.cents; shipKnown = true; }
     });
-    var h = '<div class="wb-store"><p class="wb-store-name">' + esc(name) + '</p><table class="wb-table"><colgroup>' +
-      '<col class="wb-col-item"><col class="wb-col-when"><col class="wb-col-ship"><col class="wb-col-price">' + (edit ? '<col class="wb-col-del">' : '') +
-      '</colgroup><thead><tr>' +
-      '<th scope="col">Item</th><th scope="col">Expected delivery*</th><th scope="col" class="wb-money">Shipping cost</th><th scope="col" class="wb-money">Price</th>' +
-      (edit ? '<th scope="col"><span class="wb-sr">Delete</span></th>' : '') +
-      '</tr></thead><tbody>';
+    var h = '<div class="wb-store"><p class="wb-store-name">' + esc(name) + '</p><table class="wb-table">' + colgroup(edit) + headRow(edit) + '<tbody>';
     lines.forEach(function (l) {
       h += '<tr class="wb-tr wb-row-' + esc(l.state) + '">' +
         '<td data-label="Item">' + itemCell(l) + '</td>' +
-        '<td data-label="Expected delivery">' + (retailer ? deliveryCell(l) : '—') + '</td>' +
+        '<td data-label="Expected delivery" class="wb-money">' + (retailer ? deliveryCell(l) : '—') + '</td>' +
         '<td data-label="Shipping cost" class="wb-money wb-shipcost">' + (retailer ? costCell(l) : '—') + '</td>' +
-        '<td data-label="Price" class="wb-money">' + priceCell(l) + '</td>';
+        '<td data-label="Price" class="wb-money">' + priceCell(l) + '</td>' +
+        '<td data-label="Gift-wrapping price" class="wb-money">' + wrapCell(l) + '</td>' +
+        '<td data-label="Flowers" class="wb-money">' + flowerCell(l) + '</td>';
       if (edit) h += '<td class="wb-del"><button type="button" class="wb-trash" data-act="remove" data-line="' + esc(l.id) + '" aria-label="Delete item" title="Delete item">' + TRASH_SVG + '</button></td>';
       h += '</tr>';
     });
-    var tail = edit ? '<td></td>' : '';
+    var tail = '<td class="wb-money"></td><td class="wb-money"></td>' + (edit ? '<td></td>' : '');
     h += '</tbody><tfoot>' +
       '<tr class="wb-foot"><td>Retailer subtotal</td><td></td><td class="wb-money">' + (shipKnown ? (shipSum ? usd(shipSum) : 'Free') : '—') + '</td><td class="wb-money">' + usd(itemSum) + '</td>' + tail + '</tr>' +
       '</tfoot></table></div>';
@@ -275,23 +321,26 @@
     var lines = visibleLines();
     var rows = itemTables(lines);
     var excludedHtml = excludedBlock(lines);
-    var ready = readyLines().length;
-    var canGo = ready > 0 && !stillWorking() && b.bill;
-    var room = lines.length < (S.config ? S.config.maxLinks : 5);
+    var targets = wrapTargets();
+    var canGo = targets.length > 0;
+    var allWrapped = canGo && targets.every(function (l) { return l.wrap && l.wrap.done; });
+    var room = !b.termsAccepted && lines.length < maxLinks();
+    var draft = S.draftLinks;
+    S.draftLinks = null;
     var h = '<section class="wb-card"><h2>Gift-wrapping shopping cart</h2>' +
       '<div class="wb-zip-row"><label class="wb-label" for="wb-zip-edit">Giftee / gift-recipient\'s zip code:</label>' +
       '<input class="wb-input wb-zip" id="wb-zip-edit" inputmode="numeric" maxlength="5" value="' + esc(b.gifteeZip) + '" autocomplete="off"></div>' +
       extLine() +
-      (rows || (excludedHtml ? '' : '<p class="wb-muted">Add a product link to start.</p>')) +
-      (rows ? '<p class="wb-asterisk">* Final gift delivery to the giftee may add 1 day.</p>' : '') +
+      (rows || (excludedHtml ? '' : '<p class="wb-muted">Paste a product link to start.</p>')) +
+      (rows ? '<p class="wb-asterisk">* Final gift delivery to the giftee may add 1 day.</p>' + endTotals(lines) : '') +
       excludedHtml +
-      (rows ? endTotals(lines) : '') +
-      (room ? '<p class="wb-ask">Paste the product links for gift-wrapping below.</p><div class="wb-add"><input class="wb-input" id="wb-add-link" type="url" placeholder="Paste a product link" aria-label="Product link"><button type="button" class="wb-btn wb-btn-sm" data-act="add-item">Add</button></div>' : '') +
+      (room ? '<p class="wb-ask">Paste the product links for gift-wrapping below.</p>' + linkFields(maxLinks() - lines.length, draft) + buyButton() : '') +
       '</section>';
-    if (!b.bill && b.billError && !stillWorking() && ready) h += '<p class="wb-error">' + esc(b.billError) + '</p>';
+    if (!b.bill && b.billError && !stillWorking() && readyLines().length) h += '<p class="wb-error">' + esc(b.billError) + '</p>';
     h += limitLine();
     if (S.error) h += '<p class="wb-error">' + esc(S.error) + '</p>';
-    h += '<button type="button" class="wb-btn" data-act="to-terms"' + (canGo ? '' : ' disabled') + '>Continue to gift-wrap</button>';
+    h += '<button type="button" class="wb-btn" data-act="open-wrap"' + (canGo ? '' : ' disabled') + '>Continue to gift-wrap</button>';
+    if (allWrapped) h += '<button type="button" class="wb-btn wb-btn-ghost" data-act="to-review"' + (b.bill ? '' : ' disabled') + '>Review and pay</button>';
     if (lines.some(function (l) { return l.state === 'reading'; })) h += '<p class="wb-muted">Please keep this page open.</p>';
     return h;
   }
@@ -315,18 +364,15 @@
     var rows = lines.filter(excluded);
     if (!rows.length) return '';
     var edit = canEdit();
-    var h = '<div class="wb-store wb-excluded"><p class="wb-store-name">Items Excluded</p><table class="wb-table"><colgroup>' +
-      '<col class="wb-col-item"><col class="wb-col-when"><col class="wb-col-ship"><col class="wb-col-price">' + (edit ? '<col class="wb-col-del">' : '') +
-      '</colgroup><thead><tr>' +
-      '<th scope="col">Item</th><th scope="col">Expected delivery*</th><th scope="col" class="wb-money">Shipping cost</th><th scope="col" class="wb-money">Price</th>' +
-      (edit ? '<th scope="col"><span class="wb-sr">Delete</span></th>' : '') +
-      '</tr></thead><tbody>';
+    var h = '<div class="wb-store wb-excluded"><p class="wb-store-name">Items Excluded</p><table class="wb-table">' + colgroup(edit) + headRow(edit) + '<tbody>';
     rows.forEach(function (l) {
       h += '<tr class="wb-tr wb-row-excluded">' +
         '<td data-label="Item">' + itemCell(l) + '</td>' +
         '<td data-label="Expected delivery" class="wb-money">NA</td>' +
         '<td data-label="Shipping cost" class="wb-money">NA</td>' +
-        '<td data-label="Price" class="wb-money">NA</td>';
+        '<td data-label="Price" class="wb-money">NA</td>' +
+        '<td data-label="Gift-wrapping price" class="wb-money">NA</td>' +
+        '<td data-label="Flowers" class="wb-money">NA</td>';
       if (edit) h += '<td class="wb-del"><button type="button" class="wb-trash" data-act="remove" data-line="' + esc(l.id) + '" aria-label="Delete item" title="Delete item">' + TRASH_SVG + '</button></td>';
       h += '</tr>';
     });
@@ -385,17 +431,24 @@
   }
 
   function viewWrap() {
-    var lines = readyLines();
+    var lines = wrapTargets();
     var l = lines[S.wrapIndex];
-    if (!l) { S.view = 'review'; return viewReview(); }
+    if (!l) { S.wrapOpen = false; return ''; }
     var w = l.wrap || {};
     var style = w.style || 'wrrapd';
     var custom = S.pricing && S.pricing.customDesign && S.pricing.customDesign.available;
     var occ = (S.config.occasions || []).map(function (o) { return '<option' + (w.occasion === o ? ' selected' : '') + '>' + esc(o) + '</option>'; }).join('');
     var ai = S.ai[l.id] || {};
-    var h = '<section class="wb-card"><p class="wb-muted">Gift-wrap for item ' + (S.wrapIndex + 1) + ' of ' + lines.length + '</p>' +
-      '<div class="wb-wrap-head">' + (l.product.imageUrl ? '<img src="' + esc(l.product.imageUrl) + '" alt="">' : '') + '<h2>' + esc(l.product.title) + '</h2></div>' +
-      '<label class="wb-label" for="wb-occ">Occasion</label><select class="wb-input" id="wb-occ"><option value="">Choose…</option>' + occ + '</select>' +
+    var title = l.product && l.product.title ? l.product.title : 'Item';
+    var h = '<div class="wb-modal" role="dialog" aria-modal="true" aria-labelledby="wb-wrap-title"><div class="wb-modal-box wb-wrap-modal"><p class="wb-muted">Gift-wrap for item ' + (S.wrapIndex + 1) + ' of ' + lines.length + '</p>' +
+      '<div class="wb-wrap-head">' + (l.product && l.product.imageUrl ? '<img src="' + esc(l.product.imageUrl) + '" alt="">' : '') + '<h2 id="wb-wrap-title">' + esc(title) + '</h2></div>';
+    if (!l.product || l.state === 'reading') {
+      h += '<p class="wb-status"><span class="wb-spin"></span>' + WAIT_ADD + '</p>' +
+        (S.error ? '<p class="wb-error">' + esc(S.error) + '</p>' : '') +
+        '<div class="wb-actions"><button type="button" class="wb-btn wb-btn-ghost" data-act="wrap-back">Back</button></div></div></div>';
+      return h;
+    }
+    h += '<label class="wb-label" for="wb-occ">Occasion</label><select class="wb-input" id="wb-occ"><option value="">Choose…</option>' + occ + '</select>' +
       '<p class="wb-label">Wrapping</p>' +
       radio('wrrapd', 'Wrrapd paper' + (unit('giftWrapBase') ? ' · ' + unit('giftWrapBase') : '')) +
       (custom ? radio('ai', 'AI design made for this gift' + (unit('customDesignAi') ? ' · +' + unit('customDesignAi') : '')) : '') +
@@ -433,7 +486,7 @@
       '<label class="wb-label" for="wb-from">From (optional)</label><input class="wb-input" id="wb-from" maxlength="80" value="' + esc(w.senderName || '') + '">' +
       (S.error ? '<p class="wb-error">' + esc(S.error) + '</p>' : '') +
       '<div class="wb-actions"><button type="button" class="wb-btn wb-btn-ghost" data-act="wrap-back">Back</button>' +
-      '<button type="button" class="wb-btn" data-act="wrap-save"' + (S.busy ? ' disabled' : '') + '>' + (S.wrapIndex + 1 < lines.length ? 'Save and next item' : 'Save and review') + '</button></div></section>';
+      '<button type="button" class="wb-btn" data-act="wrap-save"' + (S.busy ? ' disabled' : '') + '>' + (S.wrapIndex + 1 < lines.length ? 'Save and next item' : 'Done') + '</button></div></div></div>';
     return h;
     function radio(v, label) {
       return '<label class="wb-radio"><input type="radio" name="wb-style" value="' + v + '"' + (style === v ? ' checked' : '') + '> ' + esc(label) + '</label>';
@@ -451,7 +504,7 @@
   }
 
   function viewPaid() {
-    return '<section class="wb-card wb-center"><h2>Thank you!</h2><p>Your order number is <b>' + esc(S.batch.orderNumber || S.batch.id) + '</b>.</p><p>We are buying your items, gift-wrapping them, and delivering them.</p></section>';
+    return '<section class="wb-card wb-center"><h2>Thank you!</h2><p>Your order number is <b>' + esc(S.batch.orderNumber || S.batch.id) + '</b>.</p><p>Your order is in. We are gift-wrapping your items and delivering them.</p></section>';
   }
 
   /* ---------- actions ---------- */
@@ -499,7 +552,7 @@
     }
   }
 
-  function currentLine() { return readyLines()[S.wrapIndex]; }
+  function currentLine() { return wrapTargets()[S.wrapIndex]; }
 
   function saveDraft() {
     var l = currentLine();
@@ -518,17 +571,16 @@
     var el = e.currentTarget;
     var act = el.getAttribute('data-act');
     S.error = '';
-    if (act === 'add-link') { keepLinks(function () { S.linkCount = Math.min(S.config.maxLinks, S.linkCount + 1); }); return; }
-    if (act === 'create') return create();
+    if (act === 'submit-links') return submitLinks();
     if (act === 'remove') return removeLine(el.getAttribute('data-line'));
-    if (act === 'add-item') return addItem();
     if (act === 'variant') return submitVariant(el.getAttribute('data-line'));
-    if (act === 'to-terms') { S.termsOpen = true; S.termsScrolled = false; render(); return; }
-    if (act === 'close-terms') { S.termsOpen = false; render(); return; }
+    if (act === 'open-wrap') return openWrap();
+    if (act === 'to-review') { S.view = 'review'; S.wrapOpen = false; render(); return; }
+    if (act === 'close-terms') { S.termsOpen = false; S.wrapOpen = false; render(); return; }
     if (act === 'accept') return accept();
-    if (act === 'wrap-back') { saveDraft(); if (S.wrapIndex > 0) S.wrapIndex--; else S.view = 'items'; S.flowersOpen = false; render(); return; }
+    if (act === 'wrap-back') { saveDraft(); if (S.wrapIndex > 0) S.wrapIndex--; else S.wrapOpen = false; S.flowersOpen = false; render(); return; }
     if (act === 'wrap-save') return saveWrap();
-    if (act === 'review-back') { S.view = 'wrap'; S.wrapIndex = Math.max(0, readyLines().length - 1); render(); return; }
+    if (act === 'review-back') { S.view = 'items'; S.wrapOpen = true; S.wrapIndex = Math.max(0, wrapTargets().length - 1); render(); return; }
     if (act === 'to-pay') { location.href = PAY + '?b=' + encodeURIComponent(S.id) + '&t=' + encodeURIComponent(S.token); return; }
     if (act === 'gen-ai') return genAi();
     if (act === 'pick-ai') { saveDraft(); var ai = S.ai[currentLine().id]; ai.picked = Number(el.getAttribute('data-i')); render(); return; }
@@ -544,9 +596,42 @@
     if ($('#wb-zip')) $('#wb-zip').value = zip;
   }
 
+  function filledLinks() {
+    return $all('.wb-link').map(function (i) { return i.value.trim(); }).filter(Boolean);
+  }
+  function submitLinks() {
+    if (!S.id) return create();
+    var links = filledLinks();
+    if (!links.length) { S.error = 'Please paste at least one product link.'; render(); return; }
+    S.busy = true;
+    S.draftLinks = links;
+    render();
+    request('/api/buy/batches/' + encodeURIComponent(S.id) + '/link', { links: links }).then(function (j) {
+      S.busy = false;
+      S.draftLinks = null;
+      S.batch = j.batch;
+      render();
+      poll();
+    }).catch(function (err) {
+      S.busy = false;
+      S.error = err.message;
+      S.draftLinks = links;
+      render();
+    });
+  }
+  function openWrap() {
+    var lines = wrapTargets();
+    if (!lines.length) return;
+    var idx = lines.findIndex(function (l) { return !(l.wrap && l.wrap.done); });
+    S.wrapIndex = idx < 0 ? 0 : idx;
+    S.wrapOpen = true;
+    S.flowersOpen = false;
+    if (!S.batch.termsAccepted) { S.termsOpen = true; S.termsScrolled = false; }
+    render();
+  }
   function create() {
     var zip = ($('#wb-zip').value || '').replace(/\D/g, '');
-    var links = $all('.wb-link').map(function (i) { return i.value.trim(); }).filter(Boolean);
+    var links = filledLinks();
     if (zip.length !== 5) { S.error = 'Please enter the giftee’s 5-digit ZIP code.'; return keepLinks(function () {}); }
     if (!links.length) { S.error = 'Please paste at least one product link.'; return keepLinks(function () {}); }
     S.busy = true;
@@ -572,7 +657,7 @@
     if (!S.batch) return;
     fetch(API + '/api/pricing-preview?postalCode=' + encodeURIComponent(S.batch.gifteeZip))
       .then(function (r) { return r.json(); })
-      .then(function (j) { S.pricing = j; if (S.view === 'wrap') render(); })
+      .then(function (j) { S.pricing = j; if (S.view === 'wrap' || S.wrapOpen) render(); })
       .catch(function () {});
   }
 
@@ -588,10 +673,14 @@
     S.pollTimer = setTimeout(function () {
       request('/api/buy/batches/' + encodeURIComponent(S.id)).then(function (j) {
         S.batch = j.batch;
-        if (S.view === 'items') {
+        if (S.busy) { poll(); return; }
+        if (S.view === 'items' || S.wrapOpen) {
           var active = document.activeElement;
-          var typing = active && root.contains(active) && (active.tagName === 'SELECT' || active.id === 'wb-zip-edit' || active.id === 'wb-add-link');
-          if (!typing) render();
+          var typing = active && root.contains(active) && (active.tagName === 'INPUT' || active.tagName === 'SELECT' || active.tagName === 'TEXTAREA');
+          if (!typing) {
+            if (S.wrapOpen && !S.termsOpen) saveDraft();
+            render();
+          }
         }
         poll();
       }).catch(function () { poll(); });
@@ -657,10 +746,10 @@
       electronicsAccepted: elec ? elec.checked : false,
     }).then(function () {
       S.termsOpen = false;
-      S.view = 'wrap';
+      S.view = 'items';
+      S.wrapOpen = true;
       S.wrapIndex = 0;
       render();
-      window.scrollTo(0, root.offsetTop - 20);
     }).catch(function () {});
   }
 
@@ -787,11 +876,10 @@
       S.busy = false;
       S.batch = j.batch;
       S.flowersOpen = false;
-      var lines = readyLines();
+      var lines = wrapTargets();
       if (S.wrapIndex + 1 < lines.length) S.wrapIndex++;
-      else S.view = 'review';
+      else { S.wrapOpen = false; S.view = 'items'; }
       render();
-      window.scrollTo(0, root.offsetTop - 20);
     }).catch(function (err) {
       S.busy = false;
       S.error = err.message;
@@ -811,11 +899,7 @@
       return request('/api/buy/batches/' + encodeURIComponent(S.id)).then(function (j) {
         S.batch = j.batch;
         if (S.batch.status === 'paid' || S.batch.status === 'closed') S.view = 'paid';
-        else if (S.batch.termsAccepted && !stillWorking() && readyLines().length) {
-          var firstOpen = readyLines().findIndex(function (l) { return !(l.wrap && l.wrap.done); });
-          S.view = firstOpen < 0 ? 'review' : 'wrap';
-          S.wrapIndex = Math.max(0, firstOpen);
-        } else S.view = 'items';
+        else S.view = 'items';
         loadPricing();
         render();
         poll();

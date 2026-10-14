@@ -49,7 +49,7 @@ function receiptHtml({ batch, bill }) {
 <div style="background:#0c0638;color:#fff;padding:18px 22px;border-radius:12px 12px 0 0"><span style="font-size:22px;font-weight:700">Wrrapd</span></div>
 <div style="background:#fff;padding:22px;border-radius:0 0 12px 12px">
 <p style="color:#0f0351;font-size:18px;margin:0 0 8px">Thank you, ${esc(p.gifterFirstName || p.gifterName || '')}!</p>
-<p style="color:#162a52;margin:0 0 14px">We are buying your items, gift-wrapping them, and delivering them to ${esc(p.giftee && p.giftee.name)}.</p>
+<p style="color:#162a52;margin:0 0 14px">Your order is in. We are gift-wrapping your items and delivering them to ${esc(p.giftee && p.giftee.name)}.</p>
 <p style="color:#162a52;margin:0 0 6px"><b>Order ${esc(batch.orderNumber)}</b></p>
 <table style="width:100%;border-collapse:collapse;font-size:14px">${rows.join('')}</table>
 <p style="color:#162a52;margin:16px 0 4px"><b>Deliveries</b></p>

@@ -237,4 +237,11 @@ function changeMessages(prevQuote, nextQuote, group, lines) {
     return out;
 }
 
-module.exports = { computeBill, selectedOption, groupTax, readyLines, linePriceCents, bundlesFor, changeMessages, ymdPlusOne, WRAP_STYLES };
+function wrapPrices(batch) {
+    const lines = readyLines(batch).filter((l) => l.wrap && l.wrap.done);
+    if (!lines.length) return {};
+    const w = wrapBreakdown(lines, batch.gifteeZip);
+    return w.ok ? w.perLine : {};
+}
+
+module.exports = { computeBill, selectedOption, groupTax, readyLines, linePriceCents, bundlesFor, changeMessages, ymdPlusOne, WRAP_STYLES, wrapPrices };
