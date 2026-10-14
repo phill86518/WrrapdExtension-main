@@ -221,7 +221,7 @@
     });
     var tail = edit ? '<td></td>' : '';
     h += '</tbody><tfoot>' +
-      '<tr class="wb-foot"><td>Retailer subtotal</td><td></td><td class="wb-money">' + (shipKnown ? usd(shipSum) : '—') + '</td><td class="wb-money">' + usd(itemSum) + '</td>' + tail + '</tr>' +
+      '<tr class="wb-foot"><td>Retailer subtotal</td><td></td><td class="wb-money">' + (shipKnown ? (shipSum ? usd(shipSum) : 'Free') : '—') + '</td><td class="wb-money">' + usd(itemSum) + '</td>' + tail + '</tr>' +
       '</tfoot></table></div>';
     return h;
   }
