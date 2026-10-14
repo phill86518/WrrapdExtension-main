@@ -183,6 +183,10 @@ function applyRead(line, read, cfg) {
     if (p.pagePriceCents && p.pagePriceCents > cfg.perItemCapCents) {
         return markUnavailable(line, 'over_item_limit', overLimitMessage(p.pagePriceCents, cfg.perItemCapCents));
     }
+    if (p.choicePrompt) {
+        line.variantLabel = '';
+        return markUnavailable(line, 'ship_zip', p.choicePrompt);
+    }
     const open = (p.variantGroups || []).filter((g) => !g.selected || !g.options.includes(g.selected));
     if (!p.pagePriceCents) {
         line.variantLabel = p.choicePrompt || 'Choose a size and color on the product page, then add the link again.';
@@ -194,7 +198,6 @@ function applyRead(line, read, cfg) {
         return;
     }
     line.variantLabel = p.variantGroups.map((g) => `${g.name}: ${g.selected}`).join(', ');
-    if (p.choicePrompt) line.variantLabel = p.choicePrompt;
     line.state = 'quoting';
 }
 

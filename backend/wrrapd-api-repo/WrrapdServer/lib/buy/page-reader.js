@@ -323,8 +323,11 @@ function walmartShip(html, gifteeZip) {
         }
     }
     const postal = (text.match(/"shippingText":"Shipping"[\s\S]{0,400}?"postalCode":"(\d{5})"/) || block.match(/"locationText":"[^"]*?(\d{5})"/) || [])[1] || '';
+    const strength = (text.match(/"intentStrength":"(IMPLICIT|EXPLICIT)"/) || [])[1] || '';
     const giftee = String(gifteeZip || '').replace(/\D/g, '');
     if (postal && giftee && postal !== giftee) {
+        // IMPLICIT is Walmart's guess from the server's location, not the shopper's page.
+        if (strength !== 'EXPLICIT') return { skip: true };
         return {
             label: 'Standard shipping',
             cents: null,
@@ -980,7 +983,8 @@ async function readProduct({ retailer, url, zip, state, batchId, lineId }) {
     let choicePrompt = '';
     if (retailer === 'walmart') {
         const wship = walmartShip(page.html, zip);
-        if (wship) {
+        if (wship && wship.skip) chosen = null;
+        else if (wship) {
             chosen = { label: 'Standard shipping', cents: wship.cents, arrivalDate: wship.arrivalDate, note: wship.note || '' };
             choicePrompt = wship.choicePrompt || '';
         }
