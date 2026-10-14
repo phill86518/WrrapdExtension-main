@@ -104,13 +104,17 @@
 }
 .wb-btn[disabled] { opacity: .5; cursor: default; box-shadow: none; }
 .wb-btn-ghost { background: #fff !important; border: 1.5px solid var(--wb-deep); color: var(--wb-deep) !important; box-shadow: none; }
-.wb-btn-add {
+.wb-btn.wb-btn-add {
   margin-top: 10px;
-  max-width: 11rem;
-  padding: 8px 12px;
-  font-size: 13px;
-  line-height: 1.25;
-  white-space: normal;
+  width: 8.5rem;
+  max-width: 8.5rem;
+  height: auto;
+  padding: 6px 8px;
+  font-size: 11px !important;
+  font-weight: 650;
+  line-height: 1.2;
+  white-space: normal !important;
+  overflow-wrap: break-word;
 }
 .wb-submit { display: flex; justify-content: flex-end; }
 .wb-link-btn { background: none; border: 0; color: var(--wb-navy); font-weight: 650; padding: 10px 0 0; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
@@ -122,26 +126,26 @@
 .wb-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
 .wb-col-retailer { width: 12%; }
 .wb-col-item { width: 42%; }
-.wb-col-when { width: 12%; }
+.wb-col-when { width: 7%; }
 .wb-col-price,
 .wb-col-ship,
 .wb-col-wrap,
-.wb-col-flowers,
-.wb-col-total { width: 6%; }
-.wb-col-qty { width: 4%; }
+.wb-col-total { width: 7%; }
+.wb-col-flowers { width: 6%; }
+.wb-col-qty { width: 5%; }
 .wb-col-del { width: 32px; }
 .wb-qty {
-  width: 1.05rem;
+  width: 100%;
+  max-width: 100%;
   min-width: 0;
-  height: 1.2em;
+  height: 1.15em;
   margin: 0 auto;
   display: block;
-  vertical-align: middle;
   text-align: center;
   font: inherit;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 560;
-  line-height: 1.2;
+  line-height: 1.15;
   padding: 0;
   border: 1px solid #e4d5c4;
   border-radius: 4px;
@@ -160,7 +164,7 @@
 .wb-retailer { text-align: center; vertical-align: middle; padding: 8px 4px; border-right: 1px solid var(--wb-line); }
 .wb-rname { display: block; font-weight: 650; font-size: 13px; color: var(--wb-navy); }
 .wb-rsub { display: block; margin-top: 4px; font-size: 12px; font-weight: 560; line-height: 1.25; }
-.wb-qtycell { text-align: center; vertical-align: middle; }
+.wb-qtycell { text-align: center; vertical-align: middle; overflow: hidden; padding-left: 2px; padding-right: 2px; }
 .wb-group-start td { border-top: 1px solid var(--wb-line); }
 .wb-acct-line { display: flex; justify-content: flex-end; gap: 8px; }
 .wb-acct-line span:last-child { min-width: 4.2rem; text-align: right; }

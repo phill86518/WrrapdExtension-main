@@ -192,7 +192,7 @@
 
   function deliveryCell(l) {
     var s = shipOf(l);
-    if (s) return (s.arrivalDate ? esc(fmtDate(s.arrivalDate)) : 'date to follow') + '*';
+    if (s && s.arrivalDate) return esc(fmtDate(s.arrivalDate));
     if (waiting(l)) return '<span class="wb-status"><span class="wb-spin"></span>' + WAIT_DETAILS + '</span>';
     return '—';
   }
@@ -239,7 +239,7 @@
     return '<colgroup><col class="wb-col-retailer"><col class="wb-col-item"><col class="wb-col-when"><col class="wb-col-price"><col class="wb-col-qty"><col class="wb-col-ship"><col class="wb-col-wrap"><col class="wb-col-flowers"><col class="wb-col-total">' + (edit ? '<col class="wb-col-del">' : '') + '</colgroup>';
   }
   function headRow(edit) {
-    return '<thead><tr><th scope="col">Retailer</th><th scope="col">Item</th><th scope="col">Expected delivery*</th><th scope="col">Unit price</th><th scope="col">Qty</th><th scope="col">Shipping cost</th><th scope="col">Gift-wrapping cost</th><th scope="col">Floral cost</th><th scope="col">Item total</th>' +
+    return '<thead><tr><th scope="col">Retailer</th><th scope="col">Item</th><th scope="col">Expected Delivery</th><th scope="col">Unit price</th><th scope="col">Qty</th><th scope="col">Shipping cost</th><th scope="col">Gift-wrapping cost</th><th scope="col">Floral cost</th><th scope="col">Item Total</th>' +
       (edit ? '<th scope="col"><span class="wb-sr">Delete</span></th>' : '') + '</tr></thead>';
   }
   function groupLines(lines) {
@@ -257,19 +257,13 @@
   }
   function retailerSummary(g) {
     var itemSum = 0;
-    var shipSum = 0;
-    var shipKnown = false;
     var anyPrice = false;
     g.lines.forEach(function (l) {
       var c = lineTotalCents(l);
       if (c != null) { itemSum += c; anyPrice = true; }
-      var s = shipOf(l);
-      if (s && s.cents != null) { shipSum += s.cents; shipKnown = true; }
     });
-    var ship = shipKnown ? (shipSum ? usd(shipSum) : 'Free') : '—';
     return '<span class="wb-rname">' + esc(g.name) + '</span>' +
-      '<span class="wb-rsub">Items ' + (anyPrice ? usd(itemSum) : '—') + '</span>' +
-      '<span class="wb-rsub">Shipping ' + ship + '</span>';
+      '<span class="wb-rsub">Items ' + (anyPrice ? usd(itemSum) : '—') + '</span>';
   }
   function lineCells(l, edit, retailer) {
     var h = '<td data-label="Item">' + itemCell(l) + '</td>' +
@@ -341,7 +335,7 @@
   function qtyCell(l) {
     if (l.state === 'reading') return '—';
     if (!canEdit() || l.state === 'unavailable') return String(qtyOf(l));
-    return '<input class="wb-qty" type="number" min="1" max="5" step="1" inputmode="numeric" aria-label="Quantity" data-line="' + esc(l.id) + '" value="' + qtyOf(l) + '">';
+    return '<input class="wb-qty" type="number" min="1" max="5" step="1" size="1" inputmode="numeric" aria-label="Quantity" data-line="' + esc(l.id) + '" value="' + qtyOf(l) + '">';
   }
   function totalCell(l) {
     if (l.state === 'reading') return '—';
@@ -368,7 +362,7 @@
       '<input class="wb-input wb-zip" id="wb-zip-edit" inputmode="numeric" maxlength="5" value="' + esc(b.gifteeZip) + '" autocomplete="off"></div>' +
       extLine() +
       (rows || (excludedHtml ? '' : '<p class="wb-muted">Paste a product link to start.</p>')) +
-      (rows ? '<p class="wb-asterisk">* Final gift delivery to the giftee may add 1 day.</p>' + endTotals(lines) : '') +
+      (rows ? endTotals(lines) + '<p class="wb-asterisk">* Final gift delivery to the giftee may add 1 day.</p>' : '') +
       excludedHtml +
       (room ? '<p class="wb-ask">' + (lines.length ? 'Add more items for gift-wrapping' : 'Paste the product links for gift-wrapping below.') + '</p>' + linkFields(maxLinks() - lines.length, draft) + buyButton(lines.length > 0) : '') +
       '</section>';

@@ -3,9 +3,13 @@
  * electronics). The product page price is only a preview; the bill uses the retailer cost page.
  * When the retailer blocks the read, the caller sends the link to the Command Center quote desk.
  */
+const fs = require('fs');
+const path = require('path');
 const grokClient = require('../grok-client');
 const retailers = require('./retailers');
 const categories = require('./categories');
+
+const EXTERNAL_PAGES_DIR = path.resolve(__dirname, '..', '..', '..', '..', 'external', 'pages');
 
 const UA =
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36';
@@ -237,11 +241,11 @@ function ymdFromMonthDay(monName, day) {
 /** Regular delivery printed on the page. Skips Prime and other membership sentences. No extra request. */
 function standardFromPage(html, itemCents) {
     const text = visibleText(html).replace(/\s+/g, ' ');
-    const arrives = text.match(/arrives\s+by\s+(?:[A-Za-z]+,\s+)?([A-Za-z]+)\s+(\d{1,2})/i);
+    const arrives = text.match(/arrives\s+(?:by\s+)?(?:[A-Za-z]+,\s+)?([A-Za-z]+)\s+(\d{1,2})/i);
     if (arrives) {
         const arrivalDate = ymdFromMonthDay(arrives[1], arrives[2]);
         if (arrivalDate) {
-            const shipsFree = /ships\s+free\b/i.test(text);
+            const shipsFree = /\b(?:ships\s+free|free\s*;?\s*arrives)\b/i.test(text);
             const over = text.match(/(?:free\s+shipping|ships\s+free)[^.]{0,48}(?:with|on|over)\s+\$(\d+)/i);
             if (shipsFree && !(over && itemCents < Number(over[1]) * 100)) {
                 return { label: 'Standard shipping', cents: 0, arrivalDate, note: '' };
@@ -565,7 +569,7 @@ function nordstromStandardShip(config, zip, styleId, skuIds) {
     const rows = config?.storeMode?.promises?.entities?.[`${zip}-${styleId}`]?.promises || [];
     const wanted = new Set(skuIds.filter(Boolean));
     const costs = [];
-    let arrivalDate = null;
+    const dates = [];
     for (const row of rows) {
         if (wanted.size && !wanted.has(row.sku)) continue;
         const standard = (row.promises || []).find((promise) => promise.shipType === 'STANDARD_SHIPPING');
@@ -573,11 +577,18 @@ function nordstromStandardShip(config, zip, styleId, skuIds) {
         const cents = Math.round(Number(standard.customerCost) * 100);
         if (!Number.isFinite(cents)) continue;
         costs.push(cents);
-        if (skuIds.length === 1 && standard.minDate) arrivalDate = String(standard.minDate).slice(0, 10);
+        if (standard.minDate) {
+            const day = String(standard.minDate).slice(0, 10);
+            if (/^\d{4}-\d{2}-\d{2}$/.test(day)) dates.push(day);
+        }
     }
     if (!costs.length) return null;
     const unique = [...new Set(costs)];
-    return { cents: unique.length === 1 ? unique[0] : Math.min(...unique), arrivalDate };
+    const uniqueDates = [...new Set(dates)];
+    return {
+        cents: unique.length === 1 ? unique[0] : Math.min(...unique),
+        arrivalDate: uniqueDates.length === 1 ? uniqueDates[0] : null,
+    };
 }
 
 /**
@@ -623,13 +634,23 @@ function nordstromFromHtml(html, url, zip) {
 
     const skuIds = offers.map((offer) => offer.skuId);
     let standardShip = nordstromStandardShip(config, zip, id, skuIds);
+    const domShip = standardFromPage(html, pagePriceCents || 0);
     const freeCopy = /Free shipping\.\s*Free returns/i.test(String(html || ''));
-    if (!standardShip && freeCopy) {
+    if (!standardShip && domShip) {
+        standardShip = { cents: domShip.cents, arrivalDate: domShip.arrivalDate || null };
+    } else if (!standardShip && freeCopy) {
         standardShip = { cents: 0, arrivalDate: null };
     }
-    const needsSize = sizes.length > 1;
-    if (standardShip && needsSize) standardShip = { ...standardShip, arrivalDate: null };
-    const shipNote = needsSize ? 'Free standard shipping. Delivery date needs a size.' : 'Free standard shipping.';
+    if (standardShip && !standardShip.arrivalDate && domShip && domShip.arrivalDate) {
+        standardShip = { ...standardShip, arrivalDate: domShip.arrivalDate };
+    }
+    if (standardShip && standardShip.cents == null && domShip && domShip.cents != null) {
+        standardShip = { ...standardShip, cents: domShip.cents };
+    }
+    const needsSize = sizes.length > 1 && !(standardShip && standardShip.arrivalDate);
+    const shipNote = standardShip && standardShip.cents === 0
+        ? (needsSize ? 'Free standard shipping. Delivery date needs a size.' : 'Free standard shipping.')
+        : '';
     if (standardShip && standardShip.cents === 0) standardShip = { ...standardShip, note: shipNote };
 
     const page = (config.productDisplay?.pageData?.entities || {})[id] || {};
@@ -666,19 +687,20 @@ function parseGeminiJson(text) {
 }
 
 /** Asks Gemini to open a public product URL. Used when the retailer sends our server a bot page. */
-async function askGeminiProduct(url) {
+async function askGeminiProduct(url, zip) {
     const key = geminiKey();
     if (!key) return null;
     const prompt = [
-        'Look at this exact product page:',
+        'Read the selected product on this page. Ignore sidebar ads and other products.',
         url,
-        'Reply with JSON only: {"title":"","priceUsd":null,"shippingUsd":null,"needsChoice":false}',
-        'priceUsd is the one price for the options already chosen in the link, including a selected color.',
-        'If those options still have more than one price, or the page only shows a range, set priceUsd to null.',
-        'shippingUsd is standard shipping. Use 0 when standard shipping is free. Use null when it is not shown.',
-        'needsChoice is true when a size, color, or similar option is still not chosen.',
-        'Do not guess a number that is not on the page.',
-    ].join(' ');
+        zip ? `The shopper ZIP is ${zip}.` : '',
+        'Reply with JSON only: {"title":"","priceUsd":null,"shippingUsd":null,"arrivalDate":null}',
+        'priceUsd is the one price shown for the color and size that are already selected. It is the main price on the product, not a range across other colors and not a price in a recommendation.',
+        'If the page shows one price for that selection, return that number. If it only shows a range and no size or color is selected, set priceUsd to null.',
+        'shippingUsd is standard shipping to the shopper ZIP. Use 0 when that shipping is free.',
+        'arrivalDate is the standard arrival date shown for that selection, such as "Free arrives Tue, Oct 20", as YYYY-MM-DD. If the year is missing and the date is still ahead, use 2026.',
+        'Do not leave priceUsd or arrivalDate null when the page shows them. Do not guess a price that is not the selected item.',
+    ].filter(Boolean).join(' ');
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 28000);
     try {
@@ -703,6 +725,7 @@ async function askGeminiProduct(url) {
         const shipCents = facts.shippingUsd === 0 || ship === 0
             ? 0
             : (Number.isFinite(ship) && ship > 0 ? Math.round(ship * 100) : null);
+        const arrival = /^\d{4}-\d{2}-\d{2}$/.test(String(facts.arrivalDate || '')) ? String(facts.arrivalDate) : null;
         return {
             title: title.slice(0, 300),
             brand: '',
@@ -712,7 +735,7 @@ async function askGeminiProduct(url) {
             pagePriceCents,
             standardShip: {
                 cents: shipCents,
-                arrivalDate: null,
+                arrivalDate: arrival,
                 note: shipCents === 0 ? 'Free standard shipping.' : '',
             },
             pageNotes: [],
@@ -729,19 +752,66 @@ async function askGeminiProduct(url) {
     }
 }
 
-async function readProduct({ retailer, url, zip, state }) {
+function savedPageHtml(retailerId, url, { batchId, lineId } = {}) {
+    try {
+        if (!fs.existsSync(EXTERNAL_PAGES_DIR)) return null;
+        const parsed = retailers.parseProductLink(url);
+        const productId = (parsed && parsed.productId) || nordstromStyleId(url) || '';
+        const candidates = [
+            batchId && lineId ? `${batchId}-${lineId}.html` : '',
+            lineId ? `${lineId}.html` : '',
+            productId ? `${retailerId}-${productId}.html` : '',
+            productId ? `${productId}.html` : '',
+            `${retailerId}.html`,
+        ].filter(Boolean);
+        for (const name of candidates) {
+            const fp = path.join(EXTERNAL_PAGES_DIR, name);
+            if (fs.existsSync(fp) && fs.statSync(fp).isFile()) {
+                const html = fs.readFileSync(fp, 'utf8').slice(0, MAX_BYTES);
+                if (html.trim() && !nordstromShell(html)) return html;
+            }
+        }
+        const files = fs
+            .readdirSync(EXTERNAL_PAGES_DIR)
+            .filter((f) => /\.html?$/i.test(f))
+            .map((f) => ({ name: f, fp: path.join(EXTERNAL_PAGES_DIR, f), mtime: fs.statSync(path.join(EXTERNAL_PAGES_DIR, f)).mtimeMs }))
+            .sort((a, b) => b.mtime - a.mtime);
+        for (const f of files) {
+            if (productId && f.name.includes(productId)) {
+                const html = fs.readFileSync(f.fp, 'utf8').slice(0, MAX_BYTES);
+                if (html.trim() && !nordstromShell(html)) return html;
+            }
+        }
+        if (productId) {
+            for (const f of files) {
+                const html = fs.readFileSync(f.fp, 'utf8').slice(0, MAX_BYTES);
+                if (html.includes(productId) && !nordstromShell(html)) return html;
+            }
+        }
+        return null;
+    } catch (_) {
+        return null;
+    }
+}
+
+async function readProduct({ retailer, url, zip, state, batchId, lineId }) {
     const r = retailers.byId(retailer);
     if (!r) return { ok: false, reason: 'retailer_not_supported', needsPerson: false };
+    const savedHtml = savedPageHtml(retailer, url, { batchId, lineId });
     let page;
-    try {
-        page = await fetchPage(retailer, url);
-    } catch (e) {
-        return { ok: false, reason: `fetch_failed: ${e && e.message ? e.message : e}`, needsPerson: true };
+    if (savedHtml) {
+        page = { ok: true, html: savedHtml, finalUrl: url, fromSavedPage: true };
+    } else {
+        try {
+            page = await fetchPage(retailer, url);
+        } catch (e) {
+            return { ok: false, reason: `fetch_failed: ${e && e.message ? e.message : e}`, needsPerson: true };
+        }
     }
     if (!page.ok) return { ok: false, reason: page.reason, needsPerson: true };
     if (retailer === 'nordstrom') {
         const parsed = nordstromShell(page.html) ? null : nordstromFromHtml(page.html, url, zip);
-        const product = parsed || await askGeminiProduct(url);
+        const product = parsed || (page.fromSavedPage ? null : await askGeminiProduct(url, zip));
         if (product) {
             const amazonCategory = await categories.categorize({
                 retailer,
@@ -763,7 +833,7 @@ async function readProduct({ retailer, url, zip, state }) {
                     pageOffer,
                     choicePrompt: product.choicePrompt || '',
                     readAt: new Date().toISOString(),
-                    readBy: product.readBy || 'nordstrom',
+                    readBy: page.fromSavedPage ? 'saved_page' : (product.readBy || 'nordstrom'),
                 },
             };
         }
@@ -851,12 +921,12 @@ async function readProduct({ retailer, url, zip, state }) {
             isElectronics,
             variantGroups: cleanVariantGroups(facts.variantGroups),
             readAt: new Date().toISOString(),
-            readBy: 'grok',
+            readBy: page.fromSavedPage ? 'saved_page' : 'grok',
         },
     };
 }
 
 module.exports = {
     readProduct, askGrok, looksElectronic, priceAppearsInPage, jsonLdProducts, visibleText, fetchPage, standardFromPage, targetFulfillment,
-    nordstromShell, nordstromFromHtml,
+    nordstromShell, nordstromFromHtml, savedPageHtml, EXTERNAL_PAGES_DIR,
 };

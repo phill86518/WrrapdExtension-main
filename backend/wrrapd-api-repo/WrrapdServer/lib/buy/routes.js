@@ -858,6 +858,107 @@ module.exports = function mountBuyForYou(app, deps) {
         res.json({ ok: true, config: saved });
     });
 
+    app.post('/api/admin/buy/batches/:id/product', async (req, res) => {
+        if (!admin(req, res)) return;
+        const batch = store.read(req.params.id);
+        if (!batch || batch.status !== 'open') return res.status(404).json({ error: 'That order is not open.' });
+        const body = req.body || {};
+        const lineId = String(body.lineId || '').trim();
+        const url = String(body.url || '').trim();
+        let error = null;
+        await store.update(batch.id, (b) => {
+            if (b.status !== 'open') {
+                error = 'That order is not open.';
+                return null;
+            }
+            const line = b.lines.find((l) => (lineId && l.id === lineId) || (!lineId && url && (l.url === url || l.canonicalUrl === url)));
+            if (!line) {
+                error = 'That item is not on this order.';
+                return null;
+            }
+            const result = quotes.acceptSupplied(line, body, config.load());
+            if (!result.ok) {
+                error = result.error;
+                return result.changed ? b : null;
+            }
+            const g = quotes.ensureGroup(b, line.retailer);
+            g.quote = null;
+            g.selectedShippingId = null;
+            g.state = 'waiting';
+            store.addLog(b, 'supplied', `${line.retailerName || line.retailer}: details added for ${line.id}`);
+            return b;
+        });
+        if (error) return res.status(400).json({ error });
+        await quotes.kickGroups(batch.id, 'supplied');
+        const fresh = store.read(batch.id);
+        res.json({ ok: true, batch: adminView(fresh) });
+    });
+
+    app.post('/api/webhook/add-product', async (req, res) => {
+        if (!admin(req, res)) return;
+        const body = req.body || {};
+        const title = String(body.title || '').trim();
+        const price = body.price;
+        const imageUrl = String(body.imageUrl || '').trim();
+        const storeName = String(body.store || '').trim();
+        if (!title) return res.status(400).json({ error: 'title is required.' });
+        if (typeof price !== 'number' || !Number.isFinite(price) || price <= 0) return res.status(400).json({ error: 'price must be a number greater than 0.' });
+        if (!/^https:\/\//.test(imageUrl)) return res.status(400).json({ error: 'imageUrl must be an https link.' });
+        const retailer = retailers.RETAILERS.find((r) => r.id === storeName.toLowerCase() || r.name.toLowerCase() === storeName.toLowerCase());
+        if (!retailer) return res.status(400).json({ error: 'store is not a retailer we buy from.' });
+        const batchId = String(body.batchId || '').trim();
+        const lineId = String(body.lineId || '').trim();
+        const url = String(body.url || '').trim();
+        const batches = (batchId ? [store.read(batchId)] : store.list({ limit: 40 })).filter((b) => b && b.status === 'open');
+        let found = null;
+        for (const b of batches) {
+            const lines = (b.lines || []).filter((l) => !l.removed && l.retailer === retailer.id);
+            const line = lines.find((l) => lineId && l.id === lineId)
+                || lines.find((l) => url && (l.url === url || l.canonicalUrl === url))
+                || lines.find((l) => !l.product || !l.product.pagePriceCents)
+                || lines[0];
+            if (line) {
+                found = { batch: b, line };
+                break;
+            }
+        }
+        if (!found) return res.status(404).json({ error: 'No open cart item matches that store.' });
+        let error = null;
+        let savedLine = null;
+        let quote = false;
+        await store.update(found.batch.id, (b) => {
+            const line = b.lines.find((l) => l.id === found.line.id);
+            if (!line || line.removed) {
+                error = 'That item is not on this order.';
+                return null;
+            }
+            const result = quotes.acceptSupplied(line, {
+                ...body,
+                title,
+                price,
+                imageUrl,
+                store: retailer.name,
+            }, config.load());
+            savedLine = { id: line.id, state: line.state, message: line.message || '' };
+            if (!result.ok && !result.changed) {
+                error = result.error;
+                return null;
+            }
+            if (result.ok && line.product && line.product.pageOffer) {
+                const g = quotes.ensureGroup(b, line.retailer);
+                g.quote = null;
+                g.selectedShippingId = null;
+                g.state = 'waiting';
+                quote = true;
+            }
+            store.addLog(b, 'webhook', `${retailer.name}: product details added for ${line.id}`);
+            return b;
+        });
+        if (error) return res.status(400).json({ error });
+        if (quote) await quotes.kickGroups(found.batch.id, 'supplied');
+        res.json({ ok: true, batchId: found.batch.id, lineId: savedLine.id, state: savedLine.state, message: savedLine.message });
+    });
+
     app.get('/api/admin/buy/batches', async (req, res) => {
         if (!admin(req, res)) return;
         const rows = store.list({ limit: 300 });

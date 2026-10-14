@@ -7,6 +7,7 @@ const store = require('./store');
 const config = require('./config');
 const retailers = require('./retailers');
 const pageReader = require('./page-reader');
+const suppliedProduct = require('./supplied-product');
 const runner = require('./runner');
 const billing = require('./billing');
 const salesTax = require('../sales-tax-zip');
@@ -196,6 +197,20 @@ function applyRead(line, read, cfg) {
     line.state = 'quoting';
 }
 
+/** Writes product facts from outside the page reader onto a cart line. */
+function acceptSupplied(line, facts, cfg) {
+    const built = suppliedProduct.build(facts);
+    if (!built.ok) return built;
+    line.removed = false;
+    line.reason = '';
+    line.message = '';
+    line.readFailure = '';
+    applyRead(line, { ok: true, product: built.product }, cfg || config.load());
+    if (line.state === 'unavailable') return { ok: false, error: line.message || UNAVAILABLE, changed: true };
+    if (built.variantLabel) line.variantLabel = built.variantLabel;
+    return { ok: true };
+}
+
 /** Reads every product page in the batch (two at a time), then requests quotes. */
 async function processBatch(batchId) {
     if (readingBatches.has(batchId)) return;
@@ -224,6 +239,8 @@ async function processBatchBody(batchId) {
                     url: line.url,
                     zip: hub.postalCode || hub.zip || batch.gifteeZip,
                     state: hub.state,
+                    batchId,
+                    lineId: line.id,
                 });
             } catch (e) {
                 read = { ok: false, reason: `read_error: ${e && e.message}`, needsPerson: true };
@@ -389,6 +406,21 @@ async function sweep(batchId) {
             }
         }
         for (const l of batch.lines) {
+            if (l.removed || l.state === 'reading') continue;
+            if (l.product && l.product.pagePriceCents) continue;
+            if (l.product && l.product.readBy === 'saved_page') continue;
+            if (pageReader.savedPageHtml(l.retailer, l.url, { batchId: batch.id, lineId: l.id })) {
+                const g = batch.groups && batch.groups[l.retailer];
+                l.state = 'reading';
+                l.reason = '';
+                l.message = '';
+                l.readFailure = '';
+                l.readStartedAt = new Date(now).toISOString();
+                if (g) g.state = 'waiting';
+                changed = true;
+            }
+        }
+        for (const l of batch.lines) {
             if (l.removed || l.state !== 'unavailable' || l.reason !== 'quote_timeout') continue;
             const g = batch.groups && batch.groups[l.retailer];
             if (l.product && l.product.pagePriceCents) {
@@ -491,6 +523,7 @@ module.exports = {
     UNAVAILABLE,
     setAlert,
     processBatch,
+    acceptSupplied,
     kickGroups,
     openQuoteRequest,
     dispatch,
