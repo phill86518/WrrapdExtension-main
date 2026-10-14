@@ -30,7 +30,7 @@
     variantDraft: {},
   };
 
-  var TRASH_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
+  var TRASH_SVG = '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
     '<path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>';
 
   /* ---------- helpers ---------- */
@@ -156,15 +156,16 @@
       h += '<button type="button" class="wb-btn wb-btn-sm" data-act="variant" data-line="' + esc(l.id) + '">Confirm</button></div>';
     }
     if (l.state === 'unavailable') {
-      h += '<p class="wb-unavailable">' + esc(l.message || "We can't buy this item right now.") + '</p>' +
-        (l.retailerName ? extLine() : '');
+      h += '<p class="wb-unavailable">' + esc(l.message || "We can't buy this item right now.") + '</p>';
     }
     return h + '</div></div>';
   }
 
   function priceCell(l) {
-    if (l.state === 'unavailable' || l.state === 'reading') return '—';
-    var c = knownCents(l);
+    if (l.state === 'reading') return '—';
+    var quoted = knownCents(l);
+    var page = l.product && l.product.pagePriceCents;
+    var c = quoted != null ? quoted : page;
     return c != null ? '<span class="wb-price">' + usd(c) + '</span>' : '—';
   }
 
@@ -180,7 +181,7 @@
 
   function deliveryCell(l) {
     var s = shipOf(l);
-    if (s) return 'To Wrrapd ' + (s.arrivalDate ? esc(fmtDate(s.arrivalDate)) : 'date to follow') + '*';
+    if (s) return (s.arrivalDate ? esc(fmtDate(s.arrivalDate)) : 'date to follow') + '*';
     if (waiting(l)) return '<span class="wb-status"><span class="wb-spin"></span>' + WAIT_DETAILS + '</span>';
     return '—';
   }
@@ -193,7 +194,6 @@
   }
 
   function retailerTable(name, retailer, lines) {
-    var g = retailer ? groupFor(retailer) : null;
     var edit = canEdit();
     var itemSum = 0;
     var shipSum = 0;
@@ -205,8 +205,6 @@
       var s = shipOf(l);
       if (s && s.cents != null) { shipSum += s.cents; shipKnown = true; }
     });
-    var tax = g && g.taxCents != null ? g.taxCents : (S.batch.salesTaxPercent != null ? Math.round((itemSum + shipSum) * S.batch.salesTaxPercent / 100) : null);
-    var gross = itemSum + shipSum + (tax || 0);
     var h = '<div class="wb-store"><p class="wb-store-name">' + esc(name) + '</p><table class="wb-table"><colgroup>' +
       '<col class="wb-col-item"><col class="wb-col-when"><col class="wb-col-ship"><col class="wb-col-price">' + (edit ? '<col class="wb-col-del">' : '') +
       '</colgroup><thead><tr>' +
@@ -225,9 +223,7 @@
     var tail = edit ? '<td></td>' : '';
     h += '</tbody><tfoot>' +
       '<tr class="wb-foot"><td>Item prices</td><td></td><td class="wb-num">' + (shipKnown ? usd(shipSum) : '—') + '</td><td class="wb-num">' + usd(itemSum) + '</td>' + tail + '</tr>' +
-      '<tr class="wb-foot"><td>Sales tax</td><td></td><td></td><td class="wb-num">' + (tax != null ? usd(tax) : '—') + '</td>' + tail + '</tr>' +
-      '<tr class="wb-foot wb-gross"><td>Gross total</td><td colspan="2"></td><td class="wb-num">' + usd(gross) + '</td>' + tail + '</tr>' +
-      '</tfoot></table><p class="wb-asterisk">* Final gift delivery to the giftee may add 1 day.</p></div>';
+      '</tfoot></table></div>';
     return h;
   }
 
@@ -275,7 +271,9 @@
     var h = '<section class="wb-card"><h2>Gift-wrapping shopping cart</h2>' +
       '<div class="wb-zip-row"><label class="wb-label" for="wb-zip-edit">Giftee / gift-recipient\'s zip code:</label>' +
       '<input class="wb-input wb-zip" id="wb-zip-edit" inputmode="numeric" maxlength="5" value="' + esc(b.gifteeZip) + '" autocomplete="off"></div>' +
+      extLine() +
       (rows || '<p class="wb-muted">Add a product link to start.</p>') +
+      (rows ? '<p class="wb-asterisk">* Final gift delivery to the giftee may add 1 day.</p>' + endTotals(lines) : '') +
       (room ? '<p class="wb-ask">Paste the product links for gift-wrapping below.</p><div class="wb-add"><input class="wb-input" id="wb-add-link" type="url" placeholder="Paste a product link" aria-label="Product link"><button type="button" class="wb-btn wb-btn-sm" data-act="add-item">Add</button></div>' : '') +
       '</section>';
     if (!b.bill && b.billError && !stillWorking() && ready) h += '<p class="wb-error">' + esc(b.billError) + '</p>';
@@ -283,8 +281,23 @@
     if (S.error) h += '<p class="wb-error">' + esc(S.error) + '</p>';
     h += '<button type="button" class="wb-btn" data-act="to-terms"' + (canGo ? '' : ' disabled') + '>Continue to gift-wrap</button>';
     if (lines.some(function (l) { return l.state === 'reading'; })) h += '<p class="wb-muted">Please keep this page open.</p>';
-    h += extLine();
     return h;
+  }
+  function endTotals(lines) {
+    var itemSum = 0;
+    var shipSum = 0;
+    lines.forEach(function (l) {
+      if (l.state === 'unavailable') return;
+      var c = knownCents(l);
+      if (c != null) itemSum += c;
+      var s = shipOf(l);
+      if (s && s.cents != null) shipSum += s.cents;
+    });
+    var tax = S.batch.salesTaxPercent != null ? Math.round((itemSum + shipSum) * S.batch.salesTaxPercent / 100) : null;
+    var gross = itemSum + shipSum + (tax || 0);
+    return '<div class="wb-endtotals">' +
+      '<div class="wb-bill-row"><span>Sales tax</span><span>' + (tax != null ? usd(tax) : '—') + '</span></div>' +
+      '<div class="wb-bill-row wb-bill-total"><span>Gross total</span><span>' + usd(gross) + '</span></div></div>';
   }
 
   function billBlock(bill, withWrapDetail) {
@@ -401,7 +414,6 @@
     if (S.error) h += '<p class="wb-error">' + esc(S.error) + '</p>';
     h += '<div class="wb-actions"><button type="button" class="wb-btn wb-btn-ghost" data-act="review-back">Edit gift-wrap</button>' +
       '<button type="button" class="wb-btn" data-act="to-pay"' + (b.bill ? '' : ' disabled') + '>Review and pay</button></div>';
-    h += extLine();
     return h;
   }
 

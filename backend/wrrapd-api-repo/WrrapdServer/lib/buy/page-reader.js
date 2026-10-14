@@ -195,7 +195,13 @@ function embeddedHints(html) {
 }
 
 function numberOnPage(html, usd) {
-    if (usd === 0) return /free delivery/i.test(html) || /free shipping(?! option)/i.test(html);
+    if (usd === 0) {
+        const text = visibleText(html);
+        if (/ships\s+free\b/i.test(text)) return true;
+        if (/free\s+shipping\b/i.test(text) && !/free\s+shipping[^.]{0,48}(?:with|on orders|over)\s+\$/i.test(text)) return true;
+        if (/free\s+delivery\b/i.test(text) && !/free\s+delivery[^.]{0,48}over\s+\$/i.test(text)) return true;
+        return false;
+    }
     return priceAppearsInPage(html, usd);
 }
 
@@ -218,21 +224,41 @@ function shippingApplies(option, itemCents) {
 
 const MONTHS = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
 
+function ymdFromMonthDay(monName, day) {
+    const mon = MONTHS[String(monName || '').toLowerCase().slice(0, 3)];
+    const d = Number(day);
+    if (!mon || d < 1 || d > 31) return null;
+    const now = new Date();
+    let year = now.getFullYear();
+    if (mon < now.getMonth() + 1 || (mon === now.getMonth() + 1 && d < now.getDate() - 1)) year += 1;
+    return `${year}-${String(mon).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+}
+
 /** Regular delivery printed on the page. Skips Prime and other membership sentences. No extra request. */
 function standardFromPage(html, itemCents) {
     const text = visibleText(html).replace(/\s+/g, ' ');
+    const arrives = text.match(/arrives\s+by\s+(?:[A-Za-z]+,\s+)?([A-Za-z]+)\s+(\d{1,2})/i);
+    if (arrives) {
+        const arrivalDate = ymdFromMonthDay(arrives[1], arrives[2]);
+        if (arrivalDate) {
+            const shipsFree = /ships\s+free\b/i.test(text);
+            const over = text.match(/(?:free\s+shipping|ships\s+free)[^.]{0,48}(?:with|on|over)\s+\$(\d+)/i);
+            if (shipsFree && !(over && itemCents < Number(over[1]) * 100)) {
+                return { label: 'Standard shipping', cents: 0, arrivalDate, note: '' };
+            }
+            if (over && itemCents < Number(over[1]) * 100) {
+                return { label: 'Standard shipping', cents: null, arrivalDate, note: `Free on orders over $${over[1]}` };
+            }
+            return { label: 'Standard shipping', cents: null, arrivalDate, note: '' };
+        }
+    }
     const re = /((?:free\s+)?delivery)\s+(?:on\s+)?(?:[A-Za-z]+,\s+)?([A-Za-z]+)\s+(\d{1,2})([^.]{0,100})/gi;
-    const now = new Date();
     let m;
     while ((m = re.exec(text))) {
         const window = m[0];
         if (membershipOnly(window)) continue;
-        const mon = MONTHS[m[2].toLowerCase().slice(0, 3)];
-        const day = Number(m[3]);
-        if (!mon || day < 1 || day > 31) continue;
-        let year = now.getFullYear();
-        if (mon < now.getMonth() + 1 || (mon === now.getMonth() + 1 && day < now.getDate() - 1)) year += 1;
-        const arrivalDate = `${year}-${String(mon).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const arrivalDate = ymdFromMonthDay(m[2], m[3]);
+        if (!arrivalDate) continue;
         const over = window.match(/over\s+\$(\d+)/i);
         const free = /free/i.test(window);
         if (free && over && itemCents < Number(over[1]) * 100) {
@@ -272,6 +298,58 @@ function cleanShipping(html, options) {
             };
         })
         .filter(Boolean);
+}
+
+const TARGET_KEY = 'ff457966e64d5e877fdbad070f276d18ecec4a01';
+
+function targetTcin(url) {
+    const m = String(url || '').match(/\/A-(\d{5,12})(?:\b|\/|$)/i);
+    return m ? m[1] : '';
+}
+
+/** Target prints the price in a product API, not in the first HTML. */
+async function targetProduct(url) {
+    const tcin = targetTcin(url);
+    if (!tcin) return null;
+    const api =
+        'https://redsky.target.com/redsky_aggregations/v1/web/pdp_client_v1' +
+        `?key=${TARGET_KEY}&tcin=${tcin}&is_bot=false&store_id=3991&pricing_store_id=3991` +
+        `&has_pricing_store_id=true&channel=WEB&page=${encodeURIComponent(`/p/A-${tcin}`)}`;
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 12000);
+    let resp;
+    try {
+        resp = await fetch(api, {
+            signal: ctrl.signal,
+            headers: { 'User-Agent': UA, Accept: 'application/json', Referer: 'https://www.target.com/' },
+        });
+    } catch (_) {
+        return null;
+    } finally {
+        clearTimeout(timer);
+    }
+    if (!resp.ok) return null;
+    const body = await resp.json().catch(() => null);
+    const product = body && body.data && body.data.product;
+    if (!product || !product.item) return null;
+    const item = product.item;
+    const price = Number(product.price && product.price.current_retail);
+    const pagePriceCents = Number.isFinite(price) && price > 0 ? Math.round(price * 100) : null;
+    const title = String((item.product_description && item.product_description.title) || '').trim();
+    const brand = String((item.primary_brand && item.primary_brand.name) || '').trim();
+    const typeName = String((item.product_classification && item.product_classification.product_type_name) || '');
+    const itemType = String((item.product_classification && item.product_classification.item_type && item.product_classification.item_type.name) || '');
+    const image = (JSON.stringify(product).match(/https:\/\/target\.scene7\.com\/is\/image\/Target\/[A-Za-z0-9_-]+/) || [])[0] || '';
+    const free = !!(product.free_shipping && product.free_shipping.enabled);
+    return {
+        title: title.slice(0, 300),
+        brand: brand.slice(0, 120),
+        imageUrl: image,
+        pagePriceCents,
+        category: (itemType || typeName).slice(0, 120),
+        isElectronics: /\belectronics?\b/i.test(`${typeName} ${itemType}`),
+        standardShip: free ? { label: 'Standard shipping', cents: 0, arrivalDate: null, note: '' } : null,
+    };
 }
 
 async function askGrok({ retailerName, url, html }) {
@@ -330,37 +408,65 @@ async function readProduct({ retailer, url }) {
         return { ok: false, reason: `fetch_failed: ${e && e.message ? e.message : e}`, needsPerson: true };
     }
     if (!page.ok) return { ok: false, reason: page.reason, needsPerson: true };
-    if (!grokClient.isConfigured()) return { ok: false, reason: 'grok_not_configured', needsPerson: true };
-    let facts;
-    let meta;
-    try {
-        ({ facts, meta } = await askGrok({ retailerName: r.name, url, html: page.html }));
-    } catch (e) {
-        return { ok: false, reason: `grok_failed: ${e && e.message ? e.message : e}`, needsPerson: true };
+    let facts = null;
+    let meta = { title: '', image: '', price: '', availability: '' };
+    if (grokClient.isConfigured()) {
+        try {
+            ({ facts, meta } = await askGrok({ retailerName: r.name, url, html: page.html }));
+        } catch (e) {
+            if (retailer !== 'target') return { ok: false, reason: `grok_failed: ${e && e.message ? e.message : e}`, needsPerson: true };
+        }
+    } else if (retailer !== 'target') {
+        return { ok: false, reason: 'grok_not_configured', needsPerson: true };
     }
-    if (!facts || facts.kind === 'list') {
+    if (facts && facts.kind === 'list') {
         return { ok: false, reason: 'product_list', needsPerson: false };
     }
-    const title = String(facts.title || meta.title || '').trim().slice(0, 300);
-    if (!title) return { ok: false, reason: 'no_title', needsPerson: true };
+    facts = facts && typeof facts === 'object' ? facts : {};
+    let title = String(facts.title || meta.title || '').trim().slice(0, 300);
     const priceUsd = Number(facts.priceUsd);
     const priceSeen = priceAppearsInPage(page.html, priceUsd);
-    const category = String(facts.category || '').trim().slice(0, 120);
-    const pagePriceCents = priceSeen ? Math.round(priceUsd * 100) : null;
+    let category = String(facts.category || '').trim().slice(0, 120);
+    let pagePriceCents = priceSeen ? Math.round(priceUsd * 100) : null;
     const offered = facts.standardShipping
         ? [{ label: facts.standardShipping.label || 'Standard shipping', priceUsd: facts.standardShipping.priceUsd, arrivalDate: facts.standardShipping.arrivalDate }]
         : facts.shippingOptions;
-    const applicable = cleanShipping(page.html, offered).filter((o) => shippingApplies(o, pagePriceCents || 0));
-    const chosen = standardChoice(applicable) || standardFromPage(page.html, pagePriceCents || 0);
+    let applicable = cleanShipping(page.html, offered).filter((o) => shippingApplies(o, pagePriceCents || 0));
+    let chosen = standardChoice(applicable) || standardFromPage(page.html, pagePriceCents || 0);
+    let brand = String(facts.brand || '').trim().slice(0, 120);
+    let imageUrl = safeImageUrl(facts.imageUrl) || safeImageUrl(meta.image) || imageFallback(page.html);
+    let isElectronics = /\b(sticker|printer|photo|inkjet|label)\s+paper\b/i.test(`${category} ${title}`)
+        ? false
+        : facts.isElectronics === true || looksElectronic(retailer, category, title);
+    if (retailer === 'target') {
+        const tf = await targetProduct(url);
+        if (tf) {
+            if (tf.title) title = tf.title;
+            if (tf.brand) brand = tf.brand;
+            if (tf.category) category = tf.category;
+            if (tf.imageUrl) imageUrl = tf.imageUrl;
+            if (tf.pagePriceCents) pagePriceCents = tf.pagePriceCents;
+            isElectronics = tf.isElectronics;
+            const dated = standardFromPage(page.html, pagePriceCents || 0);
+            if (tf.standardShip) {
+                chosen = {
+                    label: 'Standard shipping',
+                    cents: tf.standardShip.cents,
+                    arrivalDate: (dated && dated.arrivalDate) || null,
+                    note: (dated && dated.note) || '',
+                };
+            } else if (dated) chosen = dated;
+        }
+    }
+    if (!title) return { ok: false, reason: 'no_title', needsPerson: true };
     const pageOffer = pagePriceCents && chosen && chosen.cents != null ? { itemPriceCents: pagePriceCents, shippingOptions: [chosen] } : null;
-    const brand = String(facts.brand || '').trim().slice(0, 120);
     const amazonCategory = await categories.categorize({ retailer, retailerName: r.name, html: page.html, title, brand, category });
     return {
         ok: true,
         product: {
             title,
             brand,
-            imageUrl: safeImageUrl(facts.imageUrl) || safeImageUrl(meta.image) || imageFallback(page.html),
+            imageUrl,
             category,
             amazonCategory,
             packageDimensions: String(facts.packageDimensions || '').trim().slice(0, 120),
@@ -369,9 +475,7 @@ async function readProduct({ retailer, url }) {
             standardShip: chosen ? { cents: chosen.cents, arrivalDate: chosen.arrivalDate || null, note: chosen.note || '' } : null,
             pageNotes: [],
             inStock: facts.inStock === false ? false : facts.inStock === true ? true : null,
-            isElectronics: /\b(sticker|printer|photo|inkjet|label)\s+paper\b/i.test(`${category} ${title}`)
-                ? false
-                : facts.isElectronics === true || looksElectronic(retailer, category, title),
+            isElectronics,
             variantGroups: cleanVariantGroups(facts.variantGroups),
             readAt: new Date().toISOString(),
             readBy: 'grok',
