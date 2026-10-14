@@ -23,6 +23,14 @@ function activeLines(batch, retailerId) {
     return batch.lines.filter((l) => l.retailer === retailerId && !l.removed && l.state !== 'unavailable');
 }
 
+function money(cents) {
+    return `$${(Number(cents) / 100).toFixed(2)}`;
+}
+
+function overLimitMessage(priceCents, capCents) {
+    return `This item is over the purchase limit (${money(priceCents)} versus ${money(capCents)}).`;
+}
+
 function markUnavailable(line, reason, message) {
     line.state = 'unavailable';
     line.reason = String(reason || 'unavailable').slice(0, 200);
@@ -167,7 +175,7 @@ function applyRead(line, read, cfg) {
     if (p.inStock === false) return markUnavailable(line, 'out_of_stock');
     if (p.isElectronics && !cfg.allowElectronics) return markUnavailable(line, 'electronics_blocked');
     if (p.pagePriceCents && p.pagePriceCents > cfg.perItemCapCents) {
-        return markUnavailable(line, 'over_item_limit', 'This item is over the Purchase Limit.');
+        return markUnavailable(line, 'over_item_limit', overLimitMessage(p.pagePriceCents, cfg.perItemCapCents));
     }
     const open = p.variantGroups.filter((g) => !g.selected || !g.options.includes(g.selected));
     if (open.length) {
@@ -314,7 +322,7 @@ async function applyQuote(batchId, retailerId, input) {
         }
         for (const l of lines) {
             if (l.product.isElectronics && !cfg.allowElectronics) markUnavailable(l, 'electronics_blocked');
-            else if (cleaned.quote.itemPrices[l.id] > cfg.perItemCapCents) markUnavailable(l, 'over_item_limit', 'This item is over the Purchase Limit.');
+            else if (cleaned.quote.itemPrices[l.id] > cfg.perItemCapCents) markUnavailable(l, 'over_item_limit', overLimitMessage(cleaned.quote.itemPrices[l.id], cfg.perItemCapCents));
         }
         const kept = lines.filter((l) => l.state !== 'unavailable');
         if (!kept.length) {

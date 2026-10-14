@@ -155,9 +155,8 @@
       });
       h += '<button type="button" class="wb-btn wb-btn-sm" data-act="variant" data-line="' + esc(l.id) + '">Confirm</button></div>';
     }
-    if (l.state === 'unavailable') {
-      h += '<p class="wb-unavailable">' + esc(l.message || "We can't buy this item right now.") + '</p>';
-    }
+    if (excluded(l)) h += '<p class="wb-unavailable">' + esc(limitMessage(l)) + '</p>';
+    else if (l.state === 'unavailable') h += '<p class="wb-unavailable">' + esc(l.message || "We can't buy this item right now.") + '</p>';
     return h + '</div></div>';
   }
 
@@ -208,29 +207,39 @@
     var h = '<div class="wb-store"><p class="wb-store-name">' + esc(name) + '</p><table class="wb-table"><colgroup>' +
       '<col class="wb-col-item"><col class="wb-col-when"><col class="wb-col-ship"><col class="wb-col-price">' + (edit ? '<col class="wb-col-del">' : '') +
       '</colgroup><thead><tr>' +
-      '<th scope="col">Item</th><th scope="col">Expected delivery*</th><th scope="col">Shipping cost</th><th scope="col">Price</th>' +
+      '<th scope="col">Item</th><th scope="col">Expected delivery*</th><th scope="col" class="wb-money">Shipping cost</th><th scope="col" class="wb-money">Price</th>' +
       (edit ? '<th scope="col"><span class="wb-sr">Delete</span></th>' : '') +
       '</tr></thead><tbody>';
     lines.forEach(function (l) {
       h += '<tr class="wb-tr wb-row-' + esc(l.state) + '">' +
         '<td data-label="Item">' + itemCell(l) + '</td>' +
         '<td data-label="Expected delivery">' + (retailer ? deliveryCell(l) : '—') + '</td>' +
-        '<td data-label="Shipping cost" class="wb-shipcost">' + (retailer ? costCell(l) : '—') + '</td>' +
-        '<td data-label="Price" class="wb-num">' + priceCell(l) + '</td>';
+        '<td data-label="Shipping cost" class="wb-money wb-shipcost">' + (retailer ? costCell(l) : '—') + '</td>' +
+        '<td data-label="Price" class="wb-money">' + priceCell(l) + '</td>';
       if (edit) h += '<td class="wb-del"><button type="button" class="wb-trash" data-act="remove" data-line="' + esc(l.id) + '" aria-label="Delete item" title="Delete item">' + TRASH_SVG + '</button></td>';
       h += '</tr>';
     });
     var tail = edit ? '<td></td>' : '';
     h += '</tbody><tfoot>' +
-      '<tr class="wb-foot"><td>Item prices</td><td></td><td class="wb-num">' + (shipKnown ? usd(shipSum) : '—') + '</td><td class="wb-num">' + usd(itemSum) + '</td>' + tail + '</tr>' +
+      '<tr class="wb-foot"><td>Retailer subtotal</td><td></td><td class="wb-money">' + (shipKnown ? usd(shipSum) : '—') + '</td><td class="wb-money">' + usd(itemSum) + '</td>' + tail + '</tr>' +
       '</tfoot></table></div>';
     return h;
   }
 
+  function excluded(l) {
+    return l.state === 'unavailable' && l.reason === 'over_item_limit';
+  }
+  function limitMessage(l) {
+    var cap = S.batch && S.batch.limits && S.batch.limits.perItemCapCents;
+    var price = l.product && l.product.pagePriceCents;
+    if (price && cap) return 'This item is over the purchase limit (' + usd(price) + ' versus ' + usd(cap) + ').';
+    return l.message || 'This item is over the purchase limit.';
+  }
   function itemTables(lines) {
     var order = [];
     var by = {};
     lines.forEach(function (l) {
+      if (excluded(l)) return;
       var key = l.retailerName ? l.retailer : '_other';
       if (!by[key]) { by[key] = []; order.push(key); }
       by[key].push(l);
@@ -265,6 +274,7 @@
     var b = S.batch;
     var lines = visibleLines();
     var rows = itemTables(lines);
+    var excludedHtml = excludedBlock(lines);
     var ready = readyLines().length;
     var canGo = ready > 0 && !stillWorking() && b.bill;
     var room = lines.length < (S.config ? S.config.maxLinks : 5);
@@ -272,8 +282,10 @@
       '<div class="wb-zip-row"><label class="wb-label" for="wb-zip-edit">Giftee / gift-recipient\'s zip code:</label>' +
       '<input class="wb-input wb-zip" id="wb-zip-edit" inputmode="numeric" maxlength="5" value="' + esc(b.gifteeZip) + '" autocomplete="off"></div>' +
       extLine() +
-      (rows || '<p class="wb-muted">Add a product link to start.</p>') +
-      (rows ? '<p class="wb-asterisk">* Final gift delivery to the giftee may add 1 day.</p>' + endTotals(lines) : '') +
+      (rows || (excludedHtml ? '' : '<p class="wb-muted">Add a product link to start.</p>')) +
+      (rows ? '<p class="wb-asterisk">* Final gift delivery to the giftee may add 1 day.</p>' : '') +
+      excludedHtml +
+      (rows ? endTotals(lines) : '') +
       (room ? '<p class="wb-ask">Paste the product links for gift-wrapping below.</p><div class="wb-add"><input class="wb-input" id="wb-add-link" type="url" placeholder="Paste a product link" aria-label="Product link"><button type="button" class="wb-btn wb-btn-sm" data-act="add-item">Add</button></div>' : '') +
       '</section>';
     if (!b.bill && b.billError && !stillWorking() && ready) h += '<p class="wb-error">' + esc(b.billError) + '</p>';
@@ -296,8 +308,29 @@
     var tax = S.batch.salesTaxPercent != null ? Math.round((itemSum + shipSum) * S.batch.salesTaxPercent / 100) : null;
     var gross = itemSum + shipSum + (tax || 0);
     return '<div class="wb-endtotals">' +
-      '<div class="wb-bill-row"><span>Sales tax</span><span>' + (tax != null ? usd(tax) : '—') + '</span></div>' +
-      '<div class="wb-bill-row wb-bill-total"><span>Gross total</span><span>' + usd(gross) + '</span></div></div>';
+      '<div class="wb-bill-row"><span>Sales tax</span><span class="wb-money">' + (tax != null ? usd(tax) : '—') + '</span></div>' +
+      '<div class="wb-bill-row wb-bill-total"><span>Gross total</span><span class="wb-money">' + usd(gross) + '</span></div></div>';
+  }
+  function excludedBlock(lines) {
+    var rows = lines.filter(excluded);
+    if (!rows.length) return '';
+    var edit = canEdit();
+    var h = '<div class="wb-store wb-excluded"><p class="wb-store-name">Items Excluded</p><table class="wb-table"><colgroup>' +
+      '<col class="wb-col-item"><col class="wb-col-when"><col class="wb-col-ship"><col class="wb-col-price">' + (edit ? '<col class="wb-col-del">' : '') +
+      '</colgroup><thead><tr>' +
+      '<th scope="col">Item</th><th scope="col">Expected delivery*</th><th scope="col" class="wb-money">Shipping cost</th><th scope="col" class="wb-money">Price</th>' +
+      (edit ? '<th scope="col"><span class="wb-sr">Delete</span></th>' : '') +
+      '</tr></thead><tbody>';
+    rows.forEach(function (l) {
+      h += '<tr class="wb-tr wb-row-excluded">' +
+        '<td data-label="Item">' + itemCell(l) + '</td>' +
+        '<td data-label="Expected delivery" class="wb-money">NA</td>' +
+        '<td data-label="Shipping cost" class="wb-money">NA</td>' +
+        '<td data-label="Price" class="wb-money">NA</td>';
+      if (edit) h += '<td class="wb-del"><button type="button" class="wb-trash" data-act="remove" data-line="' + esc(l.id) + '" aria-label="Delete item" title="Delete item">' + TRASH_SVG + '</button></td>';
+      h += '</tr>';
+    });
+    return h + '</tbody></table></div>';
   }
 
   function billBlock(bill, withWrapDetail) {

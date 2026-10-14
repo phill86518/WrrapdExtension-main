@@ -82,6 +82,7 @@ function publicLine(l) {
         retailerName: l.retailerName,
         state: l.removed ? 'removed' : l.state,
         message: l.state === 'unavailable' ? l.message || quotes.UNAVAILABLE : '',
+        reason: l.state === 'unavailable' ? l.reason || '' : '',
         product: p
             ? {
                   title: p.title || '',

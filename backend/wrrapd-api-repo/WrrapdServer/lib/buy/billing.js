@@ -162,7 +162,7 @@ function computeBill(batch, cfg) {
         for (const l of gl) {
             const p = linePriceCents(batch, l);
             if (p == null) return { ok: false, error: 'quote_incomplete', message: 'Prices are still being checked.' };
-            if (p > cfg.perItemCapCents) return { ok: false, error: 'over_item_limit', message: `${l.product.title} is over the Purchase Limit.`, lineId: l.id };
+            if (p > cfg.perItemCapCents) return { ok: false, error: 'over_item_limit', message: `This item is over the purchase limit ($${(p / 100).toFixed(2)} versus $${(cfg.perItemCapCents / 100).toFixed(2)}).`, lineId: l.id };
             merchandiseCents += p;
             items.push({ lineId: l.id, title: l.product.title, variant: l.variantLabel || '', imageUrl: l.product.imageUrl || '', cents: p });
         }

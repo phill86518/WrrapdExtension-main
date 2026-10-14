@@ -25,7 +25,7 @@
   color: var(--wb-ink);
 }
 .wrrapd-buy * { box-sizing: border-box; }
-.wb-wrap { max-width: none; width: 100%; margin: 0; padding: 4px 16px 48px; }
+.wb-wrap { max-width: 980px; width: 100%; margin: 0 auto; padding: 4px 16px 48px; }
 .wb-hero { text-align: center; padding: 0 8px 10px; }
 .wb-hero h1 {
   color: var(--wb-navy);
@@ -110,19 +110,16 @@
 .wb-linkline { color: #5c6578; font-size: 14px; margin: 2px 0 0; overflow-wrap: anywhere; }
 .wb-error { color: #9a3412; font-weight: 650; margin: 12px 0 0; }
 .wb-store { margin: 18px 0 8px; }
-.wb-store-name { margin: 8px 0 4px; font-weight: 650; font-size: 17px; color: var(--wb-navy); letter-spacing: .01em; }
+.wb-store-name { margin: 8px 0 4px; font-weight: 650; font-size: 15px; color: var(--wb-navy); letter-spacing: .01em; }
 .wb-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-body.wrrapd-buy-page #page,
-body.wrrapd-buy-page #content,
-body.wrrapd-buy-page .site-main,
-body.wrrapd-buy-page main.wrrapd-buy { max-width: none !important; width: 100% !important; }
-.wb-col-item { width: 75%; }
-.wb-col-when { width: 11%; }
-.wb-col-ship { width: 7%; }
-.wb-col-price { width: 7%; }
+.wb-col-item { width: 56%; }
+.wb-col-when { width: 18%; }
+.wb-col-ship { width: 14%; }
+.wb-col-price { width: 12%; }
 .wb-col-del { width: 32px; }
-.wb-table th { text-align: left; font-weight: 650; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: #5c6578; padding: 6px 8px; border-bottom: 2px solid var(--wb-line); }
-.wb-table td { padding: 8px; vertical-align: top; border-bottom: 1px solid var(--wb-line); font-size: 15px; }
+.wb-table th { text-align: left; font-weight: 650; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: #5c6578; padding: 6px 8px; border-bottom: 2px solid var(--wb-line); }
+.wb-table td { padding: 6px 8px; vertical-align: top; border-bottom: 1px solid var(--wb-line); font-size: 13px; }
+.wb-money { text-align: right; font-variant-numeric: tabular-nums; }
 .wb-table td.wb-num { white-space: nowrap; }
 .wb-table td.wb-shipcost { white-space: normal; line-height: 1.25; }
 .wb-arrive { display: block; color: #5c6578; font-size: 13px; margin-top: 2px; }
@@ -136,8 +133,8 @@ body.wrrapd-buy-page main.wrrapd-buy { max-width: none !important; width: 100% !
 .wb-item-main { flex: 1; min-width: 0; }
 .wb-shipcell .wb-ship { margin: 0 0 8px; }
 .wb-shipcell small { color: #5c6578; font-size: 13px; }
-.wb-row-title { font-weight: 560; font-size: 15px; line-height: 1.25; margin: 0; overflow-wrap: anywhere; color: var(--wb-navy); }
-.wb-price { font-weight: 650; font-size: 16px; margin: 0; color: var(--wb-navy); }
+.wb-row-title { font-weight: 560; font-size: 13px; line-height: 1.25; margin: 0; overflow-wrap: anywhere; color: var(--wb-navy); }
+.wb-price { font-weight: 650; font-size: 14px; margin: 0; color: var(--wb-navy); }
 .wb-status { margin: 8px 0 0; display: flex; align-items: center; gap: 8px; font-weight: 460; }
 .wb-unavailable { margin: 8px 0 0; color: #9a3412; font-weight: 560; }
 .wb-row-unavailable .wb-row-title { color: #5c6578; }
@@ -157,7 +154,8 @@ button.wb-trash { width: 22px !important; height: 22px !important; min-width: 0 
 .wb-ship, .wb-radio, .wb-check { display: flex; gap: 10px; align-items: flex-start; margin: 8px 0; cursor: pointer; font-weight: 460; }
 .wb-ship input, .wb-radio input, .wb-check input { margin-top: 5px; accent-color: var(--wb-navy); }
 .wb-bill-store { font-weight: 650; margin: 14px 0 4px; color: var(--wb-navy); }
-.wb-endtotals { margin: 8px 0 4px; max-width: 22rem; margin-left: auto; }
+.wb-endtotals { margin: 8px 0 4px; max-width: 18rem; margin-left: auto; }
+.wb-endtotals .wb-money { display: inline-block; min-width: 5.5rem; }
 .wb-bill-row { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; }
 .wb-bill-total { border-top: 2px solid var(--wb-deep); margin-top: 10px; padding-top: 12px; font-weight: 650; font-size: 20px; }
 .wb-ext-line { background: var(--wb-cream); border-radius: 12px; padding: 12px 14px; font-size: 15px; margin: 16px 0 0; }
