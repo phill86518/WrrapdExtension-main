@@ -112,8 +112,9 @@
     }
     return h + '</div>';
   }
-  function buyButton() {
-    return '<button type="button" class="wb-btn" data-act="submit-links"' + (S.busy ? ' disabled' : '') + '>' + (S.busy ? 'Checking…' : 'Buy for me and gift-wrap these items') + '</button>';
+  function buyButton(adding) {
+    var label = S.busy ? 'Checking…' : (adding ? 'Add more items' : 'Buy for me and gift-wrap these items');
+    return '<button type="button" class="wb-btn" data-act="submit-links"' + (S.busy ? ' disabled' : '') + '>' + esc(label) + '</button>';
   }
   function viewStart() {
     var open = S.config && S.config.open;
@@ -234,10 +235,10 @@
     return '—';
   }
   function colgroup(edit) {
-    return '<colgroup><col class="wb-col-item"><col class="wb-col-when"><col class="wb-col-ship"><col class="wb-col-price"><col class="wb-col-wrap"><col class="wb-col-flowers">' + (edit ? '<col class="wb-col-del">' : '') + '</colgroup>';
+    return '<colgroup><col class="wb-col-item"><col class="wb-col-when"><col class="wb-col-price"><col class="wb-col-ship"><col class="wb-col-wrap"><col class="wb-col-flowers">' + (edit ? '<col class="wb-col-del">' : '') + '</colgroup>';
   }
   function headRow(edit) {
-    return '<thead><tr><th scope="col">Item</th><th scope="col" class="wb-money">Expected delivery*</th><th scope="col" class="wb-money">Shipping cost</th><th scope="col" class="wb-money">Price</th><th scope="col" class="wb-money">Gift-wrapping price</th><th scope="col" class="wb-money">Flowers</th>' +
+    return '<thead><tr><th scope="col">Item</th><th scope="col" class="wb-money">Expected delivery*</th><th scope="col" class="wb-money">Item price</th><th scope="col" class="wb-money">Shipping cost</th><th scope="col" class="wb-money">Gift-wrapping cost</th><th scope="col" class="wb-money">Floral cost</th>' +
       (edit ? '<th scope="col"><span class="wb-sr">Delete</span></th>' : '') + '</tr></thead>';
   }
 
@@ -258,16 +259,16 @@
       h += '<tr class="wb-tr wb-row-' + esc(l.state) + '">' +
         '<td data-label="Item">' + itemCell(l) + '</td>' +
         '<td data-label="Expected delivery" class="wb-money">' + (retailer ? deliveryCell(l) : '—') + '</td>' +
+        '<td data-label="Item price" class="wb-money">' + priceCell(l) + '</td>' +
         '<td data-label="Shipping cost" class="wb-money wb-shipcost">' + (retailer ? costCell(l) : '—') + '</td>' +
-        '<td data-label="Price" class="wb-money">' + priceCell(l) + '</td>' +
-        '<td data-label="Gift-wrapping price" class="wb-money">' + wrapCell(l) + '</td>' +
-        '<td data-label="Flowers" class="wb-money">' + flowerCell(l) + '</td>';
+        '<td data-label="Gift-wrapping cost" class="wb-money">' + wrapCell(l) + '</td>' +
+        '<td data-label="Floral cost" class="wb-money">' + flowerCell(l) + '</td>';
       if (edit) h += '<td class="wb-del"><button type="button" class="wb-trash" data-act="remove" data-line="' + esc(l.id) + '" aria-label="Delete item" title="Delete item">' + TRASH_SVG + '</button></td>';
       h += '</tr>';
     });
     var tail = '<td class="wb-money"></td><td class="wb-money"></td>' + (edit ? '<td></td>' : '');
     h += '</tbody><tfoot>' +
-      '<tr class="wb-foot"><td>Retailer subtotal</td><td></td><td class="wb-money">' + (shipKnown ? (shipSum ? usd(shipSum) : 'Free') : '—') + '</td><td class="wb-money">' + usd(itemSum) + '</td>' + tail + '</tr>' +
+      '<tr class="wb-foot"><td>Retailer subtotal</td><td></td><td class="wb-money">' + usd(itemSum) + '</td><td class="wb-money">' + (shipKnown ? (shipSum ? usd(shipSum) : 'Free') : '—') + '</td>' + tail + '</tr>' +
       '</tfoot></table></div>';
     return h;
   }
@@ -334,7 +335,7 @@
       (rows || (excludedHtml ? '' : '<p class="wb-muted">Paste a product link to start.</p>')) +
       (rows ? '<p class="wb-asterisk">* Final gift delivery to the giftee may add 1 day.</p>' + endTotals(lines) : '') +
       excludedHtml +
-      (room ? '<p class="wb-ask">Paste the product links for gift-wrapping below.</p>' + linkFields(maxLinks() - lines.length, draft) + buyButton() : '') +
+      (room ? '<p class="wb-ask">' + (lines.length ? 'Add more items for gift-wrapping' : 'Paste the product links for gift-wrapping below.') + '</p>' + linkFields(maxLinks() - lines.length, draft) + buyButton(lines.length > 0) : '') +
       '</section>';
     if (!b.bill && b.billError && !stillWorking() && readyLines().length) h += '<p class="wb-error">' + esc(b.billError) + '</p>';
     h += limitLine();
@@ -369,10 +370,10 @@
       h += '<tr class="wb-tr wb-row-excluded">' +
         '<td data-label="Item">' + itemCell(l) + '</td>' +
         '<td data-label="Expected delivery" class="wb-money">NA</td>' +
+        '<td data-label="Item price" class="wb-money">NA</td>' +
         '<td data-label="Shipping cost" class="wb-money">NA</td>' +
-        '<td data-label="Price" class="wb-money">NA</td>' +
-        '<td data-label="Gift-wrapping price" class="wb-money">NA</td>' +
-        '<td data-label="Flowers" class="wb-money">NA</td>';
+        '<td data-label="Gift-wrapping cost" class="wb-money">NA</td>' +
+        '<td data-label="Floral cost" class="wb-money">NA</td>';
       if (edit) h += '<td class="wb-del"><button type="button" class="wb-trash" data-act="remove" data-line="' + esc(l.id) + '" aria-label="Delete item" title="Delete item">' + TRASH_SVG + '</button></td>';
       h += '</tr>';
     });
@@ -602,7 +603,7 @@
   function submitLinks() {
     if (!S.id) return create();
     var links = filledLinks();
-    if (!links.length) { S.error = 'Please paste at least one product link.'; render(); return; }
+    if (!links.length) { if (visibleLines().length) return; S.error = 'Please paste at least one product link.'; render(); return; }
     S.busy = true;
     S.draftLinks = links;
     render();

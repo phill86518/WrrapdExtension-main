@@ -98,6 +98,10 @@ function pageOfferQuote(batch, retailerId) {
         const offer = l.product && l.product.pageOffer;
         const opt = offer && offer.shippingOptions && offer.shippingOptions[0];
         if (!offer || !offer.itemPriceCents || !opt || opt.cents == null) return null;
+        if (l.retailer === 'target' && opt.cents === 0) {
+            const merch = lines.reduce((s, row) => s + ((row.product && row.product.pagePriceCents) || 0), 0);
+            if (merch < 3500) return null;
+        }
         itemPrices[l.id] = offer.itemPriceCents;
         ship += opt.cents;
         if (opt.arrivalDate && (!arrival || opt.arrivalDate > arrival)) arrival = opt.arrivalDate;

@@ -73,8 +73,26 @@ function returnDeadline(deliveredAtIso) {
     return deadline.toISOString();
 }
 
-function publicLine(l) {
+function countedItemCents(batch, retailer) {
+    return (batch.lines || [])
+        .filter((l) => l.retailer === retailer && !l.removed && l.state !== 'unavailable')
+        .reduce((sum, l) => sum + ((l.product && l.product.pagePriceCents) || 0), 0);
+}
+
+/** Target's "ships free" line is free on a $35 order. Under that, it is not a $0 charge. */
+function presentShip(batch, l, ship) {
+    if (!ship || l.retailer !== 'target' || ship.cents !== 0) return ship;
+    if (countedItemCents(batch, l.retailer) >= 3500) return ship;
+    return { cents: null, arrivalDate: ship.arrivalDate || null, note: ship.note || 'Free on orders over $35' };
+}
+
+function publicLine(l, batch) {
     const p = l.product || null;
+    const rawShip = p && p.standardShip && (p.standardShip.cents != null || p.standardShip.arrivalDate)
+        ? { cents: p.standardShip.cents, arrivalDate: p.standardShip.arrivalDate || null, note: p.standardShip.note || '' }
+        : (p && p.pageOffer && p.pageOffer.shippingOptions && p.pageOffer.shippingOptions[0]
+            ? { cents: p.pageOffer.shippingOptions[0].cents, arrivalDate: p.pageOffer.shippingOptions[0].arrivalDate || null, note: '' }
+            : null);
     return {
         id: l.id,
         url: l.url,
@@ -89,11 +107,7 @@ function publicLine(l) {
                   imageUrl: p.imageUrl || '',
                   isElectronics: p.isElectronics === true,
                   pagePriceCents: p.pagePriceCents || null,
-                  standardShip: p.standardShip && (p.standardShip.cents != null || p.standardShip.arrivalDate)
-                      ? { cents: p.standardShip.cents, arrivalDate: p.standardShip.arrivalDate || null, note: p.standardShip.note || '' }
-                      : (p.pageOffer && p.pageOffer.shippingOptions && p.pageOffer.shippingOptions[0]
-                          ? { cents: p.pageOffer.shippingOptions[0].cents, arrivalDate: p.pageOffer.shippingOptions[0].arrivalDate || null, note: '' }
-                          : null),
+                  standardShip: presentShip(batch, l, rawShip),
                   variantGroups: l.state === 'needs_variant' ? p.variantGroups || [] : [],
               }
             : null,
@@ -125,7 +139,7 @@ function publicView(batch) {
         status: batch.status,
         gifteeZip: batch.gifteeZip,
         hubCity: batch.hub ? `${batch.hub.city}, ${batch.hub.state}` : '',
-        lines: batch.lines.map(publicLine),
+        lines: batch.lines.map((l) => publicLine(l, batch)),
         groups: Object.values(batch.groups || {}).map((g) => publicGroup(g, batch)),
         termsAccepted: !!(batch.terms && batch.terms.version === terms.VERSION),
         electronicsAccepted: !!(batch.terms && batch.terms.electronicsAccepted),

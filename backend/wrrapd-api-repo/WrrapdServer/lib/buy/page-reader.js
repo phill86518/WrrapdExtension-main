@@ -552,6 +552,9 @@ async function readProduct({ retailer, url, zip, state }) {
                 note: (chosen && chosen.note) || '',
             };
         }
+        if (chosen && chosen.cents === 0 && (pagePriceCents || 0) < 3500 && /\$35\s+orders|orders\s+over\s+\$35|with\s+\$35/i.test(page.html)) {
+            chosen = { ...chosen, cents: null, note: 'Free on orders over $35' };
+        }
     }
     if (!title) return { ok: false, reason: 'no_title', needsPerson: true };
     const pageOffer = pagePriceCents && chosen && chosen.cents != null ? { itemPriceCents: pagePriceCents, shippingOptions: [chosen] } : null;
