@@ -2,6 +2,14 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const retailers = require('../lib/buy/retailers');
 const zenrows = require('../lib/buy/zenrows');
+const reader = require('../lib/buy/page-reader');
+
+test('a page read gives up on our own fetch after 10 seconds', () => {
+    assert.equal(reader.DIRECT_MS, 10000);
+    assert.equal(reader.usablePage({ ok: false, html: 'x'.repeat(30000) }), false);
+    assert.equal(reader.usablePage({ ok: true, html: 'captcha ' + 'x'.repeat(1000) }), false);
+    assert.equal(reader.usablePage({ ok: true, html: 'product '.repeat(4000) }), true);
+});
 
 test('an Ulta shade link stays one product, and a different shade is a different item', () => {
     const a = retailers.parseProductLink('https://www.ulta.com/p/soft-pinch-pimprod2007109?sku=2551199');

@@ -128,8 +128,8 @@
 .wb-store-name { margin: 8px 0 4px; font-weight: 650; font-size: 15px; color: var(--wb-navy); letter-spacing: .01em; }
 .wb-table { width: 100%; border-collapse: collapse; table-layout: fixed; margin: 0; }
 .wb-col-retailer { width: 12%; }
-.wb-col-item { width: 42%; }
-.wb-col-when { width: 7%; }
+.wb-col-item { width: 39%; }
+.wb-col-when { width: 10%; }
 .wb-col-price,
 .wb-col-ship,
 .wb-col-wrap,
@@ -159,7 +159,7 @@
 .wrrapd-buy button.wb-step[disabled] { opacity: .35; cursor: default; }
 .wb-variant { margin: 2px 0 0; color: var(--wb-navy); font-size: 13px; font-weight: 560; }
 .wb-notice { margin: 8px 0; padding: 8px 12px; border: 1px solid var(--wb-gold); border-radius: 8px; background: #fff8e8; color: var(--wb-navy); font-weight: 650; }
-.wb-table th { text-align: center; vertical-align: middle; font-weight: 650; font-size: 13px; letter-spacing: 0; color: var(--wb-navy); padding: 6px 3px; border-bottom: 2px solid var(--wb-line); white-space: normal; overflow-wrap: break-word; line-height: 1.15; }
+.wb-table th { text-align: center; vertical-align: middle; font-weight: 650; font-size: 13px; letter-spacing: 0; color: var(--wb-navy); padding: 6px 3px; border-bottom: 2px solid var(--wb-line); white-space: normal; overflow-wrap: normal; word-break: keep-all; line-height: 1.15; }
 .wb-table td { padding: 6px 8px; vertical-align: top; border-bottom: 1px solid var(--wb-line); font-size: 13px; font-weight: 560; line-height: 1.2; }
 .wb-money { text-align: right; font-variant-numeric: tabular-nums; font-weight: 560; font-size: 13px; }
 .wb-tbd { display: block; width: 100%; text-align: center; }

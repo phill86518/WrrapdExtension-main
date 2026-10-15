@@ -15,7 +15,7 @@ const standardShipping = require('./standard-shipping');
 const lineFacts = require('./line-facts');
 
 const UNAVAILABLE = "We can't buy this item right now.";
-const READ_STUCK_MS = 3 * 60 * 1000;
+const READ_STUCK_MS = 45 * 1000;
 const readingBatches = new Set();
 let alertFn = async () => {};
 
@@ -458,10 +458,8 @@ async function sweep(batchId) {
         }
         for (const l of batch.lines) {
             if (l.state === 'reading' && now - Date.parse(l.readStartedAt || l.addedAt || batch.createdAt) > READ_STUCK_MS) {
-                l.state = 'quoting';
-                l.readFailure = 'read_timeout';
+                markUnavailable(l, 'read_timeout', 'Please paste that link again.');
                 changed = true;
-                kick = true;
             }
         }
         for (const g of Object.values(batch.groups || {})) {

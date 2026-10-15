@@ -15,7 +15,7 @@ async function fetchHtml(url, deps) {
     api.searchParams.set('premium_proxy', 'true');
     const doFetch = (deps && deps.fetch) || fetch;
     const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 70000);
+    const timer = setTimeout(() => ctrl.abort(), 20000);
     try {
         const resp = await doFetch(api, { signal: ctrl.signal });
         if (!resp.ok) return { ok: false, reason: `zenrows_http_${resp.status}` };

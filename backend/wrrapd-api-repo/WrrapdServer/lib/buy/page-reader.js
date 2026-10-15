@@ -26,22 +26,22 @@ function hostAllowed(retailerId, host, extraHosts) {
     return allowed.has(h);
 }
 
-async function fetchPage(retailerId, url, extraHosts) {
-    if (retailerId === 'ulta') {
-        const page = await zenrows.fetchHtml(url);
-        if (!page.ok) return page;
-        try {
-            const host = new URL(page.finalUrl).hostname;
-            if (!hostAllowed(retailerId, host, extraHosts)) return { ok: false, reason: 'redirect_off_site' };
-        } catch (_) {
-            return { ok: false, reason: 'zenrows_failed' };
-        }
-        return page;
-    }
+const DIRECT_MS = 10000;
+
+function usablePage(page) {
+    if (!page || !page.ok || !page.html || page.html.length < 500) return false;
+    if (page.html.length < 20000 && BLOCK_MARKERS.test(page.html)) return false;
+    return true;
+}
+
+async function fetchDirect(retailerId, url, extraHosts) {
+    const started = Date.now();
     let current = url;
     for (let hop = 0; hop < 5; hop++) {
+        const left = DIRECT_MS - (Date.now() - started);
+        if (left < 500) return { ok: false, reason: 'timeout' };
         const ctrl = new AbortController();
-        const timer = setTimeout(() => ctrl.abort(), 15000);
+        const timer = setTimeout(() => ctrl.abort(), left);
         let resp;
         try {
             resp = await fetch(current, {
@@ -53,6 +53,8 @@ async function fetchPage(retailerId, url, extraHosts) {
                     'Accept-Language': 'en-US,en;q=0.9',
                 },
             });
+        } catch (_) {
+            return { ok: false, reason: 'timeout' };
         } finally {
             clearTimeout(timer);
         }
@@ -71,6 +73,24 @@ async function fetchPage(retailerId, url, extraHosts) {
         return { ok: true, html, finalUrl: current };
     }
     return { ok: false, reason: 'too_many_redirects' };
+}
+
+async function fetchViaZenrows(retailerId, url, extraHosts) {
+    const page = await zenrows.fetchHtml(url);
+    if (!page.ok) return page;
+    try {
+        const host = new URL(page.finalUrl).hostname;
+        if (!hostAllowed(retailerId, host, extraHosts)) return { ok: false, reason: 'redirect_off_site' };
+    } catch (_) {
+        return { ok: false, reason: 'zenrows_failed' };
+    }
+    return page;
+}
+
+async function fetchPage(retailerId, url, extraHosts) {
+    const direct = await fetchDirect(retailerId, url, extraHosts);
+    if (usablePage(direct)) return direct;
+    return fetchViaZenrows(retailerId, url, extraHosts);
 }
 
 function decodeEntities(s) {
@@ -907,7 +927,7 @@ async function readProduct({ retailer, url, zip, state, batchId, lineId }) {
             return { ok: false, reason: `fetch_failed: ${e && e.message ? e.message : e}`, needsPerson: true };
         }
     }
-    if (!page.ok) return { ok: false, reason: page.reason, needsPerson: true };
+        if (!page.ok) return { ok: false, reason: page.reason, needsPerson: false };
     if (retailer === 'nordstrom') {
         const parsed = nordstromShell(page.html) ? null : nordstromFromHtml(page.html, url, zip);
         const product = parsed || (page.fromSavedPage ? null : await askGeminiProduct(url, zip));
@@ -1037,6 +1057,6 @@ async function readProduct({ retailer, url, zip, state, batchId, lineId }) {
 }
 
 module.exports = {
-    readProduct, askGrok, looksElectronic, priceAppearsInPage, jsonLdProducts, visibleText, fetchPage, standardFromPage, walmartShip, withDefaultShip, targetFulfillment,
+    readProduct, askGrok, looksElectronic, priceAppearsInPage, jsonLdProducts, visibleText, fetchPage, usablePage, DIRECT_MS, standardFromPage, walmartShip, withDefaultShip, targetFulfillment,
     nordstromShell, nordstromFromHtml, savedPageHtml, EXTERNAL_PAGES_DIR,
 };
