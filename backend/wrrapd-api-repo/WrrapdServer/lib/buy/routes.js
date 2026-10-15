@@ -721,9 +721,11 @@ module.exports = function mountBuyForYou(app, deps) {
             const line = batch.lines.find((l) => l.id === lineId);
             if (!line || line.removed || line.state === 'unavailable' || line.state === 'reading' || !line.product) return { error: 'Please wait while we add that to your gift-wrapping cart.' };
             if (!batch.terms || batch.terms.version !== terms.VERSION) return { error: 'Please agree to the Terms first.' };
-            const occasion = cleanText(w.occasion, 60);
-            if (!extensionConfig.OCCASIONS.includes(occasion)) return { error: 'Please choose an occasion.' };
             const style = billing.WRAP_STYLES.has(w.style) ? w.style : 'wrrapd';
+            const pickedOccasion = cleanText(w.occasion, 60);
+            const occasionOk = extensionConfig.OCCASIONS.includes(pickedOccasion);
+            if (style === 'wrrapd' && !occasionOk) return { error: 'Please choose an occasion.' };
+            const occasion = style === 'wrrapd' ? pickedOccasion : '';
             const out = { occasion, style, giftMessage: cleanText(w.giftMessage, 300), senderName: cleanText(w.senderName, 80), done: true };
             if (style === 'ai') {
                 const p = cleanPath(w.aiDesign && w.aiDesign.filePath);

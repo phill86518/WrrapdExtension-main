@@ -578,7 +578,7 @@
     var w = l.wrap || {};
     var style = w.style || 'wrrapd';
     var custom = S.pricing && S.pricing.customDesign && S.pricing.customDesign.available;
-    var occ = (S.config.occasions || []).map(function (o) { return '<option' + (w.occasion === o ? ' selected' : '') + '>' + esc(o) + '</option>'; }).join('');
+    var occ = (S.config.occasions || []).map(function (o) { return '<option value="' + esc(o) + '"' + (w.occasion === o ? ' selected' : '') + '>' + esc(o) + '</option>'; }).join('');
     var ai = S.ai[l.id] || {};
     var title = l.product && l.product.title ? l.product.title : 'Item';
     var h = '<div class="wb-modal" role="dialog" aria-modal="true" aria-labelledby="wb-wrap-title"><div class="wb-modal-box wb-wrap-modal">' +
@@ -591,11 +591,12 @@
         wrapNav('') + '</div></div>';
       return h;
     }
-    h += '<label class="wb-label" for="wb-occ">Occasion</label><select class="wb-input" id="wb-occ"><option value="">Choose…</option>' + occ + '</select>' +
-      '<p class="wb-label">Wrapping</p>' +
-      radio('wrrapd', 'Wrrapd paper' + (unit('giftWrapBase') ? ' · ' + unit('giftWrapBase') : '')) +
-      (custom ? radio('ai', 'AI design made for this gift' + (unit('customDesignAi') ? ' · +' + unit('customDesignAi') : '')) : '') +
-      (custom ? radio('upload', 'Upload your own design' + (unit('customDesignUpload') ? ' · +' + unit('customDesignUpload') : '')) : '');
+    h += '<p class="wb-label">Wrapping</p>' +
+      '<div class="wb-wrrapd-row">' +
+      radio('wrrapd', 'Allow Wrrapd to choose the wrapping' + (unit('giftWrapBase') ? ' — ' + unit('giftWrapBase') : '')) +
+      '<select class="wb-input wb-occ' + (S.occBad ? ' wb-occ-bad' : '') + '" id="wb-occ" aria-label="Occasion"><option value="">Select Occasion</option>' + occ + '</select></div>' +
+      (custom ? radio('ai', 'Generate a design with AI' + (unit('customDesignAi') ? ' — +' + unit('customDesignAi') : '')) : '') +
+      (custom ? radio('upload', 'Upload your own design' + (unit('customDesignUpload') ? ' — +' + unit('customDesignUpload') : '')) : '');
     if (style === 'ai') {
       h += '<div class="wb-sub">';
       if (ai.loading) h += '<p class="wb-status"><span class="wb-spin"></span>Creating designs… this can take a minute.</p>';
@@ -620,10 +621,10 @@
       else {
         h += '<div class="wb-grid wb-flowers">' + S.flowers.choices.map(function (c) {
           var on = fl && fl.offerId === c.offerId;
-          return '<label class="wb-flower' + (on ? ' wb-flower-on' : '') + '"><img src="' + esc(c.imageUrl) + '" alt="">' +
-            '<input type="radio" name="wb-flower" value="' + esc(c.offerId) + '"' + (on ? ' checked' : '') + ' aria-label="' + esc(c.title) + '">' +
+          return '<button type="button" class="wb-flower' + (on ? ' wb-flower-on' : '') + '" data-act="pick-flower" data-offer="' + esc(c.offerId) + '" aria-pressed="' + (on ? 'true' : 'false') + '">' +
+            '<img src="' + esc(c.imageUrl) + '" alt="">' +
             '<span class="wb-flower-name">' + esc(c.title) + '</span>' +
-            '<span class="wb-flower-price">' + usdNum(c.price) + '</span></label>';
+            '<span class="wb-flower-price">' + usdNum(c.price) + '</span></button>';
         }).join('') + '</div>';
       }
       h += '</div>';
@@ -677,9 +678,8 @@
     $all('input[name="wb-style"]').forEach(function (el) {
       el.addEventListener('change', function () { saveDraft(); currentLine().wrap = Object.assign({}, currentLine().wrap || {}, { style: el.value, done: false }); render(); });
     });
-    $all('input[name="wb-flower"]').forEach(function (el) {
-      el.addEventListener('change', function () { if (el.checked) pickFlower(el.value); });
-    });
+    var occSel = $('#wb-occ');
+    if (occSel) occSel.addEventListener('change', function () { S.occBad = false; saveDraft(); });
     var flw = $('#wb-flowers');
     if (flw) flw.addEventListener('change', function () { saveDraft(); onFlowersToggle(flw.checked); });
     var file = $('#wb-file');
@@ -1015,8 +1015,7 @@
   function genAi() {
     saveDraft();
     var l = currentLine();
-    var occ = (l.wrap && l.wrap.occasion) || '';
-    if (!occ) { S.error = 'Please choose an occasion first.'; render(); return; }
+    var occ = (l.product && l.product.title) || 'gift';
     S.ai[l.id] = { loading: true };
     render();
     fetch(API + '/generate-ideas', {
@@ -1098,14 +1097,22 @@
     var l = currentLine();
     var w = l.wrap || {};
     var style = w.style || 'wrrapd';
-    if (!w.occasion) { S.error = 'Please choose an occasion.'; render(); return; }
+    if (style === 'wrrapd' && !w.occasion) {
+      S.occBad = true;
+      S.error = 'Please choose an occasion.';
+      render();
+      var sel = $('#wb-occ');
+      if (sel) sel.focus();
+      return;
+    }
+    S.occBad = false;
     if (style === 'upload' && !(w.upload && w.upload.filePath)) { S.error = 'Please upload your design.'; render(); return; }
     if (S.flowersOpen && !w.flowers) { S.error = 'Please choose flowers, or uncheck Add flowers.'; render(); return; }
     S.busy = true;
     render();
     var designP = style === 'ai' ? saveAiChoice(l) : Promise.resolve(null);
     designP.then(function (aiDesign) {
-      var payload = { occasion: w.occasion, style: style, giftMessage: w.giftMessage || '', senderName: w.senderName || '' };
+      var payload = { occasion: style === 'wrrapd' ? w.occasion : '', style: style, giftMessage: w.giftMessage || '', senderName: w.senderName || '' };
       if (aiDesign) payload.aiDesign = aiDesign;
       if (style === 'upload') payload.upload = w.upload;
       if (w.flowers) payload.flowers = w.flowers;
