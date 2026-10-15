@@ -176,8 +176,9 @@
       });
       h += '<button type="button" class="wb-btn wb-btn-sm" data-act="variant" data-line="' + esc(l.id) + '">Confirm</button></div>';
     }
-    if (excluded(l)) h += '<p class="wb-unavailable">' + esc(limitMessage(l)) + '</p>';
-    else if (l.state === 'unavailable') h += '<p class="wb-unavailable">' + esc(l.message || "We can't buy this item right now.") + '</p>';
+    var asked = l.manual === 'requested';
+    if (excluded(l) && !asked) h += '<p class="wb-unavailable">' + esc(limitMessage(l)) + '</p>';
+    else if (l.state === 'unavailable' && !asked) h += '<p class="wb-unavailable">' + esc(l.message || "We can't buy this item right now.") + '</p>';
     if (l.state === 'unavailable') h += manualCell(l);
     else if (l.manual === 'in_cart') h += '<p class="wb-manual-note">' + MAIL_SVG + 'Added by Wrrapd</p>';
     return h + '</div></div>';
