@@ -120,6 +120,8 @@ function parseProductLink(raw, allowedIds) {
     }
     const productId = retailer.productId(u);
     if (!productId) return { ok: false, reason: 'not_a_product_page', retailer: retailer.id };
+    const sku = retailer.id === 'ulta' ? String(u.searchParams.get('sku') || '') : '';
+    if (sku && !/^\d{4,12}$/.test(sku)) u.searchParams.delete('sku');
     u.hash = '';
     for (const k of [...u.searchParams.keys()]) {
         if (/^(utm_|ref|tag|linkcode|ascsubtag|clickid|irclickid|cid|psc_|afsrc|wmlspartner|sourceid|campaign)/i.test(k)) {
@@ -132,7 +134,7 @@ function parseProductLink(raw, allowedIds) {
         retailer: retailer.id,
         retailerName: retailer.name,
         productId,
-        canonicalUrl: retailer.canonical(productId),
+        canonicalUrl: retailer.id === 'ulta' && /^\d{4,12}$/.test(sku) ? `${retailer.canonical(productId)}?sku=${sku}` : retailer.canonical(productId),
         url: u.toString(),
     };
 }

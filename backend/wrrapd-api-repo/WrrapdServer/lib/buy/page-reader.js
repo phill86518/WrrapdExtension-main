@@ -8,6 +8,7 @@ const path = require('path');
 const grokClient = require('../grok-client');
 const retailers = require('./retailers');
 const categories = require('./categories');
+const zenrows = require('./zenrows');
 
 const EXTERNAL_PAGES_DIR = path.resolve(__dirname, '..', '..', '..', '..', 'external', 'pages');
 
@@ -26,6 +27,17 @@ function hostAllowed(retailerId, host, extraHosts) {
 }
 
 async function fetchPage(retailerId, url, extraHosts) {
+    if (retailerId === 'ulta') {
+        const page = await zenrows.fetchHtml(url);
+        if (!page.ok) return page;
+        try {
+            const host = new URL(page.finalUrl).hostname;
+            if (!hostAllowed(retailerId, host, extraHosts)) return { ok: false, reason: 'redirect_off_site' };
+        } catch (_) {
+            return { ok: false, reason: 'zenrows_failed' };
+        }
+        return page;
+    }
     let current = url;
     for (let hop = 0; hop < 5; hop++) {
         const ctrl = new AbortController();
@@ -160,6 +172,8 @@ const SYSTEM_PROMPT = [
     'You read a retailer page and return only facts that are in the material. Never guess.',
     'kind is "product" when the page is one item a shopper can buy.',
     'kind is "list" when it is a search, category, or promo of many items.',
+    'A product page may also show related items. kind is still "product" when the URL is one item. Read that item, not a related one.',
+    'When the URL has a sku parameter, that sku is the selected size, shade, or color.',
     'kind is "unknown" when the material does not show which.',
     'productUrl and productId must appear in the material. Use null otherwise.',
     'priceUsd and standardShipping.priceUsd must be numbers printed on the page. Use null when they are not shown.',
@@ -935,7 +949,7 @@ async function readProduct({ retailer, url, zip, state, batchId, lineId }) {
     } else if (retailer !== 'target') {
         return { ok: false, reason: 'grok_not_configured', needsPerson: true };
     }
-    if (facts && facts.kind === 'list') {
+    if (facts && facts.kind === 'list' && !retailers.parseProductLink(url).ok) {
         return { ok: false, reason: 'product_list', needsPerson: false };
     }
     facts = facts && typeof facts === 'object' ? facts : {};
