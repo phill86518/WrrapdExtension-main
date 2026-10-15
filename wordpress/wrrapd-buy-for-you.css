@@ -137,29 +137,28 @@
 .wb-col-flowers { width: 6%; }
 .wb-col-qty { width: 5%; }
 .wb-col-del { width: 32px; }
-.wb-qty {
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
-  height: 1.15em;
-  margin: 0 auto;
-  display: block;
-  text-align: center;
-  font: inherit;
-  font-size: 12px;
-  font-weight: 560;
-  line-height: 1.15;
-  padding: 0;
-  border: 1px solid #e4d5c4;
-  border-radius: 4px;
-  color: var(--wb-navy);
-  background: #fff;
-  box-sizing: border-box;
-  -moz-appearance: textfield;
-  appearance: textfield;
+.wb-stepper { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.wb-qty-n { font-size: 13px; font-weight: 650; line-height: 1; color: var(--wb-navy); }
+.wrrapd-buy button.wb-step {
+  width: 16px !important;
+  height: 14px !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 1px solid #e4d5c4 !important;
+  border-radius: 3px !important;
+  background: #fff !important;
+  color: #0f0351 !important;
+  font-size: 11px !important;
+  font-weight: 650 !important;
+  line-height: 12px !important;
+  box-shadow: none !important;
+  cursor: pointer;
 }
-.wb-qty::-webkit-outer-spin-button,
-.wb-qty::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.wrrapd-buy button.wb-step[disabled] { opacity: .35; cursor: default; }
+.wb-variant { margin: 2px 0 0; color: var(--wb-navy); font-size: 13px; font-weight: 560; }
+.wb-notice { margin: 8px 0; padding: 8px 12px; border: 1px solid var(--wb-gold); border-radius: 8px; background: #fff8e8; color: var(--wb-navy); font-weight: 650; }
 .wb-table th { text-align: center; vertical-align: middle; font-weight: 650; font-size: 13px; letter-spacing: 0; color: var(--wb-navy); padding: 6px 3px; border-bottom: 2px solid var(--wb-line); white-space: normal; overflow-wrap: break-word; line-height: 1.15; }
 .wb-table td { padding: 6px 8px; vertical-align: top; border-bottom: 1px solid var(--wb-line); font-size: 13px; font-weight: 560; line-height: 1.2; }
 .wb-money { text-align: right; font-variant-numeric: tabular-nums; font-weight: 560; font-size: 13px; }

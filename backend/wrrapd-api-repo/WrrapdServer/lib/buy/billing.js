@@ -10,6 +10,7 @@ const flowerCatalog = require('../flowers/catalog');
 const printerCoverage = require('../printer-coverage');
 const salesTax = require('../sales-tax-zip');
 const standardShipping = require('./standard-shipping');
+const lineFacts = require('./line-facts');
 
 const WRAP_STYLES = new Set(['wrrapd', 'ai', 'upload']);
 
@@ -38,9 +39,7 @@ function linePriceCents(batch, line) {
 }
 
 function lineQty(line) {
-    const n = Math.round(Number(line && line.qty));
-    if (!Number.isInteger(n) || n < 1) return 1;
-    return Math.min(5, n);
+    return lineFacts.clampQty(line && line.qty);
 }
 
 function wrapOptionFor(line) {

@@ -23,6 +23,7 @@
     wrapIndex: 0,
     pollTimer: null,
     error: '',
+    notice: '',
     busy: false,
     draftLinks: null,
     flowers: null,
@@ -160,14 +161,16 @@
         ? '<p class="wb-row-title"><a href="' + esc(l.url) + '" target="_blank" rel="noopener">' + name + '</a></p>'
         : '<p class="wb-row-title">' + name + '</p>';
     } else if (l.url) h += '<p class="wb-linkline"><a href="' + esc(l.url) + '" target="_blank" rel="noopener">' + esc(shortUrl(l.url)) + '</a></p>';
-    if (l.variantLabel && !/^\s*size:\s*\d+(\.\d+)?\s*"?\s*x\s*\d+/i.test(l.variantLabel)) h += '<p class="wb-muted">' + esc(l.variantLabel) + '</p>';
+    var variant = variantText(l.variantLabel);
+    if (variant) h += '<p class="wb-variant">' + esc(variant) + '</p>';
     if (l.product && l.product.isElectronics) h += '<p class="wb-muted">Electronics</p>';
     if (l.state === 'reading') h += '<p class="wb-status"><span class="wb-spin"></span>' + WAIT_ADD + '</p>';
     if (l.state === 'needs_variant') {
       h += '<div class="wb-variants">';
       (l.product.variantGroups || []).forEach(function (vg) {
+        var picked = S.variantDraft[l.id + '|' + vg.name] || (vg.options.indexOf(vg.selected) >= 0 ? vg.selected : '');
         h += '<label class="wb-label">' + esc(vg.name) + '</label><select class="wb-input" data-variant="' + esc(l.id) + '" data-group="' + esc(vg.name) + '"><option value="">Choose…</option>' +
-          vg.options.map(function (o) { return '<option' + (S.variantDraft[l.id + '|' + vg.name] === o ? ' selected' : '') + '>' + esc(o) + '</option>'; }).join('') + '</select>';
+          vg.options.map(function (o) { return '<option' + (picked === o ? ' selected' : '') + '>' + esc(o) + '</option>'; }).join('') + '</select>';
       });
       h += '<button type="button" class="wb-btn wb-btn-sm" data-act="variant" data-line="' + esc(l.id) + '">Confirm</button></div>';
     }
@@ -363,9 +366,21 @@
     if (l.state !== 'unavailable' && l.product && l.product.pagePriceCents) return l.product.pagePriceCents;
     return null;
   }
+  function maxQty() {
+    return (S.config && S.config.maxQty) || 10;
+  }
+  function variantText(label) {
+    if (!label || /^\s*size:\s*\d+(\.\d+)?\s*"?\s*x\s*\d+/i.test(label)) return '';
+    if (/^choose a /i.test(label)) return '';
+    return String(label).split(',').map(function (p) {
+      p = p.trim();
+      var m = p.match(/^[^:]{1,24}:\s*(.+)$/);
+      return (m ? m[1] : p).trim();
+    }).filter(Boolean).join(', ');
+  }
   function qtyOf(l) {
     var n = Math.round(Number(l && l.qty));
-    return n >= 1 && n <= 5 ? n : 1;
+    return n >= 1 && n <= maxQty() ? n : 1;
   }
   function lineTotalCents(l) {
     var c = knownCents(l);
@@ -374,7 +389,10 @@
   function qtyCell(l) {
     if (l.state === 'reading') return '—';
     if (!canEdit() || l.state === 'unavailable') return String(qtyOf(l));
-    return '<input class="wb-qty" type="number" min="1" max="5" step="1" size="1" inputmode="numeric" aria-label="Quantity" data-line="' + esc(l.id) + '" value="' + qtyOf(l) + '">';
+    var n = qtyOf(l);
+    return '<div class="wb-stepper"><span class="wb-qty-n">' + n + '</span>' +
+      '<button type="button" class="wb-step" data-act="qty-up" data-line="' + esc(l.id) + '" aria-label="Increase quantity"' + (n >= maxQty() ? ' disabled' : '') + '>+</button>' +
+      '<button type="button" class="wb-step" data-act="qty-down" data-line="' + esc(l.id) + '" aria-label="Decrease quantity"' + (n <= 1 ? ' disabled' : '') + '>−</button></div>';
   }
   function totalCell(l) {
     if (l.state === 'reading') return '—';
@@ -400,6 +418,7 @@
       '<div class="wb-cart-head"><div class="wb-zip-row"><label class="wb-label" for="wb-zip-edit">Giftee / gift-recipient\'s zip code:</label>' +
       '<input class="wb-input wb-zip" id="wb-zip-edit" inputmode="numeric" maxlength="5" value="' + esc(b.gifteeZip) + '" autocomplete="off"></div>' +
       extLine() + '</div>' +
+      (S.notice ? '<p class="wb-notice">' + esc(S.notice) + '</p>' : '') +
       (rows || (excludedHtml ? '' : '<p class="wb-muted">Paste a product link to start.</p>')) +
       (rows ? '<p class="wb-asterisk">* Final gift delivery to the giftee may add 1 day.</p><p class="wb-ship-note">Shipping prices do not reflect any club membership or other discounts.</p>' : '') +
       excludedHtml +
@@ -598,9 +617,6 @@
   });
 
   function bind() {
-    $all('.wb-qty').forEach(function (el) {
-      el.addEventListener('change', function () { setQty(el.getAttribute('data-line'), el.value); });
-    });
     var zipEdit = $('#wb-zip-edit');
     if (zipEdit) zipEdit.addEventListener('change', onZip);
     $all('[data-ship]').forEach(function (el) { el.addEventListener('change', onShip); });
@@ -670,6 +686,12 @@
     var el = e.currentTarget;
     var act = el.getAttribute('data-act');
     S.error = '';
+    if (act === 'qty-up' || act === 'qty-down') {
+      var id = el.getAttribute('data-line');
+      var row = S.batch && S.batch.lines.filter(function (x) { return x.id === id; })[0];
+      if (!row) return;
+      return setQty(id, qtyOf(row) + (act === 'qty-up' ? 1 : -1));
+    }
     if (act === 'submit-links') return submitLinks();
     if (act === 'remove') return removeLine(el.getAttribute('data-line'));
     if (act === 'variant') return submitVariant(el.getAttribute('data-line'));
@@ -710,6 +732,7 @@
       S.busy = false;
       S.draftLinks = null;
       S.batch = j.batch;
+      S.notice = j.notice || '';
       render();
       poll();
     }).catch(function (err) {
@@ -741,6 +764,7 @@
       S.id = j.id;
       S.token = j.token;
       S.batch = j.batch;
+      S.notice = j.notice || '';
       S.view = 'items';
       setUrl();
       loadPricing();
@@ -805,7 +829,7 @@
 
   function setQty(lineId, raw) {
     var n = Math.round(Number(raw));
-    if (!(n >= 1 && n <= 5)) { render(); return; }
+    if (!(n >= 1 && n <= maxQty())) { render(); return; }
     var l = S.batch.lines.filter(function (x) { return x.id === lineId; })[0];
     if (!l || qtyOf(l) === n) return;
     l.qty = n;
@@ -825,6 +849,7 @@
   function change(path, body) {
     return request('/api/buy/batches/' + encodeURIComponent(S.id) + path, body).then(function (j) {
       S.batch = j.batch;
+      S.notice = j.notice || '';
       render();
       poll();
       return j;
@@ -843,7 +868,9 @@
   function submitVariant(lineId) {
     var choices = {};
     var l = S.batch.lines.filter(function (x) { return x.id === lineId; })[0];
-    (l.product.variantGroups || []).forEach(function (vg) { choices[vg.name] = S.variantDraft[lineId + '|' + vg.name] || ''; });
+    $all('select[data-variant]').forEach(function (el) {
+      if (el.getAttribute('data-variant') === lineId) choices[el.getAttribute('data-group')] = el.value;
+    });
     change('/variant', { lineId: lineId, choices: choices }).catch(function () {});
   }
 

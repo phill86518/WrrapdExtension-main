@@ -95,6 +95,7 @@ function publicConfig(previewCode) {
         open: openFor(previewCode),
         mode: c.mode === 'live' ? 'live' : c.mode === 'test' ? 'test' : 'off',
         maxLinks: c.maxLinks,
+        maxQty: 10,
         merchandiseCapCents: c.merchandiseCapCents,
         perItemCapCents: c.perItemCapCents,
         returnWindowDays: RETURN_WINDOW_DAYS,

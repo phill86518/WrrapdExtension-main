@@ -18,6 +18,7 @@ const emails = require('./emails');
 const flowerCatalog = require('../flowers/catalog');
 const extensionConfig = require('../extension-config');
 const { rateLimit } = require('../rate-limit');
+const lineFacts = require('./line-facts');
 
 const INGEST_TAG = 'ingest-v2026-10-13-buy-for-you';
 const BATCH_TTL_MS = 24 * 60 * 60 * 1000;
@@ -74,9 +75,7 @@ function returnDeadline(deliveredAtIso) {
 }
 
 function lineQty(l) {
-    const n = Math.round(Number(l && l.qty));
-    if (!Number.isInteger(n) || n < 1) return 1;
-    return Math.min(5, n);
+    return lineFacts.clampQty(l && l.qty);
 }
 
 function countedItemCents(batch, retailer) {
@@ -292,28 +291,36 @@ module.exports = function mountBuyForYou(app, deps) {
         const raw = (Array.isArray(body.links) ? body.links : []).map((s) => String(s || '').trim()).filter(Boolean);
         if (!raw.length) return res.status(400).json({ error: 'Please paste at least one product link.' });
         if (raw.length > cfg.maxLinks) return res.status(400).json({ error: `Please paste up to ${cfg.maxLinks} links.` });
-        const seen = new Set();
         const now = new Date().toISOString();
         const opened = await Promise.all(raw.map((text) => resolveLink.resolveLink(text, cfg.allowedRetailers)));
-        const lines = opened.map((parsed, i) => {
+        const byUrl = new Map();
+        const notices = [];
+        const lines = [];
+        opened.forEach((parsed, i) => {
             const text = raw[i];
             const named = retailers.byId(parsed.retailer);
-            const base = { id: `L${i + 1}`, addedAt: now, url: text.slice(0, 2000), qty: 1, wrap: null };
+            const base = { id: `L${lines.length + 1}`, addedAt: now, url: text.slice(0, 2000), qty: 1, wrap: null };
             if (!parsed.ok) {
-                return {
+                lines.push({
                     ...base,
                     retailer: parsed.retailer || 'none',
                     retailerName: named ? named.name : '',
                     state: 'unavailable',
                     reason: parsed.reason,
                     message: REASON_TEXT[parsed.reason] || quotes.UNAVAILABLE,
-                };
+                });
+                return;
             }
-            if (seen.has(parsed.canonicalUrl)) {
-                return { ...base, retailer: parsed.retailer, retailerName: parsed.retailerName, state: 'unavailable', reason: 'duplicate', message: REASON_TEXT.duplicate };
+            const existing = byUrl.get(parsed.canonicalUrl);
+            if (existing) {
+                const bumped = lineFacts.bumpQty(existing.qty, 1);
+                existing.qty = bumped.qty;
+                notices.push(bumped.notice);
+                return;
             }
-            seen.add(parsed.canonicalUrl);
-            return { ...base, url: parsed.url, canonicalUrl: parsed.canonicalUrl, productId: parsed.productId, retailer: parsed.retailer, retailerName: parsed.retailerName, state: 'reading' };
+            const line = { ...base, url: parsed.url, canonicalUrl: parsed.canonicalUrl, productId: parsed.productId, retailer: parsed.retailer, retailerName: parsed.retailerName, state: 'reading' };
+            byUrl.set(parsed.canonicalUrl, line);
+            lines.push(line);
         });
         const batch = store.create({
             status: 'open',
@@ -335,7 +342,7 @@ module.exports = function mountBuyForYou(app, deps) {
             return b;
         });
         quotes.processBatch(batch.id).catch((e) => console.error('[buy] processBatch', e && e.message));
-        res.status(201).json({ ok: true, id: batch.id, token: batch.token, batch: publicView(store.read(batch.id)) });
+        res.status(201).json({ ok: true, id: batch.id, token: batch.token, notice: lineFacts.noticeFor(notices), batch: publicView(store.read(batch.id)) });
     });
 
     app.get('/api/buy/batches/:id', async (req, res) => {
@@ -359,7 +366,7 @@ module.exports = function mountBuyForYou(app, deps) {
         try {
             const out = await handler(req, batch);
             if (out && out.error) return res.status(out.status || 400).json({ error: out.error });
-            res.json({ ok: true, batch: publicView(store.read(batch.id)) });
+            res.json({ ok: true, notice: (out && out.notice) || '', batch: publicView(store.read(batch.id)) });
         } catch (e) {
             console.error('[buy] shopper change', e);
             res.status(500).json({ error: 'Something went wrong. Please try again.' });
@@ -385,7 +392,7 @@ module.exports = function mountBuyForYou(app, deps) {
                         err = `Please choose a ${g.name.toLowerCase()}.`;
                         return null;
                     }
-                    picked.push(`${g.name}: ${v}`);
+                    picked.push(v);
                 }
                 l.variantLabel = picked.join(', ');
                 l.state = 'quoting';
@@ -404,7 +411,7 @@ module.exports = function mountBuyForYou(app, deps) {
         shopperChange(async (req, batch) => {
             const lineId = String(req.body.lineId || '');
             const qty = Math.round(Number(req.body.qty));
-            if (!Number.isInteger(qty) || qty < 1 || qty > 5) return { error: 'Please enter a quantity from 1 to 5.' };
+            if (!Number.isInteger(qty) || qty < 1 || qty > lineFacts.MAX_QTY) return { error: 'Please enter a quantity from 1 to 10.' };
             let err = null;
             await store.update(batch.id, (b) => {
                 const l = b.lines.find((x) => x.id === lineId);
@@ -493,8 +500,8 @@ module.exports = function mountBuyForYou(app, deps) {
             if (openCount + extra > cfg.maxLinks) return { error: `Please paste up to ${cfg.maxLinks} links.` };
             let added = 0;
             let revived = 0;
+            const notices = [];
             await store.update(batch.id, (b) => {
-                const seen = new Set(b.lines.filter((l) => !l.removed && l.canonicalUrl).map((l) => l.canonicalUrl));
                 const now = new Date().toISOString();
                 opened.forEach((parsed, i) => {
                     const text = raw[i];
@@ -516,24 +523,28 @@ module.exports = function mountBuyForYou(app, deps) {
                     const existing = b.lines.find((l) => !l.removed && l.canonicalUrl === parsed.canonicalUrl);
                     if (existing) {
                         const failed = existing.state === 'unavailable' || !existing.product;
-                        if (!failed) return;
-                        existing.state = 'reading';
-                        existing.reason = '';
-                        existing.message = '';
-                        existing.readFailure = '';
-                        existing.product = null;
-                        existing.variantLabel = '';
-                        existing.url = parsed.url;
-                        existing.readStartedAt = now;
-                        existing.readTries = (existing.readTries || 0) + 1;
-                        for (const other of b.lines) {
-                            if (!other.removed && other.reason === 'duplicate' && parsed.productId && String(other.url || '').includes(parsed.productId)) other.removed = true;
+                        if (failed) {
+                            existing.state = 'reading';
+                            existing.reason = '';
+                            existing.message = '';
+                            existing.readFailure = '';
+                            existing.product = null;
+                            existing.variantLabel = '';
+                            existing.url = parsed.url;
+                            existing.readStartedAt = now;
+                            existing.readTries = (existing.readTries || 0) + 1;
+                            for (const other of b.lines) {
+                                if (!other.removed && other.reason === 'duplicate' && parsed.productId && String(other.url || '').includes(parsed.productId)) other.removed = true;
+                            }
+                            quotes.ensureGroup(b, parsed.retailer).state = 'waiting';
+                            revived += 1;
+                            return;
                         }
-                        quotes.ensureGroup(b, parsed.retailer).state = 'waiting';
-                        revived += 1;
+                        const bumped = lineFacts.bumpQty(existing.qty, 1);
+                        existing.qty = bumped.qty;
+                        notices.push(bumped.notice);
                         return;
                     }
-                    seen.add(parsed.canonicalUrl);
                     b.lines.push({
                         ...base,
                         url: parsed.url,
@@ -547,13 +558,13 @@ module.exports = function mountBuyForYou(app, deps) {
                     quotes.ensureGroup(b, parsed.retailer).state = 'waiting';
                     added += 1;
                 });
-                if (!added && !revived) return null;
-                store.addLog(b, 'shopper', revived && !added ? `Read ${revived} link(s) again` : `Added ${raw.length} link(s)`);
+                if (!added && !revived && !notices.length) return null;
+                store.addLog(b, 'shopper', notices.length && !added && !revived ? `Increased quantity for a repeated link` : revived && !added ? `Read ${revived} link(s) again` : `Added ${raw.length} link(s)`);
                 return b;
             });
-            if (!added && !revived) return { error: 'This item is already on your list.' };
-            quotes.processBatch(batch.id).catch((e) => console.error('[buy] processBatch', e && e.message));
-            return null;
+            if (!added && !revived && !notices.length) return { error: 'This item is already on your list.' };
+            if (added || revived) quotes.processBatch(batch.id).catch((e) => console.error('[buy] processBatch', e && e.message));
+            return notices.length ? { notice: lineFacts.noticeFor(notices) } : null;
         }),
     );
 

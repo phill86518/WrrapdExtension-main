@@ -12,6 +12,7 @@ const runner = require('./runner');
 const billing = require('./billing');
 const salesTax = require('../sales-tax-zip');
 const standardShipping = require('./standard-shipping');
+const lineFacts = require('./line-facts');
 
 const UNAVAILABLE = "We can't buy this item right now.";
 const READ_STUCK_MS = 3 * 60 * 1000;
@@ -91,8 +92,7 @@ function salesTaxPercent(batch) {
 }
 
 function lineQty(line) {
-    const n = Math.round(Number(line && line.qty));
-    return n >= 1 && n <= 5 ? n : 1;
+    return lineFacts.clampQty(line && line.qty);
 }
 
 /** One standard shipping charge for the retailer order, to the hub. Tax is the hub ZIP rate. */
@@ -196,8 +196,8 @@ function applyRead(line, read, cfg) {
         return markUnavailable(line, 'ship_zip', p.choicePrompt);
     }
     const open = (p.variantGroups || []).filter((g) => !g.selected || !g.options.includes(g.selected));
+    line.variantLabel = lineFacts.variantPhrase(p.variantGroups);
     if (!p.pagePriceCents) {
-        line.variantLabel = p.choicePrompt || 'Choose a size and color on the product page, then add the link again.';
         line.state = open.length ? 'needs_variant' : 'quoting';
         return;
     }
@@ -205,7 +205,6 @@ function applyRead(line, read, cfg) {
         line.state = 'needs_variant';
         return;
     }
-    line.variantLabel = p.variantGroups.map((g) => `${g.name}: ${g.selected}`).join(', ');
     line.state = 'quoting';
 }
 
