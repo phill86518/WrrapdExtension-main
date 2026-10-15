@@ -41,7 +41,8 @@ test('walmart uses the $6.99 cart default when the page has no shipping price', 
     assert.equal(reader.withDefaultShip('walmart', { cents: null, arrivalDate: '2026-10-16' }).cents, 699);
     assert.equal(reader.withDefaultShip('walmart', null).cents, 699);
     assert.equal(reader.withDefaultShip('walmart', { cents: 0, arrivalDate: '2026-10-16' }).cents, 0);
-    assert.equal(reader.withDefaultShip('target', { cents: null, arrivalDate: '2026-10-16' }).cents, null);
+    assert.equal(reader.withDefaultShip('target', { cents: null, arrivalDate: '2026-10-16' }, 269).cents, 599);
+    assert.equal(reader.withDefaultShip('amazon', { cents: null }, 1000).cents, null);
 });
 
 test('arrives tomorrow is a delivery date', () => {

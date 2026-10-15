@@ -11,6 +11,7 @@ const suppliedProduct = require('./supplied-product');
 const runner = require('./runner');
 const billing = require('./billing');
 const salesTax = require('../sales-tax-zip');
+const standardShipping = require('./standard-shipping');
 
 const UNAVAILABLE = "We can't buy this item right now.";
 const READ_STUCK_MS = 3 * 60 * 1000;
@@ -89,26 +90,33 @@ function salesTaxPercent(batch) {
     return percent == null ? 7.5 : percent;
 }
 
-/** One regular shipping price per item, read off the product page. Tax is the hub ZIP rate. */
+function lineQty(line) {
+    const n = Math.round(Number(line && line.qty));
+    return n >= 1 && n <= 5 ? n : 1;
+}
+
+/** One standard shipping charge for the retailer order, to the hub. Tax is the hub ZIP rate. */
 function pageOfferQuote(batch, retailerId) {
     const lines = activeLines(batch, retailerId);
     if (!lines.length || lines.some((l) => l.state === 'reading' || l.state === 'needs_variant')) return null;
     const itemPrices = {};
-    let ship = 0;
+    let merch = 0;
     let arrival = null;
+    let pageCents = null;
     for (const l of lines) {
-        const offer = l.product && l.product.pageOffer;
-        const opt = offer && offer.shippingOptions && offer.shippingOptions[0];
-        if (!offer || !offer.itemPriceCents || !opt || opt.cents == null) return null;
-        if (l.retailer === 'target' && opt.cents === 0) {
-            const merch = lines.reduce((s, row) => s + ((row.product && row.product.pagePriceCents) || 0), 0);
-            if (merch < 3500) return null;
-        }
-        itemPrices[l.id] = offer.itemPriceCents;
-        ship += opt.cents;
-        if (opt.arrivalDate && (!arrival || opt.arrivalDate > arrival)) arrival = opt.arrivalDate;
+        const unit = l.product && l.product.pagePriceCents;
+        if (!unit) return null;
+        itemPrices[l.id] = unit;
+        merch += unit * lineQty(l);
+        const ship = l.product.standardShip;
+        const offer = l.product.pageOffer && l.product.pageOffer.shippingOptions && l.product.pageOffer.shippingOptions[0];
+        const cents = ship && ship.cents != null ? ship.cents : offer && offer.cents != null ? offer.cents : null;
+        if (cents != null && cents > 0) pageCents = pageCents == null ? cents : Math.max(pageCents, cents);
+        const date = (ship && ship.arrivalDate) || (offer && offer.arrivalDate) || null;
+        if (date && (!arrival || date > arrival)) arrival = date;
     }
-    const merch = Object.values(itemPrices).reduce((s, c) => s + c, 0);
+    const ship = standardShipping.groupShipCents(retailerId, merch, pageCents);
+    if (ship == null) return null;
     return {
         itemPrices,
         shippingOptions: [{ label: 'Standard shipping', cents: ship, arrivalDate: arrival }],

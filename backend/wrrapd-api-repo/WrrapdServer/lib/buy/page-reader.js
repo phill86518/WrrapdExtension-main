@@ -368,18 +368,10 @@ function cleanShipping(html, options) {
         .filter(Boolean);
 }
 
-/** Cart shipping when the product page does not print a price. Walmart's standard fee is $6.99. */
-const DEFAULT_SHIP_CENTS = { walmart: 699 };
+const standardShipping = require('./standard-shipping');
 
-function withDefaultShip(retailer, chosen) {
-    const fallback = DEFAULT_SHIP_CENTS[retailer];
-    if (fallback == null || (chosen && chosen.cents != null)) return chosen;
-    return {
-        label: 'Standard shipping',
-        cents: fallback,
-        arrivalDate: (chosen && chosen.arrivalDate) || null,
-        note: (chosen && chosen.note) || '',
-    };
+function withDefaultShip(retailer, chosen, merchandiseCents) {
+    return standardShipping.fillMissing(retailer, chosen, merchandiseCents);
 }
 
 const TARGET_KEY = 'ff457966e64d5e877fdbad070f276d18ecec4a01';
@@ -1003,7 +995,7 @@ async function readProduct({ retailer, url, zip, state, batchId, lineId }) {
             choicePrompt = wship.choicePrompt || '';
         }
     }
-    if (!choicePrompt) chosen = withDefaultShip(retailer, chosen);
+    if (!choicePrompt) chosen = withDefaultShip(retailer, chosen, pagePriceCents || 0);
     if (!title) return { ok: false, reason: 'no_title', needsPerson: true };
     const pageOffer = pagePriceCents && chosen && chosen.cents != null ? { itemPriceCents: pagePriceCents, shippingOptions: [chosen] } : null;
     const amazonCategory = await categories.categorize({ retailer, retailerName: r.name, html: page.html, title, brand, category });

@@ -201,11 +201,45 @@
     return '—';
   }
 
-  function costCell(l) {
-    var s = shipOf(l);
-    if (!s) return '—';
-    if (s.cents == null) return s.note ? esc(s.note) : '—';
-    return s.cents ? usd(s.cents) : 'Free';
+  // Standard U.S. ship-to-home. Same numbers as lib/buy/standard-shipping.js. No club rates.
+  var SHIP_FEE = { nordstrom: 0, kohls: 895, walmart: 699, target: 599, sephora: 695, ulta: 695 };
+  var SHIP_FREE = { nordstrom: 0, kohls: 4900, walmart: 3500, target: 3500, amazon: 3500, sephora: 5000, ulta: 3500, bestbuy: 3500 };
+  function scheduleFee(retailer, merch) {
+    if (retailer === 'lego') {
+      if (merch <= 2500) return 495;
+      if (merch <= 3499) return 695;
+      return 0;
+    }
+    if (SHIP_FREE[retailer] != null && merch >= SHIP_FREE[retailer]) return 0;
+    return SHIP_FEE[retailer] != null ? SHIP_FEE[retailer] : null;
+  }
+  function groupShipCents(lines) {
+    if (!lines.length) return null;
+    var merch = 0;
+    var any = false;
+    var pageFee = null;
+    lines.forEach(function (l) {
+      var c = knownCents(l);
+      if (c != null) { merch += c * qtyOf(l); any = true; }
+      var s = shipOf(l);
+      if (s && s.cents > 0) pageFee = pageFee == null ? s.cents : Math.max(pageFee, s.cents);
+    });
+    if (!any) return null;
+    var scheduled = scheduleFee(lines[0].retailer, merch);
+    if (scheduled === 0) return 0;
+    if (pageFee != null) return pageFee;
+    return scheduled;
+  }
+  function costCell(l, lines, index) {
+    var cents = groupShipCents(lines || [l]);
+    if (cents == null) {
+      var s = shipOf(l);
+      if (s && s.note) return esc(s.note);
+      return '—';
+    }
+    if (cents === 0) return 'Free';
+    if (index > 0) return '—';
+    return usd(cents);
   }
 
   function wrapTargets() {
@@ -270,12 +304,12 @@
     return '<span class="wb-rname">' + esc(g.name) + '</span>' +
       '<span class="wb-rsub">Items ' + (anyPrice ? usd(itemSum) : '—') + '</span>';
   }
-  function lineCells(l, edit, retailer) {
+  function lineCells(l, edit, retailer, gLines, gIndex) {
     var h = '<td data-label="Item">' + itemCell(l) + '</td>' +
       '<td data-label="Estimated delivery" class="wb-money">' + (retailer ? deliveryCell(l) : '—') + '</td>' +
       '<td data-label="Unit price" class="wb-money">' + priceCell(l) + '</td>' +
       '<td data-label="Qty" class="wb-qtycell">' + qtyCell(l) + '</td>' +
-      '<td data-label="Shipping cost" class="wb-money wb-shipcost">' + (retailer ? costCell(l) : '—') + '</td>' +
+      '<td data-label="Shipping cost" class="wb-money wb-shipcost">' + (retailer ? costCell(l, gLines, gIndex) : '—') + '</td>' +
       '<td data-label="Gift-wrapping cost" class="wb-money">' + wrapCell(l) + '</td>' +
       '<td data-label="Floral cost" class="wb-money">' + flowerCell(l) + '</td>' +
       '<td data-label="Item total" class="wb-money">' + totalCell(l) + '</td>';
@@ -291,7 +325,7 @@
       g.lines.forEach(function (l, i) {
         h += '<tr class="wb-tr wb-row-' + esc(l.state) + (i === 0 ? ' wb-group-start' : '') + '">';
         if (i === 0) h += '<td class="wb-retailer" rowspan="' + g.lines.length + '" data-label="Retailer">' + retailerSummary(g) + '</td>';
-        h += lineCells(l, edit, g.retailer) + '</tr>';
+        h += lineCells(l, edit, g.retailer, g.lines, i) + '</tr>';
       });
     });
     return h + endTotals(lines) + '</tbody></table>';
@@ -382,12 +416,14 @@
   function endTotals(lines) {
     var itemSum = 0;
     var shipSum = 0;
-    lines.forEach(function (l) {
-      if (l.state === 'unavailable') return;
+    var active = lines.filter(function (l) { return l.state !== 'unavailable'; });
+    active.forEach(function (l) {
       var c = lineTotalCents(l);
       if (c != null) itemSum += c;
-      var s = shipOf(l);
-      if (s && s.cents != null) shipSum += s.cents;
+    });
+    groupLines(active).forEach(function (g) {
+      var c = groupShipCents(g.lines);
+      if (c != null) shipSum += c;
     });
     var tax = S.batch.salesTaxPercent != null ? Math.round((itemSum + shipSum) * S.batch.salesTaxPercent / 100) : null;
     var gross = itemSum + shipSum + (tax || 0);

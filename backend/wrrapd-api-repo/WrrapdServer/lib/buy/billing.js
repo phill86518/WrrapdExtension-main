@@ -8,6 +8,8 @@ const crypto = require('crypto');
 const wrrapdPricing = require('../wrrapd-pricing');
 const flowerCatalog = require('../flowers/catalog');
 const printerCoverage = require('../printer-coverage');
+const salesTax = require('../sales-tax-zip');
+const standardShipping = require('./standard-shipping');
 
 const WRAP_STYLES = new Set(['wrrapd', 'ai', 'upload']);
 
@@ -174,14 +176,20 @@ function computeBill(batch, cfg) {
             merchandiseCents += extended;
             items.push({ lineId: l.id, title: l.product.title, variant: l.variantLabel || '', imageUrl: l.product.imageUrl || '', cents: extended, unitCents: p, qty });
         }
+        const merch = items.reduce((s, i) => s + i.cents, 0);
+        const adjusted = standardShipping.groupShipCents(retailerId, merch, opt.cents);
+        const shipCents = adjusted == null ? opt.cents : adjusted;
+        const zip = batch.hub && (batch.hub.postalCode || batch.hub.zip);
+        const percent = salesTax.getCombinedRateAsTaxPercent(zip);
+        const taxCents = shipCents === opt.cents ? tax : Math.round((merch + shipCents) * (percent == null ? 7.5 : percent) / 100);
         groups.push({
             retailer: retailerId,
             retailerName: g.retailerName,
             items,
-            shipping: { id: opt.id, label: opt.label, cents: opt.cents, arrivalDate: opt.arrivalDate || null },
+            shipping: { id: opt.id, label: opt.label, cents: shipCents, arrivalDate: opt.arrivalDate || null },
             shippingOptions: g.quote.shippingOptions.map((o) => ({ id: o.id, label: o.label, cents: o.cents, arrivalDate: o.arrivalDate || null })),
-            taxCents: tax,
-            subtotalCents: items.reduce((s, i) => s + i.cents, 0) + opt.cents + tax,
+            taxCents,
+            subtotalCents: merch + shipCents + taxCents,
             quotedAt: g.quote.at,
         });
     }
