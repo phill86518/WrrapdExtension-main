@@ -178,7 +178,67 @@ export type BuyBatchSummary = {
   gifterName: string;
   email: string;
   bundles: Array<{ key: string; externalOrderId: string; ok: boolean }>;
+  manualOpen?: number;
 };
+
+export type ManualState =
+  | "requested"
+  | "read_ok"
+  | "in_cart"
+  | "paid_with_order"
+  | "awaiting_approval"
+  | "paid"
+  | "placed"
+  | "declined"
+  | "cancelled"
+  | "removed";
+
+export type ManualAddOn = {
+  id: string;
+  lineId: string;
+  state: "awaiting_approval" | "paid" | "placed" | "declined" | "cancelled";
+  retailerName: string;
+  item: { title: string; imageUrl: string; variant: string; unitCents: number; qty: number; cents: number };
+  shipping: { cents: number; arrivalDate: string | null };
+  taxCents: number;
+  wrapBill: { giftWrapCents: number; designCents: number; serviceTaxCents: number; totalCents: number; wrapBaseCents: number };
+  wrapStyle: string;
+  totalCents: number;
+  paidAt: string | null;
+  placement: { state: "to_place" | "placed"; retailerOrderNumber?: string; retailerTotalCents?: number; arrivalDate?: string; placedAt?: string } | null;
+  ingest: { ok: boolean; at: string; reason: string } | null;
+  approvalSentAt: string | null;
+  declinedAt: string | null;
+};
+
+export type ManualRow = {
+  batchId: string;
+  lineId: string;
+  url: string;
+  retailer: string;
+  retailerName: string;
+  reason: string;
+  state: ManualState;
+  requestedAt: string | null;
+  addedAt: string | null;
+  addedBy: string;
+  onlyItem: boolean;
+  email: string;
+  gifterName: string;
+  batchStatus: "open" | "paid" | "closed" | "expired";
+  gifteeZip: string;
+  hub: string;
+  otherItems: number;
+  product: { title: string; imageUrl: string; pagePriceCents: number | null; variant: string } | null;
+  addOn: ManualAddOn | null;
+  note: string;
+  cartUrl: string;
+  approveUrl: string;
+};
+
+export async function listManualAdditions() {
+  return (await call<{ items: ManualRow[] }>("/api/admin/buy/manual")).items;
+}
 
 export type WorkflowStep = {
   action: string;
@@ -285,6 +345,7 @@ export type BuyPurchase = {
   externalOrderId: string;
   sentToOrders: boolean;
   dates: { created: string; paid: string | null; placed: string | null; hubArrival: string | null; delivery: string | null };
+  addedManually?: boolean;
 };
 
 export async function listBuyPurchases() {

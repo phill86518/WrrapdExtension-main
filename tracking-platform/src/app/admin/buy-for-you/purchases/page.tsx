@@ -120,6 +120,9 @@ export default async function BuyPurchasesPage({
           <Link href="/admin/buy-for-you" className="rounded-lg border border-[#1a2744]/40 bg-white px-3 py-2 font-semibold">
             Website order queue
           </Link>
+          <Link href="/admin/buy-for-you/manual" className="rounded-lg border border-[#1a2744]/40 bg-white px-3 py-2 font-semibold">
+            Manual additions
+          </Link>
           <Link href="/admin/buy-for-you/settings" className="rounded-lg border border-[#1a2744]/40 bg-white px-3 py-2 font-semibold">
             Settings
           </Link>
@@ -223,6 +226,11 @@ export default async function BuyPurchasesPage({
                         <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${STATUS_CLASS[p.status]}`}>
                           {STATUS_LABEL[p.status]}
                         </span>
+                        {p.addedManually ? (
+                          <span className="ml-1 mt-1 inline-block rounded-full bg-sky-100 px-2 py-0.5 text-xs font-semibold text-sky-800">
+                            Added manually
+                          </span>
+                        ) : null}
                       </div>
                     </div>
                   </td>

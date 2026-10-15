@@ -19,9 +19,12 @@ const flowerCatalog = require('../flowers/catalog');
 const extensionConfig = require('../extension-config');
 const { rateLimit } = require('../rate-limit');
 const lineFacts = require('./line-facts');
+const manual = require('./manual');
 
 const INGEST_TAG = 'ingest-v2026-10-13-buy-for-you';
 const BATCH_TTL_MS = 24 * 60 * 60 * 1000;
+const CART_URL = 'https://www.wrrapd.com/buy/';
+const APPROVE_URL = 'https://pay.wrrapd.com/buy/approve';
 const REFRESH_VALID_MS = 10 * 60 * 1000;
 const CHARGE_LOCK_MS = 2 * 60 * 1000;
 const RETURN_DAYS = config.RETURN_WINDOW_DAYS;
@@ -76,6 +79,17 @@ function returnDeadline(deliveredAtIso) {
 
 function lineQty(l) {
     return lineFacts.clampQty(l && l.qty);
+}
+
+/** An open cart expires a day after it starts, or a day after Wrrapd adds an item by hand. */
+function openExpired(b, now = Date.now()) {
+    const since = Math.max(Date.parse(b.createdAt) || 0, Date.parse(b.reopenedAt || '') || 0);
+    return b.status === 'open' && now - since > BATCH_TTL_MS;
+}
+
+function shopperLink(base, b, extra) {
+    const q = new URLSearchParams({ b: b.id, t: b.token, ...(extra || {}) });
+    return `${base}?${q.toString()}`;
 }
 
 function sameLine(line, parsed, raw) {
@@ -134,6 +148,7 @@ function publicLine(l, batch) {
         variantLabel: l.variantLabel || '',
         qty: lineQty(l),
         wrap: l.wrap || null,
+        manual: manual.shopperState(l),
     };
 }
 
@@ -186,6 +201,7 @@ function publicView(batch) {
         })(),
         orderNumber: batch.status === 'paid' || batch.status === 'closed' ? batch.id : null,
         paidBill: batch.paidBill || null,
+        manualPending: batch.lines.some((l) => !l.removed && l.manual && (l.manual.state === 'requested' || l.manual.state === 'awaiting_approval')),
     };
 }
 
@@ -270,7 +286,7 @@ module.exports = function mountBuyForYou(app, deps) {
             res.status(404).json({ error: 'We could not find this order. Please start again.' });
             return null;
         }
-        if (batch.status === 'open' && Date.now() - Date.parse(batch.createdAt) > BATCH_TTL_MS) {
+        if (openExpired(batch)) {
             res.status(410).json({ error: 'This page has expired. Please start again.' });
             return null;
         }
@@ -479,6 +495,39 @@ module.exports = function mountBuyForYou(app, deps) {
             });
             if (regroup) await quotes.kickGroups(batch.id, 'initial');
             return null;
+        }),
+    );
+
+    app.post(
+        '/api/buy/batches/:id/manual',
+        shopperChange(async (req, batch) => {
+            const lineId = String(req.body.lineId || '');
+            const email = cleanText(req.body.email, 120).toLowerCase();
+            const line = batch.lines.find((l) => l.id === lineId);
+            if (!line || !manual.canAsk(line)) return { error: 'Please refresh the page.' };
+            const onlyItem = manual.otherActive(batch, lineId) === 0;
+            if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { error: 'Please enter a valid email.' };
+            if (onlyItem && !email) return { error: 'Please enter your email.' };
+            let saved = null;
+            await store.update(batch.id, (b) => {
+                const l = b.lines.find((x) => x.id === lineId);
+                if (!l || !manual.canAsk(l)) return null;
+                l.manual = { state: 'requested', requestedAt: new Date().toISOString(), email, onlyItem };
+                store.addLog(b, 'shopper', `Asked Wrrapd to add ${l.id} manually (${l.reason})`);
+                saved = { b, l };
+                return b;
+            });
+            if (!saved) return { error: 'Please refresh the page.' };
+            sendMail({
+                to: [manual.ADMIN_EMAIL],
+                subject: `Add it manually: ${saved.l.retailerName || saved.l.retailer} item for order ${batch.id}`,
+                html: emails.manualRequestHtml({ batch: saved.b, line: saved.l, email, onlyItem, link: `${commandCenterBase()}/admin/buy-for-you/manual` }),
+            }).catch((e) => console.warn('[buy] manual request email failed', batch.id, e && e.message));
+            return {
+                notice: onlyItem
+                    ? 'Thank you! We will email you when this item is ready in your cart.'
+                    : 'Thank you! Please finish your order. We will add this item to it and email you to approve it.',
+            };
         }),
     );
 
@@ -876,6 +925,159 @@ module.exports = function mountBuyForYou(app, deps) {
         res.sendFile(path.join(__dirname, '..', '..', 'public', 'buy-pay.html'));
     });
 
+    // ---------- Items Wrrapd added by hand to a paid order ----------
+
+    app.get('/buy/approve', (req, res) => {
+        if (!req.isPayDomain) return res.status(403).send('Access forbidden.');
+        res.set('Cache-Control', 'no-store');
+        res.sendFile(path.join(__dirname, '..', '..', 'public', 'buy-approve.html'));
+    });
+
+    const loadAddOn = (req, res) => {
+        const batch = store.read(String(req.params.id || ''));
+        const token = String((req.body && req.body.t) || req.query.t || '');
+        const addOn = batch && store.tokenMatches(batch, token) ? (batch.addOns || []).find((a) => a.id === String(req.params.aid || '')) : null;
+        if (!addOn) {
+            res.status(404).json({ error: 'We could not find this item. Please call (844) 638-5484.' });
+            return null;
+        }
+        return { batch, addOn };
+    };
+
+    const addOnView = (batch, addOn) => {
+        const p = batch.payment || {};
+        const bill = p.billing || {};
+        return {
+            orderNumber: batch.id,
+            addOn: manual.publicAddOn(addOn),
+            gifteeName: (p.giftee && p.giftee.name) || '',
+            gifterName: p.gifterName || '',
+            email: p.email || '',
+            phone: p.phone || '',
+            billing: { name: bill.name || '', line1: bill.street1 || '', city: bill.city || '', state: bill.province || '', postalCode: bill.postalCode || '' },
+        };
+    };
+
+    app.get('/api/buy/batches/:id/addons/:aid', (req, res) => {
+        if (!api(req, res)) return;
+        const found = loadAddOn(req, res);
+        if (!found) return;
+        res.json({ ok: true, ...addOnView(found.batch, found.addOn) });
+    });
+
+    app.post('/api/buy/batches/:id/addons/:aid/decline', async (req, res) => {
+        if (!api(req, res)) return;
+        const found = loadAddOn(req, res);
+        if (!found) return;
+        if (found.addOn.state !== 'awaiting_approval') return res.json({ ok: true, ...addOnView(found.batch, found.addOn) });
+        const saved = await store.update(found.batch.id, (b) => {
+            const a = (b.addOns || []).find((x) => x.id === found.addOn.id);
+            if (!a || a.state !== 'awaiting_approval') return null;
+            a.state = 'declined';
+            a.declinedAt = new Date().toISOString();
+            const l = b.lines.find((x) => x.id === a.lineId);
+            if (l && l.manual) l.manual.state = 'declined';
+            store.addLog(b, 'shopper', `Declined the item added by hand (${a.id})`);
+            return b;
+        });
+        res.json({ ok: true, ...addOnView(saved, saved.addOns.find((x) => x.id === found.addOn.id)) });
+    });
+
+    app.post('/api/buy/batches/:id/addons/:aid/charge', chargeLimiter, async (req, res) => {
+        if (!api(req, res)) return;
+        if (!helcim.enabled()) return res.status(503).json({ error: 'Payment is not available. Please refresh the page.' });
+        const found = loadAddOn(req, res);
+        if (!found) return;
+        const { batch, addOn } = found;
+        if (addOn.state === 'paid' || addOn.state === 'placed') return res.json({ ok: true, already: true, ...addOnView(batch, addOn) });
+        if (addOn.state !== 'awaiting_approval') return res.status(409).json({ error: 'This item is no longer waiting for approval.' });
+        const body = req.body || {};
+        const cardToken = String(body.cardToken || '').trim();
+        if (!cardToken || cardToken.length > 80) return res.status(400).json({ error: 'Card could not be verified. Check the card and try again.' });
+        if (Number(body.totalCents) !== addOn.totalCents) return res.status(409).json({ error: 'The total changed. Please refresh the page.' });
+        const billingAddr = helcimBillingFromClient(body.billing);
+        if (!billingAddr) return res.status(400).json({ error: 'Billing address is required.' });
+
+        let locked = false;
+        await store.update(batch.id, (b) => {
+            const a = (b.addOns || []).find((x) => x.id === addOn.id);
+            if (!a || a.state !== 'awaiting_approval') return null;
+            if (a.charging && Date.now() - Date.parse(a.charging) < CHARGE_LOCK_MS) return null;
+            a.charging = new Date().toISOString();
+            locked = true;
+            return b;
+        });
+        if (!locked) return res.status(409).json({ error: 'Your payment is already being processed.' });
+        const unlock = (note) => store.update(batch.id, (b) => {
+            const a = (b.addOns || []).find((x) => x.id === addOn.id);
+            if (a) a.charging = null;
+            if (note) store.addLog(b, 'helcim', note);
+            return b;
+        });
+
+        let result;
+        try {
+            result = await helcim.purchase({
+                amountCents: addOn.totalCents,
+                cardToken,
+                orderNumber: `${batch.id}-${addOn.id}`,
+                billing: billingAddr,
+                ipAddress: clientIpForHelcim(req),
+                lineDescription: 'Wrrapd added item and gift-wrap',
+            });
+        } catch (e) {
+            await unlock();
+            console.error('[buy] add-on charge error', batch.id, addOn.id, e && e.message);
+            return res.status(500).json({ error: 'Payment could not complete. Please try again.' });
+        }
+        const data = (result && result.data) || {};
+        if (!result.ok || !helcim.isApproved(data.status) || !data.transactionId) {
+            await unlock(`Add-on ${addOn.id}: card not approved: ${helcim.errorText(data)}`.slice(0, 200));
+            return res.status(402).json({ error: helcim.errorText(data) });
+        }
+        const chargedCents = Math.round(Number(data.amount) * 100);
+        const saved = await store.update(batch.id, (b) => {
+            const a = b.addOns.find((x) => x.id === addOn.id);
+            a.state = 'paid';
+            a.charging = null;
+            a.payment = {
+                transactionId: String(data.transactionId),
+                amountCents: Number.isFinite(chargedCents) ? chargedCents : a.totalCents,
+                paidAt: new Date().toISOString(),
+                billing: billingAddr,
+                ip: clientIpForHelcim(req),
+            };
+            a.placement = { state: 'to_place' };
+            const l = b.lines.find((x) => x.id === a.lineId);
+            if (l && l.manual) l.manual.state = 'paid';
+            store.addLog(b, 'helcim', `Add-on ${a.id} paid ${emails.usd(a.totalCents)} (transaction ${data.transactionId})`);
+            return b;
+        });
+        const paidAddOn = saved.addOns.find((x) => x.id === addOn.id);
+        const p = saved.payment || {};
+        if (p.email) {
+            sendMail({
+                to: [p.email],
+                subject: `Item added to your Wrrapd order ${batch.id}`,
+                html: emails.addOnReceiptHtml({ batch: saved, addOn: paidAddOn }),
+                from: process.env.SMTP_FROM_CUSTOMER?.trim() || 'Wrrapd Orders <orders@wrrapd.com>',
+                replyTo: 'support@wrrapd.com',
+            }).catch((e) => console.warn('[buy] add-on receipt failed', batch.id, e && e.message));
+        }
+        const cfg = config.load();
+        sendMail({
+            to: cfg.teamAlertEmails,
+            subject: `We buy it: item added by hand to ${batch.id} is paid and ready to place`,
+            html: emails.teamAlertHtml({
+                title: `Paid add-on ready to place (${paidAddOn.retailerName})`,
+                batch: saved,
+                lines: [{ retailerName: paidAddOn.retailerName, product: { title: paidAddOn.item.title }, url: paidAddOn.item.productUrl }],
+                link: `${commandCenterBase()}/admin/buy-for-you/manual`,
+            }),
+        }).catch((e) => console.warn('[buy] add-on team alert failed', e && e.message));
+        res.json({ ok: true, ...addOnView(saved, paidAddOn) });
+    });
+
     // ---------- Command Center (admin key) ----------
 
     const admin = (req, res) => {
@@ -1019,7 +1221,7 @@ module.exports = function mountBuyForYou(app, deps) {
             ok: true,
             batches: fresh.map((b) => ({
                 id: b.id,
-                status: b.status === 'open' && Date.now() - Date.parse(b.createdAt) > BATCH_TTL_MS ? 'expired' : b.status,
+                status: openExpired(b) ? 'expired' : b.status,
                 createdAt: b.createdAt,
                 updatedAt: b.updatedAt,
                 gifteeZip: b.gifteeZip,
@@ -1040,6 +1242,7 @@ module.exports = function mountBuyForYou(app, deps) {
                 gifterName: b.payment ? b.payment.gifterName : '',
                 email: b.payment ? b.payment.email : (b.terms && b.terms.email) || '',
                 bundles: Object.values(b.bundles || {}).map((x) => ({ key: x.key, externalOrderId: x.externalOrderId, ok: !!(x.ingest && x.ingest.ok) })),
+                manualOpen: b.lines.filter((l) => !l.removed && l.manual && ['requested', 'awaiting_approval', 'paid'].includes(l.manual.state)).length,
             })),
         });
     });
@@ -1108,6 +1311,42 @@ module.exports = function mountBuyForYou(app, deps) {
                         hubArrival: (placement && placement.arrivalDate) || (it.shipping && it.shipping.arrivalDate) || null,
                         delivery: bundle && bundle.arrivalDate ? billing.ymdPlusOne(bundle.arrivalDate) : null,
                     },
+                    addedManually: !!l.manual,
+                });
+            }
+            for (const a of b.addOns || []) {
+                if (!a.payment) continue;
+                const l = b.lines.find((x) => x.id === a.lineId) || {};
+                const placed = a.placement && a.placement.state === 'placed' ? a.placement : null;
+                items.push({
+                    batchId: b.id,
+                    lineId: a.lineId,
+                    title: a.item.title,
+                    variant: a.item.variant || '',
+                    imageUrl: a.item.imageUrl || '',
+                    productUrl: a.item.productUrl || l.url || '',
+                    brand: a.item.brand || '',
+                    retailer: a.retailer,
+                    retailerName: a.retailerName,
+                    retailerCategory: a.item.category || '',
+                    amazonCategory: (l.product && l.product.amazonCategory) || null,
+                    itemPriceCents: a.item.cents,
+                    shippingLabel: 'Standard shipping',
+                    wrapCents: a.wrapBill.wrapBaseCents,
+                    gifter: { name: p.gifterName || '', email: p.email || '', phone: p.phone || '' },
+                    giftee: p.giftee || null,
+                    status: placed ? 'placed' : 'to_place',
+                    retailerOrderNumber: placed ? placed.retailerOrderNumber : '',
+                    externalOrderId: a.externalOrderId || '',
+                    sentToOrders: !!(a.ingest && a.ingest.ok),
+                    dates: {
+                        created: a.createdAt,
+                        paid: a.payment.paidAt,
+                        placed: placed ? placed.placedAt : null,
+                        hubArrival: (placed && placed.arrivalDate) || a.shipping.arrivalDate || null,
+                        delivery: placed ? billing.ymdPlusOne(placed.arrivalDate) : null,
+                    },
+                    addedManually: true,
                 });
             }
         }
@@ -1349,6 +1588,296 @@ module.exports = function mountBuyForYou(app, deps) {
         res.json({ ok: true, ingest: results, batch: adminView(store.read(String(req.params.id))) });
     });
 
+    // ---------- Manual additions (Command Center) ----------
+
+    app.get('/api/admin/buy/manual', (req, res) => {
+        if (!admin(req, res)) return;
+        const rows = [];
+        for (const b of store.list({ limit: 1000 })) {
+            for (const l of b.lines || []) {
+                if (!l.manual) continue;
+                const row = manual.adminRow(b, l, Date.now(), BATCH_TTL_MS);
+                if (row.state === 'requested' && l.state !== 'unavailable' && !l.removed) row.state = 'read_ok';
+                row.cartUrl = shopperLink(CART_URL, b);
+                row.approveUrl = row.addOn ? shopperLink(APPROVE_URL, b, { a: row.addOn.id }) : '';
+                rows.push(row);
+            }
+        }
+        rows.sort((a, b) => String(b.requestedAt).localeCompare(String(a.requestedAt)));
+        res.json({ ok: true, items: rows, retailers: retailers.RETAILERS.map((r) => ({ id: r.id, name: r.name })) });
+    });
+
+    const addOnIdFor = (b) => `A${(b.addOns || []).length + 1}`;
+
+    app.post('/api/admin/buy/batches/:id/manual-add', async (req, res) => {
+        if (!admin(req, res)) return;
+        const body = req.body || {};
+        const by = cleanText(body.by, 80) || 'admin';
+        const lineId = String(body.lineId || '');
+        const b0 = store.read(String(req.params.id));
+        const l0 = b0 && b0.lines.find((l) => l.id === lineId);
+        if (!l0 || !l0.manual) return res.status(404).json({ error: 'That request is not on this order.' });
+        if (l0.manual.state !== 'requested') return res.status(400).json({ error: 'This item was already handled.' });
+        if (l0.removed) return res.status(400).json({ error: 'The shopper removed this item.' });
+        const cfg = config.load();
+        const facts = {
+            title: body.title,
+            priceUsd: body.priceUsd,
+            priceCents: body.priceCents,
+            qty: body.qty,
+            variantLabel: body.variantLabel,
+            imageUrl: body.imageUrl,
+            category: body.category,
+            ...(body.shippingCents != null && body.shippingCents !== '' ? { shippingCents: body.shippingCents } : {}),
+            ...(body.arrivalDate ? { arrivalDate: body.arrivalDate } : {}),
+        };
+
+        if (b0.status === 'open') {
+            let error = null;
+            const saved = await store.update(b0.id, (b) => {
+                const l = b.lines.find((x) => x.id === lineId);
+                if (b.status !== 'open' || !l || !l.manual || l.manual.state !== 'requested') {
+                    error = 'This order changed. Please reload.';
+                    return null;
+                }
+                const result = quotes.acceptSupplied(l, facts, cfg);
+                if (!result.ok) {
+                    error = result.error;
+                    return null;
+                }
+                l.qty = lineFacts.clampQty(body.qty);
+                l.manual = { ...l.manual, state: 'in_cart', addedAt: new Date().toISOString(), addedBy: by };
+                const g = quotes.ensureGroup(b, l.retailer);
+                g.quote = null;
+                g.selectedShippingId = null;
+                g.state = 'waiting';
+                if (b.terms) b.terms = null;
+                b.reopenedAt = new Date().toISOString();
+                store.addLog(b, by, `Added ${l.id} by hand: ${l.product.title}`);
+                return b;
+            });
+            if (error) return res.status(400).json({ error });
+            await quotes.kickGroups(b0.id, 'supplied');
+            const line = saved.lines.find((x) => x.id === lineId);
+            const to = line.manual.email || (b0.terms && b0.terms.email) || '';
+            if (to) {
+                sendMail({
+                    to: [to],
+                    subject: 'Your item is in your Wrrapd cart',
+                    html: emails.cartReadyHtml({ title: line.product.title, cartUrl: shopperLink(CART_URL, saved) }),
+                    from: process.env.SMTP_FROM_CUSTOMER?.trim() || 'Wrrapd Orders <orders@wrrapd.com>',
+                    replyTo: 'support@wrrapd.com',
+                }).catch((e) => console.warn('[buy] cart-ready email failed', b0.id, e && e.message));
+            }
+            return res.json({ ok: true, mode: 'cart', emailed: !!to, batch: adminView(store.read(b0.id)) });
+        }
+
+        if (b0.status !== 'paid' || !b0.payment) return res.status(400).json({ error: 'This order is closed.' });
+        const priced = manual.priceAddOn(b0, l0, facts, cfg);
+        if (!priced.ok) return res.status(400).json({ error: priced.error });
+        let error = null;
+        let addOn = null;
+        const saved = await store.update(b0.id, (b) => {
+            const l = b.lines.find((x) => x.id === lineId);
+            if (b.status !== 'paid' || !l || !l.manual || l.manual.state !== 'requested') {
+                error = 'This order changed. Please reload.';
+                return null;
+            }
+            b.addOns = b.addOns || [];
+            addOn = { ...priced.addOn, id: addOnIdFor(b), createdAt: new Date().toISOString(), createdBy: by, approvalSentAt: null };
+            b.addOns.push(addOn);
+            l.product = priced.product;
+            l.variantLabel = addOn.item.variant;
+            l.manual = { ...l.manual, state: 'awaiting_approval', addedAt: addOn.createdAt, addedBy: by, addOnId: addOn.id };
+            store.addLog(b, by, `Added ${l.id} by hand as add-on ${addOn.id} for ${emails.usd(addOn.totalCents)}; approval email sent`);
+            return b;
+        });
+        if (error) return res.status(400).json({ error });
+        const sent = await sendApproval(saved, addOn.id);
+        res.json({ ok: true, mode: 'addon', emailed: sent, addOn: manual.publicAddOn(addOn), batch: adminView(store.read(b0.id)) });
+    });
+
+    async function sendApproval(b, addOnId) {
+        const a = (b.addOns || []).find((x) => x.id === addOnId);
+        const to = b.payment && b.payment.email;
+        if (!a || !to) return false;
+        try {
+            await sendMail({
+                to: [to],
+                subject: `Please approve the item added to your Wrrapd order ${b.id}`,
+                html: emails.addOnApprovalHtml({ batch: b, addOn: a, approveUrl: shopperLink(APPROVE_URL, b, { a: a.id }) }),
+                from: process.env.SMTP_FROM_CUSTOMER?.trim() || 'Wrrapd Orders <orders@wrrapd.com>',
+                replyTo: 'support@wrrapd.com',
+            });
+        } catch (e) {
+            console.warn('[buy] approval email failed', b.id, e && e.message);
+            return false;
+        }
+        await store.update(b.id, (x) => {
+            const y = (x.addOns || []).find((z) => z.id === addOnId);
+            if (y) y.approvalSentAt = new Date().toISOString();
+            return x;
+        });
+        return true;
+    }
+
+    app.post('/api/admin/buy/batches/:id/addon-resend', async (req, res) => {
+        if (!admin(req, res)) return;
+        const b = store.read(String(req.params.id));
+        const a = b && (b.addOns || []).find((x) => x.id === String((req.body || {}).addOnId || ''));
+        if (!a || a.state !== 'awaiting_approval') return res.status(400).json({ error: 'That item is not waiting for approval.' });
+        const sent = await sendApproval(b, a.id);
+        if (!sent) return res.status(502).json({ error: 'The email did not send. Please try again.' });
+        res.json({ ok: true, batch: adminView(store.read(b.id)) });
+    });
+
+    app.post('/api/admin/buy/batches/:id/manual-cancel', async (req, res) => {
+        if (!admin(req, res)) return;
+        const body = req.body || {};
+        const by = cleanText(body.by, 80) || 'admin';
+        const lineId = String(body.lineId || '');
+        let error = null;
+        let title = '';
+        let to = '';
+        const saved = await store.update(String(req.params.id), (b) => {
+            const l = b.lines.find((x) => x.id === lineId);
+            if (!l || !l.manual || !['requested', 'awaiting_approval'].includes(l.manual.state)) {
+                error = 'Only a request or an item waiting for approval can be cancelled.';
+                return null;
+            }
+            const a = (b.addOns || []).find((x) => x.lineId === lineId && x.state === 'awaiting_approval');
+            if (a && a.charging) {
+                error = 'The shopper is paying for it right now.';
+                return null;
+            }
+            if (a) a.state = 'cancelled';
+            l.manual = { ...l.manual, state: 'cancelled', note: cleanText(body.note, 300), cancelledAt: new Date().toISOString(), cancelledBy: by };
+            title = (a && a.item.title) || (l.product && l.product.title) || '';
+            to = l.manual.email || (b.payment && b.payment.email) || (b.terms && b.terms.email) || '';
+            store.addLog(b, by, `Cancelled the manual request for ${l.id}`);
+            return b;
+        });
+        if (error) return res.status(400).json({ error });
+        if (to && body.tellShopper !== false) {
+            sendMail({
+                to: [to],
+                subject: `About your Wrrapd order ${saved.id}`,
+                html: emails.manualCancelledHtml({ batchId: saved.id, title }),
+                from: process.env.SMTP_FROM_CUSTOMER?.trim() || 'Wrrapd Orders <orders@wrrapd.com>',
+                replyTo: 'support@wrrapd.com',
+            }).catch((e) => console.warn('[buy] manual cancel email failed', saved.id, e && e.message));
+        }
+        res.json({ ok: true, batch: adminView(saved) });
+    });
+
+    function addOnIngestPayload(b, a) {
+        const p = b.payment;
+        const w = a.wrap || {};
+        const design = w.aiDesign || w.upload || null;
+        const giftee = p.giftee;
+        const r = retailers.byId(a.retailer);
+        const l = b.lines.find((x) => x.id === a.lineId) || {};
+        const arrival = a.placement.arrivalDate;
+        return {
+            customerName: p.gifterName,
+            customerPhone: p.phone,
+            customerEmail: p.email,
+            ...(p.emailNorm ? { customerEmailNorm: p.emailNorm } : {}),
+            ...(p.wrrapdCustomerId ? { wrrapdCustomerId: p.wrrapdCustomerId } : {}),
+            recipientName: giftee.name,
+            addressLine1: giftee.line1,
+            addressLine2: giftee.line2 || '',
+            city: giftee.city,
+            state: giftee.state,
+            postalCode: giftee.postalCode,
+            gifteeAddress: { name: giftee.name, line1: giftee.line1, line2: giftee.line2 || '', city: giftee.city, state: giftee.state, postalCode: giftee.postalCode },
+            externalOrderId: a.externalOrderId,
+            lineItems: [{
+                title: a.item.variant ? `${a.item.title} (${a.item.variant})` : a.item.title,
+                asin: l.productId || '',
+                imageUrl: a.item.imageUrl || '',
+                wrappingOption: w.style || 'wrrapd',
+                flowers: false,
+                ...(w.upload ? { uploadedDesignPath: w.upload.filePath, uploadedDesignFileName: w.upload.fileName } : {}),
+                ...(design ? { wrappingDesignImageUrl: design.imageUrl, wrappingDesignStoragePath: design.filePath, wrappingDesignFileName: String(design.filePath || '').split('/').pop() } : {}),
+                ...(w.aiDesign ? { aiDesignTitle: w.aiDesign.title, aiDesignDescription: w.aiDesign.description } : {}),
+                giftMessage: w.giftMessage || '',
+                senderName: w.senderName || '',
+                occasion: w.occasion || '',
+                itemCategory: a.item.category || '',
+                packageDimensions: '',
+                wrapBaseCents: a.wrapBill.wrapBaseCents,
+            }],
+            wrapRevenueCents: a.wrapBill.giftWrapCents + a.wrapBill.designCents,
+            flowersRevenueCents: 0,
+            orderValueCents: a.totalCents,
+            retailer: r ? r.trackingName : a.retailerName,
+            retailerEstimatedDeliveryDate: arrival || undefined,
+            scheduledFor: wrrapdIsoFromRetailerYmd(arrival) || new Date(Date.now() + 2 * 86400000).toISOString(),
+            sourceNote: `We-buy-it order ${b.id}; item added by hand (${a.id}); bought by Wrrapd (${a.retailerName} #${a.placement.retailerOrderNumber}); hub arrival ${arrival} → Wrrapd +1 day. Deliver with the rest of ${b.id} when the dates match. Hub: ${b.hub.displayName} (${b.hub.postalCode}). [${INGEST_TAG}]`,
+        };
+    }
+
+    async function ingestAddOn(batchId, addOnId, by) {
+        const b = store.read(batchId);
+        const a = b && (b.addOns || []).find((x) => x.id === addOnId);
+        if (!a || !a.placement || a.placement.state !== 'placed') return { ok: false, reason: 'not_placed' };
+        const r = await ingestOrderIntoTracking(addOnIngestPayload(b, a));
+        if (r.ok) await forwardRetailerRef(a.externalOrderId, a.placement.retailerOrderNumber, a.retailer);
+        await store.update(batchId, (x) => {
+            const y = x.addOns.find((z) => z.id === addOnId);
+            y.ingest = { ok: !!r.ok, at: new Date().toISOString(), reason: r.ok ? '' : String(r.reason || 'unknown').slice(0, 300), by };
+            if (r.ok) {
+                y.state = 'placed';
+                const l = x.lines.find((z) => z.id === y.lineId);
+                if (l && l.manual) l.manual.state = 'placed';
+            }
+            store.addLog(x, by, `Add-on ${addOnId} ${r.ok ? 'sent to Command Center orders' : `ingest failed: ${String(r.reason).slice(0, 120)}`}`);
+            return x;
+        });
+        return { ok: !!r.ok, reason: r.reason || '' };
+    }
+
+    app.post('/api/admin/buy/batches/:id/addon-placed', async (req, res) => {
+        if (!admin(req, res)) return;
+        const body = req.body || {};
+        const by = cleanText(body.by, 80) || 'admin';
+        const addOnId = String(body.addOnId || '');
+        const ref = String(body.retailerOrderNumber || '').trim().replace(/^#/, '').replace(/\s+/g, '').toUpperCase();
+        if (!/^[A-Z0-9][A-Z0-9-]{3,39}$/.test(ref)) return res.status(400).json({ error: 'Enter the retailer order number.' });
+        const arrivalDate = String(body.arrivalDate || '');
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(arrivalDate)) return res.status(400).json({ error: 'Enter the date the retailer says it reaches the hub.' });
+        const total = Math.round(Number(body.retailerTotalCents));
+        if (!Number.isFinite(total) || total <= 0) return res.status(400).json({ error: 'Enter the retailer order total.' });
+        let error = null;
+        await store.update(String(req.params.id), (b) => {
+            const a = (b.addOns || []).find((x) => x.id === addOnId);
+            if (!a || a.state !== 'paid' || !a.placement || a.placement.state !== 'to_place') {
+                error = 'Only a paid item can be placed.';
+                return null;
+            }
+            if (total > a.retailerCents) {
+                error = `The retailer total is higher than what the shopper paid for this item (${emails.usd(a.retailerCents)}). Do not place it.`;
+                return null;
+            }
+            a.placement = { state: 'placed', retailerOrderNumber: ref, retailerTotalCents: total, arrivalDate, placedAt: new Date().toISOString(), by };
+            a.externalOrderId = a.externalOrderId || `${b.id}-${a.id}`;
+            store.addLog(b, by, `Add-on ${a.id}: ${a.retailerName} order #${ref} placed for ${emails.usd(total)}; hub arrival ${arrivalDate}`);
+            return b;
+        });
+        if (error) return res.status(400).json({ error });
+        const ingest = await ingestAddOn(String(req.params.id), addOnId, by);
+        res.json({ ok: true, ingest: [{ key: addOnId, ...ingest }], batch: adminView(store.read(String(req.params.id))) });
+    });
+
+    app.post('/api/admin/buy/batches/:id/addon-ingest', async (req, res) => {
+        if (!admin(req, res)) return;
+        const by = cleanText(req.body && req.body.by, 80) || 'admin';
+        const addOnId = String((req.body || {}).addOnId || '');
+        const ingest = await ingestAddOn(String(req.params.id), addOnId, by);
+        res.json({ ok: true, ingest: [{ key: addOnId, ...ingest }], batch: adminView(store.read(String(req.params.id))) });
+    });
+
     async function refund(b, amountCents, { requestId, full, reason, by, kind, lineIds }) {
         const out = await helcim.refund({ transactionId: b.payment.transactionId, amountCents, ipAddress: '34.58.136.32', requestId, full });
         const d = (out && out.data) || {};
@@ -1508,7 +2037,7 @@ module.exports = function mountBuyForYou(app, deps) {
 
     setInterval(() => {
         for (const b of store.list({ limit: 200 })) {
-            if (b.status === 'open' && Date.now() - Date.parse(b.createdAt) < BATCH_TTL_MS) quotes.sweep(b.id).catch(() => {});
+            if (b.status === 'open' && !openExpired(b)) quotes.sweep(b.id).catch(() => {});
         }
     }, 60 * 1000).unref();
 };

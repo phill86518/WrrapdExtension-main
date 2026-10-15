@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Wrrapd — Approve your item</title>
+<link rel="icon" href="https://wrrapd.com/wp-content/mu-plugins/icons/favicon/favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,460;0,9..144,560;0,9..144,650&display=swap">
+<script src="https://secure.myhelcim.com/js/version2.js"></script>
+<style>
+  :root { --navy:#0c0638; --ink:#162a52; --gold:#f6b933; --btn-text:#0f0351; --line:#e4e1d8; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:#f6f4ef; color:var(--ink); font:16px/1.45 Fraunces, Georgia, "Times New Roman", serif; font-optical-sizing:auto; }
+  h1, h2, button, input, label, p, a { font-family: Fraunces, Georgia, "Times New Roman", serif; }
+  header { background:#fff; border-bottom:4px solid var(--navy); padding:12px 20px; text-align:center; }
+  header img { max-height:56px; max-width:200px; }
+  main { max-width:620px; margin:0 auto; padding:20px 16px 60px; }
+  h1 { font-size:24px; font-weight:560; color:var(--btn-text); margin:6px 0 14px; }
+  h2 { font-size:17px; font-weight:560; color:var(--btn-text); margin:22px 0 10px; }
+  .card { background:#fff; border:1px solid var(--line); border-radius:12px; padding:16px; margin-bottom:14px; }
+  .item { display:flex; gap:12px; align-items:center; margin-bottom:10px; }
+  .item img { width:64px; height:64px; object-fit:contain; border-radius:8px; background:#faf9f6; }
+  .bill-row { display:flex; justify-content:space-between; gap:12px; padding:5px 0; }
+  .bill-row.total { border-top:2px solid var(--navy); margin-top:8px; padding-top:10px; font-weight:650; font-size:18px; }
+  .muted { color:#5b6478; font-size:14px; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .grid .full { grid-column:1 / -1; }
+  label { display:block; font-size:14px; margin-bottom:4px; }
+  input { width:100%; padding:10px 12px; border:1px solid #c9c5ba; border-radius:8px; font-size:16px; }
+  .card-row { display:grid; grid-template-columns:2fr 1fr 1fr; gap:10px; }
+  .pay { width:100%; padding:15px; border:0; border-radius:12px; background:var(--gold); color:var(--btn-text); font-size:18px; font-weight:650; cursor:pointer; }
+  .pay[disabled] { opacity:.6; cursor:default; }
+  .no { display:block; margin:14px auto 0; background:none; border:0; color:var(--ink); text-decoration:underline; font-size:15px; cursor:pointer; }
+  .status { min-height:22px; margin:10px 0; font-size:15px; }
+  .status.err { color:#b42318; }
+  .done { text-align:center; padding:30px 10px; }
+  #helcimResults, #buttonProcess { display:none; }
+  @media (max-width:560px) { .grid { grid-template-columns:1fr; } .card-row { grid-template-columns:1fr 1fr; } .card-row .pan { grid-column:1 / -1; } }
+</style>
+</head>
+<body>
+<header><img src="/img/wrrapd-logo-1-small.png" alt="Wrrapd"></header>
+<main id="app">
+  <p class="muted">Loading…</p>
+</main>
+
+<form id="helcimForm" onsubmit="return false" style="display:none">
+  <input type="hidden" id="token" value="">
+  <input type="hidden" id="dontSubmit" value="1">
+  <input type="hidden" id="amount" value="0.00">
+  <input type="hidden" id="cardNumber" value="">
+  <input type="hidden" id="cardExpiryMonth" value="">
+  <input type="hidden" id="cardExpiryYear" value="">
+  <input type="hidden" id="cardCVV" value="">
+  <input type="hidden" id="cardHolderName" value="">
+  <input type="hidden" id="cardHolderAddress" value="">
+  <input type="hidden" id="cardHolderPostalCode" value="">
+  <button type="button" id="buttonProcess">Process</button>
+</form>
+<div id="helcimResults"></div>
+
+<script>
+(function () {
+  var API = 'https://api.wrrapd.com';
+  var qs = new URLSearchParams(location.search);
+  var id = qs.get('b') || '';
+  var token = qs.get('t') || '';
+  var aid = qs.get('a') || '';
+  var app = document.getElementById('app');
+  var view = null;
+  var busy = false;
+
+  function usd(c) { return '$' + (Number(c || 0) / 100).toFixed(2); }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (ch) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]; }); }
+  function path(suffix) { return '/api/buy/batches/' + encodeURIComponent(id) + '/addons/' + encodeURIComponent(aid) + (suffix || ''); }
+  function api(p, body) {
+    var init = { method: body ? 'POST' : 'GET', headers: { 'Content-Type': 'application/json' } };
+    if (body) init.body = JSON.stringify(Object.assign({ t: token }, body));
+    var url = API + p + (body ? '' : '?t=' + encodeURIComponent(token));
+    return fetch(url, init).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (j) { j.__status = r.status; j.__ok = r.ok; return j; });
+    });
+  }
+  function setStatus(text, err) {
+    var el = document.getElementById('status');
+    if (!el) return;
+    el.textContent = text || '';
+    el.className = 'status' + (err ? ' err' : '');
+  }
+  function row(label, amount, cls) { return '<div class="bill-row' + (cls ? ' ' + cls : '') + '"><span>' + esc(label) + '</span><span>' + esc(amount) + '</span></div>'; }
+  function field(fid, label, opts) {
+    opts = opts || {};
+    return '<div class="' + (opts.full ? 'full' : '') + '"><label for="' + fid + '">' + esc(label) + '</label><input id="' + fid + '"' +
+      (opts.ac ? ' autocomplete="' + opts.ac + '"' : '') + (opts.value ? ' value="' + esc(opts.value) + '"' : '') + (opts.max ? ' maxlength="' + opts.max + '"' : '') + '></div>';
+  }
+  function val(k) { var el = document.getElementById(k); return el ? el.value.trim() : ''; }
+
+  function itemHtml(a) {
+    var it = a.item;
+    var h = '<div class="item">' + (it.imageUrl ? '<img src="' + esc(it.imageUrl) + '" alt="">' : '') +
+      '<div><b>' + esc(it.title) + '</b>' + (it.variant ? '<br><span class="muted">' + esc(it.variant) + '</span>' : '') +
+      (it.qty > 1 ? '<br><span class="muted">Qty ' + esc(it.qty) + '</span>' : '') + '</div></div>';
+    h += row(a.retailerName + ' item', usd(it.cents));
+    h += row('Shipping', a.shipping.cents ? usd(a.shipping.cents) : 'Free');
+    h += row(a.retailerName + ' tax', usd(a.taxCents));
+    h += row('Gift-wrap', usd(a.wrapBill.giftWrapCents));
+    if (a.wrapBill.designCents) h += row('Custom design', usd(a.wrapBill.designCents));
+    h += row('Tax on gift-wrap', usd(a.wrapBill.serviceTaxCents));
+    h += row('Total', usd(a.totalCents), 'total');
+    return h;
+  }
+
+  function done(title, text) {
+    app.innerHTML = '<div class="done"><h1>' + esc(title) + '</h1><p>' + esc(text) + '</p><p class="muted">Questions? Call (844) 638-5484.</p></div>';
+  }
+
+  function render() {
+    var a = view.addOn;
+    if (a.state === 'paid' || a.state === 'placed') return done('Thank you!', 'This item is now part of order ' + view.orderNumber + '. A receipt is on its way to your email.');
+    if (a.state === 'declined') return done('No problem', 'We did not add this item to order ' + view.orderNumber + '.');
+    if (a.state !== 'awaiting_approval') return done('This item is no longer available', 'Your order ' + view.orderNumber + ' is not affected.');
+    var b = view.billing || {};
+    app.innerHTML =
+      '<h1>Approve your item</h1>' +
+      '<p>We added this item to order <b>' + esc(view.orderNumber) + '</b>' + (view.gifteeName ? ' for ' + esc(view.gifteeName) : '') + '. It will be gift-wrapped with the rest of your gifts.</p>' +
+      '<div class="card">' + itemHtml(a) + '</div>' +
+      '<h2>Billing address</h2><div class="card grid">' +
+        field('bName', 'Name on card', { full: true, ac: 'cc-name', max: 80, value: b.name }) +
+        field('bLine1', 'Street address', { full: true, ac: 'billing address-line1', max: 120, value: b.line1 }) +
+        field('bCity', 'City', { ac: 'billing address-level2', max: 80, value: b.city }) +
+        field('bState', 'State (2 letters)', { ac: 'billing address-level1', max: 2, value: b.state }) +
+        field('bZip', 'ZIP code', { ac: 'billing postal-code', max: 10, value: b.postalCode }) +
+      '</div>' +
+      '<h2>Card</h2><div class="card"><div class="card-row">' +
+        '<div class="pan"><label for="cNum">Card number</label><input id="cNum" inputmode="numeric" autocomplete="cc-number" maxlength="23"></div>' +
+        '<div><label for="cExp">MM / YY</label><input id="cExp" inputmode="numeric" autocomplete="cc-exp" maxlength="7"></div>' +
+        '<div><label for="cCvv">CVC</label><input id="cCvv" inputmode="numeric" autocomplete="cc-csc" maxlength="4"></div>' +
+      '</div></div>' +
+      '<p class="muted">By paying, you agree to the Terms you accepted for this order.</p>' +
+      '<div class="status" id="status"></div>' +
+      '<button class="pay" id="payBtn" type="button">Approve and pay ' + usd(a.totalCents) + '</button>' +
+      '<button class="no" id="noBtn" type="button">No thanks</button>';
+    document.getElementById('payBtn').addEventListener('click', onPay);
+    document.getElementById('noBtn').addEventListener('click', onDecline);
+  }
+
+  function readCard() {
+    var pan = val('cNum').replace(/\D/g, '');
+    var exp = val('cExp').replace(/\D/g, '');
+    var cvv = val('cCvv').replace(/\D/g, '');
+    var month = exp.slice(0, 2);
+    var year = exp.length >= 6 ? exp.slice(4, 6) : exp.slice(2, 4);
+    var ok = pan.length >= 13 && pan.length <= 19 && Number(month) >= 1 && Number(month) <= 12 && year.length === 2 && cvv.length >= 3;
+    return { pan: pan, month: month, year: year, cvv: cvv, ok: ok };
+  }
+
+  async function onDecline() {
+    if (busy) return;
+    busy = true;
+    var j = await api(path('/decline'), {});
+    busy = false;
+    if (!j.__ok) return setStatus(j.error || 'Please try again.', true);
+    view = j;
+    render();
+  }
+
+  async function onPay() {
+    if (busy) return;
+    if (!val('bName') || !val('bLine1') || !val('bCity') || val('bState').length !== 2 || val('bZip').replace(/\D/g, '').length < 5) return setStatus('Please complete the billing address.', true);
+    var card = readCard();
+    if (!card.ok) return setStatus('Please finish entering the card number, expiry, and CVC.', true);
+    busy = true;
+    var btn = document.getElementById('payBtn');
+    btn.disabled = true;
+    try {
+      setStatus('Processing your payment…');
+      document.getElementById('cardNumber').value = card.pan;
+      document.getElementById('cardExpiryMonth').value = card.month;
+      document.getElementById('cardExpiryYear').value = card.year;
+      document.getElementById('cardCVV').value = card.cvv;
+      document.getElementById('cardHolderName').value = val('bName');
+      document.getElementById('cardHolderAddress').value = val('bLine1');
+      document.getElementById('cardHolderPostalCode').value = val('bZip').replace(/\D/g, '').slice(0, 5);
+      document.getElementById('amount').value = (view.addOn.totalCents / 100).toFixed(2);
+      document.getElementById('helcimResults').innerHTML = '';
+      if (typeof helcimProcess !== 'function') throw new Error('The payment form did not load. Please refresh the page.');
+      try { await helcimProcess(); } catch (e) {
+        throw new Error('Card was not accepted. ' + ((document.getElementById('helcimResults').textContent || '').trim()));
+      }
+      var pane = document.getElementById('helcimResults');
+      var get = function (k) { var el = pane.querySelector('[id="' + k + '"]'); return el ? String(el.value || '').trim() : ''; };
+      var cardToken = get('cardToken');
+      if (get('response') !== '1' || !cardToken) throw new Error('Card was not accepted. ' + (get('responseMessage') || ''));
+      var j = await api(path('/charge'), {
+        cardToken: cardToken,
+        totalCents: view.addOn.totalCents,
+        billing: { name: val('bName'), email: view.email, phone: view.phone, address: { line1: val('bLine1'), city: val('bCity'), state: val('bState').toUpperCase(), postal_code: val('bZip') } },
+      });
+      if (!j.__ok) throw new Error(j.error || 'Payment could not complete. Please try again.');
+      view = j;
+      render();
+    } catch (e) {
+      setStatus((e && e.message) || 'Payment could not complete. Please try again.', true);
+    } finally {
+      busy = false;
+      var b = document.getElementById('payBtn');
+      if (b) b.disabled = false;
+    }
+  }
+
+  async function start() {
+    if (!id || !token || !aid) { app.innerHTML = '<p>We could not find this item. Please call (844) 638-5484.</p>'; return; }
+    var cfg = await fetch(API + '/api/helcim-checkout-config').then(function (r) { return r.json(); }).catch(function () { return {}; });
+    if (cfg && cfg.jsToken) document.getElementById('token').value = cfg.jsToken;
+    var j = await api(path());
+    if (!j.__ok) { app.innerHTML = '<p>' + esc(j.error || 'We could not find this item.') + '</p>'; return; }
+    view = j;
+    render();
+    if ((!cfg || !cfg.jsToken) && view.addOn.state === 'awaiting_approval') {
+      setStatus('Payment is not available right now. Please try again later.', true);
+      document.getElementById('payBtn').disabled = true;
+    }
+  }
+  start();
+})();
+</script>
+</body>
+</html>

@@ -259,4 +259,4 @@ function wrapPrices(batch) {
     return w.ok ? w.perLine : {};
 }
 
-module.exports = { computeBill, selectedOption, groupTax, readyLines, linePriceCents, bundlesFor, changeMessages, ymdPlusOne, WRAP_STYLES, wrapPrices };
+module.exports = { computeBill, selectedOption, groupTax, readyLines, linePriceCents, bundlesFor, changeMessages, ymdPlusOne, WRAP_STYLES, wrapPrices, wrapBreakdown };

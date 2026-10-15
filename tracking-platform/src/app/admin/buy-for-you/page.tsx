@@ -97,6 +97,7 @@ export default async function BuyForYouPage({
   const progress = (batches || []).filter(inProgress);
   const shopping = (batches || []).filter((b) => b.status === "open" && !needsQuote(b));
   const closed = (batches || []).filter((b) => b.status === "closed" || b.status === "expired");
+  const manualOpen = (batches || []).reduce((s, b) => s + (b.manualOpen || 0), 0);
 
   return (
     <div className="space-y-8">
@@ -120,6 +121,12 @@ export default async function BuyForYouPage({
           >
             {mode || "?"}
           </span>
+          <Link
+            href="/admin/buy-for-you/manual"
+            className={`rounded-lg border px-3 py-2 font-semibold ${manualOpen ? "border-amber-500 bg-amber-50 text-amber-900" : "border-[#1a2744]/40 bg-white"}`}
+          >
+            Manual additions{manualOpen ? ` (${manualOpen})` : ""}
+          </Link>
           <Link href="/admin/buy-for-you/purchases" className="rounded-lg border border-[#1a2744]/40 bg-white px-3 py-2 font-semibold">
             Items we purchased
           </Link>

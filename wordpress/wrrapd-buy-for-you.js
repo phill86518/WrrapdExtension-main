@@ -33,6 +33,8 @@
 
   var TRASH_SVG = '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
     '<path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>';
+  var MAIL_SVG = '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
+    '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>';
 
   /* ---------- helpers ---------- */
   function esc(s) {
@@ -176,7 +178,29 @@
     }
     if (excluded(l)) h += '<p class="wb-unavailable">' + esc(limitMessage(l)) + '</p>';
     else if (l.state === 'unavailable') h += '<p class="wb-unavailable">' + esc(l.message || "We can't buy this item right now.") + '</p>';
+    if (l.state === 'unavailable') h += manualCell(l);
+    else if (l.manual === 'in_cart') h += '<p class="wb-manual-note">' + MAIL_SVG + 'Added by Wrrapd</p>';
     return h + '</div></div>';
+  }
+
+  function onlyItem(l) {
+    return !S.batch.lines.some(function (o) { return o.id !== l.id && o.state !== 'removed' && o.state !== 'unavailable'; });
+  }
+  function manualCell(l) {
+    if (l.manual === 'requested') return '<p class="wb-manual-note">' + MAIL_SVG + 'We are adding this item for you.</p>';
+    if (l.manual !== 'available' || !canEdit()) return '';
+    var asking = S.manualEmailFor === l.id;
+    var pop = asking
+      ? '<label class="wb-label" for="wb-manual-email">Your email</label>' +
+        '<input class="wb-input wb-manual-email" id="wb-manual-email" type="email" autocomplete="email" maxlength="120">' +
+        '<div class="wb-manual-actions"><button type="button" class="wb-btn wb-btn-sm" data-act="manual-send" data-line="' + esc(l.id) + '"' + (S.busy ? ' disabled' : '') + '>Send</button>' +
+        '<button type="button" class="wb-btn wb-btn-sm wb-btn-ghost" data-act="manual-no" data-line="' + esc(l.id) + '">No</button></div>'
+      : '<p>Wrrapd can manually add this item to your order, would you like to do so?</p>' +
+        '<div class="wb-manual-actions"><button type="button" class="wb-btn wb-btn-sm" data-act="manual-yes" data-line="' + esc(l.id) + '"' + (S.busy ? ' disabled' : '') + '>Yes</button>' +
+        '<button type="button" class="wb-btn wb-btn-sm wb-btn-ghost" data-act="manual-no" data-line="' + esc(l.id) + '">No</button></div>';
+    return '<div class="wb-manual' + (asking ? ' wb-manual-open' : '') + (S.manualShut === l.id ? ' wb-manual-shut' : '') + '">' +
+      '<button type="button" class="wb-manual-btn" data-act="manual-open" data-line="' + esc(l.id) + '">' + MAIL_SVG + '<span>Add it manually</span></button>' +
+      '<div class="wb-manual-pop" role="dialog" aria-label="Add it manually">' + pop + '</div></div>';
   }
 
   function priceCell(l) {
@@ -619,7 +643,8 @@
   }
 
   function viewPaid() {
-    return '<section class="wb-card wb-center"><h2>Thank you!</h2><p>Your order number is <b>' + esc(S.batch.orderNumber || S.batch.id) + '</b>.</p><p>Your order is in. We are gift-wrapping your items and delivering them.</p></section>';
+    return '<section class="wb-card wb-center"><h2>Thank you!</h2><p>Your order number is <b>' + esc(S.batch.orderNumber || S.batch.id) + '</b>.</p><p>Your order is in. We are gift-wrapping your items and delivering them.</p>' +
+      (S.batch.manualPending ? '<p>We are adding your other item by hand. We will email you to approve it.</p>' : '') + '</section>';
   }
 
   /* ---------- actions ---------- */
@@ -632,6 +657,13 @@
   function bind() {
     var zipEdit = $('#wb-zip-edit');
     if (zipEdit) zipEdit.addEventListener('change', onZip);
+    $all('.wb-manual').forEach(function (box) {
+      box.addEventListener('mouseleave', function () {
+        S.manualShut = '';
+        box.classList.remove('wb-manual-shut');
+        if (!S.manualEmailFor) box.classList.remove('wb-manual-open');
+      });
+    });
     $all('[data-ship]').forEach(function (el) { el.addEventListener('change', onShip); });
     $all('[data-variant]').forEach(function (el) {
       el.addEventListener('change', function () { S.variantDraft[el.getAttribute('data-variant') + '|' + el.getAttribute('data-group')] = el.value; });
@@ -704,6 +736,38 @@
       var row = S.batch && S.batch.lines.filter(function (x) { return x.id === id; })[0];
       if (!row) return;
       return setQty(id, qtyOf(row) + (act === 'qty-up' ? 1 : -1));
+    }
+    if (act === 'manual-open') {
+      var box = el.closest('.wb-manual');
+      S.manualShut = '';
+      if (box) { box.classList.remove('wb-manual-shut'); box.classList.toggle('wb-manual-open'); }
+      return;
+    }
+    if (act === 'manual-no') {
+      var shut = el.closest('.wb-manual');
+      S.manualShut = el.getAttribute('data-line');
+      if (shut) { shut.classList.remove('wb-manual-open'); shut.classList.add('wb-manual-shut'); }
+      if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+      if (S.manualEmailFor) { S.manualEmailFor = ''; render(); }
+      return;
+    }
+    if (act === 'manual-yes') {
+      var mid = el.getAttribute('data-line');
+      var ml = S.batch.lines.filter(function (x) { return x.id === mid; })[0];
+      if (!ml) return;
+      if (onlyItem(ml)) {
+        S.manualEmailFor = mid;
+        render();
+        var em = $('#wb-manual-email');
+        if (em) em.focus();
+        return;
+      }
+      return askManual(mid, '');
+    }
+    if (act === 'manual-send') {
+      var email = (($('#wb-manual-email') || {}).value || '').trim();
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { S.error = 'Please enter a valid email.'; render(); var again = $('#wb-manual-email'); if (again) { again.value = email; again.focus(); } return; }
+      return askManual(el.getAttribute('data-line'), email);
     }
     if (act === 'submit-links') return submitLinks();
     if (act === 'remove') return removeLine(el.getAttribute('data-line'));
@@ -798,15 +862,20 @@
       .catch(function () {});
   }
 
+  function busyLines() {
+    var b = S.batch;
+    return stillWorking() && b.lines.some(function (l) { return l.state === 'reading' || l.state === 'quoting'; });
+  }
   function needsPoll() {
     var b = S.batch;
     if (!b || b.status !== 'open') return false;
-    return stillWorking() && b.lines.some(function (l) { return l.state === 'reading' || l.state === 'quoting'; });
+    return busyLines() || !!b.manualPending;
   }
 
   function poll() {
     clearTimeout(S.pollTimer);
     if (!needsPoll()) return;
+    var wait = busyLines() ? 4000 : 20000;
     S.pollTimer = setTimeout(function () {
       request('/api/buy/batches/' + encodeURIComponent(S.id)).then(function (j) {
         S.batch = j.batch;
@@ -821,7 +890,7 @@
         }
         poll();
       }).catch(function () { poll(); });
-    }, 4000);
+    }, wait);
   }
 
   function onZip() {
@@ -848,6 +917,19 @@
     l.qty = n;
     render();
     change('/qty', { lineId: lineId, qty: n }).catch(function () { render(); });
+  }
+
+  function askManual(lineId, email) {
+    S.busy = true;
+    render();
+    return change('/manual', { lineId: lineId, email: email }).then(function () {
+      S.busy = false;
+      S.manualEmailFor = '';
+      render();
+    }).catch(function () {
+      S.busy = false;
+      render();
+    });
   }
 
   function removeLine(lineId) {

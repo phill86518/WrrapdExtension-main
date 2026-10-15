@@ -198,6 +198,88 @@ export async function returnRefundAction(fd: FormData) {
   );
 }
 
+function manualBatch(fd: FormData) {
+  const path = `${BASE}/manual`;
+  const id = str(fd, "batchId").toUpperCase();
+  if (!/^WB-[A-Z0-9]{6,20}$/.test(id)) redirect(path);
+  return { id, path };
+}
+
+export async function manualAddAction(fd: FormData) {
+  const { id, path } = manualBatch(fd);
+  const by = await adminName(path);
+  const price = dollarsToCents(fd.get("price"));
+  if (!price) back(path, { ok: false, err: "Enter the item price." });
+  const ship = dollarsToCents(fd.get("shipping"));
+  let result: { ok: true; msg: string } | { ok: false; err: string };
+  try {
+    const out = (await postBuyAction(id, "manual-add", {
+      lineId: str(fd, "lineId"),
+      title: str(fd, "title"),
+      priceCents: price,
+      qty: Number(str(fd, "qty")) || 1,
+      variantLabel: str(fd, "variantLabel"),
+      imageUrl: str(fd, "imageUrl"),
+      category: str(fd, "category"),
+      ...(ship != null ? { shippingCents: ship } : {}),
+      arrivalDate: str(fd, "arrivalDate"),
+      by,
+    })) as { mode?: string; emailed?: boolean };
+    const msg =
+      out.mode === "addon"
+        ? out.emailed
+          ? "Added. The shopper was emailed to approve and pay."
+          : "Added, but the approval email did not send. Use Resend."
+        : out.emailed
+          ? "Added to the open cart. The shopper was emailed a link to their cart."
+          : "Added to the open cart.";
+    result = { ok: true, msg };
+  } catch (e) {
+    result = { ok: false, err: e instanceof Error ? e.message : "Something went wrong" };
+  }
+  back(path, result);
+}
+
+export async function manualCancelAction(fd: FormData) {
+  const { id, path } = manualBatch(fd);
+  const by = await adminName(path);
+  await run(path, "Request closed.", () =>
+    postBuyAction(id, "manual-cancel", { lineId: str(fd, "lineId"), note: str(fd, "note"), tellShopper: fd.get("tellShopper") === "on", by }),
+  );
+}
+
+export async function addOnResendAction(fd: FormData) {
+  const { id, path } = manualBatch(fd);
+  await adminName(path);
+  await run(path, "Approval email sent again.", () => postBuyAction(id, "addon-resend", { addOnId: str(fd, "addOnId") }));
+}
+
+export async function addOnPlacedAction(fd: FormData) {
+  const { id, path } = manualBatch(fd);
+  const by = await adminName(path);
+  await run(path, "Retailer order recorded and sent to Orders.", async () => {
+    const out = await postBuyAction(id, "addon-placed", {
+      addOnId: str(fd, "addOnId"),
+      retailerOrderNumber: str(fd, "retailerOrderNumber"),
+      retailerTotalCents: dollarsToCents(fd.get("retailerTotal")),
+      arrivalDate: str(fd, "arrivalDate"),
+      by,
+    });
+    const failed = (out.ingest || []).filter((r) => !r.ok);
+    if (failed.length) throw new Error(`Recorded, but sending to Orders failed: ${failed.map((f) => f.reason).join("; ")}. Use Retry.`);
+  });
+}
+
+export async function addOnIngestAction(fd: FormData) {
+  const { id, path } = manualBatch(fd);
+  const by = await adminName(path);
+  await run(path, "Sent to Orders.", async () => {
+    const out = await postBuyAction(id, "addon-ingest", { addOnId: str(fd, "addOnId"), by });
+    const failed = (out.ingest || []).filter((r) => !r.ok);
+    if (failed.length) throw new Error(`Still failing: ${failed.map((f) => f.reason).join("; ")}`);
+  });
+}
+
 export async function restoreWorkflowAction(fd: FormData) {
   const path = `${BASE}/settings`;
   const by = await adminName(path);

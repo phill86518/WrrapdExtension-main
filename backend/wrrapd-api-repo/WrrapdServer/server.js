@@ -2169,6 +2169,11 @@ function listOrdersJsonForWpUser(emailNorm, wpUserId) {
         if (!orderVisibleToWpUser(data, emailNorm, widStr)) continue;
         out.orders.push(summarizeOrderForWpList(data));
     }
+    try {
+        out.orders.push(...require(path.join(__dirname, 'lib', 'buy', 'account-orders')).forEmail(emailNorm));
+    } catch (e) {
+        console.warn('[orders-for-wp-user] buy-for-you orders skipped:', e && e.message);
+    }
     out.orders.sort((a, b) => {
         const ta = parseDateCandidate(a.timestamp)?.getTime() || 0;
         const tb = parseDateCandidate(b.timestamp)?.getTime() || 0;

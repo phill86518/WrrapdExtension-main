@@ -204,6 +204,7 @@
   function renderDone() {
     app.innerHTML = '<div class="done"><h1>Thank you!</h1><p>Your order number is <b>' + esc(batch.orderNumber || batch.id) + '</b>.</p>' +
       '<p>We are buying your items, gift-wrapping them, and delivering them. A receipt is on its way to your email.</p>' +
+      (batch.manualPending ? '<p>We are adding your other item by hand. We will email you to approve it.</p>' : '') +
       '<p class="muted">Questions? Call (844) 638-5484.</p></div>';
   }
 
