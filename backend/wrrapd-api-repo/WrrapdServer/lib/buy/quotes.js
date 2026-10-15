@@ -15,7 +15,7 @@ const standardShipping = require('./standard-shipping');
 const lineFacts = require('./line-facts');
 
 const UNAVAILABLE = "We can't buy this item right now.";
-const READ_STUCK_MS = 45 * 1000;
+const READ_STUCK_MS = 120 * 1000;
 const readingBatches = new Set();
 let alertFn = async () => {};
 
