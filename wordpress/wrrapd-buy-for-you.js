@@ -187,7 +187,11 @@
     return !S.batch.lines.some(function (o) { return o.id !== l.id && o.state !== 'removed' && o.state !== 'unavailable'; });
   }
   function manualCell(l) {
-    if (l.manual === 'requested') return '<p class="wb-manual-note">' + MAIL_SVG + 'We are adding this item for you.</p>';
+    if (l.manual === 'requested') {
+      return '<p class="wb-manual-note">' + MAIL_SVG + (onlyItem(l)
+        ? 'This item will be added for you manually; we will email you when it is ready.'
+        : 'This item will be added for you manually; please complete the remaining order.') + '</p>';
+    }
     if (l.manual !== 'available' || !canEdit()) return '';
     var asking = S.manualEmailFor === l.id;
     var pop = asking
