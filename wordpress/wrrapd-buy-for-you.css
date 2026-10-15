@@ -268,6 +268,17 @@ button.wb-trash { width: 22px !important; height: 22px !important; min-width: 0 
 .wb-occ-bad { border-color: #dc2626 !important; }
 .wb-ship input, .wb-radio input, .wb-check input { margin-top: 5px; accent-color: var(--wb-navy); }
 .wb-bill-store { font-weight: 650; margin: 14px 0 4px; color: var(--wb-navy); }
+.wb-review { padding: 12px 14px 10px; }
+.wb-review-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start; }
+.wb-bill-sec h2 { font-size: 16px; margin: 0 0 4px; }
+.wb-bill-sec .wb-bill-row { padding: 1px 0; font-size: 14px; line-height: 1.3; }
+.wb-bill-sec .wb-bill-row span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wb-bill-wrrapd { background: linear-gradient(180deg, #fffbeb, #fff); border: 1px solid #fcd34d; border-radius: 10px; padding: 8px 12px 6px; }
+.wb-bill-sub { border-top: 1px solid var(--wb-line); margin-top: 4px; padding-top: 4px !important; font-weight: 650; }
+.wb-bill-wrrapd .wb-bill-sub { border-top-color: #fde68a; }
+.wb-review .wb-bill-total { margin-top: 8px; padding-top: 6px; font-size: 16px; }
+.wb-review-note { margin: 6px 0 0; color: #5c6578; font-size: 13px; font-weight: 460; line-height: 1.35; }
+.wb-review + .wb-review-note { margin-top: 8px; }
 .wb-endtable { margin: 8px 0 4px; }
 .wb-endtable td { border-bottom: 0; padding-top: 4px; padding-bottom: 4px; }
 .wb-endtable td[colspan] { text-align: right; padding-right: 8px; }
@@ -335,6 +346,7 @@ textarea.wb-input { resize: vertical; }
   .wb-options { grid-template-columns: 1fr; }
   .wb-grid { grid-template-columns: repeat(2, 1fr); }
   .wb-actions .wb-btn { flex: 1; }
+  .wb-review-grid { grid-template-columns: 1fr; }
   .wb-hero h1 { font-size: 34px; }
   .wb-manual-pop { position: static; width: auto; max-width: none; margin-top: 6px; box-shadow: none; }
   .wb-manual-pop::before { display: none; }

@@ -520,33 +520,43 @@
     return h + '</tbody></table></div>';
   }
 
-  function billBlock(bill, withWrapDetail) {
-    var h = '<h2>Your total</h2>';
+  function billBlock(bill) {
+    var shipCents = 0;
+    var taxCents = 0;
+    var items = '';
     bill.groups.forEach(function (g) {
-      h += '<p class="wb-bill-store">' + esc(g.retailerName) + '</p>';
-      g.items.forEach(function (it) { h += row(it.title + (it.variant ? ' (' + it.variant + ')' : ''), usd(it.cents)); });
-      h += row('Shipping: ' + g.shipping.label, g.shipping.cents ? usd(g.shipping.cents) : 'Free');
-      h += row(g.retailerName + ' tax', usd(g.taxCents));
+      shipCents += g.shipping.cents || 0;
+      taxCents += g.taxCents || 0;
+      g.items.forEach(function (it) {
+        var name = g.retailerName + ' · ' + it.title + (it.qty > 1 ? ' ×' + it.qty : '') + (it.variant ? ' (' + it.variant + ')' : '');
+        items += row(name, usd(it.cents));
+      });
     });
     var w = bill.wrap;
-    h += '<p class="wb-bill-store">Wrrapd</p>';
-    h += row('Gift-wrap (' + (w.giftWrapCount || 0) + ')', usd(w.giftWrapCents));
-    if (w.discountCents) h += row('Multi-item discount', '-' + usd(w.discountCents));
-    if (w.designAiCents) h += row('AI design', usd(w.designAiCents));
-    if (w.designUploadCents) h += row('Your design', usd(w.designUploadCents));
-    if (w.flowersCents) h += row('Flowers', usd(w.flowersCents));
-    if (w.boxCents) h += row('Gift box', usd(w.boxCents));
-    h += row('Tax on gift-wrap', usd(w.serviceTaxCents));
-    h += '<div class="wb-bill-row wb-bill-total"><span>Total</span><span>' + usd(bill.totalCents) + '</span></div>';
+    var n = w.giftWrapCount || 0;
+    var h = '<div class="wb-review-grid">' +
+      '<section class="wb-bill-sec"><h2>Item purchases</h2>' + items +
+      row('Shipping', shipCents ? usd(shipCents) : 'Free') +
+      row('Sales tax', usd(taxCents)) +
+      '<div class="wb-bill-row wb-bill-sub"><span>Items total</span><span>' + usd(bill.retailerCents) + '</span></div></section>' +
+      '<section class="wb-bill-sec wb-bill-wrrapd"><h2>Gift-wrapping & flowers</h2>' +
+      row('Gift-wrapping' + (n > 1 ? ' (×' + n + ')' : ''), usd(w.giftWrapCents)) +
+      (w.discountCents ? row('Multi-item discount', '-' + usd(w.discountCents)) : '') +
+      (w.designAiCents ? row('AI design', usd(w.designAiCents)) : '') +
+      (w.designUploadCents ? row('Your design', usd(w.designUploadCents)) : '') +
+      (w.flowersCents ? row('Flowers', usd(w.flowersCents)) : '') +
+      (w.boxCents ? row('Gift box', usd(w.boxCents)) : '') +
+      row('Tax on gift-wrap', usd(w.serviceTaxCents)) +
+      '<div class="wb-bill-row wb-bill-sub"><span>Total due to Wrrapd</span><span>' + usd(w.totalCents) + '</span></div></section></div>' +
+      '<div class="wb-bill-row wb-bill-total"><span>Order total</span><span>' + usd(bill.totalCents) + '</span></div>';
     if (bill.bundles && bill.bundles.length) {
-      h += '<p class="wb-bill-store">Deliveries</p>';
-      bill.bundles.forEach(function (bd) {
-        h += '<p class="wb-muted">' + (bd.deliveryDate ? esc(fmtDate(bd.deliveryDate)) : 'Date to follow') + ': ' + esc(bd.titles.join(', ')) +
-          (bd.titles.length > 1 ? ' (wrapped and delivered together)' : '') + '</p>';
-      });
+      h += '<p class="wb-review-note">' + bill.bundles.map(function (bd) {
+        return (bd.deliveryDate ? esc(fmtDate(bd.deliveryDate)) : 'Date to follow') + ': ' + esc(bd.titles.join(', ')) +
+          (bd.titles.length > 1 ? ' (wrapped and delivered together)' : '');
+      }).join(' ') + '</p>';
     }
     return h;
-    function row(a, b) { return '<div class="wb-bill-row"><span>' + esc(a) + '</span><span>' + esc(b) + '</span></div>'; }
+    function row(a, b) { return '<div class="wb-bill-row"><span title="' + esc(a) + '">' + esc(a) + '</span><span>' + esc(b) + '</span></div>'; }
   }
 
   function viewTerms() {
@@ -641,8 +651,8 @@
 
   function viewReview() {
     var b = S.batch;
-    var h = '<section class="wb-card">' + (b.bill ? billBlock(b.bill, true) : '<p class="wb-error">' + esc(b.billError || 'Your total is being prepared.') + '</p>') + '</section>';
-    h += '<p class="wb-muted">When you click Pay, we check the latest prices with each store one more time.</p>';
+    var h = '<section class="wb-card wb-review">' + (b.bill ? billBlock(b.bill) : '<p class="wb-error">' + esc(b.billError || 'Your total is being prepared.') + '</p>') + '</section>';
+    h += '<p class="wb-review-note">When you click Pay, we check the latest prices with each store one more time.</p>';
     if (S.error) h += '<p class="wb-error">' + esc(S.error) + '</p>';
     h += '<div class="wb-actions"><button type="button" class="wb-btn wb-btn-ghost" data-act="review-back">Edit gift-wrap</button>' +
       '<button type="button" class="wb-btn" data-act="to-pay"' + (b.bill ? '' : ' disabled') + '>Review and pay</button></div>';

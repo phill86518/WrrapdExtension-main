@@ -21,6 +21,14 @@
   h1 { font-size:24px; color:var(--btn-text); margin:6px 0 14px; }
   h2 { font-size:17px; color:var(--btn-text); margin:22px 0 10px; }
   .card { background:#fff; border:1px solid var(--line); border-radius:12px; padding:16px; margin-bottom:14px; }
+  .review-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; align-items:start; }
+  .bill-sec h2 { font-size:16px; margin:0 0 4px; }
+  .bill-sec .bill-row { padding:1px 0; font-size:14px; line-height:1.3; }
+  .bill-sec .bill-row .lbl { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:block; }
+  .bill-wrrapd { background:linear-gradient(180deg,#fffbeb,#fff); border:1px solid #fcd34d; border-radius:10px; padding:8px 12px 6px; }
+  .bill-sub { border-top:1px solid var(--line); margin-top:4px; padding-top:4px; font-weight:650; }
+  .bill-wrrapd .bill-sub { border-top-color:#fde68a; }
+  @media (max-width:700px) { .review-grid { grid-template-columns:1fr; } }
   .bill-row { display:flex; justify-content:space-between; gap:12px; padding:5px 0; }
   .bill-row.item { align-items:center; }
   .bill-row.item img { width:44px; height:44px; object-fit:contain; border-radius:6px; background:#faf9f6; margin-right:10px; }
@@ -112,31 +120,38 @@
 
   function billHtml(bill) {
     if (!bill) return '<p class="muted">' + esc((batch && batch.billError) || 'Your total is being prepared.') + '</p>';
-    var h = '';
+    var shipCents = 0;
+    var taxCents = 0;
+    var items = '';
     bill.groups.forEach(function (g) {
-      h += '<div class="retailer">' + esc(g.retailerName) + '</div>';
+      shipCents += g.shipping.cents || 0;
+      taxCents += g.taxCents || 0;
       g.items.forEach(function (it) {
-        h += '<div class="bill-row item"><span class="lbl">' + (it.imageUrl ? '<img src="' + esc(it.imageUrl) + '" alt="">' : '') +
-          '<span>' + esc(it.title) + (it.variant ? '<br><span class="muted">' + esc(it.variant) + '</span>' : '') + '</span></span><span>' + usd(it.cents) + '</span></div>';
+        var name = g.retailerName + ' · ' + it.title + (it.qty > 1 ? ' ×' + it.qty : '') + (it.variant ? ' (' + it.variant + ')' : '');
+        items += '<div class="bill-row"><span class="lbl" title="' + esc(name) + '">' + esc(name) + '</span><span>' + usd(it.cents) + '</span></div>';
       });
-      h += '<div class="bill-row"><span class="lbl">Shipping: ' + esc(g.shipping.label) + (g.shipping.arrivalDate ? ' <span class="muted">&nbsp;(arrives ' + esc(fmtDate(g.shipping.arrivalDate)) + ')</span>' : '') + '</span><span>' + usd(g.shipping.cents) + '</span></div>';
-      h += '<div class="bill-row"><span class="lbl">' + esc(g.retailerName) + ' tax</span><span>' + usd(g.taxCents) + '</span></div>';
     });
     var w = bill.wrap;
-    h += '<div class="retailer">Wrrapd</div>';
-    h += '<div class="bill-row"><span class="lbl">Gift-wrap (' + (w.giftWrapCount || 0) + ')</span><span>' + usd(w.giftWrapCents) + '</span></div>';
-    if (w.discountCents) h += '<div class="bill-row"><span class="lbl">Multi-item discount</span><span>-' + usd(w.discountCents) + '</span></div>';
-    if (w.designAiCents) h += '<div class="bill-row"><span class="lbl">AI design</span><span>' + usd(w.designAiCents) + '</span></div>';
-    if (w.designUploadCents) h += '<div class="bill-row"><span class="lbl">Your design</span><span>' + usd(w.designUploadCents) + '</span></div>';
-    if (w.flowersCents) h += '<div class="bill-row"><span class="lbl">Flowers</span><span>' + usd(w.flowersCents) + '</span></div>';
-    if (w.boxCents) h += '<div class="bill-row"><span class="lbl">Gift box</span><span>' + usd(w.boxCents) + '</span></div>';
-    h += '<div class="bill-row"><span class="lbl">Tax on gift-wrap</span><span>' + usd(w.serviceTaxCents) + '</span></div>';
-    h += '<div class="bill-row total"><span>Total</span><span>' + usd(bill.totalCents) + '</span></div>';
+    var n = w.giftWrapCount || 0;
+    function row(a, b) { return '<div class="bill-row"><span class="lbl">' + esc(a) + '</span><span>' + esc(b) + '</span></div>'; }
+    var h = '<div class="review-grid"><section class="bill-sec"><h2>Item purchases</h2>' + items +
+      row('Shipping', shipCents ? usd(shipCents) : 'Free') +
+      row('Sales tax', usd(taxCents)) +
+      '<div class="bill-row bill-sub"><span>Items total</span><span>' + usd(bill.retailerCents) + '</span></div></section>' +
+      '<section class="bill-sec bill-wrrapd"><h2>Gift-wrapping & flowers</h2>' +
+      row('Gift-wrapping' + (n > 1 ? ' (×' + n + ')' : ''), usd(w.giftWrapCents)) +
+      (w.discountCents ? row('Multi-item discount', '-' + usd(w.discountCents)) : '') +
+      (w.designAiCents ? row('AI design', usd(w.designAiCents)) : '') +
+      (w.designUploadCents ? row('Your design', usd(w.designUploadCents)) : '') +
+      (w.flowersCents ? row('Flowers', usd(w.flowersCents)) : '') +
+      (w.boxCents ? row('Gift box', usd(w.boxCents)) : '') +
+      row('Tax on gift-wrap', usd(w.serviceTaxCents)) +
+      '<div class="bill-row bill-sub"><span>Total due to Wrrapd</span><span>' + usd(w.totalCents) + '</span></div></section></div>' +
+      '<div class="bill-row total"><span>Order total</span><span>' + usd(bill.totalCents) + '</span></div>';
     if (bill.bundles && bill.bundles.length) {
-      h += '<h2 style="margin-top:16px">Deliveries</h2>';
-      bill.bundles.forEach(function (b) {
-        h += '<p class="muted" style="margin:4px 0">' + (b.deliveryDate ? 'Estimated ' + esc(fmtDate(b.deliveryDate)) : 'Date to follow') + ': ' + esc(b.titles.join(', ')) + '</p>';
-      });
+      h += '<p class="muted" style="margin:6px 0 0">' + bill.bundles.map(function (b) {
+        return (b.deliveryDate ? esc(fmtDate(b.deliveryDate)) : 'Date to follow') + ': ' + esc(b.titles.join(', '));
+      }).join(' ') + '</p>';
     }
     return h;
   }
