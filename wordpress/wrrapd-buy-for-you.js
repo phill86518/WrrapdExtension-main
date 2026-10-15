@@ -334,8 +334,21 @@
     return h + endTotals(lines) + '</tbody></table>';
   }
 
+  function linkKey(url) {
+    try {
+      var u = new URL(url);
+      u.hash = '';
+      return u.protocol + '//' + u.host.toLowerCase() + u.pathname.replace(/\/$/, '') + u.search;
+    } catch (e) {
+      return String(url || '');
+    }
+  }
   function excluded(l) {
-    return l.state === 'unavailable';
+    if (l.state !== 'unavailable') return false;
+    var key = linkKey(l.url);
+    var lines = S.batch && S.batch.lines || [];
+    if (lines.some(function (o) { return o !== l && o.state !== 'removed' && o.state !== 'unavailable' && linkKey(o.url) === key; })) return false;
+    return !lines.some(function (o) { return o !== l && o.state === 'unavailable' && linkKey(o.url) === key && lines.indexOf(o) < lines.indexOf(l); });
   }
   function limitMessage(l) {
     if (l.reason === 'over_item_limit') {

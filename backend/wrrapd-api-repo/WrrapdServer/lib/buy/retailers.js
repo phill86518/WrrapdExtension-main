@@ -41,7 +41,7 @@ const RETAILERS = [
         name: 'Ulta',
         trackingName: 'Ulta',
         hosts: ['ulta.com', 'www.ulta.com'],
-        productId: (u) => (u.pathname.match(/\/p\/([a-z0-9-]*pimprod\d+)/i) || [])[1],
+        productId: (u) => (u.pathname.match(/\/p\/([a-z0-9-]*(?:pimprod|xlsimpprod)\d+)(?:\/|$)/i) || [])[1],
         canonical: (id) => `https://www.ulta.com/p/${id.toLowerCase()}`,
     },
     {
@@ -139,8 +139,23 @@ function parseProductLink(raw, allowedIds) {
     };
 }
 
+function normalizeUrl(raw) {
+    try {
+        const u = new URL(/^https?:\/\//i.test(raw) ? raw : `https://${raw}`);
+        u.hash = '';
+        u.protocol = 'https:';
+        u.hostname = u.hostname.toLowerCase().replace(/\.$/, '');
+        for (const k of [...u.searchParams.keys()]) {
+            if (/^(utm_|ref|tag|linkcode|ascsubtag|clickid|irclickid|cid|psc_|afsrc|wmlspartner|sourceid|campaign)/i.test(k)) u.searchParams.delete(k);
+        }
+        return u.toString();
+    } catch (_) {
+        return String(raw || '').trim();
+    }
+}
+
 function publicList(allowedIds) {
     return RETAILERS.filter((r) => !allowedIds || allowedIds.includes(r.id)).map((r) => ({ id: r.id, name: r.name }));
 }
 
-module.exports = { RETAILERS, ALL_IDS, byId, parseProductLink, publicList };
+module.exports = { RETAILERS, ALL_IDS, byId, parseProductLink, normalizeUrl, publicList };

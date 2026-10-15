@@ -78,6 +78,21 @@ function lineQty(l) {
     return lineFacts.clampQty(l && l.qty);
 }
 
+function sameLine(line, parsed, raw) {
+    if (!line || line.removed) return false;
+    if (parsed.ok && line.canonicalUrl && line.canonicalUrl === parsed.canonicalUrl) return true;
+    const theirs = retailers.normalizeUrl(parsed.ok ? parsed.url : raw);
+    return theirs && retailers.normalizeUrl(line.url) === theirs;
+}
+
+function hideExcludedTwins(lines, keep) {
+    const key = retailers.normalizeUrl(keep.url);
+    for (const other of lines) {
+        if (other === keep || other.removed || other.state !== 'unavailable') continue;
+        if (retailers.normalizeUrl(other.url) === key) other.removed = true;
+    }
+}
+
 function countedItemCents(batch, retailer) {
     return (batch.lines || [])
         .filter((l) => l.retailer === retailer && !l.removed && l.state !== 'unavailable')
@@ -300,18 +315,36 @@ module.exports = function mountBuyForYou(app, deps) {
             const text = raw[i];
             const named = retailers.byId(parsed.retailer);
             const base = { id: `L${lines.length + 1}`, addedAt: now, url: text.slice(0, 2000), qty: 1, wrap: null };
+            const existing = [...byUrl.values()].find((l) => sameLine(l, parsed, text));
             if (!parsed.ok) {
-                lines.push({
+                if (existing) {
+                    notices.push('You already have this item.');
+                    return;
+                }
+                const rejected = {
                     ...base,
                     retailer: parsed.retailer || 'none',
                     retailerName: named ? named.name : '',
                     state: 'unavailable',
                     reason: parsed.reason,
                     message: REASON_TEXT[parsed.reason] || quotes.UNAVAILABLE,
-                });
+                };
+                byUrl.set(retailers.normalizeUrl(text), rejected);
+                lines.push(rejected);
                 return;
             }
-            const existing = byUrl.get(parsed.canonicalUrl);
+            if (existing && existing.state === 'unavailable') {
+                existing.url = parsed.url;
+                existing.canonicalUrl = parsed.canonicalUrl;
+                existing.productId = parsed.productId;
+                existing.retailer = parsed.retailer;
+                existing.retailerName = parsed.retailerName;
+                existing.state = 'reading';
+                existing.reason = '';
+                existing.message = '';
+                byUrl.set(parsed.canonicalUrl, existing);
+                return;
+            }
             if (existing) {
                 const bumped = lineFacts.bumpQty(existing.qty, 1);
                 existing.qty = bumped.qty;
@@ -493,10 +526,7 @@ module.exports = function mountBuyForYou(app, deps) {
             if (!raw.length) return { error: 'Please paste a product link.' };
             const opened = await Promise.all(raw.map((text) => resolveLink.resolveLink(text, cfg.allowedRetailers)));
             const openCount = batch.lines.filter((l) => !l.removed).length;
-            const extra = opened.filter((parsed) => {
-                if (!parsed.ok) return true;
-                return !batch.lines.some((l) => !l.removed && l.canonicalUrl === parsed.canonicalUrl);
-            }).length;
+            const extra = opened.filter((parsed, i) => !batch.lines.some((l) => sameLine(l, parsed, raw[i]))).length;
             if (openCount + extra > cfg.maxLinks) return { error: `Please paste up to ${cfg.maxLinks} links.` };
             let added = 0;
             let revived = 0;
@@ -508,7 +538,12 @@ module.exports = function mountBuyForYou(app, deps) {
                     const named = retailers.byId(parsed.retailer);
                     const id = `L${b.lines.length + 1}`;
                     const base = { id, addedAt: now, url: text.slice(0, 2000), qty: 1, wrap: null };
+                    const existing = b.lines.find((l) => sameLine(l, parsed, text));
                     if (!parsed.ok) {
+                        if (existing) {
+                            notices.push('You already have this item.');
+                            return;
+                        }
                         b.lines.push({
                             ...base,
                             retailer: parsed.retailer || 'none',
@@ -520,7 +555,6 @@ module.exports = function mountBuyForYou(app, deps) {
                         added += 1;
                         return;
                     }
-                    const existing = b.lines.find((l) => !l.removed && l.canonicalUrl === parsed.canonicalUrl);
                     if (existing) {
                         const failed = existing.state === 'unavailable' || !existing.product;
                         if (failed) {
@@ -531,17 +565,23 @@ module.exports = function mountBuyForYou(app, deps) {
                             existing.product = null;
                             existing.variantLabel = '';
                             existing.url = parsed.url;
+                            existing.canonicalUrl = parsed.canonicalUrl;
+                            existing.productId = parsed.productId;
+                            existing.retailer = parsed.retailer;
+                            existing.retailerName = parsed.retailerName;
                             existing.readStartedAt = now;
                             existing.readTries = (existing.readTries || 0) + 1;
                             for (const other of b.lines) {
                                 if (!other.removed && other.reason === 'duplicate' && parsed.productId && String(other.url || '').includes(parsed.productId)) other.removed = true;
                             }
                             quotes.ensureGroup(b, parsed.retailer).state = 'waiting';
+                            hideExcludedTwins(b.lines, existing);
                             revived += 1;
                             return;
                         }
                         const bumped = lineFacts.bumpQty(existing.qty, 1);
                         existing.qty = bumped.qty;
+                        hideExcludedTwins(b.lines, existing);
                         notices.push(bumped.notice);
                         return;
                     }

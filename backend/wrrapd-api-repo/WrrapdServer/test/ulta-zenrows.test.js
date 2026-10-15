@@ -9,6 +9,9 @@ test('an Ulta shade link stays one product, and a different shade is a different
     assert.equal(a.ok, true);
     assert.notEqual(a.canonicalUrl, b.canonicalUrl);
     assert.match(a.url, /sku=2551199/);
+    const balm = retailers.parseProductLink('https://www.ulta.com/p/take-day-off-cleansing-balm-makeup-remover-xlsImpprod11771009?sku=2590281');
+    assert.equal(balm.ok, true);
+    assert.match(balm.canonicalUrl, /xlsimpprod11771009\?sku=2590281/);
 });
 
 test('Ulta page reads go through ZenRows and errors do not include the key', async () => {
