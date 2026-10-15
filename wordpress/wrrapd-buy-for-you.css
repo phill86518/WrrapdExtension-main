@@ -122,6 +122,7 @@
 .wb-submit { display: flex; justify-content: flex-end; }
 .wb-link-btn { background: none; border: 0; color: var(--wb-navy); font-weight: 650; padding: 10px 0 0; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
 .wb-muted { color: #5c6578; font-size: 15px; font-weight: 460; margin: 6px 0; }
+.wb-load-tip { font-size: 14px; margin: 2px 0 10px; }
 .wb-linkline { color: #5c6578; font-size: 14px; margin: 2px 0 0; overflow-wrap: anywhere; }
 .wb-error { color: #9a3412; font-weight: 650; margin: 12px 0 0; }
 .wb-store { margin: 18px 0 8px; }

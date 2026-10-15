@@ -222,7 +222,7 @@ function acceptSupplied(line, facts, cfg) {
     return { ok: true };
 }
 
-/** Reads every product page in the batch (two at a time), then requests quotes. */
+/** Reads every product page in the batch (all at once, up to the link limit), then requests quotes. */
 async function processBatch(batchId) {
     if (readingBatches.has(batchId)) return;
     readingBatches.add(batchId);
@@ -242,6 +242,12 @@ async function processBatchBody(batchId) {
     const worker = async () => {
         while (i < todo.length) {
             const line = todo[i++];
+            await store.update(batchId, (b) => {
+                const l = b.lines.find((x) => x.id === line.id);
+                if (!l || l.state !== 'reading') return null;
+                l.readStartedAt = new Date().toISOString();
+                return b;
+            });
             let read;
             try {
                 const hub = batch.hub || {};
@@ -265,7 +271,8 @@ async function processBatchBody(batchId) {
             await kickGroups(batchId, 'initial');
         }
     };
-    await Promise.all([worker(), worker()]);
+    const workers = Math.min(Math.max(todo.length, 1), Number(cfg.maxLinks) || 5);
+    await Promise.all(Array.from({ length: workers }, worker));
     await kickGroups(batchId, 'initial');
 }
 

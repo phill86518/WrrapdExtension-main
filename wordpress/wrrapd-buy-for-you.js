@@ -135,7 +135,7 @@
     h += '<section class="wb-card" id="wb-start"><h2>Your gift</h2>' +
       '<div class="wb-zip-row"><label class="wb-label" for="wb-zip">Giftee / gift-recipient\'s zip code:</label>' +
       '<input class="wb-input wb-zip" id="wb-zip" inputmode="numeric" maxlength="5" autocomplete="off"></div>' +
-      '<label class="wb-label">Paste the product links for gift-wrapping below.</label>' + linkFields(maxLinks(), draft) +
+      '<label class="wb-label">Paste the product links for gift-wrapping below.</label>' + LOAD_TIP + linkFields(maxLinks(), draft) +
       '<p class="wb-stores">' + (S.config ? S.config.retailers.map(function (r) { return '<span>' + esc(r.name) + '</span>'; }).join('') : esc(stores)) + '</p>' +
       (S.error ? '<p class="wb-error">' + esc(S.error) + '</p>' : '') +
       buyButton() + '</section>';
@@ -147,6 +147,7 @@
   }
 
   var WAIT_ADD = 'Please wait while we add that to your gift-wrapping cart…';
+  var LOAD_TIP = '<p class="wb-muted wb-load-tip">Items can take up to 90 seconds each to load. Paste all your product links at once for a faster cart.</p>';
   var WAIT_DETAILS = 'Getting additional details…';
 
   function canEdit() {
@@ -464,14 +465,14 @@
       (rows || (excludedHtml ? '' : '<p class="wb-muted">Paste a product link to start.</p>')) +
       (rows ? '<p class="wb-asterisk">* Final gift delivery to the giftee may add 1 day.</p><p class="wb-ship-note">Shipping prices do not reflect any club membership or other discounts.</p>' : '') +
       excludedHtml +
-      (room ? '<p class="wb-ask">' + (lines.length ? 'Add more items for gift-wrapping' : 'Paste the product links for gift-wrapping below.') + '</p>' + linkFields(maxLinks() - lines.length, draft) + buyButton(lines.length > 0) : '') +
+      (room ? '<p class="wb-ask">' + (lines.length ? 'Add more items for gift-wrapping' : 'Paste the product links for gift-wrapping below.') + '</p>' + LOAD_TIP + linkFields(maxLinks() - lines.length, draft) + buyButton(lines.length > 0) : '') +
       '</section>';
     if (!b.bill && b.billError && !stillWorking() && readyLines().length) h += '<p class="wb-error">' + esc(b.billError) + '</p>';
     h += limitLine();
     if (S.error) h += '<p class="wb-error">' + esc(S.error) + '</p>';
     h += '<button type="button" class="wb-btn" data-act="open-wrap"' + (canGo ? '' : ' disabled') + '>Continue to gift-wrap</button>';
     if (allWrapped) h += '<button type="button" class="wb-btn wb-btn-ghost" data-act="to-review"' + (b.bill ? '' : ' disabled') + '>Review and pay</button>';
-    if (lines.some(function (l) { return l.state === 'reading'; })) h += '<p class="wb-muted">Please keep this page open.</p>';
+    if (lines.some(function (l) { return l.state === 'reading'; })) h += '<p class="wb-muted">Please keep this page open. Each item can take up to 90 seconds to load.</p>';
     return h;
   }
   function endTotals(lines) {
