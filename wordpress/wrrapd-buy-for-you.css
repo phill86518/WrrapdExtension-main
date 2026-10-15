@@ -331,4 +331,6 @@ textarea.wb-input { resize: vertical; }
   .wb-grid { grid-template-columns: repeat(2, 1fr); }
   .wb-actions .wb-btn { flex: 1; }
   .wb-hero h1 { font-size: 34px; }
+  .wb-manual-pop { position: static; width: auto; max-width: none; margin-top: 6px; box-shadow: none; }
+  .wb-manual-pop::before { display: none; }
 }
