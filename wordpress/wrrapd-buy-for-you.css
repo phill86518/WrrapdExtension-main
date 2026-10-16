@@ -96,6 +96,8 @@
 .wb-input:focus { outline: 2px solid var(--wb-gold); border-color: var(--wb-gold); }
 .wb-zip { width: 6.5rem; max-width: 6.5rem; flex: 0 0 6.5rem; }
 .wb-links { display: grid; gap: 10px; }
+.wb-zip-first { margin: 8px 0 6px; font-size: 13px; font-weight: 650; color: var(--wb-navy); }
+.wb-links-locked .wb-link { background: #f4f1ea; color: #94a3b8; cursor: not-allowed; }
 .wb-stores { display: flex; flex-wrap: wrap; gap: 6px; margin: 14px 0 0; }
 .wb-stores span {
   background: var(--wb-cream);

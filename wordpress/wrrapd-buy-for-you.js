@@ -128,6 +128,18 @@
 
   /* ---------- views ---------- */
   function render() {
+    if (S.view === 'start') {
+      var zipEl = root.querySelector('#wb-zip');
+      if (zipEl) {
+        var typed = String(zipEl.value || '').replace(/\D/g, '').slice(0, 5);
+        S.startZip = typed;
+        if (typed.length !== 5) S.startZipOk = false;
+      }
+      if (S.draftLinks == null) {
+        var existing = root.querySelectorAll('.wb-link');
+        if (existing.length) S.draftLinks = Array.prototype.map.call(existing, function (i) { return i.value; });
+      }
+    }
     var html = '';
     if (S.view === 'start') html = viewStart();
     else if (S.view === 'items') html = viewItems();
@@ -144,16 +156,17 @@
   function maxLinks() {
     return (S.config && S.config.maxLinks) || 5;
   }
-  function linkFields(count, values) {
-    var h = '<div class="wb-links">';
+  function linkFields(count, values, locked) {
+    var h = '<div class="wb-links' + (locked ? ' wb-links-locked' : '') + '">';
     for (var i = 0; i < count; i++) {
-      h += '<input class="wb-input wb-link" type="url" inputmode="url" placeholder="Paste a product link" aria-label="Product link ' + (i + 1) + '" value="' + esc((values && values[i]) || '') + '">';
+      h += '<input class="wb-input wb-link" type="url" inputmode="url" placeholder="Paste a product link" aria-label="Product link ' + (i + 1) + '" value="' + esc((values && values[i]) || '') + '"' + (locked ? ' disabled' : '') + '>';
     }
     return h + '</div>';
   }
   function buyButton(adding) {
+    var locked = !adding && !S.startZipOk;
     var label = S.busy ? 'Checking…' : (adding ? 'Add these items to list above' : 'Buy for me and gift-wrap these items');
-    var btn = '<button type="button" class="wb-btn' + (adding ? ' wb-btn-add' : '') + '" data-act="submit-links"' + (S.busy ? ' disabled' : '') + '>' + esc(label) + '</button>';
+    var btn = '<button type="button" class="wb-btn' + (adding ? ' wb-btn-add' : '') + '" data-act="submit-links"' + (S.busy || locked ? ' disabled' : '') + '>' + esc(label) + '</button>';
     return adding ? '<div class="wb-submit">' + btn + '</div>' : btn;
   }
   function zipBar(id, value, act, ok) {
@@ -176,7 +189,10 @@
     S.draftLinks = null;
     h += '<section class="wb-card" id="wb-start"><h2>Your gift</h2>' +
       zipBar('wb-zip', S.startZip, 'start-zip', S.startZipOk) +
-      '<label class="wb-label">Paste the product links for gift-wrapping below.</label>' + LOAD_TIP + linkFields(maxLinks(), draft) +
+      (S.startZipOk
+        ? '<label class="wb-label">Paste the product links for gift-wrapping below.</label>' + LOAD_TIP
+        : '<p class="wb-zip-first">Enter the giftee ZIP code first.</p>') +
+      linkFields(maxLinks(), draft, !S.startZipOk) +
       '<p class="wb-stores">' + (S.config ? S.config.retailers.map(function (r) { return '<span>' + esc(r.name) + '</span>'; }).join('') : esc(stores)) + '</p>' +
       (S.error ? '<p class="wb-error">' + esc(S.error) + '</p>' : '') +
       buyButton() + '</section>';
@@ -1127,9 +1143,14 @@
       if (again) again.focus();
       return;
     }
+    var wasOk = S.startZipOk;
     S.startZipOk = true;
     S.error = '';
     render();
+    if (!wasOk) {
+      var first = root.querySelector('.wb-link');
+      if (first) first.focus();
+    }
   }
 
   function onZip() {
