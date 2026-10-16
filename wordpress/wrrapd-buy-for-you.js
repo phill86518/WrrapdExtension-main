@@ -454,7 +454,7 @@
     var targets = wrapTargets();
     var canGo = targets.length > 0;
     var allWrapped = canGo && targets.every(function (l) { return l.wrap && l.wrap.done; });
-    var room = !b.termsAccepted && lines.length < maxLinks();
+    var room = lines.length > 0 && lines.length < maxLinks();
     var draft = S.draftLinks;
     S.draftLinks = null;
     var h = '<section class="wb-card"><h2>Gift-wrapping shopping cart</h2>' +
@@ -465,18 +465,22 @@
       (rows || (excludedHtml ? '' : '<p class="wb-muted">Paste a product link to start.</p>')) +
       (rows ? '<p class="wb-asterisk">* Final gift delivery to the giftee may add 1 day.</p><p class="wb-ship-note">Shipping prices do not reflect any club membership or other discounts.</p>' : '') +
       excludedHtml +
-      (room ? '<p class="wb-ask">' + (lines.length ? 'Add more items for gift-wrapping' : 'Paste the product links for gift-wrapping below.') + '</p>' + LOAD_TIP + linkFields(maxLinks() - lines.length, draft) + buyButton(lines.length > 0) : '') +
+      (room && !S.addOpen ? '<button type="button" class="wb-btn wb-btn-ghost wb-add-more" data-act="add-more">Add more items</button>' : '') +
+      (room && S.addOpen ? '<p class="wb-ask">Add more items for gift-wrapping</p>' + LOAD_TIP + linkFields(maxLinks() - lines.length, draft) + buyButton(true) : '') +
       '</section>';
     if (!b.bill && b.billError && !stillWorking() && readyLines().length) h += '<p class="wb-error">' + esc(b.billError) + '</p>';
     h += limitLine();
     if (allWrapped && b.bill) h += '<section class="wb-card wb-review">' + billBlock(b.bill) + '</section>';
     if (S.error) h += '<p class="wb-error">' + esc(S.error) + '</p>';
-    if (allWrapped && b.bill) {
-      h += '<button type="button" class="wb-btn" data-act="pay"' + (S.busy ? ' disabled' : '') + '>Pay Wrrapd</button>';
-      h += '<button type="button" class="wb-btn wb-btn-ghost" data-act="open-wrap">Edit gift-wrap</button>';
+    h += '<div class="wb-actions wb-cart-actions">';
+    if (allWrapped) {
+      h += '<button type="button" class="wb-btn wb-btn-ghost" data-act="open-wrap">Edit gift-wrap options</button>';
+      h += '<button type="button" class="wb-btn" data-act="pay"' + (b.bill && !S.busy ? '' : ' disabled') + '>Review and pay</button>';
     } else {
       h += '<button type="button" class="wb-btn" data-act="open-wrap"' + (canGo ? '' : ' disabled') + '>Continue to gift-wrap</button>';
+      h += '<button type="button" class="wb-btn wb-btn-ghost" data-act="pay" disabled>Review and pay</button>';
     }
+    h += '</div>';
     if (lines.some(function (l) { return l.state === 'reading'; })) h += '<p class="wb-muted">Please keep this page open. Each item can take up to 90 seconds to load.</p>';
     return h;
   }
@@ -790,6 +794,7 @@
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { S.error = 'Please enter a valid email.'; render(); var again = $('#wb-manual-email'); if (again) { again.value = email; again.focus(); } return; }
       return askManual(el.getAttribute('data-line'), email);
     }
+    if (act === 'add-more') { S.addOpen = true; render(); return; }
     if (act === 'submit-links') return submitLinks();
     if (act === 'remove') return removeLine(el.getAttribute('data-line'));
     if (act === 'variant') return submitVariant(el.getAttribute('data-line'));
@@ -829,8 +834,11 @@
     request('/api/buy/batches/' + encodeURIComponent(S.id) + '/link', { links: links }).then(function (j) {
       S.busy = false;
       S.draftLinks = null;
+      S.addOpen = false;
+      S.payRefreshId = '';
       S.batch = j.batch;
-      S.notice = j.notice || '';
+      var needsWrap = (j.batch.lines || []).some(function (l) { return l.state !== 'removed' && l.state !== 'unavailable' && !(l.wrap && l.wrap.done); });
+      S.notice = needsWrap ? 'Please gift-wrap the new item.' : (j.notice || '');
       render();
       poll();
     }).catch(function (err) {

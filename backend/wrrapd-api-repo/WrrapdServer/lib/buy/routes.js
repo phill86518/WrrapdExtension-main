@@ -567,7 +567,7 @@ module.exports = function mountBuyForYou(app, deps) {
     app.post(
         '/api/buy/batches/:id/link',
         shopperChange(async (req, batch) => {
-            if (batch.terms) return { error: 'Items are set for this order.' };
+            if (batch.status !== 'open') return { error: 'This order is already paid.' };
             const cfg = config.load();
             const raw = (Array.isArray(req.body && req.body.links) ? req.body.links : [req.body && req.body.url])
                 .map((s) => String(s || '').trim())
