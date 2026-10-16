@@ -84,7 +84,36 @@
   function setUrl() {
     var u = new URL(location.href);
     if (S.id) { u.searchParams.set('b', S.id); u.searchParams.set('t', S.token); }
+    else { u.searchParams.delete('b'); u.searchParams.delete('t'); }
     history.replaceState(null, '', u.toString());
+  }
+  function startOver() {
+    clearTimeout(S.pollTimer);
+    S.id = '';
+    S.token = '';
+    S.batch = null;
+    S.view = 'start';
+    S.wrapIndex = 0;
+    S.wrapOpen = false;
+    S.termsOpen = false;
+    S.flowersOpen = false;
+    S.addOpen = false;
+    S.payRefreshId = '';
+    S.promptedWrap = '';
+    S.error = '';
+    S.notice = '';
+    S.busy = false;
+    S.draftLinks = null;
+    S.ai = {};
+    S.variantDraft = {};
+    S.manualEmailFor = '';
+    S.manualShut = '';
+    S.occBad = false;
+    S.lastHtml = '';
+    setUrl();
+    render();
+    var zip = $('#wb-zip');
+    if (zip) zip.focus();
   }
 
   function extLine() {
@@ -460,7 +489,8 @@
     S.draftLinks = null;
     var h = '<section class="wb-card"><h2>Gift-wrapping shopping cart</h2>' +
       '<div class="wb-cart-head"><div class="wb-zip-row"><label class="wb-label" for="wb-zip-edit">Giftee / gift-recipient\'s zip code:</label>' +
-      '<input class="wb-input wb-zip" id="wb-zip-edit" inputmode="numeric" maxlength="5" value="' + esc(b.gifteeZip) + '" autocomplete="off"></div>' +
+      '<input class="wb-input wb-zip" id="wb-zip-edit" inputmode="numeric" maxlength="5" value="' + esc(b.gifteeZip) + '" autocomplete="off">' +
+      '<button type="button" class="wb-btn wb-btn-ghost wb-start-over" data-act="start-over">Start over</button></div>' +
       extLine() + '</div>' +
       (S.notice ? '<p class="wb-notice">' + esc(S.notice) + '</p>' : '') +
       (rows || (excludedHtml ? '' : '<p class="wb-muted">Paste a product link to start.</p>')) +
@@ -602,6 +632,7 @@
     var ai = S.ai[l.id] || {};
     var title = l.product && l.product.title ? l.product.title : 'Item';
     var h = '<div class="wb-modal" role="dialog" aria-modal="true" aria-labelledby="wb-wrap-title"><div class="wb-modal-box wb-wrap-modal">' +
+      '<button type="button" class="wb-btn wb-btn-ghost wb-start-over" data-act="start-over">Start over</button>' +
       '<button type="button" class="wb-x" data-act="wrap-close" aria-label="Close">×</button>' +
       '<p class="wb-muted">Gift-wrap for item ' + (S.wrapIndex + 1) + ' of ' + lines.length + '</p>' +
       '<div class="wb-wrap-head">' + (l.product && l.product.imageUrl ? '<img src="' + esc(l.product.imageUrl) + '" alt="">' : '') + '<h2 id="wb-wrap-title">' + esc(title) + '</h2></div>';
@@ -671,7 +702,8 @@
 
   function viewPaid() {
     return '<section class="wb-card wb-center"><h2>Thank you!</h2><p>Your order number is <b>' + esc(S.batch.orderNumber || S.batch.id) + '</b>.</p><p>Your order is in. We are gift-wrapping your items and delivering them.</p>' +
-      (S.batch.manualPending ? '<p>We are adding your other item by hand. We will email you to approve it.</p>' : '') + '</section>';
+      (S.batch.manualPending ? '<p>We are adding your other item by hand. We will email you to approve it.</p>' : '') +
+      '<button type="button" class="wb-btn wb-btn-ghost wb-start-over" data-act="start-over">Start over</button></section>';
   }
 
   /* ---------- actions ---------- */
@@ -795,6 +827,7 @@
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { S.error = 'Please enter a valid email.'; render(); var again = $('#wb-manual-email'); if (again) { again.value = email; again.focus(); } return; }
       return askManual(el.getAttribute('data-line'), email);
     }
+    if (act === 'start-over') return startOver();
     if (act === 'add-more') { S.addOpen = true; render(); return; }
     if (act === 'submit-links') return submitLinks();
     if (act === 'remove') return removeLine(el.getAttribute('data-line'));

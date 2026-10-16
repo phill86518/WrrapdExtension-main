@@ -67,6 +67,8 @@
 .wb-zip-row { display: flex; align-items: center; gap: 10px; margin: 4px 0 8px; }
 .wb-cart-head .wb-zip-row { margin: 0; flex: 0 1 auto; }
 .wb-zip-row .wb-label { margin: 0; white-space: nowrap; }
+.wb-start-over { margin-top: 0; padding: 8px 14px; white-space: nowrap; }
+.wb-modal-box > .wb-start-over { margin: 0 48px 10px 0; }
 .wb-label { display: block; font-weight: 650; margin: 8px 0 4px; font-size: 14px; color: var(--wb-navy); }
 .wb-input {
   width: 100%;
