@@ -62,8 +62,9 @@
 .wb-card h2 { color: var(--wb-navy); font-size: 22px; font-weight: 560; margin: 0 0 2px; letter-spacing: -0.02em; }
 .wb-ask { margin: 12px 0 0; font-weight: 560; color: var(--wb-navy); }
 .wb-center { text-align: center; }
-.wb-cart-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 2px 0 6px; }
-.wb-cart-head .wb-ext-line { margin: 0; flex: 1 1 16rem; max-width: 34rem; text-align: right; background: transparent; padding: 0; font-size: 13px; line-height: 1.3; }
+.wb-cart-head { display: flex; flex-direction: column; align-items: stretch; gap: 10px; margin: 2px 0 6px; }
+.wb-cart-head .wb-ext-line { margin: 0; text-align: left; background: transparent; padding: 0; font-size: 13px; line-height: 1.3; }
+.wb-cart-head .wb-zipbar { width: 100%; margin: 0; }
 .wb-zip-row { display: flex; align-items: center; gap: 10px; margin: 4px 0 8px; }
 .wb-cart-head .wb-zip-row { margin: 0; flex: 0 1 auto; }
 .wb-zip-row .wb-label { margin: 0; white-space: nowrap; }
@@ -329,11 +330,11 @@ button.wb-trash { width: 22px !important; height: 22px !important; min-width: 0 
 .wb-zipbar { margin: 0 0 14px; padding: 14px; background: #fff; border: 2px solid #cbd5e1; border-radius: 10px; box-sizing: border-box; }
 .wb-zipbar-label { display: block; margin: 0 0 6px; font-size: 14px; font-weight: 650; color: #0f172a; }
 .wb-zipbar-hint { margin: 0 0 10px; font-size: 13px; line-height: 1.4; color: #64748b; font-weight: 460; }
-.wb-zipbar-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.wb-zipbar-row { display: flex; flex-wrap: nowrap; gap: 8px; align-items: center; }
 .wb-zipbar-input { width: 8rem; max-width: 8rem; box-sizing: border-box; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; font-weight: 650; color: #0f172a; background: #fff; }
 .wb-zipbar-input:focus { outline: 2px solid var(--wb-gold); border-color: var(--wb-gold); }
 .wb-zipbar-input.wb-zip-ok { border-color: #6ee7b7; }
-.wrrapd-buy button.wb-zip-submit { margin: 0; padding: 8px 14px; font-size: 13px !important; border-radius: 8px; box-shadow: none; }
+.wrrapd-buy button.wb-zip-submit { margin: 0; padding: 8px 14px; font-size: 13px !important; border-radius: 8px; box-shadow: none; flex: 0 0 auto; white-space: nowrap; }
 .wb-wrap-legend { margin: 0 0 6px; font-size: 15px; font-weight: 650; color: #0f172a; }
 .wb-wrap-box { border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; margin: 0 0 14px; }
 .wb-wrap-box .wb-radio { font-weight: 650; margin-bottom: 10px; }

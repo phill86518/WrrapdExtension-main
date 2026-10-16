@@ -80,6 +80,34 @@ test('a Nordstrom price range asks the shopper to choose a specific item', () =>
     assert.equal(product.choicePrompt, 'Choose a size and color on the product page, then add the link again.');
 });
 
+test('a crossed-out Nordstrom price is not the price charged', () => {
+    const sale = {
+        ...cherry,
+        coreProducts: [{
+            coreChoices: [{
+                coreChoiceId: '444448ZZ6Y',
+                displayColorDescription: 'BLACK',
+                items: [{
+                    concatenatedDisplaySize: 'S',
+                    sku: {
+                        skuId: 'S1',
+                        propositions: [{
+                            salability: { status: 'SELLABLE' },
+                            availability: { isAvailable: true },
+                            pricings: [{ sellingRetail: { price: 64 }, promotion: { price: 48 } }],
+                        }],
+                    },
+                }],
+            }],
+        }],
+    };
+    const product = reader.nordstromFromHtml(page(sale, []), url, '32244');
+    assert.equal(product.pagePriceCents, 4800);
+    const html = '<p><s>$64.00</s> <span>$48.00</span></p>';
+    assert.equal(reader.struckSaleCents(html, 6400), 4800);
+    assert.equal(reader.struckSaleCents('<p>$64.00</p>', 6400), 6400);
+});
+
 test('electronics detection uses the product title', () => {
     const headphones = { ...cherry, copyProductTitle: 'Wireless Headphones' };
     const product = reader.nordstromFromHtml(page(headphones, shipRows), url, '32244');

@@ -787,14 +787,79 @@ function nordstromChoices(entity) {
     return out;
 }
 
+function moneyCents(value) {
+    if (value == null || value === '') return null;
+    if (typeof value === 'number' || typeof value === 'string') {
+        const n = Number(value);
+        return Number.isFinite(n) && n > 0 ? Math.round(n * 100) : null;
+    }
+    if (typeof value !== 'object') return null;
+    if (value.units != null || value.nanos != null) {
+        const cents = Math.round((Number(value.units) || 0) * 100 + (Number(value.nanos) || 0) / 1e7);
+        return cents > 0 ? cents : null;
+    }
+    if (value.price != null) return moneyCents(value.price);
+    if (value.minPrice != null) return moneyCents(value.minPrice);
+    if (value.min != null) return moneyCents(value.min);
+    return null;
+}
+
+function firstCents(bag, keys) {
+    if (!bag || typeof bag !== 'object') return null;
+    for (const key of keys) {
+        if (bag[key] == null) continue;
+        const cents = moneyCents(bag[key]);
+        if (cents != null) return cents;
+    }
+    return null;
+}
+
+const NORDSTROM_SALE_KEYS = ['current', 'currentPrice', 'sale', 'salePrice', 'clearance', 'promotion', 'promotional', 'markdown'];
+const NORDSTROM_REGULAR_KEYS = ['sellingRetail', 'regular', 'compareAt', 'original', 'base', 'list'];
+
+/** Current price wins over the crossed-out regular price. */
+function nordstromPriceCents(proposition, item) {
+    const pricing = (proposition && proposition.pricings && proposition.pricings[0]) || {};
+    const bags = [pricing, proposition, item && item.price, item];
+    let sale = null;
+    let regular = null;
+    for (const bag of bags) {
+        if (sale == null) sale = firstCents(bag, NORDSTROM_SALE_KEYS);
+        if (regular == null) regular = firstCents(bag, NORDSTROM_REGULAR_KEYS);
+    }
+    return sale != null ? sale : regular;
+}
+
 function nordstromOffer(item) {
     for (const proposition of item?.sku?.propositions || []) {
         const soldOut = proposition?.salability?.status === 'SOLD_OUT' || proposition?.availability?.isAvailable === false;
-        const price = proposition?.pricings?.[0]?.sellingRetail?.price;
-        const cents = price == null || price === '' ? null : Math.round(Number(price) * 100);
+        const cents = nordstromPriceCents(proposition, item);
         if (!soldOut && Number.isFinite(cents)) return { cents, skuId: item.sku.skuId, sellable: true };
     }
     return { cents: null, skuId: item?.sku?.skuId || '', sellable: false };
+}
+
+/** When the chosen price is the struck-through one, use the lower price printed next to it. */
+function struckSaleCents(html, chosenCents) {
+    const want = Number(chosenCents);
+    if (!Number.isFinite(want) || want <= 0) return chosenCents;
+    const text = String(html || '');
+    const found = [];
+    const grab = (chunk) => {
+        const amounts = [...String(chunk).matchAll(/\$?\s*([0-9]+\.[0-9]{2})/g)].map((m) => Math.round(Number(m[1]) * 100));
+        if (!amounts.length || amounts[0] !== want) return;
+        const lower = amounts.filter((cents) => cents > 0 && cents < want);
+        if (lower.length) found.push(Math.min(...lower));
+    };
+    const patterns = [
+        /<(?:s|del|strike)\b[^>]*>[\s\S]{0,160}?<\/(?:s|del|strike)>[\s\S]{0,180}?\$?\s*[0-9]+\.[0-9]{2}/gi,
+        /line-through[^>]*>[\s\S]{0,160}?<\/[^>]+>[\s\S]{0,180}?\$?\s*[0-9]+\.[0-9]{2}/gi,
+    ];
+    for (const re of patterns) {
+        let m;
+        while ((m = re.exec(text)) && found.length < 6) grab(m[0]);
+    }
+    return found.length ? Math.min(...found) : chosenCents;
 }
 
 function nordstromChoiceImage(choice) {
@@ -837,7 +902,7 @@ function nordstromStandardShip(config, zip, styleId, skuIds) {
 
 /**
  * Reads a real Nordstrom product page (the HTML a browser saves as Page Source).
- * The selected color's selling price is used. The style-wide sale range is not.
+ * The selected color's current price is used. A crossed-out regular price is not.
  */
 function nordstromFromHtml(html, url, zip) {
     if (nordstromShell(html)) return null;
@@ -860,7 +925,8 @@ function nordstromFromHtml(html, url, zip) {
         }
     }
     const prices = [...new Set(offers.map((offer) => offer.cents))];
-    const pagePriceCents = prices.length === 1 ? prices[0] : null;
+    let pagePriceCents = prices.length === 1 ? prices[0] : null;
+    pagePriceCents = struckSaleCents(html, pagePriceCents);
     const colorNames = choices.map((choice) => nordstromTitleCase(choice.displayColorDescription)).filter(Boolean);
     const selectedColor = selectedChoice ? nordstromTitleCase(selectedChoice.displayColorDescription) : null;
     const variantSource = selectedChoice ? (selectedChoice.items || []) : choices.flatMap((choice) => choice.items || []);
@@ -1068,6 +1134,7 @@ async function readProduct({ retailer, url, zip, state, batchId, lineId }) {
         const parsed = nordstromShell(page.html) ? null : nordstromFromHtml(page.html, url, zip);
         const product = parsed || (page.fromSavedPage ? null : await askGeminiProduct(url, zip));
         if (product) {
+            if (product.pagePriceCents) product.pagePriceCents = struckSaleCents(page.html, product.pagePriceCents);
             const amazonCategory = await categories.categorize({
                 retailer,
                 retailerName: r.name,
@@ -1224,5 +1291,5 @@ async function readProduct({ retailer, url, zip, state, batchId, lineId }) {
 
 module.exports = {
     readProduct, askGrok, looksElectronic, priceAppearsInPage, jsonLdProducts, visibleText, fetchPage, usablePage, DIRECT_MS, standardFromPage, walmartShip, bestbuyShip, pageShipZip, zipMismatchPrompt, kohlsSkuColor, kohlsColorNames, applyKohlsColors, withDefaultShip, targetFulfillment,
-    nordstromShell, nordstromFromHtml, savedPageHtml, EXTERNAL_PAGES_DIR,
+    nordstromShell, nordstromFromHtml, struckSaleCents, savedPageHtml, EXTERNAL_PAGES_DIR,
 };

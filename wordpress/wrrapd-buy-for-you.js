@@ -30,6 +30,9 @@
     ai: {},
     variantDraft: {},
     promptedWrap: '',
+    modalZipOk: false,
+    startZipOk: false,
+    startZip: '',
   };
 
   var TRASH_SVG = '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
@@ -109,6 +112,9 @@
     S.manualEmailFor = '';
     S.manualShut = '';
     S.occBad = false;
+    S.modalZipOk = false;
+    S.startZipOk = false;
+    S.startZip = '';
     S.lastHtml = '';
     setUrl();
     render();
@@ -150,6 +156,12 @@
     var btn = '<button type="button" class="wb-btn' + (adding ? ' wb-btn-add' : '') + '" data-act="submit-links"' + (S.busy ? ' disabled' : '') + '>' + esc(label) + '</button>';
     return adding ? '<div class="wb-submit">' + btn + '</div>' : btn;
   }
+  function zipBar(id, value, act, ok) {
+    return '<div class="wb-zipbar"><label class="wb-zipbar-label" for="' + id + '">Giftee / gift-recipient\'s zip code:</label>' +
+      '<p class="wb-zipbar-hint">This helps us with a faster checkout!</p>' +
+      '<div class="wb-zipbar-row"><input class="wb-zipbar-input' + (ok ? ' wb-zip-ok' : '') + '" id="' + id + '" inputmode="numeric" maxlength="10" autocomplete="postal-code" placeholder="ZIP code" value="' + esc(value || '') + '">' +
+      '<button type="button" class="wb-btn wb-zip-submit" data-act="' + act + '"' + (S.busy || S.zipChecking ? ' disabled' : '') + '>' + (S.zipChecking ? 'Checking…' : 'Submit') + '</button></div></div>';
+  }
   function viewStart() {
     var open = S.config && S.config.open;
     var stores = S.config ? S.config.retailers.map(function (r) { return r.name; }).join(', ') : '';
@@ -163,8 +175,7 @@
     var draft = S.draftLinks;
     S.draftLinks = null;
     h += '<section class="wb-card" id="wb-start"><h2>Your gift</h2>' +
-      '<div class="wb-zip-row"><label class="wb-label" for="wb-zip">Giftee / gift-recipient\'s zip code:</label>' +
-      '<input class="wb-input wb-zip" id="wb-zip" inputmode="numeric" maxlength="5" autocomplete="off"></div>' +
+      zipBar('wb-zip', S.startZip, 'start-zip', S.startZipOk) +
       '<label class="wb-label">Paste the product links for gift-wrapping below.</label>' + LOAD_TIP + linkFields(maxLinks(), draft) +
       '<p class="wb-stores">' + (S.config ? S.config.retailers.map(function (r) { return '<span>' + esc(r.name) + '</span>'; }).join('') : esc(stores)) + '</p>' +
       (S.error ? '<p class="wb-error">' + esc(S.error) + '</p>' : '') +
@@ -503,8 +514,7 @@
     var more = left === 1 ? 'Add up to 1 more item' : 'Add up to ' + left + ' more items';
     var h = '<section class="wb-card"><div class="wb-card-top"><h2>Gift-wrapping shopping cart</h2>' +
       '<button type="button" class="wb-btn wb-btn-ghost wb-start-over" data-act="start-over">Start over</button></div>' +
-      '<div class="wb-cart-head"><div class="wb-zip-row"><label class="wb-label" for="wb-zip-edit">Giftee / gift-recipient\'s zip code:</label>' +
-      '<input class="wb-input wb-zip" id="wb-zip-edit" inputmode="numeric" maxlength="5" value="' + esc(b.gifteeZip) + '" autocomplete="off"></div>' +
+      '<div class="wb-cart-head">' + zipBar('wb-zip-edit', b.gifteeZip, 'cart-zip', false) +
       extLine() + '</div>' +
       (S.notice ? '<p class="wb-notice">' + esc(S.notice) + '</p>' : '') +
       (rows || (excludedHtml ? '' : '<p class="wb-muted">Paste a product link to start.</p>')) +
@@ -650,10 +660,7 @@
       : 'Gift wrap with Wrrapd';
     var h = '<div class="wb-modal" role="dialog" aria-modal="true" aria-label="Wrrapd gift wrap"><div class="wb-modal-box wb-wrap-modal">' +
       '<h2 id="wb-wrap-title">' + esc(heading) + '</h2>' +
-      '<div class="wb-zipbar"><label class="wb-zipbar-label" for="wb-modal-zip">Giftee / gift-recipient\'s zip code:</label>' +
-      '<p class="wb-zipbar-hint">This helps us with a faster checkout!</p>' +
-      '<div class="wb-zipbar-row"><input class="wb-zipbar-input' + (S.modalZipOk ? ' wb-zip-ok' : '') + '" id="wb-modal-zip" inputmode="numeric" maxlength="10" autocomplete="postal-code" placeholder="ZIP code" value="' + esc(S.batch && S.batch.gifteeZip) + '">' +
-      '<button type="button" class="wb-btn wb-zip-submit" data-act="modal-zip"' + (S.busy ? ' disabled' : '') + '>' + (S.zipChecking ? 'Checking…' : 'Submit') + '</button></div></div>';
+      zipBar('wb-modal-zip', S.batch && S.batch.gifteeZip, 'modal-zip', S.modalZipOk);
     if (!l.product || l.state === 'reading') {
       h += '<p class="wb-status"><span class="wb-spin"></span>' + WAIT_ADD + '</p>' +
         (S.error ? '<p class="wb-error">' + esc(S.error) + '</p>' : '') +
@@ -792,6 +799,14 @@
     if (modalZip) modalZip.addEventListener('keydown', function (ev) {
       if (ev.key === 'Enter') { ev.preventDefault(); submitModalZip(); }
     });
+    var startZip = $('#wb-zip');
+    if (startZip) startZip.addEventListener('keydown', function (ev) {
+      if (ev.key === 'Enter') { ev.preventDefault(); submitStartZip(); }
+    });
+    var cartZip = $('#wb-zip-edit');
+    if (cartZip) cartZip.addEventListener('keydown', function (ev) {
+      if (ev.key === 'Enter') { ev.preventDefault(); onZip(); }
+    });
     var body = document.getElementById('wb-terms-body');
     if (body) {
       var check = function () {
@@ -891,6 +906,8 @@
       return askManual(el.getAttribute('data-line'), email);
     }
     if (act === 'modal-zip') return submitModalZip();
+    if (act === 'start-zip') return submitStartZip();
+    if (act === 'cart-zip') return onZip();
     if (act === 'start-over') return startOver();
     if (act === 'add-more') { S.addOpen = true; render(); return; }
     if (act === 'submit-links') return submitLinks();
@@ -1088,10 +1105,28 @@
     });
   }
 
+  function submitStartZip() {
+    var el = $('#wb-zip');
+    if (!el) return;
+    var zip = String(el.value || '').replace(/\D/g, '').slice(0, 5);
+    S.startZip = zip;
+    if (zip.length !== 5) {
+      S.startZipOk = false;
+      S.error = 'Please enter a valid 5-digit ZIP code.';
+      render();
+      var again = $('#wb-zip');
+      if (again) again.focus();
+      return;
+    }
+    S.startZipOk = true;
+    S.error = '';
+    render();
+  }
+
   function onZip() {
     var el = $('#wb-zip-edit');
     if (!el || !S.batch) return;
-    var zip = (el.value || '').replace(/\D/g, '');
+    var zip = (el.value || '').replace(/\D/g, '').slice(0, 5);
     if (zip === S.batch.gifteeZip) return;
     if (zip.length !== 5) { S.error = 'Please enter the giftee’s 5-digit ZIP code.'; render(); return; }
     change('/zip', { gifteeZip: zip }).then(function () { loadPricing(); });
@@ -1464,28 +1499,44 @@
 
   /* ---------- start ---------- */
   function start() {
+    var batchP = (S.id && S.token)
+      ? request('/api/buy/batches/' + encodeURIComponent(S.id)).catch(function () { return null; })
+      : Promise.resolve(null);
+    if (S.id && S.token) {
+      root.innerHTML = '<div class="wb-wrap"><p class="wb-muted">Loading your cart…</p></div>';
+    }
+    batchP.then(function (j) {
+      if (!j || !j.batch || S.batch) return;
+      S.batch = j.batch;
+      S.view = (j.batch.status === 'paid' || j.batch.status === 'closed') ? 'paid' : 'items';
+      S.lastHtml = '';
+      render();
+    });
     Promise.all([
       fetch(API + '/api/buy/config?preview=' + encodeURIComponent(preview)).then(function (r) { return r.json(); }),
       fetch(API + '/api/buy/terms').then(function (r) { return r.json(); }),
+      batchP,
     ]).then(function (res) {
       S.config = res[0];
       S.terms = res[1];
       if (!S.id || !S.token) { render(); return; }
-      return request('/api/buy/batches/' + encodeURIComponent(S.id)).then(function (j) {
-        S.batch = j.batch;
-        if (S.batch.status === 'paid' || S.batch.status === 'closed') S.view = 'paid';
-        else S.view = 'items';
-        loadPricing();
-        render();
-        forceWrapPrompt();
-        poll();
-      }).catch(function () {
+      var j = res[2];
+      if (!j || !j.batch) {
         S.id = '';
         S.token = '';
+        S.batch = null;
         S.view = 'start';
         history.replaceState(null, '', location.pathname);
         render();
-      });
+        return;
+      }
+      S.batch = j.batch;
+      S.view = (j.batch.status === 'paid' || j.batch.status === 'closed') ? 'paid' : 'items';
+      S.lastHtml = '';
+      loadPricing();
+      render();
+      forceWrapPrompt();
+      poll();
     }).catch(function () {
       root.innerHTML = '<div class="wb-wrap"><p class="wb-error">This page could not load. Please refresh.</p></div>';
     });
