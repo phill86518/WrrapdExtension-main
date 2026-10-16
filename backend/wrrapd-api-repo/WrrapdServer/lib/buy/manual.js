@@ -49,7 +49,7 @@ function wrapFromOrder(batch) {
     const src = (batch.lines || []).find((l) => paidIds.has(l.id) && l.wrap && l.wrap.done);
     const w = (src && src.wrap) || {};
     const style = billing.WRAP_STYLES.has(w.style) ? w.style : 'wrrapd';
-    const out = { occasion: w.occasion || '', style, giftMessage: w.giftMessage || '', senderName: w.senderName || '', done: true };
+    const out = { occasion: w.occasion || '', style, giftMessage: w.giftMessage || '', senderName: w.senderName || '', wrrapdHint: w.wrrapdHint || '', done: true };
     if (style === 'ai' && w.aiDesign) out.aiDesign = w.aiDesign;
     if (style === 'upload' && w.upload) out.upload = w.upload;
     if ((style === 'ai' && !out.aiDesign) || (style === 'upload' && !out.upload)) out.style = 'wrrapd';

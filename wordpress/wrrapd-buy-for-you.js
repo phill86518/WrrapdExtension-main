@@ -631,62 +631,93 @@
     var occ = (S.config.occasions || []).map(function (o) { return '<option value="' + esc(o) + '"' + (w.occasion === o ? ' selected' : '') + '>' + esc(o) + '</option>'; }).join('');
     var ai = S.ai[l.id] || {};
     var title = l.product && l.product.title ? l.product.title : 'Item';
-    var h = '<div class="wb-modal" role="dialog" aria-modal="true" aria-labelledby="wb-wrap-title"><div class="wb-modal-box wb-wrap-modal">' +
-      '<button type="button" class="wb-btn wb-btn-ghost wb-start-over" data-act="start-over">Start over</button>' +
-      '<button type="button" class="wb-x" data-act="wrap-close" aria-label="Close">×</button>' +
-      '<p class="wb-muted">Gift-wrap for item ' + (S.wrapIndex + 1) + ' of ' + lines.length + '</p>' +
-      '<div class="wb-wrap-head">' + (l.product && l.product.imageUrl ? '<img src="' + esc(l.product.imageUrl) + '" alt="">' : '') + '<h2 id="wb-wrap-title">' + esc(title) + '</h2></div>';
+    var heading = lines.length > 1
+      ? 'Item ' + (S.wrapIndex + 1) + ' of ' + lines.length + ' — Gift wrap with Wrrapd'
+      : 'Gift wrap with Wrrapd';
+    var h = '<div class="wb-modal" role="dialog" aria-modal="true" aria-label="Wrrapd gift wrap"><div class="wb-modal-box wb-wrap-modal">' +
+      '<h2 id="wb-wrap-title">' + esc(heading) + '</h2>' +
+      '<div class="wb-zipbar"><p class="wb-zipbar-label">Giftee / gift-recipient\'s zip code:</p>' +
+      '<p class="wb-zipbar-hint">Same ZIP for every item in this order.</p>' +
+      '<p class="wb-zipbar-zip">' + esc(S.batch && S.batch.gifteeZip) + '</p></div>';
     if (!l.product || l.state === 'reading') {
       h += '<p class="wb-status"><span class="wb-spin"></span>' + WAIT_ADD + '</p>' +
         (S.error ? '<p class="wb-error">' + esc(S.error) + '</p>' : '') +
-        wrapNav('') + '</div></div>';
+        wrapNav(false) + '</div></div>';
       return h;
     }
-    h += '<p class="wb-label">Wrapping</p>' +
+    h += '<p class="wb-wrap-intro">Customize each item below. You\'ll complete Wrrapd\'s secure payment during checkout, then we wrap and ship to your giftee.</p>' +
+      '<div class="wb-wrap-head">' +
+      (l.product.imageUrl ? '<img src="' + esc(l.product.imageUrl) + '" alt="">' : '') +
+      '<div class="wb-wrap-title">' + esc(title) + '</div></div>' +
+      '<p class="wb-wrap-legend">Choose your wrapping</p>' +
+      '<div class="wb-wrap-box">' +
       '<div class="wb-wrrapd-row">' +
       radio('wrrapd', 'Allow Wrrapd to choose the wrapping' + (unit('giftWrapBase') ? ' — ' + unit('giftWrapBase') : '')) +
-      '<select class="wb-input wb-occ' + (S.occBad ? ' wb-occ-bad' : '') + '" id="wb-occ" aria-label="Occasion"><option value="">Select Occasion</option>' + occ + '</select></div>' +
-      (custom ? radio('ai', 'Generate a design with AI' + (unit('customDesignAi') ? ' — +' + unit('customDesignAi') : '')) : '') +
-      (custom ? radio('upload', 'Upload your own design' + (unit('customDesignUpload') ? ' — +' + unit('customDesignUpload') : '')) : '');
-    if (style === 'ai') {
-      h += '<div class="wb-sub">';
-      if (ai.loading) h += '<p class="wb-status"><span class="wb-spin"></span>Creating designs… this can take a minute.</p>';
-      else if (ai.designs && ai.designs.length) {
-        h += '<div class="wb-grid">' + ai.designs.map(function (d, i) {
-          var sel = (ai.picked === i) || (w.aiDesign && ai.picked == null && w.aiDesign.title === d.title);
-          return d.imageUrl ? '<button type="button" class="wb-tile' + (sel ? ' wb-tile-on' : '') + '" data-act="pick-ai" data-i="' + i + '"><img src="' + esc(d.imageUrl) + '" alt=""><span>' + esc(d.title) + '</span></button>' : '';
-        }).join('') + '</div>';
-      } else if (w.aiDesign) h += '<p class="wb-muted">Chosen design: ' + esc(w.aiDesign.title) + '</p>';
-      h += '<button type="button" class="wb-link-btn" data-act="gen-ai"' + (ai.loading ? ' disabled' : '') + '>' + (ai.designs ? 'Create new designs' : 'Create designs') + '</button></div>';
+      '<select class="wb-input wb-occ' + (S.occBad ? ' wb-occ-bad' : '') + '" id="wb-occ" aria-label="Occasion"' + (style === 'wrrapd' ? '' : ' hidden') + '><option value="">Select Occasion</option>' + occ + '</select></div>';
+    if (style === 'wrrapd') {
+      h += '<div class="wb-sub"><input class="wb-input" id="wb-hint" maxlength="200" placeholder="Other details for our wrap team (optional)" value="' + esc(w.wrrapdHint || '') + '"></div>';
     }
-    if (style === 'upload') {
-      h += '<div class="wb-sub"><input type="file" id="wb-file" accept="image/jpeg,image/png,image/webp">' +
-        (w.upload ? '<p class="wb-muted">Uploaded: ' + esc(w.upload.fileName) + '</p>' : '<p class="wb-muted">JPG, PNG, or WEBP, up to 5 MB.</p>') + '</div>';
+    if (custom) {
+      h += radio('upload', 'Upload my own design', unit('customDesignUpload') ? '(+' + unit('customDesignUpload') + ')' : '');
+      if (style === 'upload') {
+        var preview = (S.previews && S.previews[l.id]) || (w.upload && w.upload.imageUrl) || '';
+        h += '<div class="wb-sub"><input type="file" id="wb-file" accept="image/*">' +
+          (preview ? '<img class="wb-upload-preview" src="' + esc(preview) + '" alt="">' : '') +
+          (w.upload && w.upload.fileName ? '<p class="wb-muted">Uploaded: ' + esc(w.upload.fileName) + '</p>' : '') +
+          '</div>';
+      }
+      h += radio('ai', 'Generate a design with AI', unit('customDesignAi') ? '(+' + unit('customDesignAi') + ')' : '');
+      if (style === 'ai') {
+        h += '<div class="wb-sub"><p class="wb-ai-hint">Describe the occasion, recipient, or theme for AI-generated design ideas:</p>' +
+          '<input class="wb-input" id="wb-ai-prompt" placeholder="e.g., Birthday for my 10-year-old who loves space, elegant florals…" value="' + esc(ai.prompt || '') + '">' +
+          '<button type="button" class="wb-btn wb-gen" data-act="gen-ai"' + (ai.loading ? ' disabled' : '') + '>' + (ai.loading ? 'Generating…' : 'Generate designs') + '</button>';
+        if (ai.loading) h += '<p class="wb-ai-status">Creating 3 custom designs… this can take 1–2 minutes.</p>';
+        var designs = (ai.designs && ai.designs.length) ? ai.designs : (w.aiDesign ? [w.aiDesign] : []);
+        if (designs.length) {
+          h += '<div class="wb-designs">' + designs.map(function (d, i) {
+            var sel = ai.picked === i || (ai.picked == null && w.aiDesign && w.aiDesign.title === d.title);
+            var img = d.imageUrl || d.gcsUrl || '';
+            return '<label class="wb-design' + (sel ? ' wb-design-on' : '') + '" data-act="pick-ai" data-i="' + i + '">' +
+              '<span class="wb-design-head"><input type="radio" name="wb-ai" ' + (sel ? 'checked' : '') + '>' +
+              '<span><span class="wb-design-title">' + esc(d.title || ('Design ' + (i + 1))) + '</span>' +
+              (d.description ? '<span class="wb-design-desc">' + esc(d.description) + '</span>' : '') +
+              '</span></span>' +
+              (img ? '<img src="' + esc(img) + '" alt="">' : '') +
+              '</label>';
+          }).join('') + '</div>';
+        }
+        if (ai.designs && ai.designs.length && !ai.loading) h += '<p class="wb-ai-status">Pick your favorite design above.</p>';
+        h += '</div>';
+      }
     }
+    h += '</div>';
     var fl = w.flowers;
-    h += '<label class="wb-check"><input type="checkbox" id="wb-flowers"' + (fl || S.flowersOpen ? ' checked' : '') + '> Add flowers</label>';
+    h += '<label class="wb-flowers-label"><input type="checkbox" id="wb-flowers"' + (fl || S.flowersOpen ? ' checked' : '') + '> Add flowers — choose a bouquet below</label>';
     if (fl || S.flowersOpen) {
-      h += '<div class="wb-sub">';
-      if (!S.flowers) h += '<p class="wb-status"><span class="wb-spin"></span>Finding flowers near the giftee…</p>';
-      else if (S.flowers.status !== 'ok' || !S.flowers.choices.length) h += '<p class="wb-muted">' + esc(S.flowers.message || 'Flowers are not available for this ZIP code.') + '</p>';
+      if (!S.flowers) h += '<p class="wb-flower-msg">Finding a lovely bouquet with your gift…</p>';
+      else if (S.flowers.status !== 'ok' || !S.flowers.choices.length) h += '<p class="wb-flower-msg">' + esc(S.flowers.message || 'We apologize — floral delivery is not currently available for this ZIP code. Gift wrapping is still available.') + '</p>';
       else {
         h += '<div class="wb-grid wb-flowers">' + S.flowers.choices.map(function (c) {
           var on = fl && fl.offerId === c.offerId;
-          return '<button type="button" class="wb-flower' + (on ? ' wb-flower-on' : '') + '" data-act="pick-flower" data-offer="' + esc(c.offerId) + '" aria-pressed="' + (on ? 'true' : 'false') + '">' +
-            '<img src="' + esc(c.imageUrl) + '" alt="">' +
-            '<span class="wb-flower-name">' + esc(c.title) + '</span>' +
-            '<span class="wb-flower-price">' + usdNum(c.price) + '</span></button>';
+          return '<label class="wb-flower' + (on ? ' wb-flower-on' : '') + '" data-act="pick-flower" data-offer="' + esc(c.offerId) + '">' +
+            '<input type="radio" name="wb-flower"' + (on ? ' checked' : '') + '>' +
+            '<img src="' + esc(c.imageUrl) + '" alt="' + esc(c.title) + '">' +
+            '<span class="wb-flower-price">' + usdNum(c.price) + '</span>' +
+            '<span class="wb-flower-name">' + esc(c.title) + '</span></label>';
         }).join('') + '</div>';
+        if (S.flowers.disclaimer || S.flowers.source === 'classic_backup') {
+          h += '<p class="wb-flower-note">Actual bouquets might differ slightly from the photos shown.</p>';
+        }
       }
-      h += '</div>';
     }
-    h += '<label class="wb-label" for="wb-msg">Gift message (optional)</label><textarea class="wb-input" id="wb-msg" maxlength="300" rows="3">' + esc(w.giftMessage || '') + '</textarea>' +
-      '<label class="wb-label" for="wb-from">From (optional)</label><input class="wb-input" id="wb-from" maxlength="80" value="' + esc(w.senderName || '') + '">' +
+    h += '<label class="wb-msg-label" for="wb-msg">Gift message (optional)</label>' +
+      '<textarea class="wb-input" id="wb-msg" maxlength="300" rows="2" placeholder="A short note for your giftee">' + esc(w.giftMessage || '') + '</textarea>' +
       (S.error ? '<p class="wb-error">' + esc(S.error) + '</p>' : '') +
-      wrapNav(S.wrapIndex + 1 < lines.length ? 'Save and next item' : 'Done') + '</div></div>';
+      wrapNav(true) + '</div></div>';
     return h;
-    function radio(v, label) {
-      return '<label class="wb-radio"><input type="radio" name="wb-style" value="' + v + '"' + (style === v ? ' checked' : '') + '> ' + esc(label) + '</label>';
+    function radio(v, label, note) {
+      return '<label class="wb-radio"><input type="radio" name="wb-style" value="' + v + '"' + (style === v ? ' checked' : '') + '> <span>' + esc(label) + '</span>' +
+        (note ? '<span class="wb-price-note">' + esc(note) + '</span>' : '') + '</label>';
     }
   }
 
@@ -708,6 +739,12 @@
 
   /* ---------- actions ---------- */
   root.addEventListener('click', function (e) {
+    if (e.target && e.target.classList && e.target.classList.contains('wb-modal') && e.target.querySelector('.wb-wrap-modal')) {
+      S.wrapOpen = false;
+      S.flowersOpen = false;
+      render();
+      return;
+    }
     var el = e.target && e.target.closest ? e.target.closest('[data-act]') : null;
     if (!el || !root.contains(el) || el.disabled) return;
     onAct({ currentTarget: el, preventDefault: function () { e.preventDefault(); } });
@@ -762,14 +799,16 @@
 
   function currentLine() { return wrapTargets()[S.wrapIndex]; }
 
-  function wrapNav(saveLabel) {
+  function wrapNav(canSave) {
+    var lines = wrapTargets();
+    var last = S.wrapIndex + 1 >= lines.length;
     var back = S.wrapIndex > 0
-      ? '<button type="button" class="wb-btn wb-btn-ghost" data-act="wrap-back">Back</button>'
-      : '<span></span>';
-    var save = saveLabel
-      ? '<button type="button" class="wb-btn" data-act="wrap-save"' + (S.busy ? ' disabled' : '') + '>' + esc(saveLabel) + '</button>'
+      ? '<button type="button" class="wb-btn wb-btn-ghost" data-act="wrap-back">← Back</button>'
       : '';
-    return '<div class="wb-actions">' + back + save + '</div>';
+    var save = canSave
+      ? '<button type="button" class="wb-btn" data-act="wrap-save"' + (S.busy ? ' disabled' : '') + '>' + (last ? 'Save choices' : 'Next →') + '</button>'
+      : '';
+    return '<div class="wb-wrap-actions"><button type="button" class="wb-btn wb-btn-ghost" data-act="wrap-close">Cancel</button>' + back + save + '</div>';
   }
 
   function saveDraft() {
@@ -778,10 +817,15 @@
     var w = Object.assign({}, l.wrap || {});
     var occ = $('#wb-occ');
     if (occ) w.occasion = occ.value;
+    var hint = $('#wb-hint');
+    if (hint) w.wrrapdHint = hint.value;
     var msg = $('#wb-msg');
     if (msg) w.giftMessage = msg.value;
-    var from = $('#wb-from');
-    if (from) w.senderName = from.value;
+    var prompt = $('#wb-ai-prompt');
+    if (prompt) {
+      S.ai[l.id] = S.ai[l.id] || {};
+      S.ai[l.id].prompt = prompt.value;
+    }
     l.wrap = w;
   }
 
@@ -837,7 +881,22 @@
     if (act === 'close-terms') { S.termsOpen = false; S.wrapOpen = false; render(); return; }
     if (act === 'accept') return accept();
     if (act === 'wrap-close') { S.wrapOpen = false; S.flowersOpen = false; render(); return; }
-    if (act === 'wrap-back') { saveDraft(); if (S.wrapIndex > 0) { S.wrapIndex--; S.flowersOpen = false; } render(); return; }
+    if (act === 'wrap-back') {
+      saveDraft();
+      var backLine = currentLine();
+      var backWrap = backLine && backLine.wrap;
+      if (backWrap && (backWrap.style || 'wrrapd') === 'wrrapd' && !backWrap.occasion) {
+        S.occBad = true;
+        S.error = 'Please choose an occasion.';
+        render();
+        var backSel = $('#wb-occ');
+        if (backSel) backSel.focus();
+        return;
+      }
+      if (S.wrapIndex > 0) { S.wrapIndex--; S.flowersOpen = false; }
+      render();
+      return;
+    }
     if (act === 'wrap-save') return saveWrap();
     if (act === 'review-back') { S.view = 'items'; S.wrapOpen = true; S.wrapIndex = Math.max(0, wrapTargets().length - 1); render(); return; }
     if (act === 'to-pay' || act === 'pay') return payWrrapd();
@@ -1087,21 +1146,30 @@
   function genAi() {
     saveDraft();
     var l = currentLine();
-    var occ = (l.product && l.product.title) || 'gift';
-    S.ai[l.id] = { loading: true };
+    var prompt = ((S.ai[l.id] && S.ai[l.id].prompt) || '').trim();
+    if (!prompt) {
+      var box = $('#wb-ai-prompt');
+      if (box) box.focus();
+      return;
+    }
+    S.ai[l.id] = { loading: true, prompt: prompt };
     render();
     fetch(API + '/generate-ideas', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ occasion: occ, productTitle: l.product.title, retailer: l.retailerName }),
-    }).then(function (r) { return r.json(); }).then(function (d) {
-      if (typeof d === 'string') d = JSON.parse(d);
-      S.ai[l.id] = { designs: (d && d.designs) || [], picked: null };
-      if (!S.ai[l.id].designs.some(function (x) { return x.imageUrl; })) S.error = 'We could not create designs right now. Please try again or choose Wrrapd paper.';
+      body: JSON.stringify({ occasion: prompt, productTitle: l.product.title, retailer: l.retailerName }),
+    }).then(function (r) { return r.text(); }).then(function (raw) {
+      var d = raw;
+      try { d = JSON.parse(raw); } catch (e) { d = {}; }
+      if (typeof d === 'string') {
+        try { d = JSON.parse(d); } catch (e2) { d = {}; }
+      }
+      S.ai[l.id] = { designs: (d && d.designs) || [], picked: null, prompt: prompt };
+      if (!S.ai[l.id].designs.length) S.error = 'Could not generate designs — please try again.';
       render();
     }).catch(function () {
-      S.ai[l.id] = {};
-      S.error = 'We could not create designs right now. Please try again or choose Wrrapd paper.';
+      S.ai[l.id] = { prompt: prompt };
+      S.error = 'Could not generate designs — please try again.';
       render();
     });
   }
@@ -1139,6 +1207,13 @@
     if (!file) return;
     if (['image/jpeg', 'image/png', 'image/webp'].indexOf(file.type) < 0) { S.error = 'Please choose a JPG, PNG, or WEBP image.'; render(); return; }
     if (file.size > 5 * 1024 * 1024) { S.error = 'Please choose an image up to 5 MB.'; render(); return; }
+    var reader = new FileReader();
+    reader.onload = function () {
+      S.previews = S.previews || {};
+      if (typeof reader.result === 'string') S.previews[l.id] = reader.result;
+      if ($('#wb-file')) render();
+    };
+    reader.readAsDataURL(file);
     var ext = file.type === 'image/png' ? 'png' : file.type === 'image/webp' ? 'webp' : 'jpg';
     var name = S.id + '-' + l.id + '-' + Date.now() + '.' + ext;
     S.busy = true;
@@ -1179,6 +1254,11 @@
 
   function payWrrapd() {
     if (S.busy || !S.batch || !S.batch.bill) return;
+    var popup = openPayWindow();
+    if (!popup) {
+      window.alert('Please allow popups for wrrapd.com so you can complete your Wrrapd payment.');
+      return;
+    }
     var r = S.batch.refresh;
     var fresh = r && r.state === 'done' && r.id === S.payRefreshId && Date.now() - Date.parse(r.doneAt) < 9 * 60 * 1000;
     S.busy = true;
@@ -1192,8 +1272,10 @@
     ready.then(function () {
       r = S.batch.refresh;
       S.busy = false;
+      if (popup.closed) { render(); return; }
       if (!S.batch.bill) throw new Error((r && r.error) || S.batch.billError || 'We can’t buy these items right now.');
       if (!fresh && r.changed) {
+        try { popup.close(); } catch (e) { /* already closed */ }
         S.payRefreshId = r.id;
         S.notice = 'Please review the new total, then click Pay Wrrapd.';
         render();
@@ -1211,13 +1293,58 @@
         address: { postalCode: S.batch.gifteeZip, country: 'US' },
         gifteeOriginalAddress: { postalCode: S.batch.gifteeZip, country: 'US' },
       };
-      location.href = 'https://pay.wrrapd.com/checkout/buy?data=' + encodeURIComponent(btoa(JSON.stringify(payload)));
+      var url = 'https://pay.wrrapd.com/checkout/buy?data=' + encodeURIComponent(btoa(JSON.stringify(payload)));
+      try {
+        popup.location.href = url;
+        popup.focus();
+      } catch (e) { /* popup closed */ }
+      watchPaid();
+      render();
     }).catch(function (err) {
       S.busy = false;
       S.notice = '';
       S.error = err.message || 'Please try again.';
+      try { popup.close(); } catch (e) { /* already closed */ }
       render();
     });
+  }
+
+  function openPayWindow() {
+    var w = 480;
+    var hgt = 820;
+    var sx = window.screenX !== undefined ? window.screenX : window.screenLeft;
+    var sy = window.screenY !== undefined ? window.screenY : window.screenTop;
+    var left = sx + (window.innerWidth - w) / 2;
+    var top = sy + (window.innerHeight - hgt) / 2;
+    var popup = window.open(
+      'about:blank',
+      'WrrapdPaymentBuy',
+      'width=' + w + ',height=' + hgt + ',left=' + left + ',top=' + top + ',scrollbars=yes,resizable=yes'
+    );
+    if (!popup) return null;
+    try {
+      popup.document.write('<title>Wrrapd payment</title><body style="font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;color:#334155;">Loading Wrrapd secure payment…</body>');
+    } catch (e) { /* navigation still works */ }
+    return popup;
+  }
+
+  function watchPaid() {
+    var tries = 0;
+    function tick() {
+      if (!S.id || tries++ > 150) return;
+      request('/api/buy/batches/' + encodeURIComponent(S.id)).then(function (j) {
+        S.batch = j.batch;
+        if (S.batch.status === 'paid' || S.batch.status === 'closed') {
+          S.view = 'paid';
+          S.wrapOpen = false;
+          S.busy = false;
+          render();
+          return;
+        }
+        setTimeout(tick, 4000);
+      }).catch(function () { setTimeout(tick, 4000); });
+    }
+    setTimeout(tick, 4000);
   }
 
   function saveWrap() {
@@ -1235,12 +1362,12 @@
     }
     S.occBad = false;
     if (style === 'upload' && !(w.upload && w.upload.filePath)) { S.error = 'Please upload your design.'; render(); return; }
-    if (S.flowersOpen && !w.flowers) { S.error = 'Please choose flowers, or uncheck Add flowers.'; render(); return; }
+    if (S.flowersOpen && !w.flowers) { S.error = 'Please select a bouquet, or uncheck Add flowers.'; render(); return; }
     S.busy = true;
     render();
     var designP = style === 'ai' ? saveAiChoice(l) : Promise.resolve(null);
     designP.then(function (aiDesign) {
-      var payload = { occasion: style === 'wrrapd' ? w.occasion : '', style: style, giftMessage: w.giftMessage || '', senderName: w.senderName || '' };
+      var payload = { occasion: style === 'wrrapd' ? w.occasion : '', style: style, giftMessage: w.giftMessage || '', senderName: w.senderName || '', wrrapdHint: style === 'wrrapd' ? (w.wrrapdHint || '') : '' };
       if (aiDesign) payload.aiDesign = aiDesign;
       if (style === 'upload') payload.upload = w.upload;
       if (w.flowers) payload.flowers = w.flowers;

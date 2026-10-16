@@ -730,7 +730,7 @@ module.exports = function mountBuyForYou(app, deps) {
             const occasionOk = extensionConfig.OCCASIONS.includes(pickedOccasion);
             if (style === 'wrrapd' && !occasionOk) return { error: 'Please choose an occasion.' };
             const occasion = style === 'wrrapd' ? pickedOccasion : '';
-            const out = { occasion, style, giftMessage: cleanText(w.giftMessage, 300), senderName: cleanText(w.senderName, 80), done: true };
+            const out = { occasion, style, giftMessage: cleanText(w.giftMessage, 300), senderName: cleanText(w.senderName, 80), wrrapdHint: style === 'wrrapd' ? cleanText(w.wrrapdHint, 200) : '', done: true };
             if (style === 'ai') {
                 const p = cleanPath(w.aiDesign && w.aiDesign.filePath);
                 if (!p) return { error: 'Please choose one of the AI designs.' };
@@ -1457,6 +1457,7 @@ module.exports = function mountBuyForYou(app, deps) {
                 ...(w.aiDesign ? { aiDesignTitle: w.aiDesign.title, aiDesignDescription: w.aiDesign.description } : {}),
                 giftMessage: w.giftMessage || '',
                 senderName: w.senderName || '',
+                wrrapdHint: w.wrrapdHint || '',
                 occasion: w.occasion || '',
                 itemCategory: (l.product.amazonCategory && l.product.amazonCategory.path) || l.product.category || '',
                 packageDimensions: l.product.packageDimensions || '',
@@ -1813,6 +1814,7 @@ module.exports = function mountBuyForYou(app, deps) {
                 ...(w.aiDesign ? { aiDesignTitle: w.aiDesign.title, aiDesignDescription: w.aiDesign.description } : {}),
                 giftMessage: w.giftMessage || '',
                 senderName: w.senderName || '',
+                wrrapdHint: w.wrrapdHint || '',
                 occasion: w.occasion || '',
                 itemCategory: a.item.category || '',
                 packageDimensions: '',
