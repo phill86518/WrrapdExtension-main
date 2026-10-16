@@ -12,7 +12,8 @@
  * Amazon standard is free from $35. Under $35 the charge is $3.99.
  * Sephora guest standard is $6.95 under $50 and free from $50.
  * Ulta standard is $6.95 under $35 and free from $35.
- * Best Buy standard is free from $35. Under $35 the fee is not a published flat rate.
+ * Best Buy standard is free from $35. Under $35 the page price is kept when it is shown.
+ * When it is not shown, the charge is $5.99, the top of Best Buy's $3.99–$5.99 range.
  * LEGO standard is $4.95 up to $25, $6.95 from $25.01 to $34.99, and free from $35.
  * Etsy shipping is set by the seller.
  */
@@ -25,7 +26,7 @@ const RATES = {
     amazon: { feeCents: 399, freeOverCents: 3500 },
     sephora: { feeCents: 695, freeOverCents: 5000 },
     ulta: { feeCents: 695, freeOverCents: 3500 },
-    bestbuy: { feeCents: null, freeOverCents: 3500 },
+    bestbuy: { feeCents: 599, freeOverCents: 3500 },
     lego: {
         tiers: [
             { maxCents: 2500, feeCents: 495 },

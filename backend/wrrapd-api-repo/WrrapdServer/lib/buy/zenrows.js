@@ -10,7 +10,7 @@ const TIMEOUT_MS = 90000;
 const WAIT_FOR = 'h1';
 const RETRY_MIN_MS = 20000;
 
-async function fetchOnce(url, doFetch, waitFor, ms) {
+async function fetchOnce(url, doFetch, waitFor, ms, cookie) {
     const key = process.env.ZENROWS_API_KEY;
     const api = new URL('https://api.zenrows.com/v1/');
     api.searchParams.set('apikey', key);
@@ -19,10 +19,11 @@ async function fetchOnce(url, doFetch, waitFor, ms) {
     api.searchParams.set('premium_proxy', 'true');
     api.searchParams.set('proxy_country', 'us');
     if (waitFor) api.searchParams.set('wait_for', waitFor);
+    if (cookie) api.searchParams.set('custom_headers', 'true');
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), ms);
     try {
-        const resp = await doFetch(api, { signal: ctrl.signal });
+        const resp = await doFetch(api, { signal: ctrl.signal, headers: cookie ? { Cookie: cookie } : undefined });
         if (!resp.ok) return { ok: false, reason: `zenrows_http_${resp.status}` };
         const buf = Buffer.from(await resp.arrayBuffer());
         const html = buf.subarray(0, MAX_BYTES).toString('utf8');
@@ -40,12 +41,13 @@ async function fetchOnce(url, doFetch, waitFor, ms) {
 async function fetchHtml(url, deps) {
     if (!process.env.ZENROWS_API_KEY) return { ok: false, reason: 'zenrows_not_configured' };
     const doFetch = (deps && deps.fetch) || fetch;
+    const cookie = (deps && deps.cookie) || '';
     const started = Date.now();
-    const first = await fetchOnce(url, doFetch, WAIT_FOR, TIMEOUT_MS);
+    const first = await fetchOnce(url, doFetch, WAIT_FOR, TIMEOUT_MS, cookie);
     if (first.ok || first.reason === 'zenrows_timeout') return first;
     const left = TIMEOUT_MS - (Date.now() - started);
     if (left < RETRY_MIN_MS) return first;
-    const second = await fetchOnce(url, doFetch, '', left);
+    const second = await fetchOnce(url, doFetch, '', left, cookie);
     return second.ok ? second : first;
 }
 

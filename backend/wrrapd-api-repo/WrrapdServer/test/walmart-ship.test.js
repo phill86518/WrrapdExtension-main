@@ -46,6 +46,15 @@ test('a page that ships to a different ZIP is refused', () => {
     assert.match(reader.zipMismatchPrompt('32218', '32250'), /32218/);
     assert.equal(reader.zipMismatchPrompt('32218', '32218'), '');
     assert.equal(reader.pageShipZip('<p>No shipping zip here</p>'), '');
+    assert.match(reader.zipMismatchPrompt('11212', ''), /11212/);
+    assert.equal(reader.zipMismatchPrompt('11212', '11212'), '');
+    assert.match(reader.zipMismatchPrompt('11212', '51502'), /51502/);
+    assert.match(reader.zipMismatchPrompt('11212', '51502'), /11212/);
+});
+
+test('the Kohl\'s link sku is that color, not the page default', () => {
+    const html = '&quot;skuCode&quot;:[0,&quot;50653163&quot;],&quot;images&quot;:[1,[[0,{&quot;url&quot;:[0,&quot;https://media.kohlsimg.com/is/image/kohls/7513461_Tan&quot;],&quot;color&quot;:[0,&quot;Tan&quot;]';
+    assert.equal(reader.kohlsSkuColor(html, 'https://www.kohls.com/product/prd-7513461/x.jsp?skuId=50653163'), 'Tan');
 });
 
 test('a guessed server location is not the shopper page ZIP', () => {
@@ -66,4 +75,25 @@ test('arrives tomorrow is a delivery date', () => {
     const ship = reader.standardFromPage('<p>Shipping Arrives tomorrow</p>', 3499);
     assert.equal(ship.cents, null);
     assert.match(ship.arrivalDate, /^\d{4}-\d{2}-\d{2}$/);
+});
+
+function bestbuyBlock(zip, groups) {
+    return `"destinationZipCode":"${zip}","shippingAvailability":[{"customerLOSGroup":[${groups}]}]`;
+}
+
+test('best buy uses the standard date for the giftee ZIP and skips express', () => {
+    const html = bestbuyBlock(
+        '11212',
+        '{"maxLineItemMaxDate":"2026-10-19","name":"Next Day","price":29.99},{"maxLineItemMaxDate":"2026-10-22","name":"Standard","price":5.99}'
+    );
+    const ship = reader.bestbuyShip(html, '11212');
+    assert.equal(ship.arrivalDate, '2026-10-22');
+    assert.equal(ship.cents, 599);
+    assert.equal(reader.bestbuyShip(html, '32218'), null);
+});
+
+test('best buy under $35 uses $5.99 when the page has no price', () => {
+    assert.equal(reader.withDefaultShip('bestbuy', { cents: null, arrivalDate: null }, 2000).cents, 599);
+    assert.equal(reader.withDefaultShip('bestbuy', { cents: null, arrivalDate: null }, 4000).cents, 0);
+    assert.equal(reader.withDefaultShip('bestbuy', { cents: 399, arrivalDate: '2026-10-21' }, 2000).cents, 399);
 });

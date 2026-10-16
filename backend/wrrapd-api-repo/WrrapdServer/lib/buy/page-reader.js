@@ -31,6 +31,7 @@ const DIRECT_MS = 10000;
 function usablePage(page) {
     if (!page || !page.ok || !page.html || page.html.length < 500) return false;
     if (page.html.length < 20000 && BLOCK_MARKERS.test(page.html)) return false;
+    if (/select your country|best buy international/i.test(page.html)) return false;
     return true;
 }
 
@@ -76,7 +77,8 @@ async function fetchDirect(retailerId, url, extraHosts) {
 }
 
 async function fetchViaZenrows(retailerId, url, extraHosts) {
-    const page = await zenrows.fetchHtml(url);
+    const cookie = retailerId === 'bestbuy' ? 'intl_splash=false' : '';
+    const page = await zenrows.fetchHtml(url, cookie ? { cookie } : undefined);
     if (!page.ok) return page;
     try {
         const host = new URL(page.finalUrl).hostname;
@@ -383,6 +385,42 @@ function walmartShip(html, gifteeZip) {
 }
 
 /** ZIP printed next to the page's ship-to control. Empty when the page does not show one. */
+const BESTBUY_EXPRESS = /next day|two day|express|same day|rush|expedited/i;
+
+/** Standard ship price and date from Best Buy's Shipping panel, only for this ZIP. */
+function bestbuyShip(html, zip) {
+    const want = String(zip || '').replace(/\D/g, '').slice(0, 5);
+    if (want.length !== 5) return null;
+    const text = String(html || '');
+    const blockRe = /"destinationZipCode":"(\d{5})"[\s\S]{0,2200}?"customerLOSGroup":\[([\s\S]*?)\]/g;
+    let block;
+    let groups = '';
+    while ((block = blockRe.exec(text))) {
+        if (block[1] === want) groups = block[2];
+    }
+    if (!groups) return null;
+    const items = [];
+    const itemRe = /"maxLineItemMaxDate":"(\d{4}-\d{2}-\d{2})"[\s\S]{0,80}?"name":"([^"]+)"[\s\S]{0,40}?"price":([0-9.]+|null)/g;
+    let item;
+    while ((item = itemRe.exec(groups))) {
+        items.push({
+            arrivalDate: item[1],
+            name: item[2],
+            price: item[3] === 'null' ? null : Number(item[3]),
+        });
+    }
+    if (!items.length) return null;
+    const picked = items.find((row) => /standard|ground/i.test(row.name))
+        || items.find((row) => !BESTBUY_EXPRESS.test(row.name))
+        || items.slice().sort((a, b) => (a.price == null ? 999 : a.price) - (b.price == null ? 999 : b.price))[0];
+    return {
+        label: 'Standard shipping',
+        cents: picked.price == null ? null : Math.round(picked.price * 100),
+        arrivalDate: picked.arrivalDate,
+        note: '',
+    };
+}
+
 function pageShipZip(html) {
     const text = visibleText(html).replace(/\s+/g, ' ');
     const patterns = [
@@ -399,9 +437,38 @@ function pageShipZip(html) {
 
 function zipMismatchPrompt(expected, seen) {
     const want = String(expected || '').replace(/\D/g, '').slice(0, 5);
+    if (want.length !== 5) return '';
     const got = String(seen || '').replace(/\D/g, '').slice(0, 5);
-    if (want.length !== 5 || got.length !== 5 || want === got) return '';
+    if (got === want) return '';
+    if (got.length !== 5) return `Set the page to ${want}, then add the link again.`;
     return `This page ships to ${got}. Set the page to ${want}, then add the link again.`;
+}
+
+/** Color of the Kohl's sku in the link. The page's default color is a different shoe. */
+function kohlsSkuColor(html, url) {
+    const sku = (String(url || '').match(/[?&]skuId=(\d+)/i) || [])[1] || '';
+    if (!sku) return '';
+    const text = String(html || '').replace(/&quot;/g, '"');
+    const at = text.indexOf(sku);
+    if (at < 0) return '';
+    const block = text.slice(at, at + 5000);
+    const named = block.match(/"color":\[\d+,"([^"]+)"\]/);
+    if (named && named[1] && !/^null$/i.test(named[1])) return named[1];
+    const image = block.match(/\/\d+_([A-Za-z][A-Za-z ]{1,40})/);
+    return image ? image[1].trim() : '';
+}
+
+function withSelectedColor(groups, color) {
+    if (!color) return groups;
+    const next = (groups || []).map((g) => ({ ...g, options: (g.options || []).slice() }));
+    let group = next.find((g) => /color/i.test(g.name));
+    if (!group) {
+        next.unshift({ name: 'Color', options: [color], selected: color });
+        return next;
+    }
+    if (!group.options.includes(color)) group.options.unshift(color);
+    group.selected = color;
+    return next;
 }
 
 /** The regular option: the one marked standard or default, otherwise the cheapest. Dated options win. */
@@ -1051,15 +1118,32 @@ async function readProduct({ retailer, url, zip, state, batchId, lineId }) {
         }
     }
     let choicePrompt = '';
+    let zipChecked = false;
+    if (retailer === 'bestbuy') {
+        const bby = bestbuyShip(page.html, zip);
+        if (bby) {
+            chosen = bby;
+            zipChecked = true;
+        } else {
+            const seen = pageShipZip(page.html);
+            if (seen && seen !== String(zip || '').replace(/\D/g, '').slice(0, 5)) {
+                choicePrompt = zipMismatchPrompt(zip, seen);
+            } else {
+                zipChecked = true;
+                chosen = { label: 'Standard shipping', cents: null, arrivalDate: null, note: '' };
+            }
+        }
+    }
     if (retailer === 'walmart') {
         const wship = walmartShip(page.html, zip);
         if (wship && wship.skip) chosen = null;
         else if (wship) {
             chosen = { label: 'Standard shipping', cents: wship.cents, arrivalDate: wship.arrivalDate, note: wship.note || '' };
             choicePrompt = wship.choicePrompt || '';
+            zipChecked = !choicePrompt;
         }
     }
-    if (!choicePrompt) {
+    if (!choicePrompt && !zipChecked) {
         const seenZip = pageShipZip(page.html) || (/^\d{5}$/.test(String(facts.shipToZip || '')) ? String(facts.shipToZip) : '');
         choicePrompt = zipMismatchPrompt(zip, seenZip);
     }
@@ -1089,7 +1173,7 @@ async function readProduct({ retailer, url, zip, state, batchId, lineId }) {
             pageNotes: [],
             inStock: facts.inStock === false ? false : facts.inStock === true ? true : null,
             isElectronics,
-            variantGroups: cleanVariantGroups(facts.variantGroups),
+            variantGroups: withSelectedColor(cleanVariantGroups(facts.variantGroups), retailer === 'kohls' ? kohlsSkuColor(page.html, url) : ''),
             choicePrompt,
             readAt: new Date().toISOString(),
             readBy: page.fromSavedPage ? 'saved_page' : 'grok',
@@ -1098,6 +1182,6 @@ async function readProduct({ retailer, url, zip, state, batchId, lineId }) {
 }
 
 module.exports = {
-    readProduct, askGrok, looksElectronic, priceAppearsInPage, jsonLdProducts, visibleText, fetchPage, usablePage, DIRECT_MS, standardFromPage, walmartShip, pageShipZip, zipMismatchPrompt, withDefaultShip, targetFulfillment,
+    readProduct, askGrok, looksElectronic, priceAppearsInPage, jsonLdProducts, visibleText, fetchPage, usablePage, DIRECT_MS, standardFromPage, walmartShip, bestbuyShip, pageShipZip, zipMismatchPrompt, kohlsSkuColor, withDefaultShip, targetFulfillment,
     nordstromShell, nordstromFromHtml, savedPageHtml, EXTERNAL_PAGES_DIR,
 };

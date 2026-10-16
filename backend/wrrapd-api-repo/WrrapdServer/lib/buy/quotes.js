@@ -192,7 +192,7 @@ function applyRead(line, read, cfg) {
         return markUnavailable(line, 'over_item_limit', overLimitMessage(p.pagePriceCents, cfg.perItemCapCents));
     }
     if (p.choicePrompt) {
-        line.variantLabel = '';
+        line.variantLabel = lineFacts.variantPhrase(p.variantGroups);
         return markUnavailable(line, 'ship_zip', p.choicePrompt);
     }
     const open = (p.variantGroups || []).filter((g) => !g.selected || !g.options.includes(g.selected));
@@ -254,7 +254,7 @@ async function processBatchBody(batchId) {
                 read = await pageReader.readProduct({
                     retailer: line.retailer,
                     url: line.url,
-                    zip: hub.postalCode || hub.zip || batch.gifteeZip,
+                    zip: batch.gifteeZip,
                     state: hub.state,
                     batchId,
                     lineId: line.id,

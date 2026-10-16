@@ -67,8 +67,20 @@
 .wb-zip-row { display: flex; align-items: center; gap: 10px; margin: 4px 0 8px; }
 .wb-cart-head .wb-zip-row { margin: 0; flex: 0 1 auto; }
 .wb-zip-row .wb-label { margin: 0; white-space: nowrap; }
-.wb-start-over { margin-top: 0; padding: 8px 14px; white-space: nowrap; }
-.wb-modal-box > .wb-start-over { margin: 0 48px 10px 0; }
+.wb-card-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 8px; }
+.wb-card-top h2 { margin: 0; }
+.wrrapd-buy button.wb-btn,
+.wrrapd-buy a.wb-btn {
+  width: auto !important;
+  min-width: 0 !important;
+  height: auto !important;
+  min-height: 0 !important;
+  padding: 6px 12px !important;
+  font-size: 13px !important;
+  line-height: 1.25 !important;
+  border-radius: 8px;
+  margin-top: 8px;
+}
 .wb-label { display: block; font-weight: 650; margin: 8px 0 4px; font-size: 14px; color: var(--wb-navy); }
 .wb-input {
   width: 100%;
@@ -109,6 +121,8 @@
 }
 .wb-btn[disabled] { opacity: .5; cursor: default; box-shadow: none; }
 .wb-btn-ghost { background: #fff !important; border: 1.5px solid var(--wb-deep); color: var(--wb-deep) !important; box-shadow: none; }
+.wrrapd-buy button.wb-start-over { margin: 0 !important; padding: 3px 8px !important; font-size: 12px !important; line-height: 1.2 !important; border-radius: 6px; white-space: nowrap; }
+.wrrapd-buy .wb-center button.wb-start-over { margin-top: 10px !important; }
 .wb-btn.wb-btn-add {
   margin-top: 10px;
   width: 8.5rem;

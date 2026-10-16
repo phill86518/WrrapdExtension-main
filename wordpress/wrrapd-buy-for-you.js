@@ -265,7 +265,7 @@
   }
 
   // Standard U.S. ship-to-home. Same numbers as lib/buy/standard-shipping.js. No club rates.
-  var SHIP_FEE = { nordstrom: 0, kohls: 895, walmart: 699, target: 599, sephora: 695, ulta: 695, amazon: 399 };
+  var SHIP_FEE = { nordstrom: 0, kohls: 895, walmart: 699, target: 599, sephora: 695, ulta: 695, amazon: 399, bestbuy: 599 };
   var SHIP_FREE = { nordstrom: 0, kohls: 4900, walmart: 3500, target: 3500, amazon: 3500, sephora: 5000, ulta: 3500, bestbuy: 3500 };
   function scheduleFee(retailer, merch) {
     if (retailer === 'lego') {
@@ -487,17 +487,19 @@
     var room = lines.length > 0 && lines.length < maxLinks();
     var draft = S.draftLinks;
     S.draftLinks = null;
-    var h = '<section class="wb-card"><h2>Gift-wrapping shopping cart</h2>' +
-      '<div class="wb-cart-head"><div class="wb-zip-row"><label class="wb-label" for="wb-zip-edit">Giftee / gift-recipient\'s zip code:</label>' +
-      '<input class="wb-input wb-zip" id="wb-zip-edit" inputmode="numeric" maxlength="5" value="' + esc(b.gifteeZip) + '" autocomplete="off">' +
+    var left = maxLinks() - lines.length;
+    var more = left === 1 ? 'Add up to 1 more item' : 'Add up to ' + left + ' more items';
+    var h = '<section class="wb-card"><div class="wb-card-top"><h2>Gift-wrapping shopping cart</h2>' +
       '<button type="button" class="wb-btn wb-btn-ghost wb-start-over" data-act="start-over">Start over</button></div>' +
+      '<div class="wb-cart-head"><div class="wb-zip-row"><label class="wb-label" for="wb-zip-edit">Giftee / gift-recipient\'s zip code:</label>' +
+      '<input class="wb-input wb-zip" id="wb-zip-edit" inputmode="numeric" maxlength="5" value="' + esc(b.gifteeZip) + '" autocomplete="off"></div>' +
       extLine() + '</div>' +
       (S.notice ? '<p class="wb-notice">' + esc(S.notice) + '</p>' : '') +
       (rows || (excludedHtml ? '' : '<p class="wb-muted">Paste a product link to start.</p>')) +
       (rows ? '<p class="wb-asterisk">* Final gift delivery to the giftee may add 1 day.</p><p class="wb-ship-note">Shipping prices do not reflect any club membership or other discounts.</p>' : '') +
       excludedHtml +
-      (room && !S.addOpen ? '<button type="button" class="wb-btn wb-btn-ghost wb-add-more" data-act="add-more">Add more items</button>' : '') +
-      (room && S.addOpen ? '<p class="wb-ask">Add more items for gift-wrapping</p>' + LOAD_TIP + linkFields(maxLinks() - lines.length, draft) + buyButton(true) : '') +
+      (room && !S.addOpen ? '<button type="button" class="wb-btn wb-btn-ghost wb-add-more" data-act="add-more">' + more + '</button>' : '') +
+      (room && S.addOpen ? '<p class="wb-ask">' + more + ' for gift-wrapping</p>' + LOAD_TIP + linkFields(left, draft) + buyButton(true) : '') +
       '</section>';
     if (!b.bill && b.billError && !stillWorking() && readyLines().length) h += '<p class="wb-error">' + esc(b.billError) + '</p>';
     h += limitLine();
@@ -877,6 +879,7 @@
       return askManual(el.getAttribute('data-line'), email);
     }
     if (act === 'modal-zip') return submitModalZip();
+    if (act === 'start-over') return startOver();
     if (act === 'add-more') { S.addOpen = true; render(); return; }
     if (act === 'submit-links') return submitLinks();
     if (act === 'remove') return removeLine(el.getAttribute('data-line'));
@@ -1018,7 +1021,10 @@
     if (!needsPoll()) return;
     var wait = busyLines() ? 4000 : 20000;
     S.pollTimer = setTimeout(function () {
-      request('/api/buy/batches/' + encodeURIComponent(S.id)).then(function (j) {
+      var id = S.id;
+      if (!id) return;
+      request('/api/buy/batches/' + encodeURIComponent(id)).then(function (j) {
+        if (S.id !== id) return;
         S.batch = j.batch;
         if (S.busy) { poll(); return; }
         if (S.view === 'items' || S.wrapOpen) {
