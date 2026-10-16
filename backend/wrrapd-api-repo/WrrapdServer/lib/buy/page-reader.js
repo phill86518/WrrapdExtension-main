@@ -440,7 +440,7 @@ function zipMismatchPrompt(expected, seen) {
     if (want.length !== 5) return '';
     const got = String(seen || '').replace(/\D/g, '').slice(0, 5);
     if (got === want) return '';
-    if (got.length !== 5) return `Set the page to ${want}, then add the link again.`;
+    if (got.length !== 5) return '';
     return `This page ships to ${got}. Set the page to ${want}, then add the link again.`;
 }
 

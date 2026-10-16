@@ -203,17 +203,20 @@
       h += '<div class="wb-variants">';
       groups.forEach(function (vg) {
         var picked = S.variantDraft[l.id + '|' + vg.name] || (vg.options.indexOf(vg.selected) >= 0 ? vg.selected : '');
-        h += '<p class="wb-label">Choose ' + esc(vg.name.toLowerCase()) + '</p><div class="wb-choice-row">';
-        vg.options.forEach(function (o) {
-          h += '<button type="button" class="wb-choice' + (picked === o ? ' wb-choice-on' : '') + '" data-act="pick-variant" data-line="' + esc(l.id) + '" data-group="' + esc(vg.name) + '" data-value="' + esc(o) + '">' + esc(o) + '</button>';
-        });
-        h += '</div>';
+        h += '<p class="wb-label">Choose ' + esc(vg.name.toLowerCase()) + '</p>';
+        if (vg.options.length > 8) {
+          h += '<select class="wb-input" data-variant="' + esc(l.id) + '" data-group="' + esc(vg.name) + '"><option value="">Choose…</option>' +
+            vg.options.map(function (o) { return '<option value="' + esc(o) + '"' + (picked === o ? ' selected' : '') + '>' + esc(o) + '</option>'; }).join('') + '</select>';
+        } else {
+          h += '<div class="wb-choice-row">';
+          vg.options.forEach(function (o) {
+            h += '<button type="button" class="wb-choice' + (picked === o ? ' wb-choice-on' : '') + '" data-act="pick-variant" data-line="' + esc(l.id) + '" data-group="' + esc(vg.name) + '" data-value="' + esc(o) + '">' + esc(o) + '</button>';
+          });
+          h += '</div>';
+        }
       });
-      var missing = groups.some(function (vg) {
-        var picked = S.variantDraft[l.id + '|' + vg.name] || (vg.options.indexOf(vg.selected) >= 0 ? vg.selected : '');
-        return !picked;
-      });
-      if (groups.length > 1 && !missing) h += '<button type="button" class="wb-btn" data-act="variant" data-line="' + esc(l.id) + '">Confirm</button>';
+      var wide = groups.some(function (vg) { return vg.options.length > 8; });
+      if (wide) h += '<button type="button" class="wb-btn" data-act="variant" data-line="' + esc(l.id) + '">Confirm</button>';
       h += '</div>';
     }
     var asked = l.manual === 'requested';

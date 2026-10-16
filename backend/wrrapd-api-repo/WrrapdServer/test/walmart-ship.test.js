@@ -46,7 +46,7 @@ test('a page that ships to a different ZIP is refused', () => {
     assert.match(reader.zipMismatchPrompt('32218', '32250'), /32218/);
     assert.equal(reader.zipMismatchPrompt('32218', '32218'), '');
     assert.equal(reader.pageShipZip('<p>No shipping zip here</p>'), '');
-    assert.match(reader.zipMismatchPrompt('11212', ''), /11212/);
+    assert.equal(reader.zipMismatchPrompt('11212', ''), '');
     assert.equal(reader.zipMismatchPrompt('11212', '11212'), '');
     assert.match(reader.zipMismatchPrompt('11212', '51502'), /51502/);
     assert.match(reader.zipMismatchPrompt('11212', '51502'), /11212/);
