@@ -20,6 +20,7 @@ const extensionConfig = require('../extension-config');
 const { rateLimit } = require('../rate-limit');
 const lineFacts = require('./line-facts');
 const manual = require('./manual');
+const placePools = require('./place-pools');
 
 const INGEST_TAG = 'ingest-v2026-10-13-buy-for-you';
 const BATCH_TTL_MS = 24 * 60 * 60 * 1000;
@@ -1253,7 +1254,13 @@ module.exports = function mountBuyForYou(app, deps) {
                     state: g.state,
                     kind: g.kind || null,
                     deadlineAt: g.deadlineAt || null,
-                    placement: g.placement || null,
+                    placement: g.placement
+                        ? {
+                              state: g.placement.state,
+                              placeQueue: g.placement.placeQueue || null,
+                              retailerOrderNumber: g.placement.retailerOrderNumber || undefined,
+                          }
+                        : null,
                 })),
                 refreshRunning: !!(b.refresh && b.refresh.state === 'running'),
                 totalCents: b.paidBill ? b.paidBill.totalCents : null,
@@ -2056,10 +2063,62 @@ module.exports = function mountBuyForYou(app, deps) {
         res.json({ ok: true, current: out.current });
     });
 
+    async function tickPlacePools() {
+        const cfg = config.load();
+        const pools = placePools.buildPools(store.list({ limit: 500 }), {
+            placeIntervalHours: cfg.placeIntervalHours,
+            placeOnThreshold: cfg.placeOnThreshold,
+        });
+        const alerts = await placePools.applyPools(pools, {
+            updateBatch: (id, fn) => store.update(id, fn),
+            readBatch: (id) => store.read(id),
+        });
+        const base = `${commandCenterBase()}/admin/buy-for-you`;
+        for (const a of alerts) {
+            const subject =
+                a.pool.status === 'ready_threshold'
+                    ? `Place now (free ship): ${a.pool.retailerName} → ${a.pool.hubName || a.pool.hubZip}`
+                    : `Place now (schedule): ${a.pool.retailerName} → ${a.pool.hubName || a.pool.hubZip}`;
+            sendMail({
+                to: cfg.teamAlertEmails,
+                subject,
+                html: emails.placePoolHtml({ pool: a.pool, link: base }),
+            }).catch((e) => console.warn('[buy] place-pool alert failed', e && e.message));
+        }
+        return { pools: pools.length, alerts: alerts.length };
+    }
+
+    app.get('/api/admin/buy/place-pools', (req, res) => {
+        if (!admin(req, res)) return;
+        const cfg = config.load();
+        const pools = placePools.buildPools(store.list({ limit: 500 }), {
+            placeIntervalHours: cfg.placeIntervalHours,
+            placeOnThreshold: cfg.placeOnThreshold,
+        });
+        res.json({
+            ok: true,
+            placeIntervalHours: cfg.placeIntervalHours,
+            placeOnThreshold: cfg.placeOnThreshold,
+            pools,
+        });
+    });
+
+    /** Manual refresh of pool stamps + alerts (also runs every minute). */
+    app.post('/api/admin/buy/place-pools/tick', async (req, res) => {
+        if (!admin(req, res)) return;
+        try {
+            const out = await tickPlacePools();
+            res.json({ ok: true, ...out });
+        } catch (e) {
+            res.status(500).json({ error: (e && e.message) || 'tick failed' });
+        }
+    });
+
     setInterval(() => {
         for (const b of store.list({ limit: 200 })) {
             if (b.status === 'open' && !openExpired(b)) quotes.sweep(b.id).catch(() => {});
         }
+        tickPlacePools().catch((e) => console.warn('[buy] place-pools tick', e && e.message));
     }, 60 * 1000).unref();
 };
 

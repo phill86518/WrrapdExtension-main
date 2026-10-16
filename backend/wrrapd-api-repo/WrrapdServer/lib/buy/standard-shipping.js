@@ -48,6 +48,19 @@ function scheduleCents(retailer, merchandiseCents) {
     return rate.feeCents;
 }
 
+/** Merchandise cents at which standard shipping becomes free; null when unknown (e.g. Etsy). 0 = always free. */
+function freeOverCents(retailer) {
+    const rate = RATES[retailer];
+    if (!rate) return null;
+    if (rate.tiers) {
+        const idx = rate.tiers.findIndex((t) => t.feeCents === 0);
+        if (idx < 0) return null;
+        if (idx === 0) return 0;
+        return rate.tiers[idx - 1].maxCents + 1;
+    }
+    return rate.freeOverCents != null ? rate.freeOverCents : null;
+}
+
 /** One standard shipping charge for a retailer order shipping to the hub. */
 function groupShipCents(retailer, merchandiseCents, pageCents) {
     const scheduled = scheduleCents(retailer, merchandiseCents);
@@ -91,4 +104,4 @@ function fillMissing(retailer, chosen, merchandiseCents) {
     };
 }
 
-module.exports = { RATES, scheduleCents, groupShipCents, fillMissing, estimateArrivalDate, ESTIMATE_BUSINESS_DAYS };
+module.exports = { RATES, scheduleCents, freeOverCents, groupShipCents, fillMissing, estimateArrivalDate, ESTIMATE_BUSINESS_DAYS };

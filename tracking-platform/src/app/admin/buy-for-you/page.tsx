@@ -1,7 +1,16 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAdminSession } from "@/lib/auth";
-import { etTime, fetchBuyConfig, isPast, listBuyBatches, usd, type BuyBatchSummary } from "@/lib/buy-for-you-admin";
+import {
+  etTime,
+  fetchBuyConfig,
+  isPast,
+  listBuyBatches,
+  listPlacePools,
+  usd,
+  type BuyBatchSummary,
+  type PlacePool,
+} from "@/lib/buy-for-you-admin";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +24,18 @@ function toPlace(b: BuyBatchSummary) {
 
 function inProgress(b: BuyBatchSummary) {
   return b.status === "paid" && !toPlace(b);
+}
+
+function poolStatusLabel(p: PlacePool) {
+  if (p.status === "ready_threshold") return "Ready — free shipping";
+  if (p.status === "due_schedule") return "Due — place now";
+  return "Accumulating";
+}
+
+function poolStatusClass(p: PlacePool) {
+  if (p.status === "ready_threshold") return "bg-emerald-100 text-emerald-900";
+  if (p.status === "due_schedule") return "bg-amber-100 text-amber-900";
+  return "bg-slate-100 text-slate-700";
 }
 
 function Row({ b }: { b: BuyBatchSummary }) {
@@ -82,12 +103,16 @@ export default async function BuyForYouPage({
   const showAll = sp.all === "1";
 
   let batches: BuyBatchSummary[] | null = null;
+  let pools: PlacePool[] = [];
+  let placeIntervalHours: 1 | 2 = 1;
   let mode = "";
   let loadError = "";
   try {
-    const [rows, cfg] = await Promise.all([listBuyBatches(), fetchBuyConfig()]);
+    const [rows, cfg, poolData] = await Promise.all([listBuyBatches(), fetchBuyConfig(), listPlacePools()]);
     batches = rows;
     mode = cfg.config.mode;
+    pools = poolData.pools || [];
+    placeIntervalHours = poolData.placeIntervalHours || cfg.config.placeIntervalHours || 1;
   } catch (e) {
     loadError = e instanceof Error ? e.message : "Could not reach the pay server";
   }
@@ -98,6 +123,8 @@ export default async function BuyForYouPage({
   const shopping = (batches || []).filter((b) => b.status === "open" && !needsQuote(b));
   const closed = (batches || []).filter((b) => b.status === "closed" || b.status === "expired");
   const manualOpen = (batches || []).reduce((s, b) => s + (b.manualOpen || 0), 0);
+  const actionablePools = pools.filter((p) => p.actionable);
+  const waitingPools = pools.filter((p) => !p.actionable);
 
   return (
     <div className="space-y-8">
@@ -141,6 +168,71 @@ export default async function BuyForYouPage({
 
       {loadError ? <p className="font-semibold text-rose-700">{loadError}</p> : null}
 
+      <section className="space-y-3">
+        <div>
+          <h2 className="text-xs font-bold uppercase tracking-[0.16em] text-[#1a2744]">
+            Place pools ({pools.length})
+          </h2>
+          <p className="mt-1 text-sm text-[#2d4a38]">
+            Paid orders waiting to buy are grouped by retailer and hub. Place when free shipping is hit, or at the next{" "}
+            {placeIntervalHours}-hour Eastern boundary even if shipping still applies. Automation does not check out yet —
+            place with the Wrrapd retailer account, then record the order number on each batch.
+          </p>
+        </div>
+        {!pools.length ? (
+          <p className="text-sm text-slate-500">No paid groups waiting to place.</p>
+        ) : (
+          <div className="space-y-3">
+            {[...actionablePools, ...waitingPools].map((p) => (
+              <div
+                key={p.poolKey}
+                className="rounded-xl border border-[#1a2744]/25 bg-white px-4 py-3 shadow-sm"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="font-bold text-[#0f172a]">
+                      {p.retailerName} → {p.hubName || p.hubZip}
+                    </p>
+                    <p className="text-sm text-slate-600">
+                      {usd(p.merchCents)} merchandise · {p.memberCount} order(s)
+                      {p.freeOverCents != null
+                        ? p.freeOverCents === 0
+                          ? " · always free ship"
+                          : ` · free ship from ${usd(p.freeOverCents)}`
+                        : ""}
+                      {p.shipCentsIfPlaced != null
+                        ? p.shipCentsIfPlaced === 0
+                          ? " · ship $0 if placed now"
+                          : ` · est. ship ${usd(p.shipCentsIfPlaced)} if placed now`
+                        : ""}
+                    </p>
+                    <p className="mt-1 flex flex-wrap gap-2 text-xs">
+                      {p.members.map((m) => (
+                        <Link
+                          key={m.batchId}
+                          href={`/admin/buy-for-you/${m.batchId}`}
+                          className="rounded-full bg-slate-100 px-2 py-0.5 text-blue-800 underline"
+                        >
+                          {m.batchId} ({usd(m.merchCents)})
+                        </Link>
+                      ))}
+                    </p>
+                  </div>
+                  <div className="text-right text-sm">
+                    <span className={`inline-block rounded-full px-2.5 py-1 text-xs font-bold ${poolStatusClass(p)}`}>
+                      {poolStatusLabel(p)}
+                    </span>
+                    {p.dueAt && p.status === "accumulating" ? (
+                      <p className="mt-1 text-slate-500">Due {etTime(p.dueAt)}</p>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
       <Section
         title="Quote desk"
         blurb="Open the retailer cost page with the hub address, read prices, shipping options, and tax, then back out without paying."
@@ -149,7 +241,7 @@ export default async function BuyForYouPage({
       />
       <Section
         title="Paid — place at the retailer"
-        blurb="Buy with the Wrrapd retailer account shipping to the hub. Record the retailer order number to send it to Orders."
+        blurb="Buy with the Wrrapd retailer account shipping to the hub. Record the retailer order number to send it to Orders. Prefer the place pools section above when combining carts."
         rows={place}
         empty="Nothing to place."
       />

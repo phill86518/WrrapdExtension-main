@@ -61,6 +61,8 @@ export async function saveConfigAction(fd: FormData) {
     ...(cap != null ? { merchandiseCapCents: cap } : {}),
     ...(itemCap != null ? { perItemCapCents: itemCap } : {}),
     quoteWaitMinutes: Number(str(fd, "quoteWaitMinutes")) || 20,
+    placeIntervalHours: (Number(str(fd, "placeIntervalHours")) === 2 ? 2 : 1) as BuyConfig["placeIntervalHours"],
+    placeOnThreshold: fd.get("placeOnThreshold") === "on",
     allowElectronics: fd.get("allowElectronics") === "on",
     allowedRetailers: fd.getAll("allowedRetailers").map(String),
     automatedQuoteRetailers: fd.getAll("automatedQuoteRetailers").map(String),

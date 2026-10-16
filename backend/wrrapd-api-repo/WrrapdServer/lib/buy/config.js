@@ -16,6 +16,10 @@ const DEFAULTS = Object.freeze({
     merchandiseCapCents: 30000,
     perItemCapCents: 10000,
     quoteWaitMinutes: 20,
+    /** Hours between scheduled retailer place runs (1 or 2). Top of the hour, Eastern. */
+    placeIntervalHours: 1,
+    /** When pooled merchandise hits free shipping, mark the pool ready without waiting for the hour. */
+    placeOnThreshold: true,
     allowElectronics: true,
     allowedRetailers: retailers.ALL_IDS.slice(),
     automatedQuoteRetailers: [],
@@ -39,6 +43,7 @@ function normalize(raw) {
         ? src.teamAlertEmails.map((e) => String(e).trim()).filter((e) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)).slice(0, 8)
         : DEFAULTS.teamAlertEmails.slice();
     const cap = intIn(src.merchandiseCapCents, 100, 30000, DEFAULTS.merchandiseCapCents);
+    const placeIntervalHours = Number(src.placeIntervalHours) === 2 ? 2 : 1;
     return {
         mode,
         previewCode: String(src.previewCode || '').trim().slice(0, 40),
@@ -46,6 +51,8 @@ function normalize(raw) {
         merchandiseCapCents: cap,
         perItemCapCents: Math.min(cap, intIn(src.perItemCapCents, 100, 30000, DEFAULTS.perItemCapCents)),
         quoteWaitMinutes: intIn(src.quoteWaitMinutes, 5, 240, DEFAULTS.quoteWaitMinutes),
+        placeIntervalHours,
+        placeOnThreshold: src.placeOnThreshold !== false,
         allowElectronics: src.allowElectronics !== false,
         allowedRetailers: ids(src.allowedRetailers) ?? DEFAULTS.allowedRetailers.slice(),
         automatedQuoteRetailers: ids(src.automatedQuoteRetailers) ?? [],

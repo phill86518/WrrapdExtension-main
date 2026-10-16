@@ -79,7 +79,18 @@ export default async function BuySettingsPage({
               Minutes to answer a desk quote
               <input name="quoteWaitMinutes" type="number" min={5} max={240} defaultValue={cfgData.config.quoteWaitMinutes} className={input} />
             </label>
+            <label className="text-xs">
+              Place pool every (hours, Eastern clock)
+              <select name="placeIntervalHours" defaultValue={String(cfgData.config.placeIntervalHours ?? 1)} className={input}>
+                <option value="1">Every hour (top of the hour)</option>
+                <option value="2">Every 2 hours (even hours)</option>
+              </select>
+            </label>
           </div>
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" name="placeOnThreshold" defaultChecked={cfgData.config.placeOnThreshold !== false} /> Place a retailer pool as soon as
+            pooled merchandise hits free shipping (do not wait for the hour)
+          </label>
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" name="allowElectronics" defaultChecked={cfgData.config.allowElectronics} /> Allow electronics (shopper must accept the
             warranty sentence)

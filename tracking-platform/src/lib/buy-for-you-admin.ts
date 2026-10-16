@@ -7,6 +7,10 @@ export type BuyConfig = {
   merchandiseCapCents: number;
   perItemCapCents: number;
   quoteWaitMinutes: number;
+  /** 1 or 2 — Eastern top-of-hour place schedule for under-threshold pools */
+  placeIntervalHours: 1 | 2;
+  /** Ready immediately when pooled merchandise hits free shipping */
+  placeOnThreshold: boolean;
   allowElectronics: boolean;
   allowedRetailers: string[];
   automatedQuoteRetailers: string[];
@@ -14,6 +18,37 @@ export type BuyConfig = {
   returnWindowDays: number;
   updatedAt: string | null;
   updatedBy: string | null;
+};
+
+export type PlacePoolMember = {
+  batchId: string;
+  retailer: string;
+  merchCents: number;
+  paidAt: string;
+  titles: string[];
+  gifterName: string;
+};
+
+export type PlacePool = {
+  poolKey: string;
+  retailer: string;
+  retailerName: string;
+  hubKey: string;
+  hubName: string;
+  hubZip: string;
+  freeOverCents: number | null;
+  merchCents: number;
+  members: PlacePoolMember[];
+  earliestPaidAt: string | null;
+  placeIntervalHours: 1 | 2;
+  freeShipMet: boolean;
+  shipCentsIfPlaced: number | null;
+  dueAt: string | null;
+  status: "accumulating" | "ready_threshold" | "due_schedule";
+  reason: string;
+  actionable: boolean;
+  memberCount: number;
+  batchIds: string[];
 };
 
 export type RunnerStatus = { playwright: boolean; signedInProfile: boolean; ready: boolean };
@@ -48,7 +83,21 @@ export type BuyGroup = {
   requestedAt?: string;
   deadlineAt?: string;
   runner?: { at: string; ok: boolean; reason: string; failedStep: number | null } | null;
-  placement?: { state: "to_place" | "placed" | "cancelled" } | null;
+  placement?: {
+    state: "to_place" | "placed" | "cancelled";
+    placeQueue?: {
+      poolKey: string;
+      status: string;
+      actionable?: boolean;
+      freeShipMet?: boolean;
+      merchPoolCents?: number;
+      freeOverCents?: number | null;
+      shipCentsIfPlaced?: number | null;
+      dueAt?: string | null;
+      memberCount?: number;
+    } | null;
+    retailerOrderNumber?: string;
+  } | null;
 };
 
 export type WrapChoice = {
@@ -306,6 +355,14 @@ export async function saveBuyConfig(config: Partial<BuyConfig>, updatedBy: strin
 
 export async function listBuyBatches() {
   return (await call<{ batches: BuyBatchSummary[] }>("/api/admin/buy/batches")).batches;
+}
+
+export async function listPlacePools() {
+  return call<{
+    pools: PlacePool[];
+    placeIntervalHours: 1 | 2;
+    placeOnThreshold: boolean;
+  }>("/api/admin/buy/place-pools");
 }
 
 export async function getBuyBatch(id: string) {

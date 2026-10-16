@@ -70,6 +70,38 @@ function teamAlertHtml({ title, batch, lines, link }) {
 <p><a href="${esc(link)}">Open in Command Center</a></p></div>`;
 }
 
+/** Ops: a retailer+hub place pool is ready (free-ship threshold or schedule). */
+function placePoolHtml({ pool, link }) {
+    const ship =
+        pool.shipCentsIfPlaced === 0
+            ? 'Free shipping'
+            : pool.shipCentsIfPlaced != null
+              ? `Est. shipping ${usd(pool.shipCentsIfPlaced)}`
+              : 'Shipping TBD';
+    const why =
+        pool.status === 'ready_threshold'
+            ? 'Pooled merchandise hit the free-shipping minimum — place now.'
+            : 'Place-interval elapsed — place this pool now (shipping may apply).';
+    const members = (pool.members || [])
+        .map(
+            (m) =>
+                `<li><a href="${esc(link)}/${esc(m.batchId)}">${esc(m.batchId)}</a> — ${usd(m.merchCents)}${m.gifterName ? ` (${esc(m.gifterName)})` : ''}<br>${esc((m.titles || []).slice(0, 3).join('; '))}</li>`,
+        )
+        .join('');
+    const threshold =
+        pool.freeOverCents == null
+            ? 'No published free-shipping minimum'
+            : pool.freeOverCents === 0
+              ? 'Always free shipping'
+              : `Free shipping from ${usd(pool.freeOverCents)}`;
+    return `<div style="font-family:Arial,sans-serif;color:#162a52">
+<h3 style="color:#0f0351;margin:0 0 8px">Place pool: ${esc(pool.retailerName)} → ${esc(pool.hubName || pool.hubZip)}</h3>
+<p>${esc(why)}</p>
+<p>Merchandise ${usd(pool.merchCents)} across ${pool.memberCount} order(s). ${esc(threshold)}. ${esc(ship)}.</p>
+<ul>${members}</ul>
+<p><a href="${esc(link)}">Open place pools in Command Center</a></p></div>`;
+}
+
 function shell(inner) {
     return `<!doctype html><html><body style="margin:0;background:#f6f4ef;font-family:Arial,Helvetica,sans-serif">
 <div style="max-width:620px;margin:0 auto;padding:24px">
@@ -142,6 +174,7 @@ function manualCancelledHtml({ batchId, title }) {
 module.exports = {
     receiptHtml,
     teamAlertHtml,
+    placePoolHtml,
     usd,
     manualRequestHtml,
     cartReadyHtml,
