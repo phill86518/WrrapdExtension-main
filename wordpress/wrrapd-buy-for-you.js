@@ -168,7 +168,7 @@
     var h = '<section class="wb-hero"><h1>Order through us</h1><p>You choose the gifts. We gift-wrap them and deliver them.</p></section>';
     h += '<section class="wb-options">' +
       '<div class="wb-option"><h2>Chrome extension</h2><p>Shop at the store and add gift-wrap at checkout with the free Wrrapd Chrome extension.</p>' +
-      '<a class="wb-btn wb-btn-ghost" href="' + esc(EXT) + '" target="_blank" rel="noopener">Get the extension</a></div>' +
+      '<a class="wb-btn wb-ext-btn" href="' + esc(EXT) + '" target="_blank" rel="noopener">Get the FREE Chrome Extension</a></div>' +
       '<div class="wb-option wb-option-main"><h2>Order through us</h2><p>Paste up to ' + esc(maxLinks()) + ' product links. You buy through us. We gift-wrap every item and deliver it.</p>' +
       (open ? '<a class="wb-btn" href="#wb-start">Start</a>' : '<p class="wb-soon">Coming soon.</p>') + '</div></section>';
     if (!open) return h;
@@ -512,6 +512,7 @@
     S.draftLinks = null;
     var left = maxLinks() - lines.length;
     var more = left === 1 ? 'Add up to 1 more item' : 'Add up to ' + left + ' more items';
+    ensureFlowers();
     var h = '<section class="wb-card"><div class="wb-card-top"><h2>Gift-wrapping shopping cart</h2>' +
       '<button type="button" class="wb-btn wb-btn-ghost wb-start-over" data-act="start-over">Start over</button></div>' +
       '<div class="wb-cart-head">' + zipBar('wb-zip-edit', b.gifteeZip, 'cart-zip', false) +
@@ -658,13 +659,14 @@
     var heading = lines.length > 1
       ? 'Item ' + (S.wrapIndex + 1) + ' of ' + lines.length + ' — Gift wrap with Wrrapd'
       : 'Gift wrap with Wrrapd';
-    var h = '<div class="wb-modal" role="dialog" aria-modal="true" aria-label="Wrrapd gift wrap"><div class="wb-modal-box wb-wrap-modal">' +
+    ensureFlowers();
+    var h = '<div class="wb-modal" role="dialog" aria-modal="true" aria-label="Wrrapd gift wrap"><div class="wb-modal-box wb-wrap-modal"><div class="wb-wrap-scroll">' +
       '<h2 id="wb-wrap-title">' + esc(heading) + '</h2>' +
       '<p class="wb-zip-show">Giftee ZIP: <b>' + esc(S.batch && S.batch.gifteeZip) + '</b></p>';
     if (!l.product || l.state === 'reading') {
       h += '<p class="wb-status"><span class="wb-spin"></span>' + WAIT_ADD + '</p>' +
         (S.error ? '<p class="wb-error">' + esc(S.error) + '</p>' : '') +
-        wrapNav(false) + '</div></div>';
+        '</div>' + wrapNav(false) + '</div></div>';
       return h;
     }
     h += '<p class="wb-wrap-intro">Customize each item below. You\'ll complete Wrrapd\'s secure payment during checkout, then we wrap and ship to your giftee.</p>' +
@@ -677,7 +679,7 @@
       radio('wrrapd', 'Allow Wrrapd to choose the wrapping' + (unit('giftWrapBase') ? ' — ' + unit('giftWrapBase') : '')) +
       '<select class="wb-input wb-occ' + (S.occBad ? ' wb-occ-bad' : '') + '" id="wb-occ" aria-label="Occasion"' + (style === 'wrrapd' ? '' : ' hidden') + '><option value="">Select Occasion</option>' + occ + '</select></div>';
     if (style === 'wrrapd') {
-      h += '<div class="wb-sub"><textarea class="wb-input wb-hint" id="wb-hint" maxlength="200" rows="3" placeholder="Other details for our wrap team (optional)">' + esc(w.wrrapdHint || '') + '</textarea></div>';
+      h += '<div class="wb-sub"><textarea class="wb-input wb-hint" id="wb-hint" maxlength="200" rows="2" placeholder="Other details for our wrap team (optional)">' + esc(w.wrrapdHint || '') + '</textarea></div>';
     }
     if (custom) {
       h += radio('upload', 'Upload my own design', unit('customDesignUpload') ? '(+' + unit('customDesignUpload') + ')' : '');
@@ -714,32 +716,30 @@
     }
     h += '</div>';
     var fl = w.flowers;
-    h += '<label class="wb-flowers-label"><input type="checkbox" id="wb-flowers"' + (fl || S.flowersOpen ? ' checked' : '') + '> Add flowers — choose a bouquet below</label>';
-    if (fl || S.flowersOpen) {
-      if (!S.flowers) h += '<p class="wb-flower-msg">Finding a lovely bouquet with your gift…</p>';
-      else if (S.flowers.status !== 'ok' || !S.flowers.choices.length) h += '<p class="wb-flower-msg">' + esc(S.flowers.message || 'We apologize — floral delivery is not currently available for this ZIP code. Gift wrapping is still available.') + '</p>';
-      else {
-        h += '<div class="wb-grid wb-flowers">' + S.flowers.choices.map(function (c) {
-          var on = fl && fl.offerId === c.offerId;
-          return '<label class="wb-flower' + (on ? ' wb-flower-on' : '') + '" data-act="pick-flower" data-offer="' + esc(c.offerId) + '">' +
-            '<input type="radio" name="wb-flower"' + (on ? ' checked' : '') + '>' +
-            '<img src="' + esc(c.imageUrl) + '" alt="' + esc(c.title) + '">' +
-            '<span class="wb-flower-price">' + usdNum(c.price) + '</span>' +
-            '<span class="wb-flower-name">' + esc(c.title) + '</span></label>';
-        }).join('') + '</div>';
-        if (S.flowers.disclaimer || S.flowers.source === 'classic_backup') {
-          h += '<p class="wb-flower-note">Actual bouquets might differ slightly from the photos shown.</p>';
-        }
+    h += '<section class="wb-flower-sec"><label class="wb-flowers-label"><input type="checkbox" id="wb-flowers"' + (fl || S.flowersOpen ? ' checked' : '') + '> Add flowers</label>';
+    if (!S.flowers) h += '<p class="wb-flower-msg">Finding a lovely bouquet with your gift…</p>';
+    else if (S.flowers.status !== 'ok' || !S.flowers.choices.length) h += '<p class="wb-flower-msg">' + esc(S.flowers.message || 'We apologize — floral delivery is not currently available for this ZIP code. Gift wrapping is still available.') + '</p>';
+    else {
+      h += '<p class="wb-flower-lead">Choose a bouquet to send with this gift.</p><div class="wb-grid wb-flowers">' + S.flowers.choices.map(function (c) {
+        var on = fl && fl.offerId === c.offerId;
+        return '<label class="wb-flower' + (on ? ' wb-flower-on' : '') + '" data-act="pick-flower" data-offer="' + esc(c.offerId) + '">' +
+          '<input type="radio" name="wb-flower"' + (on ? ' checked' : '') + '>' +
+          '<img src="' + esc(c.imageUrl) + '" alt="' + esc(c.title) + '">' +
+          '<span class="wb-flower-price">' + usdNum(c.price) + '</span>' +
+          '<span class="wb-flower-name">' + esc(c.title) + '</span></label>';
+      }).join('') + '</div>';
+      if (S.flowers.disclaimer || S.flowers.source === 'classic_backup') {
+        h += '<p class="wb-flower-note">Actual bouquets might differ slightly from the photos shown.</p>';
       }
     }
-    h += '<label class="wb-msg-label" for="wb-msg">Gift message:</label>' +
-      '<textarea class="wb-input wb-msg" id="wb-msg" maxlength="300" rows="5" placeholder="A note for your giftee">' + esc(w.giftMessage || '') + '</textarea>' +
-      '<label class="wb-msg-label" for="wb-from">From:</label>' +
-      '<input class="wb-input wb-from" id="wb-from" maxlength="80" placeholder="Your name" value="' + esc(w.senderName || '') + '">' +
+    h += '</section><div class="wb-note-sec"><label class="wb-msg-label" for="wb-msg">Gift message</label>' +
+      '<textarea class="wb-input wb-msg" id="wb-msg" maxlength="300" rows="2" placeholder="A note for your giftee">' + esc(w.giftMessage || '') + '</textarea>' +
+      '<label class="wb-msg-label" for="wb-from">From</label>' +
+      '<input class="wb-input wb-from" id="wb-from" maxlength="80" placeholder="Your name" value="' + esc(w.senderName || '') + '"></div>' +
       '<label class="wb-combine"><input type="checkbox" id="wb-combine"' + (w.combine ? ' checked' : '') + '> Combine with items from another order</label>' +
       (w.combine ? '<input class="wb-input wb-combine-note" id="wb-combine-note" maxlength="200" placeholder="Enter additional instructions" value="' + esc(w.combineNote || '') + '">' : '') +
       (S.error ? '<p class="wb-error">' + esc(S.error) + '</p>' : '') +
-      wrapNav(true) + '</div></div>';
+      '</div>' + wrapNav(true) + '</div></div>';
     return h;
     function radio(v, label, note) {
       return '<label class="wb-radio"><input type="radio" name="wb-style" value="' + v + '"' + (style === v ? ' checked' : '') + '> <span>' + esc(label) + '</span>' +
@@ -1105,6 +1105,7 @@
       S.zipChecking = false;
       S.modalZipOk = true;
       S.flowers = null;
+      S.flowersLoading = false;
       loadPricing();
       render();
     }).catch(function () {
@@ -1240,16 +1241,27 @@
     }).catch(function () {});
   }
 
+  function ensureFlowers() {
+    if (S.flowers || S.flowersLoading) return;
+    var zip = S.batch && S.batch.gifteeZip;
+    if (!zip) return;
+    S.flowersLoading = true;
+    fetch(API + '/api/flowers/catalog?postalCode=' + encodeURIComponent(zip))
+      .then(function (r) { return r.json(); })
+      .then(function (j) { S.flowers = j || { status: 'unavailable', choices: [] }; })
+      .catch(function () { S.flowers = { status: 'unavailable', choices: [] }; })
+      .then(function () {
+        S.flowersLoading = false;
+        if (S.wrapOpen) render();
+      });
+  }
+
   function onFlowersToggle(on) {
     var l = currentLine();
     S.flowersOpen = on;
     if (!on) { l.wrap = Object.assign({}, l.wrap || {}, { flowers: null }); render(); return; }
+    ensureFlowers();
     render();
-    if (S.flowers) return;
-    fetch(API + '/api/flowers/catalog?postalCode=' + encodeURIComponent(S.batch.gifteeZip))
-      .then(function (r) { return r.json(); })
-      .then(function (j) { S.flowers = j || { status: 'unavailable', choices: [] }; render(); })
-      .catch(function () { S.flowers = { status: 'unavailable', choices: [] }; render(); });
   }
 
   function pickFlower(offerId) {
@@ -1257,6 +1269,7 @@
     var c = (S.flowers.choices || []).filter(function (x) { return x.offerId === offerId; })[0];
     if (!c) return;
     var l = currentLine();
+    S.flowersOpen = true;
     l.wrap = Object.assign({}, l.wrap || {}, { flowers: { offerId: c.offerId, amount: c.price, imageUrl: c.imageUrl, title: c.title } });
     render();
   }
