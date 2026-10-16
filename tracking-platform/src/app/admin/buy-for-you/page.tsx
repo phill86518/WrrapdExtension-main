@@ -178,9 +178,11 @@ export default async function BuyForYouPage({
             Place pools ({pools.length})
           </h2>
           <p className="mt-1 text-sm text-[#2d4a38]">
-            Paid orders waiting to buy are grouped by retailer and hub. Place when free shipping is hit, or at the next{" "}
-            {placeIntervalHours}-hour Eastern boundary even if shipping still applies. Buy once at the retailer, then record
-            one checkout below — every customer WB order in the pool is mapped to that retailer order.
+            Paid orders waiting to buy are grouped only when they share the same retailer and the same hub address.
+            Orders headed to different hubs stay in separate carts, including free shipping. Place when free shipping is
+            hit, or at the next {placeIntervalHours}-hour Eastern boundary even if shipping still applies. Buy once at
+            the retailer, then record one checkout below — every customer order in that pool is mapped to that retailer
+            order.
           </p>
         </div>
         {!pools.length ? (

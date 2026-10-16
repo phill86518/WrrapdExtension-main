@@ -1,9 +1,13 @@
 /**
- * Paid "to_place" groups are pooled by retailer + hub so multiple customer orders can
- * share one retailer checkout (and free shipping when merchandise crosses the store minimum).
+ * Paid "to_place" groups are pooled by retailer + exact hub ship-to so multiple customer
+ * orders can share one retailer checkout (and free shipping when merchandise crosses the
+ * store minimum).
  *
  * Rules:
- * - Accumulate all paid to_place groups for the same retailer → same hub.
+ * - Pool only when the retailer matches AND the hub address matches exactly
+ *   (hub id, street, suite, city, state, ZIP). Different hubs never share a cart
+ *   or a free-shipping total, even for the same retailer.
+ * - A batch with no complete hub address is never pooled with anything else.
  * - When pooled merchandise meets the free-shipping minimum, the pool is ready immediately.
  * - Otherwise it becomes due at the next place-interval boundary (Eastern top of hour, or every 2 hours).
  *
@@ -66,11 +70,43 @@ function nextDueAt(fromIso, intervalHours) {
     return new Date(wall.ms).toISOString();
 }
 
+function normHubPart(value) {
+    return String(value || '')
+        .trim()
+        .toUpperCase()
+        .replace(/[^A-Z0-9]/g, '');
+}
+
+function hubZip5(hub) {
+    const raw = normHubPart(hub && (hub.postalCode || hub.zip));
+    return raw.slice(0, 5);
+}
+
+/**
+ * Exact ship-to identity. Two orders pool only when this string matches.
+ * Hub id, street, suite, city, state, and ZIP are all required to agree.
+ * Returns null when the address is too incomplete to prove it is the same hub.
+ */
+function hubIdentity(hub) {
+    if (!hub || typeof hub !== 'object') return null;
+    const line1 = normHubPart(hub.addressLine1);
+    const zip = hubZip5(hub);
+    if (!line1 || zip.length !== 5) return null;
+    const id = normHubPart(hub.hubId || hub.id) || 'NOID';
+    const line2 = normHubPart(hub.addressLine2);
+    const city = normHubPart(hub.city);
+    const state = normHubPart(hub.state);
+    return [id, line1, line2, city, state, zip].join('|');
+}
+
 function hubKey(hub) {
-    if (!hub) return 'unknown';
-    const zip = String(hub.postalCode || hub.zip || '').trim();
-    const line = String(hub.addressLine1 || hub.displayName || '').trim().toUpperCase();
-    return `${zip}|${line}`;
+    return hubIdentity(hub) || 'unknown';
+}
+
+function sameHub(a, b) {
+    const left = hubIdentity(a);
+    const right = hubIdentity(b);
+    return !!left && left === right;
 }
 
 function groupMerchCents(batch, retailerId) {
@@ -113,14 +149,16 @@ function buildPools(batches, opts = {}) {
         for (const g of Object.values(batch.groups || {})) {
             if (!g || !g.placement || g.placement.state !== 'to_place') continue;
             const retailerId = g.retailer;
-            const key = `${retailerId}::${hubKey(batch.hub)}`;
+            const identity = hubIdentity(batch.hub);
+            // Incomplete or missing hub: its own pool. Never share free shipping.
+            const key = identity ? `${retailerId}::${identity}` : `${retailerId}::unpooled:${batch.id}`;
             if (!map.has(key)) {
                 const freeOver = standardShipping.freeOverCents(retailerId);
                 map.set(key, {
                     poolKey: key,
                     retailer: retailerId,
                     retailerName: (retailers.byId(retailerId) && retailers.byId(retailerId).name) || g.retailerName || retailerId,
-                    hubKey: hubKey(batch.hub),
+                    hubKey: identity || 'unknown',
                     hubName: (batch.hub && batch.hub.displayName) || '',
                     hubZip: (batch.hub && (batch.hub.postalCode || batch.hub.zip)) || '',
                     freeOverCents: freeOver,
@@ -271,7 +309,9 @@ module.exports = {
     TZ,
     etParts,
     nextDueAt,
+    hubIdentity,
     hubKey,
+    sameHub,
     buildPools,
     placeQueueSnapshot,
     applyPools,

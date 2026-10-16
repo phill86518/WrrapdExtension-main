@@ -151,6 +151,13 @@ function recordPlacement({
     if (!Number.isFinite(total) || total <= 0) return { ok: false, error: 'Enter the retailer order total.' };
     const listBatches = (batches || []).filter(Boolean);
     if (!listBatches.length) return { ok: false, error: 'No customer orders to link.' };
+    const hubKeys = listBatches.map((b) => placePools.hubKey(b.hub));
+    if (hubKeys.some((k) => k === 'unknown') || new Set(hubKeys).size !== 1) {
+        return {
+            ok: false,
+            error: 'These orders ship to different hubs. Place each hub as its own retailer order.',
+        };
+    }
     for (const b of listBatches) {
         if (b.status !== 'paid') return { ok: false, error: `Order ${b.id} is not paid.` };
         if (!skipRetailerGroupCheck && (!b.groups || !b.groups[retailerId])) {
@@ -190,6 +197,13 @@ function recordPlacement({
     const rMeta = retailers.byId(retailerId);
 
     if (existing) {
+        const storedHubKey = existing.hub ? placePools.hubKey(existing.hub) : existing.hubKey || 'unknown';
+        if (storedHubKey !== 'unknown' && storedHubKey !== hubKeys[0]) {
+            return {
+                ok: false,
+                error: `Retailer order ${existing.id} already ships to a different hub. Do not add these orders to it.`,
+            };
+        }
         const memberKey = (m) => `${m.batchId}::${m.addOnId || 'main'}`;
         const byKey = new Map(existing.members.map((m) => [memberKey(m), m]));
         for (const m of members) byKey.set(memberKey(m), m);
@@ -246,6 +260,9 @@ function backfillFromBatches(batches) {
             if (p.retailerOrderId && read(p.retailerOrderId)) continue;
             const existing = findByRetailerRef(retailerId, p.retailerOrderNumber);
             if (existing) {
+                const storedHubKey = existing.hub ? placePools.hubKey(existing.hub) : existing.hubKey || 'unknown';
+                const incomingHubKey = placePools.hubKey(b.hub);
+                if (storedHubKey !== incomingHubKey) continue;
                 if (!existing.members.some((m) => m.batchId === b.id)) {
                     existing.members.push(memberFromBatch(b, retailerId));
                     write(existing);

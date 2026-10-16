@@ -1588,6 +1588,10 @@ module.exports = function mountBuyForYou(app, deps) {
             if (g.placement && g.placement.state === 'cancelled') return { ok: false, error: `${id} was cancelled for this retailer.` };
             batches.push(b);
         }
+        const hubKeys = new Set(batches.map((b) => placePools.hubKey(b.hub)));
+        if (hubKeys.size !== 1 || hubKeys.has('unknown')) {
+            return { ok: false, error: 'These orders ship to different hubs. Place each hub as its own retailer order.' };
+        }
         const reg = retailerOrders.recordPlacement({
             retailerId,
             retailerOrderNumber,
