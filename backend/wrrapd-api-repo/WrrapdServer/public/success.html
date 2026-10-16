@@ -32,6 +32,7 @@
             color: #4caf50;
         }
 
+        .content a { color: #0f0351; font-weight: 700; }
         .content p {
             font-size: 1.2rem;
             line-height: 1.5;
@@ -106,6 +107,28 @@
                 } catch (e) {
                     console.error('[success] notify opener failed:', e);
                 }
+            }
+
+            if (params.get('buy') === '1') {
+                const redirectMessage = document.getElementById('redirect-message');
+                if (redirectMessage) {
+                    redirectMessage.innerHTML =
+                        'Your order is in. We are gift-wrapping your items and delivering them.<br><br>' +
+                        '<a href="https://www.wrrapd.com/register/">Create an account</a> with the same email to see this order in your account.<br><br>' +
+                        '<a href="https://www.wrrapd.com/">Continue to Wrrapd</a><br><br>' +
+                        'Continuing automatically in <span id="countdown">20</span> seconds.';
+                }
+                const countdownElement = document.getElementById('countdown');
+                let countdown = 20;
+                const interval = setInterval(() => {
+                    countdown -= 1;
+                    if (countdownElement) countdownElement.textContent = countdown;
+                    if (countdown <= 0) {
+                        clearInterval(interval);
+                        window.location.href = 'https://www.wrrapd.com/';
+                    }
+                }, 1000);
+                return;
             }
 
             const retailerLabel = retailerParam;

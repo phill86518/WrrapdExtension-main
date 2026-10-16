@@ -491,7 +491,11 @@
         let total = Number(payload.total);
         const gifteeOriginalAddress = gifteeFromPayload || address;
 
-        if (checkoutRetailer !== 'Amazon') {
+        if (payload.buy) {
+            document.title = 'Wrrapd payment';
+            const payBtn = document.getElementById('submit');
+            if (payBtn) payBtn.textContent = 'Pay Wrrapd';
+        } else if (checkoutRetailer !== 'Amazon') {
             document.title = 'Wrrapd payment — ' + checkoutRetailer + ' order';
         }
 
@@ -694,6 +698,11 @@
                     pricingCartForIntent.country = pricingCartForIntent.country || 'US';
                     payload.pricingCart = pricingCartForIntent;
                 }
+                if (payload.buy) {
+                    document.getElementById('amount').value = (Number(total) / 100).toFixed(2);
+                    helcimReady = true;
+                    syncCardComplete();
+                } else {
                 const quoteBody = pricingCartForIntent
                     ? { orderNumber, total, pricingCart: pricingCartForIntent }
                     : { total, orderNumber };
@@ -730,6 +739,7 @@
                 }
                 helcimReady = true;
                 syncCardComplete();
+                }
             } catch (error) {
                 helcimReady = false;
                 const cardElementContainer = document.getElementById('card-element');
@@ -931,11 +941,11 @@
             /** Prefill giftee name placeholders; lock ZIP when the extension already validated it. */
             const setDefaultAddress = () => {
                 if (gifteeUsesSplitName) {
-                    document.getElementById('giftee-first-name').value = 'John';
-                    document.getElementById('giftee-last-name').value = 'Doe';
+                    document.getElementById('giftee-first-name').value = payload.buy ? '' : 'John';
+                    document.getElementById('giftee-last-name').value = payload.buy ? '' : 'Doe';
                     syncGifteeHiddenFullName();
                 } else {
-                    document.getElementById('name').value = 'John Doe';
+                    document.getElementById('name').value = payload.buy ? '' : 'John Doe';
                 }
                 document.getElementById('line1').value = '';
                 document.getElementById('line2').value = '';
@@ -2630,6 +2640,39 @@
                         alert(`Payment failed: ${helcimResultValue('responseMessage') || 'Card was not accepted'}`);
                         submitButton.textContent = 'Pay Now';
                         updatePayButtonState();
+                        return;
+                    }
+
+                    if (payload.buy) {
+                        const buyRes = await fetch('https://api.wrrapd.com/api/buy/batches/' + encodeURIComponent(payload.batchId) + '/charge', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                t: payload.token,
+                                cardToken: cardToken,
+                                billHash: payload.billHash,
+                                termsVersion: payload.termsVersion,
+                                gifter: { name: gifterNameForCard, email: email, phone: phone },
+                                giftee: {
+                                    name: getGifteeFullName(),
+                                    line1: finalShippingAddress.line1,
+                                    line2: finalShippingAddress.line2 || '',
+                                    city: finalShippingAddress.city,
+                                    state: finalShippingAddress.state,
+                                    postalCode: finalShippingAddress.postal_code,
+                                },
+                                billing: billingDetails,
+                            }),
+                        });
+                        let buyBody = {};
+                        try { buyBody = await buyRes.json(); } catch (_) { buyBody = {}; }
+                        if (!buyRes.ok || !buyBody.ok) {
+                            alert(buyBody.error || 'Payment could not complete. Please try again.');
+                            submitButton.textContent = 'Pay Wrrapd';
+                            updatePayButtonState();
+                            return;
+                        }
+                        window.location.href = '/success?buy=1';
                         return;
                     }
 

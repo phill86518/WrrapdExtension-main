@@ -12,7 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_BUY_BUILD', '2026-10-15-buy-v42' );
+define( 'WRRAPD_BUY_BUILD', '2026-10-15-buy-v43' );
 
 function wrrapd_buy_is_request() {
 	$path = wp_parse_url( isset( $_SERVER['REQUEST_URI'] ) ? (string) wp_unslash( $_SERVER['REQUEST_URI'] ) : '', PHP_URL_PATH );

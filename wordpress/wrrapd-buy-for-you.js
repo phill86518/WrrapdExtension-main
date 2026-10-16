@@ -469,9 +469,14 @@
       '</section>';
     if (!b.bill && b.billError && !stillWorking() && readyLines().length) h += '<p class="wb-error">' + esc(b.billError) + '</p>';
     h += limitLine();
+    if (allWrapped && b.bill) h += '<section class="wb-card wb-review">' + billBlock(b.bill) + '</section>';
     if (S.error) h += '<p class="wb-error">' + esc(S.error) + '</p>';
-    h += '<button type="button" class="wb-btn" data-act="open-wrap"' + (canGo ? '' : ' disabled') + '>Continue to gift-wrap</button>';
-    if (allWrapped) h += '<button type="button" class="wb-btn wb-btn-ghost" data-act="to-review"' + (b.bill ? '' : ' disabled') + '>Review and pay</button>';
+    if (allWrapped && b.bill) {
+      h += '<button type="button" class="wb-btn" data-act="pay"' + (S.busy ? ' disabled' : '') + '>Pay Wrrapd</button>';
+      h += '<button type="button" class="wb-btn wb-btn-ghost" data-act="open-wrap">Edit gift-wrap</button>';
+    } else {
+      h += '<button type="button" class="wb-btn" data-act="open-wrap"' + (canGo ? '' : ' disabled') + '>Continue to gift-wrap</button>';
+    }
     if (lines.some(function (l) { return l.state === 'reading'; })) h += '<p class="wb-muted">Please keep this page open. Each item can take up to 90 seconds to load.</p>';
     return h;
   }
@@ -655,7 +660,7 @@
     h += '<p class="wb-review-note">When you click Pay, we check the latest prices with each store one more time.</p>';
     if (S.error) h += '<p class="wb-error">' + esc(S.error) + '</p>';
     h += '<div class="wb-actions"><button type="button" class="wb-btn wb-btn-ghost" data-act="review-back">Edit gift-wrap</button>' +
-      '<button type="button" class="wb-btn" data-act="to-pay"' + (b.bill ? '' : ' disabled') + '>Review and pay</button></div>';
+      '<button type="button" class="wb-btn" data-act="pay"' + (b.bill && !S.busy ? '' : ' disabled') + '>Pay Wrrapd</button></div>';
     return h;
   }
 
@@ -796,7 +801,7 @@
     if (act === 'wrap-back') { saveDraft(); if (S.wrapIndex > 0) { S.wrapIndex--; S.flowersOpen = false; } render(); return; }
     if (act === 'wrap-save') return saveWrap();
     if (act === 'review-back') { S.view = 'items'; S.wrapOpen = true; S.wrapIndex = Math.max(0, wrapTargets().length - 1); render(); return; }
-    if (act === 'to-pay') { location.href = PAY + '?b=' + encodeURIComponent(S.id) + '&t=' + encodeURIComponent(S.token); return; }
+    if (act === 'to-pay' || act === 'pay') return payWrrapd();
     if (act === 'gen-ai') return genAi();
     if (act === 'pick-ai') { saveDraft(); var ai = S.ai[currentLine().id]; ai.picked = Number(el.getAttribute('data-i')); render(); return; }
     if (act === 'pick-flower') return pickFlower(el.getAttribute('data-offer'));
@@ -1098,6 +1103,62 @@
     }).catch(function (err) {
       S.busy = false;
       S.error = err.message || 'Upload did not finish. Please try again.';
+      render();
+    });
+  }
+
+  function waitRefresh() {
+    var started = Date.now();
+    function tick() {
+      return request('/api/buy/batches/' + encodeURIComponent(S.id)).then(function (j) {
+        S.batch = j.batch;
+        if (S.batch.refresh && S.batch.refresh.state === 'done') return S.batch.refresh;
+        if (Date.now() - started > 10 * 60 * 1000) throw new Error('Please try again.');
+        return new Promise(function (r) { setTimeout(r, 2500); }).then(tick);
+      });
+    }
+    return tick();
+  }
+
+  function payWrrapd() {
+    if (S.busy || !S.batch || !S.batch.bill) return;
+    var r = S.batch.refresh;
+    var fresh = r && r.state === 'done' && r.id === S.payRefreshId && Date.now() - Date.parse(r.doneAt) < 9 * 60 * 1000;
+    S.busy = true;
+    S.error = '';
+    S.notice = fresh ? '' : 'Checking the latest prices…';
+    render();
+    var ready = fresh ? Promise.resolve(r) : request('/api/buy/batches/' + encodeURIComponent(S.id) + '/refresh', {}).then(function (j) {
+      S.batch = j.batch;
+      return waitRefresh();
+    });
+    ready.then(function () {
+      r = S.batch.refresh;
+      S.busy = false;
+      if (!S.batch.bill) throw new Error((r && r.error) || S.batch.billError || 'We can’t buy these items right now.');
+      if (!fresh && r.changed) {
+        S.payRefreshId = r.id;
+        S.notice = 'Please review the new total, then click Pay Wrrapd.';
+        render();
+        return;
+      }
+      S.payRefreshId = r.id;
+      var payload = {
+        buy: true,
+        batchId: S.id,
+        token: S.token,
+        orderNumber: S.id,
+        total: S.batch.bill.totalCents,
+        billHash: r.billHash,
+        termsVersion: S.terms && S.terms.version,
+        address: { postalCode: S.batch.gifteeZip, country: 'US' },
+        gifteeOriginalAddress: { postalCode: S.batch.gifteeZip, country: 'US' },
+      };
+      location.href = 'https://pay.wrrapd.com/checkout/buy?data=' + encodeURIComponent(btoa(JSON.stringify(payload)));
+    }).catch(function (err) {
+      S.busy = false;
+      S.notice = '';
+      S.error = err.message || 'Please try again.';
       render();
     });
   }
