@@ -199,13 +199,22 @@
     if (l.product && l.product.isElectronics) h += '<p class="wb-muted">Electronics</p>';
     if (l.state === 'reading') h += '<p class="wb-status"><span class="wb-spin"></span>' + WAIT_ADD + '</p>';
     if (l.state === 'needs_variant') {
+      var groups = l.product.variantGroups || [];
       h += '<div class="wb-variants">';
-      (l.product.variantGroups || []).forEach(function (vg) {
+      groups.forEach(function (vg) {
         var picked = S.variantDraft[l.id + '|' + vg.name] || (vg.options.indexOf(vg.selected) >= 0 ? vg.selected : '');
-        h += '<label class="wb-label">' + esc(vg.name) + '</label><select class="wb-input" data-variant="' + esc(l.id) + '" data-group="' + esc(vg.name) + '"><option value="">Choose…</option>' +
-          vg.options.map(function (o) { return '<option' + (picked === o ? ' selected' : '') + '>' + esc(o) + '</option>'; }).join('') + '</select>';
+        h += '<p class="wb-label">Choose ' + esc(vg.name.toLowerCase()) + '</p><div class="wb-choice-row">';
+        vg.options.forEach(function (o) {
+          h += '<button type="button" class="wb-choice' + (picked === o ? ' wb-choice-on' : '') + '" data-act="pick-variant" data-line="' + esc(l.id) + '" data-group="' + esc(vg.name) + '" data-value="' + esc(o) + '">' + esc(o) + '</button>';
+        });
+        h += '</div>';
       });
-      h += '<button type="button" class="wb-btn wb-btn-sm" data-act="variant" data-line="' + esc(l.id) + '">Confirm</button></div>';
+      var missing = groups.some(function (vg) {
+        var picked = S.variantDraft[l.id + '|' + vg.name] || (vg.options.indexOf(vg.selected) >= 0 ? vg.selected : '');
+        return !picked;
+      });
+      if (groups.length > 1 && !missing) h += '<button type="button" class="wb-btn" data-act="variant" data-line="' + esc(l.id) + '">Confirm</button>';
+      h += '</div>';
     }
     var asked = l.manual === 'requested';
     if (excluded(l) && !asked) h += '<p class="wb-unavailable">' + esc(limitMessage(l)) + '</p>';
@@ -883,6 +892,7 @@
     if (act === 'add-more') { S.addOpen = true; render(); return; }
     if (act === 'submit-links') return submitLinks();
     if (act === 'remove') return removeLine(el.getAttribute('data-line'));
+    if (act === 'pick-variant') return pickVariant(el);
     if (act === 'variant') return submitVariant(el.getAttribute('data-line'));
     if (act === 'open-wrap') return openWrap();
     if (act === 'to-review') { S.view = 'review'; S.wrapOpen = false; render(); return; }
@@ -1142,13 +1152,30 @@
     change('/shipping', { retailer: el.getAttribute('data-ship'), optionId: el.value }).catch(function () {});
   }
 
-  function submitVariant(lineId) {
-    var choices = {};
+  function variantChoices(lineId) {
     var l = S.batch.lines.filter(function (x) { return x.id === lineId; })[0];
-    $all('select[data-variant]').forEach(function (el) {
-      if (el.getAttribute('data-variant') === lineId) choices[el.getAttribute('data-group')] = el.value;
+    var choices = {};
+    var ready = true;
+    if (!l || !l.product) return { choices: choices, ready: false };
+    (l.product.variantGroups || []).forEach(function (vg) {
+      var picked = S.variantDraft[lineId + '|' + vg.name] || (vg.options.indexOf(vg.selected) >= 0 ? vg.selected : '');
+      choices[vg.name] = picked;
+      if (!picked) ready = false;
     });
-    change('/variant', { lineId: lineId, choices: choices }).catch(function () {});
+    return { choices: choices, ready: ready };
+  }
+  function pickVariant(el) {
+    var lineId = el.getAttribute('data-line');
+    var group = el.getAttribute('data-group');
+    S.variantDraft[lineId + '|' + group] = el.getAttribute('data-value');
+    var picked = variantChoices(lineId);
+    if (!picked.ready) { render(); return; }
+    change('/variant', { lineId: lineId, choices: picked.choices }).catch(function () {});
+  }
+  function submitVariant(lineId) {
+    var picked = variantChoices(lineId);
+    if (!picked.ready) { S.error = 'Please choose one.'; render(); return; }
+    change('/variant', { lineId: lineId, choices: picked.choices }).catch(function () {});
   }
 
   function accept() {

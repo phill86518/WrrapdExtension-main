@@ -57,6 +57,18 @@ test('the Kohl\'s link sku is that color, not the page default', () => {
     assert.equal(reader.kohlsSkuColor(html, 'https://www.kohls.com/product/prd-7513461/x.jsp?skuId=50653163'), 'Tan');
 });
 
+test('Kohl\'s colors that share one link are chosen in the cart', () => {
+    const html = '"skuCode":[0,"50653163"],"color":[0,"Tan"] "color":[0,"Black"]';
+    const url = 'https://www.kohls.com/product/prd-7513461/x.jsp?skuId=50653163';
+    const groups = reader.applyKohlsColors(
+        [{ name: 'Color', options: ['Black'], selected: 'Black' }],
+        html,
+        url,
+    );
+    assert.equal(groups[0].selected, null);
+    assert.deepEqual(groups[0].options, ['Black', 'Tan']);
+});
+
 test('a guessed server location is not the shopper page ZIP', () => {
     const ship = reader.walmartShip(page({ postal: '51502', date: '2026-10-15', price: null, free: false, strength: 'IMPLICIT' }), '32218');
     assert.equal(ship.skip, true);

@@ -444,11 +444,29 @@ function zipMismatchPrompt(expected, seen) {
     return `This page ships to ${got}. Set the page to ${want}, then add the link again.`;
 }
 
-/** Color of the Kohl's sku in the link. The page's default color is a different shoe. */
+function kohlsPlain(html) {
+    return String(html || '').replace(/&quot;/g, '"').replace(/\\"/g, '"');
+}
+
+/** Color names printed in the Kohl's product data. */
+function kohlsColorNames(html) {
+    const names = [];
+    const re = /"color"\s*:\s*\[\s*\d+\s*,\s*"([^"]+)"\s*\]/g;
+    let m;
+    const text = kohlsPlain(html);
+    while ((m = re.exec(text))) {
+        const name = m[1].trim();
+        if (!/^[A-Za-z][A-Za-z0-9 /'.-]{0,30}$/.test(name)) continue;
+        if (!names.includes(name)) names.push(name);
+    }
+    return names;
+}
+
+/** Color of the Kohl's sku in the link, when that sku names one color. */
 function kohlsSkuColor(html, url) {
     const sku = (String(url || '').match(/[?&]skuId=(\d+)/i) || [])[1] || '';
     if (!sku) return '';
-    const text = String(html || '').replace(/&quot;/g, '"');
+    const text = kohlsPlain(html);
     const at = text.indexOf(sku);
     if (at < 0) return '';
     const block = text.slice(at, at + 5000);
@@ -456,6 +474,27 @@ function kohlsSkuColor(html, url) {
     if (named && named[1] && !/^null$/i.test(named[1])) return named[1];
     const image = block.match(/\/\d+_([A-Za-z][A-Za-z ]{1,40})/);
     return image ? image[1].trim() : '';
+}
+
+/**
+ * Kohl's color clicks often keep the same link. When the page lists more than
+ * one color, leave the choice open so the shopper picks it in the cart.
+ */
+function applyKohlsColors(groups, html, url) {
+    const fromPage = kohlsColorNames(html);
+    const next = (groups || []).map((g) => ({ ...g, options: (g.options || []).slice(), selected: g.selected || null }));
+    let group = next.find((g) => /color/i.test(g.name));
+    const options = group ? group.options.slice() : [];
+    for (const color of fromPage) {
+        if (!options.includes(color)) options.push(color);
+    }
+    if (options.length < 2) return withSelectedColor(next, options[0] || kohlsSkuColor(html, url));
+    if (!group) next.unshift({ name: 'Color', options, selected: null });
+    else {
+        group.options = options;
+        group.selected = null;
+    }
+    return next;
 }
 
 function withSelectedColor(groups, color) {
@@ -1173,7 +1212,9 @@ async function readProduct({ retailer, url, zip, state, batchId, lineId }) {
             pageNotes: [],
             inStock: facts.inStock === false ? false : facts.inStock === true ? true : null,
             isElectronics,
-            variantGroups: withSelectedColor(cleanVariantGroups(facts.variantGroups), retailer === 'kohls' ? kohlsSkuColor(page.html, url) : ''),
+            variantGroups: retailer === 'kohls'
+                ? applyKohlsColors(cleanVariantGroups(facts.variantGroups), page.html, url)
+                : cleanVariantGroups(facts.variantGroups),
             choicePrompt,
             readAt: new Date().toISOString(),
             readBy: page.fromSavedPage ? 'saved_page' : 'grok',
@@ -1182,6 +1223,6 @@ async function readProduct({ retailer, url, zip, state, batchId, lineId }) {
 }
 
 module.exports = {
-    readProduct, askGrok, looksElectronic, priceAppearsInPage, jsonLdProducts, visibleText, fetchPage, usablePage, DIRECT_MS, standardFromPage, walmartShip, bestbuyShip, pageShipZip, zipMismatchPrompt, kohlsSkuColor, withDefaultShip, targetFulfillment,
+    readProduct, askGrok, looksElectronic, priceAppearsInPage, jsonLdProducts, visibleText, fetchPage, usablePage, DIRECT_MS, standardFromPage, walmartShip, bestbuyShip, pageShipZip, zipMismatchPrompt, kohlsSkuColor, kohlsColorNames, applyKohlsColors, withDefaultShip, targetFulfillment,
     nordstromShell, nordstromFromHtml, savedPageHtml, EXTERNAL_PAGES_DIR,
 };
