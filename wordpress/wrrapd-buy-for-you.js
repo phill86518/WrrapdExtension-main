@@ -990,8 +990,8 @@
       S.addOpen = false;
       S.payRefreshId = '';
       S.batch = j.batch;
-      var needsWrap = (j.batch.lines || []).some(function (l) { return l.state !== 'removed' && l.state !== 'unavailable' && !(l.wrap && l.wrap.done); });
-      S.notice = needsWrap ? 'Please gift-wrap the new item.' : (j.notice || '');
+      S.notice = stillNeedsWrap() ? 'Please gift-wrap the new item.' : (j.notice || '');
+      if (!stillNeedsWrap()) S.promptedWrap = '';
       render();
       forceWrapPrompt();
       poll();
@@ -1007,9 +1007,20 @@
       return l.forceWrap && l.state === 'ready' && !(l.wrap && l.wrap.done);
     }) || null;
   }
+  function stillNeedsWrap() {
+    return ((S.batch && S.batch.lines) || []).some(function (l) {
+      return l.state !== 'removed' && l.state !== 'unavailable' && !(l.wrap && l.wrap.done);
+    });
+  }
+  function clearWrapNotice() {
+    if (S.notice === 'Please gift-wrap the new item.' && !stillNeedsWrap()) {
+      S.notice = '';
+      S.promptedWrap = '';
+    }
+  }
   function forceWrapPrompt() {
     var line = pendingWrapLine();
-    if (!line) return;
+    if (!line) { clearWrapNotice(); return; }
     S.notice = 'Please gift-wrap the new item.';
     if (S.wrapOpen || S.promptedWrap === line.id) return;
     S.promptedWrap = line.id;
@@ -1534,6 +1545,7 @@
       S.busy = false;
       S.batch = j.batch;
       S.flowersOpen = false;
+      clearWrapNotice();
       var lines = wrapTargets();
       if (S.wrapIndex + 1 < lines.length) S.wrapIndex++;
       else { S.wrapOpen = false; S.view = 'items'; }
