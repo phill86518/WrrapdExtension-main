@@ -195,7 +195,18 @@ export type BuyBatch = {
     phone: string;
     giftee: { name: string; line1: string; line2?: string; city: string; state: string; postalCode: string; phone?: string };
   };
-  placements: Record<string, { state: "placed"; retailerOrderNumber: string; retailerTotalCents: number; arrivalDate: string; placedAt: string; by: string }>;
+  placements: Record<
+    string,
+    {
+      state: "placed";
+      retailerOrderNumber: string;
+      retailerTotalCents: number;
+      arrivalDate: string;
+      placedAt: string;
+      by: string;
+      retailerOrderId?: string;
+    }
+  >;
   bundles: Record<string, { key: string; arrivalDate: string | null; lineIds: string[]; externalOrderId: string; ingest?: { ok: boolean; at: string; reason: string } }>;
   returns: Record<string, { requests: Array<{ at: string; deliveredAt: string; deadline: string; caller: string; condition: string; note: string; by: string }>; refunded?: { at: string; amountCents: number; by: string } }>;
   refunds: Array<{ id: string; ok: boolean; amountCents: number; kind: string; reason: string; by: string; at: string; error: string; lineIds: string[] }>;
@@ -365,6 +376,74 @@ export async function listPlacePools() {
   }>("/api/admin/buy/place-pools");
 }
 
+export type RetailerOrderMember = {
+  batchId: string;
+  lineIds: string[];
+  merchCents: number;
+  paidGroupSubtotalCents: number | null;
+  gifterName: string;
+  gifteeZip: string;
+  titles: string[];
+  addOnId?: string | null;
+};
+
+export type RetailerOrder = {
+  id: string;
+  retailer: string;
+  retailerName: string;
+  retailerOrderNumber: string;
+  retailerTotalCents: number;
+  arrivalDate: string;
+  status: string;
+  hubName: string;
+  hubZip: string;
+  poolKey: string | null;
+  placedAt: string;
+  by: string;
+  memberCount: number;
+  merchCents: number;
+  members: RetailerOrderMember[];
+  log?: Array<{ at: string; who: string; what: string }>;
+};
+
+export async function listRetailerOrders(params?: { q?: string; retailer?: string; status?: string }) {
+  const sp = new URLSearchParams();
+  if (params?.q) sp.set("q", params.q);
+  if (params?.retailer) sp.set("retailer", params.retailer);
+  if (params?.status) sp.set("status", params.status);
+  const qs = sp.toString();
+  return call<{ orders: RetailerOrder[] }>(`/api/admin/buy/retailer-orders${qs ? `?${qs}` : ""}`);
+}
+
+export async function getRetailerOrder(id: string) {
+  return call<{
+    order: RetailerOrder;
+    batches: Array<{
+      id: string;
+      status?: string;
+      gifterName?: string;
+      email?: string;
+      gifteeZip?: string;
+      hub?: string;
+      totalCents?: number | null;
+      missing?: boolean;
+    }>;
+  }>(`/api/admin/buy/retailer-orders/${encodeURIComponent(id)}`);
+}
+
+export async function placePoolCheckout(body: {
+  poolKey: string;
+  retailerOrderNumber: string;
+  retailerTotalCents: number | null;
+  arrivalDate: string;
+  by: string;
+}) {
+  return call<{ ok: true; retailerOrder: RetailerOrder; ingest: Array<{ ok: boolean; reason: string; batchId?: string }> }>(
+    "/api/admin/buy/place-pools/place",
+    body,
+  );
+}
+
 export async function getBuyBatch(id: string) {
   return call<{ batch: BuyBatch; bill: Bill | null; billError: string | null; runner: Record<string, RunnerStatus>; termsVersion: string }>(
     `/api/admin/buy/batches/${encodeURIComponent(id)}`,
@@ -399,6 +478,7 @@ export type BuyPurchase = {
   giftee: { name: string; line1: string; line2?: string; city: string; state: string; postalCode: string; phone?: string } | null;
   status: "to_place" | "placed" | "cancelled" | "returned";
   retailerOrderNumber: string;
+  retailerOrderId?: string;
   externalOrderId: string;
   sentToOrders: boolean;
   dates: { created: string; paid: string | null; placed: string | null; hubArrival: string | null; delivery: string | null };

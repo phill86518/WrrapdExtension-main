@@ -21,6 +21,7 @@ const { rateLimit } = require('../rate-limit');
 const lineFacts = require('./line-facts');
 const manual = require('./manual');
 const placePools = require('./place-pools');
+const retailerOrders = require('./retailer-orders');
 
 const INGEST_TAG = 'ingest-v2026-10-13-buy-for-you';
 const BATCH_TTL_MS = 24 * 60 * 60 * 1000;
@@ -1328,6 +1329,7 @@ module.exports = function mountBuyForYou(app, deps) {
                     giftee: p.giftee || null,
                     status: l.cancelled ? 'cancelled' : ret && ret.refunded ? 'returned' : placement && placement.state === 'placed' ? 'placed' : 'to_place',
                     retailerOrderNumber: placement && placement.retailerOrderNumber ? placement.retailerOrderNumber : '',
+                    retailerOrderId: placement && placement.retailerOrderId ? placement.retailerOrderId : '',
                     externalOrderId: bundle ? bundle.externalOrderId : '',
                     sentToOrders: !!(bundle && bundle.ingest && bundle.ingest.ok),
                     dates: {
@@ -1363,6 +1365,7 @@ module.exports = function mountBuyForYou(app, deps) {
                     giftee: p.giftee || null,
                     status: placed ? 'placed' : 'to_place',
                     retailerOrderNumber: placed ? placed.retailerOrderNumber : '',
+                    retailerOrderId: placed && placed.retailerOrderId ? placed.retailerOrderId : '',
                     externalOrderId: a.externalOrderId || '',
                     sentToOrders: !!(a.ingest && a.ingest.ok),
                     dates: {
@@ -1565,48 +1568,162 @@ module.exports = function mountBuyForYou(app, deps) {
         return results;
     }
 
+    /**
+     * Record one retailer checkout and map one or more customer WB batches onto it.
+     * Creates/updates orders/buy-retailer-orders/RO-*.json and stamps each batch placement.
+     */
+    async function placeRetailerCheckout({ batchIds, retailerId, retailerOrderNumber, retailerTotalCents, arrivalDate, by, poolKey }) {
+        const byWho = cleanText(by, 80) || 'admin';
+        const ids = [...new Set((batchIds || []).map(String))];
+        if (!ids.length) return { ok: false, error: 'No customer orders to place.' };
+        const batches = [];
+        for (const id of ids) {
+            const b = store.read(id);
+            if (!b) return { ok: false, error: `Order ${id} not found.` };
+            if (b.status !== 'paid') return { ok: false, error: `Only paid orders can be placed (${id}).` };
+            const g = b.groups && b.groups[retailerId];
+            const grp = b.paidBill && b.paidBill.groups && b.paidBill.groups.find((x) => x.retailer === retailerId);
+            if (!grp || !g) return { ok: false, error: `That retailer is not on ${id}.` };
+            if (g.placement && g.placement.state === 'placed') return { ok: false, error: `${id} is already placed for this retailer.` };
+            if (g.placement && g.placement.state === 'cancelled') return { ok: false, error: `${id} was cancelled for this retailer.` };
+            batches.push(b);
+        }
+        const reg = retailerOrders.recordPlacement({
+            retailerId,
+            retailerOrderNumber,
+            retailerTotalCents,
+            arrivalDate,
+            batches,
+            by: byWho,
+            poolKey: poolKey || null,
+        });
+        if (!reg.ok) return reg;
+        const ref = reg.order.retailerOrderNumber;
+        const total = reg.order.retailerTotalCents;
+        const arrival = reg.order.arrivalDate;
+        const ingest = [];
+        for (const b0 of batches) {
+            await store.update(b0.id, (b) => {
+                const g = b.groups[retailerId];
+                const grp = b.paidBill.groups.find((x) => x.retailer === retailerId);
+                b.placements = b.placements || {};
+                b.placements[retailerId] = {
+                    state: 'placed',
+                    retailerOrderNumber: ref,
+                    retailerTotalCents: total,
+                    arrivalDate: arrival,
+                    placedAt: reg.order.placedAt,
+                    by: byWho,
+                    retailerOrderId: reg.order.id,
+                };
+                g.placement = { state: 'placed', retailerOrderId: reg.order.id };
+                const poolNote = batches.length > 1 ? ` (pooled ${batches.length} orders → ${reg.order.id})` : ` (${reg.order.id})`;
+                store.addLog(
+                    b,
+                    byWho,
+                    `${grp.retailerName} order #${ref} placed for ${emails.usd(total)}; hub arrival ${arrival}${poolNote}`,
+                );
+                return b;
+            });
+            const results = await ingestBundles(b0.id, byWho);
+            for (const r of results) ingest.push({ ...r, batchId: b0.id });
+        }
+        return { ok: true, order: retailerOrders.publicView(reg.order), ingest };
+    }
+
     app.post('/api/admin/buy/batches/:id/placed', async (req, res) => {
         if (!admin(req, res)) return;
         const body = req.body || {};
-        const retailerId = String(body.retailer || '');
-        const ref = String(body.retailerOrderNumber || '').trim().replace(/^#/, '').replace(/\s+/g, '').toUpperCase();
-        if (!/^[A-Z0-9][A-Z0-9-]{3,39}$/.test(ref)) return res.status(400).json({ error: 'Enter the retailer order number.' });
-        const arrivalDate = String(body.arrivalDate || '');
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(arrivalDate)) return res.status(400).json({ error: 'Enter the date the retailer says it reaches the hub.' });
-        const total = Math.round(Number(body.retailerTotalCents));
-        if (!Number.isFinite(total) || total <= 0) return res.status(400).json({ error: 'Enter the retailer order total.' });
-        let err = null;
-        await store.update(String(req.params.id), (b) => {
-            if (b.status !== 'paid') {
-                err = 'Only paid orders can be placed.';
-                return null;
-            }
-            const grp = b.paidBill.groups.find((x) => x.retailer === retailerId);
-            const g = b.groups[retailerId];
-            if (!grp || !g) {
-                err = 'That retailer is not on this order.';
-                return null;
-            }
-            if (g.placement && g.placement.state === 'placed') {
-                err = 'This retailer order is already recorded.';
-                return null;
-            }
-            if (g.placement && g.placement.state === 'cancelled') {
-                err = 'This retailer group was cancelled and refunded.';
-                return null;
-            }
-            if (total > grp.subtotalCents) {
-                err = `The retailer total is higher than what the shopper paid for ${grp.retailerName} (${emails.usd(grp.subtotalCents)}). Do not place it.`;
-                return null;
-            }
-            b.placements[retailerId] = { state: 'placed', retailerOrderNumber: ref, retailerTotalCents: total, arrivalDate, placedAt: new Date().toISOString(), by: cleanText(body.by, 80) || 'admin' };
-            g.placement = { state: 'placed' };
-            store.addLog(b, body.by || 'admin', `${grp.retailerName} order #${ref} placed for ${emails.usd(total)}; hub arrival ${arrivalDate}`);
-            return b;
+        const out = await placeRetailerCheckout({
+            batchIds: [String(req.params.id)],
+            retailerId: String(body.retailer || ''),
+            retailerOrderNumber: body.retailerOrderNumber,
+            retailerTotalCents: body.retailerTotalCents,
+            arrivalDate: body.arrivalDate,
+            by: body.by,
         });
-        if (err) return res.status(400).json({ error: err });
-        const results = await ingestBundles(String(req.params.id), cleanText(body.by, 80) || 'admin');
-        res.json({ ok: true, ingest: results, batch: adminView(store.read(String(req.params.id))) });
+        if (!out.ok) return res.status(400).json({ error: out.error });
+        res.json({
+            ok: true,
+            ingest: out.ingest,
+            retailerOrder: out.order,
+            batch: adminView(store.read(String(req.params.id))),
+        });
+    });
+
+    /** Place every to_place member of a place-pool under one retailer checkout. */
+    app.post('/api/admin/buy/place-pools/place', async (req, res) => {
+        if (!admin(req, res)) return;
+        const body = req.body || {};
+        const poolKey = String(body.poolKey || '');
+        const cfg = config.load();
+        const pools = placePools.buildPools(store.list({ limit: 500 }), {
+            placeIntervalHours: cfg.placeIntervalHours,
+            placeOnThreshold: cfg.placeOnThreshold,
+        });
+        const pool = pools.find((p) => p.poolKey === poolKey);
+        if (!pool) return res.status(404).json({ error: 'That place pool is gone or already placed.' });
+        const out = await placeRetailerCheckout({
+            batchIds: pool.batchIds,
+            retailerId: pool.retailer,
+            retailerOrderNumber: body.retailerOrderNumber,
+            retailerTotalCents: body.retailerTotalCents,
+            arrivalDate: body.arrivalDate,
+            by: body.by,
+            poolKey: pool.poolKey,
+        });
+        if (!out.ok) return res.status(400).json({ error: out.error });
+        res.json({ ok: true, ingest: out.ingest, retailerOrder: out.order, poolKey: pool.poolKey });
+    });
+
+    app.get('/api/admin/buy/retailer-orders', (req, res) => {
+        if (!admin(req, res)) return;
+        retailerOrders.backfillFromBatches(store.list({ limit: 500 }));
+        const q = String(req.query.q || '').trim().toLowerCase();
+        const retailer = String(req.query.retailer || '').trim();
+        const status = String(req.query.status || '').trim();
+        let rows = retailerOrders.list({ limit: 500 }).map(retailerOrders.publicView);
+        if (retailer) rows = rows.filter((r) => r.retailer === retailer);
+        if (status) rows = rows.filter((r) => r.status === status);
+        if (q) {
+            rows = rows.filter((r) => {
+                const hay = [
+                    r.id,
+                    r.retailerName,
+                    r.retailerOrderNumber,
+                    r.hubName,
+                    r.hubZip,
+                    ...(r.members || []).flatMap((m) => [m.batchId, m.gifterName, ...(m.titles || [])]),
+                ]
+                    .join(' ')
+                    .toLowerCase();
+                return hay.includes(q);
+            });
+        }
+        res.json({ ok: true, orders: rows });
+    });
+
+    app.get('/api/admin/buy/retailer-orders/:id', (req, res) => {
+        if (!admin(req, res)) return;
+        const rec = retailerOrders.read(String(req.params.id));
+        if (!rec) return res.status(404).json({ error: 'Retailer order not found.' });
+        const view = retailerOrders.publicView(rec);
+        const batches = (view.members || [])
+            .map((m) => {
+                const b = store.read(m.batchId);
+                return b
+                    ? {
+                          id: b.id,
+                          status: b.status,
+                          gifterName: (b.payment && b.payment.gifterName) || '',
+                          email: (b.payment && b.payment.email) || '',
+                          gifteeZip: b.gifteeZip,
+                          hub: b.hub ? b.hub.displayName : '',
+                          totalCents: b.paidBill ? b.paidBill.totalCents : null,
+                      }
+                    : { id: m.batchId, missing: true };
+            });
+        res.json({ ok: true, order: view, batches });
     });
 
     app.post('/api/admin/buy/batches/:id/retry-ingest', async (req, res) => {
@@ -1871,31 +1988,70 @@ module.exports = function mountBuyForYou(app, deps) {
         const body = req.body || {};
         const by = cleanText(body.by, 80) || 'admin';
         const addOnId = String(body.addOnId || '');
-        const ref = String(body.retailerOrderNumber || '').trim().replace(/^#/, '').replace(/\s+/g, '').toUpperCase();
-        if (!/^[A-Z0-9][A-Z0-9-]{3,39}$/.test(ref)) return res.status(400).json({ error: 'Enter the retailer order number.' });
         const arrivalDate = String(body.arrivalDate || '');
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(arrivalDate)) return res.status(400).json({ error: 'Enter the date the retailer says it reaches the hub.' });
         const total = Math.round(Number(body.retailerTotalCents));
+        const b0 = store.read(String(req.params.id));
+        const a0 = b0 && (b0.addOns || []).find((x) => x.id === addOnId);
+        if (!a0 || a0.state !== 'paid' || !a0.placement || a0.placement.state !== 'to_place') {
+            return res.status(400).json({ error: 'Only a paid item can be placed.' });
+        }
         if (!Number.isFinite(total) || total <= 0) return res.status(400).json({ error: 'Enter the retailer order total.' });
-        let error = null;
+        if (total > a0.retailerCents) {
+            return res.status(400).json({
+                error: `The retailer total is higher than what the shopper paid for this item (${emails.usd(a0.retailerCents)}). Do not place it.`,
+            });
+        }
+        const reg = retailerOrders.recordPlacement({
+            retailerId: a0.retailer,
+            retailerOrderNumber: body.retailerOrderNumber,
+            retailerTotalCents: total,
+            arrivalDate,
+            batches: [b0],
+            by,
+            skipRetailerGroupCheck: true,
+            paidCapCentsOverride: a0.retailerCents,
+            membersOverride: [
+                {
+                    batchId: b0.id,
+                    lineIds: [a0.lineId],
+                    merchCents: a0.item.cents,
+                    paidGroupSubtotalCents: a0.retailerCents,
+                    gifterName: (b0.payment && b0.payment.gifterName) || '',
+                    gifteeZip: b0.gifteeZip || '',
+                    titles: [a0.item.title],
+                    addOnId,
+                },
+            ],
+        });
+        if (!reg.ok) return res.status(400).json({ error: reg.error });
+        const ref = reg.order.retailerOrderNumber;
         await store.update(String(req.params.id), (b) => {
             const a = (b.addOns || []).find((x) => x.id === addOnId);
-            if (!a || a.state !== 'paid' || !a.placement || a.placement.state !== 'to_place') {
-                error = 'Only a paid item can be placed.';
-                return null;
-            }
-            if (total > a.retailerCents) {
-                error = `The retailer total is higher than what the shopper paid for this item (${emails.usd(a.retailerCents)}). Do not place it.`;
-                return null;
-            }
-            a.placement = { state: 'placed', retailerOrderNumber: ref, retailerTotalCents: total, arrivalDate, placedAt: new Date().toISOString(), by };
+            if (!a || a.state !== 'paid' || !a.placement || a.placement.state !== 'to_place') return null;
+            a.placement = {
+                state: 'placed',
+                retailerOrderNumber: ref,
+                retailerTotalCents: total,
+                arrivalDate: reg.order.arrivalDate,
+                placedAt: reg.order.placedAt,
+                by,
+                retailerOrderId: reg.order.id,
+            };
             a.externalOrderId = a.externalOrderId || `${b.id}-${a.id}`;
-            store.addLog(b, by, `Add-on ${a.id}: ${a.retailerName} order #${ref} placed for ${emails.usd(total)}; hub arrival ${arrivalDate}`);
+            store.addLog(
+                b,
+                by,
+                `Add-on ${a.id}: ${a.retailerName} order #${ref} placed for ${emails.usd(total)}; hub arrival ${arrivalDate} (${reg.order.id})`,
+            );
             return b;
         });
-        if (error) return res.status(400).json({ error });
         const ingest = await ingestAddOn(String(req.params.id), addOnId, by);
-        res.json({ ok: true, ingest: [{ key: addOnId, ...ingest }], batch: adminView(store.read(String(req.params.id))) });
+        res.json({
+            ok: true,
+            ingest: [{ key: addOnId, ...ingest }],
+            retailerOrder: retailerOrders.publicView(reg.order),
+            batch: adminView(store.read(String(req.params.id))),
+        });
     });
 
     app.post('/api/admin/buy/batches/:id/addon-ingest', async (req, res) => {

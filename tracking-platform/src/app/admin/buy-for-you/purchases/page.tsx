@@ -111,6 +111,13 @@ export default async function BuyPurchasesPage({
             ← Command Center
           </Link>
           <h1 className="mt-2 text-3xl font-bold text-[#0f172a]">Items we purchased</h1>
+          <p className="mt-1 text-sm text-slate-600">
+            Item-level view. For retailer checkouts that may cover several customers, see{" "}
+            <Link href="/admin/buy-for-you/retailer-orders" className="text-blue-800 underline">
+              Retailer orders
+            </Link>
+            .
+          </p>
           <p className="mt-1 max-w-2xl text-sm text-slate-600">
             Every item Wrrapd bought for a wrrapd.com website order: the Amazon category, who paid (gifter), who receives it
             (giftee name and address), and each date from payment to delivery.
@@ -276,7 +283,15 @@ export default async function BuyPurchasesPage({
                     </Link>
                     {p.retailerOrderNumber ? (
                       <p className="mt-1">
-                        {p.retailerName} #{p.retailerOrderNumber}
+                        {p.retailerOrderId ? (
+                          <Link href={`/admin/buy-for-you/retailer-orders/${p.retailerOrderId}`} className="text-blue-800 underline">
+                            {p.retailerName} #{p.retailerOrderNumber}
+                          </Link>
+                        ) : (
+                          <>
+                            {p.retailerName} #{p.retailerOrderNumber}
+                          </>
+                        )}
                       </p>
                     ) : null}
                     {o ? (

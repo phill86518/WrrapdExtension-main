@@ -79,6 +79,11 @@ const MODULE_GROUPS = [
         body: "Items shoppers asked us to add by hand: add them, send the approval email, and place them.",
       },
       {
+        href: "/admin/buy-for-you/retailer-orders",
+        title: "Retailer orders",
+        body: "Checkouts Wrrapd placed at Ulta, Kohl's, Nordstrom, and more — mapped to every customer WB order on that cart.",
+      },
+      {
         href: "/admin/buy-for-you/purchases",
         title: "Items we purchased",
         body: "Every item, its category, the gifter, the giftee name and address, and each date.",

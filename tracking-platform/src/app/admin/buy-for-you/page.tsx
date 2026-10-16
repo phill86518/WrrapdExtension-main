@@ -11,6 +11,7 @@ import {
   type BuyBatchSummary,
   type PlacePool,
 } from "@/lib/buy-for-you-admin";
+import { placePoolAction } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -154,6 +155,9 @@ export default async function BuyForYouPage({
           >
             Manual additions{manualOpen ? ` (${manualOpen})` : ""}
           </Link>
+          <Link href="/admin/buy-for-you/retailer-orders" className="rounded-lg border border-[#1a2744]/40 bg-white px-3 py-2 font-semibold">
+            Retailer orders
+          </Link>
           <Link href="/admin/buy-for-you/purchases" className="rounded-lg border border-[#1a2744]/40 bg-white px-3 py-2 font-semibold">
             Items we purchased
           </Link>
@@ -175,8 +179,8 @@ export default async function BuyForYouPage({
           </h2>
           <p className="mt-1 text-sm text-[#2d4a38]">
             Paid orders waiting to buy are grouped by retailer and hub. Place when free shipping is hit, or at the next{" "}
-            {placeIntervalHours}-hour Eastern boundary even if shipping still applies. Automation does not check out yet —
-            place with the Wrrapd retailer account, then record the order number on each batch.
+            {placeIntervalHours}-hour Eastern boundary even if shipping still applies. Buy once at the retailer, then record
+            one checkout below — every customer WB order in the pool is mapped to that retailer order.
           </p>
         </div>
         {!pools.length ? (
@@ -227,6 +231,33 @@ export default async function BuyForYouPage({
                     ) : null}
                   </div>
                 </div>
+                {p.actionable ? (
+                  <form action={placePoolAction} className="mt-3 grid gap-2 rounded-lg border border-emerald-300 bg-emerald-50/70 p-3 sm:grid-cols-4">
+                    <input type="hidden" name="poolKey" value={p.poolKey} />
+                    <p className="text-xs font-semibold text-[#0f172a] sm:col-span-4">
+                      After you check out at {p.retailerName} with all {p.memberCount} order(s) in one cart, record that
+                      checkout once. Cap: do not pay more than the sum of what shoppers paid for {p.retailerName} on these
+                      orders.
+                    </p>
+                    <label className="text-xs">
+                      Retailer order #
+                      <input name="retailerOrderNumber" required className="mt-0.5 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
+                    </label>
+                    <label className="text-xs">
+                      Retailer total $
+                      <input name="retailerTotal" required inputMode="decimal" className="mt-0.5 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
+                    </label>
+                    <label className="text-xs">
+                      Arrives at hub
+                      <input type="date" name="arrivalDate" required className="mt-0.5 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
+                    </label>
+                    <div className="flex items-end">
+                      <button className="w-full rounded-lg bg-[#1a2744] px-3 py-2 text-sm font-semibold text-white">
+                        Record pooled checkout
+                      </button>
+                    </div>
+                  </form>
+                ) : null}
               </div>
             ))}
           </div>

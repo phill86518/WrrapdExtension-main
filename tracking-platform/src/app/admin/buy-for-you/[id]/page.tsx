@@ -261,6 +261,15 @@ function GroupCard({
         <p className="mt-3 rounded-lg bg-slate-50 p-3 text-sm">
           {group.retailerName} order <b>#{placement.retailerOrderNumber}</b> · {usd(placement.retailerTotalCents)} · hub {placement.arrivalDate} ·
           placed {etTime(placement.placedAt)} by {placement.by}
+          {placement.retailerOrderId ? (
+            <>
+              {" "}
+              ·{" "}
+              <Link href={`/admin/buy-for-you/retailer-orders/${placement.retailerOrderId}`} className="font-semibold text-blue-800 underline">
+                {placement.retailerOrderId}
+              </Link>
+            </>
+          ) : null}
         </p>
       ) : null}
 

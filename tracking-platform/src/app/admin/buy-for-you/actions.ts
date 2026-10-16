@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { requireAdminSession } from "@/lib/auth";
 import {
   dollarsToCents,
+  placePoolCheckout,
   postBuyAction,
   restoreWorkflow,
   saveBuyConfig,
@@ -139,6 +140,30 @@ export async function placedAction(fd: FormData) {
     });
     const failed = (out.ingest || []).filter((r) => !r.ok);
     if (failed.length) throw new Error(`Recorded, but sending to Orders failed: ${failed.map((f) => f.reason).join("; ")}. Use Retry.`);
+  });
+}
+
+export async function placePoolAction(fd: FormData) {
+  const path = BASE;
+  const by = await adminName(path);
+  const poolKey = str(fd, "poolKey");
+  if (!poolKey) back(path, { ok: false, err: "Missing place pool." });
+  await run(path, "Pooled retailer checkout recorded for all linked customer orders.", async () => {
+    const out = await placePoolCheckout({
+      poolKey,
+      retailerOrderNumber: str(fd, "retailerOrderNumber"),
+      retailerTotalCents: dollarsToCents(fd.get("retailerTotal")),
+      arrivalDate: str(fd, "arrivalDate"),
+      by,
+    });
+    const failed = (out.ingest || []).filter((r) => !r.ok);
+    if (failed.length) {
+      throw new Error(
+        `Recorded retailer order ${out.retailerOrder?.id || ""}, but some Orders ingest failed: ${failed
+          .map((f) => `${f.batchId || "?"} ${f.reason}`)
+          .join("; ")}`,
+      );
+    }
   });
 }
 
