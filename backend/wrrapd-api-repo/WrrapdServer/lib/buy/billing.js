@@ -180,7 +180,7 @@ function computeBill(batch, cfg) {
         const shipCents = adjusted == null ? opt.cents : adjusted;
         const zip = batch.hub && (batch.hub.postalCode || batch.hub.zip);
         const percent = salesTax.getCombinedRateAsTaxPercent(zip);
-        const taxCents = shipCents === opt.cents ? tax : Math.round((merch + shipCents) * (percent == null ? 7.5 : percent) / 100);
+        const taxCents = Math.round((merch + shipCents) * (percent == null ? 7.5 : percent) / 100);
         groups.push({
             retailer: retailerId,
             retailerName: g.retailerName,
