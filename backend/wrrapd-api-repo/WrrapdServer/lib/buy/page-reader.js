@@ -89,10 +89,26 @@ async function fetchViaZenrows(retailerId, url, extraHosts) {
     return page;
 }
 
+function pageIsUsable(retailerId, page) {
+    if (!usablePage(page)) return false;
+    if (retailerId === 'nordstrom' && nordstromShell(page.html)) return false;
+    return true;
+}
+
+/** These stores answer a plain request with a bot page or a page that never shows the delivery date. */
+const ZENROWS_RETAILERS = new Set(['nordstrom', 'kohls', 'bestbuy']);
+
 async function fetchPage(retailerId, url, extraHosts) {
+    let rendered = null;
+    if (ZENROWS_RETAILERS.has(retailerId)) {
+        rendered = await fetchViaZenrows(retailerId, url, extraHosts);
+        if (pageIsUsable(retailerId, rendered)) return rendered;
+    }
     const direct = await fetchDirect(retailerId, url, extraHosts);
-    if (usablePage(direct)) return direct;
-    return fetchViaZenrows(retailerId, url, extraHosts);
+    if (pageIsUsable(retailerId, direct)) return direct;
+    if (!rendered) rendered = await fetchViaZenrows(retailerId, url, extraHosts);
+    if (pageIsUsable(retailerId, rendered)) return rendered;
+    return rendered && rendered.ok ? rendered : direct;
 }
 
 function decodeEntities(s) {
@@ -285,9 +301,11 @@ function ymdFromMonthDay(monName, day) {
 function standardFromPage(html, itemCents) {
     const text = visibleText(html).replace(/\s+/g, ' ');
     const between = text.match(/arrives\s+between\s+(?:[A-Za-z]+,\s+)?([A-Za-z]+)\s+(\d{1,2})\s+and\s+(?:[A-Za-z]+,\s+)?([A-Za-z]+)\s+(\d{1,2})/i);
-    if (between) {
-        const start = ymdFromMonthDay(between[1], between[2]);
-        const end = ymdFromMonthDay(between[3], between[4]);
+    const dashed = text.match(/arrives\s+(?:by\s+)?(?:[A-Za-z]+,\s+)?([A-Za-z]+)\s+(\d{1,2})\s*[-–]\s*(?:[A-Za-z]+,\s+)?([A-Za-z]+)\s+(\d{1,2})/i);
+    const windowed = between || dashed;
+    if (windowed) {
+        const start = ymdFromMonthDay(windowed[1], windowed[2]);
+        const end = ymdFromMonthDay(windowed[3], windowed[4]);
         const arrivalDate = end && (!start || end > start) ? end : start;
         if (arrivalDate) return { label: 'Standard shipping', cents: null, arrivalDate, note: '' };
     }
@@ -1143,7 +1161,13 @@ async function readProduct({ retailer, url, zip, state, batchId, lineId }) {
                 brand: product.brand,
                 category: product.category,
             });
-            const ship = product.standardShip;
+            const ship = product.standardShip && product.standardShip.arrivalDate
+                ? product.standardShip
+                : (() => {
+                    const printed = standardFromPage(page.html, product.pagePriceCents || 0);
+                    const base = product.standardShip || { cents: null, arrivalDate: null, note: '' };
+                    return printed && printed.arrivalDate ? { ...base, arrivalDate: printed.arrivalDate, cents: base.cents != null ? base.cents : printed.cents } : base;
+                })();
             const pageOffer = product.pagePriceCents && ship && ship.cents != null
                 ? { itemPriceCents: product.pagePriceCents, shippingOptions: [ship] }
                 : null;
@@ -1151,6 +1175,7 @@ async function readProduct({ retailer, url, zip, state, batchId, lineId }) {
                 ok: true,
                 product: {
                     ...product,
+                    standardShip: ship,
                     amazonCategory,
                     pageOffer,
                     choicePrompt: product.choicePrompt || '',
@@ -1255,6 +1280,10 @@ async function readProduct({ retailer, url, zip, state, batchId, lineId }) {
     }
     if (choicePrompt) chosen = null;
     if (!choicePrompt) chosen = withDefaultShip(retailer, chosen, pagePriceCents || 0);
+    if (chosen && !chosen.arrivalDate) {
+        const printed = standardFromPage(page.html, pagePriceCents || 0);
+        if (printed && printed.arrivalDate) chosen = { ...chosen, arrivalDate: printed.arrivalDate };
+    }
     const indicated = /^\d{4}-\d{2}-\d{2}$/.test(String(facts.standardShipping && facts.standardShipping.arrivalDate || ''))
         ? String(facts.standardShipping.arrivalDate)
         : '';

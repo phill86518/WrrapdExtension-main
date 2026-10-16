@@ -660,7 +660,7 @@
       : 'Gift wrap with Wrrapd';
     var h = '<div class="wb-modal" role="dialog" aria-modal="true" aria-label="Wrrapd gift wrap"><div class="wb-modal-box wb-wrap-modal">' +
       '<h2 id="wb-wrap-title">' + esc(heading) + '</h2>' +
-      zipBar('wb-modal-zip', S.batch && S.batch.gifteeZip, 'modal-zip', S.modalZipOk);
+      '<p class="wb-zip-show">Giftee ZIP: <b>' + esc(S.batch && S.batch.gifteeZip) + '</b></p>';
     if (!l.product || l.state === 'reading') {
       h += '<p class="wb-status"><span class="wb-spin"></span>' + WAIT_ADD + '</p>' +
         (S.error ? '<p class="wb-error">' + esc(S.error) + '</p>' : '') +
@@ -677,7 +677,7 @@
       radio('wrrapd', 'Allow Wrrapd to choose the wrapping' + (unit('giftWrapBase') ? ' — ' + unit('giftWrapBase') : '')) +
       '<select class="wb-input wb-occ' + (S.occBad ? ' wb-occ-bad' : '') + '" id="wb-occ" aria-label="Occasion"' + (style === 'wrrapd' ? '' : ' hidden') + '><option value="">Select Occasion</option>' + occ + '</select></div>';
     if (style === 'wrrapd') {
-      h += '<div class="wb-sub"><input class="wb-input" id="wb-hint" maxlength="200" placeholder="Other details for our wrap team (optional)" value="' + esc(w.wrrapdHint || '') + '"></div>';
+      h += '<div class="wb-sub"><textarea class="wb-input wb-hint" id="wb-hint" maxlength="200" rows="3" placeholder="Other details for our wrap team (optional)">' + esc(w.wrrapdHint || '') + '</textarea></div>';
     }
     if (custom) {
       h += radio('upload', 'Upload my own design', unit('customDesignUpload') ? '(+' + unit('customDesignUpload') + ')' : '');
@@ -690,8 +690,8 @@
       }
       h += radio('ai', 'Generate a design with AI', unit('customDesignAi') ? '(+' + unit('customDesignAi') + ')' : '');
       if (style === 'ai') {
-        h += '<div class="wb-sub"><p class="wb-ai-hint">Describe the occasion, recipient, or theme for AI-generated design ideas:</p>' +
-          '<input class="wb-input" id="wb-ai-prompt" placeholder="e.g., Birthday for my 10-year-old who loves space, elegant florals…" value="' + esc(ai.prompt || '') + '">' +
+        h += '<div class="wb-sub"><p class="wb-ai-hint">What\'s the occasion? Who is the giftee? What do they like? Please feel free to suggest any themes...</p>' +
+          '<textarea class="wb-input wb-hint" id="wb-ai-prompt" rows="3" placeholder="e.g., Valentine\'s Day gift for my 28 yo boyfriend, my sister\'s 21st birthday, grandson\'s bar mitzvah...">' + esc(ai.prompt || '') + '</textarea>' +
           '<button type="button" class="wb-btn wb-gen" data-act="gen-ai"' + (ai.loading ? ' disabled' : '') + '>' + (ai.loading ? 'Generating…' : 'Generate designs') + '</button>';
         if (ai.loading) h += '<p class="wb-ai-status">Creating 3 custom designs… this can take 1–2 minutes.</p>';
         var designs = (ai.designs && ai.designs.length) ? ai.designs : (w.aiDesign ? [w.aiDesign] : []);
@@ -732,8 +732,12 @@
         }
       }
     }
-    h += '<label class="wb-msg-label" for="wb-msg">Gift message (optional)</label>' +
-      '<textarea class="wb-input" id="wb-msg" maxlength="300" rows="2" placeholder="A short note for your giftee">' + esc(w.giftMessage || '') + '</textarea>' +
+    h += '<label class="wb-msg-label" for="wb-msg">Gift message:</label>' +
+      '<textarea class="wb-input wb-msg" id="wb-msg" maxlength="300" rows="5" placeholder="A note for your giftee">' + esc(w.giftMessage || '') + '</textarea>' +
+      '<label class="wb-msg-label" for="wb-from">From:</label>' +
+      '<input class="wb-input wb-from" id="wb-from" maxlength="80" placeholder="Your name" value="' + esc(w.senderName || '') + '">' +
+      '<label class="wb-combine"><input type="checkbox" id="wb-combine"' + (w.combine ? ' checked' : '') + '> Combine with items from another order</label>' +
+      (w.combine ? '<input class="wb-input wb-combine-note" id="wb-combine-note" maxlength="200" placeholder="Enter additional instructions" value="' + esc(w.combineNote || '') + '">' : '') +
       (S.error ? '<p class="wb-error">' + esc(S.error) + '</p>' : '') +
       wrapNav(true) + '</div></div>';
     return h;
@@ -793,12 +797,10 @@
     if (occSel) occSel.addEventListener('change', function () { S.occBad = false; saveDraft(); });
     var flw = $('#wb-flowers');
     if (flw) flw.addEventListener('change', function () { saveDraft(); onFlowersToggle(flw.checked); });
+    var combine = $('#wb-combine');
+    if (combine) combine.addEventListener('change', function () { saveDraft(); render(); });
     var file = $('#wb-file');
     if (file) file.addEventListener('change', function () { saveDraft(); onUpload(file.files && file.files[0]); });
-    var modalZip = $('#wb-modal-zip');
-    if (modalZip) modalZip.addEventListener('keydown', function (ev) {
-      if (ev.key === 'Enter') { ev.preventDefault(); submitModalZip(); }
-    });
     var startZip = $('#wb-zip');
     if (startZip) startZip.addEventListener('keydown', function (ev) {
       if (ev.key === 'Enter') { ev.preventDefault(); submitStartZip(); }
@@ -855,6 +857,12 @@
     if (hint) w.wrrapdHint = hint.value;
     var msg = $('#wb-msg');
     if (msg) w.giftMessage = msg.value;
+    var from = $('#wb-from');
+    if (from) w.senderName = from.value;
+    var combine = $('#wb-combine');
+    if (combine) w.combine = combine.checked;
+    var combineNote = $('#wb-combine-note');
+    if (combineNote) w.combineNote = combineNote.value;
     var prompt = $('#wb-ai-prompt');
     if (prompt) {
       S.ai[l.id] = S.ai[l.id] || {};
@@ -1477,7 +1485,7 @@
     render();
     var designP = style === 'ai' ? saveAiChoice(l) : Promise.resolve(null);
     designP.then(function (aiDesign) {
-      var payload = { occasion: style === 'wrrapd' ? w.occasion : '', style: style, giftMessage: w.giftMessage || '', senderName: w.senderName || '', wrrapdHint: style === 'wrrapd' ? (w.wrrapdHint || '') : '' };
+      var payload = { occasion: style === 'wrrapd' ? w.occasion : '', style: style, giftMessage: w.giftMessage || '', senderName: w.senderName || '', wrrapdHint: style === 'wrrapd' ? (w.wrrapdHint || '') : '', combine: !!w.combine, combineNote: w.combine ? (w.combineNote || '') : '' };
       if (aiDesign) payload.aiDesign = aiDesign;
       if (style === 'upload') payload.upload = w.upload;
       if (w.flowers) payload.flowers = w.flowers;

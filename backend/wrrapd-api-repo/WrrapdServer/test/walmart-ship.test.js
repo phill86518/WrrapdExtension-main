@@ -104,6 +104,12 @@ test('best buy uses the standard date for the giftee ZIP and skips express', () 
     assert.equal(reader.bestbuyShip(html, '32218'), null);
 });
 
+test('a dashed arrival window uses the last day', () => {
+    const html = '<p>Shipping Arrives Tue, Oct 20 - Fri, Oct 23 Free With a $49 Total Purchase</p>';
+    const ship = reader.standardFromPage(html, 4799);
+    assert.equal(ship.arrivalDate, '2026-10-23');
+});
+
 test('best buy under $35 uses $5.99 when the page has no price', () => {
     assert.equal(reader.withDefaultShip('bestbuy', { cents: null, arrivalDate: null }, 2000).cents, 599);
     assert.equal(reader.withDefaultShip('bestbuy', { cents: null, arrivalDate: null }, 4000).cents, 0);

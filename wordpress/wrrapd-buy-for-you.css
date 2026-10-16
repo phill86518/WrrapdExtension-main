@@ -353,7 +353,14 @@ button.wb-trash { width: 22px !important; height: 22px !important; min-width: 0 
 .wb-flowers-label { display: flex; align-items: center; gap: 8px; margin: 0 0 6px; font-size: 15px; font-weight: 650; color: #0f172a; cursor: pointer; }
 .wb-flower-msg { margin: 0 0 10px 24px; font-size: 13px; line-height: 1.45; color: #475569; font-weight: 460; }
 .wb-flower-note { margin: 0 0 10px 24px; font-size: 11px; font-style: italic; line-height: 1.4; color: #64748b; font-weight: 460; }
-.wb-msg-label { display: block; font-size: 13px; font-weight: 650; color: #0f172a; margin: 0 0 4px; }
+.wb-zip-show { margin: 0 0 12px; font-size: 15px; font-weight: 560; color: #0f172a; }
+.wb-zip-show b { font-weight: 650; letter-spacing: 0.04em; }
+.wb-msg-label { display: block; font-size: 15px; font-weight: 650; color: #0f172a; margin: 12px 0 6px; }
+.wb-wrap-modal textarea.wb-msg { min-height: 8rem; font-size: 16px !important; line-height: 1.5; padding: 12px; color: #0f172a; font-weight: 460; }
+.wb-wrap-modal textarea.wb-hint { font-size: 15px !important; line-height: 1.45; padding: 10px 12px; color: #0f172a; }
+.wb-from { margin: 0 0 4px; font-size: 16px !important; }
+.wb-combine { display: flex; align-items: flex-start; gap: 8px; margin: 14px 0 8px; font-size: 16px; font-weight: 650; color: #0f172a; cursor: pointer; }
+.wb-combine-note { margin: 0 0 12px 26px; font-size: 15px !important; }
 .wb-wrap-actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; margin-top: 4px; }
 .wb-wrap-actions .wb-btn { margin-top: 0; padding: 8px 14px; font-size: 13px !important; }
 .wrrapd-buy button.wb-x { position: absolute; top: 10px; right: 12px; width: 36px !important; height: 36px !important; min-width: 0 !important; margin: 0; padding: 0 !important; border: 0 !important; border-radius: 8px; background: transparent !important; color: #0c0638 !important; font-size: 28px !important; font-weight: 460 !important; line-height: 1 !important; cursor: pointer; box-shadow: none !important; }

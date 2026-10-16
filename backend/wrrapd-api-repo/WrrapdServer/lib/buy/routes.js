@@ -730,7 +730,16 @@ module.exports = function mountBuyForYou(app, deps) {
             const occasionOk = extensionConfig.OCCASIONS.includes(pickedOccasion);
             if (style === 'wrrapd' && !occasionOk) return { error: 'Please choose an occasion.' };
             const occasion = style === 'wrrapd' ? pickedOccasion : '';
-            const out = { occasion, style, giftMessage: cleanText(w.giftMessage, 300), senderName: cleanText(w.senderName, 80), wrrapdHint: style === 'wrrapd' ? cleanText(w.wrrapdHint, 200) : '', done: true };
+            const out = {
+                occasion,
+                style,
+                giftMessage: cleanText(w.giftMessage, 300),
+                senderName: cleanText(w.senderName, 80),
+                wrrapdHint: style === 'wrrapd' ? cleanText(w.wrrapdHint, 200) : '',
+                combine: w.combine === true,
+                combineNote: w.combine === true ? cleanText(w.combineNote, 200) : '',
+                done: true,
+            };
             if (style === 'ai') {
                 const p = cleanPath(w.aiDesign && w.aiDesign.filePath);
                 if (!p) return { error: 'Please choose one of the AI designs.' };
