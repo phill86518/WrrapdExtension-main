@@ -140,6 +140,9 @@
         if (existing.length) S.draftLinks = Array.prototype.map.call(existing, function (i) { return i.value; });
       }
     }
+    var wrapScroll = root.querySelector('.wb-wrap-scroll');
+    var keepWrapTop = wrapScroll ? wrapScroll.scrollTop : 0;
+    var keepPageTop = window.pageYOffset || document.documentElement.scrollTop || 0;
     var html = '';
     if (S.view === 'start') html = viewStart();
     else if (S.view === 'items') html = viewItems();
@@ -151,6 +154,9 @@
     S.lastHtml = next;
     root.innerHTML = next;
     bind();
+    var again = root.querySelector('.wb-wrap-scroll');
+    if (again && keepWrapTop) again.scrollTop = keepWrapTop;
+    if (keepPageTop) window.scrollTo(0, keepPageTop);
   }
 
   function maxLinks() {
@@ -752,8 +758,6 @@
       '<textarea class="wb-input wb-msg" id="wb-msg" maxlength="300" rows="2" placeholder="A note for your giftee">' + esc(w.giftMessage || '') + '</textarea>' +
       '<label class="wb-msg-label" for="wb-from">From</label>' +
       '<input class="wb-input wb-from" id="wb-from" maxlength="80" placeholder="Your name" value="' + esc(w.senderName || '') + '"></div>' +
-      '<label class="wb-combine"><input type="checkbox" id="wb-combine"' + (w.combine ? ' checked' : '') + '> Combine with items from another order</label>' +
-      (w.combine ? '<input class="wb-input wb-combine-note" id="wb-combine-note" maxlength="200" placeholder="Enter additional instructions" value="' + esc(w.combineNote || '') + '">' : '') +
       (S.error ? '<p class="wb-error">' + esc(S.error) + '</p>' : '') +
       '</div>' + wrapNav(true) + '</div></div>';
     return h;
@@ -813,8 +817,6 @@
     if (occSel) occSel.addEventListener('change', function () { S.occBad = false; saveDraft(); });
     var flw = $('#wb-flowers');
     if (flw) flw.addEventListener('change', function () { saveDraft(); onFlowersToggle(flw.checked); });
-    var combine = $('#wb-combine');
-    if (combine) combine.addEventListener('change', function () { saveDraft(); render(); });
     var file = $('#wb-file');
     if (file) file.addEventListener('change', function () { saveDraft(); onUpload(file.files && file.files[0]); });
     var startZip = $('#wb-zip');
@@ -875,10 +877,6 @@
     if (msg) w.giftMessage = msg.value;
     var from = $('#wb-from');
     if (from) w.senderName = from.value;
-    var combine = $('#wb-combine');
-    if (combine) w.combine = combine.checked;
-    var combineNote = $('#wb-combine-note');
-    if (combineNote) w.combineNote = combineNote.value;
     var prompt = $('#wb-ai-prompt');
     if (prompt) {
       S.ai[l.id] = S.ai[l.id] || {};
@@ -964,7 +962,7 @@
     if (act === 'to-pay' || act === 'pay') return payWrrapd();
     if (act === 'gen-ai') return genAi();
     if (act === 'pick-ai') { saveDraft(); var ai = S.ai[currentLine().id]; ai.picked = Number(el.getAttribute('data-i')); render(); return; }
-    if (act === 'pick-flower') return pickFlower(el.getAttribute('data-offer'));
+    if (act === 'pick-flower') { e.preventDefault(); return pickFlower(el.getAttribute('data-offer')); }
   }
 
   function keepLinks(fn) {
@@ -1292,7 +1290,15 @@
     var l = currentLine();
     S.flowersOpen = true;
     l.wrap = Object.assign({}, l.wrap || {}, { flowers: { offerId: c.offerId, amount: c.price, imageUrl: c.imageUrl, title: c.title } });
-    render();
+    var box = root.querySelector('#wb-flowers');
+    if (box) box.checked = true;
+    $all('.wb-flower').forEach(function (el) {
+      var on = el.getAttribute('data-offer') === offerId;
+      el.classList.toggle('wb-flower-on', on);
+      var radio = el.querySelector('input[type="radio"]');
+      if (radio) radio.checked = on;
+    });
+    S.lastHtml = '';
   }
 
   function genAi() {
@@ -1519,7 +1525,7 @@
     render();
     var designP = style === 'ai' ? saveAiChoice(l) : Promise.resolve(null);
     designP.then(function (aiDesign) {
-      var payload = { occasion: style === 'wrrapd' ? w.occasion : '', style: style, giftMessage: w.giftMessage || '', senderName: w.senderName || '', wrrapdHint: style === 'wrrapd' ? (w.wrrapdHint || '') : '', combine: !!w.combine, combineNote: w.combine ? (w.combineNote || '') : '' };
+      var payload = { occasion: style === 'wrrapd' ? w.occasion : '', style: style, giftMessage: w.giftMessage || '', senderName: w.senderName || '', wrrapdHint: style === 'wrrapd' ? (w.wrrapdHint || '') : '', combine: false, combineNote: '' };
       if (aiDesign) payload.aiDesign = aiDesign;
       if (style === 'upload') payload.upload = w.upload;
       if (w.flowers) payload.flowers = w.flowers;
