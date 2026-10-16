@@ -55,7 +55,14 @@ function paidBatch() {
 
 test('wrap for an add-on copies the order wrap without flowers', () => {
     const w = manual.wrapFromOrder(paidBatch());
-    assert.deepEqual(w, { occasion: 'Birthday', style: 'wrrapd', giftMessage: 'Love you', senderName: 'Phill', done: true });
+    assert.deepEqual(w, {
+        occasion: 'Birthday',
+        style: 'wrrapd',
+        giftMessage: 'Love you',
+        senderName: 'Phill',
+        wrrapdHint: '',
+        done: true,
+    });
 });
 
 test('add-on price: item x qty, standard shipping, hub tax, and gift-wrap', () => {
@@ -81,8 +88,14 @@ test('add-on price refuses missing price, the per-item limit, and unknown shippi
     const b = paidBatch();
     assert.equal(manual.priceAddOn(b, b.lines[1], { title: 'Shoe' }, { perItemCapCents: 50000 }).ok, false);
     assert.equal(manual.priceAddOn(b, b.lines[1], { title: 'Shoe', priceUsd: '600' }, { perItemCapCents: 50000 }).ok, false);
+    // Amazon under $35 gets the standard $3.99 schedule — shipping is known.
     const amazon = line({ retailer: 'amazon' });
-    const r = manual.priceAddOn(b, amazon, { title: 'Book', priceUsd: '12' }, { perItemCapCents: 50000 });
+    const amazonOk = manual.priceAddOn(b, amazon, { title: 'Book', priceUsd: '12' }, { perItemCapCents: 50000 });
+    assert.equal(amazonOk.ok, true, amazonOk.error);
+    assert.equal(amazonOk.addOn.shipping.cents, 399);
+    // Etsy has no standard schedule — admin must enter shipping.
+    const etsy = line({ retailer: 'etsy', retailerName: 'Etsy' });
+    const r = manual.priceAddOn(b, etsy, { title: 'Mug', priceUsd: '12' }, { perItemCapCents: 50000 });
     assert.equal(r.ok, false);
     assert.match(r.error, /shipping/i);
 });
