@@ -636,9 +636,10 @@
       : 'Gift wrap with Wrrapd';
     var h = '<div class="wb-modal" role="dialog" aria-modal="true" aria-label="Wrrapd gift wrap"><div class="wb-modal-box wb-wrap-modal">' +
       '<h2 id="wb-wrap-title">' + esc(heading) + '</h2>' +
-      '<div class="wb-zipbar"><p class="wb-zipbar-label">Giftee / gift-recipient\'s zip code:</p>' +
-      '<p class="wb-zipbar-hint">Same ZIP for every item in this order.</p>' +
-      '<p class="wb-zipbar-zip">' + esc(S.batch && S.batch.gifteeZip) + '</p></div>';
+      '<div class="wb-zipbar"><label class="wb-zipbar-label" for="wb-modal-zip">Giftee / gift-recipient\'s zip code:</label>' +
+      '<p class="wb-zipbar-hint">This helps us with a faster checkout!</p>' +
+      '<div class="wb-zipbar-row"><input class="wb-zipbar-input' + (S.modalZipOk ? ' wb-zip-ok' : '') + '" id="wb-modal-zip" inputmode="numeric" maxlength="10" autocomplete="postal-code" placeholder="ZIP code" value="' + esc(S.batch && S.batch.gifteeZip) + '">' +
+      '<button type="button" class="wb-btn wb-zip-submit" data-act="modal-zip"' + (S.busy ? ' disabled' : '') + '>' + (S.zipChecking ? 'Checking…' : 'Submit') + '</button></div></div>';
     if (!l.product || l.state === 'reading') {
       h += '<p class="wb-status"><span class="wb-spin"></span>' + WAIT_ADD + '</p>' +
         (S.error ? '<p class="wb-error">' + esc(S.error) + '</p>' : '') +
@@ -773,6 +774,10 @@
     if (flw) flw.addEventListener('change', function () { saveDraft(); onFlowersToggle(flw.checked); });
     var file = $('#wb-file');
     if (file) file.addEventListener('change', function () { saveDraft(); onUpload(file.files && file.files[0]); });
+    var modalZip = $('#wb-modal-zip');
+    if (modalZip) modalZip.addEventListener('keydown', function (ev) {
+      if (ev.key === 'Enter') { ev.preventDefault(); submitModalZip(); }
+    });
     var body = document.getElementById('wb-terms-body');
     if (body) {
       var check = function () {
@@ -871,7 +876,7 @@
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { S.error = 'Please enter a valid email.'; render(); var again = $('#wb-manual-email'); if (again) { again.value = email; again.focus(); } return; }
       return askManual(el.getAttribute('data-line'), email);
     }
-    if (act === 'start-over') return startOver();
+    if (act === 'modal-zip') return submitModalZip();
     if (act === 'add-more') { S.addOpen = true; render(); return; }
     if (act === 'submit-links') return submitLinks();
     if (act === 'remove') return removeLine(el.getAttribute('data-line'));
@@ -1028,6 +1033,40 @@
         poll();
       }).catch(function () { poll(); });
     }, wait);
+  }
+
+  function submitModalZip() {
+    saveDraft();
+    var el = $('#wb-modal-zip');
+    if (!el || !S.batch) return;
+    var zip = (el.value || '').replace(/\D/g, '').slice(0, 5);
+    el.value = zip;
+    if (zip.length !== 5) {
+      S.modalZipOk = false;
+      S.error = 'Please enter a valid 5-digit ZIP code.';
+      render();
+      return;
+    }
+    if (zip === S.batch.gifteeZip) {
+      S.modalZipOk = true;
+      S.error = '';
+      render();
+      return;
+    }
+    S.zipChecking = true;
+    S.modalZipOk = false;
+    S.error = '';
+    render();
+    change('/zip', { gifteeZip: zip }).then(function () {
+      S.zipChecking = false;
+      S.modalZipOk = true;
+      S.flowers = null;
+      loadPricing();
+      render();
+    }).catch(function () {
+      S.zipChecking = false;
+      render();
+    });
   }
 
   function onZip() {
