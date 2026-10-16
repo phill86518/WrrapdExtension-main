@@ -547,7 +547,7 @@
       (w.flowersCents ? row('Flowers', usd(w.flowersCents)) : '') +
       (w.boxCents ? row('Gift box', usd(w.boxCents)) : '') +
       row('Tax on gift-wrap', usd(w.serviceTaxCents)) +
-      '<div class="wb-bill-row wb-bill-sub"><span>Total due to Wrrapd</span><span>' + usd(w.totalCents) + '</span></div></section></div>' +
+      '<div class="wb-bill-row wb-bill-sub"><span>Total Gift-Wrapping & Flowers</span><span>' + usd(w.totalCents) + '</span></div></section></div>' +
       '<div class="wb-bill-row wb-bill-total"><span>Order total</span><span>' + usd(bill.totalCents) + '</span></div>';
     if (bill.bundles && bill.bundles.length) {
       h += '<p class="wb-review-note">' + bill.bundles.map(function (bd) {
