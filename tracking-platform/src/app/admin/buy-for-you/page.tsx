@@ -236,8 +236,9 @@ export default async function BuyForYouPage({
                     <input type="hidden" name="poolKey" value={p.poolKey} />
                     <p className="text-xs font-semibold text-[#0f172a] sm:col-span-4">
                       After you check out at {p.retailerName} with all {p.memberCount} order(s) in one cart, record that
-                      checkout once. Cap: do not pay more than the sum of what shoppers paid for {p.retailerName} on these
-                      orders.
+                      checkout once. Shoppers paid <b>{usd(p.paidCapCents || 0)}</b> for {p.retailerName} across these
+                      orders (items + shipping + tax). The retailer total you enter must not exceed that — if it does,
+                      the error shows entered vs paid and how much over.
                     </p>
                     <label className="text-xs">
                       Retailer order #

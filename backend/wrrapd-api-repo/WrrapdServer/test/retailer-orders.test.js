@@ -71,7 +71,11 @@ test('refuses a retailer total above what shoppers paid across the pool', () => 
         by: 'tester',
     });
     assert.equal(out.ok, false);
-    assert.match(out.error, /higher/i);
+    assert.match(out.error, /above what shoppers paid/i);
+    assert.match(out.error, /\$999\.99/);
+    assert.equal(out.discrepancy.enteredCents, 99999);
+    assert.equal(out.discrepancy.shoppersPaidCents, 2150);
+    assert.equal(out.discrepancy.overByCents, 97849);
 });
 
 test('backfill creates registry rows from legacy placements', () => {

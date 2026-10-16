@@ -24,6 +24,7 @@ export type PlacePoolMember = {
   batchId: string;
   retailer: string;
   merchCents: number;
+  paidGroupSubtotalCents?: number;
   paidAt: string;
   titles: string[];
   gifterName: string;
@@ -38,6 +39,8 @@ export type PlacePool = {
   hubZip: string;
   freeOverCents: number | null;
   merchCents: number;
+  /** Sum of what shoppers paid for this retailer (item+ship+tax) across pool members — place total must not exceed this */
+  paidCapCents: number;
   members: PlacePoolMember[];
   earliestPaidAt: string | null;
   placeIntervalHours: 1 | 2;

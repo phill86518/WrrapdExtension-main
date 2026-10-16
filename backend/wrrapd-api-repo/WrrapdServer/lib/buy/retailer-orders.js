@@ -161,9 +161,22 @@ function recordPlacement({
         paidCapCentsOverride != null ? Number(paidCapCentsOverride) : paidCapCents(listBatches, retailerId);
     if (cap > 0 && total > cap) {
         const r = retailers.byId(retailerId);
+        const name = r ? r.name : retailerId;
+        const over = total - cap;
+        const money = (c) => `$${(c / 100).toFixed(2)}`;
         return {
             ok: false,
-            error: `The retailer total is higher than what shoppers paid for ${r ? r.name : retailerId} across these orders ($${(cap / 100).toFixed(2)}). Do not place it.`,
+            error:
+                `Entered retailer total ${money(total)} is ${money(over)} above what shoppers paid for ${name} ` +
+                `across these orders (${money(cap)}). Do not place it.`,
+            discrepancy: {
+                retailer: retailerId,
+                retailerName: name,
+                enteredCents: total,
+                shoppersPaidCents: cap,
+                overByCents: over,
+                batchIds: listBatches.map((b) => b.id),
+            },
         };
     }
 

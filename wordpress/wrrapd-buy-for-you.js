@@ -177,7 +177,7 @@
   }
   function zipBar(id, value, act, ok) {
     return '<div class="wb-zipbar"><label class="wb-zipbar-label" for="' + id + '">Giftee / gift-recipient\'s zip code:</label>' +
-      '<p class="wb-zipbar-hint">This helps us with a faster checkout!</p>' +
+      '<p class="wb-zipbar-hint">This helps us with a faster checkout! Also enter this same ZIP on the retailer\'s product page so shipping is accurate.</p>' +
       '<div class="wb-zipbar-row"><input class="wb-zipbar-input' + (ok ? ' wb-zip-ok' : '') + '" id="' + id + '" inputmode="numeric" maxlength="10" autocomplete="postal-code" placeholder="ZIP code" value="' + esc(value || '') + '">' +
       '<button type="button" class="wb-btn wb-zip-submit" data-act="' + act + '"' + (S.busy || S.zipChecking ? ' disabled' : '') + '>' + (S.zipChecking ? 'Checking…' : 'Submit') + '</button></div></div>';
   }

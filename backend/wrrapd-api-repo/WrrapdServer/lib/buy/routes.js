@@ -1597,7 +1597,7 @@ module.exports = function mountBuyForYou(app, deps) {
             by: byWho,
             poolKey: poolKey || null,
         });
-        if (!reg.ok) return reg;
+        if (!reg.ok) return { ok: false, error: reg.error, discrepancy: reg.discrepancy || null };
         const ref = reg.order.retailerOrderNumber;
         const total = reg.order.retailerTotalCents;
         const arrival = reg.order.arrivalDate;
@@ -1642,7 +1642,7 @@ module.exports = function mountBuyForYou(app, deps) {
             arrivalDate: body.arrivalDate,
             by: body.by,
         });
-        if (!out.ok) return res.status(400).json({ error: out.error });
+        if (!out.ok) return res.status(400).json({ error: out.error, discrepancy: out.discrepancy || null });
         res.json({
             ok: true,
             ingest: out.ingest,
@@ -1672,7 +1672,7 @@ module.exports = function mountBuyForYou(app, deps) {
             by: body.by,
             poolKey: pool.poolKey,
         });
-        if (!out.ok) return res.status(400).json({ error: out.error });
+        if (!out.ok) return res.status(400).json({ error: out.error, discrepancy: out.discrepancy || null });
         res.json({ ok: true, ingest: out.ingest, retailerOrder: out.order, poolKey: pool.poolKey });
     });
 
@@ -2023,7 +2023,7 @@ module.exports = function mountBuyForYou(app, deps) {
                 },
             ],
         });
-        if (!reg.ok) return res.status(400).json({ error: reg.error });
+        if (!reg.ok) return res.status(400).json({ error: reg.error, discrepancy: reg.discrepancy || null });
         const ref = reg.order.retailerOrderNumber;
         await store.update(String(req.params.id), (b) => {
             const a = (b.addOns || []).find((x) => x.id === addOnId);

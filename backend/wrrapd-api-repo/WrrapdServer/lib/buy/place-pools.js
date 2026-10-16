@@ -125,17 +125,25 @@ function buildPools(batches, opts = {}) {
                     hubZip: (batch.hub && (batch.hub.postalCode || batch.hub.zip)) || '',
                     freeOverCents: freeOver,
                     merchCents: 0,
+                    paidCapCents: 0,
                     members: [],
                     earliestPaidAt: null,
                 });
             }
             const pool = map.get(key);
             const merch = groupMerchCents(batch, retailerId);
+            const billGroup =
+                batch.paidBill && Array.isArray(batch.paidBill.groups)
+                    ? batch.paidBill.groups.find((x) => x.retailer === retailerId)
+                    : null;
+            const paidGroupSubtotalCents = billGroup ? Number(billGroup.subtotalCents) || 0 : 0;
             pool.merchCents += merch;
+            pool.paidCapCents = (pool.paidCapCents || 0) + paidGroupSubtotalCents;
             pool.members.push({
                 batchId: batch.id,
                 retailer: retailerId,
                 merchCents: merch,
+                paidGroupSubtotalCents,
                 paidAt,
                 titles: memberTitles(batch, retailerId),
                 gifterName: (batch.payment && batch.payment.gifterName) || '',
@@ -165,6 +173,7 @@ function buildPools(batches, opts = {}) {
         const actionable = status === 'ready_threshold' || status === 'due_schedule';
         pools.push({
             ...pool,
+            paidCapCents: pool.paidCapCents || 0,
             placeIntervalHours: interval,
             freeShipMet,
             shipCentsIfPlaced: shipCents,

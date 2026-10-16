@@ -236,8 +236,9 @@ function GroupCard({
         <form action={placedAction} className="mt-4 grid gap-2 rounded-xl border border-emerald-300 bg-emerald-50/60 p-4 sm:grid-cols-4">
           <Hidden batchId={batch.id} retailer={group.retailer} />
           <p className="text-sm font-semibold text-[#0f172a] sm:col-span-4">
-            Buy at {group.retailerName} with &ldquo;{paidGroup.shipping.label}&rdquo; to {batch.hub.addressLine1}, {batch.hub.postalCode}. Do not
-            pay more than {usd(paidGroup.subtotalCents)}.
+            Buy at {group.retailerName} with &ldquo;{paidGroup.shipping.label}&rdquo; to {batch.hub.addressLine1}, {batch.hub.postalCode}.
+            Shopper paid <b>{usd(paidGroup.subtotalCents)}</b> for this retailer (items + shipping + tax). Do not enter a
+            retailer total above that — if you do, the error shows entered vs paid and how much over.
           </p>
           <label className="text-xs">
             Retailer order #
