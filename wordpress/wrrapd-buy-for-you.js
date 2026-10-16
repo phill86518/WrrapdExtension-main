@@ -520,7 +520,7 @@
       (rows || (excludedHtml ? '' : '<p class="wb-muted">Paste a product link to start.</p>')) +
       (rows ? '<p class="wb-asterisk">* Final gift delivery to the giftee may add 1 day.</p><p class="wb-ship-note">Shipping prices do not reflect any club membership or other discounts.</p>' : '') +
       excludedHtml +
-      (room && !S.addOpen ? '<button type="button" class="wb-btn wb-btn-ghost wb-add-more" data-act="add-more">' + more + '</button>' : '') +
+      (room && !S.addOpen ? '<button type="button" class="wb-btn wb-add-more" data-act="add-more">' + more + '</button>' : '') +
       (room && S.addOpen ? '<p class="wb-ask">' + more + ' for gift-wrapping</p>' + LOAD_TIP + linkFields(left, draft) + buyButton(true) : '') +
       '</section>';
     if (!b.bill && b.billError && !stillWorking() && readyLines().length) h += '<p class="wb-error">' + esc(b.billError) + '</p>';
