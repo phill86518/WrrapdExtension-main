@@ -186,16 +186,17 @@ function applyRead(line, read, cfg) {
     }
     const p = read.product;
     line.product = p;
-    if (p.inStock === false) return markUnavailable(line, 'out_of_stock');
+    const openNow = (p.variantGroups || []).filter((g) => !g.selected || !(g.options || []).includes(g.selected));
+    if (p.inStock === false && !openNow.length) return markUnavailable(line, 'out_of_stock');
     if (p.isElectronics && !cfg.allowElectronics) return markUnavailable(line, 'electronics_blocked');
     if (p.pagePriceCents && p.pagePriceCents > cfg.perItemCapCents) {
         return markUnavailable(line, 'over_item_limit', overLimitMessage(p.pagePriceCents, cfg.perItemCapCents));
     }
-    if (p.choicePrompt) {
+    if (p.choicePrompt && !openNow.length) {
         line.variantLabel = lineFacts.variantPhrase(p.variantGroups);
         return markUnavailable(line, 'ship_zip', p.choicePrompt);
     }
-    const open = (p.variantGroups || []).filter((g) => !g.selected || !g.options.includes(g.selected));
+    const open = openNow;
     line.variantLabel = lineFacts.variantPhrase(p.variantGroups);
     if (!p.pagePriceCents) {
         line.state = open.length ? 'needs_variant' : 'quoting';

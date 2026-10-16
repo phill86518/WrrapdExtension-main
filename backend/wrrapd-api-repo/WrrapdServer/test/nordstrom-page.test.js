@@ -74,10 +74,46 @@ test('selected Nordstrom color uses its own price, not the style range', () => {
     assert.equal(product.isElectronics, false);
 });
 
-test('a Nordstrom price range asks the shopper to choose a specific item', () => {
+test('a Nordstrom price range leaves the choice for the cart', () => {
     const product = reader.nordstromFromHtml(page(cherry, shipRows), 'https://www.nordstrom.com/s/5897392', '32244');
     assert.equal(product.pagePriceCents, null);
-    assert.equal(product.choicePrompt, 'Choose a size and color on the product page, then add the link again.');
+    assert.equal(product.choicePrompt, '');
+    assert.notEqual(product.inStock, false);
+});
+
+test('a color name and size in the Nordstrom link select that sale price', () => {
+    const pajamas = {
+        copyProductTitle: 'Britney Cami and Shorts Pajama Set',
+        labelDisplayName: 'In Bloom by Jonquil',
+        coreProducts: [{
+            coreChoices: [{
+                coreChoiceId: '44444GMJRG',
+                displayColorDescription: 'BLACK',
+                items: [{
+                    concatenatedDisplaySize: 'X-Small',
+                    sku: {
+                        skuId: 'B1461329',
+                        propositions: [{
+                            salability: { status: 'SELLABLE' },
+                            availability: { isAvailable: true },
+                            pricings: [{ sellingRetail: { priceType: 'CLEARANCE', price: '41.60' }, baseRetail: { price: '64.00' } }],
+                        }],
+                    },
+                }, sku('B1461330', 'Small', 41.6, false)],
+            }, {
+                coreChoiceId: '44444GMJRH',
+                displayColorDescription: 'IVORY',
+                items: [sku('B1461331', 'X-Small', 41.6, false)],
+            }],
+        }],
+    };
+    const link = 'https://www.nordstrom.com/s/in-bloom-by-jonquil-britney-cami-and-shorts-pajama-set/9078365?color=BLACK&size=x-small';
+    const product = reader.nordstromFromHtml(page(pajamas, []).replaceAll('5897392', '9078365'), link, '32218');
+    assert.equal(product.pagePriceCents, 4160);
+    assert.equal(product.inStock, true);
+    assert.equal(product.choicePrompt, '');
+    assert.equal(product.variantGroups.find((group) => group.name === 'Color').selected, 'Black');
+    assert.equal(product.variantGroups.find((group) => group.name === 'Size').selected, 'X-Small');
 });
 
 test('a crossed-out Nordstrom price is not the price charged', () => {

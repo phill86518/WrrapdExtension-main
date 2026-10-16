@@ -762,8 +762,18 @@ function nordstromStyleId(url) {
     return m ? m[1] : '';
 }
 
-function nordstromColorId(url) {
-    try { return new URL(url).searchParams.get('color') || ''; } catch { return ''; }
+function nordstromParam(url, name) {
+    try { return new URL(url).searchParams.get(name) || ''; } catch { return ''; }
+}
+
+function nordstromSame(a, b) {
+    const norm = (value) => String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const left = norm(a);
+    return !!left && left === norm(b);
+}
+
+function nordstromItemSize(item) {
+    return item?.concatenatedDisplaySize || item?.sizeDimension1?.label || '';
 }
 
 function sliceJsonObject(text, start) {
@@ -932,17 +942,25 @@ function nordstromFromHtml(html, url, zip) {
     if (!entity || !id) return null;
 
     const choices = nordstromChoices(entity).filter((choice) => choice.displayColorDescription || choice.coreChoiceId);
-    const colorId = nordstromColorId(url);
-    const selectedChoice = choices.find((choice) => choice.coreChoiceId === colorId) || null;
-    const pricedChoices = selectedChoice ? [selectedChoice] : [];
+    const colorQuery = nordstromParam(url, 'color');
+    const sizeQuery = nordstromParam(url, 'size');
+    const selectedChoice = choices.find((choice) => (
+        choice.coreChoiceId === colorQuery
+        || nordstromSame(choice.displayColorDescription, colorQuery)
+        || nordstromSame(choice.colorFamily, colorQuery)
+    )) || null;
+    const sourceChoices = selectedChoice ? [selectedChoice] : choices;
+    const looked = [];
     const offers = [];
-    for (const choice of pricedChoices) {
+    for (const choice of sourceChoices) {
         for (const item of choice.items || []) {
+            if (sizeQuery && !nordstromSame(nordstromItemSize(item), sizeQuery)) continue;
+            looked.push(item);
             const offer = nordstromOffer(item);
             if (offer.sellable) offers.push({ ...offer, item, choice });
         }
     }
-    const prices = [...new Set(offers.map((offer) => offer.cents))];
+    const prices = [...new Set(offers.map((offer) => offer.cents).filter((cents) => cents > 0))];
     let pagePriceCents = prices.length === 1 ? prices[0] : null;
     pagePriceCents = struckSaleCents(html, pagePriceCents);
     const colorNames = choices.map((choice) => nordstromTitleCase(choice.displayColorDescription)).filter(Boolean);
@@ -956,9 +974,10 @@ function nordstromFromHtml(html, url, zip) {
         return (left < 0 ? 99 : left) - (right < 0 ? 99 : right);
     });
     const groups = [];
+    const selectedSize = sizes.find((size) => nordstromSame(size, sizeQuery)) || null;
     if (colorNames.length) groups.push({ name: 'Color', options: colorNames, selected: selectedColor });
     if (sizeTypes.length) groups.push({ name: 'Size type', options: sizeTypes, selected: null });
-    if (sizes.length) groups.push({ name: 'Size', options: sizes, selected: null });
+    if (sizes.length) groups.push({ name: 'Size', options: sizes, selected: selectedSize });
 
     const skuIds = offers.map((offer) => offer.skuId);
     let standardShip = nordstromStandardShip(config, zip, id, skuIds);
@@ -975,7 +994,9 @@ function nordstromFromHtml(html, url, zip) {
     if (standardShip && standardShip.cents == null && domShip && domShip.cents != null) {
         standardShip = { ...standardShip, cents: domShip.cents };
     }
-    const needsSize = sizes.length > 1 && !(standardShip && standardShip.arrivalDate);
+    const needsSize = sizes.length > 1 && !selectedSize && !(standardShip && standardShip.arrivalDate);
+    const anySellable = choices.some((choice) => (choice.items || []).some((item) => nordstromOffer(item).sellable));
+    const inStock = offers.length > 0 ? true : (looked.length > 0 ? false : (anySellable ? null : false));
     const shipNote = standardShip && standardShip.cents === 0
         ? (needsSize ? 'Free standard shipping. Delivery date needs a size.' : 'Free standard shipping.')
         : '';
@@ -993,10 +1014,12 @@ function nordstromFromHtml(html, url, zip) {
         pagePriceCents,
         standardShip: standardShip || { cents: null, arrivalDate: null, note: '' },
         pageNotes: needsSize ? ['Delivery date needs a size.'] : [],
-        inStock: offers.length > 0,
+        inStock,
         isElectronics: looksElectronic('nordstrom', entity.copyProductTitle, crumbs.join(' ')),
         variantGroups: cleanVariantGroups(groups),
-        choicePrompt: pagePriceCents == null ? 'Choose a size and color on the product page, then add the link again.' : '',
+        choicePrompt: pagePriceCents == null && !groups.some((group) => (group.options || []).length > 1)
+            ? 'Choose a size and color on the product page, then add the link again.'
+            : '',
     };
 }
 
