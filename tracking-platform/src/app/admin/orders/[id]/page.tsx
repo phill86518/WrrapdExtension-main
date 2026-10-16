@@ -512,7 +512,19 @@ export default async function AdminOrderDetailPage({
         <p className="mt-1 text-sm text-slate-700">
           Retailer order #:{" "}
           {order.retailerOrderNumbers?.length ? (
-            <strong className="font-mono">{order.retailerOrderNumbers.join(", ")}</strong>
+            <span className="font-mono">
+              {order.retailerOrderNumbers.map((n, i) => (
+                <span key={n}>
+                  {i > 0 ? ", " : null}
+                  <Link
+                    href={`/admin/buy-for-you/retailer-orders?q=${encodeURIComponent(n)}`}
+                    className="font-bold text-blue-800 underline"
+                  >
+                    {n}
+                  </Link>
+                </span>
+              ))}
+            </span>
           ) : (
             <span className="text-amber-700">not captured</span>
           )}

@@ -33,6 +33,11 @@ const MODULE_GROUPS = [
         body: "Active, scheduled, delinquent, and past gifts.",
       },
       {
+        href: "/admin/buy-for-you/retailer-orders",
+        title: "Retailer orders",
+        body: "Checkouts Wrrapd placed at Ulta, Kohl's, Nordstrom, and more — linked to every customer order on that cart, Orders, and hub intake.",
+      },
+      {
         href: "/admin/intake",
         title: "Hub intake",
         body: "Check in arriving packages by packing-slip order number.",
@@ -65,12 +70,12 @@ const MODULE_GROUPS = [
     ],
   },
   {
-    title: "Website orders — Wrrapd buys",
-    blurb: "Orders from wrrapd.com/buy, where Wrrapd buys the items at the retailer.",
+    title: "Place at the retailer",
+    blurb: "Paid carts waiting to be bought, manual add-ons, purchase ledger, and store settings.",
     modules: [
       {
         href: "/admin/buy-for-you",
-        title: "Website order queue",
+        title: "Place queue",
         body: "Quotes to confirm, paid orders to place at the retailer, cancellations, and returns.",
       },
       {
@@ -79,18 +84,13 @@ const MODULE_GROUPS = [
         body: "Items shoppers asked us to add by hand: add them, send the approval email, and place them.",
       },
       {
-        href: "/admin/buy-for-you/retailer-orders",
-        title: "Retailer orders",
-        body: "Checkouts Wrrapd placed at Ulta, Kohl's, Nordstrom, and more — mapped to every customer WB order on that cart.",
-      },
-      {
         href: "/admin/buy-for-you/purchases",
         title: "Items we purchased",
         body: "Every item, its category, the gifter, the giftee name and address, and each date.",
       },
       {
         href: "/admin/buy-for-you/settings",
-        title: "Website order settings",
+        title: "Buying settings",
         body: "On/off, preview code, purchase limits, stores, and retailer checkout workflows.",
       },
     ],

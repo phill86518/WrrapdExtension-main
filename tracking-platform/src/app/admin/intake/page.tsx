@@ -11,9 +11,19 @@ export const dynamic = "force-dynamic";
 
 const DONE = new Set(["delivered", "cancelled", "refunded"]);
 
-export default async function AdminIntakePage() {
+function pick(v: string | string[] | undefined): string {
+  return typeof v === "string" ? v : Array.isArray(v) ? v[0] || "" : "";
+}
+
+export default async function AdminIntakePage({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const session = await requireAdminSession();
   if (!session) redirect("/admin?next=/admin/intake");
+  const sp = searchParams ? await searchParams : {};
+  const initialQuery = pick(sp.q).trim();
   const all = await listAllOrders();
   const orders = all.filter((o) => !DONE.has(o.status));
   const now = new Date();
@@ -40,15 +50,23 @@ export default async function AdminIntakePage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <Link href="/admin" className="text-sm text-blue-800 underline">
-          ← Command Center
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <Link href="/admin" className="text-sm text-blue-800 underline">
+            ← Command Center
+          </Link>
+          <h1 className="mt-2 text-3xl font-bold text-[#0f172a]">Hub intake</h1>
+          <p className="mt-1 text-sm text-slate-600">
+            Type the order number from the packing slip. If there is no slip, search by item or shopper name and check
+            the wrap day. When unsure, set the package on the hold shelf and mark it Partly received with a note.
+          </p>
+        </div>
+        <Link
+          href="/admin/buy-for-you/retailer-orders"
+          className="rounded-lg border border-[#1a2744]/40 bg-white px-3 py-2 text-sm font-semibold"
+        >
+          Retailer orders
         </Link>
-        <h1 className="mt-2 text-3xl font-bold text-[#0f172a]">Hub intake</h1>
-        <p className="mt-1 text-sm text-slate-600">
-          Type the order number from the packing slip. If there is no slip, search by item or shopper name and check
-          the wrap day. When unsure, set the package on the hold shelf and mark it Partly received with a note.
-        </p>
       </div>
       {missingRef.length ? (
         <section className="rounded-xl border-2 border-rose-300 bg-rose-50 p-4">
@@ -90,7 +108,7 @@ export default async function AdminIntakePage() {
           </ul>
         </section>
       ) : null}
-      <AdminIntakeBoard rows={rows} />
+      <AdminIntakeBoard rows={rows} initialQuery={initialQuery} />
     </div>
   );
 }

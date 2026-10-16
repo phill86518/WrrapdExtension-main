@@ -40,9 +40,15 @@ const RECEIPT_LABEL: Record<HubReceipt["status"], string> = {
   missing: "Missing",
 };
 
-export function AdminIntakeBoard({ rows: initialRows }: { rows: IntakeRow[] }) {
+export function AdminIntakeBoard({
+  rows: initialRows,
+  initialQuery = "",
+}: {
+  rows: IntakeRow[];
+  initialQuery?: string;
+}) {
   const [rows, setRows] = useState(initialRows);
-  const [q, setQ] = useState("");
+  const [q, setQ] = useState(initialQuery);
   const [showReceived, setShowReceived] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -144,7 +150,19 @@ function IntakeCard({
           <p className="mt-1 text-sm">
             Retailer order #:{" "}
             {row.retailerOrderNumbers.length ? (
-              <strong className="font-mono">{row.retailerOrderNumbers.join(", ")}</strong>
+              <span className="font-mono">
+                {row.retailerOrderNumbers.map((n, i) => (
+                  <span key={n}>
+                    {i > 0 ? ", " : null}
+                    <Link
+                      href={`/admin/buy-for-you/retailer-orders?q=${encodeURIComponent(n)}`}
+                      className="font-bold text-blue-800 underline"
+                    >
+                      {n}
+                    </Link>
+                  </span>
+                ))}
+              </span>
             ) : (
               <span className={row.missingRetailerOrder ? "font-bold text-rose-700" : "text-amber-700"}>
                 {row.missingRetailerOrder ? "none since yesterday, check with shopper" : "not captured"}

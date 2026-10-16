@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { RetailerOrderEcosystemLinks } from "@/components/retailer-order-ecosystem-links";
 import { requireAdminSession } from "@/lib/auth";
 import { etTime, listRetailerOrders, usd, ymdLabel, type RetailerOrder } from "@/lib/buy-for-you-admin";
 
@@ -39,7 +40,11 @@ function Row({ o }: { o: RetailerOrder }) {
           <p className="text-slate-500">
             {etTime(o.placedAt)} · {o.by}
           </p>
-          <p className={`mt-1 inline-block rounded-full px-2 py-0.5 text-xs font-bold ${o.status === "placed" ? "bg-emerald-100 text-emerald-800" : "bg-slate-200 text-slate-700"}`}>
+          <p
+            className={`mt-1 inline-block rounded-full px-2 py-0.5 text-xs font-bold ${
+              o.status === "placed" ? "bg-emerald-100 text-emerald-800" : "bg-slate-200 text-slate-700"
+            }`}
+          >
             {o.status}
           </p>
         </div>
@@ -73,28 +78,29 @@ export default async function RetailerOrdersPage({
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <Link href="/admin/buy-for-you" className="text-sm text-blue-800 underline">
-            ← Website order queue
-          </Link>
-          <h1 className="mt-2 text-3xl font-bold text-[#0f172a]">Retailer orders</h1>
+          <h1 className="text-3xl font-bold text-[#0f172a]">Retailer orders</h1>
           <p className="mt-1 max-w-2xl text-sm text-slate-600">
-            Every checkout Wrrapd places at Ulta, Kohl&apos;s, Nordstrom, and the other stores — with each customer WB order
-            mapped onto that retailer order number. Use this when one retailer cart covers several shoppers.
+            Every checkout Wrrapd places at Ulta, Kohl&apos;s, Nordstrom, and the other stores. One retailer cart can cover
+            several customer orders — open a row for links into those orders, Orders fulfillment, hub intake, and items
+            purchased.
           </p>
         </div>
-        <div className="flex gap-2 text-sm">
-          <Link href="/admin/buy-for-you/purchases" className="rounded-lg border border-[#1a2744]/40 bg-white px-3 py-2 font-semibold">
-            Items we purchased
-          </Link>
-          <Link href="/admin" className="rounded-lg border border-[#1a2744]/40 bg-white px-3 py-2 font-semibold">
-            Command Center
-          </Link>
-        </div>
+        <RetailerOrderEcosystemLinks />
       </div>
 
       <form className="flex flex-wrap gap-2">
-        <input name="q" defaultValue={q} placeholder="Order #, WB-…, gifter, item" className="w-72 rounded-lg border border-slate-300 px-3 py-2" />
-        <input name="retailer" defaultValue={retailer} placeholder="Retailer id (ulta…)" className="w-40 rounded-lg border border-slate-300 px-3 py-2" />
+        <input
+          name="q"
+          defaultValue={q}
+          placeholder="Retailer #, WB-…, gifter, item"
+          className="w-72 rounded-lg border border-slate-300 px-3 py-2"
+        />
+        <input
+          name="retailer"
+          defaultValue={retailer}
+          placeholder="Retailer id (ulta…)"
+          className="w-40 rounded-lg border border-slate-300 px-3 py-2"
+        />
         <select name="status" defaultValue={status} className="rounded-lg border border-slate-300 px-3 py-2">
           <option value="">Any status</option>
           <option value="placed">Placed</option>
@@ -107,7 +113,17 @@ export default async function RetailerOrdersPage({
 
       <p className="text-sm text-slate-600">{orders.length} retailer order(s)</p>
       <div className="space-y-3">
-        {orders.length ? orders.map((o) => <Row key={o.id} o={o} />) : <p className="text-sm text-slate-500">No retailer orders yet. Record a placement from a batch or place pool.</p>}
+        {orders.length ? (
+          orders.map((o) => <Row key={o.id} o={o} />)
+        ) : (
+          <p className="text-sm text-slate-500">
+            No retailer orders yet. Record a placement from the{" "}
+            <Link href="/admin/buy-for-you" className="font-semibold text-blue-800 underline">
+              place queue
+            </Link>
+            .
+          </p>
+        )}
       </div>
     </div>
   );

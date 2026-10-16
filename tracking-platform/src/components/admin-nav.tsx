@@ -19,6 +19,8 @@ export const ADMIN_NAV_GROUPS: readonly AdminNavGroup[] = [
       { href: "/admin", label: "Home", match: "exact" },
       { href: "/admin/service", label: "Customer service", match: "prefix" },
       { href: "/admin/orders", label: "Orders", match: "prefix" },
+      { href: "/admin/buy-for-you/retailer-orders", label: "Retailer orders", match: "prefix" },
+      { href: "/admin/intake", label: "Hub intake", match: "prefix" },
       { href: "/admin/orders/calendar", label: "Calendar", match: "prefix" },
       { href: "/admin/inventory", label: "Daily inventory", match: "prefix" },
       { href: "/admin/allocations", label: "Allocations", match: "prefix" },
