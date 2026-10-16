@@ -236,7 +236,7 @@
   }
 
   // Standard U.S. ship-to-home. Same numbers as lib/buy/standard-shipping.js. No club rates.
-  var SHIP_FEE = { nordstrom: 0, kohls: 895, walmart: 699, target: 599, sephora: 695, ulta: 695 };
+  var SHIP_FEE = { nordstrom: 0, kohls: 895, walmart: 699, target: 599, sephora: 695, ulta: 695, amazon: 399 };
   var SHIP_FREE = { nordstrom: 0, kohls: 4900, walmart: 3500, target: 3500, amazon: 3500, sephora: 5000, ulta: 3500, bestbuy: 3500 };
   function scheduleFee(retailer, merch) {
     if (retailer === 'lego') {

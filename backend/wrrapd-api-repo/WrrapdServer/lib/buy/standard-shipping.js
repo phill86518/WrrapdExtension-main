@@ -9,7 +9,7 @@
  * Kohl's standard is $8.95 under $49 and free from $49.
  * Walmart standard is $6.99 under $35 and free from $35.
  * Target standard is $5.99 under $35 and free from $35.
- * Amazon standard is free from $35 on eligible items. Under $35 the fee is not a flat rate.
+ * Amazon standard is free from $35. Under $35 the charge is $3.99.
  * Sephora guest standard is $6.95 under $50 and free from $50.
  * Ulta standard is $6.95 under $35 and free from $35.
  * Best Buy standard is free from $35. Under $35 the fee is not a published flat rate.
@@ -22,7 +22,7 @@ const RATES = {
     kohls: { feeCents: 895, freeOverCents: 4900 },
     walmart: { feeCents: 699, freeOverCents: 3500 },
     target: { feeCents: 599, freeOverCents: 3500 },
-    amazon: { feeCents: null, freeOverCents: 3500 },
+    amazon: { feeCents: 399, freeOverCents: 3500 },
     sephora: { feeCents: 695, freeOverCents: 5000 },
     ulta: { feeCents: 695, freeOverCents: 3500 },
     bestbuy: { feeCents: null, freeOverCents: 3500 },

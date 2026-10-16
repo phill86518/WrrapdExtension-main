@@ -11,7 +11,6 @@ const retailers = require('./retailers');
 const salesTax = require('../sales-tax-zip');
 const terms = require('./terms');
 const billing = require('./billing');
-const standardShipping = require('./standard-shipping');
 const quotes = require('./quotes');
 const workflows = require('./workflows');
 const runner = require('./runner');
@@ -142,11 +141,7 @@ function publicLine(l, batch) {
                   imageUrl: p.imageUrl || '',
                   isElectronics: p.isElectronics === true,
                   pagePriceCents: p.pagePriceCents || null,
-                  standardShip: (() => {
-                      const shown = presentShip(batch, l, rawShip);
-                      if (shown && !shown.arrivalDate) shown.arrivalDate = standardShipping.estimateArrivalDate();
-                      return shown;
-                  })(),
+                  standardShip: presentShip(batch, l, rawShip),
                   variantGroups: l.state === 'needs_variant' ? p.variantGroups || [] : [],
               }
             : null,

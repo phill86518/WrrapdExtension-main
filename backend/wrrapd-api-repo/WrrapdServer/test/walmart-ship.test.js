@@ -32,6 +32,13 @@ test('walmart does not use a date from a different ZIP the shopper set', () => {
     assert.match(ship.choicePrompt, /32218/);
 });
 
+test('a delivery range uses the later day, and each page keeps its own date', () => {
+    const range = reader.standardFromPage('<p>Arrives between Thu, Oct 15 and Fri, Oct 16</p>', 1000);
+    assert.equal(range.arrivalDate, '2026-10-16');
+    const one = reader.standardFromPage('<p>Get it by Wednesday, October 21</p>', 1000);
+    assert.equal(one.arrivalDate, '2026-10-21');
+});
+
 test('a page that ships to a different ZIP is refused', () => {
     const html = '<html><body><p>Get It Shipped</p><p>32250</p><p>Standard shipping</p></body></html>';
     assert.equal(reader.pageShipZip(html), '32250');
@@ -51,7 +58,8 @@ test('walmart uses the $6.99 cart default when the page has no shipping price', 
     assert.equal(reader.withDefaultShip('walmart', null).cents, 699);
     assert.equal(reader.withDefaultShip('walmart', { cents: 0, arrivalDate: '2026-10-16' }).cents, 0);
     assert.equal(reader.withDefaultShip('target', { cents: null, arrivalDate: '2026-10-16' }, 269).cents, 599);
-    assert.equal(reader.withDefaultShip('amazon', { cents: null }, 1000).cents, null);
+    assert.equal(reader.withDefaultShip('amazon', { cents: null, arrivalDate: '2026-10-20' }, 1000).cents, 399);
+    assert.equal(reader.withDefaultShip('amazon', { cents: null, arrivalDate: '2026-10-20' }, 1000).arrivalDate, '2026-10-20');
 });
 
 test('arrives tomorrow is a delivery date', () => {

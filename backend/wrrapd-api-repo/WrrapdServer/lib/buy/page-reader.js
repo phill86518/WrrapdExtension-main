@@ -282,7 +282,14 @@ function ymdFromMonthDay(monName, day) {
 /** Regular delivery printed on the page. Skips Prime and other membership sentences. No extra request. */
 function standardFromPage(html, itemCents) {
     const text = visibleText(html).replace(/\s+/g, ' ');
-    const arrives = text.match(/arrives\s+(?:by\s+)?(?:[A-Za-z]+,\s+)?([A-Za-z]+)\s+(\d{1,2})/i);
+    const between = text.match(/arrives\s+between\s+(?:[A-Za-z]+,\s+)?([A-Za-z]+)\s+(\d{1,2})\s+and\s+(?:[A-Za-z]+,\s+)?([A-Za-z]+)\s+(\d{1,2})/i);
+    if (between) {
+        const start = ymdFromMonthDay(between[1], between[2]);
+        const end = ymdFromMonthDay(between[3], between[4]);
+        const arrivalDate = end && (!start || end > start) ? end : start;
+        if (arrivalDate) return { label: 'Standard shipping', cents: null, arrivalDate, note: '' };
+    }
+    const arrives = text.match(/(?:arrives|get it|deliver(?:y|ed)?)\s+(?:by\s+)?(?:[A-Za-z]+,\s+)?([A-Za-z]+)\s+(\d{1,2})/i);
     if (arrives) {
         const arrivalDate = ymdFromMonthDay(arrives[1], arrives[2]);
         if (arrivalDate) {
@@ -1058,6 +1065,12 @@ async function readProduct({ retailer, url, zip, state, batchId, lineId }) {
     }
     if (choicePrompt) chosen = null;
     if (!choicePrompt) chosen = withDefaultShip(retailer, chosen, pagePriceCents || 0);
+    const indicated = /^\d{4}-\d{2}-\d{2}$/.test(String(facts.standardShipping && facts.standardShipping.arrivalDate || ''))
+        ? String(facts.standardShipping.arrivalDate)
+        : '';
+    if (!choicePrompt && indicated && (!chosen || !chosen.arrivalDate)) {
+        chosen = { label: 'Standard shipping', cents: chosen && chosen.cents != null ? chosen.cents : null, arrivalDate: indicated, note: (chosen && chosen.note) || '' };
+    }
     if (!title) return { ok: false, reason: 'no_title', needsPerson: true };
     const pageOffer = pagePriceCents && chosen && chosen.cents != null ? { itemPriceCents: pagePriceCents, shippingOptions: [chosen] } : null;
     const amazonCategory = await categories.categorize({ retailer, retailerName: r.name, html: page.html, title, brand, category });

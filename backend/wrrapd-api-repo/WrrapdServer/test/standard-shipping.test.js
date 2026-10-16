@@ -28,7 +28,7 @@ test('under the minimum, a printed price is kept and otherwise the standard fee 
     assert.equal(ship.groupShipCents('kohls', 2000, null), 895);
     assert.equal(ship.groupShipCents('lego', 2000, null), 495);
     assert.equal(ship.groupShipCents('lego', 3000, null), 695);
-    assert.equal(ship.groupShipCents('amazon', 2000, null), null);
+    assert.equal(ship.groupShipCents('amazon', 2000, null), 399);
     assert.equal(ship.groupShipCents('etsy', 5000, 450), 450);
     assert.equal(ship.groupShipCents('etsy', 1000, 0), 0);
 });
