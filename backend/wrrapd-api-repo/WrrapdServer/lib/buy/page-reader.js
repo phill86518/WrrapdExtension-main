@@ -202,12 +202,13 @@ const SYSTEM_PROMPT = [
     'Never use Prime, Prime-member, Walmart+, Target Circle, Beauty Insider, Totaltech, or any club or membership price.',
     'A priceUsd of 0 is allowed only when regular shipping is free for every shopper, not only for members.',
     'arrivalDate is the regular delivery date shown for that option, as YYYY-MM-DD. Use null only when no date is shown.',
+    'shipToZip is the 5-digit ZIP the page is shipping to, such as the ZIP next to Shipping to or Get It Shipped. Use null when no ZIP is shown.',
     'variantGroups lists choices the buyer must make (size, color, style, capacity). Leave it empty when none.',
     'isElectronics is true for powered devices and gadgets. Printer paper, sticker paper, ink, and labels are not electronics.',
     'Return JSON: {"kind":"product"|"list"|"unknown","productUrl":string|null,"productId":string|null,',
     '"title":string,"brand":string,"imageUrl":string,"priceUsd":number|null,"inStock":bool|null,"category":string,',
     '"isElectronics":bool,"variantGroups":[{"name":string,"options":[string],"selected":string|null}],',
-    '"packageDimensions":string,"standardShipping":{"label":string,"priceUsd":number|null,"arrivalDate":string|null}}',
+    '"packageDimensions":string,"standardShipping":{"label":string,"priceUsd":number|null,"arrivalDate":string|null},"shipToZip":string|null}',
 ].join(' ');
 
 function embeddedHints(html) {
@@ -372,6 +373,28 @@ function walmartShip(html, gifteeZip) {
     }
     if (!date && cents == null) return null;
     return { label: 'Standard shipping', cents, arrivalDate: date, note: cents === 0 ? 'Free standard shipping.' : '', choicePrompt: '' };
+}
+
+/** ZIP printed next to the page's ship-to control. Empty when the page does not show one. */
+function pageShipZip(html) {
+    const text = visibleText(html).replace(/\s+/g, ' ');
+    const patterns = [
+        /(?:shipping|shipped|deliver(?:y|ed)?)\s+to\s+(\d{5})\b/i,
+        /\bget it shipped\b[^.]{0,80}?(\d{5})\b/i,
+        /\bships?\s+to\s+(\d{5})\b/i,
+    ];
+    for (const re of patterns) {
+        const found = text.match(re);
+        if (found) return found[1];
+    }
+    return '';
+}
+
+function zipMismatchPrompt(expected, seen) {
+    const want = String(expected || '').replace(/\D/g, '').slice(0, 5);
+    const got = String(seen || '').replace(/\D/g, '').slice(0, 5);
+    if (want.length !== 5 || got.length !== 5 || want === got) return '';
+    return `This page ships to ${got}. Set the page to ${want}, then add the link again.`;
 }
 
 /** The regular option: the one marked standard or default, otherwise the cheapest. Dated options win. */
@@ -1029,6 +1052,11 @@ async function readProduct({ retailer, url, zip, state, batchId, lineId }) {
             choicePrompt = wship.choicePrompt || '';
         }
     }
+    if (!choicePrompt) {
+        const seenZip = pageShipZip(page.html) || (/^\d{5}$/.test(String(facts.shipToZip || '')) ? String(facts.shipToZip) : '');
+        choicePrompt = zipMismatchPrompt(zip, seenZip);
+    }
+    if (choicePrompt) chosen = null;
     if (!choicePrompt) chosen = withDefaultShip(retailer, chosen, pagePriceCents || 0);
     if (!title) return { ok: false, reason: 'no_title', needsPerson: true };
     const pageOffer = pagePriceCents && chosen && chosen.cents != null ? { itemPriceCents: pagePriceCents, shippingOptions: [chosen] } : null;
@@ -1057,6 +1085,6 @@ async function readProduct({ retailer, url, zip, state, batchId, lineId }) {
 }
 
 module.exports = {
-    readProduct, askGrok, looksElectronic, priceAppearsInPage, jsonLdProducts, visibleText, fetchPage, usablePage, DIRECT_MS, standardFromPage, walmartShip, withDefaultShip, targetFulfillment,
+    readProduct, askGrok, looksElectronic, priceAppearsInPage, jsonLdProducts, visibleText, fetchPage, usablePage, DIRECT_MS, standardFromPage, walmartShip, pageShipZip, zipMismatchPrompt, withDefaultShip, targetFulfillment,
     nordstromShell, nordstromFromHtml, savedPageHtml, EXTERNAL_PAGES_DIR,
 };

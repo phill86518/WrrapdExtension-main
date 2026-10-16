@@ -11,6 +11,7 @@ const retailers = require('./retailers');
 const salesTax = require('../sales-tax-zip');
 const terms = require('./terms');
 const billing = require('./billing');
+const standardShipping = require('./standard-shipping');
 const quotes = require('./quotes');
 const workflows = require('./workflows');
 const runner = require('./runner');
@@ -141,7 +142,11 @@ function publicLine(l, batch) {
                   imageUrl: p.imageUrl || '',
                   isElectronics: p.isElectronics === true,
                   pagePriceCents: p.pagePriceCents || null,
-                  standardShip: presentShip(batch, l, rawShip),
+                  standardShip: (() => {
+                      const shown = presentShip(batch, l, rawShip);
+                      if (shown && !shown.arrivalDate) shown.arrivalDate = standardShipping.estimateArrivalDate();
+                      return shown;
+                  })(),
                   variantGroups: l.state === 'needs_variant' ? p.variantGroups || [] : [],
               }
             : null,
@@ -149,6 +154,7 @@ function publicLine(l, batch) {
         qty: lineQty(l),
         wrap: l.wrap || null,
         manual: manual.shopperState(l),
+        forceWrap: l.forceWrap === true && !(l.wrap && l.wrap.done),
     };
 }
 
@@ -620,6 +626,8 @@ module.exports = function mountBuyForYou(app, deps) {
                             existing.retailerName = parsed.retailerName;
                             existing.readStartedAt = now;
                             existing.readTries = (existing.readTries || 0) + 1;
+                            existing.wrap = null;
+                            existing.forceWrap = b.lines.some((l) => l.id !== existing.id && !l.removed && l.wrap && l.wrap.done);
                             for (const other of b.lines) {
                                 if (!other.removed && other.reason === 'duplicate' && parsed.productId && String(other.url || '').includes(parsed.productId)) other.removed = true;
                             }
@@ -643,6 +651,7 @@ module.exports = function mountBuyForYou(app, deps) {
                         retailerName: parsed.retailerName,
                         state: 'reading',
                         readStartedAt: now,
+                        forceWrap: b.lines.some((l) => !l.removed && l.wrap && l.wrap.done),
                     });
                     quotes.ensureGroup(b, parsed.retailer).state = 'waiting';
                     added += 1;
@@ -756,6 +765,7 @@ module.exports = function mountBuyForYou(app, deps) {
                 const l = b.lines.find((x) => x.id === lineId);
                 if (!l) return null;
                 l.wrap = out;
+                l.forceWrap = false;
                 return b;
             });
             const after = billing.computeBill(store.read(batch.id), config.load());
@@ -770,7 +780,7 @@ module.exports = function mountBuyForYou(app, deps) {
         if (!batch) return;
         if (batch.status !== 'open') return res.status(409).json({ error: 'This order is already paid.' });
         if (!batch.terms || batch.terms.version !== terms.VERSION) return res.status(400).json({ error: 'Please agree to the Terms first.' });
-        const missing = billing.readyLines(batch).filter((l) => !l.wrap || !l.wrap.done);
+        const missing = (batch.lines || []).filter((l) => !l.removed && l.state !== 'unavailable' && (!(l.wrap && l.wrap.done) && (l.forceWrap || l.state === 'ready')));
         if (missing.length) return res.status(400).json({ error: 'Please finish the gift-wrap choices for every item.' });
         const { error } = await quotes.startBookingRefresh(batch.id);
         if (error === 'no_ready_items') return res.status(400).json({ error: 'Add at least one item we can buy.' });
@@ -807,6 +817,9 @@ module.exports = function mountBuyForYou(app, deps) {
             return res.status(400).json({ error: 'Please accept the electronics sentence.' });
         }
         if (ready.some((l) => !l.wrap || !l.wrap.done)) return res.status(400).json({ error: 'Please finish the gift-wrap choices for every item.' });
+        if ((batch.lines || []).some((l) => !l.removed && l.state !== 'unavailable' && l.forceWrap && !(l.wrap && l.wrap.done))) {
+            return res.status(400).json({ error: 'Please finish the gift-wrap choices for every item.' });
+        }
         const g = body.giftee && typeof body.giftee === 'object' ? body.giftee : {};
         const giftee = {
             name: cleanText(g.name, 80),

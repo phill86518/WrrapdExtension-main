@@ -14,6 +14,13 @@ test('a retailer order at the free-shipping minimum ships free', () => {
     assert.equal(ship.groupShipCents('lego', 3500, null), 0);
 });
 
+test('a missing arrival date is estimated as five business days, skipping the weekend', () => {
+    const thursday = new Date('2026-10-15T16:00:00Z');
+    assert.equal(ship.estimateArrivalDate(thursday), '2026-10-22');
+    const friday = new Date('2026-10-16T16:00:00Z');
+    assert.equal(ship.estimateArrivalDate(friday), '2026-10-23');
+});
+
 test('under the minimum, a printed price is kept and otherwise the standard fee is used', () => {
     assert.equal(ship.groupShipCents('walmart', 3499, null), 699);
     assert.equal(ship.groupShipCents('walmart', 3499, 799), 799);

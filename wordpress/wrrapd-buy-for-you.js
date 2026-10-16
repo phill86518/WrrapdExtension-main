@@ -29,6 +29,7 @@
     flowers: null,
     ai: {},
     variantDraft: {},
+    promptedWrap: '',
   };
 
   var TRASH_SVG = '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
@@ -840,6 +841,7 @@
       var needsWrap = (j.batch.lines || []).some(function (l) { return l.state !== 'removed' && l.state !== 'unavailable' && !(l.wrap && l.wrap.done); });
       S.notice = needsWrap ? 'Please gift-wrap the new item.' : (j.notice || '');
       render();
+      forceWrapPrompt();
       poll();
     }).catch(function (err) {
       S.busy = false;
@@ -847,6 +849,19 @@
       S.draftLinks = links;
       render();
     });
+  }
+  function pendingWrapLine() {
+    return ((S.batch && S.batch.lines) || []).find(function (l) {
+      return l.forceWrap && l.state === 'ready' && !(l.wrap && l.wrap.done);
+    }) || null;
+  }
+  function forceWrapPrompt() {
+    var line = pendingWrapLine();
+    if (!line) return;
+    S.notice = 'Please gift-wrap the new item.';
+    if (S.wrapOpen || S.promptedWrap === line.id) return;
+    S.promptedWrap = line.id;
+    openWrap();
   }
   function openWrap() {
     var lines = wrapTargets();
@@ -915,6 +930,7 @@
           if (!typing) {
             if (S.wrapOpen && !S.termsOpen) saveDraft();
             render();
+            forceWrapPrompt();
           }
         }
         poll();
@@ -1226,6 +1242,7 @@
         else S.view = 'items';
         loadPricing();
         render();
+        forceWrapPrompt();
         poll();
       }).catch(function () {
         S.id = '';

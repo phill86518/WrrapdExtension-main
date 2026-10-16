@@ -32,6 +32,15 @@ test('walmart does not use a date from a different ZIP the shopper set', () => {
     assert.match(ship.choicePrompt, /32218/);
 });
 
+test('a page that ships to a different ZIP is refused', () => {
+    const html = '<html><body><p>Get It Shipped</p><p>32250</p><p>Standard shipping</p></body></html>';
+    assert.equal(reader.pageShipZip(html), '32250');
+    assert.match(reader.zipMismatchPrompt('32218', '32250'), /32250/);
+    assert.match(reader.zipMismatchPrompt('32218', '32250'), /32218/);
+    assert.equal(reader.zipMismatchPrompt('32218', '32218'), '');
+    assert.equal(reader.pageShipZip('<p>No shipping zip here</p>'), '');
+});
+
 test('a guessed server location is not the shopper page ZIP', () => {
     const ship = reader.walmartShip(page({ postal: '51502', date: '2026-10-15', price: null, free: false, strength: 'IMPLICIT' }), '32218');
     assert.equal(ship.skip, true);

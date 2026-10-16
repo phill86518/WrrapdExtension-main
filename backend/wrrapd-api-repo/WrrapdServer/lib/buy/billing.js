@@ -185,7 +185,7 @@ function computeBill(batch, cfg) {
             retailer: retailerId,
             retailerName: g.retailerName,
             items,
-            shipping: { id: opt.id, label: opt.label, cents: shipCents, arrivalDate: opt.arrivalDate || null },
+            shipping: { id: opt.id, label: opt.label, cents: shipCents, arrivalDate: opt.arrivalDate || standardShipping.estimateArrivalDate() },
             shippingOptions: g.quote.shippingOptions.map((o) => ({ id: o.id, label: o.label, cents: o.cents, arrivalDate: o.arrivalDate || null })),
             taxCents,
             subtotalCents: merch + shipCents + taxCents,

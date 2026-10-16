@@ -115,6 +115,7 @@ function pageOfferQuote(batch, retailerId) {
         const date = (ship && ship.arrivalDate) || (offer && offer.arrivalDate) || null;
         if (date && (!arrival || date > arrival)) arrival = date;
     }
+    if (!arrival) arrival = standardShipping.estimateArrivalDate();
     const ship = standardShipping.groupShipCents(retailerId, merch, pageCents);
     if (ship == null) return null;
     return {

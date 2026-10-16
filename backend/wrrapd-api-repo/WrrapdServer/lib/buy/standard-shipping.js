@@ -56,6 +56,27 @@ function groupShipCents(retailer, merchandiseCents, pageCents) {
     return pageCents != null ? pageCents : null;
 }
 
+/** Standard ground when the store page prints a price but no arrival date. Skips weekends on the Eastern calendar. */
+const ESTIMATE_BUSINESS_DAYS = 5;
+
+function estimateArrivalDate(from = new Date(), businessDays = ESTIMATE_BUSINESS_DAYS) {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit',
+    }).format(from).split('-').map(Number);
+    let y = parts[0];
+    let m = parts[1];
+    let d = parts[2];
+    let left = businessDays;
+    while (left > 0) {
+        const dt = new Date(Date.UTC(y, m - 1, d + 1));
+        y = dt.getUTCFullYear();
+        m = dt.getUTCMonth() + 1;
+        d = dt.getUTCDate();
+        if (dt.getUTCDay() !== 0 && dt.getUTCDay() !== 6) left -= 1;
+    }
+    return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+}
+
 /** Fills a missing per-item shipping price from the standard schedule for that item's price. */
 function fillMissing(retailer, chosen, merchandiseCents) {
     if (chosen && chosen.cents != null) return chosen;
@@ -69,4 +90,4 @@ function fillMissing(retailer, chosen, merchandiseCents) {
     };
 }
 
-module.exports = { RATES, scheduleCents, groupShipCents, fillMissing };
+module.exports = { RATES, scheduleCents, groupShipCents, fillMissing, estimateArrivalDate, ESTIMATE_BUSINESS_DAYS };
