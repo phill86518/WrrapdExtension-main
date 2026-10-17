@@ -1185,9 +1185,9 @@ async function readProduct({ retailer, url, zip, state, batchId, lineId }) {
     } else {
         try {
             page = await fetchPage(retailer, url);
-            // Kohl's / Nordstrom / Best Buy blocks are often brief. One quiet retry
-            // recovers more often than sending the shopper straight to manual add.
-            if (!pageIsUsable(retailer, page) && ZENROWS_RETAILERS.has(retailer)) {
+            // Brief blocks / empty responses are common across stores. One quiet
+            // retry recovers more often than sending the shopper straight to manual add.
+            if (!pageIsUsable(retailer, page)) {
                 await sleep(2000);
                 page = await fetchPage(retailer, url);
             }
