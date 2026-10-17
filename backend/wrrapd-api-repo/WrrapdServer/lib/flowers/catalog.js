@@ -84,10 +84,43 @@ function flowerUnitPriceForZip(postalCode) {
   }
 }
 
+/** Strip CDN query noise so the same photo can't sneak in as two URLs. */
+function imageKey(url) {
+  return String(url || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[?#].*$/, '');
+}
+
+/**
+ * Shopper grid must never show the same photo (or same SKU) twice.
+ * Grok has repeated one Publix SKU five times when the candidate pool was tiny.
+ */
+function dedupeDistinctBouquets(list) {
+  const out = [];
+  const usedSku = new Set();
+  const usedImg = new Set();
+  for (const c of Array.isArray(list) ? list : []) {
+    if (!c) continue;
+    const skuKey = `${c.retailer || ''}:${c.sku || c.designKey || ''}`;
+    const img = imageKey(c.imageUrl);
+    if (skuKey !== ':' && usedSku.has(skuKey)) continue;
+    if (img && usedImg.has(img)) continue;
+    if (skuKey !== ':') usedSku.add(skuKey);
+    if (img) usedImg.add(img);
+    out.push(c);
+  }
+  return out;
+}
+
 function deterministicSelect(byRetailerCandidates) {
   // Target disabled as a floral supplier (Publix + Sam's only for now).
-  const publix = (byRetailerCandidates.publix || []).filter((c) => c.retailPrice < scrape.CAP_PUBLIX);
-  const samsAll = (byRetailerCandidates.sams || []).filter((c) => c.retailPrice < scrape.CAP_SAMS_ROSES);
+  const publix = dedupeDistinctBouquets(
+    (byRetailerCandidates.publix || []).filter((c) => c.retailPrice < scrape.CAP_PUBLIX),
+  );
+  const samsAll = dedupeDistinctBouquets(
+    (byRetailerCandidates.sams || []).filter((c) => c.retailPrice < scrape.CAP_SAMS_ROSES),
+  );
   // Prefer roses when Publix is also in the mix; if Publix is empty, keep every
   // Sam's bouquet so the shopper sees a real price ladder (not four identical classics).
   const sams = publix.length ? samsAll.filter((c) => c.isRose) : samsAll;
@@ -107,12 +140,22 @@ function deterministicSelect(byRetailerCandidates) {
   }
 
   const pick = (arr, n) => arr.slice(0, n);
-  let selected = [...pick(publix, wantP), ...pick(sams, wantS)];
+  let selected = dedupeDistinctBouquets([...pick(publix, wantP), ...pick(sams, wantS)]);
 
   const used = new Set(selected.map((c) => `${c.retailer}:${c.sku}`));
-  const pool = [...publix, ...sams].filter((c) => !used.has(`${c.retailer}:${c.sku}`));
+  const usedImg = new Set(selected.map((c) => imageKey(c.imageUrl)).filter(Boolean));
+  const pool = [...publix, ...sams].filter((c) => {
+    if (used.has(`${c.retailer}:${c.sku}`)) return false;
+    const img = imageKey(c.imageUrl);
+    if (img && usedImg.has(img)) return false;
+    return true;
+  });
   while (selected.length < MIN_CHOICES && pool.length) {
-    selected.push(pool.shift());
+    const next = pool.shift();
+    selected.push(next);
+    used.add(`${next.retailer}:${next.sku}`);
+    const img = imageKey(next.imageUrl);
+    if (img) usedImg.add(img);
   }
   if (selected.length > MAX_CHOICES) selected = selected.slice(0, MAX_CHOICES);
   return selected;
@@ -123,7 +166,7 @@ function deterministicSelect(byRetailerCandidates) {
  * Prefer the nearby Publix store for attribution when available.
  */
 function padWithClassicPublix(selected, byRetailer, unit) {
-  const list = Array.isArray(selected) ? [...selected] : [];
+  const list = dedupeDistinctBouquets(Array.isArray(selected) ? selected : []);
   if (list.length >= MIN_CHOICES) return list;
 
   const preferStore = byRetailer.publix || byRetailer.sams || null;
@@ -131,19 +174,17 @@ function padWithClassicPublix(selected, byRetailer, unit) {
   const usedKeys = new Set(
     list.map((c) => c.designKey || `${c.retailer}:${c.sku}`).filter(Boolean),
   );
+  const usedImg = new Set(list.map((c) => imageKey(c.imageUrl)).filter(Boolean));
 
   for (const c of classic) {
     if (list.length >= MIN_CHOICES) break;
     const key = c.designKey || `${c.retailer}:${c.sku}`;
+    const img = imageKey(c.imageUrl);
     if (usedKeys.has(key)) continue;
+    if (img && usedImg.has(img)) continue;
     list.push(c);
     usedKeys.add(key);
-  }
-  // If still short (unlikely), append remaining classic even with key overlap.
-  for (const c of classic) {
-    if (list.length >= MIN_CHOICES) break;
-    if (list.some((x) => x.designKey && x.designKey === c.designKey)) continue;
-    list.push(c);
+    if (img) usedImg.add(img);
   }
   return list.slice(0, MAX_CHOICES);
 }
@@ -172,7 +213,7 @@ async function grokRank(postalCode, byRetailerCandidates, storesNearby) {
         {
           role: 'system',
           content:
-            'You are Wrrapd floral merchandising. Pick bouquet SKUs for a giftee ZIP from candidate lists. Prefer Publix; Sam\'s Club only for rose bouquets. Return JSON only: {"picks":[{"retailer":"publix|sams","sku":"..."}]} with 5–8 picks. Respect caps: Publix under $17, Sam\'s roses under $20. Never invent SKUs.',
+            'You are Wrrapd floral merchandising. Pick bouquet SKUs for a giftee ZIP from candidate lists. Prefer Publix; Sam\'s Club only for rose bouquets. Return JSON only: {"picks":[{"retailer":"publix|sams","sku":"..."}]} with up to 8 picks. Each SKU at most once — never repeat a pick. If the candidate list is short, return fewer picks (do not pad by repeating). Respect caps: Publix under $17, Sam\'s roses under $20. Never invent SKUs.',
         },
         {
           role: 'user',
@@ -181,6 +222,7 @@ async function grokRank(postalCode, byRetailerCandidates, storesNearby) {
             nearbyStores: storeSummary,
             candidates: compact,
             idealCounts: { publix: 5, samsRoses: 2 },
+            rules: ['unique sku only', 'fewer picks ok when candidates are scarce'],
           }),
         },
       ],
@@ -194,11 +236,15 @@ async function grokRank(postalCode, byRetailerCandidates, storesNearby) {
       }
     }
     const selected = [];
+    const seen = new Set();
     for (const p of picks) {
       const key = `${p.retailer}:${p.sku}`;
-      if (byKey[key]) selected.push(byKey[key]);
+      if (!byKey[key] || seen.has(key)) continue;
+      seen.add(key);
+      selected.push(byKey[key]);
     }
-    if (selected.length >= MIN_CHOICES) return selected.slice(0, MAX_CHOICES);
+    const unique = dedupeDistinctBouquets(selected);
+    if (unique.length >= MIN_CHOICES) return unique.slice(0, MAX_CHOICES);
     return null;
   } catch (e) {
     console.warn('[flowers-catalog] grok rank failed', e.message);
@@ -328,12 +374,20 @@ async function buildCatalogForZip(postalCode) {
     if (!selected || selected.length < MIN_CHOICES) {
       selected = deterministicSelect(byRetailerCandidates);
     }
+    selected = dedupeDistinctBouquets(selected);
   }
 
   // Zero live picks → full classic backup (Publix-attributed when Publix is nearby).
   if (!selected || !selected.length) {
     const preferStore =
-      byRetailer.publix || byRetailer.sams || active.find(([, s]) => s)?.[1] || active[0][1];
+      byRetailer.publix ||
+      byRetailer.sams ||
+      byRetailer.lidl ||
+      byRetailer.wholefoods ||
+      byRetailer.traderjoes ||
+      byRetailer.foodemporium ||
+      active.find(([, s]) => s)?.[1] ||
+      active[0][1];
     selected = scrape.classicFourBouquets(preferStore, unit);
     source = 'classic_backup';
     disclaimer = CLASSIC_DISCLAIMER;
@@ -371,6 +425,14 @@ async function buildCatalogForZip(postalCode) {
         );
       }
     }
+  }
+
+  // Final guard: never ship duplicate photos/SKUs to the wrap modal.
+  selected = dedupeDistinctBouquets(selected);
+  if (selected.length < MIN_CHOICES) {
+    selected = padWithClassicPublix(selected, byRetailer, unit);
+    if (!disclaimer) disclaimer = CLASSIC_DISCLAIMER;
+    if (source === 'live') source = 'live_padded';
   }
 
   const offers = toOffers(selected);
@@ -430,4 +492,6 @@ module.exports = {
   getOffer,
   validateOfferAmount,
   chargedPrice,
+  dedupeDistinctBouquets,
+  imageKey,
 };

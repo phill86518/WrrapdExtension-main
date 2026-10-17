@@ -328,15 +328,8 @@ const SAMS_SEARCH_FALLBACK = [
     productUrl:
       'https://www.samsclub.com/ip/Member-s-Mark-Premium-Roses-18-stems-choose-color/18312501615',
   },
-  {
-    sku: '13612912757-mini',
-    title: "Member's Mark Mini Premium Rose Bouquet, color and variety may vary",
-    retailPrice: 12.98,
-    imageUrl:
-      'https://i5.samsclubimages.com/asr/691be988-4d94-4cdd-9276-9085f22651aa.7500796e6775de91a4794a3e528443ca.jpeg',
-    productUrl:
-      'https://www.samsclub.com/ip/Member-s-Mark-Jumbo-Premium-Bouquet-color-and-variety-may-vary/13612912757',
-  },
+  // Do not invent a second SKU that reuses the jumbo photo — duplicate images
+  // in the shopper wrap modal are embarrassing and must never ship.
 ];
 
 function samsCandidateFromParts({ sku, title, retailPrice, imageUrl, productUrl }) {
@@ -557,6 +550,16 @@ async function fetchBouquetsForStore(store) {
   if (!store?.retailer) return { items: [], scrapeFailed: true };
   // Target paused as floral supplier (function kept for possible reactivation).
   if (store.retailer === 'target') return { items: [], scrapeFailed: false };
+  // These grocers unlock floral choices when Publix is not nearby. Shelf prices
+  // still come from the classic bouquet list until a live scrape exists.
+  if (
+    store.retailer === 'lidl' ||
+    store.retailer === 'wholefoods' ||
+    store.retailer === 'traderjoes' ||
+    store.retailer === 'foodemporium'
+  ) {
+    return { items: [], scrapeFailed: false };
+  }
   let items = [];
   let scrapeFailed = false;
   try {
