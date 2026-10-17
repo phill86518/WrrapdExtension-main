@@ -10,7 +10,7 @@ const TIMEOUT_MS = 90000;
 const WAIT_FOR = 'h1';
 const RETRY_MIN_MS = 20000;
 
-async function fetchOnce(url, doFetch, waitFor, ms, cookie) {
+async function fetchOnce(url, doFetch, waitFor, ms, cookie, { antibot } = {}) {
     const key = process.env.ZENROWS_API_KEY;
     const api = new URL('https://api.zenrows.com/v1/');
     api.searchParams.set('apikey', key);
@@ -18,6 +18,7 @@ async function fetchOnce(url, doFetch, waitFor, ms, cookie) {
     api.searchParams.set('js_render', 'true');
     api.searchParams.set('premium_proxy', 'true');
     api.searchParams.set('proxy_country', 'us');
+    if (antibot) api.searchParams.set('antibot', 'true');
     if (waitFor) api.searchParams.set('wait_for', waitFor);
     if (cookie) api.searchParams.set('custom_headers', 'true');
     const ctrl = new AbortController();
@@ -43,11 +44,12 @@ async function fetchHtml(url, deps) {
     const doFetch = (deps && deps.fetch) || fetch;
     const cookie = (deps && deps.cookie) || '';
     const started = Date.now();
-    const first = await fetchOnce(url, doFetch, WAIT_FOR, TIMEOUT_MS, cookie);
+    const first = await fetchOnce(url, doFetch, WAIT_FOR, TIMEOUT_MS, cookie, { antibot: false });
     if (first.ok || first.reason === 'zenrows_timeout') return first;
     const left = TIMEOUT_MS - (Date.now() - started);
     if (left < RETRY_MIN_MS) return first;
-    const second = await fetchOnce(url, doFetch, '', left, cookie);
+    // Hard stores (Kohl's / Nordstrom) often need antibot on the second pass.
+    const second = await fetchOnce(url, doFetch, WAIT_FOR, left, cookie, { antibot: true });
     return second.ok ? second : first;
 }
 

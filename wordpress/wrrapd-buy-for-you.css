@@ -243,8 +243,8 @@
   left: 0;
   top: calc(100% + 6px);
   z-index: 30;
-  width: 250px;
-  max-width: 80vw;
+  width: 280px;
+  max-width: 88vw;
   padding: 10px 12px;
   background: #fff;
   border: 1px solid var(--wb-gold);
@@ -258,6 +258,7 @@
 }
 .wb-manual-pop::before { content: ''; position: absolute; left: 0; right: 0; top: -8px; height: 8px; }
 .wb-manual-pop p { margin: 0 0 8px; }
+.wb-manual-explain { color: #5c6578; font-size: 12px; font-weight: 460; line-height: 1.35; }
 .wb-manual:hover .wb-manual-pop,
 .wb-manual:focus-within .wb-manual-pop,
 .wb-manual.wb-manual-open .wb-manual-pop { display: block; }

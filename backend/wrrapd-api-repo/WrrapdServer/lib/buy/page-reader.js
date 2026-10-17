@@ -108,6 +108,21 @@ async function fetchPage(retailerId, url, extraHosts) {
     if (pageIsUsable(retailerId, direct)) return direct;
     if (!rendered) rendered = await fetchViaZenrows(retailerId, url, extraHosts);
     if (pageIsUsable(retailerId, rendered)) return rendered;
+    // Prefer the ZenRows failure reason for stores that require it — a bare
+    // direct http_403 hides that the premium fetch also failed and looks like
+    // the shopper's link is broken.
+    if (ZENROWS_RETAILERS.has(retailerId) && rendered && !rendered.ok) {
+        console.warn(
+            '[buy-read]',
+            retailerId,
+            'zenrows',
+            rendered.reason || 'failed',
+            'direct',
+            (direct && direct.reason) || 'n/a',
+            String(url).slice(0, 120),
+        );
+        return rendered;
+    }
     return rendered && rendered.ok ? rendered : direct;
 }
 
@@ -1156,6 +1171,10 @@ function savedPageHtml(retailerId, url, { batchId, lineId } = {}) {
     }
 }
 
+function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function readProduct({ retailer, url, zip, state, batchId, lineId }) {
     const r = retailers.byId(retailer);
     if (!r) return { ok: false, reason: 'retailer_not_supported', needsPerson: false };
@@ -1166,6 +1185,12 @@ async function readProduct({ retailer, url, zip, state, batchId, lineId }) {
     } else {
         try {
             page = await fetchPage(retailer, url);
+            // Kohl's / Nordstrom / Best Buy blocks are often brief. One quiet retry
+            // recovers more often than sending the shopper straight to manual add.
+            if (!pageIsUsable(retailer, page) && ZENROWS_RETAILERS.has(retailer)) {
+                await sleep(2000);
+                page = await fetchPage(retailer, url);
+            }
         } catch (e) {
             return { ok: false, reason: `fetch_failed: ${e && e.message ? e.message : e}`, needsPerson: true };
         }

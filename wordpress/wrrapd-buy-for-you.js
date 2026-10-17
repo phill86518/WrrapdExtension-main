@@ -272,13 +272,14 @@
     if (l.manual !== 'available' || !canEdit()) return '';
     var asking = S.manualEmailFor === l.id;
     var pop = asking
-      ? '<label class="wb-label" for="wb-manual-email">Your email</label>' +
-        '<input class="wb-input wb-manual-email" id="wb-manual-email" type="email" autocomplete="email" maxlength="120">' +
-        '<div class="wb-manual-actions"><button type="button" class="wb-btn wb-btn-sm" data-act="manual-send" data-line="' + esc(l.id) + '"' + (S.busy ? ' disabled' : '') + '>Send</button>' +
-        '<button type="button" class="wb-btn wb-btn-sm wb-btn-ghost" data-act="manual-no" data-line="' + esc(l.id) + '">No</button></div>'
-      : '<p>Wrrapd can manually add this item to your order, would you like to do so?</p>' +
-        '<div class="wb-manual-actions"><button type="button" class="wb-btn wb-btn-sm" data-act="manual-yes" data-line="' + esc(l.id) + '"' + (S.busy ? ' disabled' : '') + '>Yes</button>' +
-        '<button type="button" class="wb-btn wb-btn-sm wb-btn-ghost" data-act="manual-no" data-line="' + esc(l.id) + '">No</button></div>';
+      ? '<p class="wb-manual-explain">We will email you when this item is ready to add to your order.</p>' +
+        '<label class="wb-label" for="wb-manual-email">Your email</label>' +
+        '<input class="wb-input wb-manual-email" id="wb-manual-email" type="email" autocomplete="email" maxlength="120" placeholder="you@example.com">' +
+        '<div class="wb-manual-actions"><button type="button" class="wb-btn wb-btn-sm" data-act="manual-send" data-line="' + esc(l.id) + '"' + (S.busy ? ' disabled' : '') + '>Email me when ready</button>' +
+        '<button type="button" class="wb-btn wb-btn-sm wb-btn-ghost" data-act="manual-no" data-line="' + esc(l.id) + '">Cancel</button></div>'
+      : '<p>We could not read this item automatically. Want us to add it by hand and email you when it is ready?</p>' +
+        '<div class="wb-manual-actions"><button type="button" class="wb-btn wb-btn-sm" data-act="manual-yes" data-line="' + esc(l.id) + '"' + (S.busy ? ' disabled' : '') + '>Yes, email me</button>' +
+        '<button type="button" class="wb-btn wb-btn-sm wb-btn-ghost" data-act="manual-no" data-line="' + esc(l.id) + '">No thanks</button></div>';
     return '<div class="wb-manual' + (asking ? ' wb-manual-open' : '') + (S.manualShut === l.id ? ' wb-manual-shut' : '') + '">' +
       '<button type="button" class="wb-manual-btn" data-act="manual-open" data-line="' + esc(l.id) + '">' + MAIL_SVG + '<span>Add it manually</span></button>' +
       '<div class="wb-manual-pop" role="dialog" aria-label="Add it manually">' + pop + '</div></div>';

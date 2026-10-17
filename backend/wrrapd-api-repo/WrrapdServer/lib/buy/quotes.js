@@ -178,6 +178,13 @@ async function kickGroups(batchId, kind) {
 function applyRead(line, read, cfg) {
     if (!read.ok) {
         if (read.reason === 'product_list') return markUnavailable(line, 'product_list', 'This link opens a list of items. Paste the link to one product.');
+        if (/^(http_403|blocked|zenrows_)/.test(String(read.reason || ''))) {
+            return markUnavailable(
+                line,
+                read.reason,
+                "We couldn't load this store page just now. Paste the link again in a minute, or ask us to add it by hand.",
+            );
+        }
         if (!read.needsPerson || read.reason === 'blocked' || read.reason === 'no_title') return markUnavailable(line, read.reason);
         line.product = null;
         line.readFailure = read.reason;
