@@ -49,6 +49,18 @@ type Message = {
 
 type Line = { phoneNumber: string; connected: boolean; smsUrl: string; voiceUrl: string };
 
+function messageKind(
+  channel: "sms" | "mms" | "voice",
+  opts?: { recording?: boolean; preview?: string; direction?: "in" | "out" },
+): "Text message" | "Text sent" | "Photo" | "Voicemail" | "Phone call" {
+  if (channel === "mms") return "Photo";
+  if (channel === "voice") {
+    if (opts?.recording || /voicemail/i.test(opts?.preview || "")) return "Voicemail";
+    return "Phone call";
+  }
+  return opts?.direction === "out" ? "Text sent" : "Text message";
+}
+
 type FilterId = "all" | "needs" | "customers" | "applicants" | "team";
 
 const FILTERS: { id: FilterId; label: string }[] = [
@@ -445,6 +457,8 @@ export function ServiceDesk() {
                       </span>
                     </span>
                     <span className="mt-0.5 block text-xs font-semibold uppercase tracking-wide text-[#a88417]">
+                      {messageKind(thread.lastChannel, { preview: thread.lastPreview })}
+                      {" · "}
                       {thread.audienceLabel}
                       {thread.needsReply ? " · needs reply" : ""}
                     </span>
@@ -534,11 +548,21 @@ export function ServiceDesk() {
                     }
                   >
                     <p className="text-[11px] font-bold uppercase tracking-wide opacity-70">
-                      {message.channel === "voice" ? "Call" : message.direction === "out" ? message.actor || "Wrrapd" : "Them"}
+                      {messageKind(message.channel, {
+                        recording: Boolean(message.recordingUrl),
+                        preview: message.body,
+                        direction: message.direction,
+                      })}
+                      {message.direction === "out" && message.actor ? ` · ${message.actor}` : ""}
                       {" · "}
                       {clock(message.createdAt)}
                     </p>
-                    {message.body ? <p className="mt-1 whitespace-pre-wrap">{message.body}</p> : null}
+                    {message.body && !(message.channel === "voice" && /^(incoming call|voicemail|phone call)$/i.test(message.body.trim())) ? (
+                      <p className="mt-1 whitespace-pre-wrap">{message.body}</p>
+                    ) : null}
+                    {message.channel === "voice" && message.recordingUrl ? (
+                      <p className="mt-1 text-xs font-semibold">Voicemail recording, not a text.</p>
+                    ) : null}
                     {typeof message.callDurationSec === "number" ? (
                       <p className="mt-1 text-xs opacity-80">{message.callDurationSec}s · {message.callStatus}</p>
                     ) : null}

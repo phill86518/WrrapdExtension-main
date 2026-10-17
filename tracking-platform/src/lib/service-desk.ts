@@ -307,7 +307,10 @@ async function resolveIdentity(e164: string): Promise<Identity> {
 
 function previewFor(channel: ServiceMessage["channel"], body: string, mediaCount: number): string {
   const text = body.trim();
-  if (channel === "voice") return text || "Phone call";
+  if (channel === "voice") {
+    if (/voicemail/i.test(text)) return "Voicemail";
+    return "Phone call";
+  }
   if (text) return text.slice(0, 160);
   if (mediaCount > 0) return mediaCount === 1 ? "Photo" : `${mediaCount} photos`;
   return "Message";
@@ -421,7 +424,7 @@ export async function attachRecording(callSid: string, fromRaw: string, recordin
       callStatus: "completed",
     });
   }
-  await ref.set({ recordingUrl }, { merge: true });
+  await ref.set({ recordingUrl, body: "Voicemail" }, { merge: true });
   await threadRef(e164).set(
     { lastPreview: "Voicemail", lastChannel: "voice", updatedAt: new Date().toISOString() },
     { merge: true },

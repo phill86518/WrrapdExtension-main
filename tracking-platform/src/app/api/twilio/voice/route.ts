@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
       sid: callSid,
       fromRaw: from,
       channel: "voice",
-      body: "Incoming call",
+      body: "Phone call",
       callStatus: params.CallStatus || "ringing",
     });
     if (thread && !thread.optedOut) {
