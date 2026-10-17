@@ -58,7 +58,10 @@ test('Ulta page reads go through ZenRows and errors do not include the key', asy
     });
     assert.equal(noHeading.ok, true);
     assert.equal(tries.length, 2);
-    assert.doesNotMatch(tries[1], /wait_for/);
+    // Retry keeps wait_for=h1 (Kohl's never goes network-idle) and adds antibot.
+    assert.match(tries[1], /wait_for=h1/);
+    assert.match(tries[1], /antibot=true/);
+    assert.doesNotMatch(tries[0], /antibot=true/);
     if (previous == null) delete process.env.ZENROWS_API_KEY;
     else process.env.ZENROWS_API_KEY = previous;
 });

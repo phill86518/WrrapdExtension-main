@@ -33,10 +33,12 @@ test('walmart does not use a date from a different ZIP the shopper set', () => {
 });
 
 test('a delivery range uses the later day, and each page keeps its own date', () => {
-    const range = reader.standardFromPage('<p>Arrives between Thu, Oct 15 and Fri, Oct 16</p>', 1000);
-    assert.equal(range.arrivalDate, '2026-10-16');
-    const one = reader.standardFromPage('<p>Get it by Wednesday, October 21</p>', 1000);
-    assert.equal(one.arrivalDate, '2026-10-21');
+    // Month/day strings without a year roll forward when the day is already past —
+    // use mid-December so this stays stable through late October / November.
+    const range = reader.standardFromPage('<p>Arrives between Mon, Dec 14 and Tue, Dec 15</p>', 1000);
+    assert.equal(range.arrivalDate, '2026-12-15');
+    const one = reader.standardFromPage('<p>Get it by Wednesday, December 21</p>', 1000);
+    assert.equal(one.arrivalDate, '2026-12-21');
 });
 
 test('a page that ships to a different ZIP is refused', () => {
@@ -105,9 +107,9 @@ test('best buy uses the standard date for the giftee ZIP and skips express', () 
 });
 
 test('a dashed arrival window uses the last day', () => {
-    const html = '<p>Shipping Arrives Tue, Oct 20 - Fri, Oct 23 Free With a $49 Total Purchase</p>';
+    const html = '<p>Shipping Arrives Mon, Dec 14 - Fri, Dec 18 Free With a $49 Total Purchase</p>';
     const ship = reader.standardFromPage(html, 4799);
-    assert.equal(ship.arrivalDate, '2026-10-23');
+    assert.equal(ship.arrivalDate, '2026-12-18');
 });
 
 test('best buy under $35 uses $5.99 when the page has no price', () => {
