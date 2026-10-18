@@ -25,7 +25,17 @@ async function fetchOnce(url, doFetch, waitFor, ms, cookie, { antibot } = {}) {
     const timer = setTimeout(() => ctrl.abort(), ms);
     try {
         const resp = await doFetch(api, { signal: ctrl.signal, headers: cookie ? { Cookie: cookie } : undefined });
-        if (!resp.ok) return { ok: false, reason: `zenrows_http_${resp.status}` };
+        if (!resp.ok) {
+            let code = '';
+            try {
+                const errBody = await resp.text();
+                code = (JSON.parse(errBody).code || '').toString().slice(0, 24);
+            } catch {
+                /* ignore */
+            }
+            if (code) console.warn('[zenrows]', `http_${resp.status}`, code, String(url).slice(0, 100));
+            return { ok: false, reason: code ? `zenrows_http_${resp.status}_${code}` : `zenrows_http_${resp.status}` };
+        }
         const buf = Buffer.from(await resp.arrayBuffer());
         const html = buf.subarray(0, MAX_BYTES).toString('utf8');
         if (html.length < 500) return { ok: false, reason: 'zenrows_empty' };

@@ -1052,25 +1052,42 @@ function parseGeminiJson(text) {
     try { return JSON.parse(body.slice(start, end + 1)); } catch { return null; }
 }
 
-/** Asks Gemini to open a public product URL. Used when the retailer sends our server a bot page. */
-async function askGeminiProduct(url, zip) {
+function skuHintFromUrl(url) {
+    try {
+        const u = new URL(url);
+        for (const key of ['topSkuId', 'skuId', 'sku', 'SKU']) {
+            const v = u.searchParams.get(key);
+            if (v) return `${key}=${v}`;
+        }
+    } catch {
+        /* ignore */
+    }
+    return '';
+}
+
+/**
+ * Asks Gemini to open a public product URL (url_context).
+ * Used when ZenRows/direct get a bot wall — Kohl's currently RESP001s every ZenRows attempt.
+ */
+async function askGeminiProduct(url, zip, retailerId) {
     const key = geminiKey();
     if (!key) return null;
+    const retailer = String(retailerId || 'retailer');
+    const skuHint = skuHintFromUrl(url);
     const prompt = [
-        'Read the selected product on this page. Ignore sidebar ads and other products.',
+        'Open this product URL and extract the selected item. Ignore sidebar ads.',
         url,
-        zip ? `The shopper ZIP is ${zip}.` : '',
-        'Reply with JSON only: {"title":"","priceUsd":null,"compareAtUsd":null,"shippingUsd":null,"arrivalDate":null,"shipToZip":null}',
-        'priceUsd is the price the shopper would pay now for the selected color and size. If the page shows New Markdown, a sale price, or a lower price next to a crossed-out price, use that lower price. Do not use the crossed-out price.',
-        'compareAtUsd is the crossed-out original price, or null when there is none.',
-        'If the page shows one current price for that selection, return that number. If it only shows a range and no size or color is selected, set priceUsd to null.',
-        'shippingUsd is standard shipping to the shopper ZIP. Use 0 when that shipping is free.',
-        'arrivalDate is the standard arrival date for that selection. "Free arrives Tue, Oct 20" is 2026-10-20. "Arrives between Thu, Oct 15 and Fri, Oct 16" is the last day, 2026-10-16. If the year is missing and the date is still ahead, use 2026.',
-        'shipToZip is the 5-digit ZIP shown next to Shipping to. Use null when no ZIP is shown.',
-        'Do not leave priceUsd or arrivalDate null when the page shows them. Do not use a sidebar or recommendation price.',
-    ].filter(Boolean).join(' ');
+        skuHint ? `The selected SKU in the URL is ${skuHint}. Use that color/size price.` : '',
+        zip ? `Shopper ZIP ${zip}.` : '',
+        'Reply JSON only: {"title":"","brand":"","imageUrl":"","priceUsd":null,"compareAtUsd":null,"shippingUsd":null,"arrivalDate":null,"shipToZip":null,"inStock":null,"variantGroups":[{"name":"Color","options":[],"selected":null},{"name":"Size","options":[],"selected":null}]}',
+        'priceUsd must be the current dollar amount for the selected SKU when the page shows one. Prefer sale over crossed-out. Never invent.',
+        'imageUrl is the main product https photo.',
+        'shippingUsd is non-member standard shipping; 0 only if free for every shopper with no minimum; otherwise null when unsure.',
+        'arrivalDate YYYY-MM-DD when shown. shipToZip is the Shipping-to ZIP when shown.',
+        'Fill variantGroups Color/Size options and selected when visible.',
+    ].filter(Boolean).join('\n');
     const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 28000);
+    const timer = setTimeout(() => ctrl.abort(), 32000);
     try {
         const resp = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent', {
             method: 'POST',
@@ -1103,10 +1120,13 @@ async function askGeminiProduct(url, zip) {
         const choicePrompt = zipMismatch
             ? `This page ships to ${shipToZip}. Set the page to ${zip}, then add the link again.`
             : (pagePriceCents == null ? 'Choose a size and color on the product page, then add the link again.' : '');
+        const brand = String((facts && facts.brand) || '').trim().slice(0, 120);
+        const imageUrl = safeImageUrl((facts && facts.imageUrl) || '');
+        const inStock = facts && facts.inStock === false ? false : facts && facts.inStock === true ? true : null;
         return {
             title: title.slice(0, 300),
-            brand: '',
-            imageUrl: '',
+            brand,
+            imageUrl,
             category: '',
             packageDimensions: null,
             pagePriceCents,
@@ -1116,9 +1136,9 @@ async function askGeminiProduct(url, zip) {
                 note: shipCents === 0 ? 'Free standard shipping.' : '',
             },
             pageNotes: [],
-            inStock: null,
-            isElectronics: looksElectronic('nordstrom', title),
-            variantGroups: [],
+            inStock,
+            isElectronics: looksElectronic(retailer, title, brand),
+            variantGroups: cleanVariantGroups(facts && facts.variantGroups),
             choicePrompt,
             readBy: 'gemini',
         };
@@ -1128,6 +1148,47 @@ async function askGeminiProduct(url, zip) {
         clearTimeout(timer);
     }
 }
+
+/** Build a successful readProduct payload from a Gemini (or similar) product object. */
+async function productFromBrowse(retailer, retailerMeta, product, zip) {
+    let ship = product.standardShip || { cents: null, arrivalDate: null, note: '' };
+    // Gemini sometimes claims free shipping when Kohl's / Best Buy still charge under the threshold.
+    if (ship.cents === 0) {
+        const defaults = withDefaultShip(retailer, { cents: null, arrivalDate: ship.arrivalDate, note: '' }, product.pagePriceCents || 0);
+        if (defaults && defaults.cents != null && defaults.cents > 0) {
+            ship = { ...ship, cents: null, note: '' };
+        }
+    }
+    if (!product.choicePrompt) ship = withDefaultShip(retailer, ship, product.pagePriceCents || 0) || ship;
+    const amazonCategory = await categories.categorize({
+        retailer,
+        retailerName: retailerMeta.name,
+        html: '',
+        title: product.title,
+        brand: product.brand,
+        category: product.category,
+    });
+    const pageOffer =
+        product.pagePriceCents && ship && ship.cents != null
+            ? { itemPriceCents: product.pagePriceCents, shippingOptions: [ship] }
+            : null;
+    return {
+        ok: true,
+        product: {
+            ...product,
+            standardShip: ship,
+            amazonCategory,
+            pageOffer,
+            choicePrompt: product.choicePrompt || '',
+            readAt: new Date().toISOString(),
+            readBy: product.readBy || 'gemini',
+        },
+    };
+}
+
+/** Stores where ZenRows/direct often die — Gemini url_context is the reliable path. */
+const GEMINI_FIRST_RETAILERS = new Set(['kohls']);
+const GEMINI_FALLBACK_RETAILERS = new Set(['kohls', 'nordstrom', 'bestbuy']);
 
 function savedPageHtml(retailerId, url, { batchId, lineId } = {}) {
     try {
@@ -1179,6 +1240,35 @@ async function readProduct({ retailer, url, zip, state, batchId, lineId }) {
     const r = retailers.byId(retailer);
     if (!r) return { ok: false, reason: 'retailer_not_supported', needsPerson: false };
     const savedHtml = savedPageHtml(retailer, url, { batchId, lineId });
+
+    // Kohl's ZenRows returns RESP001 every time (direct 403). Gemini url_context is the
+    // only reliable read — never burn 90s on ZenRows for these stores when Gemini is configured.
+    if (!savedHtml && GEMINI_FIRST_RETAILERS.has(retailer) && geminiKey()) {
+        let browsed = await askGeminiProduct(url, zip, retailer);
+        // Price is required for a usable cart line; retry once when the title landed without it.
+        if (browsed && browsed.title && browsed.pagePriceCents == null) {
+            await sleep(1200);
+            const priced = await askGeminiProduct(url, zip, retailer);
+            if (priced && priced.title && priced.pagePriceCents != null) browsed = priced;
+        }
+        if (!browsed || !browsed.title) {
+            await sleep(1500);
+            browsed = await askGeminiProduct(url, zip, retailer);
+        }
+        if (browsed && browsed.title) {
+            console.log(
+                '[buy-read]',
+                retailer,
+                'gemini_first ok',
+                browsed.pagePriceCents != null ? `price=${browsed.pagePriceCents}` : 'price=null',
+                String(url).slice(0, 100),
+            );
+            return productFromBrowse(retailer, r, browsed, zip);
+        }
+        console.warn('[buy-read]', retailer, 'gemini_first failed', String(url).slice(0, 120));
+        return { ok: false, reason: 'blocked', needsPerson: true };
+    }
+
     let page;
     if (savedHtml) {
         page = { ok: true, html: savedHtml, finalUrl: url, fromSavedPage: true };
@@ -1192,15 +1282,28 @@ async function readProduct({ retailer, url, zip, state, batchId, lineId }) {
                 page = await fetchPage(retailer, url);
             }
         } catch (e) {
+            if (GEMINI_FALLBACK_RETAILERS.has(retailer)) {
+                const browsed = await askGeminiProduct(url, zip, retailer);
+                if (browsed && browsed.title) return productFromBrowse(retailer, r, browsed, zip);
+            }
             return { ok: false, reason: `fetch_failed: ${e && e.message ? e.message : e}`, needsPerson: true };
         }
     }
-        if (!page.ok) return { ok: false, reason: page.reason, needsPerson: false };
+    if (!page.ok || !pageIsUsable(retailer, page)) {
+        if (GEMINI_FALLBACK_RETAILERS.has(retailer)) {
+            const browsed = await askGeminiProduct(url, zip, retailer);
+            if (browsed && browsed.title) {
+                console.log('[buy-read]', retailer, 'gemini_fallback ok after', page.reason || 'unusable', String(url).slice(0, 120));
+                return productFromBrowse(retailer, r, browsed, zip);
+            }
+        }
+        if (!page.ok) return { ok: false, reason: page.reason, needsPerson: true };
+    }
     if (retailer === 'nordstrom') {
         const parsed = nordstromShell(page.html) ? null : nordstromFromHtml(page.html, url, zip);
-        const product = parsed || (page.fromSavedPage ? null : await askGeminiProduct(url, zip));
+        const product = parsed || (page.fromSavedPage ? null : await askGeminiProduct(url, zip, retailer));
         if (product) {
-            if (product.pagePriceCents) product.pagePriceCents = struckSaleCents(page.html, product.pagePriceCents);
+            if (product.pagePriceCents && page.html) product.pagePriceCents = struckSaleCents(page.html, product.pagePriceCents);
             const amazonCategory = await categories.categorize({
                 retailer,
                 retailerName: r.name,
@@ -1367,6 +1470,6 @@ async function readProduct({ retailer, url, zip, state, batchId, lineId }) {
 }
 
 module.exports = {
-    readProduct, askGrok, looksElectronic, priceAppearsInPage, jsonLdProducts, visibleText, fetchPage, usablePage, DIRECT_MS, standardFromPage, walmartShip, bestbuyShip, pageShipZip, zipMismatchPrompt, kohlsSkuColor, kohlsColorNames, applyKohlsColors, withDefaultShip, targetFulfillment,
-    nordstromShell, nordstromFromHtml, struckSaleCents, savedPageHtml, EXTERNAL_PAGES_DIR,
+    readProduct, askGrok, askGeminiProduct, looksElectronic, priceAppearsInPage, jsonLdProducts, visibleText, fetchPage, usablePage, DIRECT_MS, standardFromPage, walmartShip, bestbuyShip, pageShipZip, zipMismatchPrompt, kohlsSkuColor, kohlsColorNames, applyKohlsColors, withDefaultShip, targetFulfillment,
+    nordstromShell, nordstromFromHtml, struckSaleCents, savedPageHtml, EXTERNAL_PAGES_DIR, GEMINI_FIRST_RETAILERS,
 };

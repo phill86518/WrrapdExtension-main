@@ -44,15 +44,30 @@ test('Ulta page reads go through ZenRows and errors do not include the key', asy
     assert.equal(seen.length, 1);
     assert.equal(JSON.stringify(page).includes('test-key-should-not-leak'), false);
     const missed = await zenrows.fetchHtml('https://www.ulta.com/p/x-pimprod1', {
-        fetch: async () => ({ ok: false, status: 422, headers: { get: () => '' }, arrayBuffer: async () => Buffer.from('secret') }),
+        fetch: async () => ({
+            ok: false,
+            status: 422,
+            headers: { get: () => '' },
+            text: async () => JSON.stringify({ code: 'RESP001' }),
+            arrayBuffer: async () => Buffer.from('secret'),
+        }),
     });
-    assert.equal(missed.reason, 'zenrows_http_422');
+    assert.equal(missed.reason, 'zenrows_http_422_RESP001');
     assert.equal(missed.reason.includes('test-key'), false);
+    assert.equal(reader.GEMINI_FIRST_RETAILERS.has('kohls'), true);
     const tries = [];
     const noHeading = await zenrows.fetchHtml('https://www.kohls.com/product/prd-1.jsp', {
         fetch: async (api) => {
             tries.push(String(api));
-            if (tries.length === 1) return { ok: false, status: 422, headers: { get: () => '' }, arrayBuffer: async () => Buffer.from('') };
+            if (tries.length === 1) {
+                return {
+                    ok: false,
+                    status: 422,
+                    headers: { get: () => '' },
+                    text: async () => JSON.stringify({ code: 'RESP001' }),
+                    arrayBuffer: async () => Buffer.from(''),
+                };
+            }
             return { ok: true, headers: { get: () => '' }, arrayBuffer: async () => Buffer.from('<html>' + 'kohls page '.repeat(80) + '</html>') };
         },
     });
