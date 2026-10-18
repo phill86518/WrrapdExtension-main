@@ -9,6 +9,7 @@ const grokClient = require('../grok-client');
 const retailers = require('./retailers');
 const categories = require('./categories');
 const zenrows = require('./zenrows');
+const brightdata = require('./brightdata');
 
 const EXTERNAL_PAGES_DIR = path.resolve(__dirname, '..', '..', '..', '..', 'external', 'pages');
 
@@ -97,8 +98,35 @@ function pageIsUsable(retailerId, page) {
 
 /** These stores answer a plain request with a bot page or a page that never shows the delivery date. */
 const ZENROWS_RETAILERS = new Set(['nordstrom', 'kohls', 'bestbuy']);
+/** Prefer Bright Data Web Unlocker here — ZenRows RESP001s on Kohl's. */
+const BRIGHTDATA_RETAILERS = new Set(['kohls', 'nordstrom', 'bestbuy']);
+
+async function fetchViaBrightData(retailerId, url, extraHosts) {
+    const page = await brightdata.fetchHtml(url);
+    if (!page.ok) return page;
+    try {
+        const host = new URL(page.finalUrl || url).hostname;
+        if (!hostAllowed(retailerId, host, extraHosts)) return { ok: false, reason: 'redirect_off_site' };
+    } catch (_) {
+        return { ok: false, reason: 'brightdata_failed' };
+    }
+    return page;
+}
 
 async function fetchPage(retailerId, url, extraHosts) {
+    let bright = null;
+    if (BRIGHTDATA_RETAILERS.has(retailerId) && brightdata.isConfigured()) {
+        bright = await fetchViaBrightData(retailerId, url, extraHosts);
+        if (pageIsUsable(retailerId, bright)) return bright;
+        console.warn(
+            '[buy-read]',
+            retailerId,
+            'brightdata',
+            (bright && bright.reason) || 'failed',
+            String(url).slice(0, 120),
+        );
+    }
+
     let rendered = null;
     if (ZENROWS_RETAILERS.has(retailerId)) {
         rendered = await fetchViaZenrows(retailerId, url, extraHosts);
@@ -108,9 +136,9 @@ async function fetchPage(retailerId, url, extraHosts) {
     if (pageIsUsable(retailerId, direct)) return direct;
     if (!rendered) rendered = await fetchViaZenrows(retailerId, url, extraHosts);
     if (pageIsUsable(retailerId, rendered)) return rendered;
-    // Prefer the ZenRows failure reason for stores that require it — a bare
-    // direct http_403 hides that the premium fetch also failed and looks like
-    // the shopper's link is broken.
+    // Prefer unlocker failure reasons for hard stores — a bare direct http_403
+    // hides that the premium fetch also failed and looks like a bad shopper link.
+    if (bright && !bright.ok) return bright;
     if (ZENROWS_RETAILERS.has(retailerId) && rendered && !rendered.ok) {
         console.warn(
             '[buy-read]',
@@ -1241,9 +1269,32 @@ async function readProduct({ retailer, url, zip, state, batchId, lineId }) {
     if (!r) return { ok: false, reason: 'retailer_not_supported', needsPerson: false };
     const savedHtml = savedPageHtml(retailer, url, { batchId, lineId });
 
-    // Kohl's ZenRows returns RESP001 every time (direct 403). Gemini url_context is the
-    // only reliable read — never burn 90s on ZenRows for these stores when Gemini is configured.
-    if (!savedHtml && GEMINI_FIRST_RETAILERS.has(retailer) && geminiKey()) {
+    // Kohl's: Bright Data pre-built product scraper (structured price) before HTML/Gemini.
+    if (!savedHtml && retailer === 'kohls' && brightdata.isConfigured()) {
+        const scraped = await brightdata.scrapeKohlsProduct(url);
+        if (scraped.ok && scraped.product && scraped.product.title && scraped.product.pagePriceCents != null) {
+            console.log(
+                '[buy-read]',
+                'kohls',
+                'brightdata_scraper ok',
+                `price=${scraped.product.pagePriceCents}`,
+                String(url).slice(0, 100),
+            );
+            return productFromBrowse(retailer, r, scraped.product, zip);
+        }
+        console.warn(
+            '[buy-read]',
+            'kohls',
+            'brightdata_scraper',
+            (scraped && scraped.reason) || 'miss',
+            scraped.ok && scraped.product ? `price=${scraped.product.pagePriceCents}` : '',
+            String(url).slice(0, 100),
+        );
+    }
+
+    // Without Bright Data, Kohl's ZenRows RESP001s every time — Gemini opens the URL first.
+    // When Bright Data is configured, fetchPage tries Web Unlocker HTML before Gemini.
+    if (!savedHtml && GEMINI_FIRST_RETAILERS.has(retailer) && geminiKey() && !brightdata.isConfigured()) {
         let browsed = await askGeminiProduct(url, zip, retailer);
         // Price is required for a usable cart line; retry once when the title landed without it.
         if (browsed && browsed.title && browsed.pagePriceCents == null) {
