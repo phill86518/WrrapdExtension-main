@@ -97,7 +97,8 @@ function pageIsUsable(retailerId, page) {
 }
 
 /** These stores answer a plain request with a bot page or a page that never shows the delivery date. */
-const ZENROWS_RETAILERS = new Set(['nordstrom', 'kohls', 'bestbuy']);
+/** Kohl's: ZenRows RESP001s every time — skip it (Bright Data scraper → Unlocker → Gemini). */
+const ZENROWS_RETAILERS = new Set(['nordstrom', 'bestbuy']);
 /** Prefer Bright Data Web Unlocker here — ZenRows RESP001s on Kohl's. */
 const BRIGHTDATA_RETAILERS = new Set(['kohls', 'nordstrom', 'bestbuy']);
 
@@ -1269,38 +1270,38 @@ async function readProduct({ retailer, url, zip, state, batchId, lineId }) {
     if (!r) return { ok: false, reason: 'retailer_not_supported', needsPerson: false };
     const savedHtml = savedPageHtml(retailer, url, { batchId, lineId });
 
-    // Kohl's: Bright Data pre-built product scraper (structured price) before HTML/Gemini.
-    if (!savedHtml && retailer === 'kohls' && brightdata.isConfigured()) {
-        const scraped = await brightdata.scrapeKohlsProduct(url);
-        if (scraped.ok && scraped.product && scraped.product.title && scraped.product.pagePriceCents != null) {
-            console.log(
-                '[buy-read]',
-                'kohls',
-                'brightdata_scraper ok',
-                `price=${scraped.product.pagePriceCents}`,
-                String(url).slice(0, 100),
-            );
-            return productFromBrowse(retailer, r, scraped.product, zip);
-        }
-        console.warn(
-            '[buy-read]',
-            'kohls',
-            'brightdata_scraper',
-            (scraped && scraped.reason) || 'miss',
-            scraped.ok && scraped.product ? `price=${scraped.product.pagePriceCents}` : '',
-            String(url).slice(0, 100),
-        );
-    }
-
-    // Without Bright Data, Kohl's ZenRows RESP001s every time — Gemini opens the URL first.
-    // When Bright Data is configured, fetchPage tries Web Unlocker HTML before Gemini.
-    if (!savedHtml && GEMINI_FIRST_RETAILERS.has(retailer) && geminiKey() && !brightdata.isConfigured()) {
+    // Kohl's: Gemini first (fast). Bright Data scraper often returns error_code=blocked;
+    // Unlocker needs a zone in the Bright Data CP. Try scraper when Gemini misses price.
+    if (!savedHtml && GEMINI_FIRST_RETAILERS.has(retailer) && geminiKey()) {
         let browsed = await askGeminiProduct(url, zip, retailer);
         // Price is required for a usable cart line; retry once when the title landed without it.
         if (browsed && browsed.title && browsed.pagePriceCents == null) {
             await sleep(1200);
             const priced = await askGeminiProduct(url, zip, retailer);
             if (priced && priced.title && priced.pagePriceCents != null) browsed = priced;
+        }
+        // Bright Data Kohl's scraper is often blocked (error_code=blocked) and can take
+        // ~45s — only burn that when Gemini returned nothing usable.
+        if ((!browsed || !browsed.title) && retailer === 'kohls' && brightdata.isConfigured()) {
+            const scraped = await brightdata.scrapeKohlsProduct(url);
+            if (scraped.ok && scraped.product && scraped.product.title && scraped.product.pagePriceCents != null) {
+                console.log(
+                    '[buy-read]',
+                    'kohls',
+                    'brightdata_scraper ok',
+                    `price=${scraped.product.pagePriceCents}`,
+                    String(url).slice(0, 100),
+                );
+                return productFromBrowse(retailer, r, scraped.product, zip);
+            }
+            console.warn(
+                '[buy-read]',
+                'kohls',
+                'brightdata_scraper',
+                (scraped && scraped.reason) || 'miss',
+                scraped.ok && scraped.product ? `price=${scraped.product.pagePriceCents}` : '',
+                String(url).slice(0, 100),
+            );
         }
         if (!browsed || !browsed.title) {
             await sleep(1500);
@@ -1318,6 +1319,27 @@ async function readProduct({ retailer, url, zip, state, batchId, lineId }) {
         }
         console.warn('[buy-read]', retailer, 'gemini_first failed', String(url).slice(0, 120));
         return { ok: false, reason: 'blocked', needsPerson: true };
+    }
+
+    if (!savedHtml && retailer === 'kohls' && brightdata.isConfigured()) {
+        const scraped = await brightdata.scrapeKohlsProduct(url);
+        if (scraped.ok && scraped.product && scraped.product.title && scraped.product.pagePriceCents != null) {
+            console.log(
+                '[buy-read]',
+                'kohls',
+                'brightdata_scraper ok',
+                `price=${scraped.product.pagePriceCents}`,
+                String(url).slice(0, 100),
+            );
+            return productFromBrowse(retailer, r, scraped.product, zip);
+        }
+        console.warn(
+            '[buy-read]',
+            'kohls',
+            'brightdata_scraper',
+            (scraped && scraped.reason) || 'miss',
+            String(url).slice(0, 100),
+        );
     }
 
     let page;

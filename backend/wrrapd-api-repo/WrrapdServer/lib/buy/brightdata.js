@@ -7,7 +7,8 @@
  */
 const MAX_BYTES = 3 * 1024 * 1024;
 const TIMEOUT_MS = 90000;
-const SCRAPE_TIMEOUT_MS = 70000;
+/** Kohl's often returns error_code=blocked; keep this short so Gemini can take over. */
+const SCRAPE_TIMEOUT_MS = 45000;
 const KOHLS_DATASET_ID =
     process.env.BRIGHTDATA_KOHLS_DATASET_ID || 'gd_mlji2hi729x1g0vg4i';
 
@@ -149,15 +150,47 @@ function productFromKohlsRecord(row, url) {
     };
 }
 
-async function downloadSnapshot(snapshotId, doFetch, key) {
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), SCRAPE_TIMEOUT_MS);
-    try {
-        const started = Date.now();
-        while (Date.now() - started < SCRAPE_TIMEOUT_MS) {
+function rowsFromPayload(data) {
+    if (Array.isArray(data)) return data;
+    if (data && Array.isArray(data.data)) return data.data;
+    if (data && typeof data === 'object') return [data];
+    return [];
+}
+
+function reasonFromRow(row) {
+    if (!row || typeof row !== 'object') return 'brightdata_kohls_empty';
+    const code = String(row.error_code || '').toLowerCase();
+    const err = String(row.error || '').toLowerCase();
+    if (code === 'blocked' || /403|forbidden|access denied|blocked/.test(err)) {
+        return 'brightdata_kohls_blocked';
+    }
+    if (row.error || row.error_code) return 'brightdata_kohls_error';
+    return null;
+}
+
+async function waitForSnapshot(snapshotId, doFetch, key, signal) {
+    const started = Date.now();
+    while (Date.now() - started < SCRAPE_TIMEOUT_MS) {
+        if (signal && signal.aborted) throw new Error('AbortError');
+        const mon = await doFetch(
+            `https://api.brightdata.com/datasets/v3/progress/${encodeURIComponent(snapshotId)}`,
+            { headers: { Authorization: `Bearer ${key}` }, signal },
+        );
+        let status = '';
+        try {
+            const body = await mon.json();
+            status = String((body && body.status) || '');
+            if (status === 'failed') {
+                console.warn('[brightdata-kohls] progress failed', snapshotId, JSON.stringify(body).slice(0, 200));
+                return null;
+            }
+        } catch {
+            status = '';
+        }
+        if (status === 'ready' || !status) {
             const resp = await doFetch(
                 `https://api.brightdata.com/datasets/v3/snapshot/${encodeURIComponent(snapshotId)}?format=json`,
-                { headers: { Authorization: `Bearer ${key}` }, signal: ctrl.signal },
+                { headers: { Authorization: `Bearer ${key}` }, signal },
             );
             if (resp.status === 200) {
                 const text = await resp.text();
@@ -171,16 +204,15 @@ async function downloadSnapshot(snapshotId, doFetch, key) {
                 console.warn('[brightdata-kohls] snapshot', resp.status, snapshotId);
                 return null;
             }
-            await new Promise((r) => setTimeout(r, 3000));
         }
-        return null;
-    } finally {
-        clearTimeout(timer);
+        await new Promise((r) => setTimeout(r, 4000));
     }
+    return null;
 }
 
 /**
  * Live Kohl's product via pre-built dataset scraper gd_mlji2hi729x1g0vg4i.
+ * Uses trigger → progress → snapshot (sync /scrape often returns 202).
  * @returns {Promise<{ ok: true, product: object, record: object } | { ok: false, reason: string }>}
  */
 async function scrapeKohlsProduct(url, deps) {
@@ -188,19 +220,24 @@ async function scrapeKohlsProduct(url, deps) {
     if (!key) return { ok: false, reason: 'brightdata_not_configured' };
     const doFetch = (deps && deps.fetch) || fetch;
     const datasetId = String((deps && deps.datasetId) || KOHLS_DATASET_ID);
-    const endpoint = `https://api.brightdata.com/datasets/v3/scrape?dataset_id=${encodeURIComponent(datasetId)}&format=json&include_errors=true`;
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), SCRAPE_TIMEOUT_MS);
+    const authHeaders = {
+        Authorization: `Bearer ${key}`,
+        'Content-Type': 'application/json',
+    };
+    const payload = [{ url: String(url) }];
+
     try {
-        // Bright Data accepts a bare URL array (docs + MCP guidance) for this scraper.
-        const resp = await doFetch(endpoint, {
+        // Prefer async trigger + poll — sync /scrape frequently returns 202 for Kohl's.
+        const triggerUrl =
+            `https://api.brightdata.com/datasets/v3/trigger?dataset_id=${encodeURIComponent(datasetId)}` +
+            '&format=json&include_errors=true';
+        const resp = await doFetch(triggerUrl, {
             method: 'POST',
             signal: ctrl.signal,
-            headers: {
-                Authorization: `Bearer ${key}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify([{ url: String(url) }]),
+            headers: authHeaders,
+            body: JSON.stringify(payload),
         });
         const text = await resp.text();
         let data;
@@ -210,18 +247,21 @@ async function scrapeKohlsProduct(url, deps) {
             data = null;
         }
 
-        if (resp.status === 202 && data && data.snapshot_id) {
-            data = await downloadSnapshot(data.snapshot_id, doFetch, key);
-        } else if (!resp.ok) {
+        if (!resp.ok) {
             console.warn('[brightdata-kohls]', `http_${resp.status}`, text.slice(0, 160).replace(/\s+/g, ' '));
             return { ok: false, reason: `brightdata_scrape_${resp.status}` };
         }
 
-        const rows = Array.isArray(data) ? data : data && Array.isArray(data.data) ? data.data : data ? [data] : [];
-        const row = rows.find((r) => r && typeof r === 'object' && !r.error) || rows[0];
-        if (!row || row.error) {
-            return { ok: false, reason: 'brightdata_kohls_empty' };
+        if (data && data.snapshot_id) {
+            data = await waitForSnapshot(data.snapshot_id, doFetch, key, ctrl.signal);
         }
+
+        const rows = rowsFromPayload(data);
+        const row = rows.find((r) => r && typeof r === 'object' && !r.error && !r.error_code) || rows[0];
+        const rowReason = reasonFromRow(row);
+        if (rowReason) return { ok: false, reason: rowReason };
+        if (!row) return { ok: false, reason: 'brightdata_kohls_empty' };
+
         const product = productFromKohlsRecord(row, url);
         if (!product || !product.title) return { ok: false, reason: 'brightdata_kohls_no_title' };
         return { ok: true, product, record: row };
@@ -267,11 +307,15 @@ async function fetchHtml(url, deps) {
         if (!resp.ok) {
             let code = '';
             try {
-                code = (JSON.parse(text).error_code || JSON.parse(text).error || '').toString().slice(0, 40);
+                const parsed = JSON.parse(text);
+                code = (parsed.error_code || parsed.error || '').toString().slice(0, 80);
             } catch {
                 code = text.slice(0, 80).replace(/\s+/g, ' ');
             }
             console.warn('[brightdata]', `http_${resp.status}`, code || '', String(url).slice(0, 100));
+            if (/zone .+ not found|zone_not_found/i.test(code || text)) {
+                return { ok: false, reason: 'brightdata_zone_missing' };
+            }
             return { ok: false, reason: `brightdata_http_${resp.status}` };
         }
         const html = Buffer.from(text).subarray(0, MAX_BYTES).toString('utf8');

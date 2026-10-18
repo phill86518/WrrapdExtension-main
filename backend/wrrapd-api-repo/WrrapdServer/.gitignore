@@ -3,11 +3,13 @@ no-upload/
 orders/.pending-final-shipping-*.json
 customers/email_to_customer_id.json
 .env
+data/buy-browser-profiles/
 data/extension-installs.json
 data/facebook-post-log.json
 data/facebook-post-log.json.tmp
 data/flower-offers.json
 data/flower-offers.json.tmp
+data/w9/
 server-test.js
 venv/
 config/

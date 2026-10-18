@@ -4,7 +4,7 @@
 
 ```bash
 BRIGHTDATA_API_KEY=your_api_token_here
-BRIGHTDATA_UNLOCKER_ZONE=mcp_unlocker
+BRIGHTDATA_UNLOCKER_ZONE=mcp_unlocker   # must exist in Bright Data CP → Zones
 BRIGHTDATA_KOHLS_DATASET_ID=gd_mlji2hi729x1g0vg4i
 ```
 
@@ -14,25 +14,38 @@ Pre-built scraper **Kohl's Products unified schema** (`gd_mlji2hi729x1g0vg4i`):
 
 ```bash
 curl -X POST \
-  "https://api.brightdata.com/datasets/v3/scrape?dataset_id=gd_mlji2hi729x1g0vg4i&format=json" \
+  "https://api.brightdata.com/datasets/v3/trigger?dataset_id=gd_mlji2hi729x1g0vg4i&format=json&include_errors=true" \
   -H "Authorization: Bearer $BRIGHTDATA_API_KEY" \
   -H "Content-Type: application/json" \
   -d '[{"url":"https://www.kohls.com/product/prd-7513461/lifestride-london-3-womens-loafers.jsp?skuId=50653163"}]'
 ```
 
-`lib/buy/brightdata.js` → `scrapeKohlsProduct()` runs that call. Shipping is often missing from the record; we keep Kohl's standard ship defaults ($8.95 / free over $49) until Browser API can compute ZIP-specific shipping.
+Poll `GET /datasets/v3/progress/{snapshot_id}` until `ready`, then download  
+`GET /datasets/v3/snapshot/{snapshot_id}?format=json`.
 
-## Web Unlocker (HTML fallback)
+`lib/buy/brightdata.js` → `scrapeKohlsProduct()` runs that flow. When Kohl's returns  
+`error_code: blocked`, the buy reader falls through to **Gemini** (and Unlocker HTML if a zone exists).
 
-`POST https://api.brightdata.com/request` with `render: "true"`.  
-Zone must be a **Web Unlocker** zone ([zones](https://brightdata.com/cp/zones)); MCP free tier often uses `mcp_unlocker`.
+Shipping is often missing from the record; we keep Kohl's standard ship defaults ($8.95 / free over $49) until Browser API can compute ZIP-specific shipping.
 
-Restart after setting the key:
+## Web Unlocker (HTML fallback) — create a zone
+
+Account status with only a Scraper API token and **no zones** looks like:
+
+`can_make_requests: false`, `auth_fail_reason: zone_not_found`
+
+1. Open [Bright Data Zones](https://brightdata.com/cp/zones) (or Web Unlocker quickstart).
+2. Create a **Web Unlocker** zone (name e.g. `wrrapd_unlocker` or `mcp_unlocker`).
+3. Token must allow **Admin/Ops** to create zones via API; otherwise create in the CP UI.
+4. Set `BRIGHTDATA_UNLOCKER_ZONE` to that exact zone name.
+5. Restart:
 
 ```bash
 cd /home/phill/wrrapd-GCP/backend/wrrapd-api-repo/WrrapdServer
 pm2 restart wrrapd-server
 ```
+
+`POST https://api.brightdata.com/request` with `render: "true"` and that zone.
 
 ## Cursor MCP (agent tools)
 
