@@ -1,28 +1,40 @@
 <?php
 /**
- * Campaign landing pages at /landing1 … /landing5.
+ * Campaign landing pages at /landing1 … /landing5 (still private).
  *
- * 1 Holiday rescue (countdown) · 2 Ten-second checkout demo · 3 Now wrapping in Jacksonville
- * 4 Send a wrapped gift to Jacksonville from anywhere · 5 Multi-store gift combo
- * 6 The real homepage with a compact occasion strip, "How it works" (extension), "Paste & wrap" (/buy/)
- *   and a gift-ideas blurb; the store gift guides move to /gift-ideas/.
- * No WordPress page records. Private: editors, or visitors who opened the ?lp=<key> preview link
- * (key in option wrrapd_landing_preview_key). Everyone else gets the normal 404.
+ * Homepage (2026-10-19+): the Elementor front page plus landing6 overlays (occasion strip,
+ * How it works, paste & wrap → /buy/, gift-ideas blurb). Store gift guides live at /gift-ideas/.
+ * /landing6/ redirects to /. Pre-refresh homepage (no overlays): /landing-retired-20261019/
+ * (editors / preview key only).
+ *
+ * Landings 1–5: no WordPress page records. Private via editors or ?lp=<key>
+ * (option wrrapd_landing_preview_key). Everyone else gets the normal 404.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_LANDINGS_BUILD', '2026-10-19-landings-v13' );
+define( 'WRRAPD_LANDINGS_BUILD', '2026-10-19-landings-v14' );
 define( 'WRRAPD_LANDING_COOKIE', 'wrrapd_lp' );
+define( 'WRRAPD_LANDING_RETIRED_SLUG', 'landing-retired-20261019' );
 
 function wrrapd_landing_number() {
 	$path = wp_parse_url( isset( $_SERVER['REQUEST_URI'] ) ? (string) wp_unslash( $_SERVER['REQUEST_URI'] ) : '', PHP_URL_PATH );
-	if ( is_string( $path ) && preg_match( '#^/landing([1-6])/?$#', $path, $m ) ) {
+	if ( is_string( $path ) && preg_match( '#^/landing([1-5])/?$#', $path, $m ) ) {
 		return (int) $m[1];
 	}
 	return 0;
+}
+
+function wrrapd_landing_is_retired_request() {
+	$path = wp_parse_url( isset( $_SERVER['REQUEST_URI'] ) ? (string) wp_unslash( $_SERVER['REQUEST_URI'] ) : '', PHP_URL_PATH );
+	return is_string( $path ) && (bool) preg_match( '#^/' . preg_quote( WRRAPD_LANDING_RETIRED_SLUG, '#' ) . '/?$#', $path );
+}
+
+function wrrapd_landing_is_landing6_alias() {
+	$path = wp_parse_url( isset( $_SERVER['REQUEST_URI'] ) ? (string) wp_unslash( $_SERVER['REQUEST_URI'] ) : '', PHP_URL_PATH );
+	return is_string( $path ) && (bool) preg_match( '#^/landing6/?$#', $path );
 }
 
 function wrrapd_landing_preview_token() {
@@ -49,15 +61,16 @@ function wrrapd_landing_allowed() {
 	return '' !== $token && '' !== $cookie && hash_equals( $token, $cookie );
 }
 
-/* /landing6 renders the front page itself, so every homepage section and MU injection stays in sync. */
+/* Retired archive + (legacy) /landing6 alias both resolve to the Elementor front page. */
 add_filter(
 	'request',
 	function ( $vars ) {
-		if ( 6 === wrrapd_landing_number() && wrrapd_landing_allowed() ) {
-			$front = (int) get_option( 'page_on_front' );
-			if ( $front ) {
-				return array( 'page_id' => $front );
-			}
+		$front = (int) get_option( 'page_on_front' );
+		if ( ! $front ) {
+			return $vars;
+		}
+		if ( wrrapd_landing_is_retired_request() && wrrapd_landing_allowed() ) {
+			return array( 'page_id' => $front );
 		}
 		return $vars;
 	},
@@ -66,8 +79,69 @@ add_filter(
 add_filter(
 	'redirect_canonical',
 	function ( $url ) {
-		return wrrapd_landing_number() ? false : $url;
+		if ( wrrapd_landing_number() || wrrapd_landing_is_retired_request() || wrrapd_landing_is_landing6_alias() ) {
+			return false;
+		}
+		return $url;
 	}
+);
+
+/* Public homepage = landing6 experience. /landing6/ → /. Retired path stays gated. */
+add_action(
+	'template_redirect',
+	function () {
+		if ( wrrapd_landing_is_landing6_alias() ) {
+			wp_safe_redirect( home_url( '/' ), 301 );
+			exit;
+		}
+		if ( wrrapd_landing_is_retired_request() ) {
+			if ( ! defined( 'DONOTCACHEPAGE' ) ) {
+				define( 'DONOTCACHEPAGE', true );
+			}
+			nocache_headers();
+			header( 'X-Robots-Tag: noindex, nofollow', true );
+			if ( ! wrrapd_landing_allowed() ) {
+				global $wp_query;
+				if ( $wp_query ) {
+					$wp_query->set_404();
+				}
+				status_header( 404 );
+				return;
+			}
+			if ( wrrapd_landing_query_key_ok() ) {
+				setcookie( WRRAPD_LANDING_COOKIE, wrrapd_landing_preview_token(), time() + 90 * DAY_IN_SECONDS, '/', '', is_ssl(), true );
+				wp_safe_redirect( home_url( '/' . WRRAPD_LANDING_RETIRED_SLUG . '/' ), 302 );
+				exit;
+			}
+			add_filter(
+				'pre_get_document_title',
+				function () {
+					return 'Landing page retired 20261019 | Wrrapd';
+				},
+				99
+			);
+			add_filter(
+				'wp_robots',
+				function ( $robots ) {
+					$robots['noindex']  = true;
+					$robots['nofollow'] = true;
+					return $robots;
+				}
+			);
+			add_filter(
+				'body_class',
+				function ( $classes ) {
+					$classes[] = 'wrrapd-landing-retired';
+					return $classes;
+				}
+			);
+			return;
+		}
+		if ( is_front_page() && ! is_admin() && ! wrrapd_landing_is_retired_request() ) {
+			wrrapd_landing_6_setup();
+		}
+	},
+	0
 );
 
 function wrrapd_landing_extension_url( $n ) {
@@ -85,7 +159,6 @@ function wrrapd_landing_titles() {
 		3 => 'Now wrapping in Jacksonville | Wrrapd',
 		4 => 'Send a wrapped gift to Jacksonville from anywhere | Wrrapd',
 		5 => 'Three stores, one beautiful gift | Wrrapd',
-		6 => 'Wrrapd | Wrapping Happiness',
 	);
 }
 
@@ -124,10 +197,6 @@ function wrrapd_landing_render() {
 			return $robots;
 		}
 	);
-	if ( 6 === $n ) {
-		wrrapd_landing_6_setup();
-		return;
-	}
 
 	global $wp_query;
 	if ( $wp_query ) {
@@ -458,6 +527,11 @@ function wrrapd_landing_body_5( $ext ) {
 /* ---------- 6. Homepage refresh ---------- */
 
 function wrrapd_landing_6_setup() {
+	static $done = false;
+	if ( $done ) {
+		return;
+	}
+	$done = true;
 	add_filter(
 		'body_class',
 		function ( $classes ) {
@@ -488,7 +562,7 @@ function wrrapd_landing_6_parts() {
 	$icon = content_url( 'mu-plugins/icons/favicon/android-chrome-512x512.png' );
 	echo '<template id="wl6-parts">';
 
-	echo '<div class="wl6-ways" data-wl6="ways">Two ways to gift-wrap: the Chrome extension or <a href="#paste-and-wrap">paste a link</a></div>';
+	echo '<div class="wl6-ways" data-wl6="ways">Two ways to gift-wrap: <a class="wl6-ways-ext" href="' . esc_url( $ext ) . '" target="_blank" rel="noopener">Chrome extension</a> or <a href="#paste-and-wrap">paste a link</a></div>';
 
 	echo '<section class="wl wl-ways-bar" data-wl6="waysbar" aria-label="Two ways to gift-wrap"><p>Two ways to gift-wrap</p><div>'
 		. wrrapd_landing_orange( $ext, 'Chrome extension' )
@@ -595,14 +669,6 @@ function wrrapd_gift_ideas_render() {
 	if ( ! is_string( $path ) || ! preg_match( '#^/gift-ideas/?$#', $path ) ) {
 		return;
 	}
-	if ( ! defined( 'DONOTCACHEPAGE' ) ) {
-		define( 'DONOTCACHEPAGE', true );
-	}
-	nocache_headers();
-	header( 'X-Robots-Tag: noindex, nofollow', true );
-	if ( ! wrrapd_landing_allowed() ) {
-		return;
-	}
 	$file = __DIR__ . '/wrrapd-gift-guides.html';
 	if ( ! is_readable( $file ) ) {
 		return;
@@ -618,14 +684,6 @@ function wrrapd_gift_ideas_render() {
 			return 'Gift ideas by store | Wrrapd';
 		},
 		99
-	);
-	add_filter(
-		'wp_robots',
-		function ( $robots ) {
-			$robots['noindex']  = true;
-			$robots['nofollow'] = true;
-			return $robots;
-		}
 	);
 	add_filter(
 		'body_class',

@@ -7,33 +7,52 @@
   var root = document.getElementById('wrrapd-landing') || mountHomeParts();
   if (!root) return;
 
-  /* /landing6: the real homepage, with the ticker and old How it works swapped for these parts. */
+  /* Homepage: ticker + old How it works / gift guides swapped for these parts. */
   function mountHomeParts() {
     var tpl = document.getElementById('wl6-parts');
     if (!tpl || !tpl.content) return null;
     var parts = {};
     Array.prototype.forEach.call(tpl.content.querySelectorAll('[data-wl6]'), function (el) { parts[el.getAttribute('data-wl6')] = el; });
+    var shell = document.querySelector('.occasion-ticker-shell');
     var ticker = document.querySelector('.elementor-element-0a7e92b');
     var wheels = document.getElementById('wrrapd-retailer-wheels-row');
-    if (ticker && ticker.parentNode) { ticker.parentNode.insertBefore(parts.strip, ticker); ticker.setAttribute('aria-hidden', 'true'); }
+    /* Insert outside the ticker shell so removing the shell does not take the strip with it. */
+    if (shell && shell.parentNode) shell.parentNode.insertBefore(parts.strip, shell);
+    else if (ticker && ticker.parentNode) ticker.parentNode.insertBefore(parts.strip, ticker);
     else if (wheels) wheels.insertAdjacentElement('afterend', parts.strip);
+    else document.body.insertBefore(parts.strip, document.body.firstChild);
     if (parts.strip.parentNode) parts.strip.parentNode.insertBefore(parts.waysbar, parts.strip);
-    ['.elementor-element-0a7e92b', '.elementor-element-6b1d5da', '.elementor-element-3b1e47e', '.elementor-element-f68c5e7'].forEach(function (s) {
-      var el = document.querySelector(s);
-      if (el) el.setAttribute('aria-hidden', 'true');
+    ['.elementor-element-0a7e92b', '.elementor-element-6b1d5da', '.elementor-element-3b1e47e', '.elementor-element-f68c5e7', '.occasion-ticker-shell'].forEach(function (s) {
+      document.querySelectorAll(s).forEach(function (el) {
+        if (el.parentNode) el.parentNode.removeChild(el);
+      });
     });
-    var steps = document.querySelector('.elementor-element-f68c5e7');
     var footer = document.querySelector('.elementor-element-bdc63f8') || document.querySelector('.elementor-location-footer');
-    var anchor = steps && steps.parentNode ? steps : footer;
-    if (anchor && anchor.parentNode) {
-      [parts.hiw, parts.paste, parts.ideas].forEach(function (p) { anchor.parentNode.insertBefore(p, anchor); });
+    if (footer && footer.parentNode) {
+      [parts.hiw, parts.paste, parts.ideas].forEach(function (p) { footer.parentNode.insertBefore(p, footer); });
     }
-    var cta = document.querySelector('.elementor-location-header .elementor-element-7f1bdc1');
-    if (cta) {
-      if (getComputedStyle(cta).position === 'static') cta.style.position = 'relative';
-      cta.insertBefore(parts.ways, cta.firstChild);
-    }
+    mountHeaderWays(parts.ways);
     return document.body;
+  }
+
+  function mountHeaderWays(ways) {
+    if (!ways) return;
+    var header = document.querySelector('.elementor-location-header');
+    if (!header) return;
+    var host = header.querySelector('.elementor-element-00ec9fc') ||
+      header.querySelector('[data-id="00ec9fc"]') ||
+      header.querySelector('.elementor-element-7f1bdc1') ||
+      header.querySelector('[data-id="7f1bdc1"]');
+    if (!host) return;
+    host.classList.add('wl6-has-ways');
+    host.style.position = 'relative';
+    host.style.overflow = 'visible';
+    if (host.firstChild !== ways) host.insertBefore(ways, host.firstChild);
+    var label = host.querySelector('.elementor-button-text');
+    var btn = label || host.querySelector('.elementor-button');
+    if (btn) btn.textContent = 'Add your FREE Chrome extension today';
+    var a = host.querySelector('a.elementor-button, a.wrrapd-ext-cta');
+    if (a && EXT) a.setAttribute('href', EXT);
   }
 
   function $(sel, el) { return (el || root).querySelector(sel); }

@@ -276,8 +276,29 @@ body .wl a.wl-ghost { border: 2px solid #e85d04; background: #fff !important; co
 body .wl a.wl-orange:hover, body .wl button.wl-orange:hover, body .wl a.wl-ghost:hover { transform: translateY(-1px); box-shadow: 0 .5rem 1.1rem rgba(0, 0, 0, .2); }
 
 /* Header: "Two ways to gift-wrap" above the orange button (desktop header only) */
-.wl6-ways { position: absolute; left: 50%; bottom: 100%; transform: translateX(-50%); margin-bottom: 6px; white-space: nowrap; font-family: Fraunces, Georgia, serif; font-size: .74rem; font-weight: 600; letter-spacing: .02em; color: rgba(255, 255, 255, .85); pointer-events: auto; }
+body.wrrapd-landing-6 .elementor-location-header,
+body.wrrapd-landing-6 .elementor-location-header .elementor-element-00ec9fc,
+body.wrrapd-landing-6 .elementor-location-header .elementor-element-7f1bdc1,
+body.wrrapd-landing-6 .elementor-location-header .wl6-has-ways {
+  overflow: visible !important;
+}
+body.wrrapd-landing-6 .elementor-location-header .wl6-has-ways,
+body.wrrapd-landing-6 .elementor-location-header .elementor-element-00ec9fc.wl6-has-ways,
+body.wrrapd-landing-6 .elementor-location-header .elementor-element-7f1bdc1.wl6-has-ways {
+  position: relative !important;
+  z-index: 6 !important;
+}
+.wl6-ways {
+  position: absolute; left: 50%; bottom: calc(100% + 4px); transform: translateX(-50%);
+  margin: 0; padding: 0; white-space: nowrap; z-index: 7;
+  font-family: Fraunces, Georgia, "Times New Roman", serif; font-size: .72rem; font-weight: 600;
+  letter-spacing: .02em; line-height: 1.2; color: rgba(255, 255, 255, .9); pointer-events: auto;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, .35);
+}
 .wl6-ways a { color: #f6b933 !important; text-decoration: underline; text-underline-offset: 2px; }
+@media (max-width: 1100px), (pointer: coarse) {
+  .wl6-ways { display: none !important; }
+}
 
 /* Two ways bar (shown where the header button is hidden) */
 .wl-ways-bar { display: none; }
