@@ -13,16 +13,20 @@
     if (!tpl || !tpl.content) return null;
     var parts = {};
     Array.prototype.forEach.call(tpl.content.querySelectorAll('[data-wl6]'), function (el) { parts[el.getAttribute('data-wl6')] = el; });
-    var shell = document.querySelector('.occasion-ticker-shell');
-    var ticker = document.querySelector('.elementor-element-0a7e92b');
-    var wheels = document.getElementById('wrrapd-retailer-wheels-row');
-    var header = document.querySelector('.elementor-location-header');
-    /* After wheels (preferred), else before ticker shell, else right after the site header — never body-first. */
-    if (wheels) wheels.insertAdjacentElement('afterend', parts.strip);
-    else if (shell && shell.parentNode) shell.parentNode.insertBefore(parts.strip, shell);
-    else if (ticker && ticker.parentNode) ticker.parentNode.insertBefore(parts.strip, ticker);
-    else if (header) header.insertAdjacentElement('afterend', parts.strip);
-    if (parts.strip.parentNode) parts.strip.parentNode.insertBefore(parts.waysbar, parts.strip);
+    function placeStrip() {
+      var shell = document.querySelector('.occasion-ticker-shell');
+      var ticker = document.querySelector('.elementor-element-0a7e92b');
+      var wheels = document.getElementById('wrrapd-retailer-wheels-row');
+      var header = document.querySelector('.elementor-location-header');
+      if (wheels) wheels.insertAdjacentElement('afterend', parts.strip);
+      else if (shell && shell.parentNode) shell.parentNode.insertBefore(parts.strip, shell);
+      else if (ticker && ticker.parentNode) ticker.parentNode.insertBefore(parts.strip, ticker);
+      else if (header) header.insertAdjacentElement('afterend', parts.strip);
+      if (parts.strip.parentNode) parts.strip.parentNode.insertBefore(parts.waysbar, parts.strip);
+    }
+    placeStrip();
+    setTimeout(placeStrip, 400);
+    setTimeout(placeStrip, 1400);
     /* Collapse ticker via CSS; only remove the sections we fully replace. */
     [shell, ticker].forEach(function (el) { if (el) el.setAttribute('aria-hidden', 'true'); });
     ['.elementor-element-6b1d5da', '.elementor-element-3b1e47e', '.elementor-element-f68c5e7'].forEach(function (s) {
