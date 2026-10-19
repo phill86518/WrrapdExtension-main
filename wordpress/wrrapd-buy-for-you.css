@@ -304,14 +304,13 @@ button.wb-trash { width: 22px !important; height: 22px !important; min-width: 0 
 .wb-occ-bad { border-color: #dc2626 !important; }
 .wb-ship input, .wb-radio input, .wb-check input { margin-top: 5px; accent-color: var(--wb-navy); }
 .wb-bill-store { font-weight: 650; margin: 14px 0 4px; color: var(--wb-navy); }
-.wb-review { padding: 12px 14px 10px; }
-.wb-review-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start; }
+.wb-review { padding: 12px 14px 10px; max-width: 100%; overflow: hidden; }
+.wb-review-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; align-items: start; max-width: 100%; }
+.wb-bill-sec { min-width: 0; max-width: 100%; }
 .wb-bill-sec h2 { font-size: 16px; margin: 0 0 4px; }
 .wb-bill-sec .wb-bill-row { padding: 1px 0; font-size: 14px; line-height: 1.3; }
-.wb-bill-sec .wb-bill-row span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.wb-bill-wrrapd { background: linear-gradient(180deg, #fffbeb, #fff); border: 1px solid #fcd34d; border-radius: 10px; padding: 8px 12px 6px; }
+.wb-bill-wrrapd { background: linear-gradient(180deg, #fffbeb, #fff); border: 1px solid #fcd34d; border-radius: 10px; padding: 8px 12px 6px; min-width: 0; }
 .wb-bill-sub { border-top: 1px solid var(--wb-line); margin-top: 4px; padding-top: 4px !important; font-weight: 650; }
-.wb-bill-sub span:first-child { white-space: normal; overflow: visible; text-overflow: clip; }
 .wb-bill-wrrapd .wb-bill-sub { border-top-color: #fde68a; }
 .wb-review .wb-bill-total { margin-top: 8px; padding-top: 6px; font-size: 16px; }
 .wb-review-note { margin: 6px 0 0; color: #5c6578; font-size: 13px; font-weight: 460; line-height: 1.35; }
@@ -320,8 +319,13 @@ button.wb-trash { width: 22px !important; height: 22px !important; min-width: 0 
 .wb-endtable td { border-bottom: 0; padding-top: 4px; padding-bottom: 4px; }
 .wb-endtable td[colspan] { text-align: right; padding-right: 8px; }
 .wb-endtable tr.wb-bill-total td { border-top: 2px solid var(--wb-deep); padding-top: 8px; font-weight: 650; }
-.wb-bill-row { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; }
+.wb-bill-row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 4px 0; max-width: 100%; min-width: 0; }
+.wb-bill-row > span:first-child { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wb-bill-row > span.wb-bill-amt,
+.wb-bill-row > span:last-child { flex: 0 0 auto; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .wb-bill-row.wb-bill-total { border-top: 2px solid var(--wb-deep); margin-top: 10px; padding-top: 8px; font-weight: 650; font-size: 13px; }
+.wb-row-title { margin: 0; max-width: 100%; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; }
+.wb-row-title a { color: inherit; text-decoration: none; }
 .wb-ext-line { background: var(--wb-cream); border-radius: 12px; padding: 12px 14px; font-size: 15px; margin: 16px 0 0; }
 .wb-ext-line a { color: var(--wb-navy); font-weight: 650; }
 .wb-tr .wb-ext-line { margin-top: 8px; }

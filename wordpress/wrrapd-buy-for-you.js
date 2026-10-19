@@ -219,13 +219,14 @@
 
   function itemCell(l) {
     var title = l.product && l.product.title ? l.product.title : 'Item';
+    var shown = shortTitle(title, 80);
     var img = l.product && l.product.imageUrl ? '<img src="' + esc(l.product.imageUrl) + '" alt="">' : '<span class="wb-img-ph"></span>';
     var h = '<div class="wb-item">' + img + '<div class="wb-item-main">';
     if (l.product) {
-      var name = esc(title);
+      var name = esc(shown);
       h += l.url
-        ? '<p class="wb-row-title"><a href="' + esc(l.url) + '" target="_blank" rel="noopener">' + name + '</a></p>'
-        : '<p class="wb-row-title">' + name + '</p>';
+        ? '<p class="wb-row-title" title="' + esc(title) + '"><a href="' + esc(l.url) + '" target="_blank" rel="noopener">' + name + '</a></p>'
+        : '<p class="wb-row-title" title="' + esc(title) + '">' + name + '</p>';
     } else if (l.url) h += '<p class="wb-linkline"><a href="' + esc(l.url) + '" target="_blank" rel="noopener">' + esc(shortUrl(l.url)) + '</a></p>';
     var variant = variantText(l.variantLabel);
     if (variant) h += '<p class="wb-variant">' + esc(variant) + '</p>';
@@ -621,6 +622,16 @@
     return h + '</tbody></table></div>';
   }
 
+  /** Short shopper-facing title — long Amazon strings must not blow out the bill layout. */
+  function shortTitle(s, max) {
+    max = max || 64;
+    s = String(s || '').replace(/\s+/g, ' ').trim();
+    if (s.length <= max) return s;
+    var cut = s.slice(0, max - 1);
+    var soft = cut.replace(/\s+\S*$/, '');
+    return (soft.length >= Math.floor(max * 0.55) ? soft : cut).replace(/[|–—,:;\-\s]+$/g, '') + '…';
+  }
+
   function billBlock(bill) {
     var shipCents = 0;
     var taxCents = 0;
@@ -629,11 +640,12 @@
       shipCents += g.shipping.cents || 0;
       taxCents += g.taxCents || 0;
       g.items.forEach(function (it) {
-        var name = g.retailerName + ' · ' + it.title + (it.qty > 1 ? ' ×' + it.qty : '') + (it.variant ? ' (' + it.variant + ')' : '');
-        items += row(name, usd(it.cents));
+        var label = shortTitle(it.title, 52);
+        var name = g.retailerName + ' · ' + label + (it.qty > 1 ? ' ×' + it.qty : '') + (it.variant ? ' (' + shortTitle(it.variant, 24) + ')' : '');
+        items += row(name, usd(it.cents), it.title);
       });
     });
-    var w = bill.wrap;
+    var w = bill.wrap || {};
     var n = w.giftWrapCount || 0;
     var h = '<div class="wb-review-grid">' +
       '<section class="wb-bill-sec"><h2>Item purchases</h2>' + items +
@@ -641,23 +653,19 @@
       row('Sales tax', usd(taxCents)) +
       '<div class="wb-bill-row wb-bill-sub"><span>Items total</span><span>' + usd(bill.retailerCents) + '</span></div></section>' +
       '<section class="wb-bill-sec wb-bill-wrrapd"><h2>Gift-wrapping & flowers</h2>' +
-      row('Gift-wrapping' + (n > 1 ? ' (×' + n + ')' : ''), usd(w.giftWrapCents)) +
+      row('Gift-wrapping' + (n > 1 ? ' (×' + n + ')' : ''), usd(w.giftWrapCents || 0)) +
       (w.discountCents ? row('Multi-item discount', '-' + usd(w.discountCents)) : '') +
       (w.designAiCents ? row('AI design', usd(w.designAiCents)) : '') +
       (w.designUploadCents ? row('Your design', usd(w.designUploadCents)) : '') +
       (w.flowersCents ? row('Flowers', usd(w.flowersCents)) : '') +
       (w.boxCents ? row('Gift box', usd(w.boxCents)) : '') +
-      row('Tax on gift-wrap', usd(w.serviceTaxCents)) +
-      '<div class="wb-bill-row wb-bill-sub"><span>Total Gift-Wrapping & Flowers</span><span>' + usd(w.totalCents) + '</span></div></section></div>' +
+      row('Tax on gift-wrap', usd(w.serviceTaxCents || 0)) +
+      '<div class="wb-bill-row wb-bill-sub"><span>Total Gift-Wrapping & Flowers</span><span>' + usd(w.totalCents || 0) + '</span></div></section></div>' +
       '<div class="wb-bill-row wb-bill-total"><span>Order total</span><span>' + usd(bill.totalCents) + '</span></div>';
-    if (bill.bundles && bill.bundles.length) {
-      h += '<p class="wb-review-note">' + bill.bundles.map(function (bd) {
-        return (bd.deliveryDate ? esc(fmtDate(bd.deliveryDate)) : 'Date to follow') + ': ' + esc(bd.titles.join(', ')) +
-          (bd.titles.length > 1 ? ' (wrapped and delivered together)' : '');
-      }).join(' ') + '</p>';
-    }
     return h;
-    function row(a, b) { return '<div class="wb-bill-row"><span title="' + esc(a) + '">' + esc(a) + '</span><span>' + esc(b) + '</span></div>'; }
+    function row(a, b, fullTitle) {
+      return '<div class="wb-bill-row"><span title="' + esc(fullTitle || a) + '">' + esc(a) + '</span><span class="wb-bill-amt">' + esc(b) + '</span></div>';
+    }
   }
 
   function viewTerms() {
@@ -708,7 +716,7 @@
     h += '<p class="wb-wrap-intro">Customize each item below. You\'ll complete Wrrapd\'s secure payment during checkout, then we wrap and ship to your giftee.</p>' +
       '<div class="wb-wrap-head">' +
       (l.product.imageUrl ? '<img src="' + esc(l.product.imageUrl) + '" alt="">' : '') +
-      '<div class="wb-wrap-title">' + esc(title) + '</div></div>' +
+      '<div class="wb-wrap-title" title="' + esc(title) + '">' + esc(shortTitle(title, 90)) + '</div></div>' +
       '<p class="wb-wrap-legend">Choose your wrapping</p>' +
       '<div class="wb-wrap-box">' +
       '<div class="wb-wrrapd-row">' +

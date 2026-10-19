@@ -4,18 +4,18 @@
  * Draft for counsel review. A changed text must get a new VERSION.
  */
 
-const VERSION = 'buy-terms-2026-10-16-draft';
+const VERSION = 'buy-terms-2026-10-18-draft';
 const PHONE = '(844) 638-5484';
 
 const TITLE = 'Wrrapd Inc. Terms & Conditions';
 const SUBTITLE = 'You order through us. We gift-wrap it and deliver it';
 const LEADS = [
     'Returns are allowed for 15 days after delivery, and only on the conditions in section 19. After that moment, the sale is final. Wrrapd does not make exceptions.',
-    'You order through us. Wrrapd may be the buyer of record. For electronics, phones, and similar goods, a warranty or store protection may not cover the item.',
+    'You order through us. Wrrapd may be the buyer of record. For electronics, phones, and similar goods, a warranty or store protection may not cover purchases via third-party.',
 ];
 
 const ELECTRONICS_SENTENCE =
-    'I understand Wrrapd is buying this electronic item, and that the warranty or store protection may not cover it.';
+    'I understand Wrrapd is buying this electronic item, and that the warranty or store protection may not cover purchases via third-party.';
 const AGREE_LABEL = 'I have read these Terms and I agree.';
 
 /** Each clause: [title, ...paragraphs]. A paragraph that is an array renders as a list. */
