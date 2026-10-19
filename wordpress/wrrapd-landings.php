@@ -3,23 +3,70 @@
  * Campaign landing pages at /landing1 … /landing5.
  *
  * 1 Holiday rescue (countdown) · 2 Ten-second checkout demo · 3 Now wrapping in Jacksonville
- * 4 Send a wrapped gift to Jacksonville from anywhere · 5 Multi-store gift combo.
- * No WordPress page records; kept out of search while ad tests run.
+ * 4 Send a wrapped gift to Jacksonville from anywhere · 5 Multi-store gift combo
+ * 6 The real homepage with the occasion strip, animated "How it works" and "For the people you miss".
+ * No WordPress page records. Private: editors, or visitors who opened the ?lp=<key> preview link
+ * (key in option wrrapd_landing_preview_key). Everyone else gets the normal 404.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_LANDINGS_BUILD', '2026-10-18-landings-v4' );
+define( 'WRRAPD_LANDINGS_BUILD', '2026-10-19-landings-v5' );
+define( 'WRRAPD_LANDING_COOKIE', 'wrrapd_lp' );
 
 function wrrapd_landing_number() {
 	$path = wp_parse_url( isset( $_SERVER['REQUEST_URI'] ) ? (string) wp_unslash( $_SERVER['REQUEST_URI'] ) : '', PHP_URL_PATH );
-	if ( is_string( $path ) && preg_match( '#^/landing([1-5])/?$#', $path, $m ) ) {
+	if ( is_string( $path ) && preg_match( '#^/landing([1-6])/?$#', $path, $m ) ) {
 		return (int) $m[1];
 	}
 	return 0;
 }
+
+function wrrapd_landing_preview_token() {
+	$key = (string) get_option( 'wrrapd_landing_preview_key', '' );
+	return strlen( $key ) >= 16 ? hash_hmac( 'sha256', $key, wp_salt( 'auth' ) ) : '';
+}
+
+function wrrapd_landing_query_key_ok() {
+	$key = (string) get_option( 'wrrapd_landing_preview_key', '' );
+	$got = isset( $_GET['lp'] ) ? (string) wp_unslash( $_GET['lp'] ) : '';
+	return strlen( $key ) >= 16 && '' !== $got && hash_equals( $key, $got );
+}
+
+function wrrapd_landing_allowed() {
+	if ( is_user_logged_in() && current_user_can( 'edit_pages' ) ) {
+		return true;
+	}
+	if ( wrrapd_landing_query_key_ok() ) {
+		return true;
+	}
+	$token  = wrrapd_landing_preview_token();
+	$cookie = isset( $_COOKIE[ WRRAPD_LANDING_COOKIE ] ) ? (string) wp_unslash( $_COOKIE[ WRRAPD_LANDING_COOKIE ] ) : '';
+	return '' !== $token && '' !== $cookie && hash_equals( $token, $cookie );
+}
+
+/* /landing6 renders the front page itself, so every homepage section and MU injection stays in sync. */
+add_filter(
+	'request',
+	function ( $vars ) {
+		if ( 6 === wrrapd_landing_number() && wrrapd_landing_allowed() ) {
+			$front = (int) get_option( 'page_on_front' );
+			if ( $front ) {
+				return array( 'page_id' => $front );
+			}
+		}
+		return $vars;
+	},
+	1
+);
+add_filter(
+	'redirect_canonical',
+	function ( $url ) {
+		return wrrapd_landing_number() ? false : $url;
+	}
+);
 
 function wrrapd_landing_extension_url( $n ) {
 	$base = function_exists( 'wrrapd_chrome_extension_install_url' )
@@ -36,6 +83,7 @@ function wrrapd_landing_titles() {
 		3 => 'Now wrapping in Jacksonville | Wrrapd',
 		4 => 'Send a wrapped gift to Jacksonville from anywhere | Wrrapd',
 		5 => 'Three stores, one beautiful gift | Wrrapd',
+		6 => 'Wrrapd | Wrapping Happiness',
 	);
 }
 
@@ -47,12 +95,16 @@ function wrrapd_landing_render() {
 	if ( ! defined( 'DONOTCACHEPAGE' ) ) {
 		define( 'DONOTCACHEPAGE', true );
 	}
-	global $wp_query;
-	if ( $wp_query ) {
-		$wp_query->is_404 = false;
-	}
-	status_header( 200 );
 	nocache_headers();
+	header( 'X-Robots-Tag: noindex, nofollow', true );
+	if ( ! wrrapd_landing_allowed() ) {
+		return;
+	}
+	if ( wrrapd_landing_query_key_ok() ) {
+		setcookie( WRRAPD_LANDING_COOKIE, wrrapd_landing_preview_token(), time() + 90 * DAY_IN_SECONDS, '/', '', is_ssl(), true );
+		wp_safe_redirect( home_url( '/landing' . $n . '/' ), 302 );
+		exit;
+	}
 
 	$titles = wrrapd_landing_titles();
 	add_filter(
@@ -70,6 +122,16 @@ function wrrapd_landing_render() {
 			return $robots;
 		}
 	);
+	if ( 6 === $n ) {
+		wrrapd_landing_6_setup();
+		return;
+	}
+
+	global $wp_query;
+	if ( $wp_query ) {
+		$wp_query->is_404 = false;
+	}
+	status_header( 200 );
 	add_filter(
 		'body_class',
 		function ( $classes ) use ( $n ) {
@@ -97,25 +159,7 @@ function wrrapd_landing_render() {
 		);
 	}
 
-	$base = content_url( 'mu-plugins/' );
-	wp_enqueue_style(
-		'wrrapd-landing-font',
-		'https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,460;0,9..144,560;0,9..144,650;1,9..144,460;1,9..144,560&display=swap',
-		array(),
-		null
-	);
-	wp_enqueue_style( 'wrrapd-landings', $base . 'wrrapd-landings.css', array( 'wrrapd-landing-font' ), WRRAPD_LANDINGS_BUILD );
-	wp_enqueue_script( 'wrrapd-landings', $base . 'wrrapd-landings.js', array(), WRRAPD_LANDINGS_BUILD, true );
-	wp_localize_script(
-		'wrrapd-landings',
-		'WRRAPD_LANDING',
-		array(
-			'page'         => $n,
-			'api'          => 'https://api.wrrapd.com',
-			'extensionUrl' => wrrapd_landing_extension_url( $n ),
-			'build'        => WRRAPD_LANDINGS_BUILD,
-		)
-	);
+	wrrapd_landing_enqueue( $n );
 
 	get_header();
 	echo '<main id="wrrapd-landing" class="wl wl-' . (int) $n . '" data-build="' . esc_attr( WRRAPD_LANDINGS_BUILD ) . '">';
@@ -126,6 +170,34 @@ function wrrapd_landing_render() {
 	exit;
 }
 add_action( 'template_redirect', 'wrrapd_landing_render', 1 );
+
+function wrrapd_landing_enqueue( $n ) {
+	add_action(
+		'wp_enqueue_scripts',
+		function () use ( $n ) {
+			$base = content_url( 'mu-plugins/' );
+			wp_enqueue_style(
+				'wrrapd-landing-font',
+				'https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,460;0,9..144,560;0,9..144,650;1,9..144,460;1,9..144,560&display=swap',
+				array(),
+				null
+			);
+			wp_enqueue_style( 'wrrapd-landings', $base . 'wrrapd-landings.css', array( 'wrrapd-landing-font' ), WRRAPD_LANDINGS_BUILD );
+			wp_enqueue_script( 'wrrapd-landings', $base . 'wrrapd-landings.js', array(), WRRAPD_LANDINGS_BUILD, true );
+			wp_localize_script(
+				'wrrapd-landings',
+				'WRRAPD_LANDING',
+				array(
+					'page'         => $n,
+					'api'          => 'https://api.wrrapd.com',
+					'extensionUrl' => wrrapd_landing_extension_url( $n ),
+					'build'        => WRRAPD_LANDINGS_BUILD,
+				)
+			);
+		},
+		20
+	);
+}
 
 /* ---------- shared pieces ---------- */
 
@@ -379,4 +451,98 @@ function wrrapd_landing_body_5( $ext ) {
 
 	echo wrrapd_landing_final( $ext, 'Build a gift they will never forget', 'Free to install. Combine stores at checkout.', 'Build my gift combo' );
 	echo wrrapd_landing_sticky( $ext, 'Build my gift combo' );
+}
+
+/* ---------- 6. Homepage refresh ---------- */
+
+function wrrapd_landing_6_setup() {
+	add_filter(
+		'body_class',
+		function ( $classes ) {
+			$classes[] = 'wrrapd-landing-6';
+			return $classes;
+		}
+	);
+	wrrapd_landing_enqueue( 6 );
+	add_action( 'wp_footer', 'wrrapd_landing_6_parts', 5 );
+}
+
+/** Sections the script moves into the homepage: occasion strip, How it works, For the people you miss. */
+function wrrapd_landing_6_parts() {
+	$ext  = wrrapd_landing_extension_url( 6 );
+	$icon = content_url( 'mu-plugins/icons/favicon/android-chrome-512x512.png' );
+	echo '<template id="wl6-parts">';
+
+	echo '<section class="wl wl-strip" data-wl6="strip" aria-label="Upcoming gifting days"><div class="wl-strip-head"><p class="wl-strip-title">Upcoming gifting days</p><p class="wl-strip-note">Suggested order-by dates</p></div><div class="wl-strip-row" data-wl-strip></div></section>';
+
+	echo '<section class="wl wl-hiw" data-wl6="hiw" id="how-it-works">';
+	echo '<div class="wl-statement"><div class="wl-inner"><p class="wl-eyebrow">How it works</p><p class="wl-statement-line">Your store. Your cart. <em>Our wrapping.</em></p></div></div>';
+	echo '<div class="wl-section wl-cream"><div class="wl-inner wl-hiw-grid">';
+	$steps = array(
+		array( 'Add Wrrapd to Chrome', 'One click, free. Wrrapd shows up at Amazon, Target, Walmart, Nordstrom, Kohl\'s, Ulta, Sephora, Best Buy, LEGO and Etsy.' ),
+		array( 'Shop as usual', 'Fill your cart like always. At checkout, Wrrapd asks if you would like it gift-wrapped.' ),
+		array( 'Make it yours', 'Pick a paper, upload your own art or design one with AI. Add fresh flowers and a note.' ),
+		array( 'Ship it to the Wrrapd hub', 'Follow Wrrapd\'s prompt on the store\'s shipping page and send the order to our hub.' ),
+		array( 'Pay Wrrapd, then check out', 'Pay for the wrapping and add-ons, then place your store order as usual. Final delivery is free.' ),
+		array( 'We wrap and deliver', 'Often the same day. You get a photo the moment it arrives.' ),
+	);
+	echo '<ol class="wl-hiw-steps" data-wl-hiw-steps>';
+	foreach ( $steps as $i => $s ) {
+		echo '<li><button type="button" data-step="' . (int) $i . '"><span class="wl-step-n">' . ( $i + 1 ) . '</span><span class="wl-hiw-copy"><b>' . esc_html( $s[0] ) . '</b><span>' . esc_html( $s[1] ) . '</span></span></button></li>';
+	}
+	echo '</ol>';
+
+	echo '<div class="wl-demo wl-hiw-demo" data-wl-hiw aria-label="Animated demo of Wrrapd at checkout">';
+	echo '<div class="wl-browser"><div class="wl-browser-bar"><i></i><i></i><i></i><span class="wl-url" data-wl-h-url>chromewebstore.google.com</span></div>';
+	echo '<div class="wl-browser-body">';
+
+	echo '<div class="wl-sc wl-sc-install"><div class="wl-cws"><img src="' . esc_url( $icon ) . '" alt="" width="72" height="72"><div class="wl-cws-meta"><b>Wrrapd</b><small>Gift-wrap at checkout</small><small class="wl-cws-free">Free</small></div></div>';
+	echo '<button type="button" class="wl-cws-btn" tabindex="-1" data-wl-h-add><span class="wl-cws-a">Add to Chrome</span><span class="wl-cws-b">Added to Chrome</span></button></div>';
+
+	echo '<div class="wl-sc wl-sc-cart"><div class="wl-cart"><p class="wl-cart-store" data-wl-h-store>Target</p>';
+	echo '<div class="wl-cart-item"><img src="https://target.scene7.com/is/image/Target/GUEST_2c7410d9-3a5a-41d2-a0fe-f53eeabd2726?wid=300&hei=300&qlt=80" alt="" data-wl-h-img><div><p class="wl-cart-title" data-wl-h-title>LEGO Icons Bumblebee Set</p><p class="wl-cart-meta">Qty 1 · Arrives Tue</p></div></div>';
+	echo '<div class="wl-cart-line"><span>Order total</span><span class="wl-skel"></span></div>';
+	echo '<button type="button" class="wl-place" tabindex="-1" data-wl-h-place>Place your order</button></div>';
+	echo '<div class="wl-panel" data-wl-h-panel><div class="wl-panel-head">' . wrrapd_landing_bow_svg( 'wl-bow-xs' ) . '<b>Wrrapd</b></div>';
+	echo '<div class="wl-panel-pick"><p class="wl-panel-q">Gift-wrap this order?</p><div class="wl-toggle" data-wl-h-toggle><span></span></div>';
+	echo '<p class="wl-panel-sub">Choose a design</p><div class="wl-swatches"><i class="wl-pat-plaid" data-wl-h-sw></i><i class="wl-pat-dots" data-wl-h-sw></i><i class="wl-pat-stripe" data-wl-h-sw></i><i class="wl-pat-star" data-wl-h-sw></i></div>';
+	echo '<label class="wl-panel-check" data-wl-h-flowers><span class="wl-box"></span>Add fresh flowers</label></div>';
+	echo '<div class="wl-panel-sum"><p class="wl-panel-q">Wrrapd Summary</p><ul class="wl-sum"><li><span>Gift-wrap</span><b>Holiday Plaid</b></li><li><span>Flowers</span><b>Added</b></li><li><span>Delivery</span><b>Free</b></li></ul>';
+	echo '<button type="button" class="wl-pay" tabindex="-1" data-wl-h-pay><span class="wl-pay-a">Pay Wrrapd</span><span class="wl-pay-b">Paid</span></button></div></div></div>';
+
+	echo '<div class="wl-sc wl-sc-ship"><p class="wl-ship-h">Choose a shipping address</p>';
+	echo '<div class="wl-addr"><span class="wl-radio"></span><div><b>Jamie Rivera</b><small>Home address</small></div></div>';
+	echo '<div class="wl-addr wl-addr-hub" data-wl-h-hub><span class="wl-radio"></span><div><b>Wrrapd hub</b><small>We wrap it, then deliver it to Jamie</small></div>' . wrrapd_landing_bow_svg( 'wl-bow-xs' ) . '</div>';
+	echo '<button type="button" class="wl-place" tabindex="-1">Use this address</button></div>';
+
+	echo '<div class="wl-sc wl-sc-done">' . wrrapd_landing_gift( 'plaid', 'wl-gift-sm' ) . '<p>Wrapped and delivered!</p><div class="wl-proof"><span class="wl-proof-pic">' . wrrapd_landing_gift( 'plaid', 'wl-gift-xs' ) . '</span><span>Delivery photo sent to you</span></div></div>';
+
+	echo '<span class="wl-cursor" data-wl-h-cursor></span>';
+	echo '</div></div>';
+	echo '<div class="wl-demo-progress"><span data-wl-h-bar></span></div>';
+	echo '</div>';
+	echo '</div>';
+	echo '<p class="wl-center wl-hiw-cta">' . wrrapd_landing_cta( $ext, 'Add to Chrome, free' ) . '</p>';
+	echo '</div></section>';
+
+	echo '<section class="wl wl-miss" data-wl6="miss">';
+	echo '<div class="wl-hero wl-hero-navy"><div class="wl-inner wl-hero-grid">';
+	echo '<div><p class="wl-eyebrow">For the people you miss</p><h2 class="wl-miss-h">Miles away? Your gift arrives wrapped with a bow.</h2>';
+	echo '<p class="wl-lead">Shop from anywhere in the country. We gift-wrap it and hand-deliver it to someone you love in Jacksonville.</p>';
+	echo wrrapd_landing_cta( $ext, 'Send a wrapped gift' ) . '</div>';
+	echo '<div><div class="wl-journey"><div class="wl-journey-stop"><span class="wl-dot"></span><b>You shop</b><small>wherever you are</small></div><div class="wl-journey-line"><span></span></div><div class="wl-journey-stop"><span class="wl-dot"></span><b>We wrap</b><small>in Jacksonville</small></div><div class="wl-journey-line"><span></span></div><div class="wl-journey-stop wl-journey-end">' . wrrapd_landing_gift( 'dots', 'wl-gift-xs' ) . '<b>They open</b><small>at their door</small></div></div>';
+	echo '<div class="wl-card wl-miss-zip">' . wrrapd_landing_zip_checker( 'wl-zip-6', 'Where is your gift going?' ) . '</div></div>';
+	echo '</div></div>';
+
+	echo '<div class="wl-section"><div class="wl-inner wl-split"><div><h2>Make it personal</h2><p class="wl-lead-dark">Pick the occasion and write a note. We tuck it under the bow, and fresh flowers can come along too.</p>';
+	echo '<div class="wl-occasions" data-wl-occasions>';
+	foreach ( array( 'Birthday', 'Get well', 'New baby', 'Anniversary', 'Thinking of you', 'Holidays' ) as $i => $o ) {
+		echo '<button type="button" class="wl-occ' . ( 0 === $i ? ' wl-on' : '' ) . '" data-occ="' . esc_attr( $o ) . '">' . esc_html( $o ) . '</button>';
+	}
+	echo '</div><label class="wl-note-label" for="wl-note">Your gift message</label><textarea id="wl-note" maxlength="140" data-wl-note>Happy birthday, Mom! Wish I could be there to hug you. Love, Sam</textarea></div>';
+	echo '<div class="wl-tag-wrap">' . wrrapd_landing_gift( 'plaid' ) . '<div class="wl-tag"><span class="wl-tag-hole"></span><p class="wl-tag-occ" data-wl-tag-occ>Birthday</p><p class="wl-tag-msg" data-wl-tag-msg></p></div></div>';
+	echo '</div></div>';
+	echo '</section>';
+
+	echo '</template>';
 }
