@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_LANDINGS_BUILD', '2026-10-19-landings-v11' );
+define( 'WRRAPD_LANDINGS_BUILD', '2026-10-19-landings-v12' );
 define( 'WRRAPD_LANDING_COOKIE', 'wrrapd_lp' );
 
 function wrrapd_landing_number() {
@@ -497,7 +497,7 @@ function wrrapd_landing_6_parts() {
 	echo '<section class="wl wl-strip" data-wl6="strip" aria-label="Upcoming gifting days"><div class="wl-strip-inner"><p class="wl-strip-title">Upcoming gifting days</p><div class="wl-strip-row" data-wl-strip></div></div></section>';
 
 	echo '<section class="wl wl-hiw" data-wl6="hiw" id="how-it-works"><div class="wl-inner">';
-	echo wrrapd_landing_head( 'How it works', 'Your store. Your cart. Our wrapping.', 'The first way: add the free Wrrapd Chrome extension and gift-wrap right at checkout.' );
+	echo wrrapd_landing_head( 'How it works', 'Your store. Your cart. Our wrapping.', 'Add the free Wrrapd Chrome extension and gift-wrap right at checkout.' );
 	echo '<div class="wl-hiw-grid"><div class="wl-hiw-left">';
 	$steps = array(
 		array( 'Add Wrrapd to Chrome', 'One click, free. Wrrapd shows up at Amazon, Target, Walmart, Nordstrom, Kohl\'s, Ulta, Sephora, Best Buy, LEGO and Etsy.' ),
@@ -512,7 +512,7 @@ function wrrapd_landing_6_parts() {
 		echo '<li' . ( 0 === $i ? ' class="wl-on"' : '' ) . '><button type="button" data-step="' . (int) $i . '"><span class="wl-step-n">' . ( $i + 1 ) . '</span><span class="wl-hiw-copy"><b>' . esc_html( $s[0] ) . '</b><span>' . esc_html( $s[1] ) . '</span></span></button></li>';
 	}
 	echo '</ol>';
-	echo '<div class="wl-hiw-cta">' . wrrapd_landing_orange( $ext, 'Add to Chrome, free' ) . '</div>';
+	echo '<div class="wl-hiw-cta">' . wrrapd_landing_orange( $ext, 'Add your FREE Chrome extension today' ) . '</div>';
 	echo '</div>';
 
 	echo '<div class="wl-demo wl-hiw-demo" data-wl-hiw aria-label="Animated demo of Wrrapd at checkout">';
@@ -548,7 +548,7 @@ function wrrapd_landing_6_parts() {
 	echo '</div></div></section>';
 
 	echo '<section class="wl wl-paste" data-wl6="paste" id="paste-and-wrap"><div class="wl-inner">';
-	echo wrrapd_landing_head( 'The second way to gift-wrap', 'Copy, paste, beautifully wrapped.', 'Miles away from the people you miss? Copy a gift\'s link from one of our partner stores and paste it here. We purchase it, wrap it by hand and deliver it to their door, finished with a bow.' );
+	echo wrrapd_landing_head( 'Try without the Extension (simpler)', 'Copy, paste, beautifully wrapped.', 'Miles away from the people you miss? Copy a gift\'s link from one of our partner stores and paste it here. We purchase it, wrap it by hand and deliver it to their door, finished with a bow.' );
 	echo '<div class="wl-paste-grid"><div class="wl-paste-left">';
 	echo '<form class="wl-paste-form" data-wl-paste action="' . esc_url( $buy ) . '" method="get" novalidate>';
 	echo '<label class="wl-note-label" for="wl-paste-link">Copy-paste your product page (URL) here</label>';
