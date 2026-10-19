@@ -36,14 +36,10 @@
       else if (header) header.insertAdjacentElement('afterend', parts.strip);
       if (parts.waysbar && parts.strip.parentNode) parts.strip.parentNode.insertBefore(parts.waysbar, parts.strip);
     }
-    function placeDeal() {
-      if (!parts.deal || !parts.strip || !parts.strip.parentNode) return;
-      parts.strip.insertAdjacentElement('afterend', parts.deal);
-    }
     placeStrip();
-    placeDeal();
-    setTimeout(function () { placeStrip(); placeDeal(); }, 400);
-    setTimeout(function () { placeStrip(); placeDeal(); }, 1400);
+    setTimeout(placeStrip, 400);
+    setTimeout(placeStrip, 1400);
+    if (parts.dealpop) document.body.appendChild(parts.dealpop);
 
     [document.querySelector('.occasion-ticker-shell'), document.querySelector('.elementor-element-0a7e92b')].forEach(function (el) {
       if (el) el.setAttribute('aria-hidden', 'true');
@@ -71,10 +67,9 @@
 
     var footer = document.querySelector('.elementor-element-bdc63f8') || document.querySelector('.elementor-location-footer');
     if (footer && footer.parentNode) {
-      [parts.deal, parts.hiw, parts.paste, parts.ideas].forEach(function (p) {
+      [parts.hiw, parts.paste, parts.ideas].forEach(function (p) {
         if (p) footer.parentNode.insertBefore(p, footer);
       });
-      placeDeal();
     }
     if (bodyMount && bodyMount.parentNode && !bodyMount.children.length) bodyMount.parentNode.removeChild(bodyMount);
 
@@ -297,6 +292,69 @@
     }).join('');
   }
 
+  /* Splashy multi-item discount pop — flashes on Step 2 + paste hover. */
+  var dealPopTimer = null;
+  var dealPopHold = 0;
+  function dealPopEl() {
+    var el = document.getElementById('wl-deal-pop');
+    if (el && !document.body.contains(el)) document.body.appendChild(el);
+    return el;
+  }
+  function placeDealPopNear(anchor) {
+    var pop = dealPopEl();
+    if (!pop) return;
+    if (!anchor || !anchor.getBoundingClientRect) {
+      pop.style.left = '50%';
+      pop.style.top = '42%';
+      return;
+    }
+    var r = anchor.getBoundingClientRect();
+    var x = Math.min(window.innerWidth - 24, Math.max(24, r.left + r.width / 2));
+    var y = Math.min(window.innerHeight - 24, Math.max(72, r.top - 18));
+    pop.style.left = x + 'px';
+    pop.style.top = y + 'px';
+  }
+  function flashDealPop(anchor) {
+    var pop = dealPopEl();
+    if (!pop) return;
+    placeDealPopNear(anchor);
+    pop.hidden = false;
+    pop.classList.remove('is-hold', 'is-on');
+    void pop.offsetWidth;
+    pop.classList.add('is-on');
+    clearTimeout(dealPopTimer);
+    dealPopTimer = setTimeout(function () {
+      if (dealPopHold > 0) return;
+      pop.classList.remove('is-on');
+      pop.hidden = true;
+    }, 2600);
+  }
+  function holdDealPop(on, anchor) {
+    var pop = dealPopEl();
+    if (!pop) return;
+    if (on) {
+      dealPopHold += 1;
+      placeDealPopNear(anchor);
+      pop.hidden = false;
+      pop.classList.remove('is-on');
+      pop.classList.add('is-hold');
+      clearTimeout(dealPopTimer);
+    } else {
+      dealPopHold = Math.max(0, dealPopHold - 1);
+      if (dealPopHold > 0) return;
+      pop.classList.remove('is-hold', 'is-on');
+      pop.hidden = true;
+    }
+  }
+  function wireDealPopHover(el) {
+    if (!el || el._wlDealPop) return;
+    el._wlDealPop = true;
+    el.addEventListener('mouseenter', function () { holdDealPop(true, el); });
+    el.addEventListener('mouseleave', function () { holdDealPop(false); });
+    el.addEventListener('focus', function () { holdDealPop(true, el); });
+    el.addEventListener('blur', function () { holdDealPop(false); });
+  }
+
   /* ---------- How it works demo (landing6) ---------- */
   function initHowItWorks() {
     var demo = $('[data-wl-hiw]');
@@ -314,6 +372,7 @@
     var t0 = 0;
     var loop = 0;
     var store = DEMO_STORES[0];
+    var lastStep = -1;
     DEMO_STORES.forEach(function (s) { var i = new Image(); i.src = s.img; });
 
     function set(cls, on) { demo.classList.toggle(cls, on); }
@@ -325,7 +384,14 @@
       cursor.style.left = (r.left - b.left + r.width / 2 - 11) + 'px';
       cursor.style.top = (r.top - b.top + r.height / 2 - 11) + 'px';
     }
-    function step(i) { stepBtns.forEach(function (b, k) { b.parentNode.classList.toggle('wl-on', k === i); }); }
+    function step(i) {
+      stepBtns.forEach(function (b, k) { b.parentNode.classList.toggle('wl-on', k === i); });
+      if (i === 1 && lastStep !== 1) {
+        var shopBtn = stepBtns[1];
+        flashDealPop(shopBtn || demo);
+      }
+      lastStep = i;
+    }
     function pick(i) { sw.forEach(function (x, k) { x.classList.toggle('wl-on', k === i); }); }
     function press(el) { if (!el) return; el.classList.add('wl-pressed'); setTimeout(function () { el.classList.remove('wl-pressed'); }, 220); }
 
@@ -412,6 +478,10 @@
 
   /* ---------- Paste & wrap (landing6) ---------- */
   function initPaste() {
+    wireDealPopHover(document.querySelector('label[for="wl-paste-link"]'));
+    wireDealPopHover(document.getElementById('wl-paste-link'));
+    wireDealPopHover(document.querySelector('.wl6-ways-opt2 a'));
+    wireDealPopHover(document.querySelector('.wl-ways-bar a[href="#paste-and-wrap"]'));
     var form = $('[data-wl-paste]');
     if (form) {
       var input = $('input[name="link"]', form);
@@ -598,4 +668,9 @@
   initTag();
   initPapers();
   if (document.body && document.body.classList.contains('wrrapd-landing-6')) ensureHeaderWays();
+  /* Header ways mount can lag — re-wire paste hover targets once the note is in the DOM. */
+  setTimeout(function () {
+    wireDealPopHover(document.querySelector('.wl6-ways-opt2 a'));
+    wireDealPopHover(document.querySelector('label[for="wl-paste-link"]'));
+  }, 600);
 })();
