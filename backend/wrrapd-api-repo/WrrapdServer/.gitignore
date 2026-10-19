@@ -5,6 +5,7 @@ customers/email_to_customer_id.json
 .env
 data/buy-browser-profiles/
 data/extension-installs.json
+data/landing-waitlist.jsonl
 data/facebook-post-log.json
 data/facebook-post-log.json.tmp
 data/flower-offers.json

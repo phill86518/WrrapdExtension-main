@@ -1,0 +1,293 @@
+/* Wrrapd campaign landing pages (/landing1 … /landing5). */
+(function () {
+  'use strict';
+  var CFG = window.WRRAPD_LANDING || {};
+  var API = CFG.api || 'https://api.wrrapd.com';
+  var EXT = CFG.extensionUrl || 'https://chromewebstore.google.com/detail/wrrapd/lobngnjcjeimefihnobdmocicopikoip';
+  var root = document.getElementById('wrrapd-landing');
+  if (!root) return;
+
+  function $(sel, el) { return (el || root).querySelector(sel); }
+  function $$(sel, el) { return Array.prototype.slice.call((el || root).querySelectorAll(sel)); }
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  function ctaHtml(label) {
+    return '<a class="wl-btn wl-btn-sm" href="' + esc(EXT) + '" target="_blank" rel="noopener" data-wl-cta>' + esc(label) + '</a>';
+  }
+
+  /* ---------- Holiday milestones (Eastern time) ---------- */
+  var MILESTONES = [
+    { name: 'Thanksgiving', day: 'Thu, Nov 26', orderBy: '2026-11-20', label: 'Fri, Nov 20', note: 'Hostess gifts and thank-yous.' },
+    { name: 'Hanukkah', day: 'Begins Fri, Dec 4', orderBy: '2026-11-28', label: 'Sat, Nov 28', note: 'Eight nights of wrapped surprises.' },
+    { name: 'Christmas', day: 'Fri, Dec 25', orderBy: '2026-12-18', label: 'Fri, Dec 18', note: 'Wrapped and under the tree.' },
+    { name: "New Year's Eve", day: 'Thu, Dec 31', orderBy: '2026-12-23', label: 'Wed, Dec 23', note: 'Hostess gifts for the big night.' },
+    { name: "Valentine's Day", day: 'Sun, Feb 14', orderBy: '2027-02-08', label: 'Mon, Feb 8', note: 'Flowers and a gift, wrapped with love.' },
+  ];
+  function deadlineMs(ymd) { return new Date(ymd + 'T23:59:59-05:00').getTime(); }
+  function nextMilestone(now) {
+    for (var i = 0; i < MILESTONES.length; i++) if (deadlineMs(MILESTONES[i].orderBy) > now) return i;
+    return -1;
+  }
+
+  function ordinal(n) {
+    var s = ['th', 'st', 'nd', 'rd'], v = n % 100;
+    return n + (s[(v - 20) % 10] || s[v] || s[0]);
+  }
+  function easternParts(d) {
+    try {
+      var f = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', month: 'long', day: 'numeric' }).formatToParts(d);
+      var o = {};
+      f.forEach(function (p) { o[p.type] = p.value; });
+      return { month: o.month, day: Number(o.day) };
+    } catch (e) {
+      return { month: '', day: d.getDate() };
+    }
+  }
+
+  function initRescue() {
+    var title = $('[data-wl-rescue-title]');
+    var now = new Date();
+    var ep = easternParts(now);
+    if (title && (ep.month === 'December' && ep.day <= 24 || ep.month === 'November' && ep.day >= 15)) {
+      title.textContent = 'It\u2019s ' + ep.month + ' ' + ordinal(ep.day) + ' and nothing is wrapped?';
+    }
+    var box = $('[data-wl-milestones]');
+    var idx = nextMilestone(now.getTime());
+    if (box) {
+      box.innerHTML = MILESTONES.slice(0, 4).map(function (m, i) {
+        var cls = 'wl-ms' + (i === idx ? ' wl-ms-next' : (idx === -1 || i < idx ? ' wl-ms-past' : ''));
+        return '<div class="' + cls + '"><h3>' + esc(m.name) + '</h3><p>' + esc(m.day) + '</p><p>' + esc(m.note) + '</p><p class="wl-ms-by">Order by ' + esc(m.label) + '</p></div>';
+      }).join('');
+    }
+    var card = $('[data-wl-countdown]');
+    if (!card) return;
+    if (idx === -1) { card.style.display = 'none'; return; }
+    var m = MILESTONES[idx];
+    $('[data-wl-cd-date]', card).textContent = m.label;
+    $('[data-wl-cd-name]', card).textContent = m.name;
+    var end = deadlineMs(m.orderBy);
+    var cells = { d: $('[data-wl-cd="d"]', card), h: $('[data-wl-cd="h"]', card), m: $('[data-wl-cd="m"]', card), s: $('[data-wl-cd="s"]', card) };
+    function tick() {
+      var left = Math.max(0, end - Date.now());
+      var s = Math.floor(left / 1000);
+      cells.d.textContent = pad(Math.floor(s / 86400));
+      cells.h.textContent = pad(Math.floor(s % 86400 / 3600));
+      cells.m.textContent = pad(Math.floor(s % 3600 / 60));
+      cells.s.textContent = pad(s % 60);
+      if (left <= 0) { initRescue(); return; }
+      setTimeout(tick, 1000 - Date.now() % 1000);
+    }
+    tick();
+  }
+
+  /* ---------- 10-second checkout demo ---------- */
+  var DEMO_STORES = [
+    { store: 'Target', url: 'www.target.com/checkout', title: 'LEGO Icons Bumblebee Set', img: 'https://target.scene7.com/is/image/Target/GUEST_2c7410d9-3a5a-41d2-a0fe-f53eeabd2726?wid=300&hei=300&qlt=80' },
+    { store: 'Etsy', url: 'www.etsy.com/cart', title: 'Handmade Cedar Wind Chime', img: 'https://i.etsystatic.com/12200091/r/il/e19d8e/5475173991/il_794xN.5475173991_dadd.jpg' },
+    { store: 'Amazon', url: 'www.amazon.com/checkout', title: 'Goodnight Moon (Board Book)', img: 'https://covers.openlibrary.org/b/isbn/9780694003617-M.jpg' },
+  ];
+  function initDemo() {
+    var demo = $('[data-wl-demo]');
+    if (!demo) return;
+    var body = $('.wl-browser-body', demo);
+    var cursor = $('[data-wl-demo-cursor]', demo);
+    var sw = $$('[data-wl-sw]', demo);
+    var steps = $$('[data-wl-demo-steps] li', demo);
+    var bar = $('[data-wl-demo-bar]', demo);
+    var LOOP = 10000;
+    var loop = 0;
+    var t0 = 0;
+    var timers = [];
+    DEMO_STORES.forEach(function (s) { var i = new Image(); i.src = s.img; });
+
+    function at(ms, fn) { timers.push(setTimeout(fn, ms)); }
+    function pointAt(el) {
+      if (!el) return;
+      var b = body.getBoundingClientRect();
+      var r = el.getBoundingClientRect();
+      cursor.style.left = (r.left - b.left + r.width / 2 - 11) + 'px';
+      cursor.style.top = (r.top - b.top + r.height / 2 - 11) + 'px';
+    }
+    function step(i) { steps.forEach(function (li, k) { li.classList.toggle('wl-on', k === i); }); }
+    function pickSwatch(i) { sw.forEach(function (x, k) { x.classList.toggle('wl-on', k === i); }); }
+    function set(cls, on) { demo.classList.toggle(cls, on); }
+
+    function run() {
+      timers.forEach(clearTimeout);
+      timers = [];
+      var s = DEMO_STORES[loop % DEMO_STORES.length];
+      loop++;
+      $('[data-wl-demo-store]', demo).textContent = s.store;
+      $('[data-wl-demo-url]', demo).textContent = s.url;
+      $('[data-wl-demo-title]', demo).textContent = s.title;
+      $('[data-wl-demo-img]', demo).src = s.img;
+      ['wl-s-panel', 'wl-s-toggle', 'wl-s-flowers', 'wl-s-press', 'wl-s-done'].forEach(function (c) { set(c, false); });
+      pickSwatch(-1);
+      step(0);
+      pointAt($('.wl-cart-item', demo));
+      t0 = Date.now();
+      at(1000, function () { set('wl-s-panel', true); step(1); });
+      at(1600, function () { pointAt($('[data-wl-demo-toggle]', demo)); });
+      at(2300, function () { set('wl-s-toggle', true); });
+      at(3000, function () { step(2); pointAt(sw[0]); pickSwatch(0); });
+      at(3600, function () { pointAt(sw[1]); pickSwatch(1); });
+      at(4200, function () { pointAt(sw[2]); pickSwatch(2); });
+      at(4900, function () { pointAt(sw[0]); pickSwatch(0); });
+      at(5600, function () { step(3); pointAt($('[data-wl-demo-flowers] .wl-box', demo)); });
+      at(6200, function () { set('wl-s-flowers', true); });
+      at(6900, function () { pointAt($('[data-wl-demo-place]', demo)); });
+      at(7500, function () { set('wl-s-press', true); });
+      at(7800, function () { set('wl-s-press', false); set('wl-s-done', true); step(4); });
+      at(LOOP, run);
+    }
+    function frame() {
+      if (bar) bar.style.width = Math.min(100, (Date.now() - t0) / LOOP * 100) + '%';
+      requestAnimationFrame(frame);
+    }
+    run();
+    requestAnimationFrame(frame);
+  }
+
+  /* ---------- Jacksonville ZIP checker ---------- */
+  var HOODS = {
+    '32202': 'Downtown', '32204': 'Riverside', '32205': 'Avondale', '32206': 'Springfield', '32207': 'San Marco',
+    '32208': 'Northwest Jacksonville', '32209': 'Northwest Jacksonville', '32210': 'Ortega', '32211': 'Arlington',
+    '32212': 'NAS Jacksonville', '32216': 'Southside', '32217': 'San Jose', '32218': 'Northside', '32219': 'Northside',
+    '32220': 'Westside', '32221': 'Westside', '32222': 'Westside', '32223': 'Mandarin', '32224': 'Intracoastal West',
+    '32225': 'Fort Caroline', '32226': 'Oceanway', '32227': 'Mayport', '32228': 'Mayport', '32233': 'Atlantic Beach',
+    '32234': 'Baldwin', '32244': 'Argyle', '32246': 'Southside', '32250': 'Jacksonville Beach', '32254': 'Westside',
+    '32256': 'Deerwood', '32257': 'Mandarin', '32258': 'Bartram Park', '32266': 'Neptune Beach', '32277': 'Arlington',
+  };
+  var ribbonHoods = ['Riverside', 'Avondale', 'San Marco', 'Ortega', 'Mandarin', 'Jacksonville Beach', 'Atlantic Beach',
+    'Neptune Beach', 'Southside', 'Arlington', 'Deerwood', 'Springfield', 'Downtown', 'Bartram Park', 'Oceanway', 'San Jose', 'Intracoastal West', 'Argyle'];
+  var zipList = null;
+  function loadZips() {
+    if (zipList) return Promise.resolve(zipList);
+    return fetch(API + '/api/allowed-zip-codes', { cache: 'no-store' })
+      .then(function (r) { return r.json(); })
+      .then(function (j) { zipList = (j && j.allowedZipCodes) || Object.keys(HOODS); return zipList; })
+      .catch(function () { zipList = Object.keys(HOODS); return zipList; });
+  }
+  function initZip() {
+    $$('[data-wl-zip]').forEach(function (form) {
+      var input = $('input', form);
+      var out = $('.wl-zip-out', form);
+      input.addEventListener('input', function () { input.value = input.value.replace(/\D/g, '').slice(0, 5); });
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var zip = input.value.replace(/\D/g, '').slice(0, 5);
+        if (zip.length !== 5) { out.innerHTML = '<div class="wl-zip-soon"><p>Please enter a 5-digit ZIP code.</p></div>'; return; }
+        out.innerHTML = '<div class="wl-zip-soon"><p>Checking\u2026</p></div>';
+        loadZips().then(function (list) {
+          if (list.indexOf(zip) >= 0) {
+            var hood = HOODS[zip] || 'Jacksonville';
+            out.innerHTML = '<div class="wl-zip-yes"><p>Yes! We deliver gift-wrapped gifts to ' + esc(hood) + ' (' + esc(zip) + ').</p>' + ctaHtml('Add to Chrome, free') + '</div>';
+          } else {
+            out.innerHTML = '<div class="wl-zip-soon"><p>We\u2019re coming to ' + esc(zip) + ' soon. Want a note when we arrive?</p>' +
+              '<form class="wl-wait" data-wl-wait data-page="landing' + esc(CFG.page) + '" data-zip="' + esc(zip) + '" novalidate><div class="wl-wait-row">' +
+              '<input type="email" name="email" autocomplete="email" placeholder="you@example.com" aria-label="Your email" required>' +
+              '<button type="submit" class="wl-btn wl-btn-sm">Notify me</button></div><p class="wl-wait-out" aria-live="polite"></p></form></div>';
+            bindWait($('[data-wl-wait]', out));
+          }
+        });
+      });
+    });
+    var track = $('[data-wl-hoods]');
+    if (track) {
+      var row = ribbonHoods.map(function (h) { return '<span>' + esc(h) + '</span>'; }).join('');
+      track.innerHTML = row + row;
+    }
+  }
+
+  /* ---------- Waitlist ---------- */
+  function bindWait(form) {
+    if (!form || form.dataset.bound) return;
+    form.dataset.bound = '1';
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var out = $('.wl-wait-out', form);
+      var email = ($('input[name="email"]', form) || {}).value || '';
+      var cityEl = $('input[name="city"]', form);
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim())) { out.textContent = 'Please enter a valid email.'; return; }
+      var btn = $('button', form);
+      btn.disabled = true;
+      out.textContent = 'Saving\u2026';
+      fetch(API + '/api/landing/waitlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim(), city: cityEl ? cityEl.value : '', zip: form.dataset.zip || '', page: form.dataset.page || '' }),
+      }).then(function (r) { return r.json(); }).then(function (j) {
+        if (j && j.ok) { out.textContent = 'You\u2019re on the list! We\u2019ll email you when Wrrapd arrives.'; form.reset(); }
+        else { out.textContent = (j && j.error) || 'Please try again.'; btn.disabled = false; }
+      }).catch(function () { out.textContent = 'Please try again.'; btn.disabled = false; });
+    });
+  }
+  function initCities() {
+    $$('[data-wl-wait]').forEach(bindWait);
+    var chips = $$('.wl-city');
+    chips.forEach(function (b) {
+      b.addEventListener('click', function () {
+        chips.forEach(function (x) { x.classList.toggle('wl-on', x === b); });
+        var city = $('[data-wl-wait] input[name="city"]');
+        if (city) city.value = b.dataset.city;
+        var em = $('[data-wl-wait] input[name="email"]');
+        if (em) em.focus();
+      });
+    });
+  }
+
+  /* ---------- Gift tag preview ---------- */
+  function initTag() {
+    var note = $('[data-wl-note]');
+    var msg = $('[data-wl-tag-msg]');
+    var occ = $('[data-wl-tag-occ]');
+    if (!note || !msg) return;
+    function sync() { msg.textContent = note.value || 'Your message here'; }
+    note.addEventListener('input', sync);
+    sync();
+    var chips = $$('.wl-occ');
+    var samples = {
+      Birthday: 'Happy birthday, Mom! Wish I could be there to hug you. Love, Sam',
+      'Get well': 'Sending you sunshine and a big hug. Feel better soon!',
+      'New baby': 'Welcome to the world, little one! We love you already.',
+      Anniversary: 'Happy anniversary to my favorite couple. Cheers to you both!',
+      'Thinking of you': 'Just because. Thinking of you today and always.',
+      Holidays: 'Merry everything! Wish we were there to celebrate with you.',
+    };
+    chips.forEach(function (b) {
+      b.addEventListener('click', function () {
+        chips.forEach(function (x) { x.classList.toggle('wl-on', x === b); });
+        occ.textContent = b.dataset.occ;
+        note.value = samples[b.dataset.occ] || note.value;
+        sync();
+      });
+    });
+  }
+
+  /* ---------- Paper picker ---------- */
+  function initPapers() {
+    var box = $('.wl-combo-box .wl-gift');
+    var papers = $$('.wl-paper');
+    papers.forEach(function (b) {
+      b.addEventListener('click', function () {
+        papers.forEach(function (x) { x.classList.toggle('wl-on', x === b); });
+        if (box) {
+          box.className = box.className.replace(/wl-pat-\w+/, 'wl-pat-' + b.dataset.pat);
+          var hero = $('.wl-combo');
+          if (hero && hero.getBoundingClientRect().bottom < 0) window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      });
+    });
+  }
+
+  initRescue();
+  initDemo();
+  initZip();
+  initCities();
+  initTag();
+  initPapers();
+})();

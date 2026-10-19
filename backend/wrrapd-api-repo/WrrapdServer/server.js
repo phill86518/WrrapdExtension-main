@@ -4804,6 +4804,42 @@ app.get('/api/allowed-zip-codes', (req, res) => {
     }
 });
 
+// Landing-page "notify me when Wrrapd reaches my city" sign-ups (wrrapd.com/landing3 etc.).
+const LANDING_WAITLIST_FILE = path.join(__dirname, 'data', 'landing-waitlist.jsonl');
+const landingWaitlistHits = new Map();
+app.options('/api/landing/waitlist', (req, res) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'POST');
+    res.header('Access-Control-Allow-Headers', 'Content-Type');
+    res.sendStatus(204);
+});
+app.post('/api/landing/waitlist', express.json({ limit: '4kb' }), (req, res) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    const ip = String(req.headers['x-forwarded-for'] || req.ip || '').split(',')[0].trim();
+    const now = Date.now();
+    const hits = (landingWaitlistHits.get(ip) || []).filter((t) => now - t < 60 * 60 * 1000);
+    if (hits.length >= 10) return res.status(429).json({ ok: false, error: 'Please try again later.' });
+    hits.push(now);
+    landingWaitlistHits.set(ip, hits);
+    const b = req.body || {};
+    const email = String(b.email || '').trim().toLowerCase().slice(0, 160);
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return res.status(400).json({ ok: false, error: 'Please enter a valid email.' });
+    const row = {
+        at: new Date().toISOString(),
+        email,
+        zip: String(b.zip || '').replace(/\D/g, '').slice(0, 5),
+        city: String(b.city || '').replace(/[^\w .,'-]/g, '').trim().slice(0, 80),
+        page: String(b.page || '').replace(/[^\w-]/g, '').slice(0, 40),
+    };
+    fs.appendFile(LANDING_WAITLIST_FILE, JSON.stringify(row) + '\n', (err) => {
+        if (err) {
+            console.error('[landing-waitlist]', err.message);
+            return res.status(500).json({ ok: false, error: 'Please try again.' });
+        }
+        res.json({ ok: true });
+    });
+});
+
 // Also serve it as a static file for direct access
 app.get('/data/allowed-zip-codes.json', (req, res) => {
     res.header('Access-Control-Allow-Origin', '*');
