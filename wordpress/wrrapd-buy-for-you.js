@@ -63,6 +63,23 @@
     var p = ymd.split('-').map(Number);
     return new Date(Date.UTC(p[0], p[1] - 1, p[2], 12)).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' });
   }
+  /** Latest Estimated Delivery* across cart items (uses end of a printed window when present). */
+  function latestItemArrivalYmd() {
+    var latest = '';
+    cartSlotLines().forEach(function (l) {
+      var s = l.product && l.product.standardShip;
+      if (!s) return;
+      var d = s.arrivalDateEnd || s.arrivalDate;
+      if (/^\d{4}-\d{2}-\d{2}$/.test(d) && d > latest) latest = d;
+    });
+    return latest;
+  }
+  function deliveryFootnote() {
+    var latest = latestItemArrivalYmd();
+    var line = '* Estimated delivery date to Wrrapd; final gift delivery to the giftee may add 1 day.';
+    if (latest) line += ' Wrrapd will deliver all gifts together on ' + fmtDate(latest) + '.';
+    return line;
+  }
   function $(sel) { return root.querySelector(sel); }
   function $all(sel) { return Array.prototype.slice.call(root.querySelectorAll(sel)); }
 
@@ -556,7 +573,7 @@
       extLine() + '</div>' +
       (S.notice ? '<p class="wb-notice">' + esc(S.notice) + '</p>' : '') +
       (rows || (empty ? '<p class="wb-muted">Paste a product link to start.</p>' + paste : (excludedHtml ? '' : '<p class="wb-muted">Paste a product link to start.</p>'))) +
-      (rows ? '<p class="wb-asterisk">* Final gift delivery to the giftee may add 1 day.</p><p class="wb-ship-note">Shipping prices do not reflect any club membership or other discounts.</p>' : '') +
+      (rows ? '<p class="wb-asterisk">' + esc(deliveryFootnote()) + '</p><p class="wb-ship-note">Shipping prices do not reflect any club membership or other discounts.</p>' : '') +
       excludedHtml +
       (room && !empty && !S.addOpen ? '<button type="button" class="wb-btn wb-add-more" data-act="add-more">' + more + '</button>' : '') +
       (room && !empty && S.addOpen ? '<p class="wb-ask">' + more + ' for gift-wrapping</p>' + paste : '') +

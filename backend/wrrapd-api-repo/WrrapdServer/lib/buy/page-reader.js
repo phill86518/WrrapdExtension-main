@@ -576,6 +576,25 @@ function kohlsPlain(html) {
     return String(html || '').replace(/&quot;/g, '"').replace(/\\"/g, '"');
 }
 
+/** Kohl's sometimes stores "Na" / "N/A" as a placeholder color on single-SKU toys. */
+function isBogusKohlsOption(name) {
+    const s = String(name || '').trim();
+    if (!s || s.length < 2) return true;
+    return /^(n\/?a|na|none|null|undefined|unknown|not available|-|—|–)$/i.test(s);
+}
+
+/** True when Kohl's Shipping control says the item cannot ship (pickup-only). */
+function kohlsShippingUnavailable(html) {
+    const text = kohlsVisibleText(html);
+    if (/\bshipping\b[\s\S]{0,100}?\bnot available\b/i.test(text)) return true;
+    if (/\bnot available for (?:this )?item\b/i.test(text) && /\bshipping\b/i.test(text)) return true;
+    const raw = String(html || '');
+    if (/"isShipToHomeAvailable"\s*:\s*false/i.test(raw)) return true;
+    if (/"shipToHome(?:Available)?"\s*:\s*false/i.test(raw)) return true;
+    if (/"shippingAvailable"\s*:\s*false/i.test(raw)) return true;
+    return false;
+}
+
 /** Color names printed in the Kohl's product data. */
 function kohlsColorNames(html) {
     const names = [];
@@ -588,6 +607,7 @@ function kohlsColorNames(html) {
         const fromLabel = [...swatchChunk[0].matchAll(/(?:aria-label|title|alt|data-color)=["']([^"']{2,40})["']/gi)]
             .map((m) => m[1].replace(/^(select|choose)\s+/i, '').trim());
         for (const name of fromLabel) {
+            if (isBogusKohlsOption(name)) continue;
             if (!/^[A-Za-z][A-Za-z0-9 /'.-]{0,30}$/.test(name)) continue;
             if (/color|swatch|image|view/i.test(name) && !/beige|black|brown|tan|white|grey|gray|blue|red|green|navy|bone|cognac|bisc/i.test(name)) continue;
             if (!names.includes(name)) names.push(name);
@@ -600,6 +620,7 @@ function kohlsColorNames(html) {
     const text = kohlsPlain(html);
     while ((m = re.exec(text))) {
         const name = m[1].trim();
+        if (isBogusKohlsOption(name)) continue;
         if (!/^[A-Za-z][A-Za-z0-9 /'.-]{0,30}$/.test(name)) continue;
         if (!names.includes(name)) names.push(name);
         if (names.length >= 12) break;
@@ -616,9 +637,10 @@ function kohlsSkuColor(html, url) {
     if (at < 0) return '';
     const block = text.slice(at, at + 5000);
     const named = block.match(/"color":\[\d+,"([^"]+)"\]/);
-    if (named && named[1] && !/^null$/i.test(named[1])) return named[1];
+    if (named && named[1] && !/^null$/i.test(named[1]) && !isBogusKohlsOption(named[1])) return named[1].trim();
     const image = block.match(/\/\d+_([A-Za-z][A-Za-z ]{1,40})/);
-    return image ? image[1].trim() : '';
+    const fromImage = image ? image[1].trim() : '';
+    return fromImage && !isBogusKohlsOption(fromImage) ? fromImage : '';
 }
 
 /**
@@ -626,14 +648,28 @@ function kohlsSkuColor(html, url) {
  * one color, leave the choice open so the shopper picks it in the cart.
  */
 function applyKohlsColors(groups, html, url) {
-    const fromPage = kohlsColorNames(html);
-    const next = (groups || []).map((g) => ({ ...g, options: (g.options || []).slice(), selected: g.selected || null }));
+    const fromPage = kohlsColorNames(html).filter((c) => !isBogusKohlsOption(c));
+    const next = (groups || [])
+        .map((g) => ({
+            ...g,
+            options: (g.options || []).filter((o) => !isBogusKohlsOption(o)),
+            selected: g.selected && !isBogusKohlsOption(g.selected) ? g.selected : null,
+        }))
+        .filter((g) => !/color/i.test(g.name) || g.options.length);
     let group = next.find((g) => /color/i.test(g.name));
     const options = group ? group.options.slice() : [];
     for (const color of fromPage) {
         if (!options.includes(color)) options.push(color);
     }
-    if (options.length < 2) return withSelectedColor(next, options[0] || kohlsSkuColor(html, url));
+    const skuColor = kohlsSkuColor(html, url);
+    // One real color → auto-select. Bogus / empty → drop Color entirely (toys, LEGO, etc.).
+    if (options.length < 2) {
+        const only = options[0] || skuColor;
+        if (!only || isBogusKohlsOption(only)) {
+            return next.filter((g) => !/color/i.test(g.name));
+        }
+        return withSelectedColor(next.filter((g) => !/color/i.test(g.name) || g.options.length), only);
+    }
     if (!group) next.unshift({ name: 'Color', options, selected: null });
     else {
         group.options = options;
@@ -690,17 +726,24 @@ function kohlsProductFromBrowserHtml(html, url) {
     const title = rawTitle.replace(/\s*[|–-]\s*Kohl.?s.*$/i, '').trim();
     if (!title) return null;
     const text = kohlsVisibleText(html);
+    const shipUnavailable = kohlsShippingUnavailable(html);
     const withCode = text.match(/\$(\d{1,4}\.\d{2})\s*with\s+[A-Z0-9]+/i)
         || String(html || '').match(/\$(\d{1,4}\.\d{2})(?:\s|<[^>]*>){0,8}with\s+[A-Z0-9]+/i);
     const nearSale = String(html || '').match(/\$(\d{1,4}\.\d{2})(?:\s|<[^>]*>){0,12}Sale\b/i);
     const beforeReg = text.match(/\$(\d{1,4}\.\d{2})\s*\$(\d{1,4}\.\d{2})\s*Reg\b/i);
+    const jsonPrice = String(html || '').match(/"salePrice"\s*:\s*"?(\d+(?:\.\d{2})?)"?/i)
+        || String(html || '').match(/"price"\s*:\s*"?(\d+(?:\.\d{2})?)"?/i);
     let dollars = withCode ? Number(withCode[1]) : null;
     if (!(dollars > 0) && nearSale) dollars = Number(nearSale[1]);
     if (!(dollars > 0) && beforeReg) dollars = Number(beforeReg[1]);
+    if (!(dollars > 0) && jsonPrice) dollars = Number(jsonPrice[1]);
     if (!(dollars > 0)) {
+        // Prefer prices that look like real item prices (≥ $8), not Kohl's Cash / promo crumbs.
         const any = [...text.matchAll(/\$(\d{1,4}\.\d{2})(\s*with\b)?/gi)]
-            .find((m) => !m[2] && Number(m[1]) > 0);
-        dollars = any ? Number(any[1]) : null;
+            .map((m) => ({ withCode: !!m[2], n: Number(m[1]) }))
+            .filter((row) => !row.withCode && row.n >= 8)
+            .sort((a, b) => a.n - b.n)[0];
+        dollars = any ? any.n : null;
     }
     const pagePriceCents = dollars > 0 ? Math.round(dollars * 100) : null;
     const image = (String(html).match(/https:\/\/media\.kohlsimg\.com\/is\/image\/kohls\/[^"'\\\s<>]+/i) || [])[0] || '';
@@ -711,22 +754,26 @@ function kohlsProductFromBrowserHtml(html, url) {
     const plain = kohlsPlain(html);
     while ((sizeMatch = sizeRe.exec(plain))) {
         const name = sizeMatch[1].trim();
-        if (name && !sizeNames.includes(name)) sizeNames.push(name);
+        if (name && !isBogusKohlsOption(name) && !sizeNames.includes(name)) sizeNames.push(name);
     }
     let variantGroups = [];
-    if (kohlsColorNames(html).length || kohlsSkuColor(html, url)) {
-        variantGroups.push({ name: 'Color', options: kohlsColorNames(html), selected: null });
+    const colors = kohlsColorNames(html);
+    if (colors.length >= 2 || (colors.length === 1 && !isBogusKohlsOption(colors[0]))) {
+        variantGroups.push({ name: 'Color', options: colors, selected: null });
     }
     variantGroups = applyKohlsColors(variantGroups, html, url);
-    if (sizeNames.length) {
+    if (sizeNames.length > 1) {
         variantGroups.push({
             name: 'Size',
             options: sizeNames.slice(0, 40),
-            selected: sizeNames.length === 1 ? sizeNames[0] : null,
+            selected: null,
         });
     }
-    const windowed = kohlsDeliveryWindow(text) || kohlsDeliveryWindow(String(html || ''));
-    const shipCents = pagePriceCents != null ? standardShipping.scheduleCents('kohls', pagePriceCents) : null;
+    variantGroups = cleanVariantGroups(variantGroups);
+    const windowed = shipUnavailable ? null : (kohlsDeliveryWindow(text) || kohlsDeliveryWindow(String(html || '')));
+    const shipCents = shipUnavailable || pagePriceCents == null
+        ? null
+        : standardShipping.scheduleCents('kohls', pagePriceCents);
     return {
         title: title.slice(0, 300),
         brand: String(brand || '').trim().slice(0, 120),
@@ -741,10 +788,13 @@ function kohlsProductFromBrowserHtml(html, url) {
             note: shipCents === 0 ? 'Free standard shipping.' : '',
         },
         pageNotes: [],
-        inStock: /out of stock/i.test(text) ? false : (/in stock|add to cart/i.test(text) ? true : null),
+        inStock: shipUnavailable ? false : (/out of stock/i.test(text) ? false : (/in stock|add to cart/i.test(text) ? true : null)),
+        shipUnavailable,
         isElectronics: false,
         variantGroups,
-        choicePrompt: pagePriceCents == null ? 'Choose a size and color on the product page, then add the link again.' : '',
+        choicePrompt: pagePriceCents == null && !shipUnavailable
+            ? 'Choose a size and color on the product page, then add the link again.'
+            : '',
         readBy: 'brightdata_browser',
     };
 }
@@ -1074,7 +1124,11 @@ function cleanVariantGroups(groups) {
         .slice(0, 4)
         .map((g) => {
             const options = Array.isArray(g && g.options)
-                ? [...new Set(g.options.map((o) => String(o).trim().slice(0, 80)).filter((o) => o && !looksLikePackage(o)))].slice(0, 40)
+                ? [...new Set(
+                    g.options
+                        .map((o) => String(o).trim().slice(0, 80))
+                        .filter((o) => o && !looksLikePackage(o) && !isBogusKohlsOption(o)),
+                )].slice(0, 40)
                 : [];
             return {
                 name: String((g && g.name) || '').trim().slice(0, 40),
@@ -1528,7 +1582,8 @@ async function askGeminiProduct(url, zip, retailerId) {
         'imageUrl is the main product https photo.',
         'shippingUsd is non-member standard shipping; 0 only if free for every shopper with no minimum; otherwise null when unsure.',
         'arrivalDate YYYY-MM-DD when shown. shipToZip is the Shipping-to ZIP when shown.',
-        'Fill variantGroups with the Color and Size options. Leave selected null when more than one option is listed.',
+        'Fill variantGroups only when THIS product page shows Color or Size choices for the item. Toys, LEGO, and other single-SKU items usually have none — leave variantGroups as []. Never invent "Na" or "N/A".',
+        'If Shipping says "Not available" or the item cannot be shipped (pickup only), set inStock to false and shippingUsd to null.',
     ].filter(Boolean).join('\n');
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 32000);
@@ -1568,24 +1623,27 @@ async function askGeminiProduct(url, zip, retailerId) {
         const brand = String((facts && facts.brand) || '').trim().slice(0, 120);
         const imageUrl = safeImageUrl((facts && facts.imageUrl) || '');
         const inStock = facts && facts.inStock === false ? false : facts && facts.inStock === true ? true : null;
+        // Gemini marks pickup-only items as inStock:false with no shipping — treat as ship unavailable.
+        const shipUnavailable = retailer === 'kohls' && inStock === false && shipCents == null && !arrival;
         return {
             title: title.slice(0, 300),
             brand,
             imageUrl,
             category: '',
             packageDimensions: null,
-            pagePriceCents,
+            pagePriceCents: shipUnavailable ? pagePriceCents : pagePriceCents,
             standardShip: {
-                cents: shipCents,
-                arrivalDate: arrival,
-                arrivalDateEnd: arrivalEnd && arrival && arrivalEnd > arrival ? arrivalEnd : null,
-                note: shipCents === 0 ? 'Free standard shipping.' : '',
+                cents: shipUnavailable ? null : shipCents,
+                arrivalDate: shipUnavailable ? null : arrival,
+                arrivalDateEnd: shipUnavailable ? null : (arrivalEnd && arrival && arrivalEnd > arrival ? arrivalEnd : null),
+                note: !shipUnavailable && shipCents === 0 ? 'Free standard shipping.' : '',
             },
             pageNotes: [],
             inStock,
+            shipUnavailable,
             isElectronics: looksElectronic(retailer, title, brand),
             variantGroups: cleanVariantGroups(facts && facts.variantGroups),
-            choicePrompt,
+            choicePrompt: shipUnavailable ? '' : choicePrompt,
             readBy: 'gemini',
         };
     } catch {
@@ -1598,22 +1656,27 @@ async function askGeminiProduct(url, zip, retailerId) {
 /** Build a successful readProduct payload from a Gemini (or similar) product object. */
 async function productFromBrowse(retailer, retailerMeta, product, zip) {
     let ship = product.standardShip || { cents: null, arrivalDate: null, note: '' };
-    // Gemini sometimes claims free shipping when Kohl's / Best Buy still charge under the threshold.
-    if (ship.cents === 0) {
-        const defaults = withDefaultShip(retailer, { cents: null, arrivalDate: ship.arrivalDate, note: '' }, product.pagePriceCents || 0);
-        if (defaults && defaults.cents != null && defaults.cents > 0) {
-            ship = { ...ship, cents: null, note: '' };
+    const shipUnavailable = product.shipUnavailable === true;
+    if (shipUnavailable) {
+        ship = { label: 'Standard shipping', cents: null, arrivalDate: null, arrivalDateEnd: null, note: '' };
+    } else {
+        // Gemini sometimes claims free shipping when Kohl's / Best Buy still charge under the threshold.
+        if (ship.cents === 0) {
+            const defaults = withDefaultShip(retailer, { cents: null, arrivalDate: ship.arrivalDate, note: '' }, product.pagePriceCents || 0);
+            if (defaults && defaults.cents != null && defaults.cents > 0) {
+                ship = { ...ship, cents: null, note: '' };
+            }
         }
+        // Fill standard ship $. Most stores also get a calendar estimate when no date printed.
+        // Target: never invent a date — ask for delivery + store ZIP, then re-paste.
+        ship = withDefaultShip(retailer, ship, product.pagePriceCents || 0) || ship;
     }
-    // Fill standard ship $. Most stores also get a calendar estimate when no date printed.
-    // Target: never invent a date — ask for delivery + store ZIP, then re-paste.
-    ship = withDefaultShip(retailer, ship, product.pagePriceCents || 0) || ship;
     let choicePrompt = product.choicePrompt || '';
     if (retailer === 'target') {
         if (!(ship && ship.arrivalDate)) {
             choicePrompt = choicePrompt || targetZipRepastePrompt(zip);
         }
-    } else if (ship && !ship.arrivalDate) {
+    } else if (!shipUnavailable && ship && !ship.arrivalDate) {
         ship = { ...ship, arrivalDate: standardShipping.estimateArrivalDate() };
     }
     if (retailer !== 'target' && /shipping ZIP|ships to|Set the page|Set the product page shipping ZIP/i.test(choicePrompt)) {
@@ -1760,6 +1823,7 @@ function blankKohls() {
         standardShip: { cents: null, arrivalDate: null, arrivalDateEnd: null, note: '' },
         pageNotes: [],
         inStock: null,
+        shipUnavailable: false,
         isElectronics: false,
         variantGroups: [],
         choicePrompt: '',
@@ -1767,41 +1831,48 @@ function blankKohls() {
     };
 }
 
-/** Keep the lower price, a printed delivery window, and page-true choices (browser beats Gemini). */
+/** Keep a real price and delivery window; Scraping Browser beats Gemini. Never invent color/size. */
 function mergeKohlsPart(acc, part) {
     if (!part) return acc;
     if (!acc.title && part.title && !/access denied/i.test(part.title)) acc.title = part.title;
     if (!acc.brand && part.brand) acc.brand = part.brand;
     if (!acc.imageUrl && part.imageUrl) acc.imageUrl = part.imageUrl;
-    if (part.pagePriceCents != null && part.pagePriceCents > 0 && (acc.pagePriceCents == null || part.pagePriceCents < acc.pagePriceCents)) {
-        acc.pagePriceCents = part.pagePriceCents;
-    }
-    const ship = part.standardShip || {};
-    if (futureYmd(ship.arrivalDate) && !acc.standardShip.arrivalDate) acc.standardShip.arrivalDate = futureYmd(ship.arrivalDate);
-    if (futureYmd(ship.arrivalDateEnd) && !acc.standardShip.arrivalDateEnd) acc.standardShip.arrivalDateEnd = futureYmd(ship.arrivalDateEnd);
-    if (ship.cents != null && ship.cents > 0 && (acc.standardShip.cents == null || acc.standardShip.cents === 0)) {
-        acc.standardShip.cents = ship.cents;
-    }
-    const groups = (part.variantGroups || []).map((g) => ({
-        name: g.name,
-        options: (g.options || []).slice(),
-        selected: null,
-    }));
     const partBy = String(part.readBy || '');
     const accBy = String(acc.readBy || '');
     const partIsBrowser = /brightdata_browser/.test(partBy);
     const accHasBrowser = /brightdata_browser/.test(accBy);
+    if (part.pagePriceCents != null && part.pagePriceCents > 0) {
+        // Browser price wins. Gemini may only fill a blank — never undercut a known price with a crumb like $5.
+        if (partIsBrowser || acc.pagePriceCents == null) acc.pagePriceCents = part.pagePriceCents;
+        else if (!accHasBrowser && part.pagePriceCents < acc.pagePriceCents && part.pagePriceCents >= acc.pagePriceCents * 0.5) {
+            acc.pagePriceCents = part.pagePriceCents;
+        }
+    }
+    if (part.shipUnavailable) acc.shipUnavailable = true;
+    const ship = part.standardShip || {};
+    if (!acc.shipUnavailable) {
+        if (futureYmd(ship.arrivalDate) && !acc.standardShip.arrivalDate) acc.standardShip.arrivalDate = futureYmd(ship.arrivalDate);
+        if (futureYmd(ship.arrivalDateEnd) && !acc.standardShip.arrivalDateEnd) acc.standardShip.arrivalDateEnd = futureYmd(ship.arrivalDateEnd);
+        if (ship.cents != null && ship.cents > 0 && (acc.standardShip.cents == null || acc.standardShip.cents === 0)) {
+            acc.standardShip.cents = ship.cents;
+        }
+    } else {
+        acc.standardShip = { cents: null, arrivalDate: null, arrivalDateEnd: null, note: '' };
+    }
+    const groups = cleanVariantGroups(part.variantGroups);
     // Never let Gemini / Grok inflate color-size lists over a Scraping Browser read.
     if (groups.length) {
         if (partIsBrowser || !acc.variantGroups.length) {
             if (partIsBrowser || !accHasBrowser) acc.variantGroups = groups;
         }
+    } else if (partIsBrowser) {
+        acc.variantGroups = [];
     }
     if (part.inStock === false) acc.inStock = false;
     if (part.readBy && !String(acc.readBy).split('+').includes(part.readBy)) {
         acc.readBy = [acc.readBy, part.readBy].filter(Boolean).join('+');
     }
-    if (acc.pagePriceCents != null) {
+    if (!acc.shipUnavailable && acc.pagePriceCents != null) {
         const scheduled = standardShipping.scheduleCents('kohls', acc.pagePriceCents);
         if (acc.standardShip.cents == null || (acc.standardShip.cents === 0 && scheduled > 0)) {
             acc.standardShip.cents = scheduled;
@@ -1815,16 +1886,13 @@ function mergeKohlsPart(acc, part) {
 }
 
 function kohlsReady(acc) {
-    const names = (acc.variantGroups || []).map((g) => String(g.name || '').toLowerCase());
-    const hasColor = names.some((n) => /color/.test(n));
-    const hasSize = names.some((n) => /size/.test(n));
+    // Toys / single-SKU items have no color or size — do not wait for invented choices.
+    if (acc.shipUnavailable) return !!(acc.title && (acc.pagePriceCents != null || acc.shipUnavailable));
     return !!(
         acc.title
         && acc.pagePriceCents != null
         && acc.standardShip.cents != null
         && acc.standardShip.arrivalDate
-        && hasColor
-        && hasSize
     );
 }
 
@@ -1951,6 +2019,12 @@ function readKohlsFanout({ r, url, zip }) {
         const ms = Date.now() - started;
         const quiet = ['browser', 'gemini', 'unlocker', 'dataset', 'direct', 'grok'].filter((name) => !reported.has(name));
         if (quiet.length) console.log('[buy-read]', 'kohls', 'still-running', quiet.join(','), `${ms}ms`);
+        if (acc.shipUnavailable && acc.title) {
+            acc.standardShip = { cents: null, arrivalDate: null, arrivalDateEnd: null, note: '' };
+            acc.variantGroups = cleanVariantGroups(acc.variantGroups);
+            console.log('[buy-read]', 'kohls', 'stop', why, `${ms}ms`, 'ship_unavailable', String(url).slice(0, 90));
+            return productFromBrowse('kohls', r, acc, zip);
+        }
         if (acc.title && acc.pagePriceCents != null) {
             if (acc.standardShip.cents == null) {
                 acc.standardShip.cents = standardShipping.scheduleCents('kohls', acc.pagePriceCents);
@@ -1958,6 +2032,7 @@ function readKohlsFanout({ r, url, zip }) {
             if (!acc.standardShip.arrivalDate) {
                 acc.standardShip.arrivalDate = standardShipping.estimateArrivalDate();
             }
+            acc.variantGroups = cleanVariantGroups(acc.variantGroups);
             cacheKohlsProduct(url, acc);
             console.log(
                 '[buy-read]',

@@ -194,14 +194,26 @@ function applyRead(line, read, cfg) {
     const p = read.product;
     line.product = p;
     const openNow = (p.variantGroups || []).filter((g) => !g.selected || !(g.options || []).includes(g.selected));
+    if (p.shipUnavailable) {
+        return markUnavailable(line, 'ship_unavailable', 'This item is not available for shipping.');
+    }
     if (p.inStock === false && !openNow.length) return markUnavailable(line, 'out_of_stock');
     if (p.isElectronics && !cfg.allowElectronics) return markUnavailable(line, 'electronics_blocked');
+    // Soft launch: pause wearables (shoes/clothing/lingerie). Jewelry + beauty/lotions stay.
+    const wearKind = pageReader.wearablePauseKind(line.url, p.title, p.category, p.brand);
+    if (wearKind) {
+        return markUnavailable(line, 'wearable_paused', pageReader.wearablePauseMessage(wearKind));
+    }
     if (p.pagePriceCents && p.pagePriceCents > cfg.perItemCapCents) {
         return markUnavailable(line, 'over_item_limit', overLimitMessage(p.pagePriceCents, cfg.perItemCapCents));
     }
-    // Never park a readable item in Excluded for ZIP / delivery gaps — keep it in the cart
-    // with whatever price, ship estimate, and date we have (including a wrong-ZIP date).
-    if (p.choicePrompt && /shipping ZIP|ships to|Set the page/i.test(p.choicePrompt)) {
+    // Target: shopper must set delivery ZIP + store ZIP, then re-paste — park in Excluded with the ask.
+    // Other stores: keep partial reads in the cart (do not exclude for ZIP gaps).
+    if (p.choicePrompt && /shipping ZIP|ships to|Set the page|store ZIP|paste this link again/i.test(p.choicePrompt)) {
+        if (line.retailer === 'target') {
+            line.variantLabel = lineFacts.variantPhrase(p.variantGroups);
+            return markUnavailable(line, 'ship_zip', p.choicePrompt);
+        }
         p.choicePrompt = '';
         line.message = '';
     } else if (p.choicePrompt && !openNow.length && !p.pagePriceCents) {
