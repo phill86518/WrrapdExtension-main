@@ -9,7 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_GIFT_POPUP_BUILD', '2026-10-05-intro-video' );
+define( 'WRRAPD_GIFT_POPUP_BUILD', '2026-10-19-extension-flow-demo' );
 
 /**
  * Homepage popup intro clip (Media Library, muted autoplay then copy).
@@ -21,13 +21,18 @@ function wrrapd_gift_wrap_popup_video_url() {
 		return esc_url( (string) WRRAPD_GIFT_POPUP_VIDEO );
 	}
 
+	/* Prefer the extension-flow demo (checkout radio → modal → hub → wrap → delivery). */
+	$by_id = wp_get_attachment_url( 7405 );
+	if ( is_string( $by_id ) && $by_id !== '' ) {
+		return $by_id;
+	}
 	$by_id = wp_get_attachment_url( 7382 );
 	if ( is_string( $by_id ) && $by_id !== '' ) {
 		return $by_id;
 	}
 
-	$fallback = 'https://wrrapd.com/wp-content/uploads/2026/10/Gift-Wrapped-in-a-Flash_-A-Quick-Flashy-Finish.mp4';
-	$needle   = 'gift-wrapped-in-a-flash';
+	$fallback = 'https://wrrapd.com/wp-content/uploads/2026/10/Wrrapd-Extension-Flow-Demo.mp4';
+	$needles  = array( 'extension-flow-demo', 'wrrapd-extension-flow', 'gift-wrapped-in-a-flash' );
 	$atts     = get_posts(
 		array(
 			'post_type'      => 'attachment',
@@ -40,10 +45,12 @@ function wrrapd_gift_wrap_popup_video_url() {
 	);
 	foreach ( $atts as $att ) {
 		$hay = strtolower( (string) $att->post_title . ' ' . (string) $att->post_name . ' ' . (string) get_attached_file( $att->ID ) );
-		if ( strpos( $hay, $needle ) !== false ) {
-			$url = wp_get_attachment_url( $att->ID );
-			if ( is_string( $url ) && $url !== '' ) {
-				return $url;
+		foreach ( $needles as $needle ) {
+			if ( strpos( $hay, $needle ) !== false ) {
+				$url = wp_get_attachment_url( $att->ID );
+				if ( is_string( $url ) && $url !== '' ) {
+					return $url;
+				}
 			}
 		}
 	}

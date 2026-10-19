@@ -18,8 +18,11 @@
 	var nameEl = document.getElementById('wrrapd-gift-popup-name');
 	var logoEl = document.getElementById('wrrapd-gift-popup-logo');
 	var closeBtn = document.getElementById('wrrapd-gift-popup-close');
+	root.querySelectorAll('.wrrapd-gift-popup__cta, .wrrapd-gift-popup__lede').forEach(function (node) {
+		node.remove();
+	});
 	var ctaEl = root.querySelector('.wrrapd-gift-popup__cta');
-	var videoUrl = config.videoUrl || 'https://wrrapd.com/wp-content/uploads/2026/10/Gift-Wrapped-in-a-Flash_-A-Quick-Flashy-Finish.mp4';
+	var videoUrl = config.videoUrl || 'https://wrrapd.com/wp-content/uploads/2026/10/Wrrapd-Extension-Flow-Demo.mp4';
 	var videoWrap = document.getElementById('wrrapd-gift-popup-video');
 	var videoEl = document.getElementById('wrrapd-gift-popup-player');
 	var panelEl = root.querySelector('.wrrapd-gift-popup__panel');
@@ -50,6 +53,7 @@
 	var cyclingTimer = null;
 	var openTimer = null;
 	var introTimer = null;
+	var handoffTimer = null;
 	var currentIndex = 0;
 	var isOpen = false;
 	var introDone = false;
@@ -181,16 +185,19 @@
 			return;
 		}
 		introDone = true;
-		root.classList.remove('is-intro');
-		if (videoWrap) {
-			videoWrap.hidden = true;
-		}
-		if (videoEl) {
-			try {
-				videoEl.pause();
-			} catch (e) {}
-		}
-		startCycling();
+		handoffTimer = window.setTimeout(function () {
+			handoffTimer = null;
+			root.classList.remove('is-intro');
+			if (videoWrap) {
+				videoWrap.hidden = true;
+			}
+			if (videoEl) {
+				try {
+					videoEl.pause();
+				} catch (e) {}
+			}
+			startCycling();
+		}, 500);
 	}
 
 	function playIntro(thenStart) {
@@ -220,11 +227,95 @@
 			videoEl.currentTime = 0;
 		} catch (e) {}
 
-		var playAttempt = videoEl.play();
-		if (playAttempt && typeof playAttempt.then === 'function') {
-			playAttempt.catch(function () {
-				finishIntro();
+		function keepVolume() {
+			videoEl.muted = false;
+			videoEl.defaultMuted = false;
+			videoEl.volume = 1;
+			videoEl.removeAttribute('muted');
+		}
+
+		function playWithSound() {
+			keepVolume();
+			var playAttempt = videoEl.play();
+			if (!playAttempt || typeof playAttempt.then !== 'function') {
+				return;
+			}
+			playAttempt.then(function () {
+				keepVolume();
+			}).catch(function () {
+				keepVolume();
+				var onGesture = function () {
+					document.removeEventListener('pointerdown', onGesture, true);
+					document.removeEventListener('keydown', onGesture, true);
+					keepVolume();
+					var next = videoEl.play();
+					if (next && typeof next.then === 'function') {
+						next.then(function () {
+							keepVolume();
+						});
+					}
+				};
+				document.addEventListener('pointerdown', onGesture, true);
+				document.addEventListener('keydown', onGesture, true);
 			});
+		}
+
+		function playFullClip() {
+			keepVolume();
+			var playAttempt = videoEl.play();
+			if (!playAttempt || typeof playAttempt.then !== 'function') {
+				return;
+			}
+			playAttempt.then(function () {
+				keepVolume();
+			}).catch(function () {
+				keepVolume();
+				var retry = function () {
+					videoEl.removeEventListener('canplay', retry);
+					playWithSound();
+				};
+				if (videoEl.readyState >= 2) {
+					playWithSound();
+				} else {
+					videoEl.addEventListener('canplay', retry);
+				}
+			});
+		}
+
+		function isMobilePlayback() {
+			if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) {
+				return true;
+			}
+			return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent || '');
+		}
+
+		if (isMobilePlayback()) {
+			keepVolume();
+			var onTap = function (event) {
+				if (event.target && event.target.closest && event.target.closest('#wrrapd-gift-popup-close')) {
+					return;
+				}
+				document.removeEventListener('touchend', onTap, true);
+				document.removeEventListener('click', onTap, true);
+				if (introTimer) {
+					window.clearTimeout(introTimer);
+				}
+				introTimer = window.setTimeout(finishIntro, 12000);
+				keepVolume();
+				try {
+					videoEl.currentTime = 0;
+				} catch (e) {}
+				var tapped = videoEl.play();
+				if (tapped && typeof tapped.then === 'function') {
+					tapped.then(function () {
+						keepVolume();
+					});
+				}
+			};
+			document.addEventListener('touchend', onTap, true);
+			document.addEventListener('click', onTap, true);
+		} else {
+			playFullClip();
 		}
 
 		introTimer = window.setTimeout(finishIntro, 12000);
@@ -254,6 +345,10 @@
 		if (introTimer) {
 			window.clearTimeout(introTimer);
 			introTimer = null;
+		}
+		if (handoffTimer) {
+			window.clearTimeout(handoffTimer);
+			handoffTimer = null;
 		}
 		root.classList.remove('is-open', 'is-intro');
 		root.setAttribute('aria-hidden', 'true');
