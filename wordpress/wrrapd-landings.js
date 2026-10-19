@@ -28,7 +28,9 @@
     setTimeout(placeStrip, 400);
     setTimeout(placeStrip, 1400);
     /* Collapse ticker via CSS; only remove the sections we fully replace. */
-    [shell, ticker].forEach(function (el) { if (el) el.setAttribute('aria-hidden', 'true'); });
+    [document.querySelector('.occasion-ticker-shell'), document.querySelector('.elementor-element-0a7e92b')].forEach(function (el) {
+      if (el) el.setAttribute('aria-hidden', 'true');
+    });
     ['.elementor-element-6b1d5da', '.elementor-element-3b1e47e', '.elementor-element-f68c5e7'].forEach(function (s) {
       document.querySelectorAll(s).forEach(function (el) {
         if (el.parentNode) el.parentNode.removeChild(el);
@@ -36,7 +38,9 @@
     });
     var footer = document.querySelector('.elementor-element-bdc63f8') || document.querySelector('.elementor-location-footer');
     if (footer && footer.parentNode) {
-      [parts.hiw, parts.paste, parts.ideas].forEach(function (p) { footer.parentNode.insertBefore(p, footer); });
+      [parts.hiw, parts.paste, parts.ideas].forEach(function (p) {
+        if (p) footer.parentNode.insertBefore(p, footer);
+      });
     }
     ensureHeaderWays();
     return document.body;
