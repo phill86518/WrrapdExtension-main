@@ -21,21 +21,21 @@
     position: absolute; left: 50%; top: 50%; width: 1280px; height: 720px;
     transform: translate(-50%, -50%) scale(1);
     transform-origin: center center;
-    transition: transform .85s cubic-bezier(.2,.8,.2,1);
+    transition: transform .7s cubic-bezier(.2,.8,.2,1);
   }
-  .stage.z-wide .cam { transform: translate(-50%, -50%) scale(1.08); }
-  .stage.z-optin .cam { transform: translate(-40%, -44%) scale(1.42); }
-  .stage.z-radio .cam { transform: translate(-36%, -36%) scale(1.55); }
-  .stage.z-modal .cam { transform: translate(-50%, -54%) scale(1.52); }
-  .stage.z-flowers .cam { transform: translate(-50%, -46%) scale(1.58); }
-  .stage.z-hub .cam { transform: translate(-50%, -52%) scale(1.48); }
-  .stage.z-pay .cam { transform: translate(-24%, -24%) scale(1.6); }
-  .stage.z-wrap .cam { transform: translate(-50%, -50%) scale(1.38); }
-  .stage.z-deliver .cam { transform: translate(-50%, -48%) scale(1.42); }
-  .stage.z-paste .cam { transform: translate(-50%, -50%) scale(1.32); }
+  /* Mild zoom — tighten framing without cropping the story */
+  .stage.z-wide .cam { transform: translate(-50%, -50%) scale(1.04); }
+  .stage.z-optin .cam { transform: translate(-46%, -48%) scale(1.16); }
+  .stage.z-radio .cam { transform: translate(-44%, -42%) scale(1.2); }
+  .stage.z-modal .cam { transform: translate(-50%, -52%) scale(1.18); }
+  .stage.z-flowers .cam { transform: translate(-50%, -48%) scale(1.2); }
+  .stage.z-hub .cam { transform: translate(-50%, -50%) scale(1.16); }
+  .stage.z-pay .cam { transform: translate(-36%, -36%) scale(1.22); }
+  .stage.z-wrap .cam, .stage.z-deliver .cam { transform: translate(-50%, -50%) scale(1.12); }
+  .stage.z-paste .cam, .stage.z-buy .cam { transform: translate(-50%, -50%) scale(1.1); }
 
   .browser {
-    position: absolute; inset: 8px 16px 12px;
+    position: absolute; inset: 28px 48px 36px;
     border-radius: 14px; overflow: hidden; background: #fff;
     box-shadow: 0 24px 60px rgba(0,0,0,.45);
     display: flex; flex-direction: column;
@@ -165,9 +165,7 @@
     height: 58px; border-radius: 8px; margin-bottom: 4px; position: relative; overflow: hidden;
     background: linear-gradient(180deg, #ecfdf5 0%, #d1fae5 100%);
   }
-  .bq .pic::before, .bq .pic::after {
-    content: ""; position: absolute; border-radius: 50%;
-  }
+  .bq .pic::before, .bq .pic::after { content: ""; position: absolute; border-radius: 50%; }
   .bq .pic::before {
     width: 18px; height: 18px; left: 14px; top: 14px;
     background: radial-gradient(circle at 35% 35%, #fda4af, #fb7185 55%, #be123c);
@@ -221,7 +219,7 @@
   .pay.paid { background: #ecfdf5; border-color: #6ee7b7; }
   .pay.paid b, .pay.paid .row { color: #065f46; }
 
-  .wrap-scene, .deliver-scene, .paste-scene {
+  .wrap-scene, .deliver-scene, .paste-scene, .buy-scene {
     position: absolute; inset: 0; display: flex; flex-direction: column;
     align-items: center; justify-content: center; gap: 14px; z-index: 8;
     opacity: 0; pointer-events: none; transition: opacity .45s ease;
@@ -230,7 +228,9 @@
     background: radial-gradient(900px 420px at 70% 10%, rgba(246,185,51,.22), transparent 55%),
       linear-gradient(160deg, #0c0638 0%, #170a5e 100%); color: #fff;
   }
-  .stage.s-wrap .wrap-scene, .stage.s-deliver .deliver-scene, .stage.s-paste .paste-scene { opacity: 1; }
+  .stage.s-wrap .wrap-scene, .stage.s-deliver .deliver-scene,
+  .stage.s-paste .paste-scene, .stage.s-buy .buy-scene,
+  .stage.s-review .buy-scene { opacity: 1; }
 
   .gift-row { display: flex; align-items: flex-end; gap: 18px; }
   .gift {
@@ -278,9 +278,7 @@
     position: absolute; bottom: 6px; left: 10px; width: 28px; height: 22px; border-radius: 3px;
     background: repeating-linear-gradient(45deg, #7f1d1d 0 4px, #fef3c7 4px 8px);
   }
-  .proof-pic .pf {
-    position: absolute; bottom: 8px; right: 12px; width: 22px; height: 30px;
-  }
+  .proof-pic .pf { position: absolute; bottom: 8px; right: 12px; width: 22px; height: 30px; }
   .proof-pic .pf::before {
     content: ""; position: absolute; left: 6px; bottom: 0; width: 6px; height: 14px; background: #16a34a; border-radius: 2px;
   }
@@ -325,25 +323,53 @@
   }
   .sms small { display: block; color: #64748b; font-weight: 460; margin-top: 2px; font-size: 12px; }
 
-  .paste-scene { background: linear-gradient(160deg, #fbf6ec, #fff); color: var(--navy-text); padding: 24px; }
-  .paste-card {
-    width: min(720px, 92%); background: #fff; border-radius: 16px; padding: 22px 24px;
+  .paste-scene, .buy-scene { background: linear-gradient(160deg, #fbf6ec, #fff); color: var(--navy-text); padding: 24px; }
+  .paste-card, .buy-card {
+    width: min(760px, 92%); background: #fff; border-radius: 16px; padding: 22px 24px;
     border: 1px solid var(--line); box-shadow: 0 18px 40px rgba(12,6,56,.12);
   }
-  .paste-card h2 { font-size: 22px; font-weight: 650; margin-bottom: 6px; }
-  .paste-card .lede { font-size: 14px; color: #64748b; margin-bottom: 14px; }
-  .paste-row { display: flex; gap: 8px; margin-bottom: 10px; }
-  .paste-row input {
+  .paste-card h2, .buy-card h2 { font-size: 22px; font-weight: 650; margin-bottom: 6px; }
+  .paste-card .lede, .buy-card .lede { font-size: 14px; color: #64748b; margin-bottom: 14px; }
+  .paste-row, .buy-row { display: flex; gap: 8px; margin-bottom: 10px; }
+  .paste-row input, .buy-row input {
     flex: 1; border: 1px solid var(--line); border-radius: 999px; padding: 11px 16px;
     font: inherit; font-size: 14px; background: #f8fafc;
   }
-  .paste-row input.on { border-color: var(--gold); background: #fffaf0; }
-  .paste-row .go {
+  .paste-row input.on, .buy-row input.on { border-color: var(--gold); background: #fffaf0; }
+  .paste-row .go, .buy-row .go {
     border: 0; border-radius: 999px; padding: 11px 18px; font: inherit; font-weight: 800; font-size: 13px;
     background: linear-gradient(180deg, #e85d04, #d14900); color: #fff; white-space: nowrap;
   }
-  .paste-note { font-size: 12px; color: #64748b; }
-  .paste-note b { color: var(--navy-text); }
+  .paste-note, .buy-note { font-size: 12px; color: #64748b; }
+  .paste-note b, .buy-note b { color: var(--navy-text); }
+  .buy-zip {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
+    padding: 10px 12px; border-radius: 10px; background: #f8fafc; border: 1px solid var(--line);
+  }
+  .buy-zip label { font-size: 12px; font-weight: 650; color: #475569; white-space: nowrap; }
+  .buy-zip input { width: 7rem; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font: inherit; font-size: 14px; }
+  .buy-zip input.ok { border-color: #34d399; background: #ecfdf5; }
+  .buy-review {
+    display: flex; gap: 14px; align-items: center; padding: 12px; margin: 10px 0 14px;
+    border: 1px solid var(--line); border-radius: 12px; background: #fffaf0;
+    opacity: 0; transform: translateY(8px); transition: .35s ease;
+  }
+  .stage.s-review .buy-review { opacity: 1; transform: none; }
+  .buy-review img { width: 64px; height: 64px; border-radius: 10px; object-fit: cover; }
+  .buy-review b { display: block; font-size: 14px; color: var(--navy-text); }
+  .buy-review span { font-size: 12px; color: #64748b; }
+  .buy-checks { display: grid; gap: 6px; margin-bottom: 12px; font-size: 13px; color: #475569; }
+  .buy-checks i {
+    display: flex; align-items: center; gap: 8px; opacity: 0; transform: translateX(-6px);
+    transition: .3s ease;
+  }
+  .stage.s-review .buy-checks i { opacity: 1; transform: none; }
+  .stage.s-review .buy-checks i:nth-child(2) { transition-delay: .12s; }
+  .stage.s-review .buy-checks i:nth-child(3) { transition-delay: .24s; }
+  .buy-checks i::before {
+    content: ""; width: 14px; height: 14px; border-radius: 50%;
+    background: #059669; box-shadow: inset 0 0 0 3px #fff, 0 0 0 1px #059669;
+  }
 
   .cursor {
     position: absolute; width: 20px; height: 20px; border-radius: 50% 50% 50% 0;
@@ -354,17 +380,67 @@
     left: 70%; top: 40%;
   }
   .cursor.press { transform: translate(-4px, -4px) rotate(-35deg) scale(.82); }
+  .stage.s-option .cursor, .stage.s-intro .cursor { opacity: 0; }
 
   .badge {
     position: absolute; top: 14px; left: 50%; transform: translateX(-50%); z-index: 30;
     padding: 5px 12px; border-radius: 999px; background: rgba(12,6,56,.9); color: var(--gold);
     font-size: 11px; font-weight: 650; letter-spacing: .08em; text-transform: uppercase;
+    transition: opacity .25s ease;
+  }
+  .stage.s-option .badge, .stage.s-intro .badge { opacity: 0; }
+
+  .steps {
+    position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%);
+    z-index: 32; display: flex; gap: 6px; padding: 6px 8px; border-radius: 999px;
+    background: rgba(12,6,56,.88); box-shadow: 0 8px 22px rgba(0,0,0,.28);
+    opacity: 0; pointer-events: none; transition: opacity .3s ease;
+  }
+  .stage.show-steps .steps { opacity: 1; }
+  .steps span {
+    padding: 5px 10px; border-radius: 999px; font-size: 11px; font-weight: 650;
+    color: rgba(255,255,255,.55); white-space: nowrap; transition: .25s ease;
+  }
+  .steps span.on { background: var(--gold); color: var(--navy-text); }
+
+  .option-card {
+    position: absolute; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center;
+    background: radial-gradient(700px 380px at 50% 40%, rgba(246,185,51,.28), transparent 60%),
+      linear-gradient(160deg, #0c0638, #170a5e);
+    opacity: 0; pointer-events: none; transition: opacity .4s ease;
+  }
+  .stage.s-option .option-card, .stage.s-intro .option-card { opacity: 1; }
+  .option-card .inner {
+    text-align: center; color: #fff; transform: scale(.92);
+    transition: transform .45s cubic-bezier(.2,.9,.2,1.1);
+  }
+  .stage.s-option .option-card .inner, .stage.s-intro .option-card .inner { transform: scale(1); }
+  .option-card .eyebrow {
+    display: inline-block; margin-bottom: 12px; padding: 5px 12px; border-radius: 999px;
+    background: rgba(246,185,51,.18); border: 1px solid rgba(246,185,51,.5);
+    color: var(--gold); font-size: 12px; font-weight: 650; letter-spacing: .12em; text-transform: uppercase;
+  }
+  .option-card h1 { font-size: 48px; font-weight: 800; line-height: 1.1; margin-bottom: 10px; }
+  .option-card p { font-size: 18px; font-weight: 460; color: rgba(255,255,255,.82); max-width: 28ch; margin: 0 auto; }
+  .option-card .circle {
+    display: inline-grid; place-items: center; width: 64px; height: 64px; margin-bottom: 14px;
+    border-radius: 50%; background: var(--gold); color: var(--navy-text);
+    font-size: 28px; font-weight: 800;
   }
 </style>
 </head>
 <body>
-<div class="stage s-boot z-wide" id="stage">
+<div class="stage s-intro z-wide" id="stage">
   <div class="badge" id="badge">At checkout</div>
+  <div class="steps" id="steps" aria-hidden="true"></div>
+  <div class="option-card" id="option-card">
+    <div class="inner">
+      <div class="circle" id="opt-circle">①</div>
+      <p class="eyebrow" id="opt-eyebrow">Two ways to gift-wrap</p>
+      <h1 id="opt-title">Wrrapd</h1>
+      <p id="opt-lede">Chrome extension or copy-paste on the website</p>
+    </div>
+  </div>
   <div class="cam">
     <div class="browser">
       <div class="bar"><i></i><i></i><i></i><div class="url" id="url">target.com/checkout</div></div>
@@ -465,13 +541,40 @@ Jacksonville, FL</div>
 
         <div class="paste-scene">
           <div class="paste-card">
-            <h2>Or copy-paste a product link</h2>
+            <h2>Copy-paste a product link</h2>
             <p class="lede">No extension needed — paste any partner-store product URL on wrrapd.com.</p>
+            <div class="buy-zip">
+              <label for="paste-zip">Giftee zip</label>
+              <input id="paste-zip" type="text" readonly value="" placeholder="ZIP" />
+            </div>
             <div class="paste-row">
               <input id="paste-url" type="text" readonly value="" placeholder="https://…" />
-              <button class="go" type="button">Gift-wrap this item</button>
+              <button class="go" type="button" id="paste-go">Gift-wrap this item</button>
             </div>
-            <p class="paste-note"><b>Also on the website:</b> giftee ZIP + product link → we buy, wrap, and deliver.</p>
+            <p class="paste-note"><b>On the website:</b> giftee ZIP + product link → we buy, wrap, and deliver.</p>
+          </div>
+        </div>
+
+        <div class="buy-scene">
+          <div class="buy-card">
+            <h2>Your gift list</h2>
+            <p class="lede">We found the item — confirm wrapping, then we buy it for you.</p>
+            <div class="buy-review" id="buy-review">
+              <img src="https://target.scene7.com/is/image/Target/GUEST_2c7410d9-3a5a-41d2-a0fe-f53eeabd2726?wid=300&hei=300&qlt=80" alt="" />
+              <div>
+                <b>LEGO Icons Bumblebee Set</b>
+                <span>Target · Gift wrap + flowers selected</span>
+              </div>
+            </div>
+            <div class="buy-checks">
+              <i>Wrapping design chosen</i>
+              <i>Fresh flowers added</i>
+              <i>Ready to checkout on Wrrapd</i>
+            </div>
+            <div class="buy-row">
+              <button class="go" type="button" id="buy-pay">Continue to Wrrapd checkout</button>
+            </div>
+            <p class="buy-note"><b>Next:</b> we purchase, wrap by hand, and deliver to their door.</p>
           </div>
         </div>
 
@@ -484,6 +587,7 @@ Jacksonville, FL</div>
 (function () {
   var stage = document.getElementById('stage');
   var badge = document.getElementById('badge');
+  var stepsEl = document.getElementById('steps');
   var cursor = document.getElementById('cursor');
   var url = document.getElementById('url');
   var zip = document.getElementById('zip');
@@ -493,10 +597,38 @@ Jacksonville, FL</div>
   var pay = document.getElementById('pay');
   var payBtn = document.getElementById('pay-btn');
   var pasteUrl = document.getElementById('paste-url');
+  var pasteZip = document.getElementById('paste-zip');
+  var optCircle = document.getElementById('opt-circle');
+  var optEyebrow = document.getElementById('opt-eyebrow');
+  var optTitle = document.getElementById('opt-title');
+  var optLede = document.getElementById('opt-lede');
 
-  function setScene(name, zoom, label) {
-    stage.className = 'stage s-' + name + ' z-' + zoom;
+  var OPT1_STEPS = ['Step 1 · Checkout', 'Step 2 · Choose wrap', 'Step 3 · Customize', 'Step 4 · Hub', 'Step 5 · Pay', 'Step 6 · Wrap', 'Step 7 · Deliver'];
+  var OPT2_STEPS = ['Step 1 · Open /buy', 'Step 2 · Giftee ZIP', 'Step 3 · Paste link', 'Step 4 · Review', 'Step 5 · Wrap', 'Step 6 · Deliver'];
+
+  function setScene(name, zoom, label, showSteps) {
+    stage.className = 'stage s-' + name + ' z-' + zoom + (showSteps ? ' show-steps' : '');
     if (label) badge.textContent = label;
+  }
+  function setOptionCard(circle, eyebrow, title, lede) {
+    optCircle.textContent = circle;
+    optEyebrow.textContent = eyebrow;
+    optTitle.textContent = title;
+    optLede.textContent = lede;
+  }
+  function setSteps(list, active) {
+    stepsEl.innerHTML = '';
+    list.forEach(function (label, i) {
+      var s = document.createElement('span');
+      s.textContent = label;
+      if (i === active) s.className = 'on';
+      stepsEl.appendChild(s);
+    });
+  }
+  function markStep(i) {
+    Array.prototype.forEach.call(stepsEl.children, function (el, k) {
+      el.classList.toggle('on', k === i);
+    });
   }
   function moveCursor(x, y, press) {
     cursor.style.left = x + 'px';
@@ -511,92 +643,145 @@ Jacksonville, FL</div>
   }
 
   function run() {
-    setScene('boot', 'wide', 'At checkout');
     url.textContent = 'target.com/checkout';
     radioNo.classList.add('on'); radioYes.classList.remove('on');
     flowers.classList.remove('on');
     zip.value = ''; zip.classList.remove('ok');
     pay.classList.remove('paid'); payBtn.textContent = 'Pay Wrrapd';
-    pasteUrl.value = '';
+    pasteUrl.value = ''; pasteUrl.classList.remove('on');
+    pasteZip.value = ''; pasteZip.classList.remove('ok');
     document.querySelectorAll('.bq').forEach(function (b) { b.classList.remove('on'); });
     document.getElementById('bq3').classList.add('on');
     moveCursor(900, 280, false);
 
-    at(350, function () {
-      setScene('optin', 'optin', 'Wrrapd at checkout');
-      var p = rectCenter(document.getElementById('optin'));
-      moveCursor(p.x, p.y);
+    /* Intro */
+    setOptionCard('①②', 'Two ways to gift-wrap', 'Wrrapd', 'Chrome extension or copy-paste on the website');
+    setScene('intro', 'wide', '', false);
+
+    /* Option 1 title */
+    at(2200, function () {
+      setOptionCard('①', 'Option 1', 'Chrome Extension', 'Gift-wrap right at checkout on your favorite stores');
+      setScene('option', 'wide', '', false);
     });
-    at(1400, function () {
-      setScene('radio', 'radio', 'Choose gift-wrap');
+
+    /* Option 1 flow */
+    at(4800, function () {
+      setSteps(OPT1_STEPS, 0);
+      setScene('boot', 'wide', 'Option 1 · At checkout', true);
+    });
+    at(5400, function () {
+      setScene('optin', 'optin', 'Option 1 · Wrrapd appears', true);
+      markStep(0);
+      moveCursor(rectCenter(document.getElementById('optin')).x, rectCenter(document.getElementById('optin')).y);
+    });
+    at(6600, function () {
+      setScene('radio', 'radio', 'Option 1 · Step 2 · Choose wrap', true);
+      markStep(1);
       moveCursor(rectCenter(radioYes).x, rectCenter(radioYes).y);
     });
-    at(2000, function () {
+    at(7400, function () {
       moveCursor(rectCenter(radioYes).x, rectCenter(radioYes).y, true);
       radioYes.classList.add('on'); radioNo.classList.remove('on');
     });
-    at(2350, function () {
-      setScene('modal', 'modal', 'Customize wrapping');
+    at(8000, function () {
+      setScene('modal', 'modal', 'Option 1 · Step 3 · Customize', true);
+      markStep(2);
       moveCursor(rectCenter(zip).x, rectCenter(zip).y, true);
       zip.value = '32202'; zip.classList.add('ok');
     });
-    at(3200, function () {
-      setScene('flowers', 'flowers', 'Add flowers');
+    at(9200, function () {
+      setScene('flowers', 'flowers', 'Option 1 · Step 3 · Add flowers', true);
       moveCursor(rectCenter(flowers).x, rectCenter(flowers).y, true);
       flowers.classList.add('on');
     });
-    at(4100, function () {
+    at(10400, function () {
       var b = document.getElementById('bq2');
       moveCursor(rectCenter(b).x, rectCenter(b).y, true);
       document.querySelectorAll('.bq').forEach(function (x) { x.classList.remove('on'); });
       b.classList.add('on');
     });
-    at(5000, function () {
-      moveCursor(rectCenter(document.getElementById('bq1')).x, rectCenter(document.getElementById('bq1')).y);
-    });
-    at(5600, function () {
-      var b = document.getElementById('bq3');
-      moveCursor(rectCenter(b).x, rectCenter(b).y, true);
-      document.querySelectorAll('.bq').forEach(function (x) { x.classList.remove('on'); });
-      b.classList.add('on');
-    });
-    at(6400, function () {
+    at(11400, function () {
       moveCursor(rectCenter(document.getElementById('save-btn')).x, rectCenter(document.getElementById('save-btn')).y, true);
     });
-    at(6900, function () {
-      setScene('hub', 'hub', 'Confirm the Wrrapd hub');
+    at(12000, function () {
+      setScene('hub', 'hub', 'Option 1 · Step 4 · Confirm hub', true);
+      markStep(3);
       document.getElementById('hub-addr').textContent = 'Wrrapd Gift Hub\nJacksonville, FL 32202';
       moveCursor(rectCenter(document.getElementById('hub-accept')).x, rectCenter(document.getElementById('hub-accept')).y);
     });
-    at(8000, function () {
+    at(13400, function () {
       moveCursor(rectCenter(document.getElementById('hub-accept')).x, rectCenter(document.getElementById('hub-accept')).y, true);
     });
-    at(8600, function () {
-      setScene('pay', 'pay', 'Pay Wrrapd');
+    at(14200, function () {
+      setScene('pay', 'pay', 'Option 1 · Step 5 · Pay Wrrapd', true);
+      markStep(4);
       url.textContent = 'target.com/checkout · Wrrapd ready';
       moveCursor(rectCenter(payBtn).x, rectCenter(payBtn).y);
     });
-    at(9400, function () {
+    at(15200, function () {
       moveCursor(rectCenter(payBtn).x, rectCenter(payBtn).y, true);
       pay.classList.add('paid'); payBtn.textContent = 'Paid — continue checkout';
     });
-    at(10300, function () { setScene('wrap', 'wrap', 'We wrap at the hub'); moveCursor(640, 360, false); });
-    at(12800, function () { setScene('deliver', 'deliver', 'Delivered with confirmation'); });
     at(16200, function () {
-      setScene('paste', 'paste', 'Or paste a link on wrrapd.com');
+      setScene('wrap', 'wrap', 'Option 1 · Step 6 · We wrap', true);
+      markStep(5);
+      moveCursor(640, 360, false);
+    });
+    at(18600, function () {
+      setScene('deliver', 'deliver', 'Option 1 · Step 7 · Delivered', true);
+      markStep(6);
+    });
+
+    /* Option 2 title */
+    at(21400, function () {
+      setOptionCard('②', 'Option 2', 'Copy-paste on wrrapd.com', 'No extension needed — paste a product link on the website');
+      setScene('option', 'wide', '', false);
+    });
+
+    /* Option 2 flow */
+    at(24000, function () {
+      setSteps(OPT2_STEPS, 0);
       url.textContent = 'wrrapd.com/buy';
-      pasteUrl.value = '';
+      setScene('paste', 'paste', 'Option 2 · Step 1 · Open /buy', true);
+      moveCursor(rectCenter(pasteZip).x, rectCenter(pasteZip).y);
+    });
+    at(25600, function () {
+      markStep(1);
+      badge.textContent = 'Option 2 · Step 2 · Giftee ZIP';
+      moveCursor(rectCenter(pasteZip).x, rectCenter(pasteZip).y, true);
+      pasteZip.value = '32202'; pasteZip.classList.add('ok');
+    });
+    at(27200, function () {
+      markStep(2);
+      badge.textContent = 'Option 2 · Step 3 · Paste link';
       moveCursor(rectCenter(pasteUrl).x, rectCenter(pasteUrl).y, true);
     });
-    at(17400, function () {
+    at(28200, function () {
       pasteUrl.value = 'https://www.target.com/p/lego-icons-bumblebee/-/A-879';
       pasteUrl.classList.add('on');
-      moveCursor(rectCenter(document.querySelector('.paste-row .go')).x, rectCenter(document.querySelector('.paste-row .go')).y, true);
+      moveCursor(rectCenter(document.getElementById('paste-go')).x, rectCenter(document.getElementById('paste-go')).y, true);
     });
-    at(20500, function () { /* hold final */ });
+    at(29600, function () {
+      markStep(3);
+      setScene('review', 'buy', 'Option 2 · Step 4 · Review & wrap', true);
+      moveCursor(rectCenter(document.getElementById('buy-pay')).x, rectCenter(document.getElementById('buy-pay')).y);
+    });
+    at(31800, function () {
+      moveCursor(rectCenter(document.getElementById('buy-pay')).x, rectCenter(document.getElementById('buy-pay')).y, true);
+    });
+    at(32800, function () {
+      markStep(4);
+      setScene('wrap', 'wrap', 'Option 2 · Step 5 · We wrap', true);
+      moveCursor(640, 360, false);
+    });
+    at(35000, function () {
+      markStep(5);
+      setScene('deliver', 'deliver', 'Option 2 · Step 6 · Delivered', true);
+    });
+    at(37800, function () { /* hold final */ });
   }
 
-  window.__WRRAPD_DEMO_DURATION_MS = 21000;
+  window.__WRRAPD_DEMO_DURATION_MS = 39000;
   window.__WRRAPD_DEMO_RUN = run;
   if (location.search.indexOf('auto=1') >= 0) run();
 })();
