@@ -278,18 +278,17 @@ body .wl a.wl-orange, body .wl button.wl-orange { border: 0; background: linear-
 body .wl a.wl-ghost { border: 2px solid #e85d04; background: #fff !important; color: #d14900 !important; }
 body .wl a.wl-orange:hover, body .wl button.wl-orange:hover, body .wl a.wl-ghost:hover { transform: translateY(-1px); box-shadow: 0 .5rem 1.1rem rgba(0, 0, 0, .2); }
 
-/* Header: option note stacked above the orange button (desktop) — grouped as one unit */
+/* Header: lede + ① label|button row, then OR + ② below the button (desktop) */
 body.wrrapd-landing-6 .elementor-location-header .wl6-has-ways,
-body.wrrapd-landing-6 .elementor-location-header .elementor-element-00ec9fc.wl6-has-ways,
-body.wrrapd-landing-6 .elementor-location-header .elementor-element-7f1bdc1.wl6-has-ways {
+body.wrrapd-landing-6 .elementor-location-header .elementor-element-00ec9fc.wl6-has-ways {
   display: flex !important;
   flex-direction: column !important;
   align-items: center !important;
   justify-content: center !important;
-  gap: 6px !important;
+  gap: 0 !important;
   overflow: visible !important;
   z-index: 6 !important;
-  padding: 6px 12px 5px !important;
+  padding: 5px 10px 6px !important;
   border-radius: 12px !important;
   background: rgba(255, 255, 255, .07) !important;
   border: 1px solid rgba(246, 185, 51, .28) !important;
@@ -302,8 +301,13 @@ body.wrrapd-landing-6 .elementor-location-header .elementor-element-7f1bdc1.wl6-
   transform: none !important;
   margin: 0 !important;
   padding: 0 !important;
+  width: 100%;
+  max-width: 28rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
   white-space: normal;
-  max-width: 22rem;
   font-family: Fraunces, Georgia, "Times New Roman", serif;
   font-size: .7rem;
   font-weight: 600;
@@ -314,14 +318,51 @@ body.wrrapd-landing-6 .elementor-location-header .elementor-element-7f1bdc1.wl6-
   text-align: center;
 }
 .wl6-ways p { margin: 0 !important; }
-.wl6-ways-lede { color: rgba(255, 255, 255, .88); font-weight: 560; margin-bottom: 2px !important; }
-.wl6-ways-opt1, .wl6-ways-opt2 { color: #f6b933; font-weight: 650; }
+.wl6-ways-lede { color: rgba(255, 255, 255, .88); font-weight: 560; }
+.wl6-ways-row1 {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: nowrap;
+  gap: 8px;
+  width: 100%;
+}
+.wl6-ways-opt1 {
+  flex: 0 1 auto;
+  color: #f6b933;
+  font-weight: 650;
+  white-space: nowrap;
+  text-align: right;
+}
+.wl6-ways-btn-slot {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+}
+.wl6-ways-btn-slot .elementor-widget-container,
+.wl6-ways-btn-slot .elementor-button-wrapper {
+  margin: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+}
+.wl6-ways-or {
+  margin-top: 3px !important;
+  color: rgba(255, 255, 255, .7);
+  font-weight: 650;
+  font-size: .65rem;
+  letter-spacing: .14em;
+}
+.wl6-ways-opt2 {
+  margin-top: 1px !important;
+  color: #f6b933;
+  font-weight: 650;
+}
 .wl6-ways a { color: #f6b933 !important; text-decoration: underline; text-underline-offset: 2px; }
 @media (max-width: 1100px), (pointer: coarse) {
   .wl6-ways { display: none !important; }
   body.wrrapd-landing-6 .elementor-location-header .wl6-has-ways,
-  body.wrrapd-landing-6 .elementor-location-header .elementor-element-00ec9fc.wl6-has-ways,
-  body.wrrapd-landing-6 .elementor-location-header .elementor-element-7f1bdc1.wl6-has-ways {
+  body.wrrapd-landing-6 .elementor-location-header .elementor-element-00ec9fc.wl6-has-ways {
     padding: 0 !important;
     border: 0 !important;
     background: transparent !important;

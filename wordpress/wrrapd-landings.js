@@ -90,22 +90,29 @@
     return tpl && tpl.content ? tpl.content.querySelector('[data-wl6="ways"]') : null;
   }
 
-  /* Only adds the tiny "Two ways…" note. Never changes header/footer button text or styling. */
+  /* Mount ① label + orange button on one row; OR + ② sit below the button. */
   function ensureHeaderWays(preferredWays) {
+    function findBtn(scope) {
+      return (scope || document).querySelector('.elementor-element-7f1bdc1, [data-id="7f1bdc1"]') ||
+        (function () {
+          var a = (scope || document).querySelector('a.elementor-button');
+          return a && a.closest('.elementor-element');
+        })();
+    }
     function apply() {
       var ways = takeWaysNode(preferredWays);
       var header = document.querySelector('.elementor-location-header');
       if (!ways || !header) return false;
-      var host = header.querySelector('.elementor-element-00ec9fc, [data-id="00ec9fc"]') ||
-        header.querySelector('.elementor-element-7f1bdc1, [data-id="7f1bdc1"]');
-      if (!host) {
-        var anyBtn = header.querySelector('a.elementor-button');
-        host = anyBtn && anyBtn.closest('.elementor-element-7f1bdc1, [data-id="7f1bdc1"], .elementor-element');
-      }
-      if (!host) return false;
+      var host = header.querySelector('.elementor-element-00ec9fc, [data-id="00ec9fc"]');
+      var btn = findBtn(host || header);
+      if (!host && btn) host = btn.parentElement;
+      if (!host || !btn) return false;
+      var slot = ways.querySelector('.wl6-ways-btn-slot');
+      if (!slot) return false;
       host.classList.add('wl6-has-ways');
       host.style.setProperty('overflow', 'visible', 'important');
-      if (host.firstChild !== ways) host.insertBefore(ways, host.firstChild);
+      if (!host.contains(ways)) host.insertBefore(ways, host.firstChild);
+      if (btn.parentElement !== slot) slot.appendChild(btn);
       return true;
     }
     if (apply()) return;
