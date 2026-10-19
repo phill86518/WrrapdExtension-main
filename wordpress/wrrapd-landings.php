@@ -11,7 +11,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_LANDINGS_BUILD', '2026-10-18-landings-v1' );
+define( 'WRRAPD_LANDINGS_BUILD', '2026-10-18-landings-v2' );
 
 function wrrapd_landing_number() {
 	$path = wp_parse_url( isset( $_SERVER['REQUEST_URI'] ) ? (string) wp_unslash( $_SERVER['REQUEST_URI'] ) : '', PHP_URL_PATH );

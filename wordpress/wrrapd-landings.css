@@ -258,9 +258,12 @@
 .wl-final .wl-fine { font-size: .82rem; }
 .wl-sticky { display: none; }
 
+.wl-hero-grid > *, .wl-split > * { min-width: 0; }
+.wl a.wl-btn span { white-space: normal; }
+.wl h1, .wl h2 { overflow-wrap: break-word; }
 @media (max-width: 960px) {
-  .wl-hero-grid, .wl-split { grid-template-columns: 1fr; }
-  .wl-steps, .wl-roles, .wl-combos { grid-template-columns: 1fr; }
+  .wl-hero-grid, .wl-split { grid-template-columns: minmax(0, 1fr); }
+  .wl-steps, .wl-roles, .wl-combos { grid-template-columns: minmax(0, 1fr); }
   .wl-features, .wl-milestones, .wl-papers { grid-template-columns: repeat(2, 1fr); }
   .wl-lead { max-width: none; }
   .wl-split h2 { text-align: center; }
