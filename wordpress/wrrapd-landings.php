@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_LANDINGS_BUILD', '2026-10-19-landings-v20' );
+define( 'WRRAPD_LANDINGS_BUILD', '2026-10-19-landings-v21' );
 define( 'WRRAPD_LANDING_COOKIE', 'wrrapd_lp' );
 define( 'WRRAPD_LANDING_RETIRED_SLUG', 'landing-retired-20261019' );
 
@@ -562,10 +562,10 @@ function wrrapd_landing_6_parts() {
 	$buy  = home_url( '/buy/' );
 	$icon = content_url( 'mu-plugins/icons/favicon/android-chrome-512x512.png' );
 	echo '<template id="wl6-parts">';
-	echo '<div class="wl6-ways" data-wl6="ways">Two ways to gift-wrap: <a class="wl6-ways-ext" href="' . esc_url( $ext ) . '" target="_blank" rel="noopener">Chrome extension</a> or <a href="#paste-and-wrap">paste a link</a></div>';
+	echo '<div class="wl6-ways" data-wl6="ways"><span class="wl6-ways-opt1">① Orange button below</span><span class="wl6-ways-sep"> · </span><span class="wl6-ways-opt2">② <a href="#paste-and-wrap">copy-paste your product link</a></span></div>';
 	echo '<section class="wl wl-ways-bar" data-wl6="waysbar" aria-label="Two ways to gift-wrap"><p>Two ways to gift-wrap</p><div>'
 		. wrrapd_landing_orange( $ext, 'Chrome extension' )
-		. '<a class="wl-ghost" href="#paste-and-wrap">Paste a link</a></div></section>';
+		. '<a class="wl-ghost" href="#paste-and-wrap">Copy-paste your product link</a></div></section>';
 	echo '</template>';
 
 	echo '<div id="wl6-body">';

@@ -43,11 +43,26 @@
     [document.querySelector('.occasion-ticker-shell'), document.querySelector('.elementor-element-0a7e92b')].forEach(function (el) {
       if (el) el.setAttribute('aria-hidden', 'true');
     });
-    ['.elementor-element-6b1d5da', '.elementor-element-3b1e47e', '.elementor-element-f68c5e7'].forEach(function (s) {
+    ['.elementor-element-6b1d5da', '.elementor-element-3b1e47e', '.elementor-element-f68c5e7', '.elementor-element-d0991cd', '.wrrapd-gift-guides'].forEach(function (s) {
       document.querySelectorAll(s).forEach(function (el) {
-        if (el.parentNode) el.parentNode.removeChild(el);
+        var node = el.classList && el.classList.contains('wrrapd-gift-guides')
+          ? (el.closest('.elementor-element') || el)
+          : el;
+        if (node.parentNode) node.parentNode.removeChild(node);
       });
     });
+    /* Gift guides live on /gift-ideas/ — strip any late re-inject. */
+    function scrubGuides() {
+      document.querySelectorAll('.wrrapd-gift-guides, .elementor-element-3b1e47e, .elementor-element-6b1d5da').forEach(function (el) {
+        var node = el.classList && el.classList.contains('wrrapd-gift-guides')
+          ? (el.closest('.elementor-element') || el)
+          : el;
+        if (node.parentNode) node.parentNode.removeChild(node);
+      });
+    }
+    setTimeout(scrubGuides, 200);
+    setTimeout(scrubGuides, 800);
+    setTimeout(scrubGuides, 1800);
 
     var footer = document.querySelector('.elementor-element-bdc63f8') || document.querySelector('.elementor-location-footer');
     if (footer && footer.parentNode) {
@@ -111,14 +126,14 @@
 
   /* ---------- Holiday milestones (Eastern time) ---------- */
   var MILESTONES = [
-    { name: 'Thanksgiving', day: 'Thu, Nov 26', orderBy: '2026-11-20', label: 'Fri, Nov 20', note: 'Hostess gifts and thank-yous.', q: 'thanksgiving day gifts' },
-    { name: 'Hanukkah', day: 'Begins Fri, Dec 4', orderBy: '2026-11-28', label: 'Sat, Nov 28', note: 'Eight nights of wrapped surprises.', q: 'hanukkah gift ideas' },
-    { name: 'Christmas', day: 'Fri, Dec 25', orderBy: '2026-12-18', label: 'Fri, Dec 18', note: 'Wrapped and under the tree.', q: 'christmas gift ideas' },
-    { name: "New Year's Eve", day: 'Thu, Dec 31', orderBy: '2026-12-23', label: 'Wed, Dec 23', note: 'Hostess gifts for the big night.', q: "new year's gift ideas" },
-    { name: "Valentine's Day", day: 'Sun, Feb 14', orderBy: '2027-02-08', label: 'Mon, Feb 8', note: 'Flowers and a gift, wrapped with love.', q: "valentine's day gifts" },
-    { name: 'Easter', day: 'Sun, Mar 28', orderBy: '2027-03-22', label: 'Mon, Mar 22', note: 'Spring baskets and sweet surprises.', q: 'easter gifts' },
-    { name: "Mother's Day", day: 'Sun, May 9', orderBy: '2027-05-03', label: 'Mon, May 3', note: 'Wrapped with flowers, just for her.', q: "mother's day gift ideas" },
-    { name: "Father's Day", day: 'Sun, Jun 20', orderBy: '2027-06-14', label: 'Mon, Jun 14', note: 'A wrapped surprise for Dad.', q: "father's day gift ideas" },
+    { name: 'Thanksgiving', strip: 'Thanksgiving', day: 'Thu, Nov 26', orderBy: '2026-11-20', label: 'Fri, Nov 20', note: 'Hostess gifts and thank-yous.', q: 'thanksgiving day gifts' },
+    { name: 'Hanukkah', strip: 'Hanukkah', day: 'Begins Fri, Dec 4', orderBy: '2026-11-28', label: 'Sat, Nov 28', note: 'Eight nights of wrapped surprises.', q: 'hanukkah gift ideas' },
+    { name: 'Christmas', strip: 'Christmas', day: 'Fri, Dec 25', orderBy: '2026-12-18', label: 'Fri, Dec 18', note: 'Wrapped and under the tree.', q: 'christmas gift ideas' },
+    { name: "New Year's Eve", strip: 'New Year', day: 'Thu, Dec 31', orderBy: '2026-12-23', label: 'Wed, Dec 23', note: 'Hostess gifts for the big night.', q: "new year's gift ideas" },
+    { name: "Valentine's Day", strip: "Valentine's", day: 'Sun, Feb 14', orderBy: '2027-02-08', label: 'Mon, Feb 8', note: 'Flowers and a gift, wrapped with love.', q: "valentine's day gifts" },
+    { name: 'Easter', strip: 'Easter', day: 'Sun, Mar 28', orderBy: '2027-03-22', label: 'Mon, Mar 22', note: 'Spring baskets and sweet surprises.', q: 'easter gifts' },
+    { name: "Mother's Day", strip: "Mother's Day", day: 'Sun, May 9', orderBy: '2027-05-03', label: 'Mon, May 3', note: 'Wrapped with flowers, just for her.', q: "mother's day gift ideas" },
+    { name: "Father's Day", strip: "Father's Day", day: 'Sun, Jun 20', orderBy: '2027-06-14', label: 'Mon, Jun 14', note: 'A wrapped surprise for Dad.', q: "father's day gift ideas" },
   ];
   function shopUrl(m) {
     return 'https://wrrapd.com/go/amazon/?to=' + encodeURIComponent('https://www.amazon.com/s?k=' + encodeURIComponent(m.q).replace(/%20/g, '+'));
@@ -259,11 +274,13 @@
     var idx = nextMilestone(now);
     if (idx === -1) { row.closest('.wl-strip').style.display = 'none'; return; }
     function short(s) { return String(s).replace(/^(Begins )?[A-Z][a-z]{2}, /, ''); }
-    row.innerHTML = MILESTONES.slice(idx, idx + 5).map(function (m, k) {
+    var count = window.matchMedia && window.matchMedia('(max-width: 700px)').matches ? 3 : 4;
+    row.innerHTML = MILESTONES.slice(idx, idx + count).map(function (m, k) {
       var left = daysLeft(m, now);
+      var label = m.strip || m.name;
       var badge = k === 0 ? '<span class="wl-strip-next">' + (left <= 1 ? 'Last day' : left + ' days') + '</span>' : '';
       return '<a class="wl-strip-card' + (k === 0 ? ' wl-on' : '') + '" href="' + esc(shopUrl(m)) + '" target="_blank" rel="noopener sponsored" title="Shop ' + esc(m.name) + ' gifts">' +
-        '<b>' + esc(m.name) + '</b><small>' + esc(short(m.day)) + ' · order by ' + esc(short(m.label)) + '</small>' + badge + '</a>';
+        '<b>' + esc(label) + '</b><small>' + esc(short(m.day)) + ' · by ' + esc(short(m.label)) + '</small>' + badge + '</a>';
     }).join('');
   }
 

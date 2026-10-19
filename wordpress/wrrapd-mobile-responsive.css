@@ -17,19 +17,33 @@ html {
 	display: none !important;
 }
 
-@media (max-width: 960px), (hover: none) and (pointer: coarse) {
+@media (max-width: 960px) {
 	.wrrapd-wrap-promo-mobile,
-	.wrrapd-wrap-promo-mobile--tagline,
-	.wrrapd-wrap-promo-mobile__features--stack {
+	.wrrapd-wrap-promo-mobile--tagline {
 		display: none !important;
+	}
+
+	/* Right-of-logos bullets are too cramped on phones — show them under the logo row. */
+	.wrrapd-wrap-promo--bestbuy {
+		display: none !important;
+	}
+
+	.wrrapd-wrap-promo-mobile__features.wrrapd-wrap-promo-mobile__features--stack {
+		display: flex !important;
+		flex-wrap: wrap !important;
+		justify-content: center !important;
+		align-items: center !important;
+		gap: 0.15rem 0.55rem !important;
+		height: auto !important;
+		margin: 0.4rem 0 0.15rem !important;
+		padding: 0 0.6rem 0.15rem !important;
+		overflow: visible !important;
+		list-style: none !important;
+		text-align: center !important;
 	}
 
 	.wrrapd-wrap-promo {
 		display: flex !important;
-	}
-
-	.wrrapd-wrap-promo--bestbuy {
-		display: none !important;
 	}
 
 	.wrrapd-wheel-mobile-stack {
@@ -43,13 +57,6 @@ html {
 		margin: 0 !important;
 		align-items: center !important;
 		gap: 0.15rem !important;
-	}
-
-	.wrrapd-wrap-promo--bestbuy {
-		flex: 0 0 auto !important;
-		max-width: min(6.25rem, 26vw) !important;
-		margin: 0 !important;
-		align-items: flex-start !important;
 	}
 
 	.wrrapd-wrap-promo__line {
@@ -912,17 +919,19 @@ a.wrrapd-ext-cta {
 		margin-top: auto !important;
 	}
 
-	/* Keep the logo row flush with the ticker — no stacked-feature white band. */
+	/* Keep right-of-logos column off; features stay under the logo row (see ≤960px). */
 	.wrrapd-wrap-promo--bestbuy {
 		display: none !important;
 	}
 
 	.wrrapd-wrap-promo-mobile__features.wrrapd-wrap-promo-mobile__features--stack {
-		display: none !important;
-		height: 0 !important;
-		margin: 0 !important;
-		padding: 0 !important;
-		overflow: hidden !important;
+		display: flex !important;
+		flex-wrap: wrap !important;
+		justify-content: center !important;
+		height: auto !important;
+		margin: 0.35rem 0 0.1rem !important;
+		padding: 0 0.45rem 0.1rem !important;
+		overflow: visible !important;
 	}
 
 	#wrrapd-retailer-wheels-row {

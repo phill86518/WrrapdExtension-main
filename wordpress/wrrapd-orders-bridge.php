@@ -1729,8 +1729,8 @@ function wrrapd_output_retailer_wheel_strip() {
 	echo '.wrrapd-wrap-promo__arrow--right::after{content:"";position:absolute;top:50%;right:0;width:.5rem;height:.5rem;border-top:2.5px solid #162a52;border-right:2.5px solid #162a52;transform:translateY(-50%) rotate(45deg);}';
 	echo '.wrrapd-wrap-promo__arrow--left::before{background:linear-gradient(90deg,#162a52,#c9a227);}';
 	echo '.wrrapd-wrap-promo__arrow--left::after{content:"";position:absolute;top:50%;left:0;width:.5rem;height:.5rem;border-bottom:2.5px solid #162a52;border-left:2.5px solid #162a52;transform:translateY(-50%) rotate(45deg);}';
-	echo '@media(max-width:960px){.wrrapd-wrap-promo-mobile,.wrrapd-wrap-promo-mobile--tagline,.wrrapd-wrap-promo-mobile__features--stack{display:none!important;}.wrrapd-wheel-mobile-stack{display:block;width:100%;}.wrrapd-wrap-promo{display:flex!important;}.wrrapd-wrap-promo--ulta{flex:0 0 auto;max-width:min(5.5rem,22vw)!important;margin:0!important;align-items:center!important;}.wrrapd-wrap-promo--bestbuy{flex:0 0 auto;max-width:min(6.25rem,26vw)!important;margin:0!important;align-items:flex-start!important;}.wrrapd-wrap-promo__line{font-size:clamp(.52rem,2.4vw,.68rem)!important;white-space:normal!important;line-height:1.05!important;}.wrrapd-wrap-promo__line--premium{font-size:clamp(.58rem,2.6vw,.74rem)!important;}.wrrapd-wrap-promo__line--mid,.wrrapd-wrap-promo__line--for{font-size:clamp(.5rem,2.2vw,.64rem)!important;}.wrrapd-wrap-promo__arrow{width:.85rem!important;height:.85rem!important;flex-shrink:0!important;}.wrrapd-wrap-promo__bullet{font-size:clamp(.44rem,2vw,.54rem)!important;line-height:1.12!important;margin:.04rem 0!important;}.wrrapd-wrap-promo__copy--right{text-align:right!important;}#wrrapd-retailer-wheels-row .wrrapd-retailer-wheels{display:flex!important;flex-wrap:nowrap!important;align-items:center!important;justify-content:space-between!important;overflow-x:hidden!important;gap:.1rem!important;padding:.35rem!important;}.wrrapd-retailer-wheels__item{flex:1 1 0!important;min-width:0!important;max-width:none!important;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:.06rem!important;}.wrrapd-retailer-wheels__badge{width:1.12rem!important;height:1.12rem!important;}.wrrapd-retailer-wheels__title{display:block!important;font-size:.42rem!important;line-height:1.1!important;text-align:center!important;font-weight:600!important;color:#334155!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;max-width:100%!important;}}';
-	echo '@media(max-width:393px){.wrrapd-wrap-promo--bestbuy{display:none!important;}.wrrapd-wrap-promo-mobile__features.wrrapd-wrap-promo-mobile__features--stack{display:none!important;height:0!important;margin:0!important;padding:0!important;overflow:hidden!important;}}';
+	echo '@media(max-width:960px){.wrrapd-wrap-promo-mobile,.wrrapd-wrap-promo-mobile--tagline{display:none!important;}.wrrapd-wrap-promo--bestbuy{display:none!important;}.wrrapd-wrap-promo-mobile__features.wrrapd-wrap-promo-mobile__features--stack{display:flex!important;flex-wrap:wrap!important;justify-content:center!important;align-items:center!important;gap:.15rem .55rem!important;height:auto!important;margin:.4rem 0 .15rem!important;padding:0 .6rem .15rem!important;overflow:visible!important;}.wrrapd-wheel-mobile-stack{display:block;width:100%;}.wrrapd-wrap-promo{display:flex!important;}.wrrapd-wrap-promo--ulta{flex:0 0 auto;max-width:min(5.5rem,22vw)!important;margin:0!important;align-items:center!important;}.wrrapd-wrap-promo__line{font-size:clamp(.52rem,2.4vw,.68rem)!important;white-space:normal!important;line-height:1.05!important;}.wrrapd-wrap-promo__line--premium{font-size:clamp(.58rem,2.6vw,.74rem)!important;}.wrrapd-wrap-promo__line--mid,.wrrapd-wrap-promo__line--for{font-size:clamp(.5rem,2.2vw,.64rem)!important;}.wrrapd-wrap-promo__arrow{width:.85rem!important;height:.85rem!important;flex-shrink:0!important;}.wrrapd-wrap-promo__bullet{font-size:clamp(.44rem,2vw,.54rem)!important;line-height:1.12!important;margin:.04rem 0!important;}.wrrapd-wrap-promo__copy--right{text-align:right!important;}#wrrapd-retailer-wheels-row .wrrapd-retailer-wheels{display:flex!important;flex-wrap:nowrap!important;align-items:center!important;justify-content:space-between!important;overflow-x:hidden!important;gap:.1rem!important;padding:.35rem!important;}.wrrapd-retailer-wheels__item{flex:1 1 0!important;min-width:0!important;max-width:none!important;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:.06rem!important;}.wrrapd-retailer-wheels__badge{width:1.12rem!important;height:1.12rem!important;}.wrrapd-retailer-wheels__title{display:block!important;font-size:.42rem!important;line-height:1.1!important;text-align:center!important;font-weight:600!important;color:#334155!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;max-width:100%!important;}}';
+	echo '@media(max-width:393px){.wrrapd-wrap-promo--bestbuy{display:none!important;}.wrrapd-wrap-promo-mobile__features.wrrapd-wrap-promo-mobile__features--stack{display:flex!important;flex-wrap:wrap!important;justify-content:center!important;height:auto!important;margin:.35rem 0 .1rem!important;padding:0 .45rem .1rem!important;overflow:visible!important;}}';
 	echo '@media(prefers-reduced-motion:reduce){.wrrapd-wrap-promo__line--blink,.wrrapd-wrap-promo-mobile__blink{animation:none!important;opacity:1!important;}.wrrapd-retailer-wheels__item{animation:none;opacity:1;}}';
 	echo '</style>';
 	echo '<div id="wrrapd-retailer-wheels-row" class="wrrapd-retailer-wheels-row">';
@@ -1908,7 +1908,7 @@ function wrrapd_output_home_section_tighten_css() {
 	echo '.elementor-4857 .wrrapd-season-hero-body,.elementor-4857 .wrrapd-season-hero-body span{margin-bottom:0.25rem!important;}';
 	echo '#wrrapd-retailer-wheels-row{margin-bottom:0!important;padding-bottom:0!important;border-bottom:none!important;}';
 	echo '#wrrapd-retailer-wheels-row .wrrapd-retailer-wheels{padding-top:.28rem!important;padding-bottom:0!important;}';
-	echo '.wrrapd-wrap-promo-mobile__features--stack{display:none!important;margin:0!important;padding:0!important;height:0!important;overflow:hidden!important;}';
+	echo '@media(min-width:961px){.wrrapd-wrap-promo-mobile__features--stack{display:none!important;margin:0!important;padding:0!important;height:0!important;overflow:hidden!important;}}';
 	/* Empty Elementor divider box 7a8bd00 was leaving a white band between retailer logos and the ticker. */
 	echo '.elementor-4857 .elementor-element-7a8bd00{display:none!important;height:0!important;min-height:0!important;margin:0!important;padding:0!important;overflow:hidden!important;}';
 	echo '.elementor-4857 .elementor-element-0a7e92b{padding-top:0!important;margin-top:0!important;}';
@@ -2305,51 +2305,11 @@ function wrrapd_output_home_gift_guides_reposition_script() {
 		return;
 	}
 	$printed = true;
-	echo '<style id="wrrapd-gift-guides-hide-dup-strip">.wrrapd-gift-guides__stores-wrap{display:none!important}</style>';
-	echo '<script id="wrrapd-gift-guides-reposition-js">';
-	echo 'function wrrapdRemoveDupGiftGuideLogos(){var dup=document.querySelector(".wrrapd-gift-guides__stores-wrap");if(dup)dup.remove();}';
-	echo 'function wrrapdFindGiftGuidesAnchor(){';
-	echo 'var red=document.querySelector(".elementor-element-5601b5d");';
-	echo 'if(red)return{mode:"after",el:red};';
-	echo 'var gift=document.getElementById("giftWrapRow");';
-	echo 'if(gift){var gw=gift.closest(".elementor-element");if(gw&&gw.parentNode)return{mode:"before",el:gw};}';
-	echo 'var heads=document.querySelectorAll("h1,h2,h3,h4,.elementor-heading-title");';
-	echo 'for(var h=0;h<heads.length;h++){var tx=(heads[h].textContent||"").trim();';
-	echo 'if(/^how\\s+it\\s+works/i.test(tx)){var hw=heads[h].closest(".elementor-element");';
-	echo 'if(hw&&hw.parentNode)return{mode:"before",el:hw};break;}}';
-	echo 'var jack=document.querySelector(".elementor-element-de3f6bb");';
-	echo 'if(!jack){var nodes=document.querySelectorAll("p,.elementor-widget-text-editor");';
-	echo 'for(var i=0;i<nodes.length;i++){var t=(nodes[i].textContent||"");';
-	echo 'if(/new cities being added soon/i.test(t)){';
-	echo 'jack=nodes[i].closest(".elementor-element");break;}}}';
-	echo 'if(!jack)return null;';
-	echo 'var walk=jack;';
-	echo 'for(var j=0;j<16;j++){walk=walk.nextElementSibling;if(!walk)break;';
-	echo 'if(walk.classList&&(walk.classList.contains("elementor-widget-divider")||walk.classList.contains("elementor-widget-divider-separator")))return{mode:"after",el:walk};';
-	echo 'if(walk.querySelector&&walk.querySelector(".elementor-divider,.elementor-widget-divider,.elementor-widget-divider-separator,hr"))return{mode:"after",el:walk};}';
-	echo 'return{mode:"after",el:jack};}';
-	echo 'function wrrapdInsertGiftGuides(move,anchor){';
-	echo 'if(!anchor||!anchor.el||!anchor.el.parentNode)return;';
-	echo 'if(anchor.mode==="before"){anchor.el.parentNode.insertBefore(move,anchor.el);return;}';
-	echo 'anchor.el.insertAdjacentElement("afterend",move);}';
-	echo 'function wrrapdGiftGuidesAlreadyPlaced(move,anchor){';
-	echo 'if(!anchor||!anchor.el)return true;';
-	echo 'if(anchor.mode==="before")return move.nextElementSibling===anchor.el;';
-	echo 'return move.previousElementSibling===anchor.el;}';
-	echo 'function wrrapdPatchGiftGuidesEyebrow(){var el=document.querySelector(".wrrapd-gift-guides__eyebrow");if(el)el.textContent="SEAMLESS GIFT-WRAPPING & DELIVERY OPTIONS FOR:";}';
-	echo 'function wrrapdRepositionGiftGuides(){';
-	echo 'wrrapdRemoveDupGiftGuideLogos();wrrapdPatchGiftGuidesEyebrow();';
-	echo 'var guides=document.querySelector(".wrrapd-gift-guides");';
-	echo 'if(!guides)return;';
-	echo 'var widget=guides.closest(".elementor-element");';
-	echo 'var move=widget||guides;';
-	echo 'var anchor=wrrapdFindGiftGuidesAnchor();';
-	echo 'if(!anchor||!anchor.el)return;';
-	echo 'if(move===anchor.el||move.contains(anchor.el)||anchor.el.contains(move))return;';
-	echo 'if(wrrapdGiftGuidesAlreadyPlaced(move,anchor))return;';
-	echo 'wrrapdInsertGiftGuides(move,anchor);}';
-	echo 'document.addEventListener("DOMContentLoaded",wrrapdRepositionGiftGuides);';
-	echo 'window.addEventListener("load",function(){wrrapdRepositionGiftGuides();setTimeout(wrrapdRepositionGiftGuides,150);setTimeout(wrrapdRepositionGiftGuides,600);});';
+	/* Homepage gift guides moved to /gift-ideas/ — hide leftovers; do not reposition or patch the eyebrow. */
+	echo '<style id="wrrapd-home-hide-gift-guides">body.home .wrrapd-gift-guides,body.home .wrrapd-gift-guides__eyebrow,body.home .elementor-element-3b1e47e,body.home .elementor-element-6b1d5da,body.wrrapd-landing-6 .wrrapd-gift-guides{display:none!important;height:0!important;margin:0!important;padding:0!important;overflow:hidden!important}</style>';
+	echo '<script id="wrrapd-gift-guides-home-scrub-js">';
+	echo '(function(){function scrub(){document.querySelectorAll(".wrrapd-gift-guides,.elementor-element-3b1e47e,.elementor-element-6b1d5da").forEach(function(el){var n=el.classList&&el.classList.contains("wrrapd-gift-guides")?(el.closest(".elementor-element")||el):el;if(n&&n.parentNode)n.parentNode.removeChild(n);});}';
+	echo 'document.addEventListener("DOMContentLoaded",scrub);window.addEventListener("load",function(){scrub();setTimeout(scrub,200);setTimeout(scrub,800);});})();';
 	echo '</script>';
 }
 
