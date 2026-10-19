@@ -245,9 +245,9 @@ export function AdminPricingEditor({
         <div className="mt-4 flex flex-wrap items-end gap-6">
           {(
             [
-              ["twoItemsPercent", "2"],
-              ["threeToNineItemsPercent", "3 to 9"],
-              ["tenPlusItemsPercent", "10+"],
+              ["twoItemsPercent", "2–4"],
+              ["threeToNineItemsPercent", "5+"],
+              ["tenPlusItemsPercent", "5+ (max)"],
             ] as Array<[keyof VolumeDiscount, string]>
           ).map(([key, label]) => (
             <label key={key} className="block text-sm">

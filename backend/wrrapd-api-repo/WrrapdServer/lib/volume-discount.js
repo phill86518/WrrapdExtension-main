@@ -2,7 +2,8 @@
  * Volume (multi-item) discount on the gift-wrap base price.
  * Mirrored in extension/src/shared/volume-discount.js — keep the math identical.
  *
- * Tiers by wrapped-unit count in one checkout: 2, 3–9, 10+. Whole percents 0–99.
+ * Tiers by wrapped-unit count in one checkout: 2–4, 5+ (10+ uses the higher of mid/high).
+ * Admin fields stay twoItems / threeToNine / tenPlus for compatibility.
  * Discount = tier % of (giftWrapBase × count), rounded half-up to the cent, pre-tax.
  */
 
@@ -43,9 +44,9 @@ function volumeDiscountOrderError(tiers) {
 function volumeDiscountPercentFor(tiers, wrappedCount) {
     const t = normalizeVolumeDiscount(tiers);
     const n = Math.floor(Number(wrappedCount) || 0);
-    if (n >= 10) return t.tenPlusItemsPercent;
-    if (n >= 3) return t.threeToNineItemsPercent;
-    if (n === 2) return t.twoItemsPercent;
+    // Shopper tiers: 2–4 → twoItems; 5+ → max(3–9, 10+) so 5+ can be advertised as one rate.
+    if (n >= 5) return Math.max(t.threeToNineItemsPercent, t.tenPlusItemsPercent);
+    if (n >= 2) return t.twoItemsPercent;
     return 0;
 }
 

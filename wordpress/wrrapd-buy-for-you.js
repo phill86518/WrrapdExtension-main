@@ -41,6 +41,7 @@
     zipChecking: false,
     zipStatus: '',
     allowedZips: null,
+    discountToast: '',
   };
 
   /* Same copy as the Chrome extension giftee-ZIP gate. */
@@ -216,7 +217,7 @@
     else if (S.view === 'wrap') html = viewWrap();
     else if (S.view === 'review') html = viewReview();
     else if (S.view === 'paid') html = viewPaid();
-    var next = '<div class="wb-wrap">' + html + '</div>' + (S.termsOpen ? viewTerms() : '') + (S.wrapOpen && !S.termsOpen ? viewWrap() : '');
+    var next = '<div class="wb-wrap">' + html + '</div>' + (S.termsOpen ? viewTerms() : '') + (S.wrapOpen && !S.termsOpen ? viewWrap() : '') + discountToastHtml();
     if (next === S.lastHtml) return;
     S.lastHtml = next;
     root.innerHTML = next;
@@ -224,6 +225,38 @@
     var again = root.querySelector('.wb-wrap-scroll');
     if (again && keepWrapTop) again.scrollTop = keepWrapTop;
     if (keepPageTop) window.scrollTo(0, keepPageTop);
+  }
+
+  /* Match server volume tiers: 10% for 2–4 wraps, 15% for 5+. */
+  function multiItemPercent(n) {
+    var c = Math.floor(Number(n) || 0);
+    if (c >= 5) return 15;
+    if (c >= 2) return 10;
+    return 0;
+  }
+  function wrappedDoneCount() {
+    return wrapTargets().filter(function (l) { return l.wrap && l.wrap.done; }).length;
+  }
+  function showDiscountEarned(n) {
+    var count = typeof n === 'number' ? n : wrappedDoneCount();
+    var pct = multiItemPercent(count);
+    if (!pct) {
+      S.discountToast = '';
+      return;
+    }
+    S.discountToast = 'You earned a ' + pct + '% multi-item wrap discount for ' + count + ' items!';
+    if (S._discountToastTimer) clearTimeout(S._discountToastTimer);
+    S._discountToastTimer = setTimeout(function () {
+      S.discountToast = '';
+      S.lastHtml = '';
+      render();
+    }, 9000);
+  }
+  function discountToastHtml() {
+    if (!S.discountToast) return '';
+    return '<div class="wb-discount-toast" role="status">' +
+      '<span>' + esc(S.discountToast) + '</span>' +
+      '<button type="button" class="wb-discount-toast-x" data-act="dismiss-discount" aria-label="Dismiss">×</button></div>';
   }
 
   function maxLinks() {
@@ -243,7 +276,7 @@
   }
   function zipBar(id, value, act, ok) {
     var bad = !!S.zipStatus;
-    return '<div class="wb-zipbar' + (bad ? ' wb-zipbar-msg' : '') + '"><label class="wb-zipbar-label" for="' + id + '">Giftee / gift-recipient\'s zip code:</label>' +
+    return '<div class="wb-zipbar' + (bad ? ' wb-zipbar-msg' : '') + '"><label class="wb-zipbar-label" for="' + id + '">Giftee / gift-recipient\'s zip code (currently limited to Jacksonville, FL):</label>' +
       '<p class="wb-zipbar-hint">This helps us with a faster checkout! Also enter this same ZIP on the retailer\'s product page so shipping is accurate.</p>' +
       '<div class="wb-zipbar-row"><input class="wb-zipbar-input' + (ok ? ' wb-zip-ok' : '') + (bad ? ' wb-zip-bad' : '') + '" id="' + id + '" inputmode="numeric" maxlength="10" autocomplete="postal-code" placeholder="ZIP code" value="' + esc(value || '') + '">' +
       '<button type="button" class="wb-btn wb-zip-submit" data-act="' + act + '"' + (S.busy || S.zipChecking ? ' disabled' : '') + '>' + (S.zipChecking ? 'Checking…' : 'Submit') + '</button></div>' +
@@ -914,6 +947,7 @@
     if (e.target && e.target.classList && e.target.classList.contains('wb-modal') && e.target.querySelector('.wb-wrap-modal')) {
       S.wrapOpen = false;
       S.flowersOpen = false;
+      showDiscountEarned();
       render();
       return;
     }
@@ -1081,7 +1115,8 @@
       render(); return;
     }
     if (act === 'accept') return accept();
-    if (act === 'wrap-close') { S.wrapOpen = false; S.flowersOpen = false; render(); return; }
+    if (act === 'wrap-close') { S.wrapOpen = false; S.flowersOpen = false; showDiscountEarned(); render(); return; }
+    if (act === 'dismiss-discount') { S.discountToast = ''; if (S._discountToastTimer) clearTimeout(S._discountToastTimer); render(); return; }
     if (act === 'wrap-back') {
       saveDraft();
       var backLine = currentLine();
@@ -1787,7 +1822,11 @@
       clearWrapNotice();
       var lines = wrapTargets();
       if (S.wrapIndex + 1 < lines.length) S.wrapIndex++;
-      else { S.wrapOpen = false; S.view = 'items'; }
+      else {
+        S.wrapOpen = false;
+        S.view = 'items';
+        showDiscountEarned(wrapTargets().filter(function (l) { return l.wrap && l.wrap.done; }).length);
+      }
       render();
     }).catch(function (err) {
       S.busy = false;

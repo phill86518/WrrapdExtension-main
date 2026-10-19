@@ -1,5 +1,5 @@
 {
-  "version": "2026-06-10",
+  "version": "2026-10-07",
   "defaultUnitPrices": {
     "giftWrapBase": 6.99,
     "customDesignAi": 2.99,
@@ -7,11 +7,6 @@
     "flowers": 17.99
   },
   "globalMultiplier": 1,
-  "volumeDiscount": {
-    "twoItemsPercent": 0,
-    "threeToNineItemsPercent": 0,
-    "tenPlusItemsPercent": 0
-  },
   "rules": [
     {
       "id": "county-fl-miami-dade",
@@ -90,5 +85,10 @@
       "customDesignUpload": 1.99,
       "flowers": 17.99
     }
+  },
+  "volumeDiscount": {
+    "twoItemsPercent": 10,
+    "threeToNineItemsPercent": 15,
+    "tenPlusItemsPercent": 15
   }
 }

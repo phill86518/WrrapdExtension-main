@@ -36,9 +36,14 @@
       else if (header) header.insertAdjacentElement('afterend', parts.strip);
       if (parts.waysbar && parts.strip.parentNode) parts.strip.parentNode.insertBefore(parts.waysbar, parts.strip);
     }
+    function placeDeal() {
+      if (!parts.deal || !parts.strip || !parts.strip.parentNode) return;
+      parts.strip.insertAdjacentElement('afterend', parts.deal);
+    }
     placeStrip();
-    setTimeout(placeStrip, 400);
-    setTimeout(placeStrip, 1400);
+    placeDeal();
+    setTimeout(function () { placeStrip(); placeDeal(); }, 400);
+    setTimeout(function () { placeStrip(); placeDeal(); }, 1400);
 
     [document.querySelector('.occasion-ticker-shell'), document.querySelector('.elementor-element-0a7e92b')].forEach(function (el) {
       if (el) el.setAttribute('aria-hidden', 'true');
@@ -66,9 +71,10 @@
 
     var footer = document.querySelector('.elementor-element-bdc63f8') || document.querySelector('.elementor-location-footer');
     if (footer && footer.parentNode) {
-      [parts.hiw, parts.paste, parts.ideas].forEach(function (p) {
+      [parts.deal, parts.hiw, parts.paste, parts.ideas].forEach(function (p) {
         if (p) footer.parentNode.insertBefore(p, footer);
       });
+      placeDeal();
     }
     if (bodyMount && bodyMount.parentNode && !bodyMount.children.length) bodyMount.parentNode.removeChild(bodyMount);
 

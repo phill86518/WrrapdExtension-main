@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_LANDINGS_BUILD', '2026-10-19-landings-v22' );
+define( 'WRRAPD_LANDINGS_BUILD', '2026-10-19-landings-v24' );
 define( 'WRRAPD_LANDING_COOKIE', 'wrrapd_lp' );
 define( 'WRRAPD_LANDING_RETIRED_SLUG', 'landing-retired-20261019' );
 
@@ -571,6 +571,12 @@ function wrrapd_landing_6_parts() {
 	echo '<div id="wl6-body">';
 	echo '<section class="wl wl-strip" data-wl6="strip" aria-label="Upcoming gifting days"><div class="wl-strip-inner"><p class="wl-strip-title">Upcoming gifting days</p><div class="wl-strip-row" data-wl-strip></div></div></section>';
 
+	echo '<section class="wl wl-deal" data-wl6="deal" aria-label="Multi-item wrap savings"><div class="wl-deal-inner">'
+		. '<p class="wl-deal-eyebrow">Multi-item wrap savings</p>'
+		. '<p class="wl-deal-title">Wrap more, save on the base wrap price</p>'
+		. '<p class="wl-deal-lede"><b>10% off</b> for 2+ items · <b>15% off</b> for 5+ items — applied at Wrrapd checkout.</p>'
+		. '</div></section>';
+
 	echo '<section class="wl wl-hiw" data-wl6="hiw" id="how-it-works"><div class="wl-inner">';
 	echo wrrapd_landing_head( 'How it works', 'Your store. Your cart. Our wrapping.', 'Add the free Wrrapd Chrome extension and gift-wrap right at checkout.' );
 	echo '<div class="wl-hiw-grid"><div class="wl-hiw-left">';
@@ -626,7 +632,7 @@ function wrrapd_landing_6_parts() {
 	echo wrrapd_landing_head( 'Try without the Extension (simpler)', 'Copy, paste, beautifully wrapped.', 'Miles away from the people you miss? Copy a gift\'s link from one of our partner stores and paste it here. We purchase it, wrap it by hand and deliver it to their door, finished with a bow.' );
 	echo '<div class="wl-paste-grid"><div class="wl-paste-left">';
 	echo '<form class="wl-paste-form" data-wl-paste action="' . esc_url( $buy ) . '" method="get" novalidate>';
-	echo '<label class="wl-paste-zip" for="wl-paste-zip"><span>Giftee / gift-recipient\'s zip code</span>';
+	echo '<label class="wl-paste-zip" for="wl-paste-zip"><span>Giftee / gift-recipient\'s zip code (currently limited to Jacksonville, FL)</span>';
 	echo '<input id="wl-paste-zip" name="zip" type="text" inputmode="numeric" maxlength="10" autocomplete="postal-code" placeholder="ZIP"></label>';
 	echo '<label class="wl-note-label" for="wl-paste-link">Copy-paste your product page (URL) here</label>';
 	echo '<div class="wl-paste-row"><input id="wl-paste-link" name="link" type="url" inputmode="url" autocomplete="off" placeholder="https://">';
@@ -637,6 +643,7 @@ function wrrapd_landing_6_parts() {
 	foreach ( array(
 		array( 'Make it personal', 'Choose the occasion and write a note. We tuck it under the bow, and fresh flowers can come along too.' ),
 		array( 'From any device', 'Order from your phone, tablet or laptop in moments.' ),
+		array( 'Multi-item wrap savings', '10% off the base wrap price for 2+ items, 15% off for 5+ items — same checkout.' ),
 		array( 'Up to five gifts at once', 'Gather favorites from different stores in a single order.' ),
 		array( 'One graceful checkout', 'Gifts, wrapping and delivery, settled in one payment.' ),
 	) as $p ) {

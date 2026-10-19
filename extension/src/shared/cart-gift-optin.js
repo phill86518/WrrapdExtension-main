@@ -33,6 +33,38 @@ import { formatUsd, getActiveUnitPrices, createUnitPricingState } from "./wrrapd
 import { mountGifteeZipEstimateBar, readValidatedEstimateZip } from "./giftee-zip-estimate.js";
 import { loadFlowersCatalog, resolveFlowerChargeDollars } from "./flowers-catalog.js";
 import { unlockHubShippingFields } from "./wrrapd-hub.js";
+import { readVolumeDiscount, volumeDiscountPercentFor } from "./volume-discount.js";
+
+/** Toast after wrap choices are saved (2+ items). */
+function showMultiItemDiscountEarned(count) {
+  const n = Math.floor(Number(count) || 0);
+  let pct = volumeDiscountPercentFor(readVolumeDiscount(), n);
+  // Fallback when pricing-preview tiers have not loaded yet (matches live 10% / 15%).
+  if (!pct) {
+    if (n >= 5) pct = 15;
+    else if (n >= 2) pct = 10;
+  }
+  if (!pct || typeof document === "undefined") return;
+  document.getElementById("wrrapd-discount-toast")?.remove();
+  const toast = document.createElement("div");
+  toast.id = "wrrapd-discount-toast";
+  toast.setAttribute("role", "status");
+  toast.style.cssText =
+    "position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:2147483000;display:flex;align-items:center;gap:12px;max-width:min(92vw,34rem);padding:12px 14px 12px 16px;border-radius:12px;background:#0c0638;color:#fff;box-shadow:0 14px 36px rgba(12,6,56,.35);font:560 14px/1.35 system-ui,sans-serif;";
+  const msg = document.createElement("span");
+  msg.style.cssText = "flex:1 1 auto;";
+  msg.textContent = `You earned a ${pct}% multi-item wrap discount for ${n} items!`;
+  const x = document.createElement("button");
+  x.type = "button";
+  x.setAttribute("aria-label", "Dismiss");
+  x.textContent = "×";
+  x.style.cssText =
+    "flex:0 0 auto;border:0;background:transparent;color:#f6b933;font-size:22px;line-height:1;cursor:pointer;padding:0 4px;";
+  x.addEventListener("click", () => toast.remove());
+  toast.append(msg, x);
+  document.body.append(toast);
+  setTimeout(() => toast.remove(), 9000);
+}
 
 function normalizeWhitespace(value) {
   return String(value || "").replace(/\s+/g, " ").trim();
@@ -1109,7 +1141,9 @@ function openGiftChoicesModal(config, cartSnapshot) {
     writeItemChoices(config.sessionPrefix, allChoices);
     writeGiftChoicesSaved(config.sessionPrefix, true);
     writeGiftRadio(config.sessionPrefix, "yes");
+    const wrappedCount = allChoices.length;
     overlay.remove();
+    showMultiItemDiscountEarned(wrappedCount);
     openGenericTermsModal(config, () => {
       // Re-render the opt-in card so the saved banner + edit link appear.
       existingOptIn(config)?.remove();

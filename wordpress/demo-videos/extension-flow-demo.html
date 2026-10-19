@@ -4,393 +4,479 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Wrrapd extension flow demo</title>
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,460;9..144,560;9..144,650;9..144,800&display=swap" rel="stylesheet" />
 <style>
   :root {
-    --navy: #0c0638;
-    --navy-text: #0f0351;
-    --ink: #162a52;
-    --gold: #f6b933;
-    --orange: #e85d04;
-    --line: #e2e8f0;
-    --cream: #fbf6ec;
+    --navy: #0c0638; --navy-text: #0f0351; --ink: #162a52;
+    --gold: #f6b933; --orange: #e85d04; --line: #e2e8f0;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body {
     width: 1280px; height: 720px; overflow: hidden;
     font-family: Fraunces, Georgia, "Times New Roman", serif;
-    font-optical-sizing: auto;
-    background: #0b1220;
-    color: var(--ink);
+    font-optical-sizing: auto; background: #07041c; color: var(--ink);
   }
-  .stage {
-    position: relative; width: 1280px; height: 720px;
-    background: linear-gradient(160deg, #f8fafc 0%, #eef2ff 100%);
+  .stage { position: relative; width: 1280px; height: 720px; overflow: hidden; background: #07041c; }
+  .cam {
+    position: absolute; left: 50%; top: 50%; width: 1280px; height: 720px;
+    transform: translate(-50%, -50%) scale(1);
+    transform-origin: center center;
+    transition: transform .85s cubic-bezier(.2,.8,.2,1);
   }
+  .stage.z-wide .cam { transform: translate(-50%, -50%) scale(1.08); }
+  .stage.z-optin .cam { transform: translate(-40%, -44%) scale(1.42); }
+  .stage.z-radio .cam { transform: translate(-36%, -36%) scale(1.55); }
+  .stage.z-modal .cam { transform: translate(-50%, -54%) scale(1.52); }
+  .stage.z-flowers .cam { transform: translate(-50%, -46%) scale(1.58); }
+  .stage.z-hub .cam { transform: translate(-50%, -52%) scale(1.48); }
+  .stage.z-pay .cam { transform: translate(-24%, -24%) scale(1.6); }
+  .stage.z-wrap .cam { transform: translate(-50%, -50%) scale(1.38); }
+  .stage.z-deliver .cam { transform: translate(-50%, -48%) scale(1.42); }
+  .stage.z-paste .cam { transform: translate(-50%, -50%) scale(1.32); }
 
-  /* Browser chrome */
   .browser {
-    position: absolute; inset: 28px 48px 36px;
-    border-radius: 16px; overflow: hidden;
-    background: #fff;
-    box-shadow: 0 30px 80px rgba(12, 6, 56, .28);
+    position: absolute; inset: 8px 16px 12px;
+    border-radius: 14px; overflow: hidden; background: #fff;
+    box-shadow: 0 24px 60px rgba(0,0,0,.45);
     display: flex; flex-direction: column;
   }
   .bar {
-    display: flex; align-items: center; gap: 10px;
-    padding: 12px 16px; background: #f1f5f9; border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 14px; background: #f1f5f9; border-bottom: 1px solid var(--line);
   }
-  .bar i { width: 10px; height: 10px; border-radius: 50%; background: #cbd5e1; display: block; }
+  .bar i { width: 9px; height: 9px; border-radius: 50%; background: #cbd5e1; display: block; }
   .bar i:nth-child(1) { background: #f87171; }
   .bar i:nth-child(2) { background: #fbbf24; }
   .bar i:nth-child(3) { background: #34d399; }
   .url {
-    flex: 1; margin-left: 8px; padding: 7px 14px; border-radius: 999px;
-    background: #fff; border: 1px solid var(--line);
-    font-size: 13px; color: #64748b; white-space: nowrap; overflow: hidden;
+    flex: 1; margin-left: 6px; padding: 6px 12px; border-radius: 999px;
+    background: #fff; border: 1px solid var(--line); font-size: 12px; color: #64748b;
+    white-space: nowrap; overflow: hidden;
   }
   .page { position: relative; flex: 1; background: #fff; overflow: hidden; }
 
-  /* Target-ish checkout */
-  .checkout {
-    display: grid; grid-template-columns: 1.15fr .85fr; gap: 24px;
-    padding: 28px 32px; height: 100%;
-  }
-  .brand {
-    display: flex; align-items: center; gap: 10px; margin-bottom: 18px;
-  }
-  .brand .t {
-    font-weight: 800; font-size: 22px; letter-spacing: -.02em; color: #cc0000;
-  }
-  .brand small { color: #64748b; font-size: 13px; font-weight: 560; }
+  .checkout { display: grid; grid-template-columns: 1.15fr .85fr; gap: 20px; padding: 22px 26px; height: 100%; }
+  .brand { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+  .brand .t { font-weight: 800; font-size: 20px; color: #cc0000; }
+  .brand small { color: #64748b; font-size: 12px; font-weight: 560; }
   .item {
-    display: flex; gap: 16px; align-items: center;
-    padding: 16px; border: 1px solid var(--line); border-radius: 14px; background: #fff;
+    display: flex; gap: 14px; align-items: center; padding: 14px;
+    border: 1px solid var(--line); border-radius: 12px;
   }
-  .item img {
-    width: 88px; height: 88px; object-fit: cover; border-radius: 12px; background: #f8fafc;
-  }
-  .item b { display: block; font-size: 17px; font-weight: 650; color: var(--navy-text); margin-bottom: 4px; }
-  .item span { color: #64748b; font-size: 13px; }
-  .aside {
-    padding: 18px; border-radius: 16px; background: #f8fafc; border: 1px solid var(--line);
-  }
-  .aside h3 { font-size: 15px; font-weight: 650; margin-bottom: 12px; color: var(--navy-text); }
-  .line { display: flex; justify-content: space-between; margin: 8px 0; font-size: 14px; color: #475569; }
+  .item img { width: 76px; height: 76px; object-fit: cover; border-radius: 10px; background: #f8fafc; }
+  .item b { display: block; font-size: 15px; font-weight: 650; color: var(--navy-text); margin-bottom: 2px; }
+  .item span { color: #64748b; font-size: 12px; }
+  .aside { padding: 14px; border-radius: 14px; background: #f8fafc; border: 1px solid var(--line); }
+  .aside h3 { font-size: 14px; font-weight: 650; margin-bottom: 10px; color: var(--navy-text); }
+  .line { display: flex; justify-content: space-between; margin: 6px 0; font-size: 13px; color: #475569; }
   .line strong { color: var(--navy-text); }
   .place {
-    margin-top: 16px; width: 100%; padding: 14px 16px; border: 0; border-radius: 999px;
-    background: #cc0000; color: #fff; font: inherit; font-weight: 800; font-size: 15px;
+    margin-top: 12px; width: 100%; padding: 12px; border: 0; border-radius: 999px;
+    background: #cc0000; color: #fff; font: inherit; font-weight: 800; font-size: 14px;
   }
 
-  /* Extension opt-in card */
   .optin {
-    margin-top: 18px; padding: 16px 18px; border-radius: 14px;
-    border: 2px solid rgba(246, 185, 51, .55);
+    margin-top: 14px; padding: 14px 16px; border-radius: 12px;
+    border: 2px solid rgba(246,185,51,.55);
     background: linear-gradient(180deg, #fffaf0, #fff);
-    box-shadow: 0 10px 28px rgba(12, 6, 56, .08);
-    opacity: 0; transform: translateY(12px);
-    transition: opacity .45s ease, transform .45s ease;
+    opacity: 0; transform: translateY(10px);
+    transition: opacity .4s ease, transform .4s ease;
   }
   .stage.s-optin .optin, .stage.s-radio .optin, .stage.s-modal .optin,
-  .stage.s-hub .optin, .stage.s-pay .optin { opacity: 1; transform: none; }
-  .optin-head {
-    display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
-  }
-  .optin-head img { width: 28px; height: 28px; border-radius: 8px; }
-  .optin-head b { font-size: 15px; color: var(--navy-text); }
-  .optin-q { font-size: 16px; font-weight: 650; color: var(--navy-text); margin-bottom: 12px; }
-  .radios { display: grid; gap: 8px; }
+  .stage.s-flowers .optin, .stage.s-hub .optin, .stage.s-pay .optin { opacity: 1; transform: none; }
+  .optin-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .optin-head img { width: 24px; height: 24px; border-radius: 6px; }
+  .optin-head b { font-size: 14px; color: var(--navy-text); }
+  .optin-q { font-size: 15px; font-weight: 650; color: var(--navy-text); margin-bottom: 10px; }
+  .radios { display: grid; gap: 7px; }
   .radio {
-    display: flex; align-items: center; gap: 10px; padding: 10px 12px;
-    border: 1px solid var(--line); border-radius: 10px; background: #fff;
-    font-size: 14px; transition: border-color .2s ease, background .2s ease, box-shadow .2s ease;
+    display: flex; align-items: center; gap: 8px; padding: 9px 11px;
+    border: 1px solid var(--line); border-radius: 9px; background: #fff; font-size: 13px;
   }
   .radio .dot {
-    width: 18px; height: 18px; border-radius: 50%; border: 2px solid #94a3b8;
+    width: 16px; height: 16px; border-radius: 50%; border: 2px solid #94a3b8;
     display: grid; place-items: center; flex: 0 0 auto;
   }
-  .radio .dot::after {
-    content: ""; width: 8px; height: 8px; border-radius: 50%; background: transparent;
-  }
-  .radio.on {
-    border-color: var(--gold); background: #fffaf0;
-    box-shadow: 0 0 0 3px rgba(246, 185, 51, .25);
-  }
+  .radio .dot::after { content: ""; width: 7px; height: 7px; border-radius: 50%; background: transparent; }
+  .radio.on { border-color: var(--gold); background: #fffaf0; box-shadow: 0 0 0 3px rgba(246,185,51,.22); }
   .radio.on .dot { border-color: var(--orange); }
   .radio.on .dot::after { background: var(--orange); }
 
-  /* Modal overlay */
   .overlay {
-    position: absolute; inset: 0; background: rgba(12, 6, 56, .45);
+    position: absolute; inset: 0; background: rgba(12,6,56,.48);
     display: flex; align-items: center; justify-content: center;
-    opacity: 0; pointer-events: none; transition: opacity .35s ease; z-index: 5;
+    opacity: 0; pointer-events: none; transition: opacity .3s ease; z-index: 5;
   }
-  .stage.s-modal .overlay, .stage.s-hub .overlay, .stage.s-pay .overlay { opacity: 1; pointer-events: auto; }
+  .stage.s-modal .overlay, .stage.s-flowers .overlay, .stage.s-hub .overlay, .stage.s-pay .overlay { opacity: 1; }
   .modal {
-    width: min(560px, 88%); background: #fff; border-radius: 16px;
-    box-shadow: 0 24px 64px rgba(0, 0, 0, .28); padding: 22px 22px 18px;
-    transform: translateY(18px) scale(.98); opacity: 0;
-    transition: transform .4s cubic-bezier(.2,.9,.2,1), opacity .35s ease;
+    width: min(540px, 90%); background: #fff; border-radius: 14px;
+    box-shadow: 0 22px 56px rgba(0,0,0,.3); padding: 18px 18px 14px;
+    transform: translateY(14px) scale(.97); opacity: 0;
+    transition: transform .35s cubic-bezier(.2,.9,.2,1), opacity .3s ease;
   }
-  .stage.s-modal .modal { transform: none; opacity: 1; }
-  .stage.s-hub .modal, .stage.s-pay .modal { opacity: 0; transform: translateY(-10px) scale(.98); }
-  .modal-title {
-    display: flex; align-items: center; gap: 10px; margin-bottom: 8px;
-    font-size: 18px; font-weight: 800; color: var(--navy-text);
-  }
-  .modal-title img { width: 26px; height: 26px; border-radius: 7px; }
-  .modal-lede { font-size: 13px; color: #64748b; margin-bottom: 14px; line-height: 1.4; }
+  .stage.s-modal .modal, .stage.s-flowers .modal { transform: none; opacity: 1; }
+  .stage.s-hub .modal, .stage.s-pay .modal { opacity: 0; transform: translateY(-8px) scale(.97); }
+  .modal-title { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 16px; font-weight: 800; color: var(--navy-text); }
+  .modal-title img { width: 22px; height: 22px; border-radius: 6px; }
+  .modal-lede { font-size: 12px; color: #64748b; margin-bottom: 10px; line-height: 1.4; }
   .zip {
-    display: flex; gap: 8px; align-items: center; margin-bottom: 14px;
-    padding: 10px 12px; border-radius: 10px; background: #f8fafc; border: 1px solid var(--line);
+    display: flex; gap: 8px; align-items: center; margin-bottom: 10px;
+    padding: 8px 10px; border-radius: 9px; background: #f8fafc; border: 1px solid var(--line);
   }
-  .zip label { font-size: 12px; font-weight: 650; color: #475569; white-space: nowrap; }
-  .zip input {
-    flex: 1; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px;
-    font: inherit; font-size: 14px; outline: none;
-  }
+  .zip label { font-size: 11px; font-weight: 650; color: #475569; }
+  .zip input { flex: 1; border: 1px solid var(--line); border-radius: 7px; padding: 6px 8px; font: inherit; font-size: 13px; }
   .zip input.ok { border-color: #34d399; background: #ecfdf5; }
-  .fieldset { margin-bottom: 12px; }
-  .legend { font-size: 13px; font-weight: 650; color: var(--navy-text); margin-bottom: 8px; }
+  .legend { font-size: 12px; font-weight: 650; color: var(--navy-text); margin-bottom: 6px; }
   .choice {
-    display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px;
-    border: 1px solid var(--line); border-radius: 10px; margin-bottom: 8px; font-size: 13px;
+    display: flex; align-items: flex-start; gap: 8px; padding: 8px 10px;
+    border: 1px solid var(--line); border-radius: 9px; margin-bottom: 6px; font-size: 12px;
   }
   .choice.on { border-color: var(--gold); background: #fffaf0; }
-  .choice .dot {
-    width: 16px; height: 16px; margin-top: 2px; border-radius: 50%; border: 2px solid #94a3b8;
-    flex: 0 0 auto;
-  }
-  .choice.on .dot { border-color: var(--orange); box-shadow: inset 0 0 0 4px var(--orange); }
-  .swatches { display: flex; gap: 8px; margin: 4px 0 10px 26px; }
-  .swatches i {
-    width: 42px; height: 42px; border-radius: 8px; border: 2px solid transparent;
-    display: block; box-shadow: inset 0 0 0 1px rgba(0,0,0,.08);
-  }
+  .choice .dot { width: 14px; height: 14px; margin-top: 1px; border-radius: 50%; border: 2px solid #94a3b8; flex: 0 0 auto; }
+  .choice.on .dot { border-color: var(--orange); box-shadow: inset 0 0 0 3.5px var(--orange); }
+  .swatches { display: flex; gap: 7px; margin: 2px 0 8px 22px; }
+  .swatches i { width: 36px; height: 36px; border-radius: 7px; border: 2px solid transparent; display: block; }
   .swatches i.on { border-color: var(--orange); }
-  .pat-plaid { background: repeating-linear-gradient(45deg, #7f1d1d 0 6px, #fef3c7 6px 12px); }
-  .pat-dots { background: radial-gradient(circle at 30% 30%, #0c0638 2px, #fce7f3 3px); background-size: 12px 12px; background-color: #fce7f3; }
-  .pat-stripe { background: repeating-linear-gradient(90deg, #1d4ed8 0 5px, #dbeafe 5px 10px); }
+  .pat-plaid { background: repeating-linear-gradient(45deg, #7f1d1d 0 5px, #fef3c7 5px 10px); }
+  .pat-dots { background: radial-gradient(circle at 30% 30%, #0c0638 2px, #fce7f3 3px); background-size: 10px 10px; background-color: #fce7f3; }
+  .pat-stripe { background: repeating-linear-gradient(90deg, #1d4ed8 0 4px, #dbeafe 4px 8px); }
+
+  .flowers-block { margin-top: 4px; }
   .flowers {
-    display: flex; align-items: center; gap: 10px; padding: 10px 12px;
-    border: 1px solid var(--line); border-radius: 10px; font-size: 13px; margin-bottom: 14px;
+    display: flex; align-items: center; gap: 8px; padding: 8px 10px;
+    border: 1px solid var(--line); border-radius: 9px; font-size: 12px; margin-bottom: 8px;
   }
   .flowers.on { border-color: #34d399; background: #ecfdf5; }
-  .check {
-    width: 16px; height: 16px; border-radius: 4px; border: 2px solid #94a3b8;
-  }
+  .check { width: 14px; height: 14px; border-radius: 3px; border: 2px solid #94a3b8; }
   .flowers.on .check { background: #059669; border-color: #059669; }
-  .actions { display: flex; justify-content: flex-end; gap: 8px; }
-  .btn {
-    padding: 9px 14px; border-radius: 8px; font: inherit; font-size: 13px; font-weight: 650; cursor: default;
+  .bouquet-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+    max-height: 0; overflow: hidden; opacity: 0;
+    transition: max-height .45s ease, opacity .35s ease, margin .35s ease;
+    margin: 0;
   }
+  .stage.s-flowers .bouquet-grid { max-height: 160px; opacity: 1; margin: 0 0 10px; }
+  .bq {
+    border: 2px solid var(--line); border-radius: 10px; padding: 6px; text-align: center;
+    background: #fff; font-size: 11px; color: var(--navy-text);
+  }
+  .bq.on { border-color: #059669; background: #ecfdf5; box-shadow: 0 0 0 2px rgba(5,150,105,.18); }
+  .bq .pic {
+    height: 58px; border-radius: 8px; margin-bottom: 4px; position: relative; overflow: hidden;
+    background: linear-gradient(180deg, #ecfdf5 0%, #d1fae5 100%);
+  }
+  .bq .pic::before, .bq .pic::after {
+    content: ""; position: absolute; border-radius: 50%;
+  }
+  .bq .pic::before {
+    width: 18px; height: 18px; left: 14px; top: 14px;
+    background: radial-gradient(circle at 35% 35%, #fda4af, #fb7185 55%, #be123c);
+    box-shadow: 16px -4px 0 #f472b6, 8px 14px 0 #fbbf24, 22px 10px 0 #fb7185;
+  }
+  .bq .pic::after {
+    width: 10px; height: 22px; left: 26px; bottom: 4px;
+    background: #16a34a; border-radius: 4px; transform: rotate(12deg);
+  }
+  .bq:nth-child(2) .pic::before {
+    background: radial-gradient(circle at 35% 35%, #fbcfe8, #ec4899 55%, #9d174d);
+    box-shadow: 16px -4px 0 #f9a8d4, 8px 14px 0 #c084fc, 22px 10px 0 #f472b6;
+  }
+  .bq:nth-child(3) .pic::before {
+    background: radial-gradient(circle at 35% 35%, #fde68a, #f59e0b 55%, #b45309);
+    box-shadow: 16px -4px 0 #fbbf24, 8px 14px 0 #fb7185, 22px 10px 0 #fcd34d;
+  }
+
+  .actions { display: flex; justify-content: flex-end; gap: 7px; }
+  .btn { padding: 8px 12px; border-radius: 7px; font: inherit; font-size: 12px; font-weight: 650; }
   .btn-ghost { border: 1px solid var(--line); background: #fff; color: var(--ink); }
   .btn-primary { border: 0; background: #111827; color: #fff; }
   .btn-orange { border: 0; background: linear-gradient(180deg, #e85d04, #d14900); color: #fff; }
 
-  /* Hub confirm */
   .hub-card {
-    position: absolute; left: 50%; top: 50%; width: min(520px, 86%);
+    position: absolute; left: 50%; top: 50%; width: min(480px, 86%);
     transform: translate(-50%, -42%) scale(.96); opacity: 0;
-    background: #fff; border-radius: 16px; padding: 22px;
-    box-shadow: 0 24px 64px rgba(0,0,0,.3); z-index: 6;
-    transition: opacity .4s ease, transform .45s cubic-bezier(.2,.9,.2,1);
+    background: #fff; border-radius: 14px; padding: 18px;
+    box-shadow: 0 22px 56px rgba(0,0,0,.32); z-index: 6;
+    transition: opacity .35s ease, transform .4s cubic-bezier(.2,.9,.2,1);
   }
   .stage.s-hub .hub-card { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-  .hub-card h2 { font-size: 18px; font-weight: 800; color: var(--navy-text); margin-bottom: 8px; }
-  .hub-card p { font-size: 14px; color: #475569; line-height: 1.45; margin-bottom: 12px; }
+  .hub-card h2 { font-size: 16px; font-weight: 800; color: var(--navy-text); margin-bottom: 6px; }
+  .hub-card p { font-size: 13px; color: #475569; line-height: 1.4; margin-bottom: 10px; }
   .hub-addr {
-    padding: 12px 14px; border-radius: 10px; background: #f8fafc; border: 1px solid var(--line);
-    font-size: 13px; line-height: 1.45; color: var(--navy-text); margin-bottom: 14px; white-space: pre-line;
+    padding: 10px 12px; border-radius: 9px; background: #f8fafc; border: 1px solid var(--line);
+    font-size: 12px; line-height: 1.45; color: var(--navy-text); margin-bottom: 12px; white-space: pre-line;
   }
-  .hub-actions { display: flex; justify-content: flex-end; gap: 8px; }
+  .hub-actions { display: flex; justify-content: flex-end; gap: 7px; }
 
-  /* Pay summary strip */
   .pay {
-    position: absolute; right: 40px; bottom: 48px; width: 340px;
-    padding: 14px 16px; border-radius: 14px; z-index: 6;
-    background: #fffbeb; border: 1px solid #fcd34d;
-    box-shadow: 0 16px 40px rgba(12,6,56,.18);
-    opacity: 0; transform: translateY(16px);
-    transition: opacity .4s ease, transform .4s ease;
+    position: absolute; right: 32px; bottom: 36px; width: 300px; padding: 12px 14px;
+    border-radius: 12px; z-index: 6; background: #fffbeb; border: 1px solid #fcd34d;
+    box-shadow: 0 14px 36px rgba(12,6,56,.2);
+    opacity: 0; transform: translateY(12px); transition: opacity .35s ease, transform .35s ease;
   }
   .stage.s-pay .pay { opacity: 1; transform: none; }
-  .pay b { display: block; font-size: 14px; color: #92400e; margin-bottom: 8px; }
-  .pay .row { display: flex; justify-content: space-between; font-size: 13px; margin: 4px 0; color: #78350f; }
-  .pay .btn-orange { width: 100%; margin-top: 10px; padding: 11px; border-radius: 999px; font-size: 14px; }
+  .pay b { display: block; font-size: 13px; color: #92400e; margin-bottom: 6px; }
+  .pay .row { display: flex; justify-content: space-between; font-size: 12px; margin: 3px 0; color: #78350f; }
+  .pay .btn-orange { width: 100%; margin-top: 8px; padding: 9px; border-radius: 999px; font-size: 13px; }
   .pay.paid { background: #ecfdf5; border-color: #6ee7b7; }
   .pay.paid b, .pay.paid .row { color: #065f46; }
 
-  /* Wrap workshop */
-  .wrap-scene, .deliver-scene {
+  .wrap-scene, .deliver-scene, .paste-scene {
     position: absolute; inset: 0; display: flex; flex-direction: column;
-    align-items: center; justify-content: center; gap: 18px;
+    align-items: center; justify-content: center; gap: 14px; z-index: 8;
+    opacity: 0; pointer-events: none; transition: opacity .45s ease;
+  }
+  .wrap-scene, .deliver-scene {
     background: radial-gradient(900px 420px at 70% 10%, rgba(246,185,51,.22), transparent 55%),
-      linear-gradient(160deg, #0c0638 0%, #170a5e 100%);
-    color: #fff; z-index: 8;
-    opacity: 0; pointer-events: none; transition: opacity .5s ease;
+      linear-gradient(160deg, #0c0638 0%, #170a5e 100%); color: #fff;
   }
-  .stage.s-wrap .wrap-scene { opacity: 1; pointer-events: auto; }
-  .stage.s-deliver .deliver-scene { opacity: 1; pointer-events: auto; }
-  .gift {
-    width: 180px; height: 140px; border-radius: 12px; position: relative;
-    background: repeating-linear-gradient(45deg, #7f1d1d 0 10px, #fef3c7 10px 20px);
-    box-shadow: 0 20px 50px rgba(0,0,0,.35);
-    transform: scale(.85); opacity: 0;
-    transition: transform .6s cubic-bezier(.2,.9,.3,1.2), opacity .45s ease;
-  }
-  .stage.s-wrap .gift { transform: scale(1); opacity: 1; }
-  .gift::before, .gift::after {
-    content: ""; position: absolute; background: var(--gold);
-  }
-  .gift::before { left: 50%; top: 0; bottom: 0; width: 18px; transform: translateX(-50%); }
-  .gift::after { top: 42%; left: 0; right: 0; height: 18px; }
-  .bow {
-    position: absolute; left: 50%; top: 28%; width: 70px; height: 42px;
-    transform: translate(-50%, -50%);
-  }
-  .bow path { fill: var(--gold); }
-  .caption {
-    font-size: 22px; font-weight: 650; letter-spacing: -.01em; text-align: center;
-  }
-  .caption small { display: block; margin-top: 6px; font-size: 14px; font-weight: 460; color: rgba(255,255,255,.75); }
+  .stage.s-wrap .wrap-scene, .stage.s-deliver .deliver-scene, .stage.s-paste .paste-scene { opacity: 1; }
 
+  .gift-row { display: flex; align-items: flex-end; gap: 18px; }
+  .gift {
+    width: 168px; height: 128px; border-radius: 11px; position: relative;
+    background: repeating-linear-gradient(45deg, #7f1d1d 0 9px, #fef3c7 9px 18px);
+    box-shadow: 0 18px 44px rgba(0,0,0,.35);
+    transform: scale(.88); opacity: 0; transition: transform .55s cubic-bezier(.2,.9,.3,1.2), opacity .4s ease;
+  }
+  .stage.s-wrap .gift, .stage.s-wrap .bouquet-hero { transform: scale(1); opacity: 1; }
+  .gift::before, .gift::after { content: ""; position: absolute; background: var(--gold); }
+  .gift::before { left: 50%; top: 0; bottom: 0; width: 16px; transform: translateX(-50%); }
+  .gift::after { top: 42%; left: 0; right: 0; height: 16px; }
+  .bow { position: absolute; left: 50%; top: 28%; width: 64px; height: 38px; transform: translate(-50%, -50%); }
+  .bow path { fill: var(--gold); }
+  .bouquet-hero {
+    width: 72px; height: 96px; position: relative; opacity: 0; transform: scale(.88);
+    transition: transform .55s cubic-bezier(.2,.9,.3,1.2) .1s, opacity .4s ease .1s;
+  }
+  .bouquet-hero .stem {
+    position: absolute; left: 50%; bottom: 0; width: 10px; height: 42px;
+    background: #15803d; border-radius: 4px; transform: translateX(-50%);
+  }
+  .bouquet-hero .petal {
+    position: absolute; width: 28px; height: 28px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #fda4af, #e11d48);
+  }
+  .bouquet-hero .petal:nth-child(1) { left: 8px; top: 8px; }
+  .bouquet-hero .petal:nth-child(2) { left: 28px; top: 0; background: radial-gradient(circle at 35% 35%, #fde68a, #f59e0b); }
+  .bouquet-hero .petal:nth-child(3) { left: 36px; top: 22px; background: radial-gradient(circle at 35% 35%, #f9a8d4, #db2777); }
+  .bouquet-hero .petal:nth-child(4) { left: 14px; top: 28px; background: radial-gradient(circle at 35% 35%, #fdba74, #ea580c); }
+  .caption { font-size: 22px; font-weight: 650; text-align: center; }
+  .caption small { display: block; margin-top: 5px; font-size: 14px; font-weight: 460; color: rgba(255,255,255,.78); }
+
+  .deliver-stack { display: flex; flex-direction: column; align-items: center; gap: 12px; }
   .proof {
-    display: flex; align-items: center; gap: 14px; padding: 14px 18px;
-    border-radius: 16px; background: rgba(255,255,255,.1); border: 1px solid rgba(246,185,51,.35);
-    backdrop-filter: blur(6px);
+    display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 14px;
+    background: rgba(255,255,255,.12); border: 1px solid rgba(246,185,51,.4);
   }
   .proof-pic {
-    width: 64px; height: 52px; border-radius: 8px;
-    background: repeating-linear-gradient(45deg, #7f1d1d 0 6px, #fef3c7 6px 12px);
-    position: relative; box-shadow: 0 6px 16px rgba(0,0,0,.25);
-  }
-  .proof-pic::before { content:""; position:absolute; left:50%; top:0; bottom:0; width:8px; background:var(--gold); transform:translateX(-50%); }
-  .proof-pic::after { content:""; position:absolute; top:40%; left:0; right:0; height:8px; background:var(--gold); }
-  .proof span { font-size: 15px; font-weight: 560; }
-
-  /* Cursor */
-  .cursor {
-    position: absolute; width: 22px; height: 22px; border-radius: 50% 50% 50% 0;
-    background: #fff; border: 2px solid var(--navy);
-    transform: translate(-4px, -4px) rotate(-35deg);
+    width: 88px; height: 64px; border-radius: 8px; position: relative; overflow: hidden;
+    background: linear-gradient(180deg, #cbd5e1 0 36%, #f8fafc 36%);
     box-shadow: 0 6px 14px rgba(0,0,0,.25);
-    z-index: 20; pointer-events: none;
-    transition: left .55s cubic-bezier(.2,.8,.2,1), top .55s cubic-bezier(.2,.8,.2,1), transform .15s ease;
+  }
+  .proof-pic .pg {
+    position: absolute; bottom: 6px; left: 10px; width: 28px; height: 22px; border-radius: 3px;
+    background: repeating-linear-gradient(45deg, #7f1d1d 0 4px, #fef3c7 4px 8px);
+  }
+  .proof-pic .pf {
+    position: absolute; bottom: 8px; right: 12px; width: 22px; height: 30px;
+  }
+  .proof-pic .pf::before {
+    content: ""; position: absolute; left: 6px; bottom: 0; width: 6px; height: 14px; background: #16a34a; border-radius: 2px;
+  }
+  .proof-pic .pf::after {
+    content: ""; position: absolute; left: 0; top: 0; width: 20px; height: 20px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #fda4af, #e11d48);
+    box-shadow: 8px 2px 0 #fbbf24, 4px 10px 0 #f472b6;
+  }
+  .proof span { font-size: 14px; font-weight: 560; }
+  .door {
+    width: 280px; height: 148px; border-radius: 14px; position: relative; overflow: hidden;
+    background: linear-gradient(180deg, #7dd3fc 0 34%, #94a3b8 34% 38%, #e2e8f0 38%);
+    box-shadow: 0 16px 36px rgba(0,0,0,.3); border: 2px solid rgba(255,255,255,.25);
+  }
+  .door .porch { position: absolute; left: 0; right: 0; bottom: 0; height: 28px; background: #64748b; }
+  .door .person {
+    position: absolute; bottom: 28px; left: 42%; transform: translateX(-50%);
+    width: 40px; height: 58px; border-radius: 10px 10px 6px 6px;
+    background: linear-gradient(180deg, #fde68a, #f59e0b);
+  }
+  .door .person::before {
+    content: ""; position: absolute; top: -14px; left: 50%; transform: translateX(-50%);
+    width: 18px; height: 18px; border-radius: 50%; background: #fcd34d;
+  }
+  .door .box {
+    position: absolute; bottom: 34px; right: 58px; width: 42px; height: 32px; border-radius: 4px;
+    background: repeating-linear-gradient(45deg, #7f1d1d 0 4px, #fef3c7 4px 8px);
+    box-shadow: 0 4px 10px rgba(0,0,0,.2);
+  }
+  .door .box::after {
+    content: ""; position: absolute; right: -22px; bottom: 2px; width: 18px; height: 26px;
+    background: radial-gradient(circle at 40% 30%, #fb7185 0 40%, transparent 41%),
+      radial-gradient(circle at 70% 45%, #fbbf24 0 35%, transparent 36%),
+      linear-gradient(#16a34a, #16a34a);
+    background-size: 100% 100%, 100% 100%, 5px 12px;
+    background-position: 0 0, 0 0, 6px 14px;
+    background-repeat: no-repeat;
+  }
+  .sms {
+    margin-top: 2px; padding: 12px 16px; border-radius: 12px; background: #fff; color: var(--navy-text);
+    font-size: 14px; font-weight: 560; box-shadow: 0 10px 24px rgba(0,0,0,.25); max-width: 360px; text-align: left;
+  }
+  .sms small { display: block; color: #64748b; font-weight: 460; margin-top: 2px; font-size: 12px; }
+
+  .paste-scene { background: linear-gradient(160deg, #fbf6ec, #fff); color: var(--navy-text); padding: 24px; }
+  .paste-card {
+    width: min(720px, 92%); background: #fff; border-radius: 16px; padding: 22px 24px;
+    border: 1px solid var(--line); box-shadow: 0 18px 40px rgba(12,6,56,.12);
+  }
+  .paste-card h2 { font-size: 22px; font-weight: 650; margin-bottom: 6px; }
+  .paste-card .lede { font-size: 14px; color: #64748b; margin-bottom: 14px; }
+  .paste-row { display: flex; gap: 8px; margin-bottom: 10px; }
+  .paste-row input {
+    flex: 1; border: 1px solid var(--line); border-radius: 999px; padding: 11px 16px;
+    font: inherit; font-size: 14px; background: #f8fafc;
+  }
+  .paste-row input.on { border-color: var(--gold); background: #fffaf0; }
+  .paste-row .go {
+    border: 0; border-radius: 999px; padding: 11px 18px; font: inherit; font-weight: 800; font-size: 13px;
+    background: linear-gradient(180deg, #e85d04, #d14900); color: #fff; white-space: nowrap;
+  }
+  .paste-note { font-size: 12px; color: #64748b; }
+  .paste-note b { color: var(--navy-text); }
+
+  .cursor {
+    position: absolute; width: 20px; height: 20px; border-radius: 50% 50% 50% 0;
+    background: #fff; border: 2px solid var(--navy); z-index: 20; pointer-events: none;
+    transform: translate(-4px, -4px) rotate(-35deg);
+    box-shadow: 0 5px 12px rgba(0,0,0,.28);
+    transition: left .5s cubic-bezier(.2,.8,.2,1), top .5s cubic-bezier(.2,.8,.2,1), transform .12s ease;
     left: 70%; top: 40%;
   }
   .cursor.press { transform: translate(-4px, -4px) rotate(-35deg) scale(.82); }
 
   .badge {
-    position: absolute; top: 18px; left: 50%; transform: translateX(-50%);
-    padding: 6px 14px; border-radius: 999px; z-index: 30;
-    background: rgba(12,6,56,.88); color: var(--gold);
-    font-size: 12px; font-weight: 650; letter-spacing: .08em; text-transform: uppercase;
+    position: absolute; top: 14px; left: 50%; transform: translateX(-50%); z-index: 30;
+    padding: 5px 12px; border-radius: 999px; background: rgba(12,6,56,.9); color: var(--gold);
+    font-size: 11px; font-weight: 650; letter-spacing: .08em; text-transform: uppercase;
   }
 </style>
 </head>
 <body>
-<div class="stage s-boot" id="stage">
+<div class="stage s-boot z-wide" id="stage">
   <div class="badge" id="badge">At checkout</div>
-  <div class="browser">
-    <div class="bar"><i></i><i></i><i></i><div class="url" id="url">target.com/checkout</div></div>
-    <div class="page">
-      <div class="checkout" id="checkout">
-        <div>
-          <div class="brand"><span class="t">Target</span><small>Secure checkout</small></div>
-          <div class="item">
-            <img src="https://target.scene7.com/is/image/Target/GUEST_2c7410d9-3a5a-41d2-a0fe-f53eeabd2726?wid=300&hei=300&qlt=80" alt="" />
-            <div>
-              <b>LEGO Icons Bumblebee Set</b>
-              <span>Qty 1 · Arrives Tue</span>
+  <div class="cam">
+    <div class="browser">
+      <div class="bar"><i></i><i></i><i></i><div class="url" id="url">target.com/checkout</div></div>
+      <div class="page">
+        <div class="checkout" id="checkout">
+          <div>
+            <div class="brand"><span class="t">Target</span><small>Secure checkout</small></div>
+            <div class="item">
+              <img src="https://target.scene7.com/is/image/Target/GUEST_2c7410d9-3a5a-41d2-a0fe-f53eeabd2726?wid=300&hei=300&qlt=80" alt="" />
+              <div><b>LEGO Icons Bumblebee Set</b><span>Qty 1 · Arrives Tue</span></div>
+            </div>
+            <div class="optin" id="optin">
+              <div class="optin-head">
+                <img src="https://wrrapd.com/wp-content/mu-plugins/icons/favicon/android-chrome-512x512.png" alt="" />
+                <b>Wrrapd</b>
+              </div>
+              <p class="optin-q">Would you like us to gift-wrap your order?</p>
+              <div class="radios">
+                <div class="radio" id="radio-yes"><span class="dot"></span><span>Yes — gift-wrap my items with Wrrapd</span></div>
+                <div class="radio on" id="radio-no"><span class="dot"></span><span>No, thank you — continue without gift wrap</span></div>
+              </div>
             </div>
           </div>
+          <aside class="aside">
+            <h3>Order summary</h3>
+            <div class="line"><span>Item</span><strong>In cart</strong></div>
+            <div class="line"><span>Shipping</span><strong>To address</strong></div>
+            <button class="place" type="button">Place your order</button>
+          </aside>
+        </div>
 
-          <div class="optin" id="optin">
-            <div class="optin-head">
+        <div class="overlay">
+          <div class="modal" id="modal">
+            <div class="modal-title">
               <img src="https://wrrapd.com/wp-content/mu-plugins/icons/favicon/android-chrome-512x512.png" alt="" />
-              <b>Wrrapd</b>
+              Gift wrap with Wrrapd
             </div>
-            <p class="optin-q">Would you like us to gift-wrap your order?</p>
-            <div class="radios">
-              <div class="radio" id="radio-yes"><span class="dot"></span><span>Yes — gift-wrap my items with Wrrapd</span></div>
-              <div class="radio on" id="radio-no"><span class="dot"></span><span>No, thank you — continue without gift wrap</span></div>
-            </div>
-          </div>
-        </div>
-        <aside class="aside">
-          <h3>Order summary</h3>
-          <div class="line"><span>Item</span><strong>In cart</strong></div>
-          <div class="line"><span>Shipping</span><strong>To address</strong></div>
-          <button class="place" type="button">Place your order</button>
-        </aside>
-      </div>
-
-      <div class="overlay" id="overlay">
-        <div class="modal" id="modal">
-          <div class="modal-title">
-            <img src="https://wrrapd.com/wp-content/mu-plugins/icons/favicon/android-chrome-512x512.png" alt="" />
-            Gift wrap with Wrrapd
-          </div>
-          <p class="modal-lede">Choose wrapping, optionally add flowers, then we’ll guide shipping to the Wrrapd hub.</p>
-          <div class="zip">
-            <label>Giftee zip</label>
-            <input id="zip" type="text" value="" placeholder="ZIP" readonly />
-          </div>
-          <div class="fieldset">
+            <p class="modal-lede">Choose wrapping, add flowers if you like, then confirm shipping to the Wrrapd hub.</p>
+            <div class="zip"><label>Giftee zip</label><input id="zip" type="text" value="" placeholder="ZIP" readonly /></div>
             <div class="legend">Wrapping design</div>
-            <div class="choice on" id="ch-wrrapd"><span class="dot"></span><span>Allow Wrrapd to choose the wrapping</span></div>
-            <div class="swatches">
-              <i class="pat-plaid on"></i><i class="pat-dots"></i><i class="pat-stripe"></i>
+            <div class="choice on"><span class="dot"></span><span>Allow Wrrapd to choose the wrapping</span></div>
+            <div class="swatches"><i class="pat-plaid on"></i><i class="pat-dots"></i><i class="pat-stripe"></i></div>
+            <div class="flowers-block">
+              <div class="flowers" id="flowers"><span class="check"></span><span>Add flowers — choose a bouquet</span></div>
+              <div class="bouquet-grid" id="bouquets">
+                <div class="bq" id="bq1"><div class="pic"></div>Sunny mixed</div>
+                <div class="bq" id="bq2"><div class="pic"></div>Pink garden</div>
+                <div class="bq on" id="bq3"><div class="pic"></div>Gold bloom</div>
+              </div>
             </div>
-            <div class="choice" id="ch-upload"><span class="dot"></span><span>Upload your own design</span></div>
-          </div>
-          <div class="flowers" id="flowers"><span class="check"></span><span>Add flowers — choose a bouquet</span></div>
-          <div class="actions">
-            <button class="btn btn-ghost" type="button">Cancel</button>
-            <button class="btn btn-primary" type="button" id="save-btn">Save gift wrap</button>
+            <div class="actions">
+              <button class="btn btn-ghost" type="button">Cancel</button>
+              <button class="btn btn-primary" type="button" id="save-btn">Save gift wrap</button>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div class="hub-card" id="hub">
-        <h2>Ship to the Wrrapd hub</h2>
-        <p>Target ships this order to our gift hub first so we can wrap it, then we deliver to your giftee.</p>
-        <div class="hub-addr" id="hub-addr">Wrrapd Gift Hub
+        <div class="hub-card" id="hub">
+          <h2>Ship to the Wrrapd hub</h2>
+          <p>Target ships this order to our gift hub first so we can wrap it, then we deliver to your giftee.</p>
+          <div class="hub-addr" id="hub-addr">Wrrapd Gift Hub
 Jacksonville, FL</div>
-        <div class="hub-actions">
-          <button class="btn btn-ghost" type="button">Not now</button>
-          <button class="btn btn-orange" type="button" id="hub-accept">I accept — use Wrrapd hub</button>
+          <div class="hub-actions">
+            <button class="btn btn-ghost" type="button">Not now</button>
+            <button class="btn btn-orange" type="button" id="hub-accept">I accept — use Wrrapd hub</button>
+          </div>
         </div>
-      </div>
 
-      <div class="pay" id="pay">
-        <b>Your Wrrapd gift-wrap order</b>
-        <div class="row"><span>Gift wrapping</span><span>Selected</span></div>
-        <div class="row"><span>Flowers</span><span>Added</span></div>
-        <div class="row"><span>Final delivery</span><span>Free</span></div>
-        <button class="btn-orange" type="button" id="pay-btn">Pay Wrrapd</button>
-      </div>
-
-      <div class="wrap-scene" id="wrap">
-        <div class="gift">
-          <svg class="bow" viewBox="0 0 64 40" aria-hidden="true"><path d="M32 20C24 4 6 2 6 14s18 10 26 6Z"/><path d="M32 20c8-16 26-18 26-6S40 24 32 20Z"/><rect x="28" y="16" width="8" height="18" rx="2"/></svg>
+        <div class="pay" id="pay">
+          <b>Your Wrrapd gift-wrap order</b>
+          <div class="row"><span>Gift wrapping</span><span>Selected</span></div>
+          <div class="row"><span>Flowers</span><span>Added</span></div>
+          <div class="row"><span>Final delivery</span><span>Free</span></div>
+          <button class="btn-orange" type="button" id="pay-btn">Pay Wrrapd</button>
         </div>
-        <p class="caption">We wrap it by hand<small>Paper, bow, and your note tucked underneath</small></p>
-      </div>
 
-      <div class="deliver-scene" id="deliver">
-        <p class="caption">Delivered with a smile<small>You get a photo the moment it arrives</small></p>
-        <div class="proof">
-          <span class="proof-pic"></span>
-          <span>Delivery photo sent to you</span>
+        <div class="wrap-scene">
+          <div class="gift-row">
+            <div class="gift">
+              <svg class="bow" viewBox="0 0 64 40" aria-hidden="true"><path d="M32 20C24 4 6 2 6 14s18 10 26 6Z"/><path d="M32 20c8-16 26-18 26-6S40 24 32 20Z"/><rect x="28" y="16" width="8" height="18" rx="2"/></svg>
+            </div>
+            <div class="bouquet-hero" aria-hidden="true">
+              <span class="petal"></span><span class="petal"></span><span class="petal"></span><span class="petal"></span>
+              <span class="stem"></span>
+            </div>
+          </div>
+          <p class="caption">We wrap it by hand<small>Paper, bow, fresh flowers, and your note tucked underneath</small></p>
         </div>
-      </div>
 
-      <div class="cursor" id="cursor"></div>
+        <div class="deliver-scene">
+          <div class="deliver-stack">
+            <p class="caption">Hand-delivered to their door<small>Gift + flowers on the porch — photo confirmation in seconds</small></p>
+            <div class="door"><div class="porch"></div><div class="person"></div><div class="box"></div></div>
+            <div class="proof"><span class="proof-pic"><span class="pg"></span><span class="pf"></span></span><span>Delivery photo sent to you</span></div>
+            <div class="sms">Wrrapd: Your gift arrived!<small>Photo attached · Wrapped gift + bouquet at the door</small></div>
+          </div>
+        </div>
+
+        <div class="paste-scene">
+          <div class="paste-card">
+            <h2>Or copy-paste a product link</h2>
+            <p class="lede">No extension needed — paste any partner-store product URL on wrrapd.com.</p>
+            <div class="paste-row">
+              <input id="paste-url" type="text" readonly value="" placeholder="https://…" />
+              <button class="go" type="button">Gift-wrap this item</button>
+            </div>
+            <p class="paste-note"><b>Also on the website:</b> giftee ZIP + product link → we buy, wrap, and deliver.</p>
+          </div>
+        </div>
+
+        <div class="cursor" id="cursor"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -406,10 +492,10 @@ Jacksonville, FL</div>
   var flowers = document.getElementById('flowers');
   var pay = document.getElementById('pay');
   var payBtn = document.getElementById('pay-btn');
-  var hubAddr = document.getElementById('hub-addr');
+  var pasteUrl = document.getElementById('paste-url');
 
-  function setScene(name, label) {
-    stage.className = 'stage s-' + name;
+  function setScene(name, zoom, label) {
+    stage.className = 'stage s-' + name + ' z-' + zoom;
     if (label) badge.textContent = label;
   }
   function moveCursor(x, y, press) {
@@ -424,86 +510,93 @@ Jacksonville, FL</div>
     return { x: r.left - root.left + r.width * 0.55, y: r.top - root.top + r.height * 0.55 };
   }
 
-  // Fixed timeline ~18s — matches popup intro length better than the flashy cut
   function run() {
-    setScene('boot', 'At checkout');
+    setScene('boot', 'wide', 'At checkout');
     url.textContent = 'target.com/checkout';
-    radioNo.classList.add('on');
-    radioYes.classList.remove('on');
+    radioNo.classList.add('on'); radioYes.classList.remove('on');
     flowers.classList.remove('on');
-    zip.value = '';
-    zip.classList.remove('ok');
-    pay.classList.remove('paid');
-    payBtn.textContent = 'Pay Wrrapd';
+    zip.value = ''; zip.classList.remove('ok');
+    pay.classList.remove('paid'); payBtn.textContent = 'Pay Wrrapd';
+    pasteUrl.value = '';
+    document.querySelectorAll('.bq').forEach(function (b) { b.classList.remove('on'); });
+    document.getElementById('bq3').classList.add('on');
     moveCursor(900, 280, false);
 
-    at(400, function () {
-      setScene('optin', 'Wrrapd appears at checkout');
+    at(350, function () {
+      setScene('optin', 'optin', 'Wrrapd at checkout');
       var p = rectCenter(document.getElementById('optin'));
       moveCursor(p.x, p.y);
     });
-    at(1600, function () {
-      setScene('radio', 'Choose gift-wrap');
-      var p = rectCenter(radioYes);
-      moveCursor(p.x, p.y);
+    at(1400, function () {
+      setScene('radio', 'radio', 'Choose gift-wrap');
+      moveCursor(rectCenter(radioYes).x, rectCenter(radioYes).y);
     });
-    at(2300, function () {
+    at(2000, function () {
       moveCursor(rectCenter(radioYes).x, rectCenter(radioYes).y, true);
-      radioYes.classList.add('on');
-      radioNo.classList.remove('on');
+      radioYes.classList.add('on'); radioNo.classList.remove('on');
     });
-    at(2600, function () {
-      moveCursor(rectCenter(radioYes).x, rectCenter(radioYes).y, false);
-      setScene('modal', 'Customize wrapping');
+    at(2350, function () {
+      setScene('modal', 'modal', 'Customize wrapping');
+      moveCursor(rectCenter(zip).x, rectCenter(zip).y, true);
+      zip.value = '32202'; zip.classList.add('ok');
     });
     at(3200, function () {
-      var p = rectCenter(zip);
-      moveCursor(p.x, p.y, true);
-      zip.value = '32202';
-      zip.classList.add('ok');
-    });
-    at(3800, function () {
+      setScene('flowers', 'flowers', 'Add flowers');
       moveCursor(rectCenter(flowers).x, rectCenter(flowers).y, true);
       flowers.classList.add('on');
     });
-    at(4500, function () {
-      var p = rectCenter(document.getElementById('save-btn'));
-      moveCursor(p.x, p.y, true);
+    at(4100, function () {
+      var b = document.getElementById('bq2');
+      moveCursor(rectCenter(b).x, rectCenter(b).y, true);
+      document.querySelectorAll('.bq').forEach(function (x) { x.classList.remove('on'); });
+      b.classList.add('on');
     });
     at(5000, function () {
-      setScene('hub', 'Confirm the Wrrapd hub');
-      hubAddr.textContent = 'Wrrapd Gift Hub\nJacksonville, FL 32202';
-      var p = rectCenter(document.getElementById('hub-accept'));
-      moveCursor(p.x, p.y);
+      moveCursor(rectCenter(document.getElementById('bq1')).x, rectCenter(document.getElementById('bq1')).y);
     });
-    at(6200, function () {
+    at(5600, function () {
+      var b = document.getElementById('bq3');
+      moveCursor(rectCenter(b).x, rectCenter(b).y, true);
+      document.querySelectorAll('.bq').forEach(function (x) { x.classList.remove('on'); });
+      b.classList.add('on');
+    });
+    at(6400, function () {
+      moveCursor(rectCenter(document.getElementById('save-btn')).x, rectCenter(document.getElementById('save-btn')).y, true);
+    });
+    at(6900, function () {
+      setScene('hub', 'hub', 'Confirm the Wrrapd hub');
+      document.getElementById('hub-addr').textContent = 'Wrrapd Gift Hub\nJacksonville, FL 32202';
+      moveCursor(rectCenter(document.getElementById('hub-accept')).x, rectCenter(document.getElementById('hub-accept')).y);
+    });
+    at(8000, function () {
       moveCursor(rectCenter(document.getElementById('hub-accept')).x, rectCenter(document.getElementById('hub-accept')).y, true);
     });
-    at(6800, function () {
-      setScene('pay', 'Pay Wrrapd, then place the store order');
+    at(8600, function () {
+      setScene('pay', 'pay', 'Pay Wrrapd');
       url.textContent = 'target.com/checkout · Wrrapd ready';
-      var p = rectCenter(payBtn);
-      moveCursor(p.x, p.y);
+      moveCursor(rectCenter(payBtn).x, rectCenter(payBtn).y);
     });
-    at(7800, function () {
+    at(9400, function () {
       moveCursor(rectCenter(payBtn).x, rectCenter(payBtn).y, true);
-      pay.classList.add('paid');
-      payBtn.textContent = 'Paid — continue checkout';
+      pay.classList.add('paid'); payBtn.textContent = 'Paid — continue checkout';
     });
-    at(8800, function () {
-      setScene('wrap', 'We wrap at the hub');
-      moveCursor(640, 360, false);
+    at(10300, function () { setScene('wrap', 'wrap', 'We wrap at the hub'); moveCursor(640, 360, false); });
+    at(12800, function () { setScene('deliver', 'deliver', 'Delivered with confirmation'); });
+    at(16200, function () {
+      setScene('paste', 'paste', 'Or paste a link on wrrapd.com');
+      url.textContent = 'wrrapd.com/buy';
+      pasteUrl.value = '';
+      moveCursor(rectCenter(pasteUrl).x, rectCenter(pasteUrl).y, true);
     });
-    at(11800, function () {
-      setScene('deliver', 'Delivered with confirmation');
+    at(17400, function () {
+      pasteUrl.value = 'https://www.target.com/p/lego-icons-bumblebee/-/A-879';
+      pasteUrl.classList.add('on');
+      moveCursor(rectCenter(document.querySelector('.paste-row .go')).x, rectCenter(document.querySelector('.paste-row .go')).y, true);
     });
-    at(15500, function () {
-      // hold final frame briefly for recording end
-    });
+    at(20500, function () { /* hold final */ });
   }
 
-  // Expose for recorder
-  window.__WRRAPD_DEMO_DURATION_MS = 16000;
+  window.__WRRAPD_DEMO_DURATION_MS = 21000;
   window.__WRRAPD_DEMO_RUN = run;
   if (location.search.indexOf('auto=1') >= 0) run();
 })();

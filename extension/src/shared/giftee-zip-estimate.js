@@ -95,7 +95,7 @@ export function mountGifteeZipEstimateBar(opts) {
 
   const label = document.createElement("label");
   label.style.cssText = "display:block;font-size:14px;font-weight:700;color:#0f172a;margin:0 0 6px;";
-  label.textContent = "Giftee / gift-recipient's zip code:";
+  label.textContent = "Giftee / gift-recipient's zip code (currently limited to Jacksonville, FL):";
 
   const OPEN_HINT = "This helps us with a faster checkout!";
   const LOCKED_HINT = "Same ZIP for every item in this order.";

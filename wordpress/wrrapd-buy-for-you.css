@@ -446,3 +446,16 @@ textarea.wb-input { resize: vertical; }
   .wb-manual-pop { position: static; width: auto; max-width: none; margin-top: 6px; box-shadow: none; }
   .wb-manual-pop::before { display: none; }
 }
+
+.wb-discount-toast {
+  position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
+  z-index: 100050; display: flex; align-items: center; gap: 12px;
+  max-width: min(92vw, 34rem); padding: 12px 14px 12px 16px;
+  border-radius: 12px; background: #0c0638; color: #fff;
+  box-shadow: 0 14px 36px rgba(12, 6, 56, .35); font-size: 14px; font-weight: 560; line-height: 1.35;
+}
+.wb-discount-toast span { flex: 1 1 auto; }
+.wb-discount-toast-x {
+  flex: 0 0 auto; border: 0; background: transparent; color: #f6b933;
+  font-size: 22px; line-height: 1; cursor: pointer; padding: 0 4px;
+}

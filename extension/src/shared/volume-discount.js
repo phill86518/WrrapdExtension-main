@@ -3,8 +3,8 @@
  * Mirrors backend WrrapdServer/lib/volume-discount.js — the pay server recomputes the
  * charge with the same math, so keep both files identical in behavior.
  *
- * Tiers by wrapped-unit count in one checkout: 2, 3–9, 10+ (whole percents, set in
- * Command Center → Checkout pricing → Volume Discounting). Pre-tax, base price only.
+ * Tiers by wrapped-unit count: 2–4 and 5+ (admin fields two / 3–9 / 10+ kept for
+ * Command Center). Pre-tax, base price only.
  */
 
 export const MULTI_ITEM_DISCOUNT_LABEL = "Multi-item base discount";
@@ -38,9 +38,8 @@ export function normalizeVolumeDiscount(raw) {
 export function volumeDiscountPercentFor(tiers, wrappedCount) {
   const t = normalizeVolumeDiscount(tiers);
   const n = Math.floor(Number(wrappedCount) || 0);
-  if (n >= 10) return t.tenPlusItemsPercent;
-  if (n >= 3) return t.threeToNineItemsPercent;
-  if (n === 2) return t.twoItemsPercent;
+  if (n >= 5) return Math.max(t.threeToNineItemsPercent, t.tenPlusItemsPercent);
+  if (n >= 2) return t.twoItemsPercent;
   return 0;
 }
 

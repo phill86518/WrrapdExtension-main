@@ -350,6 +350,14 @@ body .wl .wl-strip-next { padding: 2px 8px; border-radius: 999px; background: va
   body .wl .wl-strip-card small { font-size: .7rem !important; }
 }
 
+/* Multi-item wrap savings band */
+.wl-deal { padding: 14px 0; background: linear-gradient(180deg, #fffaf0, #fff); border-bottom: 1px solid var(--wl-line); }
+.wl-deal-inner { max-width: 1160px; margin: 0 auto; padding: 0 24px; text-align: center; }
+body .wl .wl-deal-eyebrow { margin: 0 0 .35rem !important; font-size: .72rem !important; font-weight: 650 !important; letter-spacing: .12em; text-transform: uppercase; color: #9a7618 !important; }
+body .wl .wl-deal-title { margin: 0 0 .4rem !important; font-size: clamp(1.15rem, 2.2vw, 1.45rem) !important; font-weight: 560 !important; color: var(--wl-navy-text) !important; }
+body .wl .wl-deal-lede { margin: 0 auto !important; max-width: 46ch; font-size: .98rem !important; line-height: 1.4 !important; color: #475569 !important; }
+body .wl .wl-deal-lede b { color: var(--wl-navy-text); font-weight: 650; }
+
 /* How it works */
 .wl-hiw { padding: 46px 0 50px; border-top: 1px solid var(--wl-line); }
 .wl-hiw-grid { display: grid; grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); gap: clamp(24px, 4vw, 48px); align-items: center; }
