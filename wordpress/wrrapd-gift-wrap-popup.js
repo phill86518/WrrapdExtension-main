@@ -1,8 +1,9 @@
 (function () {
 	'use strict';
 
-	var STORAGE_KEY = 'wrrapd_gift_popup_dismissed';
+	var STORAGE_KEY = 'wrrapd_gift_popup_dismissed_v5';
 	var OPEN_DELAY_MS = 1800;
+	var VIDEO_BUST = '2026-10-19-extension-flow-demo-v5';
 
 	var root = document.getElementById('wrrapd-gift-popup');
 	if (!root) {
@@ -22,10 +23,27 @@
 		node.remove();
 	});
 	var ctaEl = root.querySelector('.wrrapd-gift-popup__cta');
-	var videoUrl = config.videoUrl || 'https://wrrapd.com/wp-content/uploads/2026/10/Wrrapd-Extension-Flow-Demo-3.mp4?v=2026-10-19-extension-flow-demo-v5';
+	var videoUrl = config.videoUrl || 'https://wrrapd.com/wp-content/uploads/2026/10/Wrrapd-Extension-Flow-Demo-3.mp4';
+	if (videoUrl && videoUrl.indexOf('v=') === -1) {
+		videoUrl += (videoUrl.indexOf('?') === -1 ? '?' : '&') + 'v=' + encodeURIComponent(VIDEO_BUST);
+	}
 	var videoWrap = document.getElementById('wrrapd-gift-popup-video');
 	var videoEl = document.getElementById('wrrapd-gift-popup-player');
 	var panelEl = root.querySelector('.wrrapd-gift-popup__panel');
+
+	function applyVideoUrl(el, url) {
+		if (!el || !url) {
+			return;
+		}
+		var srcEl = el.querySelector('source');
+		if (srcEl) {
+			srcEl.setAttribute('src', url);
+		}
+		try {
+			el.setAttribute('src', url);
+			el.load();
+		} catch (e) {}
+	}
 
 	if (videoUrl && panelEl && !videoEl) {
 		videoWrap = document.createElement('div');
@@ -47,6 +65,9 @@
 		videoEl.appendChild(src);
 		videoWrap.appendChild(videoEl);
 		panelEl.appendChild(videoWrap);
+		root.classList.add('has-intro');
+	} else if (videoEl && videoUrl) {
+		applyVideoUrl(videoEl, videoUrl);
 		root.classList.add('has-intro');
 	}
 
@@ -300,7 +321,7 @@
 				if (introTimer) {
 					window.clearTimeout(introTimer);
 				}
-				introTimer = window.setTimeout(finishIntro, 12000);
+				introTimer = window.setTimeout(finishIntro, 40000);
 				keepVolume();
 				try {
 					videoEl.currentTime = 0;
@@ -318,7 +339,8 @@
 			playFullClip();
 		}
 
-		introTimer = window.setTimeout(finishIntro, 12000);
+		/* Demo-3 is ~28s; do not cut before the Option/Step beats. */
+		introTimer = window.setTimeout(finishIntro, 40000);
 		return true;
 	}
 
