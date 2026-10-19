@@ -175,8 +175,14 @@ async function kickGroups(batchId, kind) {
     for (const req of reqs) dispatch(batchId, req).catch((e) => console.error('[buy] dispatch', e && e.message));
 }
 
+function markWearable(line, kind) {
+    return markUnavailable(line, 'wearable_paused', pageReader.wearablePauseMessage(kind, line.retailerName));
+}
+
 function applyRead(line, read, cfg) {
     if (!read.ok) {
+        const slugKind = pageReader.wearableKindFromUrl(line.url);
+        if (slugKind) return markWearable(line, slugKind);
         if (read.reason === 'product_list') return markUnavailable(line, 'product_list', 'This link opens a list of items. Paste the link to one product.');
         if (/^(http_403|blocked|zenrows_)/.test(String(read.reason || ''))) {
             return markUnavailable(
@@ -205,9 +211,7 @@ function applyRead(line, read, cfg) {
     if (p.isElectronics && !cfg.allowElectronics) return markUnavailable(line, 'electronics_blocked');
     // Soft launch: pause wearables (shoes/clothing/lingerie). Jewelry + beauty/lotions stay.
     const wearKind = pageReader.wearablePauseKind(line.url, p.title, p.category, p.brand);
-    if (wearKind) {
-        return markUnavailable(line, 'wearable_paused', pageReader.wearablePauseMessage(wearKind, line.retailerName));
-    }
+    if (wearKind) return markWearable(line, wearKind);
     if (p.pagePriceCents && p.pagePriceCents > cfg.perItemCapCents) {
         return markUnavailable(line, 'over_item_limit', overLimitMessage(p.pagePriceCents, cfg.perItemCapCents));
     }
@@ -271,6 +275,17 @@ async function processBatchBody(batchId) {
     const worker = async () => {
         while (i < todo.length) {
             const line = todo[i++];
+            const slugKind = pageReader.wearableKindFromUrl(line.url);
+            if (slugKind) {
+                await store.update(batchId, (b) => {
+                    const l = b.lines.find((x) => x.id === line.id);
+                    if (!l || l.state !== 'reading') return null;
+                    markWearable(l, slugKind);
+                    return b;
+                });
+                await kickGroups(batchId, 'initial');
+                continue;
+            }
             await store.update(batchId, (b) => {
                 const l = b.lines.find((x) => x.id === line.id);
                 if (!l || l.state !== 'reading') return null;

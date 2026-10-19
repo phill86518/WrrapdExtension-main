@@ -282,6 +282,29 @@ function wearablePauseKind(url, title, category, brand) {
     return '';
 }
 
+/**
+ * Wearable kind from the product link alone (store pages often block reads).
+ * Only clear slug words — "short", "suit", "coat", "tee", "boot" show up in toy and book names.
+ */
+function wearableKindFromUrl(url) {
+    let path = '';
+    try {
+        path = decodeURIComponent(new URL(String(url || '')).pathname);
+    } catch (_) {
+        return '';
+    }
+    const words = path.toLowerCase().replace(/\.(jsp|html?|aspx?)$/, '').replace(/[-_/+.]+/g, ' ');
+    if (/\b(jewelr[y]|necklace|bracelet|earrings?|pendant|anklet)\b/.test(words)) return '';
+    if (/\b(lego|toy|toys|doll|plush|puzzle|book|game|costume|figure|figurine|ornament)\b/.test(words)) return '';
+    if (/\b(shoes?|sneakers?|loafers?|boots|sandals?|heels|pumps|flats|mules|clogs|slippers|oxfords|footwear)\b/.test(words)) return 'shoes';
+    if (/\b(lingerie|bras?|bralettes?|panty|panties|underwear|shapewear|hosiery)\b/.test(words)) return 'lingerie';
+    if (/\b(clothing|apparel|dress|dresses|shirt|shirts|t shirt|blouse|blouses|pants|jeans|leggings|skirt|skirts|hoodie|hoodies|sweater|sweaters|cardigan|jacket|jackets|blazer|romper|jumpsuit|pajamas?|sweatshirt|sweatpants|joggers|polo|long sleeve|short sleeve|sleeveless)\b/.test(words)
+        || /\b(mens|womens|men s|women s|boys|girls|juniors)\b.*\b(tee|tees|tops?|tank|shorts|coat|vest|suit|socks)\b/.test(words)) {
+        return 'clothing';
+    }
+    return '';
+}
+
 function wearablePauseMessage(kind, retailerName) {
     const label = kind === 'shoes' ? 'shoes'
         : kind === 'lingerie' ? 'lingerie'
@@ -2441,5 +2464,5 @@ module.exports = {
     readProduct, askGrok, askGeminiProduct, looksElectronic, priceAppearsInPage, jsonLdProducts, visibleText, fetchPage, usablePage, DIRECT_MS, standardFromPage, walmartShip, bestbuyShip, pageShipZip, zipMismatchPrompt, kohlsSkuColor, kohlsColorNames, applyKohlsColors, kohlsProductFromBrowserHtml, withDefaultShip, targetFulfillment,
     nordstromShell, nordstromFromHtml, struckSaleCents, savedPageHtml, EXTERNAL_PAGES_DIR, GEMINI_FIRST_RETAILERS,
     applyVariantOffer, enrichUltaVariantOffers,
-    wearablePauseKind, wearablePauseMessage, targetShippingArrivesBy, targetZipRepastePrompt, targetRedskyStandardArrival,
+    wearablePauseKind, wearableKindFromUrl, wearablePauseMessage, targetShippingArrivesBy, targetZipRepastePrompt, targetRedskyStandardArrival,
 };
