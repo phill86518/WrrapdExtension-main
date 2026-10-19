@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /** Bump when account UI / header polish changes — view-source should contain this string. */
-define( 'WRRAPD_MU_BUILD', '2026-10-08-cws-3.0.14' );
+define( 'WRRAPD_MU_BUILD', '2026-10-19-footer-cta-fit' );
 
 /** Published Chrome Web Store item id (Wrrapd 3.0.14, approved Oct 8, 2026). */
 if ( ! defined( 'WRRAPD_CHROME_EXTENSION_ID' ) ) {
@@ -2709,8 +2709,8 @@ function wrrapd_output_site_footer_css() {
 	echo '.wrrapd-footer__list li:last-child{margin-bottom:0;}';
 	echo '.wrrapd-footer__list a{display:inline-block;color:var(--wf-ink);font-family:inherit;font-size:.93rem;font-weight:600;line-height:1.35;text-decoration:none;border-bottom:1px solid transparent;transition:color .15s ease,border-color .15s ease;}';
 	echo '.wrrapd-footer__list a:hover,.wrrapd-footer__list a:focus-visible{color:var(--wf-gold);border-bottom-color:var(--wf-gold);}';
-	echo '.wrrapd-footer__cta{margin:auto 0 0;padding-top:.85rem;width:100%;}';
-	echo '.wrrapd-footer__cta a{display:flex;align-items:center;justify-content:center;width:100%;box-sizing:border-box;gap:.5rem;background:linear-gradient(180deg,#e85d04,#d14900);color:#fff;font-family:inherit;font-size:.86rem;font-weight:800;line-height:1.2;text-align:center;text-decoration:none;white-space:nowrap;padding:.78rem 1.1rem;border-radius:999px;transition:transform .15s ease,box-shadow .15s ease;}';
+	echo '.wrrapd-footer__cta{margin:auto 0 0;padding-top:.85rem;width:auto;max-width:100%;}';
+	echo '.wrrapd-footer__cta a{display:inline-flex;align-items:center;justify-content:center;width:auto;max-width:100%;box-sizing:border-box;gap:.5rem;background:linear-gradient(180deg,#e85d04,#d14900);color:#fff;font-family:inherit;font-size:.86rem;font-weight:800;line-height:1.2;text-align:center;text-decoration:none;white-space:nowrap;padding:.78rem 1.1rem;border-radius:999px;transition:transform .15s ease,box-shadow .15s ease;}';
 	echo '.wrrapd-footer__cta a:hover,.wrrapd-footer__cta a:focus-visible{transform:translateY(-1px);box-shadow:0 .5rem 1.1rem rgba(0,0,0,.28);}';
 	echo 'html.wrrapd-ext-installed .wrrapd-footer__cta{display:none!important;}';
 	echo '.wrrapd-footer__list a[href*="chromewebstore.google.com"]{display:none!important;}';
