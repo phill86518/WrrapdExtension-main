@@ -24,12 +24,11 @@ test('walmart free shipping', () => {
     assert.equal(ship.arrivalDate, '2026-10-16');
 });
 
-test('walmart does not use a date from a different ZIP the shopper set', () => {
+test('walmart keeps the page date when the shopper set a different ZIP (no cart exclusion)', () => {
     const ship = reader.walmartShip(page({ postal: '51502', date: '2026-10-15', price: null, free: false, strength: 'EXPLICIT' }), '32218');
-    assert.equal(ship.arrivalDate, null);
+    assert.equal(ship.arrivalDate, '2026-10-15');
     assert.equal(ship.cents, null);
-    assert.match(ship.choicePrompt, /51502/);
-    assert.match(ship.choicePrompt, /32218/);
+    assert.equal(ship.choicePrompt, '');
 });
 
 test('a delivery range uses the later day, and each page keeps its own date', () => {

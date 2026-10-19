@@ -40,7 +40,7 @@ test('supplied Nordstrom facts fill the cart line', () => {
 test('a supplied price over the limit stays off the cart', () => {
     const line = { id: 'L1', state: 'quoting', reason: '', message: '', product: null };
     const out = quotes.acceptSupplied(line, {
-        title: 'Coat',
+        title: 'Cast Iron Dutch Oven',
         priceUsd: 140,
         shipping: 0,
     }, { perItemCapCents: 10000, allowElectronics: false });

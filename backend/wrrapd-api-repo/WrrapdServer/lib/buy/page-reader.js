@@ -603,8 +603,9 @@ function kohlsPlain(html) {
 /** Kohl's sometimes stores "Na" / "N/A" as a placeholder color on single-SKU toys. */
 function isBogusKohlsOption(name) {
     const s = String(name || '').trim();
-    if (!s || s.length < 2) return true;
-    return /^(n\/?a|na|none|null|undefined|unknown|not available|-|—|–)$/i.test(s);
+    if (!s) return true;
+    // Single characters are real sizes (S, M, L, 7) — only placeholders are bogus.
+    return /^(n\/?a|na|none|null|undefined|unknown|not available|-|—|–|\.|\*)$/i.test(s);
 }
 
 /** True when Kohl's Shipping control says the item cannot ship (pickup-only). */
@@ -808,7 +809,7 @@ function kohlsProductFromBrowserHtml(html, url) {
             selected: null,
         });
     }
-    variantGroups = cleanVariantGroups(variantGroups);
+    variantGroups = cleanVariantGroups(variantGroups, { keepSelected: true });
     // Always honor Shipping "Not available" — even when a delivery window was scraped from elsewhere.
     const windowed = shipUnavailable ? null : (kohlsDeliveryWindow(text) || kohlsDeliveryWindow(String(html || '')));
     const shipCents = shipUnavailable || pagePriceCents == null
@@ -1162,7 +1163,11 @@ function looksLikePackage(value) {
     return /^\s*\d+(\.\d+)?\s*"?\s*x\s*\d+/i.test(String(value || ''));
 }
 
-function cleanVariantGroups(groups) {
+/**
+ * keepSelected: the reader took the choice from the shopper's link or SKU (Nordstrom, Kohl's page).
+ * AI readers (Gemini/Grok) guess a default, so their selection is dropped unless only one option exists.
+ */
+function cleanVariantGroups(groups, { keepSelected = false } = {}) {
     if (!Array.isArray(groups)) return [];
     return groups
         .slice(0, 4)
@@ -1174,10 +1179,11 @@ function cleanVariantGroups(groups) {
                         .filter((o) => o && !looksLikePackage(o) && !isBogusKohlsOption(o)),
                 )].slice(0, 40)
                 : [];
+            const picked = keepSelected && g && g.selected ? String(g.selected).trim().slice(0, 80) : '';
             return {
                 name: String((g && g.name) || '').trim().slice(0, 40),
                 options,
-                selected: options.length === 1 ? options[0] : null,
+                selected: picked && options.includes(picked) ? picked : (options.length === 1 ? options[0] : null),
             };
         })
         .filter((g) => g.name && g.options.length > 1);
@@ -1572,7 +1578,7 @@ function nordstromFromHtml(html, url, zip) {
         pageNotes: needsSize ? ['Delivery date needs a size.'] : [],
         inStock,
         isElectronics: looksElectronic('nordstrom', entity.copyProductTitle, crumbs.join(' ')),
-        variantGroups: cleanVariantGroups(groups),
+        variantGroups: cleanVariantGroups(groups, { keepSelected: true }),
         choicePrompt: pagePriceCents == null && !groups.some((group) => (group.options || []).length > 1)
             ? 'Choose a size and color on the product page, then add the link again.'
             : '',
@@ -1910,7 +1916,7 @@ function mergeKohlsPart(acc, part) {
     } else {
         acc.standardShip = { cents: null, arrivalDate: null, arrivalDateEnd: null, note: '' };
     }
-    const groups = cleanVariantGroups(part.variantGroups);
+    const groups = cleanVariantGroups(part.variantGroups, { keepSelected: partIsBrowser });
     // Never let Gemini / Grok inflate color-size lists over a Scraping Browser read.
     if (groups.length) {
         if (partIsBrowser || !acc.variantGroups.length) {
@@ -2072,7 +2078,7 @@ function readKohlsFanout({ r, url, zip }) {
         if (quiet.length) console.log('[buy-read]', 'kohls', 'still-running', quiet.join(','), `${ms}ms`);
         if (acc.shipUnavailable && acc.title) {
             acc.standardShip = { cents: null, arrivalDate: null, arrivalDateEnd: null, note: '' };
-            acc.variantGroups = cleanVariantGroups(acc.variantGroups);
+            acc.variantGroups = cleanVariantGroups(acc.variantGroups, { keepSelected: /brightdata_browser/.test(String(acc.readBy || '')) });
             console.log('[buy-read]', 'kohls', 'stop', why, `${ms}ms`, 'ship_unavailable', String(url).slice(0, 90));
             return productFromBrowse('kohls', r, acc, zip);
         }
@@ -2083,7 +2089,7 @@ function readKohlsFanout({ r, url, zip }) {
             if (!acc.standardShip.arrivalDate) {
                 acc.standardShip.arrivalDate = standardShipping.estimateArrivalDate();
             }
-            acc.variantGroups = cleanVariantGroups(acc.variantGroups);
+            acc.variantGroups = cleanVariantGroups(acc.variantGroups, { keepSelected: /brightdata_browser/.test(String(acc.readBy || '')) });
             cacheKohlsProduct(url, acc);
             console.log(
                 '[buy-read]',

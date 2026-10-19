@@ -82,11 +82,11 @@ test('Kohl\'s scraper trigger uses the dataset id and never leaks the key', asyn
     assert.equal(scraped.ok, true);
     assert.equal(scraped.product.pagePriceCents, 5499);
     assert.match(seen.url, /datasets\/v3\/trigger/);
-    assert.match(seen.url, /gd_mlji2hi729x1g0vg4i/);
+    assert.match(seen.url, /gd_mjwhpd7x2m0n36whj8/);
     assert.match(seen.opts.headers.Authorization, /^Bearer /);
     assert.equal(JSON.stringify(scraped.product).includes('test-bright-key'), false);
     assert.equal(reader.GEMINI_FIRST_RETAILERS.has('kohls'), true);
-    assert.equal(brightdata.KOHLS_DATASET_ID, 'gd_mlji2hi729x1g0vg4i');
+    assert.equal(brightdata.KOHLS_DATASET_ID, 'gd_mjwhpd7x2m0n36whj8');
     assert.ok(calls >= 2);
     if (prev == null) delete process.env.BRIGHTDATA_API_KEY;
     else process.env.BRIGHTDATA_API_KEY = prev;
