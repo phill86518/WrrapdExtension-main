@@ -22,7 +22,7 @@
 		node.remove();
 	});
 	var ctaEl = root.querySelector('.wrrapd-gift-popup__cta');
-	var videoUrl = config.videoUrl || 'https://wrrapd.com/wp-content/uploads/2026/10/Wrrapd-Extension-Flow-Demo.mp4';
+	var videoUrl = config.videoUrl || 'https://wrrapd.com/wp-content/uploads/2026/10/Wrrapd-Extension-Flow-Demo-3.mp4?v=2026-10-19-extension-flow-demo-v5';
 	var videoWrap = document.getElementById('wrrapd-gift-popup-video');
 	var videoEl = document.getElementById('wrrapd-gift-popup-player');
 	var panelEl = root.querySelector('.wrrapd-gift-popup__panel');

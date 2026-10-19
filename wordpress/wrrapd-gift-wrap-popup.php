@@ -9,7 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_GIFT_POPUP_BUILD', '2026-10-19-extension-flow-demo-v4' );
+define( 'WRRAPD_GIFT_POPUP_BUILD', '2026-10-19-extension-flow-demo-v5' );
 
 /**
  * Homepage popup intro clip (Media Library, muted autoplay then copy).
@@ -17,57 +17,55 @@ define( 'WRRAPD_GIFT_POPUP_BUILD', '2026-10-19-extension-flow-demo-v4' );
  * @return string URL or empty.
  */
 function wrrapd_gift_wrap_popup_video_url() {
+	$url = '';
 	if ( defined( 'WRRAPD_GIFT_POPUP_VIDEO' ) && WRRAPD_GIFT_POPUP_VIDEO !== '' ) {
-		return esc_url( (string) WRRAPD_GIFT_POPUP_VIDEO );
+		$url = (string) WRRAPD_GIFT_POPUP_VIDEO;
 	}
 
 	/* Prefer the extension-flow demo (checkout radio → modal → hub → wrap → delivery). */
-	$by_id = wp_get_attachment_url( 7410 );
-	if ( is_string( $by_id ) && $by_id !== '' ) {
-		return $by_id;
-	}
-	$by_id = wp_get_attachment_url( 7409 );
-	if ( is_string( $by_id ) && $by_id !== '' ) {
-		return $by_id;
-	}
-	$by_id = wp_get_attachment_url( 7406 );
-	if ( is_string( $by_id ) && $by_id !== '' ) {
-		return $by_id;
-	}
-	$by_id = wp_get_attachment_url( 7405 );
-	if ( is_string( $by_id ) && $by_id !== '' ) {
-		return $by_id;
-	}
-	$by_id = wp_get_attachment_url( 7382 );
-	if ( is_string( $by_id ) && $by_id !== '' ) {
-		return $by_id;
-	}
-
-	$fallback = 'https://wrrapd.com/wp-content/uploads/2026/10/Wrrapd-Extension-Flow-Demo.mp4';
-	$needles  = array( 'extension-flow-demo', 'wrrapd-extension-flow', 'gift-wrapped-in-a-flash' );
-	$atts     = get_posts(
-		array(
-			'post_type'      => 'attachment',
-			'post_mime_type' => 'video',
-			'posts_per_page' => 20,
-			'post_status'    => 'inherit',
-			'orderby'        => 'date',
-			'order'          => 'DESC',
-		)
-	);
-	foreach ( $atts as $att ) {
-		$hay = strtolower( (string) $att->post_title . ' ' . (string) $att->post_name . ' ' . (string) get_attached_file( $att->ID ) );
-		foreach ( $needles as $needle ) {
-			if ( strpos( $hay, $needle ) !== false ) {
-				$url = wp_get_attachment_url( $att->ID );
-				if ( is_string( $url ) && $url !== '' ) {
-					return $url;
-				}
+	if ( $url === '' ) {
+		foreach ( array( 7410, 7409, 7406, 7405, 7382 ) as $att_id ) {
+			$by_id = wp_get_attachment_url( $att_id );
+			if ( is_string( $by_id ) && $by_id !== '' ) {
+				$url = $by_id;
+				break;
 			}
 		}
 	}
 
-	return $fallback;
+	if ( $url === '' ) {
+		$fallback = 'https://wrrapd.com/wp-content/uploads/2026/10/Wrrapd-Extension-Flow-Demo-3.mp4';
+		$needles  = array( 'extension-flow-demo', 'wrrapd-extension-flow', 'gift-wrapped-in-a-flash' );
+		$atts     = get_posts(
+			array(
+				'post_type'      => 'attachment',
+				'post_mime_type' => 'video',
+				'posts_per_page' => 20,
+				'post_status'    => 'inherit',
+				'orderby'        => 'date',
+				'order'          => 'DESC',
+			)
+		);
+		foreach ( $atts as $att ) {
+			$hay = strtolower( (string) $att->post_title . ' ' . (string) $att->post_name . ' ' . (string) get_attached_file( $att->ID ) );
+			foreach ( $needles as $needle ) {
+				if ( strpos( $hay, $needle ) !== false ) {
+					$found = wp_get_attachment_url( $att->ID );
+					if ( is_string( $found ) && $found !== '' ) {
+						$url = $found;
+						break 2;
+					}
+				}
+			}
+		}
+		if ( $url === '' ) {
+			$url = $fallback;
+		}
+	}
+
+	/* Bust browser / CDN video caches when the popup build changes. */
+	$sep = ( strpos( $url, '?' ) === false ) ? '?' : '&';
+	return esc_url( $url . $sep . 'v=' . rawurlencode( (string) WRRAPD_GIFT_POPUP_BUILD ) );
 }
 
 /**
