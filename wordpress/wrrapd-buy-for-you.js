@@ -485,6 +485,10 @@
   function visibleLines() {
     return S.batch.lines.filter(function (l) { return l.state !== 'removed'; });
   }
+  /** Slots toward the paste limit — Excluded rows do not use up "add more" room. */
+  function cartSlotLines() {
+    return visibleLines().filter(function (l) { return !excluded(l); });
+  }
   function knownCents(l) {
     var g = groupFor(l.retailer);
     if (l.state === 'ready' && g && g.itemPrices && g.itemPrices[l.id]) return g.itemPrices[l.id];
@@ -537,10 +541,11 @@
     var canGo = targets.length > 0;
     var allWrapped = canGo && targets.every(function (l) { return l.wrap && l.wrap.done; });
     var empty = lines.length === 0;
-    var room = lines.length < maxLinks();
+    var slotted = cartSlotLines().length;
+    var room = slotted < maxLinks();
     var draft = S.draftLinks;
     S.draftLinks = null;
-    var left = maxLinks() - lines.length;
+    var left = Math.max(0, maxLinks() - slotted);
     var more = left === 1 ? 'Add up to 1 more item' : 'Add up to ' + left + ' more items';
     var paste = LOAD_TIP + linkFields(left, draft) + buyButton(true);
     ensureFlowers();

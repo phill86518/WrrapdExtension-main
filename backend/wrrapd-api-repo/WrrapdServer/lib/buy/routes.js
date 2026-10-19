@@ -22,6 +22,7 @@ const lineFacts = require('./line-facts');
 const manual = require('./manual');
 const placePools = require('./place-pools');
 const retailerOrders = require('./retailer-orders');
+const pageReader = require('./page-reader');
 
 const INGEST_TAG = 'ingest-v2026-10-13-buy-for-you';
 const BATCH_TTL_MS = 24 * 60 * 60 * 1000;
@@ -119,6 +120,7 @@ const SKIP_RETRY_REASONS = new Set([
     'duplicate',
     'electronics_blocked',
     'over_item_limit',
+    'wearable_paused',
 ]);
 
 /**
@@ -517,6 +519,28 @@ module.exports = function mountBuyForYou(app, deps) {
                     picked.push(v);
                 }
                 l.variantLabel = picked.join(', ');
+                // Ulta (and similar): apply the price/sku for the chosen size — never keep the cheapest size's $.
+                const offer = pageReader.applyVariantOffer(l.product, choices);
+                if (offer && offer.pagePriceCents != null) {
+                    l.product.pagePriceCents = offer.pagePriceCents;
+                    if (offer.url) l.url = offer.url;
+                    if (offer.sku) {
+                        l.productId = offer.sku;
+                        l.canonicalUrl = retailers.normalizeUrl(offer.url) || l.canonicalUrl;
+                    }
+                    const ship = pageReader.withDefaultShip(
+                        l.retailer,
+                        l.product.standardShip || { cents: null, arrivalDate: null, note: '' },
+                        offer.pagePriceCents,
+                    );
+                    if (ship) {
+                        l.product.standardShip = ship;
+                        l.product.pageOffer = {
+                            itemPriceCents: offer.pagePriceCents,
+                            shippingOptions: [ship],
+                        };
+                    }
+                }
                 l.state = 'quoting';
                 const g = quotes.ensureGroup(b, l.retailer);
                 if (g.state !== 'waiting') g.state = 'waiting';
@@ -647,8 +671,9 @@ module.exports = function mountBuyForYou(app, deps) {
                 .filter(Boolean);
             if (!raw.length) return { error: 'Please paste a product link.' };
             const opened = await Promise.all(raw.map((text) => resolveLink.resolveLink(text, cfg.allowedRetailers)));
-            const openCount = batch.lines.filter((l) => !l.removed).length;
-            const extra = opened.filter((parsed, i) => !batch.lines.some((l) => sameLine(l, parsed, raw[i]))).length;
+            // Excluded (unavailable) rows do not consume paste slots.
+            const openCount = batch.lines.filter((l) => !l.removed && l.state !== 'unavailable').length;
+            const extra = opened.filter((parsed, i) => !batch.lines.some((l) => sameLine(l, parsed, raw[i]) && !l.removed && l.state !== 'unavailable')).length;
             if (openCount + extra > cfg.maxLinks) return { error: `Please paste up to ${cfg.maxLinks} links.` };
             let added = 0;
             let revived = 0;

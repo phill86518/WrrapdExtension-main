@@ -250,6 +250,71 @@ function looksElectronic(retailerId, ...texts) {
     return ELECTRONICS_WORDS.test(blob);
 }
 
+/**
+ * Soft launch: pause size/color apparel & footwear (not jewelry, not beauty/lotions).
+ * Returns a short category label for the shopper message, or ''.
+ */
+function wearablePauseKind(url, title, category, brand) {
+    const blob = `${url || ''} ${title || ''} ${category || ''} ${brand || ''}`;
+    const lower = blob.toLowerCase();
+    // Beauty / lotions / creams — allowed even with size options.
+    if (/\b(lotion|cream|serum|moisturizer|balm|cleanser|shampoo|conditioner|skincare|skin care|lipstick|mascara|foundation|makeup|cosmetic|fragrance|perfume|body wash|sunscreen)\b/i.test(blob)) {
+        if (!/\b(shoe|sneaker|boot|sandal|loafer|heel|dress|shirt|pant|jean|lingerie|bra)\b/i.test(blob)) return '';
+    }
+    // Jewelry exception (for now).
+    if (/\b(jewelr[y]|necklace|bracelet|earring|earrings|pendant|charm|anklet)\b/i.test(blob)
+        && !/\b(clothing|apparel|shoe|shoes|sneaker|dress|shirt)\b/i.test(blob)) {
+        return '';
+    }
+    if (/\b(shoe|shoes|sneaker|sneakers|boot|boots|sandal|sandals|loafer|loafers|heel|heels|footwear|slip-?on)\b/i.test(blob)
+        || /\/(shoes|footwear)\b/i.test(lower)) {
+        return 'shoes';
+    }
+    if (/\b(lingerie|bra|bras|panty|panties|underwear|shapewear|hosiery)\b/i.test(blob)
+        || /\/lingerie\b/i.test(lower)) {
+        return 'lingerie';
+    }
+    if (/\b(clothing|apparel|dress|dresses|shirt|shirts|blouse|tee|t-shirt|pant|pants|jean|jeans|short|shorts|skirt|hoodie|sweater|jacket|coat|legging|activewear|sock|socks|romper|jumpsuit|suit|blazer)\b/i.test(blob)
+        || /\/(clothing|apparel|mens|womens|kids)\b/i.test(lower)
+        || /\b(men'?s|women'?s|kids?'?)\s+(tee|shirt|pant|dress|jean|short|hoodie|sweater)\b/i.test(blob)) {
+        return 'clothing';
+    }
+    return '';
+}
+
+function wearablePauseMessage(kind) {
+    const label = kind === 'shoes' ? 'shoes'
+        : kind === 'lingerie' ? 'lingerie'
+            : 'clothing';
+    return `Wrrapd is working on including ${label} for gift-wrapping. Please check back soon.`;
+}
+
+/** Target's Shipping control: "Arrives by Fri, Oct 24" (not pickup / same-day). */
+function targetShippingArrivesBy(html) {
+    const text = String(html || '')
+        .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+        .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/\s+/g, ' ');
+    const shipFirst = text.match(
+        /\bShipping\b(?![^.]{0,40}\b(pickup|same.?day|drive\s*up)\b).{0,220}?Arrives by\s+(?:[A-Za-z]{3,9},?\s+)?([A-Za-z]{3,9})\s+(\d{1,2})\b/i,
+    );
+    if (shipFirst) return ymdFromMonthDay(shipFirst[1], shipFirst[2]);
+    const labeled = text.match(
+        /Arrives by\s+(?:[A-Za-z]{3,9},?\s+)?([A-Za-z]{3,9})\s+(\d{1,2})\b(?=[^.]{0,80}\bShipping\b)/i,
+    );
+    if (labeled) return ymdFromMonthDay(labeled[1], labeled[2]);
+    return null;
+}
+
+function targetZipRepastePrompt(zip) {
+    const z = String(zip || '').replace(/\D/g, '').slice(0, 5);
+    if (z.length !== 5) {
+        return 'On Target, set both the delivery ZIP and the store ZIP to the giftee ZIP, then paste this link again for the correct arrival date.';
+    }
+    return `On Target, set both the delivery ZIP and the store ZIP to ${z}, then paste this link again for the correct arrival date.`;
+}
+
 const SYSTEM_PROMPT = [
     'You read a retailer page and return only facts that are in the material. Never guess.',
     'kind is "product" when the page is one item a shopper can buy.',
@@ -806,9 +871,13 @@ function fulfillmentSections(node, out = []) {
 /** Date and cost printed on Target's Shipping control, not pickup or same-day delivery. */
 function shipFromFulfillment(json) {
     const sections = fulfillmentSections(json).filter((s) => s.fulfillment_type === 'SHIPPING' || s.fulfillment_type === 'SINGLE');
-    const section = sections.find((s) => s.fulfillment_type === 'SHIPPING') || sections[0];
+    // Always prefer the Shipping box — never fall back to pickup / same-day SINGLE first.
+    const section = sections.find((s) => s.fulfillment_type === 'SHIPPING')
+        || sections.find((s) => /arrives\s+by/i.test(quillTexts(s).join(' ')))
+        || null;
     if (!section) return null;
     const text = quillTexts(section).join(' ').replace(/\s+/g, ' ');
+    if (/\b(pickup|same.?day|drive\s*up|order\s+pickup)\b/i.test(text) && !/\barrives\s+by\b/i.test(text)) return null;
     const arrives = text.match(/arrives\s+by\s+(?:[A-Za-z]+,\s+)?([A-Za-z]+)\s+(\d{1,2})/i);
     const arrivalDate = arrives ? ymdFromMonthDay(arrives[1], arrives[2]) : null;
     let cents = null;
@@ -921,6 +990,126 @@ function cleanVariantGroups(groups) {
             };
         })
         .filter((g) => g.name && g.options.length > 1);
+}
+
+/** Ulta JSON-LD Product / ProductGroup nodes (size + sku; price often only on the sku page). */
+function ultaLdProducts(html) {
+    const blocks = [...String(html || '').matchAll(/<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)];
+    const out = [];
+    for (const block of blocks) {
+        let data;
+        try {
+            data = JSON.parse(block[1]);
+        } catch (_) {
+            continue;
+        }
+        const stack = [data];
+        while (stack.length) {
+            const node = stack.pop();
+            if (!node) continue;
+            if (Array.isArray(node)) {
+                stack.push(...node);
+                continue;
+            }
+            if (typeof node !== 'object') continue;
+            const type = node['@type'];
+            const types = Array.isArray(type) ? type : [type];
+            if (types.includes('Product')) out.push(node);
+            if (types.includes('ProductGroup') && Array.isArray(node.hasVariant)) stack.push(...node.hasVariant);
+            for (const value of Object.values(node)) {
+                if (value && typeof value === 'object') stack.push(value);
+            }
+        }
+    }
+    return out;
+}
+
+function ultaOfferPriceCents(product) {
+    const offers = product && product.offers;
+    const one = Array.isArray(offers) ? offers[0] : offers;
+    const n = Number(one && one.price);
+    if (Number.isFinite(n) && n > 0) return Math.round(n * 100);
+    return null;
+}
+
+function ultaProductUrl(baseUrl, sku) {
+    try {
+        const u = new URL(baseUrl);
+        u.searchParams.set('sku', String(sku));
+        return u.toString();
+    } catch (_) {
+        return String(baseUrl || '');
+    }
+}
+
+function ultaSizeLabel(product) {
+    const size = String((product && product.size) || '').trim();
+    if (size) return size;
+    const fromName = String((product && product.name) || '').match(/(\d+(?:\.\d+)?\s*oz)\b/i);
+    return fromName ? fromName[1] : '';
+}
+
+/**
+ * Build per-size Ulta offers with real prices. ProductGroup lists sizes/skus; each sku page
+ * carries that size's price in JSON-LD (1.0 oz $15 vs 6.7 oz $58 on the Clinique balm).
+ */
+async function enrichUltaVariantOffers(baseUrl, html) {
+    const bySku = new Map();
+    for (const product of ultaLdProducts(html)) {
+        const sku = String(product.sku || '').trim();
+        if (!/^\d{5,}$/.test(sku)) continue;
+        const row = bySku.get(sku) || { sku, size: '', pagePriceCents: null };
+        const size = ultaSizeLabel(product);
+        if (size) row.size = size;
+        const cents = ultaOfferPriceCents(product);
+        if (cents != null) row.pagePriceCents = cents;
+        bySku.set(sku, row);
+    }
+    if (!bySku.size) return [];
+    await Promise.all(
+        [...bySku.values()].map(async (row) => {
+            if (row.pagePriceCents != null && row.size) return;
+            let page;
+            try {
+                page = await fetchDirect('ulta', ultaProductUrl(baseUrl, row.sku));
+            } catch (_) {
+                return;
+            }
+            if (!page || !page.ok || !page.html) return;
+            for (const product of ultaLdProducts(page.html)) {
+                if (String(product.sku || '') !== row.sku && ultaOfferPriceCents(product) == null) continue;
+                if (!row.size) row.size = ultaSizeLabel(product);
+                const cents = ultaOfferPriceCents(product);
+                if (cents != null) row.pagePriceCents = cents;
+                if (String(product.sku || '') === row.sku && cents != null) break;
+            }
+        }),
+    );
+    return [...bySku.values()]
+        .filter((row) => row.size && row.pagePriceCents != null)
+        .sort((a, b) => a.pagePriceCents - b.pagePriceCents)
+        .map((row) => ({
+            group: 'Size',
+            option: row.size,
+            sku: row.sku,
+            pagePriceCents: row.pagePriceCents,
+            url: ultaProductUrl(baseUrl, row.sku),
+        }));
+}
+
+/** Match shopper choices to a stored per-option offer (Ulta size → price/sku). */
+function applyVariantOffer(product, choices) {
+    const offers = (product && product.variantOffers) || [];
+    if (!offers.length || !choices || typeof choices !== 'object') return null;
+    const size = String(choices.Size || choices.size || '');
+    if (size) {
+        const hit = offers.find((o) => o.group === 'Size' && o.option === size);
+        if (hit) return hit;
+    }
+    return (
+        offers.find((o) => o.option && choices[o.group] === o.option) ||
+        null
+    );
 }
 
 /**
@@ -1323,14 +1512,18 @@ async function productFromBrowse(retailer, retailerMeta, product, zip) {
             ship = { ...ship, cents: null, note: '' };
         }
     }
-    // Always fill standard ship $ and a date (printed ZIP date or calendar estimate). Never blank the cart.
+    // Fill standard ship $. Most stores also get a calendar estimate when no date printed.
+    // Target: never invent a date — ask for delivery + store ZIP, then re-paste.
     ship = withDefaultShip(retailer, ship, product.pagePriceCents || 0) || ship;
-    if (ship && !ship.arrivalDate) {
+    let choicePrompt = product.choicePrompt || '';
+    if (retailer === 'target') {
+        if (!(ship && ship.arrivalDate)) {
+            choicePrompt = choicePrompt || targetZipRepastePrompt(zip);
+        }
+    } else if (ship && !ship.arrivalDate) {
         ship = { ...ship, arrivalDate: standardShipping.estimateArrivalDate() };
     }
-    // ZIP mismatch / missing date must not kick the item out — drop those prompts.
-    let choicePrompt = product.choicePrompt || '';
-    if (/shipping ZIP|ships to|Set the page|Set the product page shipping ZIP/i.test(choicePrompt)) {
+    if (retailer !== 'target' && /shipping ZIP|ships to|Set the page|Set the product page shipping ZIP/i.test(choicePrompt)) {
         choicePrompt = '';
     }
     const amazonCategory = await categories.categorize({
@@ -1697,19 +1890,43 @@ async function readProduct({ retailer, url, zip, state, batchId, lineId }) {
     if (!r) return { ok: false, reason: 'retailer_not_supported', needsPerson: false };
     const savedHtml = savedPageHtml(retailer, url, { batchId, lineId });
 
-    // Target's price is on their product API. Use it immediately so a title-only page is never saved.
+    // Target's price is on their product API. Then read the Shipping "Arrives by…" box (not pickup).
     if (!savedHtml && retailer === 'target') {
         const tf = await targetProduct(url);
         if (tf && tf.title && tf.pagePriceCents) {
-            const shipCents = tf.standardShip && tf.standardShip.cents === 0
+            let shipCents = tf.standardShip && tf.standardShip.cents === 0
                 ? 0
                 : standardShipping.scheduleCents('target', tf.pagePriceCents);
+            let arrivalDate = null;
+            let choicePrompt = '';
+            try {
+                const page = await fetchPage('target', url);
+                if (page && page.ok && page.html) {
+                    const fromHtml = targetShippingArrivesBy(page.html);
+                    if (fromHtml) arrivalDate = fromHtml;
+                    const button = await targetFulfillment(page.html, { zip, state, referer: url });
+                    if (button) {
+                        if (button.arrivalDate) arrivalDate = button.arrivalDate;
+                        if (button.cents != null) shipCents = button.cents;
+                    }
+                    const seenZip = pageShipZip(page.html);
+                    const want = String(zip || '').replace(/\D/g, '').slice(0, 5);
+                    if (want.length === 5 && seenZip && seenZip !== want) {
+                        choicePrompt = targetZipRepastePrompt(want);
+                        arrivalDate = null;
+                    }
+                }
+            } catch (e) {
+                console.warn('[buy-read]', 'target', 'ship_lookup', e && e.message);
+            }
+            if (!arrivalDate) choicePrompt = choicePrompt || targetZipRepastePrompt(zip);
             console.log(
                 '[buy-read]',
                 'target',
                 'redsky ok',
                 `price=${tf.pagePriceCents}`,
                 `ship=${shipCents}`,
+                `date=${arrivalDate || 'null'}`,
                 String(url).slice(0, 100),
             );
             return productFromBrowse(retailer, r, {
@@ -1721,14 +1938,14 @@ async function readProduct({ retailer, url, zip, state, batchId, lineId }) {
                 pagePriceCents: tf.pagePriceCents,
                 standardShip: {
                     cents: shipCents,
-                    arrivalDate: null,
+                    arrivalDate,
                     note: shipCents === 0 ? 'Free standard shipping.' : '',
                 },
                 pageNotes: [],
                 inStock: null,
                 isElectronics: tf.isElectronics === true,
                 variantGroups: [],
-                choicePrompt: '',
+                choicePrompt,
                 readBy: 'target_api',
             }, zip);
         }
@@ -1972,6 +2189,28 @@ async function readProduct({ retailer, url, zip, state, batchId, lineId }) {
     if (!pagePriceCents && !cleanVariantGroups(facts.variantGroups).some((g) => (g.options || []).length > 1)) {
         return { ok: false, reason: 'no_price', needsPerson: false };
     }
+    let variantGroups = retailer === 'kohls'
+        ? applyKohlsColors(cleanVariantGroups(facts.variantGroups), page.html, url)
+        : cleanVariantGroups(facts.variantGroups);
+    let variantOffers = [];
+    if (retailer === 'ulta') {
+        try {
+            variantOffers = await enrichUltaVariantOffers(url, page.html);
+        } catch (e) {
+            console.warn('[buy-read]', 'ulta', 'variant_offers', e && e.message);
+        }
+        if (variantOffers.length) {
+            variantGroups = [{
+                name: 'Size',
+                options: variantOffers.map((o) => o.option),
+                selected: null,
+            }];
+            const currentSku = (String(url).match(/[?&]sku=(\d+)/i) || [])[1] || '';
+            const current = variantOffers.find((o) => o.sku === currentSku) || variantOffers[0];
+            if (current && current.pagePriceCents != null) pagePriceCents = current.pagePriceCents;
+            chosen = withDefaultShip(retailer, chosen, pagePriceCents || 0) || chosen;
+        }
+    }
     const pageOffer = pagePriceCents && chosen && chosen.cents != null ? { itemPriceCents: pagePriceCents, shippingOptions: [chosen] } : null;
     const amazonCategory = await categories.categorize({ retailer, retailerName: r.name, html: page.html, title, brand, category });
     return {
@@ -1989,9 +2228,8 @@ async function readProduct({ retailer, url, zip, state, batchId, lineId }) {
             pageNotes: [],
             inStock: facts.inStock === false ? false : facts.inStock === true ? true : null,
             isElectronics,
-            variantGroups: retailer === 'kohls'
-                ? applyKohlsColors(cleanVariantGroups(facts.variantGroups), page.html, url)
-                : cleanVariantGroups(facts.variantGroups),
+            variantGroups,
+            variantOffers,
             choicePrompt,
             readAt: new Date().toISOString(),
             readBy: page.fromSavedPage ? 'saved_page' : 'grok',
@@ -2002,4 +2240,6 @@ async function readProduct({ retailer, url, zip, state, batchId, lineId }) {
 module.exports = {
     readProduct, askGrok, askGeminiProduct, looksElectronic, priceAppearsInPage, jsonLdProducts, visibleText, fetchPage, usablePage, DIRECT_MS, standardFromPage, walmartShip, bestbuyShip, pageShipZip, zipMismatchPrompt, kohlsSkuColor, kohlsColorNames, applyKohlsColors, kohlsProductFromBrowserHtml, withDefaultShip, targetFulfillment,
     nordstromShell, nordstromFromHtml, struckSaleCents, savedPageHtml, EXTERNAL_PAGES_DIR, GEMINI_FIRST_RETAILERS,
+    applyVariantOffer, enrichUltaVariantOffers,
+    wearablePauseKind, wearablePauseMessage, targetShippingArrivesBy, targetZipRepastePrompt,
 };
