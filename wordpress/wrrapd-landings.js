@@ -38,37 +38,49 @@
     if (footer && footer.parentNode) {
       [parts.hiw, parts.paste, parts.ideas].forEach(function (p) { footer.parentNode.insertBefore(p, footer); });
     }
-    mountHeaderWays(parts.ways);
+    ensureHeaderWays();
     return document.body;
   }
 
-  function mountHeaderWays(ways) {
-    if (!ways) return;
+  function takeWaysNode() {
+    var live = document.querySelector('.wl6-ways');
+    if (live) return live;
+    var tpl = document.getElementById('wl6-parts');
+    return tpl && tpl.content ? tpl.content.querySelector('[data-wl6="ways"]') : null;
+  }
+
+  function ensureHeaderWays() {
     var want = 'Add your FREE Chrome extension';
     function apply() {
+      var ways = takeWaysNode();
       var header = document.querySelector('.elementor-location-header');
-      if (!header) return;
+      if (!ways || !header) return false;
       /* Prefer the centered CTA wrapper (reparented by orders-bridge), then the button widget. */
-      var host = header.querySelector('.elementor-element-00ec9fc') ||
-        header.querySelector('[data-id="00ec9fc"]') ||
-        header.querySelector('.elementor-element-7f1bdc1') ||
-        header.querySelector('[data-id="7f1bdc1"]');
-      if (!host) return;
+      var host = header.querySelector('.elementor-element-00ec9fc, [data-id="00ec9fc"]') ||
+        header.querySelector('.elementor-element-7f1bdc1, [data-id="7f1bdc1"]');
+      if (!host) {
+        var anyBtn = header.querySelector('a.elementor-button');
+        host = anyBtn && anyBtn.closest('.elementor-element-7f1bdc1, [data-id="7f1bdc1"], .elementor-element');
+      }
+      if (!host) return false;
       host.classList.add('wl6-has-ways');
-      host.style.setProperty('position', 'relative', 'important');
       host.style.setProperty('overflow', 'visible', 'important');
-      if (ways.parentNode !== host || host.firstChild !== ways) host.insertBefore(ways, host.firstChild);
+      if (host.firstChild !== ways) host.insertBefore(ways, host.firstChild);
       var label = host.querySelector('.elementor-button-text');
       var btn = label || host.querySelector('.elementor-button');
       if (btn && (btn.textContent || '').replace(/\s+/g, ' ').trim() !== want) btn.textContent = want;
       var a = host.querySelector('a.elementor-button, a.wrrapd-ext-cta');
       if (a && EXT) a.setAttribute('href', EXT);
+      return true;
     }
-    apply();
+    if (apply()) return;
     document.addEventListener('DOMContentLoaded', apply);
     window.addEventListener('load', apply);
-    setTimeout(apply, 300);
-    setTimeout(apply, 1200);
+    var tries = 0;
+    var timer = setInterval(function () {
+      tries += 1;
+      if (apply() || tries > 20) clearInterval(timer);
+    }, 250);
   }
 
   function $(sel, el) { return (el || root).querySelector(sel); }
@@ -541,4 +553,5 @@
   initCities();
   initTag();
   initPapers();
+  if (document.body && document.body.classList.contains('wrrapd-landing-6')) ensureHeaderWays();
 })();
