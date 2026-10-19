@@ -478,10 +478,9 @@
 
   /* ---------- Paste & wrap (landing6) ---------- */
   function initPaste() {
+    /* Paste section only — never the header Option 2 link. */
     wireDealPopHover(document.querySelector('label[for="wl-paste-link"]'));
     wireDealPopHover(document.getElementById('wl-paste-link'));
-    wireDealPopHover(document.querySelector('.wl6-ways-opt2 a'));
-    wireDealPopHover(document.querySelector('.wl-ways-bar a[href="#paste-and-wrap"]'));
     var form = $('[data-wl-paste]');
     if (form) {
       var input = $('input[name="link"]', form);
@@ -668,9 +667,8 @@
   initTag();
   initPapers();
   if (document.body && document.body.classList.contains('wrrapd-landing-6')) ensureHeaderWays();
-  /* Header ways mount can lag — re-wire paste hover targets once the note is in the DOM. */
   setTimeout(function () {
-    wireDealPopHover(document.querySelector('.wl6-ways-opt2 a'));
     wireDealPopHover(document.querySelector('label[for="wl-paste-link"]'));
+    wireDealPopHover(document.getElementById('wl-paste-link'));
   }, 600);
 })();

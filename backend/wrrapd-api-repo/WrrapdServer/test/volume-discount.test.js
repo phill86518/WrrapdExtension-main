@@ -6,30 +6,33 @@ const pricing = require('../lib/wrrapd-pricing');
 const TIERS = { twoItemsPercent: 10, threeToNineItemsPercent: 15, tenPlusItemsPercent: 15 };
 const PRICES = { giftWrapBase: 6.99, customDesignAi: 2.99, customDesignUpload: 1.99, flowers: 17.99 };
 
-test('tier boundaries: 1 none, 2, 3-9, 10+', () => {
+test('tier boundaries: 1 none, 2–4 twoItems, 5+ max(mid, high)', () => {
     const t = { twoItemsPercent: 5, threeToNineItemsPercent: 10, tenPlusItemsPercent: 20 };
     assert.equal(vd.volumeDiscountPercentFor(t, 0), 0);
     assert.equal(vd.volumeDiscountPercentFor(t, 1), 0);
     assert.equal(vd.volumeDiscountPercentFor(t, 2), 5);
-    assert.equal(vd.volumeDiscountPercentFor(t, 3), 10);
-    assert.equal(vd.volumeDiscountPercentFor(t, 9), 10);
+    assert.equal(vd.volumeDiscountPercentFor(t, 3), 5);
+    assert.equal(vd.volumeDiscountPercentFor(t, 4), 5);
+    assert.equal(vd.volumeDiscountPercentFor(t, 5), 20);
+    assert.equal(vd.volumeDiscountPercentFor(t, 9), 20);
     assert.equal(vd.volumeDiscountPercentFor(t, 10), 20);
     assert.equal(vd.volumeDiscountPercentFor(t, 40), 20);
 });
 
 test('discount is % of the base total, half-up to the cent', () => {
     assert.equal(vd.computeMultiItemBaseDiscount(6.99, 2, TIERS).discountCents, 140); // 10% of 13.98
-    assert.equal(vd.computeMultiItemBaseDiscount(6.99, 3, TIERS).discountCents, 315); // 15% of 20.97 = 3.1455
-    assert.equal(vd.computeMultiItemBaseDiscount(6.99, 4, TIERS).discountCents, 419); // 15% of 27.96 = 4.194
-    assert.equal(vd.computeMultiItemBaseDiscount(6.99, 10, TIERS).discountCents, 1049); // 15% of 69.90 = 10.485
+    assert.equal(vd.computeMultiItemBaseDiscount(6.99, 3, TIERS).discountCents, 210); // 10% of 20.97
+    assert.equal(vd.computeMultiItemBaseDiscount(6.99, 4, TIERS).discountCents, 280); // 10% of 27.96
+    assert.equal(vd.computeMultiItemBaseDiscount(6.99, 5, TIERS).discountCents, 524); // 15% of 34.95
+    assert.equal(vd.computeMultiItemBaseDiscount(6.99, 10, TIERS).discountCents, 1049); // 15% of 69.90
     assert.equal(vd.computeMultiItemBaseDiscount(6.99, 1, TIERS).discountCents, 0);
     assert.equal(vd.computeMultiItemBaseDiscount(6.99, 5, vd.ZERO_VOLUME_DISCOUNT).discountCents, 0);
 });
 
 test('allocation sums exactly to the discount', () => {
     assert.deepEqual(vd.allocateDiscountCents(140, 2), [70, 70]);
-    assert.deepEqual(vd.allocateDiscountCents(315, 3), [105, 105, 105]);
-    assert.deepEqual(vd.allocateDiscountCents(419, 4), [105, 105, 105, 104]);
+    assert.deepEqual(vd.allocateDiscountCents(210, 3), [70, 70, 70]);
+    assert.deepEqual(vd.allocateDiscountCents(280, 4), [70, 70, 70, 70]);
     assert.equal(vd.allocateDiscountCents(1049, 10).reduce((a, b) => a + b, 0), 1049);
 });
 

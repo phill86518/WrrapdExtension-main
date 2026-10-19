@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /** Bump when account UI / header polish changes — view-source should contain this string. */
-define( 'WRRAPD_MU_BUILD', '2026-10-19-header-ways-cta' );
+define( 'WRRAPD_MU_BUILD', '2026-10-19-header-cta-2s' );
 
 /** Published Chrome Web Store item id (Wrrapd 3.0.14, approved Oct 8, 2026). */
 if ( ! defined( 'WRRAPD_CHROME_EXTENSION_ID' ) ) {
@@ -1968,7 +1968,7 @@ function wrrapd_output_header_layout_css() {
 	echo '.elementor-location-header .elementor-element-7f1bdc1 .elementor-button,.elementor-element-eb0b235 .elementor-button{background:linear-gradient(180deg,#e85d04,#d14900)!important;color:#fff!important;}';
 	/* Slow the orange CTA pulse (Additional CSS historically used 1.05s — too flickery). */
 	echo '@keyframes wrrapd-cta-blink{0%,100%{opacity:1;filter:brightness(1);box-shadow:0 0 0 0 rgba(209,73,0,.45);transform:translateZ(0) scale(1)}50%{opacity:.82;filter:brightness(1.12);box-shadow:0 0 12px 2px rgba(209,73,0,.28);transform:translateZ(0) scale(1.02)}}';
-	echo '.elementor-element-7f1bdc1.elementor-widget-button .elementor-button,.elementor-element-7f1bdc1 a.elementor-button,.elementor-element-eb0b235.elementor-widget-button .elementor-button,.elementor-element-eb0b235 a.elementor-button,a.wrrapd-ext-cta{animation:wrrapd-cta-blink 3.5s ease-in-out infinite!important;}';
+	echo '.elementor-element-7f1bdc1.elementor-widget-button .elementor-button,.elementor-element-7f1bdc1 a.elementor-button,.elementor-element-eb0b235.elementor-widget-button .elementor-button,.elementor-element-eb0b235 a.elementor-button,a.wrrapd-ext-cta{animation:wrrapd-cta-blink 2s ease-in-out infinite!important;}';
 	echo '@media(prefers-reduced-motion:reduce){.elementor-element-7f1bdc1.elementor-widget-button .elementor-button,.elementor-element-7f1bdc1 a.elementor-button,.elementor-element-eb0b235.elementor-widget-button .elementor-button,.elementor-element-eb0b235 a.elementor-button,a.wrrapd-ext-cta{animation:none!important;}}';
 	echo '.elementor-location-header .gift-ideas-button{background-color:' . WRRAPD_LOGO_GOLD . '!important;color:#0f0351!important;}';
 	/* Row: brand | location | spacer | auth — CTA is page-centered (desktop) */

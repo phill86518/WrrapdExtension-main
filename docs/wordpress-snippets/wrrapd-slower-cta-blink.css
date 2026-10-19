@@ -27,9 +27,8 @@
 .elementor-element-7f1bdc1 a.elementor-button,
 .elementor-element-eb0b235 a.elementor-button,
 a.wrrapd-ext-cta {
-	animation: wrrapd-cta-blink-slow 3.5s ease-in-out infinite !important;
+	animation: wrrapd-cta-blink-slow 2s ease-in-out infinite !important;
 }
 
-/* Live Additional CSS historically used `wrrapd-cta-blink 1.05s` — MU header CSS now
- * redefines that keyframe and duration. Prefer keeping Additional CSS at 3.5s too. */
+/* Live Additional CSS + MU header CSS use ~2s (was 1.05s too frantic, 3.5s too slow). */
 
