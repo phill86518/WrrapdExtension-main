@@ -528,10 +528,9 @@
     return l.message || "We can't buy this item right now.";
   }
 
-  /** This store cannot ship it right now; another store can, through the extension. */
-  var ELSEWHERE_REASONS = { ship_unavailable: 1, out_of_stock: 1 };
-  /** Not a single product — nothing to gift-wrap yet. */
+  /** Do not advertise the extension for these — the shopper cannot buy/gift-wrap this link as-is. */
   var NO_EXT_REASONS = {
+    ship_unavailable: 1, out_of_stock: 1,
     product_list: 1, not_a_product_page: 1, retailer_not_supported: 1, not_a_link: 1, too_long: 1, duplicate: 1,
   };
   function extFits(l) {
@@ -552,15 +551,14 @@
       return 'Wrrapd gift-wraps ' + wearableLabel(l) + ' through the free Wrrapd Chrome extension: buy this item on ' + storeName(l) + ' and choose Wrrapd at checkout.';
     }
     if (l.reason === 'ship_unavailable') return storeName(l) + ' does not ship this item.';
+    if (l.reason === 'out_of_stock') return 'This item is out of stock.';
     return limitMessage(l);
   }
   function extCta(l) {
     if (!extFits(l)) return '';
     var lead = l.reason === 'wearable_paused'
       ? ''
-      : ELSEWHERE_REASONS[l.reason]
-        ? '<span class="wb-ext-cta-lead">Find it at another store and gift-wrap it with Wrrapd.</span>'
-        : '<span class="wb-ext-cta-lead">Buy it on ' + esc(storeName(l)) + ' and gift-wrap it with Wrrapd.</span>';
+      : '<span class="wb-ext-cta-lead">Buy it on ' + esc(storeName(l)) + ' and gift-wrap it with Wrrapd.</span>';
     return '<p class="wb-ext-cta">' + lead +
       '<a class="wb-ext-cta-btn" href="' + esc(EXT) + '" target="_blank" rel="noopener">Install Wrrapd extension</a></p>';
   }

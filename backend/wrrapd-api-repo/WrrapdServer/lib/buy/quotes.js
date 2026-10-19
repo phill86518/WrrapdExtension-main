@@ -207,7 +207,9 @@ function applyRead(line, read, cfg) {
     if (p.shipUnavailable) {
         return markUnavailable(line, 'ship_unavailable', `${line.retailerName || 'The store'} does not ship this item.`);
     }
-    if (p.inStock === false && !openNow.length) return markUnavailable(line, 'out_of_stock');
+    if (p.inStock === false && !openNow.length) {
+        return markUnavailable(line, 'out_of_stock', 'This item is out of stock.');
+    }
     if (p.isElectronics && !cfg.allowElectronics) return markUnavailable(line, 'electronics_blocked');
     // Soft launch: pause wearables (shoes/clothing/lingerie). Jewelry + beauty/lotions stay.
     const wearKind = pageReader.wearablePauseKind(line.url, p.title, p.category, p.brand);

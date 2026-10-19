@@ -1627,7 +1627,8 @@ async function askGeminiProduct(url, zip, retailerId) {
         'shippingUsd is non-member standard shipping; 0 only if free for every shopper with no minimum; otherwise null when unsure.',
         'arrivalDate YYYY-MM-DD when shown. shipToZip is the Shipping-to ZIP when shown.',
         'Fill variantGroups only when THIS product page shows Color or Size choices for the item. Toys, LEGO, and other single-SKU items usually have none — leave variantGroups as []. Never invent "Na" or "N/A".',
-        'If Shipping says "Not available" or the item cannot be shipped (pickup only), set inStock to false and shippingUsd to null.',
+        'If Shipping says "Not available" or the item cannot be shipped (pickup only), set inStock to false, shippingUsd to null, and arrivalDate to null. Never invent a shipping price or date for those items.',
+        'If the item is truly sold out, set inStock to false, shippingUsd to null, and arrivalDate to null.',
     ].filter(Boolean).join('\n');
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 32000);
@@ -1667,20 +1668,24 @@ async function askGeminiProduct(url, zip, retailerId) {
         const brand = String((facts && facts.brand) || '').trim().slice(0, 120);
         const imageUrl = safeImageUrl((facts && facts.imageUrl) || '');
         const inStock = facts && facts.inStock === false ? false : facts && facts.inStock === true ? true : null;
-        // Gemini marks pickup-only items as inStock:false with no shipping — treat as ship unavailable.
-        const shipUnavailable = retailer === 'kohls' && inStock === false && shipCents == null && !arrival;
+        // Kohl's: Gemini often sets inStock:false for "Shipping Not available" and still invents a ship price/date.
+        // Trust the unavailable flag; drop invented shipping so applyRead marks ship_unavailable (not out_of_stock).
+        const shipUnavailable = retailer === 'kohls' && inStock === false;
+        const useShipCents = shipUnavailable ? null : shipCents;
+        const useArrival = shipUnavailable ? null : arrival;
+        const useArrivalEnd = shipUnavailable ? null : (arrivalEnd && arrival && arrivalEnd > arrival ? arrivalEnd : null);
         return {
             title: title.slice(0, 300),
             brand,
             imageUrl,
             category: '',
             packageDimensions: null,
-            pagePriceCents: shipUnavailable ? pagePriceCents : pagePriceCents,
+            pagePriceCents,
             standardShip: {
-                cents: shipUnavailable ? null : shipCents,
-                arrivalDate: shipUnavailable ? null : arrival,
-                arrivalDateEnd: shipUnavailable ? null : (arrivalEnd && arrival && arrivalEnd > arrival ? arrivalEnd : null),
-                note: !shipUnavailable && shipCents === 0 ? 'Free standard shipping.' : '',
+                cents: useShipCents,
+                arrivalDate: useArrival,
+                arrivalDateEnd: useArrivalEnd,
+                note: !shipUnavailable && useShipCents === 0 ? 'Free standard shipping.' : '',
             },
             pageNotes: [],
             inStock,
