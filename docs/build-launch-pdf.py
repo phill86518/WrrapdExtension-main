@@ -138,7 +138,8 @@ def build() -> None:
         for s in ["BOOSTER — Website", "GUIDANCE — Extension", "FIDO — Payments", "INCO — Pay server",
                   "GROUND — Hub / PO Box", "CAPCOM — Command Center", "WRAP — Wrap ops", "RECOVERY — Delivery",
                   "COMMS — Customer service", "CREW — Contractors", "SUPPLY — Kits", "DATA — Backups",
-                  "SECURITY", "SURGEON — Monitoring", "LEGAL — Legal / tax", "FLIGHT DIRECTOR — Final Go"]
+                  "SECURITY", "SURGEON — Monitoring", "LEGAL — Legal / tax", "PROCURE — Buy through us",
+                  "FLIGHT DIRECTOR — Final Go"]
     )
     html = f"""<!doctype html><html><head><meta charset="utf-8"><title>{title}</title><style>{CSS}</style></head><body>
 <section class="cover">
