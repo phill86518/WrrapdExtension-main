@@ -19,6 +19,10 @@
     id: qs.get('b') || '',
     token: qs.get('t') || '',
     prefillLink: /^https?:\/\/\S+$/i.test(qs.get('link') || '') ? String(qs.get('link')).slice(0, 2000) : '',
+    prefillZip: (function () {
+      var z = String(qs.get('zip') || '').replace(/\D/g, '').slice(0, 5);
+      return z.length === 5 ? z : '';
+    })(),
     batch: null,
     view: 'start',
     wrapIndex: 0,
@@ -1733,13 +1737,22 @@
       S.config = res[0];
       S.terms = res[1];
       if (!S.id || !S.token) {
+        if (S.prefillZip) {
+          S.startZip = S.prefillZip;
+          S.startZipOk = true;
+        }
         if (S.prefillLink) S.draftLinks = [S.prefillLink];
         render();
-        if (S.prefillLink) {
+        if (S.prefillLink || S.prefillZip) {
           var start = root.querySelector('#wb-start');
           if (start) start.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          var zip = root.querySelector('#wb-zip');
-          if (zip) zip.focus({ preventScroll: true });
+          if (S.startZipOk && S.prefillLink) {
+            var first = root.querySelector('.wb-link');
+            if (first) first.focus({ preventScroll: true });
+          } else {
+            var zip = root.querySelector('#wb-zip');
+            if (zip) zip.focus({ preventScroll: true });
+          }
         }
         return;
       }

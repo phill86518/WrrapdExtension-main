@@ -324,15 +324,20 @@
     var form = $('[data-wl-paste]');
     if (form) {
       var input = $('input[name="link"]', form);
+      var zip = $('input[name="zip"]', form);
       var out = $('.wl-paste-out', form);
       form.addEventListener('submit', function (e) {
         var v = input.value.trim();
         var m = v.match(/https?:\/\/\S+/i);
+        var z = zip ? String(zip.value || '').replace(/\D/g, '').slice(0, 5) : '';
         if (!v) { e.preventDefault(); location.href = form.action + '#wb-start'; return; }
         if (!m) { e.preventDefault(); out.textContent = 'Please paste the full product link, starting with https://'; input.focus(); return; }
+        if (z.length !== 5) { e.preventDefault(); out.textContent = 'Please enter the giftee\'s 5-digit zip code.'; if (zip) zip.focus(); return; }
         input.value = m[0];
+        if (zip) zip.value = z;
       });
       input.addEventListener('input', function () { out.textContent = ''; });
+      if (zip) zip.addEventListener('input', function () { out.textContent = ''; });
     }
     var phone = $('[data-wl-phone]');
     if (!phone) return;
