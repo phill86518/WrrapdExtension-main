@@ -15,7 +15,7 @@
     Array.prototype.forEach.call(tpl.content.querySelectorAll('[data-wl6]'), function (el) { parts[el.getAttribute('data-wl6')] = el; });
     var ticker = document.querySelector('.elementor-element-0a7e92b');
     var wheels = document.getElementById('wrrapd-retailer-wheels-row');
-    if (ticker && ticker.parentNode) ticker.parentNode.insertBefore(parts.strip, ticker);
+    if (ticker && ticker.parentNode) { ticker.parentNode.insertBefore(parts.strip, ticker); ticker.setAttribute('aria-hidden', 'true'); }
     else if (wheels) wheels.insertAdjacentElement('afterend', parts.strip);
     var steps = document.querySelector('.elementor-element-f68c5e7');
     var footer = document.querySelector('.elementor-element-bdc63f8') || document.querySelector('.elementor-location-footer');

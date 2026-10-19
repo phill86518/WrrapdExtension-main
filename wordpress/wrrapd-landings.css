@@ -250,9 +250,9 @@
 .wl button.wl-paper i { display: block; aspect-ratio: 4 / 3; border-radius: 12px; }
 .wl button.wl-paper.wl-on { border-color: var(--wl-gold); box-shadow: 0 0 0 3px rgba(246, 185, 51, .35); }
 
-/* 6. Homepage refresh: hide the parts we replace */
+/* 6. Homepage refresh: hide the parts we replace (the ticker script forces display/height inline) */
 html body.wrrapd-landing-6 .elementor-element-0a7e92b,
-html body.wrrapd-landing-6.home .occasion-ticker-shell,
+html body.wrrapd-landing-6.home .occasion-ticker-shell { max-height: 0 !important; min-height: 0 !important; overflow: hidden !important; padding: 0 !important; margin: 0 !important; border: 0 !important; }
 html body.wrrapd-landing-6 .elementor-element-d0991cd,
 html body.wrrapd-landing-6 .elementor-element-f68c5e7 { display: none !important; }
 body.wrrapd-landing-6 .wl { width: 100%; }
