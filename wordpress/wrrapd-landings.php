@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_LANDINGS_BUILD', '2026-10-19-landings-v9' );
+define( 'WRRAPD_LANDINGS_BUILD', '2026-10-19-landings-v10' );
 define( 'WRRAPD_LANDING_COOKIE', 'wrrapd_lp' );
 
 function wrrapd_landing_number() {

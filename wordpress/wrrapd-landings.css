@@ -311,7 +311,7 @@ body.wrrapd-landing-6 .wl .wl-hiw-steps li.wl-on button { background: #fff; bord
 .wl-hiw-copy { display: grid; gap: 2px; padding-top: 3px; }
 .wl-hiw-copy b { font-weight: 650; color: var(--wl-navy-text); font-size: 1rem; }
 .wl-hiw-copy > span { color: #475569; font-size: .9rem; line-height: 1.4; max-height: 0; overflow: hidden; opacity: 0; transition: max-height .35s ease, opacity .35s ease; }
-.wl-hiw-steps li.wl-on .wl-hiw-copy > span { max-height: 5em; opacity: 1; }
+.wl-hiw-steps li.wl-on .wl-hiw-copy > span { max-height: 9em; opacity: 1; }
 .wl-hiw-cta { margin: 22px 0 0 12px; }
 
 .wl-hiw-demo .wl-browser-body { height: 320px; }
