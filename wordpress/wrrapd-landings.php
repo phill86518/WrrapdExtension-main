@@ -13,7 +13,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_LANDINGS_BUILD', '2026-10-19-landings-v7' );
+define( 'WRRAPD_LANDINGS_BUILD', '2026-10-19-landings-v8' );
 define( 'WRRAPD_LANDING_COOKIE', 'wrrapd_lp' );
 
 function wrrapd_landing_number() {
@@ -31,8 +31,9 @@ function wrrapd_landing_preview_token() {
 
 function wrrapd_landing_query_key_ok() {
 	$key = (string) get_option( 'wrrapd_landing_preview_key', '' );
-	$got = isset( $_GET['lp'] ) ? (string) wp_unslash( $_GET['lp'] ) : '';
-	return strlen( $key ) >= 16 && '' !== $got && hash_equals( $key, $got );
+	// Links pasted from chat or email often pick up a trailing backtick, quote or period.
+	$got = isset( $_GET['lp'] ) ? preg_replace( '/[^A-Za-z0-9_-]/', '', (string) wp_unslash( $_GET['lp'] ) ) : '';
+	return strlen( $key ) >= 16 && strlen( $got ) >= strlen( $key ) && hash_equals( $key, substr( $got, 0, strlen( $key ) ) );
 }
 
 function wrrapd_landing_allowed() {
@@ -523,7 +524,35 @@ function wrrapd_landing_6_parts() {
 	echo '</div>';
 	echo '</div>';
 	echo '<p class="wl-center wl-hiw-cta">' . wrrapd_landing_cta( $ext, 'Add to Chrome, free' ) . '</p>';
+	echo '<p class="wl-center wl-hiw-alt">Shopping on your phone? <a class="wl-link" href="#paste-and-wrap">Simply paste a link</a></p>';
 	echo '</div></section>';
+
+	$buy = home_url( '/buy/' );
+	echo '<section class="wl wl-paste" data-wl6="paste" id="paste-and-wrap"><div class="wl-section"><div class="wl-inner wl-split">';
+	echo '<div><p class="wl-eyebrow wl-eyebrow-dark">Paste &amp; wrap</p><h2>Simply paste a link. We take it from there.</h2>';
+	echo '<p class="wl-lead-dark">Found the perfect gift? Copy its link from one of our partner stores and paste it here. We purchase it for you, wrap it by hand and deliver it to their door, ready to open.</p>';
+	echo '<form class="wl-paste-form" data-wl-paste action="' . esc_url( $buy ) . '" method="get" novalidate>';
+	echo '<label class="wl-note-label" for="wl-paste-link">Gift link</label><div class="wl-zip-row"><input id="wl-paste-link" name="link" type="url" inputmode="url" autocomplete="off" placeholder="Paste a product link">';
+	echo '<input type="hidden" name="utm_source" value="wrrapd.com"><input type="hidden" name="utm_medium" value="landing"><input type="hidden" name="utm_campaign" value="landing6-paste">';
+	echo '<button type="submit" class="wl-btn wl-btn-sm">Wrap this gift</button></div><p class="wl-paste-out" aria-live="polite"></p></form>';
+	echo '<ul class="wl-paste-points">';
+	foreach ( array(
+		array( 'From any device', 'Order from your phone, tablet or laptop in moments.' ),
+		array( 'Up to five gifts at once', 'Gather favorites from different stores in a single order.' ),
+		array( 'One graceful checkout', 'Gifts, wrapping and delivery, settled in one payment.' ),
+	) as $p ) {
+		echo '<li>' . wrrapd_landing_bow_svg( 'wl-bow-xs' ) . '<div><b>' . esc_html( $p[0] ) . '</b><span>' . esc_html( $p[1] ) . '</span></div></li>';
+	}
+	echo '</ul></div>';
+
+	echo '<div class="wl-phone" data-wl-phone aria-label="Animated demo of pasting a gift link"><div class="wl-phone-screen">';
+	echo '<p class="wl-phone-url">wrrapd.com/buy</p><p class="wl-phone-h">Your gift</p>';
+	echo '<div class="wl-phone-field"><span data-wl-phone-type></span><i class="wl-caret"></i></div>';
+	echo '<div class="wl-phone-card"><img src="https://target.scene7.com/is/image/Target/GUEST_2c7410d9-3a5a-41d2-a0fe-f53eeabd2726?wid=300&hei=300&qlt=80" alt=""><div><b>LEGO Icons Bumblebee Set</b><small>Target · Arrives Tue</small></div></div>';
+	echo '<div class="wl-phone-wrap"><span class="wl-pat-plaid"></span><div><b>Holiday Plaid</b><small>Hand-wrapped, gold bow</small></div></div>';
+	echo '<div class="wl-phone-done">' . wrrapd_landing_gift( 'plaid', 'wl-gift-xs' ) . '<b>Wrapped and on its way</b></div>';
+	echo '</div></div>';
+	echo '</div></div></section>';
 
 	echo '<section class="wl wl-miss" data-wl6="miss">';
 	echo '<div class="wl-hero wl-hero-navy"><div class="wl-inner wl-hero-grid">';

@@ -18,6 +18,7 @@
     pricing: null,
     id: qs.get('b') || '',
     token: qs.get('t') || '',
+    prefillLink: /^https?:\/\/\S+$/i.test(qs.get('link') || '') ? String(qs.get('link')).slice(0, 2000) : '',
     batch: null,
     view: 'start',
     wrapIndex: 0,
@@ -1731,7 +1732,17 @@
     ]).then(function (res) {
       S.config = res[0];
       S.terms = res[1];
-      if (!S.id || !S.token) { render(); return; }
+      if (!S.id || !S.token) {
+        if (S.prefillLink) S.draftLinks = [S.prefillLink];
+        render();
+        if (S.prefillLink) {
+          var start = root.querySelector('#wb-start');
+          if (start) start.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          var zip = root.querySelector('#wb-zip');
+          if (zip) zip.focus({ preventScroll: true });
+        }
+        return;
+      }
       var j = res[2];
       if (!j || !j.batch) {
         S.id = '';

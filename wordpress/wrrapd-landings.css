@@ -346,6 +346,42 @@ body.wrrapd-landing-6 .wl button.wl-place, body.wrrapd-landing-6 .wl button.wl-p
 .wl-proof-pic { display: grid; place-items: center; width: 64px; height: 56px; border-radius: 8px; background: linear-gradient(180deg, #cfe3f1 0 55%, #b98f62 55%); padding-top: 8px; }
 .wl-proof-pic .wl-gift .wl-bow { top: -30%; }
 
+.wl .wl-hiw-alt { margin: 16px 0 0; color: #4a5068; }
+
+/* Paste & wrap */
+.wl-paste { background: linear-gradient(180deg, #fff 0%, var(--wl-cream) 100%); }
+body.wrrapd-landing-6 .wl-paste h2 { text-align: left; max-width: 16ch; }
+.wl-paste-form { max-width: 520px; margin: 0 0 26px; }
+.wl-paste-form .wl-zip-row input { font-size: 1rem; letter-spacing: 0; }
+.wl .wl-paste-out { margin: 8px 0 0; min-height: 1.3em; font-size: .9rem; color: var(--wl-red); }
+.wl-paste-points { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+.wl-paste-points li { display: flex; gap: 12px; align-items: flex-start; }
+.wl-paste-points .wl-bow-xs { flex: 0 0 auto; margin-top: 2px; }
+.wl-paste-points div { display: grid; gap: 2px; }
+.wl-paste-points b { font-weight: 650; color: var(--wl-navy-text); }
+.wl-paste-points span { color: #4a5068; font-size: .95rem; }
+.wl-phone { justify-self: center; width: 290px; padding: 12px; border-radius: 42px; background: #0c0638; box-shadow: 0 40px 80px rgba(12, 6, 56, .28), inset 0 0 0 2px rgba(246, 185, 51, .35); }
+.wl-phone-screen { position: relative; height: 520px; border-radius: 32px; background: #fff; padding: 46px 18px 18px; overflow: hidden; }
+.wl-phone-screen::before { content: ""; position: absolute; top: 12px; left: 50%; width: 84px; height: 22px; margin-left: -42px; border-radius: 999px; background: #0c0638; }
+.wl .wl-phone-url { margin: 0 0 14px; text-align: center; font-size: .75rem; color: #8a8fa6; }
+.wl .wl-phone-h { margin: 0 0 10px; font-weight: 650; font-size: 1.15rem; color: var(--wl-navy-text); }
+.wl-phone-field { display: flex; align-items: center; min-height: 44px; padding: 10px 12px; border-radius: 12px; border: 2px solid var(--wl-line); font-size: .82rem; color: var(--wl-navy-text); transition: border-color .3s ease; overflow: hidden; white-space: nowrap; }
+.wl-phone.wl-p-paste .wl-phone-field { border-color: var(--wl-gold); }
+.wl-phone-field span:empty::before { content: "Paste a product link"; color: #a3a7b8; }
+.wl-caret { display: inline-block; width: 2px; height: 1.1em; margin-left: 2px; background: var(--wl-navy-text); animation: wl-blink 1s steps(1) infinite; }
+@keyframes wl-blink { 50% { opacity: 0; } }
+.wl-phone-card, .wl-phone-wrap { display: flex; gap: 12px; align-items: center; margin-top: 14px; padding: 12px; border-radius: 16px; border: 1px solid var(--wl-line); background: #fff; box-shadow: 0 10px 22px rgba(12, 6, 56, .06); opacity: 0; transform: translateY(14px); transition: opacity .45s ease, transform .45s ease; }
+.wl-phone-card img { width: 56px; height: 56px; object-fit: contain; border-radius: 10px; background: #f7f5f0; }
+.wl-phone-card div, .wl-phone-wrap div { display: grid; gap: 2px; }
+.wl-phone-card b, .wl-phone-wrap b { font-size: .88rem; font-weight: 650; color: var(--wl-navy-text); line-height: 1.25; }
+.wl-phone-card small, .wl-phone-wrap small { font-size: .76rem; color: #6b7088; }
+.wl-phone-wrap > span { flex: 0 0 auto; width: 56px; height: 42px; border-radius: 8px; }
+.wl-phone.wl-p-card .wl-phone-card, .wl-phone.wl-p-wrap .wl-phone-wrap { opacity: 1; transform: none; }
+.wl-phone-done { position: absolute; left: 18px; right: 18px; bottom: 18px; display: flex; align-items: center; justify-content: center; gap: 12px; padding: 16px; border-radius: 16px; background: var(--wl-navy); color: #fff; opacity: 0; transform: translateY(20px); transition: opacity .45s ease, transform .45s ease; }
+.wl-phone-done b { color: var(--wl-gold); font-weight: 650; font-size: .95rem; }
+.wl-phone.wl-p-done .wl-phone-done { opacity: 1; transform: none; }
+.wl-phone.wl-p-done .wl-phone-done .wl-gift { animation: wl-pop .6s cubic-bezier(.2, .9, .3, 1.4); }
+
 /* For the people you miss */
 .wl-miss .wl-hero { padding: clamp(52px, 7vw, 88px) 0; }
 .wl-miss .wl-journey { margin-bottom: 18px; }
@@ -381,6 +417,10 @@ body.wrrapd-landing-6 .wl button.wl-place, body.wrrapd-landing-6 .wl button.wl-p
   body.wrrapd-landing-6 .wl .wl-hero-navy h2 { text-align: center; }
   body.wrrapd-landing-6 .wl-miss .wl-hero-grid > div:first-child { text-align: center; }
   body.wrrapd-landing-6 .wl-miss .wl-lead { margin-left: auto; margin-right: auto; }
+  body.wrrapd-landing-6 .wl-paste h2 { text-align: center; max-width: none; }
+  .wl-paste .wl-eyebrow { display: table; margin-left: auto; margin-right: auto; }
+  .wl-paste-form { margin-left: auto; margin-right: auto; }
+  .wl-paste-points { max-width: 420px; margin: 0 auto; }
   .wl-sticky { display: block; position: fixed; left: 0; right: 0; bottom: 0; z-index: 9999; padding: 10px 14px calc(10px + env(safe-area-inset-bottom)); background: rgba(12, 6, 56, .96); box-shadow: 0 -8px 24px rgba(0, 0, 0, .25); }
   .wl { padding-bottom: 76px; }
 }

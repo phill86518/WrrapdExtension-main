@@ -20,11 +20,9 @@
     var steps = document.querySelector('.elementor-element-f68c5e7');
     var footer = document.querySelector('.elementor-element-bdc63f8') || document.querySelector('.elementor-location-footer');
     if (steps && steps.parentNode) {
-      steps.parentNode.insertBefore(parts.hiw, steps);
-      steps.parentNode.insertBefore(parts.miss, steps);
+      [parts.hiw, parts.paste, parts.miss].forEach(function (p) { steps.parentNode.insertBefore(p, steps); });
     } else if (footer && footer.parentNode) {
-      footer.parentNode.insertBefore(parts.hiw, footer);
-      footer.parentNode.insertBefore(parts.miss, footer);
+      [parts.hiw, parts.paste, parts.miss].forEach(function (p) { footer.parentNode.insertBefore(p, footer); });
     }
     return document.body;
   }
@@ -289,6 +287,46 @@
     }
   }
 
+  /* ---------- Paste & wrap (landing6) ---------- */
+  function initPaste() {
+    var form = $('[data-wl-paste]');
+    if (form) {
+      var input = $('input[name="link"]', form);
+      var out = $('.wl-paste-out', form);
+      form.addEventListener('submit', function (e) {
+        var v = input.value.trim();
+        var m = v.match(/https?:\/\/\S+/i);
+        if (!v) { e.preventDefault(); location.href = form.action + '#wb-start'; return; }
+        if (!m) { e.preventDefault(); out.textContent = 'Please paste the full product link, starting with https://'; input.focus(); return; }
+        input.value = m[0];
+      });
+      input.addEventListener('input', function () { out.textContent = ''; });
+    }
+    var phone = $('[data-wl-phone]');
+    if (!phone) return;
+    var typeEl = $('[data-wl-phone-type]', phone);
+    var LINK = 'target.com/p/lego-icons-bumblebee';
+    var timers = [];
+    function at(ms, fn) { timers.push(setTimeout(fn, ms)); }
+    function run() {
+      timers.forEach(clearTimeout);
+      timers = [];
+      phone.className = 'wl-phone';
+      typeEl.textContent = '';
+      at(500, function () { phone.classList.add('wl-p-paste'); typeEl.textContent = LINK; });
+      at(1500, function () { phone.classList.add('wl-p-card'); });
+      at(2900, function () { phone.classList.add('wl-p-wrap'); });
+      at(4400, function () { phone.classList.add('wl-p-done'); });
+      at(7600, run);
+    }
+    if ('IntersectionObserver' in window) {
+      var io = new IntersectionObserver(function (en) { if (en[0].isIntersecting) { run(); io.disconnect(); } }, { threshold: 0.3 });
+      io.observe(phone);
+    } else {
+      run();
+    }
+  }
+
   /* ---------- Jacksonville ZIP checker ---------- */
   var HOODS = {
     '32202': 'Downtown', '32204': 'Riverside', '32205': 'Avondale', '32206': 'Springfield', '32207': 'San Marco',
@@ -426,6 +464,7 @@
   initStrip();
   initDemo();
   initHowItWorks();
+  initPaste();
   initZip();
   initCities();
   initTag();
