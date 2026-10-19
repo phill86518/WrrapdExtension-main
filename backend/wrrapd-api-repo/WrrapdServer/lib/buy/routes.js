@@ -109,6 +109,47 @@ function hideExcludedTwins(lines, keep) {
     }
 }
 
+/** Permanent link-parse rejects — refreshing cannot fix these without a new URL. */
+const SKIP_RETRY_REASONS = new Set([
+    'retailer_not_supported',
+    'not_a_product_page',
+    'product_list',
+    'not_a_link',
+    'too_long',
+    'duplicate',
+    'electronics_blocked',
+    'over_item_limit',
+]);
+
+/** On full page load, put Excluded (unavailable) lines back into reading so we re-try the cart add. */
+async function reviveExcludedOnRefresh(batchId) {
+    const out = await store.update(batchId, (b) => {
+        if (!b || b.status !== 'open') return null;
+        const now = new Date().toISOString();
+        let n = 0;
+        for (const l of b.lines || []) {
+            if (l.removed || l.state !== 'unavailable') continue;
+            if (SKIP_RETRY_REASONS.has(l.reason)) continue;
+            if (!l.url && !l.canonicalUrl) continue;
+            l.state = 'reading';
+            l.reason = '';
+            l.message = '';
+            l.readFailure = '';
+            l.product = null;
+            l.variantLabel = '';
+            l.readStartedAt = now;
+            l.readTries = (l.readTries || 0) + 1;
+            l.wrap = null;
+            if (l.retailer) quotes.ensureGroup(b, l.retailer).state = 'waiting';
+            n += 1;
+        }
+        if (!n) return null;
+        store.addLog(b, 'shopper', `Retrying ${n} excluded item(s) after page refresh`);
+        return b;
+    });
+    return out;
+}
+
 function countedItemCents(batch, retailer) {
     return (batch.lines || [])
         .filter((l) => l.retailer === retailer && !l.removed && l.state !== 'unavailable')
@@ -119,15 +160,25 @@ function countedItemCents(batch, retailer) {
 function presentShip(batch, l, ship) {
     if (!ship || l.retailer !== 'target' || ship.cents !== 0) return ship;
     if (countedItemCents(batch, l.retailer) >= 3500) return ship;
-    return { cents: null, arrivalDate: ship.arrivalDate || null, note: ship.note || 'Free on orders over $35' };
+    return { cents: null, arrivalDate: ship.arrivalDate || null, arrivalDateEnd: ship.arrivalDateEnd || null, note: ship.note || 'Free on orders over $35' };
 }
 
 function publicLine(l, batch) {
     const p = l.product || null;
     const rawShip = p && p.standardShip && (p.standardShip.cents != null || p.standardShip.arrivalDate)
-        ? { cents: p.standardShip.cents, arrivalDate: p.standardShip.arrivalDate || null, note: p.standardShip.note || '' }
+        ? {
+            cents: p.standardShip.cents,
+            arrivalDate: p.standardShip.arrivalDate || null,
+            arrivalDateEnd: p.standardShip.arrivalDateEnd || null,
+            note: p.standardShip.note || '',
+        }
         : (p && p.pageOffer && p.pageOffer.shippingOptions && p.pageOffer.shippingOptions[0]
-            ? { cents: p.pageOffer.shippingOptions[0].cents, arrivalDate: p.pageOffer.shippingOptions[0].arrivalDate || null, note: '' }
+            ? {
+                cents: p.pageOffer.shippingOptions[0].cents,
+                arrivalDate: p.pageOffer.shippingOptions[0].arrivalDate || null,
+                arrivalDateEnd: p.pageOffer.shippingOptions[0].arrivalDateEnd || null,
+                note: '',
+            }
             : null);
     return {
         id: l.id,
@@ -401,6 +452,11 @@ module.exports = function mountBuyForYou(app, deps) {
         if (!api(req, res)) return;
         const batch = loadForShopper(req, res);
         if (!batch) return;
+        const wantRetry =
+            req.query.retryExcluded === '1' ||
+            req.query.retryExcluded === 'true' ||
+            req.query.retryExcluded === 'yes';
+        if (wantRetry) await reviveExcludedOnRefresh(batch.id);
         const swept = await quotes.sweep(batch.id);
         const view = swept || store.read(batch.id);
         if (view && view.lines.some((l) => l.state === 'reading')) {
@@ -444,6 +500,7 @@ module.exports = function mountBuyForYou(app, deps) {
                         err = `Please choose a ${g.name.toLowerCase()}.`;
                         return null;
                     }
+                    g.selected = v;
                     picked.push(v);
                 }
                 l.variantLabel = picked.join(', ');

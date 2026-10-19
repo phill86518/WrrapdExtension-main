@@ -1565,8 +1565,9 @@
 
   /* ---------- start ---------- */
   function start() {
+    // Full page load only: re-try every Excluded item (server flips unavailable → reading).
     var batchP = (S.id && S.token)
-      ? request('/api/buy/batches/' + encodeURIComponent(S.id)).catch(function () { return null; })
+      ? request('/api/buy/batches/' + encodeURIComponent(S.id) + '?retryExcluded=1').catch(function () { return null; })
       : Promise.resolve(null);
     if (S.id && S.token) {
       root.innerHTML = '<div class="wb-wrap"><p class="wb-muted">Loading your cart…</p></div>';
