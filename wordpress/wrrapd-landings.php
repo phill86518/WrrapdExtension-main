@@ -11,7 +11,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_LANDINGS_BUILD', '2026-10-18-landings-v2' );
+define( 'WRRAPD_LANDINGS_BUILD', '2026-10-18-landings-v3' );
 
 function wrrapd_landing_number() {
 	$path = wp_parse_url( isset( $_SERVER['REQUEST_URI'] ) ? (string) wp_unslash( $_SERVER['REQUEST_URI'] ) : '', PHP_URL_PATH );
@@ -173,10 +173,10 @@ function wrrapd_landing_final( $url, $title, $sub, $label ) {
 }
 
 function wrrapd_landing_zip_checker( $id, $label ) {
-	return '<form class="wl-zip" data-wl-zip novalidate>'
+	return '<div class="wl-zip" data-wl-zip><form novalidate>'
 		. '<label for="' . esc_attr( $id ) . '">' . esc_html( $label ) . '</label>'
 		. '<div class="wl-zip-row"><input id="' . esc_attr( $id ) . '" inputmode="numeric" maxlength="5" autocomplete="postal-code" placeholder="ZIP code"><button type="submit" class="wl-btn wl-btn-sm">Check</button></div>'
-		. '<div class="wl-zip-out" aria-live="polite"></div></form>';
+		. '</form><div class="wl-zip-out" aria-live="polite"></div></div>';
 }
 
 /* ---------- 1. Holiday rescue ---------- */

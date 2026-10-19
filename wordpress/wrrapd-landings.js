@@ -173,9 +173,10 @@
       .catch(function () { zipList = Object.keys(HOODS); return zipList; });
   }
   function initZip() {
-    $$('[data-wl-zip]').forEach(function (form) {
+    $$('[data-wl-zip]').forEach(function (wrap) {
+      var form = $('form', wrap);
       var input = $('input', form);
-      var out = $('.wl-zip-out', form);
+      var out = $('.wl-zip-out', wrap);
       input.addEventListener('input', function () { input.value = input.value.replace(/\D/g, '').slice(0, 5); });
       form.addEventListener('submit', function (e) {
         e.preventDefault();
