@@ -372,13 +372,13 @@ body.wrrapd-landing-6 .wl button.wl-place, body.wrrapd-landing-6 .wl button.wl-p
 .wl-paste { padding: 46px 0 50px; background: var(--wl-cream); }
 .wl-paste-grid { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: clamp(24px, 5vw, 64px); align-items: center; max-width: 980px; margin: 0 auto; }
 .wl-paste-form { margin: 0 0 22px; }
-.wl-paste-row { display: flex; gap: 10px; margin: 0 0 10px; }
-.wl-paste-row input { flex: 1; min-width: 0; font-size: 1rem; height: 48px; padding: 0 14px; border: 1px solid var(--wl-line); border-radius: 12px; background: #fff; color: var(--wl-navy-text); box-sizing: border-box; }
-.wl-paste-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
-.wl-paste-zip { display: grid; gap: 4px; margin: 0; }
-.wl-paste-zip span { font-size: .78rem; font-weight: 650; color: #475569; letter-spacing: .02em; }
-.wl-paste-zip input { width: 5.2rem; height: 40px; padding: 0 10px; border: 1px solid var(--wl-line); border-radius: 999px; background: #fff; color: var(--wl-navy-text); font-size: .95rem; font-weight: 650; text-align: center; box-sizing: border-box; }
-.wl-paste-actions .wl-orange { margin: 0; height: 48px; padding: 0 22px; }
+.wl-paste-zip { display: grid; gap: 3px; margin: 0 0 10px; width: fit-content; max-width: 100%; }
+.wl-paste-zip span { font-size: .78rem; font-weight: 650; color: #475569; }
+.wl-paste-zip input { width: 5rem; height: 30px; padding: 0 8px; border: 1px solid var(--wl-line); border-radius: 6px; background: #fff; color: var(--wl-navy-text); font-size: .85rem; font-weight: 650; box-sizing: border-box; }
+.wl-paste-form .wl-note-label { display: block; margin: 0 0 4px; }
+.wl-paste-row { display: flex; gap: 8px; align-items: center; }
+.wl-paste-row input { flex: 1; min-width: 0; height: 34px; padding: 0 10px; border: 1px solid var(--wl-line); border-radius: 8px; background: #fff; color: var(--wl-navy-text); font-size: .9rem; box-sizing: border-box; }
+body .wl .wl-paste-row .wl-orange { margin: 0; height: 34px; padding: 0 14px; font-size: .85rem !important; line-height: 34px; border-radius: 8px; white-space: nowrap; }
 .wl .wl-paste-out { margin: 6px 0 0; min-height: 1.2em; font-size: .9rem; color: var(--wl-red); }
 .wl-paste-points { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 22px; }
 .wl-paste-points li { display: flex; gap: 10px; align-items: flex-start; }
@@ -445,9 +445,10 @@ body .wl a.wl-idea:hover { border-color: var(--wl-gold); transform: translateY(-
   .wl-sc-cart .wl-cart { width: 100%; }
   .wl-cws { padding: 12px; gap: 12px; }
   .wl-cws img { width: 52px; height: 52px; }
-  .wl-paste-actions { flex-direction: column; align-items: stretch; }
+  .wl-paste-row { flex-direction: column; align-items: stretch; }
   .wl-paste-zip { width: 100%; }
-  .wl-paste-zip input { width: 100%; text-align: left; }
+  .wl-paste-zip input { width: 6rem; }
+  body .wl .wl-paste-row .wl-orange { width: 100%; text-align: center; }
   .wl-paste-points { grid-template-columns: minmax(0, 1fr); }
   .wl-phone { display: none; }
 }

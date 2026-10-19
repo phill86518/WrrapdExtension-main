@@ -38,7 +38,13 @@
     modalZipOk: false,
     startZipOk: false,
     startZip: '',
+    zipChecking: false,
+    allowedZips: null,
   };
+
+  /* Same copy as the Chrome extension giftee-ZIP gate. */
+  var OUT_OF_AREA_MSG =
+    "We're sorry — we can't deliver to that ZIP yet. We're constantly adding new areas and hope to be near you soon.";
 
   var TRASH_SVG = '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
     '<path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>';
@@ -253,6 +259,7 @@
     if (!open) return h;
     var draft = S.draftLinks;
     S.draftLinks = null;
+    if ((!draft || !draft.length) && S.prefillLink) draft = [S.prefillLink];
     h += '<section class="wb-card" id="wb-start"><h2>Your gift</h2>' +
       zipBar('wb-zip', S.startZip, 'start-zip', S.startZipOk) +
       (S.startZipOk
@@ -1267,11 +1274,28 @@
     });
   }
 
+  function loadAllowedZips(force) {
+    if (S.allowedZips && !force) return Promise.resolve(S.allowedZips);
+    return fetch(API + '/api/allowed-zip-codes', { cache: 'no-store' })
+      .then(function (r) {
+        if (!r.ok) throw new Error('zip-list ' + r.status);
+        return r.json();
+      })
+      .then(function (j) {
+        if (!j || !Array.isArray(j.allowedZipCodes)) throw new Error('zip-list');
+        S.allowedZips = j.allowedZipCodes.map(function (z) {
+          return String(z || '').replace(/\D/g, '').slice(0, 5);
+        }).filter(function (z) { return z.length === 5; });
+        return S.allowedZips;
+      });
+  }
+
   function submitStartZip() {
     var el = $('#wb-zip');
-    if (!el) return;
+    if (!el || S.zipChecking) return;
     var zip = String(el.value || '').replace(/\D/g, '').slice(0, 5);
     S.startZip = zip;
+    el.value = zip;
     if (zip.length !== 5) {
       S.startZipOk = false;
       S.error = 'Please enter a valid 5-digit ZIP code.';
@@ -1280,14 +1304,42 @@
       if (again) again.focus();
       return;
     }
-    var wasOk = S.startZipOk;
-    S.startZipOk = true;
+    S.zipChecking = true;
     S.error = '';
     render();
-    if (!wasOk) {
-      var first = root.querySelector('.wb-link');
-      if (first) first.focus();
-    }
+    loadAllowedZips(true).then(function (list) {
+      S.zipChecking = false;
+      if (list.indexOf(zip) < 0) {
+        S.startZipOk = false;
+        S.error = OUT_OF_AREA_MSG;
+        render();
+        var bad = $('#wb-zip');
+        if (bad) {
+          bad.style.borderColor = '#dc2626';
+          bad.focus();
+        }
+        return;
+      }
+      var wasOk = S.startZipOk;
+      S.startZipOk = true;
+      S.error = '';
+      render();
+      if (!wasOk) {
+        var first = root.querySelector('.wb-link');
+        if (first) first.focus();
+      }
+    }).catch(function () {
+      S.zipChecking = false;
+      if (S.allowedZips && S.allowedZips.indexOf(zip) >= 0) {
+        S.startZipOk = true;
+        S.error = '';
+        render();
+        return;
+      }
+      S.startZipOk = false;
+      S.error = "We couldn't verify that ZIP right now. Please try again.";
+      render();
+    });
   }
 
   function onZip() {
@@ -1737,22 +1789,18 @@
       S.config = res[0];
       S.terms = res[1];
       if (!S.id || !S.token) {
-        if (S.prefillZip) {
-          S.startZip = S.prefillZip;
-          S.startZipOk = true;
-        }
+        if (S.prefillZip) S.startZip = S.prefillZip;
         if (S.prefillLink) S.draftLinks = [S.prefillLink];
         render();
         if (S.prefillLink || S.prefillZip) {
           var start = root.querySelector('#wb-start');
           if (start) start.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          if (S.startZipOk && S.prefillLink) {
-            var first = root.querySelector('.wb-link');
-            if (first) first.focus({ preventScroll: true });
-          } else {
-            var zip = root.querySelector('#wb-zip');
-            if (zip) zip.focus({ preventScroll: true });
-          }
+        }
+        if (S.prefillZip) {
+          submitStartZip();
+        } else {
+          var zip = root.querySelector('#wb-zip');
+          if (zip) zip.focus({ preventScroll: true });
         }
         return;
       }

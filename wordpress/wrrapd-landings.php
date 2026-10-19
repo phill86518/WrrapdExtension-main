@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_LANDINGS_BUILD', '2026-10-19-landings-v12' );
+define( 'WRRAPD_LANDINGS_BUILD', '2026-10-19-landings-v13' );
 define( 'WRRAPD_LANDING_COOKIE', 'wrrapd_lp' );
 
 function wrrapd_landing_number() {
@@ -551,11 +551,10 @@ function wrrapd_landing_6_parts() {
 	echo wrrapd_landing_head( 'Try without the Extension (simpler)', 'Copy, paste, beautifully wrapped.', 'Miles away from the people you miss? Copy a gift\'s link from one of our partner stores and paste it here. We purchase it, wrap it by hand and deliver it to their door, finished with a bow.' );
 	echo '<div class="wl-paste-grid"><div class="wl-paste-left">';
 	echo '<form class="wl-paste-form" data-wl-paste action="' . esc_url( $buy ) . '" method="get" novalidate>';
+	echo '<label class="wl-paste-zip" for="wl-paste-zip"><span>Giftee / gift-recipient\'s zip code</span>';
+	echo '<input id="wl-paste-zip" name="zip" type="text" inputmode="numeric" maxlength="10" autocomplete="postal-code" placeholder="ZIP"></label>';
 	echo '<label class="wl-note-label" for="wl-paste-link">Copy-paste your product page (URL) here</label>';
-	echo '<div class="wl-paste-row"><input id="wl-paste-link" name="link" type="url" inputmode="url" autocomplete="off" placeholder="https://"></div>';
-	echo '<div class="wl-paste-actions">';
-	echo '<label class="wl-paste-zip" for="wl-paste-zip"><span>Giftee zip</span>';
-	echo '<input id="wl-paste-zip" name="zip" type="text" inputmode="numeric" maxlength="10" autocomplete="postal-code" placeholder="ZIP" aria-label="Giftee / gift-recipient\'s zip code"></label>';
+	echo '<div class="wl-paste-row"><input id="wl-paste-link" name="link" type="url" inputmode="url" autocomplete="off" placeholder="https://">';
 	echo '<button type="submit" class="wl-orange">Gift-wrap this item</button></div>';
 	echo '<input type="hidden" name="utm_source" value="wrrapd.com"><input type="hidden" name="utm_medium" value="landing"><input type="hidden" name="utm_campaign" value="landing6-paste">';
 	echo '<p class="wl-paste-out" aria-live="polite"></p></form>';
