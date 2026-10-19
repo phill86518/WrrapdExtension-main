@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_LANDINGS_BUILD', '2026-10-19-landings-v27' );
+define( 'WRRAPD_LANDINGS_BUILD', '2026-10-19-landings-v28' );
 define( 'WRRAPD_LANDING_COOKIE', 'wrrapd_lp' );
 define( 'WRRAPD_LANDING_RETIRED_SLUG', 'landing-retired-20261019' );
 
@@ -565,7 +565,6 @@ function wrrapd_landing_6_parts() {
 	echo '<div class="wl6-ways" data-wl6="ways">'
 		. '<p class="wl6-ways-lede">Premium gift-wrapping using either option below:</p>'
 		. '<div class="wl6-ways-row1">'
-		. '<span class="wl6-ways-opt1">① Install Chrome Extension</span>'
 		. '<div class="wl6-ways-btn-slot"></div>'
 		. '</div>'
 		. '<p class="wl6-ways-or">OR</p>'
