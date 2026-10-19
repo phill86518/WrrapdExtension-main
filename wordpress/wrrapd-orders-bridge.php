@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /** Bump when account UI / header polish changes — view-source should contain this string. */
-define( 'WRRAPD_MU_BUILD', '2026-10-19-footer-cta-fit' );
+define( 'WRRAPD_MU_BUILD', '2026-10-19-header-ways-cta' );
 
 /** Published Chrome Web Store item id (Wrrapd 3.0.14, approved Oct 8, 2026). */
 if ( ! defined( 'WRRAPD_CHROME_EXTENSION_ID' ) ) {
@@ -1966,6 +1966,10 @@ function wrrapd_output_header_layout_css() {
 	echo '.elementor-location-header [data-id="2ca99876"],.elementor-location-header .elementor-element-2ca99876,.elementor-location-header [data-id="2ca99876"] .elementor-widget-container,.elementor-location-header [data-id="2ca99876"] .elementor-button{background:#f9d027!important;background-color:#f9d027!important;}';
 	echo '.elementor-location-header .elementor-element-7f1bdc1 .elementor-widget-container,.elementor-location-header .elementor-element-00ec9fc .elementor-widget-container{background:transparent!important;background-color:transparent!important;}';
 	echo '.elementor-location-header .elementor-element-7f1bdc1 .elementor-button,.elementor-element-eb0b235 .elementor-button{background:linear-gradient(180deg,#e85d04,#d14900)!important;color:#fff!important;}';
+	/* Slow the orange CTA pulse (Additional CSS historically used 1.05s — too flickery). */
+	echo '@keyframes wrrapd-cta-blink{0%,100%{opacity:1;filter:brightness(1);box-shadow:0 0 0 0 rgba(209,73,0,.45);transform:translateZ(0) scale(1)}50%{opacity:.82;filter:brightness(1.12);box-shadow:0 0 12px 2px rgba(209,73,0,.28);transform:translateZ(0) scale(1.02)}}';
+	echo '.elementor-element-7f1bdc1.elementor-widget-button .elementor-button,.elementor-element-7f1bdc1 a.elementor-button,.elementor-element-eb0b235.elementor-widget-button .elementor-button,.elementor-element-eb0b235 a.elementor-button,a.wrrapd-ext-cta{animation:wrrapd-cta-blink 3.5s ease-in-out infinite!important;}';
+	echo '@media(prefers-reduced-motion:reduce){.elementor-element-7f1bdc1.elementor-widget-button .elementor-button,.elementor-element-7f1bdc1 a.elementor-button,.elementor-element-eb0b235.elementor-widget-button .elementor-button,.elementor-element-eb0b235 a.elementor-button,a.wrrapd-ext-cta{animation:none!important;}}';
 	echo '.elementor-location-header .gift-ideas-button{background-color:' . WRRAPD_LOGO_GOLD . '!important;color:#0f0351!important;}';
 	/* Row: brand | location | spacer | auth — CTA is page-centered (desktop) */
 	echo '.elementor-location-header .elementor-section,.elementor-location-header [data-elementor-type="header"] .e-con{min-height:0!important;--min-height:0!important;padding-block:0!important;}';
@@ -1995,7 +1999,7 @@ function wrrapd_output_header_layout_css() {
 	echo '.elementor-location-header .elementor-element-00ec9fc{position:absolute!important;left:56%!important;top:50%!important;transform:translate(-50%,-50%)!important;z-index:3!important;flex:0 0 auto!important;width:auto!important;max-width:none!important;display:flex!important;align-items:center!important;justify-content:center!important;margin:0!important;pointer-events:auto!important;}';
 	echo '.elementor-location-header .elementor-element-7f1bdc1{width:auto!important;max-width:none!important;flex:0 0 auto!important;align-self:center!important;margin:0!important;}';
 	echo '.elementor-location-header .elementor-element-7f1bdc1 .elementor-widget-container,.elementor-location-header .elementor-element-7f1bdc1 .elementor-button-wrapper{display:flex!important;align-items:center!important;justify-content:center!important;width:auto!important;max-width:none!important;overflow:visible!important;}';
-	echo '.elementor-location-header .elementor-element-7f1bdc1 .elementor-button{display:inline-flex!important;align-items:center!important;justify-content:center!important;white-space:nowrap!important;width:auto!important;min-width:0!important;max-width:none!important;overflow:visible!important;font-size:clamp(.8rem,1.6vmin,.98rem)!important;line-height:1.15!important;padding:.55rem 1.55rem!important;min-height:2.55rem!important;height:auto!important;text-align:center!important;}';
+	echo '.elementor-location-header .elementor-element-7f1bdc1 .elementor-button{display:inline-flex!important;align-items:center!important;justify-content:center!important;white-space:nowrap!important;width:auto!important;min-width:0!important;max-width:none!important;overflow:visible!important;font-size:clamp(.8rem,1.6vmin,.98rem)!important;line-height:1.15!important;padding:.4rem 1.25rem!important;min-height:2.15rem!important;height:auto!important;text-align:center!important;}';
 	echo '.elementor-location-header .elementor-element-7f1bdc1 .elementor-button-text{white-space:nowrap!important;display:inline!important;overflow:visible!important;}';
 	echo '}';
 	/* Register/Login → Google → Amazon — always far right, above CTA if paths cross */
@@ -2433,7 +2437,8 @@ function wrrapd_fetch_orders_for_user( WP_User $user ) {
 
 /**
  * Hide the extension CTA only for signed-in users who already have Wrrapd orders.
- * Orange blink animation lives in Customizer Additional CSS (wrrapd-cta-blink) — do not override here.
+ * Orange blink also lives in Customizer Additional CSS (wrrapd-cta-blink); header layout CSS
+ * redefines it slower so the pulse does not fight a 1.05s Additional CSS rule.
  */
 function wrrapd_inject_header_cta_rules() {
 	if ( is_admin() ) {

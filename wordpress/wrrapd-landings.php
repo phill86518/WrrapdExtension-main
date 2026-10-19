@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_LANDINGS_BUILD', '2026-10-19-landings-v24' );
+define( 'WRRAPD_LANDINGS_BUILD', '2026-10-19-landings-v25' );
 define( 'WRRAPD_LANDING_COOKIE', 'wrrapd_lp' );
 define( 'WRRAPD_LANDING_RETIRED_SLUG', 'landing-retired-20261019' );
 
@@ -562,7 +562,11 @@ function wrrapd_landing_6_parts() {
 	$buy  = home_url( '/buy/' );
 	$icon = content_url( 'mu-plugins/icons/favicon/android-chrome-512x512.png' );
 	echo '<template id="wl6-parts">';
-	echo '<div class="wl6-ways" data-wl6="ways"><span class="wl6-ways-opt1">① Orange button below</span><span class="wl6-ways-sep"> · </span><span class="wl6-ways-opt2">② <a href="#paste-and-wrap">copy-paste your product link</a></span></div>';
+	echo '<div class="wl6-ways" data-wl6="ways">'
+		. '<p class="wl6-ways-lede">Premium gift-wrapping using either option below</p>'
+		. '<p class="wl6-ways-opt1">(1) Chrome Extension — click the button below to install</p>'
+		. '<p class="wl6-ways-opt2">(2) <a href="#paste-and-wrap">Copy-paste your product link</a> on this site</p>'
+		. '</div>';
 	echo '<section class="wl wl-ways-bar" data-wl6="waysbar" aria-label="Two ways to gift-wrap"><p>Two ways to gift-wrap</p><div>'
 		. wrrapd_landing_orange( $ext, 'Chrome extension' )
 		. '<a class="wl-ghost" href="#paste-and-wrap">Copy-paste your product link</a></div></section>';

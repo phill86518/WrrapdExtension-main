@@ -29,3 +29,7 @@
 a.wrrapd-ext-cta {
 	animation: wrrapd-cta-blink-slow 3.5s ease-in-out infinite !important;
 }
+
+/* Live Additional CSS historically used `wrrapd-cta-blink 1.05s` — MU header CSS now
+ * redefines that keyframe and duration. Prefer keeping Additional CSS at 3.5s too. */
+
