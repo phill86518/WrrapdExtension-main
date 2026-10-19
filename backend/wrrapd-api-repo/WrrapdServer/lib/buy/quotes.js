@@ -199,9 +199,14 @@ function applyRead(line, read, cfg) {
     if (p.pagePriceCents && p.pagePriceCents > cfg.perItemCapCents) {
         return markUnavailable(line, 'over_item_limit', overLimitMessage(p.pagePriceCents, cfg.perItemCapCents));
     }
-    if (p.choicePrompt && !openNow.length) {
+    // Never park a readable item in Excluded for ZIP / delivery gaps — keep it in the cart
+    // with whatever price, ship estimate, and date we have (including a wrong-ZIP date).
+    if (p.choicePrompt && /shipping ZIP|ships to|Set the page/i.test(p.choicePrompt)) {
+        p.choicePrompt = '';
+        line.message = '';
+    } else if (p.choicePrompt && !openNow.length && !p.pagePriceCents) {
         line.variantLabel = lineFacts.variantPhrase(p.variantGroups);
-        return markUnavailable(line, 'ship_zip', p.choicePrompt);
+        return markUnavailable(line, 'needs_choice', p.choicePrompt);
     }
     const open = openNow;
     line.variantLabel = lineFacts.variantPhrase(p.variantGroups);

@@ -434,12 +434,13 @@ function walmartShip(html, gifteeZip) {
     if (postal && giftee && postal !== giftee) {
         // IMPLICIT is Walmart's guess from the server's location, not the shopper's page.
         if (strength !== 'EXPLICIT') return { skip: true };
+        // Keep whatever date/price the page printed for its ZIP — never blank the cart.
         return {
             label: 'Standard shipping',
-            cents: null,
-            arrivalDate: null,
-            note: '',
-            choicePrompt: `This page ships to ${postal}. Set the page to ${giftee}, then add the link again.`,
+            cents,
+            arrivalDate: date,
+            note: cents === 0 ? 'Free standard shipping.' : '',
+            choicePrompt: '',
         };
     }
     if (!date && cents == null) return null;
@@ -513,6 +514,22 @@ function kohlsPlain(html) {
 /** Color names printed in the Kohl's product data. */
 function kohlsColorNames(html) {
     const names = [];
+    const raw = String(html || '');
+    // Prefer the PDP color-swatch strip so "Customers also viewed" colors never land in the cart.
+    const swatchChunk = raw.match(
+        /(?:pdp[-_]?(?:product[-_]?)?color|color[-_]?swatch|Select\s+Color)[\s\S]{0,12000}/i,
+    );
+    if (swatchChunk) {
+        const fromLabel = [...swatchChunk[0].matchAll(/(?:aria-label|title|alt|data-color)=["']([^"']{2,40})["']/gi)]
+            .map((m) => m[1].replace(/^(select|choose)\s+/i, '').trim());
+        for (const name of fromLabel) {
+            if (!/^[A-Za-z][A-Za-z0-9 /'.-]{0,30}$/.test(name)) continue;
+            if (/color|swatch|image|view/i.test(name) && !/beige|black|brown|tan|white|grey|gray|blue|red|green|navy|bone|cognac|bisc/i.test(name)) continue;
+            if (!names.includes(name)) names.push(name);
+        }
+        if (names.length) return names.slice(0, 20);
+    }
+    // Fallback: JSON color fields, but only the first product-sized cluster (avoid carousels).
     const re = /"color"\s*:\s*\[\s*\d+\s*,\s*"([^"]+)"\s*\]/g;
     let m;
     const text = kohlsPlain(html);
@@ -520,6 +537,7 @@ function kohlsColorNames(html) {
         const name = m[1].trim();
         if (!/^[A-Za-z][A-Za-z0-9 /'.-]{0,30}$/.test(name)) continue;
         if (!names.includes(name)) names.push(name);
+        if (names.length >= 12) break;
     }
     return names;
 }
@@ -557,6 +575,113 @@ function applyKohlsColors(groups, html, url) {
         group.selected = null;
     }
     return next;
+}
+
+function kohlsVisibleText(html) {
+    return String(html || '')
+        .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+        .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/&amp;/g, '&')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+/**
+ * Kohl's prints a delivery window, such as "Arrives by Oct 23 - Oct 27".
+ * A Kohl's Cash date range is not a delivery window.
+ */
+function kohlsDeliveryWindow(text) {
+    const src = String(text || '').replace(/\s+/g, ' ');
+    const range = src.match(/(?:arriv(?:e|es|ing)|get it|estimated delivery)(?:(?!kohl'?s cash).){0,90}?([A-Za-z]{3,9})\s+(\d{1,2})\s*[-–]\s*(?:[A-Za-z]{3,9},\s+)?([A-Za-z]{3,9})\s+(\d{1,2})/i);
+    if (range) {
+        const arrivalDate = ymdFromMonthDay(range[1], range[2]);
+        const arrivalDateEnd = ymdFromMonthDay(range[3], range[4]);
+        if (arrivalDate && arrivalDateEnd) return { arrivalDate, arrivalDateEnd };
+    }
+    const one = src.match(/(?:arriv(?:e|es|ing)|get it|estimated delivery)[^.]{0,40}?([A-Za-z]{3,9})\s+(\d{1,2})\b/i);
+    if (one) {
+        const arrivalDate = ymdFromMonthDay(one[1], one[2]);
+        if (arrivalDate) return { arrivalDate, arrivalDateEnd: null };
+    }
+    const block = src.match(/"estimatedDeliveryDates"\s*:\s*\{[^}]+\}/);
+    if (block) {
+        const start = block[0].match(/"startDate"\s*:\s*"(20\d{2}-\d{2}-\d{2})/);
+        const end = block[0].match(/"endDate"\s*:\s*"(20\d{2}-\d{2}-\d{2})/);
+        if (start) return { arrivalDate: start[1], arrivalDateEnd: end ? end[1] : null };
+    }
+    const min = src.match(/"(?:minDate|deliveryStartDate|earliestDeliveryDate)"\s*:\s*"(20\d{2}-\d{2}-\d{2})"/);
+    const max = src.match(/"(?:maxDate|deliveryEndDate|latestDeliveryDate)"\s*:\s*"(20\d{2}-\d{2}-\d{2})"/);
+    if (min) return { arrivalDate: min[1], arrivalDateEnd: max ? max[1] : null };
+    return null;
+}
+
+/**
+ * Price and options from a Scraping Browser Kohl's page.
+ * The delivery window is the one Kohl's prints for the giftee ZIP.
+ */
+function kohlsProductFromBrowserHtml(html, url) {
+    const rawTitle = (String(html || '').match(/<title>([^<]+)/i) || [])[1] || '';
+    const title = rawTitle.replace(/\s*[|–-]\s*Kohl.?s.*$/i, '').trim();
+    if (!title) return null;
+    const text = kohlsVisibleText(html);
+    const withCode = text.match(/\$(\d{1,4}\.\d{2})\s*with\s+[A-Z0-9]+/i)
+        || String(html || '').match(/\$(\d{1,4}\.\d{2})(?:\s|<[^>]*>){0,8}with\s+[A-Z0-9]+/i);
+    const nearSale = String(html || '').match(/\$(\d{1,4}\.\d{2})(?:\s|<[^>]*>){0,12}Sale\b/i);
+    const beforeReg = text.match(/\$(\d{1,4}\.\d{2})\s*\$(\d{1,4}\.\d{2})\s*Reg\b/i);
+    let dollars = withCode ? Number(withCode[1]) : null;
+    if (!(dollars > 0) && nearSale) dollars = Number(nearSale[1]);
+    if (!(dollars > 0) && beforeReg) dollars = Number(beforeReg[1]);
+    if (!(dollars > 0)) {
+        const any = [...text.matchAll(/\$(\d{1,4}\.\d{2})(\s*with\b)?/gi)]
+            .find((m) => !m[2] && Number(m[1]) > 0);
+        dollars = any ? Number(any[1]) : null;
+    }
+    const pagePriceCents = dollars > 0 ? Math.round(dollars * 100) : null;
+    const image = (String(html).match(/https:\/\/media\.kohlsimg\.com\/is\/image\/kohls\/[^"'\\\s<>]+/i) || [])[0] || '';
+    const brand = (kohlsPlain(html).match(/"brand"\s*:\s*(?:\[\s*\d+\s*,\s*)?"([^"]+)"/) || [])[1] || '';
+    const sizeNames = [];
+    const sizeRe = /"size"\s*:\s*\[\s*\d+\s*,\s*"([^"]+)"\s*\]/g;
+    let sizeMatch;
+    const plain = kohlsPlain(html);
+    while ((sizeMatch = sizeRe.exec(plain))) {
+        const name = sizeMatch[1].trim();
+        if (name && !sizeNames.includes(name)) sizeNames.push(name);
+    }
+    let variantGroups = [];
+    if (kohlsColorNames(html).length || kohlsSkuColor(html, url)) {
+        variantGroups.push({ name: 'Color', options: kohlsColorNames(html), selected: null });
+    }
+    variantGroups = applyKohlsColors(variantGroups, html, url);
+    if (sizeNames.length) {
+        variantGroups.push({
+            name: 'Size',
+            options: sizeNames.slice(0, 40),
+            selected: sizeNames.length === 1 ? sizeNames[0] : null,
+        });
+    }
+    const windowed = kohlsDeliveryWindow(text) || kohlsDeliveryWindow(String(html || ''));
+    const shipCents = pagePriceCents != null ? standardShipping.scheduleCents('kohls', pagePriceCents) : null;
+    return {
+        title: title.slice(0, 300),
+        brand: String(brand || '').trim().slice(0, 120),
+        imageUrl: image.slice(0, 1000),
+        category: '',
+        packageDimensions: null,
+        pagePriceCents,
+        standardShip: {
+            cents: shipCents,
+            arrivalDate: windowed ? windowed.arrivalDate : null,
+            arrivalDateEnd: windowed ? windowed.arrivalDateEnd : null,
+            note: shipCents === 0 ? 'Free standard shipping.' : '',
+        },
+        pageNotes: [],
+        inStock: /out of stock/i.test(text) ? false : (/in stock|add to cart/i.test(text) ? true : null),
+        isElectronics: false,
+        variantGroups,
+        choicePrompt: pagePriceCents == null ? 'Choose a size and color on the product page, then add the link again.' : '',
+        readBy: 'brightdata_browser',
+    };
 }
 
 function withSelectedColor(groups, color) {
@@ -627,7 +752,11 @@ async function targetProduct(url) {
     try {
         resp = await fetch(api, {
             signal: ctrl.signal,
-            headers: { 'User-Agent': UA, Accept: 'application/json', Referer: 'https://www.target.com/' },
+            headers: {
+                'User-Agent': 'Mozilla/5.0',
+                Accept: 'application/json',
+                Referer: 'https://www.target.com/',
+            },
         });
     } catch (_) {
         return null;
@@ -781,13 +910,16 @@ function cleanVariantGroups(groups) {
     if (!Array.isArray(groups)) return [];
     return groups
         .slice(0, 4)
-        .map((g) => ({
-            name: String((g && g.name) || '').trim().slice(0, 40),
-            options: Array.isArray(g && g.options)
+        .map((g) => {
+            const options = Array.isArray(g && g.options)
                 ? [...new Set(g.options.map((o) => String(o).trim().slice(0, 80)).filter((o) => o && !looksLikePackage(o)))].slice(0, 40)
-                : [],
-            selected: g && g.selected && !looksLikePackage(g.selected) ? String(g.selected).trim().slice(0, 80) : null,
-        }))
+                : [];
+            return {
+                name: String((g && g.name) || '').trim().slice(0, 40),
+                options,
+                selected: options.length === 1 ? options[0] : null,
+            };
+        })
         .filter((g) => g.name && g.options.length > 1);
 }
 
@@ -1108,12 +1240,13 @@ async function askGeminiProduct(url, zip, retailerId) {
         url,
         skuHint ? `The selected SKU in the URL is ${skuHint}. Use that color/size price.` : '',
         zip ? `Shopper ZIP ${zip}.` : '',
-        'Reply JSON only: {"title":"","brand":"","imageUrl":"","priceUsd":null,"compareAtUsd":null,"shippingUsd":null,"arrivalDate":null,"shipToZip":null,"inStock":null,"variantGroups":[{"name":"Color","options":[],"selected":null},{"name":"Size","options":[],"selected":null}]}',
-        'priceUsd must be the current dollar amount for the selected SKU when the page shows one. Prefer sale over crossed-out. Never invent.',
+        'Reply JSON only: {"title":"","brand":"","imageUrl":"","priceUsd":null,"compareAtUsd":null,"shippingUsd":null,"arrivalDate":null,"arrivalDateEnd":null,"shipToZip":null,"inStock":null,"variantGroups":[{"name":"Color","options":[],"selected":null},{"name":"Size","options":[],"selected":null}]}',
+        'priceUsd is the discounted price next to a code (such as with GET20). If no code price is shown, use the Sale price. Never use the Reg price. Never invent.',
+        'When a delivery range is printed, arrivalDate is the first day and arrivalDateEnd is the last day, both YYYY-MM-DD.',
         'imageUrl is the main product https photo.',
         'shippingUsd is non-member standard shipping; 0 only if free for every shopper with no minimum; otherwise null when unsure.',
         'arrivalDate YYYY-MM-DD when shown. shipToZip is the Shipping-to ZIP when shown.',
-        'Fill variantGroups Color/Size options and selected when visible.',
+        'Fill variantGroups with the Color and Size options. Leave selected null when more than one option is listed.',
     ].filter(Boolean).join('\n');
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 32000);
@@ -1145,7 +1278,8 @@ async function askGeminiProduct(url, zip, retailerId) {
             : (Number.isFinite(ship) && ship > 0 ? Math.round(ship * 100) : null);
         const shipToZip = /^\d{5}$/.test(String(facts.shipToZip || '')) ? String(facts.shipToZip) : '';
         const zipMismatch = !!(zip && shipToZip && shipToZip !== String(zip));
-        const arrival = zipMismatch ? null : (/^\d{4}-\d{2}-\d{2}$/.test(String(facts.arrivalDate || '')) ? String(facts.arrivalDate) : null);
+        const arrival = zipMismatch ? null : futureYmd(String(facts.arrivalDate || ''));
+        const arrivalEnd = zipMismatch ? null : futureYmd(String(facts.arrivalDateEnd || ''));
         const choicePrompt = zipMismatch
             ? `This page ships to ${shipToZip}. Set the page to ${zip}, then add the link again.`
             : (pagePriceCents == null ? 'Choose a size and color on the product page, then add the link again.' : '');
@@ -1162,6 +1296,7 @@ async function askGeminiProduct(url, zip, retailerId) {
             standardShip: {
                 cents: shipCents,
                 arrivalDate: arrival,
+                arrivalDateEnd: arrivalEnd && arrival && arrivalEnd > arrival ? arrivalEnd : null,
                 note: shipCents === 0 ? 'Free standard shipping.' : '',
             },
             pageNotes: [],
@@ -1188,7 +1323,16 @@ async function productFromBrowse(retailer, retailerMeta, product, zip) {
             ship = { ...ship, cents: null, note: '' };
         }
     }
-    if (!product.choicePrompt) ship = withDefaultShip(retailer, ship, product.pagePriceCents || 0) || ship;
+    // Always fill standard ship $ and a date (printed ZIP date or calendar estimate). Never blank the cart.
+    ship = withDefaultShip(retailer, ship, product.pagePriceCents || 0) || ship;
+    if (ship && !ship.arrivalDate) {
+        ship = { ...ship, arrivalDate: standardShipping.estimateArrivalDate() };
+    }
+    // ZIP mismatch / missing date must not kick the item out — drop those prompts.
+    let choicePrompt = product.choicePrompt || '';
+    if (/shipping ZIP|ships to|Set the page|Set the product page shipping ZIP/i.test(choicePrompt)) {
+        choicePrompt = '';
+    }
     const amazonCategory = await categories.categorize({
         retailer,
         retailerName: retailerMeta.name,
@@ -1208,7 +1352,7 @@ async function productFromBrowse(retailer, retailerMeta, product, zip) {
             standardShip: ship,
             amazonCategory,
             pageOffer,
-            choicePrompt: product.choicePrompt || '',
+            choicePrompt,
             readAt: new Date().toISOString(),
             readBy: product.readBy || 'gemini',
         },
@@ -1265,14 +1409,339 @@ function sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+const KOHLS_FANOUT_MS = 100000;
+/** Recent successful Kohl's reads for the same product URL (price/options only). */
+const kohlsReadCache = new Map();
+const KOHLS_CACHE_MS = 10 * 60 * 1000;
+
+function kohlsCacheKey(url) {
+    try {
+        const u = new URL(String(url || ''));
+        u.hash = '';
+        return `${u.hostname.toLowerCase()}${u.pathname.replace(/\/$/, '')}${u.search}`;
+    } catch {
+        return String(url || '').slice(0, 300);
+    }
+}
+
+function cacheKohlsProduct(url, product) {
+    if (!product || !product.title || product.pagePriceCents == null) return;
+    const copy = {
+        ...product,
+        variantGroups: (product.variantGroups || []).map((g) => ({
+            name: g.name,
+            options: (g.options || []).slice(),
+            selected: (g.options || []).length === 1 ? g.options[0] : null,
+        })),
+        choicePrompt: '',
+        readBy: `${product.readBy || 'cache'}+cache`,
+    };
+    kohlsReadCache.set(kohlsCacheKey(url), { at: Date.now(), product: copy });
+}
+
+function cachedKohlsProduct(url) {
+    const row = kohlsReadCache.get(kohlsCacheKey(url));
+    if (!row) return null;
+    if (Date.now() - row.at > KOHLS_CACHE_MS) {
+        kohlsReadCache.delete(kohlsCacheKey(url));
+        return null;
+    }
+    return {
+        ...row.product,
+        variantGroups: (row.product.variantGroups || []).map((g) => ({
+            name: g.name,
+            options: (g.options || []).slice(),
+            selected: (g.options || []).length === 1 ? g.options[0] : null,
+        })),
+        readBy: `${row.product.readBy || 'cache'}`.replace(/\+cache$/, '') + '+cache',
+    };
+}
+
+function futureYmd(value) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value || ''))) return null;
+    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+    return value >= today ? value : null;
+}
+
+function blankKohls() {
+    return {
+        title: '',
+        brand: '',
+        imageUrl: '',
+        category: '',
+        packageDimensions: null,
+        pagePriceCents: null,
+        standardShip: { cents: null, arrivalDate: null, arrivalDateEnd: null, note: '' },
+        pageNotes: [],
+        inStock: null,
+        isElectronics: false,
+        variantGroups: [],
+        choicePrompt: '',
+        readBy: '',
+    };
+}
+
+/** Keep the lower price, a printed delivery window, and page-true choices (browser beats Gemini). */
+function mergeKohlsPart(acc, part) {
+    if (!part) return acc;
+    if (!acc.title && part.title && !/access denied/i.test(part.title)) acc.title = part.title;
+    if (!acc.brand && part.brand) acc.brand = part.brand;
+    if (!acc.imageUrl && part.imageUrl) acc.imageUrl = part.imageUrl;
+    if (part.pagePriceCents != null && part.pagePriceCents > 0 && (acc.pagePriceCents == null || part.pagePriceCents < acc.pagePriceCents)) {
+        acc.pagePriceCents = part.pagePriceCents;
+    }
+    const ship = part.standardShip || {};
+    if (futureYmd(ship.arrivalDate) && !acc.standardShip.arrivalDate) acc.standardShip.arrivalDate = futureYmd(ship.arrivalDate);
+    if (futureYmd(ship.arrivalDateEnd) && !acc.standardShip.arrivalDateEnd) acc.standardShip.arrivalDateEnd = futureYmd(ship.arrivalDateEnd);
+    if (ship.cents != null && ship.cents > 0 && (acc.standardShip.cents == null || acc.standardShip.cents === 0)) {
+        acc.standardShip.cents = ship.cents;
+    }
+    const groups = (part.variantGroups || []).map((g) => ({
+        name: g.name,
+        options: (g.options || []).slice(),
+        selected: null,
+    }));
+    const partBy = String(part.readBy || '');
+    const accBy = String(acc.readBy || '');
+    const partIsBrowser = /brightdata_browser/.test(partBy);
+    const accHasBrowser = /brightdata_browser/.test(accBy);
+    // Never let Gemini / Grok inflate color-size lists over a Scraping Browser read.
+    if (groups.length) {
+        if (partIsBrowser || !acc.variantGroups.length) {
+            if (partIsBrowser || !accHasBrowser) acc.variantGroups = groups;
+        }
+    }
+    if (part.inStock === false) acc.inStock = false;
+    if (part.readBy && !String(acc.readBy).split('+').includes(part.readBy)) {
+        acc.readBy = [acc.readBy, part.readBy].filter(Boolean).join('+');
+    }
+    if (acc.pagePriceCents != null) {
+        const scheduled = standardShipping.scheduleCents('kohls', acc.pagePriceCents);
+        if (acc.standardShip.cents == null || (acc.standardShip.cents === 0 && scheduled > 0)) {
+            acc.standardShip.cents = scheduled;
+            acc.standardShip.note = scheduled === 0 ? 'Free standard shipping.' : '';
+        }
+        if (!acc.standardShip.arrivalDate) {
+            acc.standardShip.arrivalDate = standardShipping.estimateArrivalDate();
+        }
+    }
+    return acc;
+}
+
+function kohlsReady(acc) {
+    const names = (acc.variantGroups || []).map((g) => String(g.name || '').toLowerCase());
+    const hasColor = names.some((n) => /color/.test(n));
+    const hasSize = names.some((n) => /size/.test(n));
+    return !!(
+        acc.title
+        && acc.pagePriceCents != null
+        && acc.standardShip.cents != null
+        && acc.standardShip.arrivalDate
+        && hasColor
+        && hasSize
+    );
+}
+
+async function grokKohlsProduct(url, html) {
+    if (!grokClient.isConfigured()) return null;
+    const { facts, meta } = await askGrok({ retailerName: "Kohl's", url, html });
+    if (!facts || facts.kind === 'list') return null;
+    const title = String((facts && facts.title) || (meta && meta.title) || '').trim();
+    if (!title || /access denied/i.test(title)) return null;
+    const priceUsd = Number(facts.priceUsd);
+    const pagePriceCents = priceAppearsInPage(html, priceUsd) ? Math.round(priceUsd * 100) : null;
+    const shipUsd = facts.standardShipping && Number(facts.standardShipping.priceUsd);
+    const printedShip = facts.standardShipping && priceAppearsInPage(html, shipUsd) ? Math.round(shipUsd * 100) : null;
+    const arrival = facts.standardShipping && /^\d{4}-\d{2}-\d{2}$/.test(String(facts.standardShipping.arrivalDate || ''))
+        ? String(facts.standardShipping.arrivalDate)
+        : null;
+    const windowed = kohlsDeliveryWindow(html);
+    return {
+        title: title.slice(0, 300),
+        brand: String((facts && facts.brand) || '').slice(0, 120),
+        imageUrl: safeImageUrl(facts && facts.imageUrl) || safeImageUrl(meta && meta.image) || '',
+        pagePriceCents,
+        standardShip: {
+            cents: printedShip,
+            arrivalDate: (windowed && windowed.arrivalDate) || arrival,
+            arrivalDateEnd: windowed ? windowed.arrivalDateEnd : null,
+            note: '',
+        },
+        variantGroups: cleanVariantGroups(facts.variantGroups),
+        inStock: facts.inStock === false ? false : facts.inStock === true ? true : null,
+        readBy: 'grok',
+    };
+}
+
+function kohlsFromHtml(html, url, readBy) {
+    if (!pageIsUsable('kohls', { ok: true, html })) return null;
+    const parsed = kohlsProductFromBrowserHtml(html, url);
+    if (!parsed || !parsed.title) return null;
+    parsed.readBy = readBy;
+    return parsed;
+}
+
+/**
+ * Every Kohl's reader starts together. The shopper gets the line as soon as
+ * title, discounted price, shipping, a printed delivery date, and choices are in.
+ * Cap is 100s so a slow Scraping Browser result is kept.
+ */
+function readKohlsFanout({ r, url, zip }) {
+    const cached = cachedKohlsProduct(url);
+    if (cached) {
+        console.log('[buy-read]', 'kohls', 'cache hit', `price=${cached.pagePriceCents}`, String(url).slice(0, 90));
+        return productFromBrowse('kohls', r, cached, zip);
+    }
+    const started = Date.now();
+    const acc = blankKohls();
+    const reported = new Set();
+    let pending = 0;
+    let finished = false;
+    let grokStarted = false;
+    let resolveDone;
+    const done = new Promise((resolve) => { resolveDone = resolve; });
+    const finish = (why) => {
+        if (finished) return;
+        finished = true;
+        resolveDone(why);
+    };
+    const logReader = (name, ms, detail) => {
+        console.log('[buy-read]', 'kohls', name, `${ms}ms`, detail, String(url).slice(0, 90));
+    };
+    const consider = (name, ms, part) => {
+        if (finished) {
+            logReader(name, ms, part ? 'late' : 'late-miss');
+            return;
+        }
+        if (part) mergeKohlsPart(acc, part);
+        reported.add(name);
+        const bits = [
+            acc.pagePriceCents != null ? `price=${acc.pagePriceCents}` : 'price=null',
+            acc.standardShip.cents != null ? `ship=${acc.standardShip.cents}` : 'ship=null',
+            acc.standardShip.arrivalDate ? `date=${acc.standardShip.arrivalDate}` : 'date=null',
+            (acc.variantGroups || []).length ? `choices=${acc.variantGroups.map((g) => g.name).join('+')}` : 'choices=none',
+        ].join(' ');
+        logReader(name, ms, part ? bits : 'miss');
+        if (kohlsReady(acc)) finish('ready');
+    };
+    const track = (name, promise) => {
+        pending += 1;
+        const t0 = Date.now();
+        Promise.resolve(promise).then(
+            (part) => consider(name, Date.now() - t0, part),
+            () => consider(name, Date.now() - t0, null),
+        ).finally(() => {
+            pending -= 1;
+            if (pending <= 0) finish('all');
+        });
+    };
+    const maybeGrok = (html) => {
+        if (grokStarted || finished || !html) return;
+        grokStarted = true;
+        track('grok', grokKohlsProduct(url, html));
+    };
+    const fromPage = (name, readBy) => (page) => {
+        const html = page && page.html;
+        maybeGrok(html);
+        return kohlsFromHtml(html, url, readBy);
+    };
+
+    track('browser', brightdata.browserConfigured()
+        ? brightdata.fetchHtmlViaBrowser(url, { zip }).then(fromPage('browser', 'brightdata_browser'))
+        : Promise.resolve(null));
+    track('gemini', geminiKey() ? askGeminiProduct(url, zip, 'kohls') : Promise.resolve(null));
+    track('unlocker', brightdata.isConfigured()
+        ? fetchViaBrightData('kohls', url).then(fromPage('unlocker', 'brightdata_unlocker'))
+        : Promise.resolve(null));
+    track('dataset', brightdata.isConfigured()
+        ? brightdata.scrapeKohlsProduct(url).then((scraped) => (scraped && scraped.ok && scraped.product) || null)
+        : Promise.resolve(null));
+    // ZenRows always RESP001s on Kohl's — skip it so we do not burn a minute on a known miss.
+    track('direct', fetchDirect('kohls', url).then((page) => fromPage('direct', 'direct')(page)));
+
+    const timer = setTimeout(() => finish('cap'), KOHLS_FANOUT_MS);
+    return done.then((why) => {
+        clearTimeout(timer);
+        const ms = Date.now() - started;
+        const quiet = ['browser', 'gemini', 'unlocker', 'dataset', 'direct', 'grok'].filter((name) => !reported.has(name));
+        if (quiet.length) console.log('[buy-read]', 'kohls', 'still-running', quiet.join(','), `${ms}ms`);
+        if (acc.title && acc.pagePriceCents != null) {
+            if (acc.standardShip.cents == null) {
+                acc.standardShip.cents = standardShipping.scheduleCents('kohls', acc.pagePriceCents);
+            }
+            if (!acc.standardShip.arrivalDate) {
+                acc.standardShip.arrivalDate = standardShipping.estimateArrivalDate();
+            }
+            cacheKohlsProduct(url, acc);
+            console.log(
+                '[buy-read]',
+                'kohls',
+                'stop',
+                why,
+                `${ms}ms`,
+                `price=${acc.pagePriceCents}`,
+                `ship=${acc.standardShip.cents}`,
+                `date=${acc.standardShip.arrivalDate || 'null'}`,
+                `by=${acc.readBy}`,
+                String(url).slice(0, 90),
+            );
+            return productFromBrowse('kohls', r, acc, zip);
+        }
+        console.warn('[buy-read]', 'kohls', 'stop', why, `${ms}ms`, 'no_price', String(url).slice(0, 90));
+        return { ok: false, reason: 'blocked', needsPerson: true };
+    });
+}
+
 async function readProduct({ retailer, url, zip, state, batchId, lineId }) {
     const r = retailers.byId(retailer);
     if (!r) return { ok: false, reason: 'retailer_not_supported', needsPerson: false };
     const savedHtml = savedPageHtml(retailer, url, { batchId, lineId });
 
-    // Kohl's: Gemini first (fast). Bright Data scraper often returns error_code=blocked;
-    // Unlocker needs a zone in the Bright Data CP. Try scraper when Gemini misses price.
-    if (!savedHtml && GEMINI_FIRST_RETAILERS.has(retailer) && geminiKey()) {
+    // Target's price is on their product API. Use it immediately so a title-only page is never saved.
+    if (!savedHtml && retailer === 'target') {
+        const tf = await targetProduct(url);
+        if (tf && tf.title && tf.pagePriceCents) {
+            const shipCents = tf.standardShip && tf.standardShip.cents === 0
+                ? 0
+                : standardShipping.scheduleCents('target', tf.pagePriceCents);
+            console.log(
+                '[buy-read]',
+                'target',
+                'redsky ok',
+                `price=${tf.pagePriceCents}`,
+                `ship=${shipCents}`,
+                String(url).slice(0, 100),
+            );
+            return productFromBrowse(retailer, r, {
+                title: tf.title,
+                brand: tf.brand || '',
+                imageUrl: tf.imageUrl || '',
+                category: tf.category || '',
+                packageDimensions: null,
+                pagePriceCents: tf.pagePriceCents,
+                standardShip: {
+                    cents: shipCents,
+                    arrivalDate: null,
+                    note: shipCents === 0 ? 'Free standard shipping.' : '',
+                },
+                pageNotes: [],
+                inStock: null,
+                isElectronics: tf.isElectronics === true,
+                variantGroups: [],
+                choicePrompt: '',
+                readBy: 'target_api',
+            }, zip);
+        }
+        console.warn('[buy-read]', 'target', 'redsky', tf && tf.title ? 'no_price' : 'miss', String(url).slice(0, 100));
+    }
+
+    // Kohl's readers all start here. Nothing below this runs for a live Kohl's link.
+    if (!savedHtml && retailer === 'kohls') {
+        return readKohlsFanout({ r, url, zip });
+    }
+
+    let kohlsHtml = null;
+    if (!savedHtml && !kohlsHtml && GEMINI_FIRST_RETAILERS.has(retailer) && geminiKey() && !(retailer === 'kohls' && brightdata.isConfigured())) {
         let browsed = await askGeminiProduct(url, zip, retailer);
         // Price is required for a usable cart line; retry once when the title landed without it.
         if (browsed && browsed.title && browsed.pagePriceCents == null) {
@@ -1321,30 +1790,11 @@ async function readProduct({ retailer, url, zip, state, batchId, lineId }) {
         return { ok: false, reason: 'blocked', needsPerson: true };
     }
 
-    if (!savedHtml && retailer === 'kohls' && brightdata.isConfigured()) {
-        const scraped = await brightdata.scrapeKohlsProduct(url);
-        if (scraped.ok && scraped.product && scraped.product.title && scraped.product.pagePriceCents != null) {
-            console.log(
-                '[buy-read]',
-                'kohls',
-                'brightdata_scraper ok',
-                `price=${scraped.product.pagePriceCents}`,
-                String(url).slice(0, 100),
-            );
-            return productFromBrowse(retailer, r, scraped.product, zip);
-        }
-        console.warn(
-            '[buy-read]',
-            'kohls',
-            'brightdata_scraper',
-            (scraped && scraped.reason) || 'miss',
-            String(url).slice(0, 100),
-        );
-    }
-
     let page;
     if (savedHtml) {
         page = { ok: true, html: savedHtml, finalUrl: url, fromSavedPage: true };
+    } else if (kohlsHtml) {
+        page = kohlsHtml;
     } else {
         try {
             page = await fetchPage(retailer, url);
@@ -1498,12 +1948,13 @@ async function readProduct({ retailer, url, zip, state, batchId, lineId }) {
             zipChecked = !choicePrompt;
         }
     }
+    // Wrong page ZIP: keep the printed date/price. Never clear shipping to force a re-paste.
     if (!choicePrompt && !zipChecked) {
         const seenZip = pageShipZip(page.html) || (/^\d{5}$/.test(String(facts.shipToZip || '')) ? String(facts.shipToZip) : '');
-        choicePrompt = zipMismatchPrompt(zip, seenZip);
+        if (zipMismatchPrompt(zip, seenZip)) choicePrompt = '';
     }
-    if (choicePrompt) chosen = null;
-    if (!choicePrompt) chosen = withDefaultShip(retailer, chosen, pagePriceCents || 0);
+    if (/shipping ZIP|ships to|Set the page/i.test(choicePrompt)) choicePrompt = '';
+    chosen = withDefaultShip(retailer, chosen, pagePriceCents || 0) || chosen;
     if (chosen && !chosen.arrivalDate) {
         const printed = standardFromPage(page.html, pagePriceCents || 0);
         if (printed && printed.arrivalDate) chosen = { ...chosen, arrivalDate: printed.arrivalDate };
@@ -1511,10 +1962,16 @@ async function readProduct({ retailer, url, zip, state, batchId, lineId }) {
     const indicated = /^\d{4}-\d{2}-\d{2}$/.test(String(facts.standardShipping && facts.standardShipping.arrivalDate || ''))
         ? String(facts.standardShipping.arrivalDate)
         : '';
-    if (!choicePrompt && indicated && (!chosen || !chosen.arrivalDate)) {
+    if (indicated && (!chosen || !chosen.arrivalDate)) {
         chosen = { label: 'Standard shipping', cents: chosen && chosen.cents != null ? chosen.cents : null, arrivalDate: indicated, note: (chosen && chosen.note) || '' };
     }
+    if (chosen && !chosen.arrivalDate) {
+        chosen = { ...chosen, arrivalDate: standardShipping.estimateArrivalDate() };
+    }
     if (!title) return { ok: false, reason: 'no_title', needsPerson: true };
+    if (!pagePriceCents && !cleanVariantGroups(facts.variantGroups).some((g) => (g.options || []).length > 1)) {
+        return { ok: false, reason: 'no_price', needsPerson: false };
+    }
     const pageOffer = pagePriceCents && chosen && chosen.cents != null ? { itemPriceCents: pagePriceCents, shippingOptions: [chosen] } : null;
     const amazonCategory = await categories.categorize({ retailer, retailerName: r.name, html: page.html, title, brand, category });
     return {
@@ -1543,6 +2000,6 @@ async function readProduct({ retailer, url, zip, state, batchId, lineId }) {
 }
 
 module.exports = {
-    readProduct, askGrok, askGeminiProduct, looksElectronic, priceAppearsInPage, jsonLdProducts, visibleText, fetchPage, usablePage, DIRECT_MS, standardFromPage, walmartShip, bestbuyShip, pageShipZip, zipMismatchPrompt, kohlsSkuColor, kohlsColorNames, applyKohlsColors, withDefaultShip, targetFulfillment,
+    readProduct, askGrok, askGeminiProduct, looksElectronic, priceAppearsInPage, jsonLdProducts, visibleText, fetchPage, usablePage, DIRECT_MS, standardFromPage, walmartShip, bestbuyShip, pageShipZip, zipMismatchPrompt, kohlsSkuColor, kohlsColorNames, applyKohlsColors, kohlsProductFromBrowserHtml, withDefaultShip, targetFulfillment,
     nordstromShell, nordstromFromHtml, struckSaleCents, savedPageHtml, EXTERNAL_PAGES_DIR, GEMINI_FIRST_RETAILERS,
 };

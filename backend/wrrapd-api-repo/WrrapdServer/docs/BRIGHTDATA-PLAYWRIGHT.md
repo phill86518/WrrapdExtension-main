@@ -1,20 +1,37 @@
 # Bright Data + Playwright (Kohl's / hard retailers)
 
+## Strategy (Akamai — Kohl's)
+
+Kohl's sits behind **Akamai**, not Cloudflare. Detection changes often; a DIY stack
+(`curl_cffi` TLS spoof + Playwright stealth + rotating residentials) needs ongoing
+reverse engineering. For Wrrapd we **buy** the hard part: Bright Data Web Unlocker,
+Scraping Browser, and the Kohl's dataset. Keep open-source Playwright only for
+signed-in quote profiles on a machine with a real display.
+
+We already capture the shopper IP on the batch (`client.ip`). That is useful for
+Helcim / fraud and for knowing mobile vs home — it is **not** something Bright Data
+can exit as. Arbitrary home IPs are not in their peer pool; forcing `state`/`city` on
+our Unlocker zone returns HTTP 407, and Scraping Browser city pins can return
+`no_peers`. Stick to `BRIGHTDATA_COUNTRY=us`. Delivery ZIP (e.g. 32218 Jacksonville)
+is set inside the Scraping Browser page via `prepareKohlsDelivery`.
+
 ## Env (never commit)
 
 ```bash
 BRIGHTDATA_API_KEY=your_api_token_here
-BRIGHTDATA_UNLOCKER_ZONE=mcp_unlocker   # must exist in Bright Data CP → Zones
-BRIGHTDATA_KOHLS_DATASET_ID=gd_mlji2hi729x1g0vg4i
+BRIGHTDATA_UNLOCKER_ZONE=web_unlocker1   # zone name from Bright Data CP
+BRIGHTDATA_KOHLS_DATASET_ID=gd_mjwhpd7x2m0n36whj8
+WRRAPD_HOME_IP=73.53.188.4              # Jacksonville FL home — reference / logging only
+BRIGHTDATA_COUNTRY=us
 ```
 
 ## Kohl's live product price (primary)
 
-Pre-built scraper **Kohl's Products unified schema** (`gd_mlji2hi729x1g0vg4i`):
+Pre-built scraper **Kohls.com → Collect by URL** (`gd_mjwhpd7x2m0n36whj8`): price plus `shipping_options` (cost and delivery). The unified-schema scraper (`gd_mlji2hi729x1g0vg4i`) has a sale price and no shipping.
 
 ```bash
 curl -X POST \
-  "https://api.brightdata.com/datasets/v3/trigger?dataset_id=gd_mlji2hi729x1g0vg4i&format=json&include_errors=true" \
+  "https://api.brightdata.com/datasets/v3/trigger?dataset_id=gd_mjwhpd7x2m0n36whj8&format=json&include_errors=true" \
   -H "Authorization: Bearer $BRIGHTDATA_API_KEY" \
   -H "Content-Type: application/json" \
   -d '[{"url":"https://www.kohls.com/product/prd-7513461/lifestride-london-3-womens-loafers.jsp?skuId=50653163"}]'

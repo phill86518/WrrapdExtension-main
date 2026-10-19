@@ -230,8 +230,11 @@
     var variant = variantText(l.variantLabel);
     if (variant) h += '<p class="wb-variant">' + esc(variant) + '</p>';
     if (l.product && l.product.isElectronics) h += '<p class="wb-muted">Electronics</p>';
-    if (l.state === 'reading') h += '<p class="wb-status"><span class="wb-spin"></span>' + WAIT_ADD + '</p>';
-    if (l.state === 'needs_variant') {
+    if (l.state === 'reading') {
+      h += '<p class="wb-status"><span class="wb-spin"></span>' +
+        (l.product ? 'Updating this item…' : WAIT_ADD) + '</p>';
+    }
+    if (l.state === 'needs_variant' && l.product) {
       var groups = l.product.variantGroups || [];
       h += '<div class="wb-variants">';
       groups.forEach(function (vg) {

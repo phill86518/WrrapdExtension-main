@@ -121,7 +121,10 @@ const SKIP_RETRY_REASONS = new Set([
     'over_item_limit',
 ]);
 
-/** On full page load, put Excluded (unavailable) lines back into reading so we re-try the cart add. */
+/**
+ * On full page load, re-try Excluded lines. Keep the last product on the line so the cart
+ * still shows title/price/image while we re-read (wiping product made Ulta/Target look broken).
+ */
 async function reviveExcludedOnRefresh(batchId) {
     const out = await store.update(batchId, (b) => {
         if (!b || b.status !== 'open') return null;
@@ -135,11 +138,9 @@ async function reviveExcludedOnRefresh(batchId) {
             l.reason = '';
             l.message = '';
             l.readFailure = '';
-            l.product = null;
-            l.variantLabel = '';
+            // Do NOT clear l.product / variantLabel — shopper keeps seeing the last good card.
             l.readStartedAt = now;
             l.readTries = (l.readTries || 0) + 1;
-            l.wrap = null;
             if (l.retailer) quotes.ensureGroup(b, l.retailer).state = 'waiting';
             n += 1;
         }
@@ -452,6 +453,18 @@ module.exports = function mountBuyForYou(app, deps) {
         if (!api(req, res)) return;
         const batch = loadForShopper(req, res);
         if (!batch) return;
+        const shopperIp = clientIpForHelcim(req);
+        const shopperUa = cleanText(req.get('user-agent'), 300);
+        if (shopperIp && shopperIp !== '0.0.0.0') {
+            await store.update(batch.id, (b) => {
+                b.client = b.client || {};
+                if (b.client.ip === shopperIp && b.client.ua === shopperUa) return null;
+                b.client.ip = shopperIp;
+                b.client.ua = shopperUa || b.client.ua || '';
+                b.client.seenAt = new Date().toISOString();
+                return b;
+            });
+        }
         const wantRetry =
             req.query.retryExcluded === '1' ||
             req.query.retryExcluded === 'true' ||

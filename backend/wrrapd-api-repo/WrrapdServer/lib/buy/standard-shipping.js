@@ -91,15 +91,20 @@ function estimateArrivalDate(from = new Date(), businessDays = ESTIMATE_BUSINESS
     return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 }
 
-/** Fills a missing per-item shipping price from the standard schedule for that item's price. */
+/**
+ * Fills missing standard-ship cents from the retailer schedule, and a calendar
+ * estimate when Kohl's (or anyone) printed no date — including when the page ZIP
+ * is not the giftee ZIP. Never leave the cart blank for shipping/date.
+ */
 function fillMissing(retailer, chosen, merchandiseCents) {
-    if (chosen && chosen.cents != null) return chosen;
     const scheduled = scheduleCents(retailer, Number(merchandiseCents) || 0);
-    if (scheduled == null) return chosen;
+    const cents = chosen && chosen.cents != null ? chosen.cents : scheduled;
+    if (cents == null && !(chosen && chosen.arrivalDate)) return chosen || null;
     return {
-        label: 'Standard shipping',
-        cents: scheduled,
-        arrivalDate: (chosen && chosen.arrivalDate) || null,
+        label: (chosen && chosen.label) || 'Standard shipping',
+        cents: cents != null ? cents : null,
+        arrivalDate: (chosen && chosen.arrivalDate) || estimateArrivalDate(),
+        arrivalDateEnd: (chosen && chosen.arrivalDateEnd) || null,
         note: (chosen && chosen.note) || '',
     };
 }
