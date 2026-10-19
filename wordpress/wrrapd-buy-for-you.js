@@ -63,7 +63,7 @@
     var p = ymd.split('-').map(Number);
     return new Date(Date.UTC(p[0], p[1] - 1, p[2], 12)).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' });
   }
-  /** Latest Estimated Delivery* across cart items (uses end of a printed window when present). */
+  /** Latest Estimated Delivery* to Wrrapd (end of a printed window when present). */
   function latestItemArrivalYmd() {
     var latest = '';
     cartSlotLines().forEach(function (l) {
@@ -74,11 +74,49 @@
     });
     return latest;
   }
+  function ymdPlusOne(ymd) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(ymd || '')) return '';
+    var p = ymd.split('-').map(Number);
+    return new Date(Date.UTC(p[0], p[1] - 1, p[2] + 1)).toISOString().slice(0, 10);
+  }
   function deliveryFootnote() {
-    var latest = latestItemArrivalYmd();
-    var line = '* Estimated delivery date to Wrrapd; final gift delivery to the giftee may add 1 day.';
-    if (latest) line += ' Wrrapd will deliver all gifts together on ' + fmtDate(latest) + '.';
+    var hub = latestItemArrivalYmd();
+    var together = hub ? ymdPlusOne(hub) : '';
+    var line = '* Estimated delivery date to Wrrapd; final gift delivery to the giftee may add 1 day';
+    if (together) line += '; all gifts delivered together on ' + fmtDate(together) + '.';
+    else line += '.';
     return line;
+  }
+  function cartHasElectronics() {
+    return readyLines().some(function (l) { return l.product && l.product.isElectronics; });
+  }
+  /** Need Terms when never accepted, version changed, or electronics were added after accept. */
+  function needsTermsGate() {
+    if (!S.batch) return false;
+    if (S.batch.needsTerms === true) return true;
+    if (!S.batch.termsAccepted) return true;
+    if (cartHasElectronics() && !S.batch.electronicsAccepted) return true;
+    return false;
+  }
+  function ensureTermsLoaded() {
+    if (S.terms && S.terms.version) return Promise.resolve(S.terms);
+    return fetch(API + '/api/buy/terms').then(function (r) { return r.json(); }).then(function (j) {
+      S.terms = j;
+      return j;
+    });
+  }
+  /** Show Terms first; after Agree, continue to wrap / pay / review. */
+  function openTermsThen(next) {
+    S.pendingAfterTerms = next || 'wrap';
+    S.termsOpen = true;
+    S.termsScrolled = false;
+    S.wrapOpen = false;
+    S.error = '';
+    ensureTermsLoaded().then(function () { render(); }).catch(function () {
+      S.error = 'Please refresh the page to load the Terms.';
+      render();
+    });
+    render();
   }
   function $(sel) { return root.querySelector(sel); }
   function $all(sel) { return Array.prototype.slice.call(root.querySelectorAll(sel)); }
@@ -976,8 +1014,14 @@
     if (act === 'pick-variant') return pickVariant(el);
     if (act === 'variant') return submitVariant(el.getAttribute('data-line'));
     if (act === 'open-wrap') return openWrap();
-    if (act === 'to-review') { S.view = 'review'; S.wrapOpen = false; render(); return; }
-    if (act === 'close-terms') { S.termsOpen = false; S.wrapOpen = false; render(); return; }
+    if (act === 'to-review') {
+      if (needsTermsGate()) { openTermsThen('review'); return; }
+      S.view = 'review'; S.wrapOpen = false; render(); return;
+    }
+    if (act === 'close-terms') {
+      S.termsOpen = false; S.wrapOpen = false; S.pendingAfterTerms = '';
+      render(); return;
+    }
     if (act === 'accept') return accept();
     if (act === 'wrap-close') { S.wrapOpen = false; S.flowersOpen = false; render(); return; }
     if (act === 'wrap-back') {
@@ -1070,9 +1114,13 @@
     if (!lines.length) return;
     var idx = lines.findIndex(function (l) { return !(l.wrap && l.wrap.done); });
     S.wrapIndex = idx < 0 ? 0 : idx;
-    S.wrapOpen = true;
     S.flowersOpen = false;
-    if (!S.batch.termsAccepted) { S.termsOpen = true; S.termsScrolled = false; }
+    if (needsTermsGate()) {
+      openTermsThen('wrap');
+      return;
+    }
+    S.termsOpen = false;
+    S.wrapOpen = true;
     render();
   }
   function create() {
@@ -1296,6 +1344,7 @@
 
   function accept() {
     var elec = document.getElementById('wb-elec');
+    var next = S.pendingAfterTerms || 'wrap';
     change('/accept', {
       version: S.terms.version,
       scrolledToEnd: !!S.termsScrolled,
@@ -1303,9 +1352,24 @@
       electronicsAccepted: elec ? elec.checked : false,
     }).then(function () {
       S.termsOpen = false;
+      S.pendingAfterTerms = '';
       S.view = 'items';
+      if (next === 'pay') {
+        S.wrapOpen = false;
+        render();
+        payWrrapd();
+        return;
+      }
+      if (next === 'review') {
+        S.wrapOpen = false;
+        S.view = 'review';
+        render();
+        return;
+      }
+      var lines = wrapTargets();
+      var idx = lines.findIndex(function (l) { return !(l.wrap && l.wrap.done); });
+      S.wrapIndex = idx < 0 ? 0 : idx;
       S.wrapOpen = true;
-      S.wrapIndex = 0;
       render();
     }).catch(function () {});
   }
@@ -1462,6 +1526,10 @@
 
   function payWrrapd() {
     if (S.busy || !S.batch || !S.batch.bill) return;
+    if (needsTermsGate()) {
+      openTermsThen('pay');
+      return;
+    }
     var popup = openPayWindow();
     if (!popup) {
       window.alert('Please allow popups for wrrapd.com so you can complete your Wrrapd payment.');
@@ -1513,6 +1581,10 @@
       S.notice = '';
       S.error = err.message || 'Please try again.';
       try { popup.close(); } catch (e) { /* already closed */ }
+      if (/agree to the Terms|electronics sentence/i.test(String(err.message || ''))) {
+        openTermsThen('pay');
+        return;
+      }
       render();
     });
   }
@@ -1592,6 +1664,10 @@
     }).catch(function (err) {
       S.busy = false;
       S.error = err.message;
+      if (/agree to the Terms|electronics sentence/i.test(String(err.message || ''))) {
+        openTermsThen('wrap');
+        return;
+      }
       render();
     });
   }

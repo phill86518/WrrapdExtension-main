@@ -586,13 +586,27 @@ function isBogusKohlsOption(name) {
 /** True when Kohl's Shipping control says the item cannot ship (pickup-only). */
 function kohlsShippingUnavailable(html) {
     const text = kohlsVisibleText(html);
-    if (/\bshipping\b[\s\S]{0,100}?\bnot available\b/i.test(text)) return true;
+    if (/\bshipping\b[\s\S]{0,120}?\bnot available\b/i.test(text)) return true;
     if (/\bnot available for (?:this )?item\b/i.test(text) && /\bshipping\b/i.test(text)) return true;
+    if (/\bpickup only\b/i.test(text) && !/\barriv/i.test(text)) return true;
     const raw = String(html || '');
     if (/"isShipToHomeAvailable"\s*:\s*false/i.test(raw)) return true;
     if (/"shipToHome(?:Available)?"\s*:\s*false/i.test(raw)) return true;
     if (/"shippingAvailable"\s*:\s*false/i.test(raw)) return true;
+    if (/"bopusOnly"\s*:\s*true/i.test(raw)) return true;
     return false;
+}
+
+/**
+ * Apparel / footwear / beauty shades usually need Color or Size.
+ * Toys, LEGO, books, and single-SKU housewares usually do not — ignore placeholder "Na".
+ */
+function kohlsLikelyNeedsVariants(title, html) {
+    const blob = `${title || ''} ${kohlsVisibleText(html).slice(0, 2000)}`.toLowerCase();
+    if (/\b(lego|toy|toys|puzzle|book|dvd|blu-?ray|game console|video game)\b/i.test(blob)) return false;
+    if (/\b(shoe|shoes|boot|loafer|sneaker|sandal|heel|dress|shirt|pant|jean|skirt|size|color|swatch)\b/i.test(blob)) return true;
+    if (/\b(foundation|lipstick|concealer|shade|toner|serum)\b/i.test(blob)) return true;
+    return /select (?:a )?color|select (?:a )?size|choose (?:a )?color|choose (?:a )?size/i.test(blob);
 }
 
 /** Color names printed in the Kohl's product data. */
@@ -757,12 +771,13 @@ function kohlsProductFromBrowserHtml(html, url) {
         if (name && !isBogusKohlsOption(name) && !sizeNames.includes(name)) sizeNames.push(name);
     }
     let variantGroups = [];
+    const needsVariants = kohlsLikelyNeedsVariants(title, html);
     const colors = kohlsColorNames(html);
-    if (colors.length >= 2 || (colors.length === 1 && !isBogusKohlsOption(colors[0]))) {
+    if (needsVariants && (colors.length >= 2 || (colors.length === 1 && !isBogusKohlsOption(colors[0])))) {
         variantGroups.push({ name: 'Color', options: colors, selected: null });
+        variantGroups = applyKohlsColors(variantGroups, html, url);
     }
-    variantGroups = applyKohlsColors(variantGroups, html, url);
-    if (sizeNames.length > 1) {
+    if (needsVariants && sizeNames.length > 1) {
         variantGroups.push({
             name: 'Size',
             options: sizeNames.slice(0, 40),
@@ -770,14 +785,19 @@ function kohlsProductFromBrowserHtml(html, url) {
         });
     }
     variantGroups = cleanVariantGroups(variantGroups);
+    // Always honor Shipping "Not available" — even when a delivery window was scraped from elsewhere.
     const windowed = shipUnavailable ? null : (kohlsDeliveryWindow(text) || kohlsDeliveryWindow(String(html || '')));
     const shipCents = shipUnavailable || pagePriceCents == null
         ? null
         : standardShipping.scheduleCents('kohls', pagePriceCents);
+    const ogImage = (String(html || '').match(/property=["']og:image["'][^>]*content=["']([^"']+)/i)
+        || String(html || '').match(/content=["']([^"']+)["'][^>]*property=["']og:image["']/i)
+        || [])[1] || '';
+    const imageUrl = (image || ogImage || '').slice(0, 1000);
     return {
         title: title.slice(0, 300),
         brand: String(brand || '').trim().slice(0, 120),
-        imageUrl: image.slice(0, 1000),
+        imageUrl,
         category: '',
         packageDimensions: null,
         pagePriceCents,
@@ -1836,11 +1856,13 @@ function mergeKohlsPart(acc, part) {
     if (!part) return acc;
     if (!acc.title && part.title && !/access denied/i.test(part.title)) acc.title = part.title;
     if (!acc.brand && part.brand) acc.brand = part.brand;
-    if (!acc.imageUrl && part.imageUrl) acc.imageUrl = part.imageUrl;
     const partBy = String(part.readBy || '');
     const accBy = String(acc.readBy || '');
     const partIsBrowser = /brightdata_browser/.test(partBy);
     const accHasBrowser = /brightdata_browser/.test(accBy);
+    if (part.imageUrl && /^https:\/\//i.test(part.imageUrl) && (!acc.imageUrl || partIsBrowser)) {
+        acc.imageUrl = part.imageUrl;
+    }
     if (part.pagePriceCents != null && part.pagePriceCents > 0) {
         // Browser price wins. Gemini may only fill a blank — never undercut a known price with a crumb like $5.
         if (partIsBrowser || acc.pagePriceCents == null) acc.pagePriceCents = part.pagePriceCents;

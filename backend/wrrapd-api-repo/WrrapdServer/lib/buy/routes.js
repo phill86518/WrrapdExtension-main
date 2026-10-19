@@ -121,6 +121,7 @@ const SKIP_RETRY_REASONS = new Set([
     'electronics_blocked',
     'over_item_limit',
     'wearable_paused',
+    'ship_unavailable',
 ]);
 
 /**
@@ -236,6 +237,14 @@ function publicView(batch) {
         groups: Object.values(batch.groups || {}).map((g) => publicGroup(g, batch)),
         termsAccepted: !!(batch.terms && batch.terms.version === terms.VERSION),
         electronicsAccepted: !!(batch.terms && batch.terms.electronicsAccepted),
+        needsTerms: (() => {
+            const accepted = batch.terms && batch.terms.version === terms.VERSION;
+            if (!accepted) return true;
+            const hasElec = (batch.lines || []).some(
+                (l) => !l.removed && l.state === 'ready' && l.product && l.product.isElectronics,
+            );
+            return !!(hasElec && !batch.terms.electronicsAccepted);
+        })(),
         refresh: batch.refresh
             ? {
                   id: batch.refresh.id,

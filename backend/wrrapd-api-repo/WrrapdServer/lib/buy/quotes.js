@@ -192,6 +192,10 @@ function applyRead(line, read, cfg) {
         return;
     }
     const p = read.product;
+    // Keep the last good photo when a re-read returns title/price without an image.
+    if ((!p.imageUrl || !/^https:\/\//i.test(p.imageUrl)) && line.product && line.product.imageUrl) {
+        p.imageUrl = line.product.imageUrl;
+    }
     line.product = p;
     const openNow = (p.variantGroups || []).filter((g) => !g.selected || !(g.options || []).includes(g.selected));
     if (p.shipUnavailable) {
