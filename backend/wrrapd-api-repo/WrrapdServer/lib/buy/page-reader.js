@@ -289,21 +289,21 @@ function wearablePauseMessage(kind) {
     return `Wrrapd is working on including ${label} for gift-wrapping. Please check back soon.`;
 }
 
-/** Target's Shipping control: "Arrives by Fri, Oct 24" (not pickup / same-day). */
+/**
+ * Target's Shipping control text: "Shipping Arrives by Tue, Oct 21".
+ * Do not use a broad "Arrives by" match — Pickup sits next to Shipping in the HTML text
+ * and a negative-lookahead for "pickup" used to reject the real Shipping date.
+ */
 function targetShippingArrivesBy(html) {
     const text = String(html || '')
         .replace(/<script[\s\S]*?<\/script>/gi, ' ')
         .replace(/<style[\s\S]*?<\/style>/gi, ' ')
         .replace(/<[^>]+>/g, ' ')
         .replace(/\s+/g, ' ');
-    const shipFirst = text.match(
-        /\bShipping\b(?![^.]{0,40}\b(pickup|same.?day|drive\s*up)\b).{0,220}?Arrives by\s+(?:[A-Za-z]{3,9},?\s+)?([A-Za-z]{3,9})\s+(\d{1,2})\b/i,
+    const ship = text.match(
+        /\bShipping\s+Arrives by\s+(?:[A-Za-z]{3,9},?\s+)?([A-Za-z]{3,9})\s+(\d{1,2})\b/i,
     );
-    if (shipFirst) return ymdFromMonthDay(shipFirst[1], shipFirst[2]);
-    const labeled = text.match(
-        /Arrives by\s+(?:[A-Za-z]{3,9},?\s+)?([A-Za-z]{3,9})\s+(\d{1,2})\b(?=[^.]{0,80}\bShipping\b)/i,
-    );
-    if (labeled) return ymdFromMonthDay(labeled[1], labeled[2]);
+    if (ship) return ymdFromMonthDay(ship[1], ship[2]);
     return null;
 }
 
@@ -870,13 +870,19 @@ function fulfillmentSections(node, out = []) {
 
 /** Date and cost printed on Target's Shipping control, not pickup or same-day delivery. */
 function shipFromFulfillment(json) {
+    const raw = typeof json === 'string' ? json : JSON.stringify(json || '');
+    if (/blockScript|"appId":"PX/i.test(raw)) return null;
     const sections = fulfillmentSections(json).filter((s) => s.fulfillment_type === 'SHIPPING' || s.fulfillment_type === 'SINGLE');
     // Always prefer the Shipping box — never fall back to pickup / same-day SINGLE first.
     const section = sections.find((s) => s.fulfillment_type === 'SHIPPING')
         || sections.find((s) => /arrives\s+by/i.test(quillTexts(s).join(' ')))
         || null;
-    if (!section) return null;
-    const text = quillTexts(section).join(' ').replace(/\s+/g, ' ');
+    let text = section ? quillTexts(section).join(' ').replace(/\s+/g, ' ') : '';
+    if (!text) {
+        const shipBlock = raw.match(/"fulfillment_type":"SHIPPING"[\s\S]{0,3000}/);
+        text = shipBlock ? shipBlock[0].replace(/\\n/g, ' ') : '';
+    }
+    if (!text) return null;
     if (/\b(pickup|same.?day|drive\s*up|order\s+pickup)\b/i.test(text) && !/\barrives\s+by\b/i.test(text)) return null;
     const arrives = text.match(/arrives\s+by\s+(?:[A-Za-z]+,\s+)?([A-Za-z]+)\s+(\d{1,2})/i);
     const arrivalDate = arrives ? ymdFromMonthDay(arrives[1], arrives[2]) : null;
@@ -888,6 +894,93 @@ function shipFromFulfillment(json) {
     }
     if (!arrivalDate && cents == null) return null;
     return { label: 'Standard shipping', cents, arrivalDate, note: '' };
+}
+
+/**
+ * Standard ship arrival for a giftee ZIP from Target's redsky fulfillment API.
+ * Uses min_delivery_date on the STANDARD / base method — never pickup_date.
+ * Direct calls often hit PerimeterX; Bright Data Unlocker is the reliable path.
+ */
+async function targetRedskyStandardArrival(tcin, { zip, state } = {}) {
+    const id = String(tcin || '').replace(/\D/g, '');
+    const want = String(zip || '').replace(/\D/g, '').slice(0, 5);
+    if (!id || want.length !== 5) return null;
+    const st = String(state || '').trim().toUpperCase().slice(0, 2);
+    const qs = new URLSearchParams({
+        key: TARGET_KEY,
+        tcin: id,
+        zip: want,
+        channel: 'WEB',
+    });
+    if (st.length === 2) qs.set('state', st);
+    // Jacksonville hub ZIP — coords help store proximity; shipping date follows zip.
+    if (want === '32218') {
+        qs.set('latitude', '30.4501');
+        qs.set('longitude', '-81.6654');
+        if (!st) qs.set('state', 'FL');
+    }
+    const apiUrl =
+        `https://redsky.target.com/redsky_aggregations/v1/web/pdp_fulfillment_v1?${qs}`;
+
+    const parseServices = (text) => {
+        if (!text || /blockScript|"appId":"PX/i.test(text)) return null;
+        let body;
+        try {
+            body = JSON.parse(text);
+        } catch (_) {
+            return null;
+        }
+        const services =
+            body
+            && body.data
+            && body.data.product
+            && body.data.product.fulfillment
+            && body.data.product.fulfillment.shipping_options
+            && body.data.product.fulfillment.shipping_options.services;
+        if (!Array.isArray(services) || !services.length) return null;
+        const std =
+            services.find((s) => s && (s.is_base_shipping_method || s.shipping_method_id === 'STANDARD'))
+            || services[0];
+        const date = String((std && (std.min_delivery_date || std.max_delivery_date)) || '');
+        return /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : null;
+    };
+
+    try {
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 12000);
+        let resp;
+        try {
+            resp = await fetch(apiUrl, {
+                signal: ctrl.signal,
+                headers: {
+                    'User-Agent': UA,
+                    Accept: 'application/json',
+                    Referer: 'https://www.target.com/',
+                },
+            });
+        } finally {
+            clearTimeout(timer);
+        }
+        if (resp && resp.ok) {
+            const dated = parseServices(await resp.text());
+            if (dated) return dated;
+        }
+    } catch (_) {
+        /* try Unlocker */
+    }
+
+    if (brightdata.isConfigured()) {
+        // Unlocker sometimes 502s on redsky (robots.txt) then succeeds on retry.
+        for (let attempt = 0; attempt < 3; attempt += 1) {
+            const page = await brightdata.fetchHtml(apiUrl, { render: false });
+            if (page && page.ok) {
+                const dated = parseServices(page.html);
+                if (dated) return dated;
+            }
+            await new Promise((r) => setTimeout(r, 400 + attempt * 600));
+        }
+    }
+    return null;
 }
 
 /** Asks Target for the Shipping button copy (arrival date and ships-free / price). */
@@ -1890,36 +1983,42 @@ async function readProduct({ retailer, url, zip, state, batchId, lineId }) {
     if (!r) return { ok: false, reason: 'retailer_not_supported', needsPerson: false };
     const savedHtml = savedPageHtml(retailer, url, { batchId, lineId });
 
-    // Target's price is on their product API. Then read the Shipping "Arrives by…" box (not pickup).
+    // Target: price from product API; Standard arrival from redsky fulfillment for the giftee ZIP.
+    // Never invent a date. Never trust HTML "Arrives by" unless the page Ship-to ZIP matches.
     if (!savedHtml && retailer === 'target') {
         const tf = await targetProduct(url);
         if (tf && tf.title && tf.pagePriceCents) {
             let shipCents = tf.standardShip && tf.standardShip.cents === 0
                 ? 0
                 : standardShipping.scheduleCents('target', tf.pagePriceCents);
-            let arrivalDate = null;
+            const want = String(zip || '').replace(/\D/g, '').slice(0, 5);
+            let arrivalDate = await targetRedskyStandardArrival(targetTcin(url), { zip, state });
             let choicePrompt = '';
-            try {
-                const page = await fetchPage('target', url);
-                if (page && page.ok && page.html) {
-                    const fromHtml = targetShippingArrivesBy(page.html);
-                    if (fromHtml) arrivalDate = fromHtml;
-                    const button = await targetFulfillment(page.html, { zip, state, referer: url });
-                    if (button) {
-                        if (button.arrivalDate) arrivalDate = button.arrivalDate;
-                        if (button.cents != null) shipCents = button.cents;
+            if (!arrivalDate) {
+                try {
+                    const page = await fetchPage('target', url);
+                    if (page && page.ok && page.html) {
+                        const seenZip = pageShipZip(page.html);
+                        const fromHtml = targetShippingArrivesBy(page.html);
+                        // Only keep a printed date when the page is shipping to the giftee ZIP.
+                        if (fromHtml && want.length === 5 && seenZip === want) arrivalDate = fromHtml;
+                        const button = await targetFulfillment(page.html, { zip, state, referer: url });
+                        if (button) {
+                            if (button.arrivalDate && (!seenZip || seenZip === want || want.length !== 5)) {
+                                arrivalDate = button.arrivalDate;
+                            }
+                            if (button.cents != null) shipCents = button.cents;
+                        }
+                        if (want.length === 5 && seenZip && seenZip !== want) {
+                            choicePrompt = targetZipRepastePrompt(want);
+                        }
                     }
-                    const seenZip = pageShipZip(page.html);
-                    const want = String(zip || '').replace(/\D/g, '').slice(0, 5);
-                    if (want.length === 5 && seenZip && seenZip !== want) {
-                        choicePrompt = targetZipRepastePrompt(want);
-                        arrivalDate = null;
-                    }
+                } catch (e) {
+                    console.warn('[buy-read]', 'target', 'ship_lookup', e && e.message);
                 }
-            } catch (e) {
-                console.warn('[buy-read]', 'target', 'ship_lookup', e && e.message);
             }
             if (!arrivalDate) choicePrompt = choicePrompt || targetZipRepastePrompt(zip);
+            else choicePrompt = '';
             console.log(
                 '[buy-read]',
                 'target',
@@ -2182,8 +2281,11 @@ async function readProduct({ retailer, url, zip, state, batchId, lineId }) {
     if (indicated && (!chosen || !chosen.arrivalDate)) {
         chosen = { label: 'Standard shipping', cents: chosen && chosen.cents != null ? chosen.cents : null, arrivalDate: indicated, note: (chosen && chosen.note) || '' };
     }
-    if (chosen && !chosen.arrivalDate) {
+    if (chosen && !chosen.arrivalDate && retailer !== 'target') {
         chosen = { ...chosen, arrivalDate: standardShipping.estimateArrivalDate() };
+    }
+    if (retailer === 'target' && chosen && !chosen.arrivalDate) {
+        choicePrompt = choicePrompt || targetZipRepastePrompt(zip);
     }
     if (!title) return { ok: false, reason: 'no_title', needsPerson: true };
     if (!pagePriceCents && !cleanVariantGroups(facts.variantGroups).some((g) => (g.options || []).length > 1)) {
@@ -2241,5 +2343,5 @@ module.exports = {
     readProduct, askGrok, askGeminiProduct, looksElectronic, priceAppearsInPage, jsonLdProducts, visibleText, fetchPage, usablePage, DIRECT_MS, standardFromPage, walmartShip, bestbuyShip, pageShipZip, zipMismatchPrompt, kohlsSkuColor, kohlsColorNames, applyKohlsColors, kohlsProductFromBrowserHtml, withDefaultShip, targetFulfillment,
     nordstromShell, nordstromFromHtml, struckSaleCents, savedPageHtml, EXTERNAL_PAGES_DIR, GEMINI_FIRST_RETAILERS,
     applyVariantOffer, enrichUltaVariantOffers,
-    wearablePauseKind, wearablePauseMessage, targetShippingArrivesBy, targetZipRepastePrompt,
+    wearablePauseKind, wearablePauseMessage, targetShippingArrivesBy, targetZipRepastePrompt, targetRedskyStandardArrival,
 };
