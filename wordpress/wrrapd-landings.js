@@ -192,7 +192,7 @@
     if (idx === -1) { row.closest('.wl-strip').style.display = 'none'; return; }
     row.innerHTML = MILESTONES.slice(idx, idx + 5).map(function (m, k) {
       var left = daysLeft(m, now);
-      var badge = k === 0 ? '<span class="wl-strip-next">Next up · ' + (left <= 1 ? 'last day to order' : left + ' days to order') + '</span>' : '';
+      var badge = k === 0 ? '<span class="wl-strip-next">Next up · ' + (left <= 1 ? 'last day' : left + ' days left') + '</span>' : '';
       return '<a class="wl-strip-card' + (k === 0 ? ' wl-on' : '') + '" href="' + esc(shopUrl(m)) + '" target="_blank" rel="noopener sponsored">' + badge +
         '<b>' + esc(m.name) + '</b><small>' + esc(m.day) + '</small><span class="wl-strip-by">Order by ' + esc(m.label) + '</span><span class="wl-strip-shop">Shop gifts \u203a</span></a>';
     }).join('');
@@ -255,7 +255,7 @@
       [9500, function () { scene('cart'); step(4); url.textContent = store.url; set('wl-s-sum', true); pointAt($('.wl-cart-item', demo)); }],
       [10100, function () { pointAt($('[data-wl-h-pay]', demo)); }],
       [10700, function () { press($('[data-wl-h-pay]', demo)); set('wl-s-paid', true); }],
-      [11300, function () { pointAt($('[data-wl-h-place]', demo)); }],
+      [11300, function () { set('wl-s-panel', false); pointAt($('[data-wl-h-place]', demo)); }],
       [11800, function () { press($('[data-wl-h-place]', demo)); }],
       [12200, function () { scene('done'); step(5); url.textContent = 'wrrapd.com/orders'; pointAt($('.wl-proof', demo)); }],
     ];
