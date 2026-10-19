@@ -46,3 +46,5 @@ backend/wrrapd-api-repo/WrrapdServer/config/
 
 # Personal / legal documents dropped in tmp/ for review (addresses, card digits)
 tmp/*.pdf
+
+wordpress/demo-videos/out/*.webm
