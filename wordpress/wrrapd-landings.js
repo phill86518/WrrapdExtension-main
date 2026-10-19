@@ -16,13 +16,19 @@
     var shell = document.querySelector('.occasion-ticker-shell');
     var ticker = document.querySelector('.elementor-element-0a7e92b');
     var wheels = document.getElementById('wrrapd-retailer-wheels-row');
-    /* Insert outside the ticker shell so removing the shell does not take the strip with it. */
-    if (shell && shell.parentNode) shell.parentNode.insertBefore(parts.strip, shell);
-    else if (ticker && ticker.parentNode) ticker.parentNode.insertBefore(parts.strip, ticker);
-    else if (wheels) wheels.insertAdjacentElement('afterend', parts.strip);
-    else document.body.insertBefore(parts.strip, document.body.firstChild);
+    /* Prefer the wheels row — the ticker script may recreate/remove its own shell. */
+    if (wheels) wheels.insertAdjacentElement('afterend', parts.strip);
+    else if (shell && shell.parentNode) shell.parentNode.insertBefore(parts.strip, shell);
+    else if (ticker && ticker.parentNode && ticker.parentNode !== (shell || {}).parentNode) {
+      ticker.parentNode.insertBefore(parts.strip, ticker);
+    } else {
+      var main = document.querySelector('.elementor-location-single') || document.querySelector('#content') || document.body;
+      main.insertBefore(parts.strip, main.firstChild);
+    }
     if (parts.strip.parentNode) parts.strip.parentNode.insertBefore(parts.waysbar, parts.strip);
-    ['.elementor-element-0a7e92b', '.elementor-element-6b1d5da', '.elementor-element-3b1e47e', '.elementor-element-f68c5e7', '.occasion-ticker-shell'].forEach(function (s) {
+    /* Collapse ticker via CSS; only remove the sections we fully replace. */
+    [shell, ticker].forEach(function (el) { if (el) el.setAttribute('aria-hidden', 'true'); });
+    ['.elementor-element-6b1d5da', '.elementor-element-3b1e47e', '.elementor-element-f68c5e7'].forEach(function (s) {
       document.querySelectorAll(s).forEach(function (el) {
         if (el.parentNode) el.parentNode.removeChild(el);
       });
