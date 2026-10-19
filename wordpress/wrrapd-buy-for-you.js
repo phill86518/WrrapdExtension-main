@@ -39,6 +39,7 @@
     startZipOk: false,
     startZip: '',
     zipChecking: false,
+    zipStatus: '',
     allowedZips: null,
   };
 
@@ -236,16 +237,18 @@
     return h + '</div>';
   }
   function buyButton(adding) {
-    var locked = !adding && !S.startZipOk;
     var label = S.busy ? 'Checking…' : (adding ? 'Add these items to list above' : 'Buy for me and gift-wrap these items');
-    var btn = '<button type="button" class="wb-btn' + (adding ? ' wb-btn-add' : '') + '" data-act="submit-links"' + (S.busy || locked ? ' disabled' : '') + '>' + esc(label) + '</button>';
+    var btn = '<button type="button" class="wb-btn' + (adding ? ' wb-btn-add' : '') + '" data-act="submit-links"' + (S.busy || S.zipChecking ? ' disabled' : '') + '>' + esc(label) + '</button>';
     return adding ? '<div class="wb-submit">' + btn + '</div>' : btn;
   }
   function zipBar(id, value, act, ok) {
-    return '<div class="wb-zipbar"><label class="wb-zipbar-label" for="' + id + '">Giftee / gift-recipient\'s zip code:</label>' +
+    var bad = !!S.zipStatus;
+    return '<div class="wb-zipbar' + (bad ? ' wb-zipbar-msg' : '') + '"><label class="wb-zipbar-label" for="' + id + '">Giftee / gift-recipient\'s zip code:</label>' +
       '<p class="wb-zipbar-hint">This helps us with a faster checkout! Also enter this same ZIP on the retailer\'s product page so shipping is accurate.</p>' +
-      '<div class="wb-zipbar-row"><input class="wb-zipbar-input' + (ok ? ' wb-zip-ok' : '') + '" id="' + id + '" inputmode="numeric" maxlength="10" autocomplete="postal-code" placeholder="ZIP code" value="' + esc(value || '') + '">' +
-      '<button type="button" class="wb-btn wb-zip-submit" data-act="' + act + '"' + (S.busy || S.zipChecking ? ' disabled' : '') + '>' + (S.zipChecking ? 'Checking…' : 'Submit') + '</button></div></div>';
+      '<div class="wb-zipbar-row"><input class="wb-zipbar-input' + (ok ? ' wb-zip-ok' : '') + (bad ? ' wb-zip-bad' : '') + '" id="' + id + '" inputmode="numeric" maxlength="10" autocomplete="postal-code" placeholder="ZIP code" value="' + esc(value || '') + '">' +
+      '<button type="button" class="wb-btn wb-zip-submit" data-act="' + act + '"' + (S.busy || S.zipChecking ? ' disabled' : '') + '>' + (S.zipChecking ? 'Checking…' : 'Submit') + '</button></div>' +
+      (S.zipStatus ? '<p class="wb-zip-status" role="alert">' + esc(S.zipStatus) + '</p>' : '') +
+      '</div>';
   }
   function viewStart() {
     var open = S.config && S.config.open;
@@ -262,9 +265,7 @@
     if ((!draft || !draft.length) && S.prefillLink) draft = [S.prefillLink];
     h += '<section class="wb-card" id="wb-start"><h2>Your gift</h2>' +
       zipBar('wb-zip', S.startZip, 'start-zip', S.startZipOk) +
-      (S.startZipOk
-        ? '<label class="wb-label">Paste the product links for gift-wrapping below.</label>' + LOAD_TIP
-        : '<p class="wb-zip-first">Enter the giftee ZIP code first.</p>') +
+      (S.startZipOk ? '<label class="wb-label">Paste the product links for gift-wrapping below.</label>' + LOAD_TIP : '') +
       linkFields(maxLinks(), draft, !S.startZipOk) +
       '<p class="wb-stores">' + (S.config ? S.config.retailers.map(function (r) { return '<span>' + esc(r.name) + '</span>'; }).join('') : esc(stores)) + '</p>' +
       (S.error ? '<p class="wb-error">' + esc(S.error) + '</p>' : '') +
@@ -945,9 +946,18 @@
     var file = $('#wb-file');
     if (file) file.addEventListener('change', function () { saveDraft(); onUpload(file.files && file.files[0]); });
     var startZip = $('#wb-zip');
-    if (startZip) startZip.addEventListener('keydown', function (ev) {
-      if (ev.key === 'Enter') { ev.preventDefault(); submitStartZip(); }
-    });
+    if (startZip) {
+      startZip.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Enter') { ev.preventDefault(); submitStartZip(); }
+      });
+      startZip.addEventListener('input', function () {
+        var z = String(startZip.value || '').replace(/\D/g, '').slice(0, 5);
+        if (S.startZipOk && z !== S.startZip) {
+          S.startZipOk = false;
+          S.zipStatus = '';
+        }
+      });
+    }
     var cartZip = $('#wb-zip-edit');
     if (cartZip) cartZip.addEventListener('keydown', function (ev) {
       if (ev.key === 'Enter') { ev.preventDefault(); onZip(); }
@@ -1172,28 +1182,41 @@
     render();
   }
   function create() {
-    var zip = ($('#wb-zip').value || '').replace(/\D/g, '');
+    var zipEl = $('#wb-zip');
+    var zip = String((zipEl && zipEl.value) || S.startZip || '').replace(/\D/g, '').slice(0, 5);
     var links = filledLinks();
-    if (zip.length !== 5) { S.error = 'Please enter the giftee’s 5-digit ZIP code.'; return keepLinks(function () {}); }
+    if (zip.length !== 5) {
+      S.startZipOk = false;
+      S.zipStatus = 'Please enter the giftee ZIP code first.';
+      S.error = '';
+      return keepLinks(function () {});
+    }
     if (!links.length) { S.error = 'Please paste at least one product link.'; return keepLinks(function () {}); }
-    S.busy = true;
-    keepLinks(function () {});
-    request('/api/buy/batches', { preview: preview, gifteeZip: zip, links: links }).then(function (j) {
-      S.busy = false;
-      S.id = j.id;
-      S.token = j.token;
-      S.batch = j.batch;
-      S.notice = j.notice || '';
-      S.view = 'items';
-      setUrl();
-      loadPricing();
-      render();
-      poll();
-    }).catch(function (err) {
-      S.busy = false;
-      S.error = err.message;
+    function go() {
+      S.busy = true;
+      S.zipStatus = '';
       keepLinks(function () {});
-    });
+      request('/api/buy/batches', { preview: preview, gifteeZip: zip, links: links }).then(function (j) {
+        S.busy = false;
+        S.id = j.id;
+        S.token = j.token;
+        S.batch = j.batch;
+        S.notice = j.notice || '';
+        S.view = 'items';
+        setUrl();
+        loadPricing();
+        render();
+        poll();
+      }).catch(function (err) {
+        S.busy = false;
+        S.error = err.message;
+        keepLinks(function () {});
+      });
+    }
+    if (!S.startZipOk) {
+      return checkStartZip(zip).then(function (ok) { if (ok) go(); });
+    }
+    go();
   }
 
   function loadPricing() {
@@ -1290,56 +1313,68 @@
       });
   }
 
-  function submitStartZip() {
+  /** Same allowlist gate as the Chrome extension. Resolves true when the ZIP is deliverable. */
+  function checkStartZip(forcedZip) {
     var el = $('#wb-zip');
-    if (!el || S.zipChecking) return;
-    var zip = String(el.value || '').replace(/\D/g, '').slice(0, 5);
+    var zip = String(forcedZip != null ? forcedZip : ((el && el.value) || S.startZip || '')).replace(/\D/g, '').slice(0, 5);
     S.startZip = zip;
-    el.value = zip;
+    if (el) el.value = zip;
     if (zip.length !== 5) {
       S.startZipOk = false;
-      S.error = 'Please enter a valid 5-digit ZIP code.';
+      S.zipStatus = 'Please enter a valid 5-digit ZIP code.';
+      S.error = '';
       render();
       var again = $('#wb-zip');
       if (again) again.focus();
-      return;
+      return Promise.resolve(false);
     }
+    if (S.zipChecking) return Promise.resolve(false);
     S.zipChecking = true;
+    S.zipStatus = '';
     S.error = '';
     render();
-    loadAllowedZips(true).then(function (list) {
+    return loadAllowedZips(true).then(function (list) {
       S.zipChecking = false;
       if (list.indexOf(zip) < 0) {
         S.startZipOk = false;
-        S.error = OUT_OF_AREA_MSG;
+        S.zipStatus = OUT_OF_AREA_MSG;
+        S.error = '';
         render();
         var bad = $('#wb-zip');
-        if (bad) {
-          bad.style.borderColor = '#dc2626';
-          bad.focus();
-        }
-        return;
+        if (bad) bad.focus();
+        var start = root.querySelector('#wb-start');
+        if (start) start.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return false;
       }
       var wasOk = S.startZipOk;
       S.startZipOk = true;
+      S.zipStatus = '';
       S.error = '';
       render();
       if (!wasOk) {
         var first = root.querySelector('.wb-link');
         if (first) first.focus();
       }
+      return true;
     }).catch(function () {
       S.zipChecking = false;
       if (S.allowedZips && S.allowedZips.indexOf(zip) >= 0) {
         S.startZipOk = true;
+        S.zipStatus = '';
         S.error = '';
         render();
-        return;
+        return true;
       }
       S.startZipOk = false;
-      S.error = "We couldn't verify that ZIP right now. Please try again.";
+      S.zipStatus = "We couldn't verify that ZIP right now. Please try again.";
+      S.error = '';
       render();
+      return false;
     });
+  }
+
+  function submitStartZip() {
+    checkStartZip();
   }
 
   function onZip() {
@@ -1792,15 +1827,15 @@
         if (S.prefillZip) S.startZip = S.prefillZip;
         if (S.prefillLink) S.draftLinks = [S.prefillLink];
         render();
-        if (S.prefillLink || S.prefillZip) {
-          var start = root.querySelector('#wb-start');
-          if (start) start.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
         if (S.prefillZip) {
-          submitStartZip();
+          checkStartZip(S.prefillZip);
         } else {
           var zip = root.querySelector('#wb-zip');
           if (zip) zip.focus({ preventScroll: true });
+          if (S.prefillLink) {
+            var start = root.querySelector('#wb-start');
+            if (start) start.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
         }
         return;
       }
