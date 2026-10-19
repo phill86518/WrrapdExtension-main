@@ -16,15 +16,12 @@
     var shell = document.querySelector('.occasion-ticker-shell');
     var ticker = document.querySelector('.elementor-element-0a7e92b');
     var wheels = document.getElementById('wrrapd-retailer-wheels-row');
-    /* Prefer the wheels row — the ticker script may recreate/remove its own shell. */
+    var header = document.querySelector('.elementor-location-header');
+    /* After wheels (preferred), else before ticker shell, else right after the site header — never body-first. */
     if (wheels) wheels.insertAdjacentElement('afterend', parts.strip);
     else if (shell && shell.parentNode) shell.parentNode.insertBefore(parts.strip, shell);
-    else if (ticker && ticker.parentNode && ticker.parentNode !== (shell || {}).parentNode) {
-      ticker.parentNode.insertBefore(parts.strip, ticker);
-    } else {
-      var main = document.querySelector('.elementor-location-single') || document.querySelector('#content') || document.body;
-      main.insertBefore(parts.strip, main.firstChild);
-    }
+    else if (ticker && ticker.parentNode) ticker.parentNode.insertBefore(parts.strip, ticker);
+    else if (header) header.insertAdjacentElement('afterend', parts.strip);
     if (parts.strip.parentNode) parts.strip.parentNode.insertBefore(parts.waysbar, parts.strip);
     /* Collapse ticker via CSS; only remove the sections we fully replace. */
     [shell, ticker].forEach(function (el) { if (el) el.setAttribute('aria-hidden', 'true'); });
@@ -43,22 +40,31 @@
 
   function mountHeaderWays(ways) {
     if (!ways) return;
-    var header = document.querySelector('.elementor-location-header');
-    if (!header) return;
-    var host = header.querySelector('.elementor-element-00ec9fc') ||
-      header.querySelector('[data-id="00ec9fc"]') ||
-      header.querySelector('.elementor-element-7f1bdc1') ||
-      header.querySelector('[data-id="7f1bdc1"]');
-    if (!host) return;
-    host.classList.add('wl6-has-ways');
-    host.style.position = 'relative';
-    host.style.overflow = 'visible';
-    if (host.firstChild !== ways) host.insertBefore(ways, host.firstChild);
-    var label = host.querySelector('.elementor-button-text');
-    var btn = label || host.querySelector('.elementor-button');
-    if (btn) btn.textContent = 'Add your FREE Chrome extension today';
-    var a = host.querySelector('a.elementor-button, a.wrrapd-ext-cta');
-    if (a && EXT) a.setAttribute('href', EXT);
+    var want = 'Add your FREE Chrome extension';
+    function apply() {
+      var header = document.querySelector('.elementor-location-header');
+      if (!header) return;
+      /* Prefer the centered CTA wrapper (reparented by orders-bridge), then the button widget. */
+      var host = header.querySelector('.elementor-element-00ec9fc') ||
+        header.querySelector('[data-id="00ec9fc"]') ||
+        header.querySelector('.elementor-element-7f1bdc1') ||
+        header.querySelector('[data-id="7f1bdc1"]');
+      if (!host) return;
+      host.classList.add('wl6-has-ways');
+      host.style.setProperty('position', 'relative', 'important');
+      host.style.setProperty('overflow', 'visible', 'important');
+      if (ways.parentNode !== host || host.firstChild !== ways) host.insertBefore(ways, host.firstChild);
+      var label = host.querySelector('.elementor-button-text');
+      var btn = label || host.querySelector('.elementor-button');
+      if (btn && (btn.textContent || '').replace(/\s+/g, ' ').trim() !== want) btn.textContent = want;
+      var a = host.querySelector('a.elementor-button, a.wrrapd-ext-cta');
+      if (a && EXT) a.setAttribute('href', EXT);
+    }
+    apply();
+    document.addEventListener('DOMContentLoaded', apply);
+    window.addEventListener('load', apply);
+    setTimeout(apply, 300);
+    setTimeout(apply, 1200);
   }
 
   function $(sel, el) { return (el || root).querySelector(sel); }
