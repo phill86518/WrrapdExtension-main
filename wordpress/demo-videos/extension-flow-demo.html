@@ -35,11 +35,12 @@
   .stage.z-paste .cam, .stage.z-buy .cam { transform: translate(-50%, -50%) scale(1.1); }
 
   .browser {
-    position: absolute; inset: 28px 48px 36px;
+    position: absolute; inset: 118px 48px 36px;
     border-radius: 14px; overflow: hidden; background: #fff;
     box-shadow: 0 24px 60px rgba(0,0,0,.45);
     display: flex; flex-direction: column;
   }
+  .stage.s-option .browser, .stage.s-intro .browser { inset: 28px 48px 36px; }
   .bar {
     display: flex; align-items: center; gap: 8px;
     padding: 10px 14px; background: #f1f5f9; border-bottom: 1px solid var(--line);
@@ -391,17 +392,41 @@
   .stage.s-option .badge, .stage.s-intro .badge { opacity: 0; }
 
   .steps {
-    position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%);
-    z-index: 32; display: flex; gap: 6px; padding: 6px 8px; border-radius: 999px;
-    background: rgba(12,6,56,.88); box-shadow: 0 8px 22px rgba(0,0,0,.28);
+    position: absolute; left: 50%; top: 12px; transform: translateX(-50%);
+    z-index: 32; display: flex; flex-direction: column; align-items: center; gap: 10px;
+    width: auto; max-width: 92%; padding: 0; background: transparent; box-shadow: none;
     opacity: 0; pointer-events: none; transition: opacity .3s ease;
   }
   .stage.show-steps .steps { opacity: 1; }
-  .steps span {
-    padding: 5px 10px; border-radius: 999px; font-size: 11px; font-weight: 650;
-    color: rgba(255,255,255,.55); white-space: nowrap; transition: .25s ease;
+  .stage.show-steps .badge { top: auto; bottom: 14px; }
+  .steps-now {
+    display: flex; flex-direction: row; align-items: baseline; gap: 16px;
+    padding: 14px 28px 12px; border-radius: 20px; background: #f6b933; color: #0c0638;
+    border: 5px solid #fff; box-shadow: 0 16px 40px rgba(0,0,0,.45), 0 0 0 4px rgba(12,6,56,.35);
   }
-  .steps span.on { background: var(--gold); color: var(--navy-text); }
+  .steps-now b {
+    display: block; font-size: 56px; font-weight: 800; line-height: .9;
+    letter-spacing: -.03em; text-transform: uppercase; white-space: nowrap;
+  }
+  .steps-now em {
+    display: block; font-style: normal; font-size: 28px; font-weight: 650;
+    line-height: 1.1; color: #0f0351; white-space: nowrap;
+  }
+  .steps-rail {
+    display: flex; flex-wrap: nowrap; gap: 8px; padding: 8px 12px;
+    border-radius: 999px; background: #0c0638; border: 3px solid #f6b933;
+    box-shadow: 0 10px 24px rgba(0,0,0,.4);
+  }
+  .steps-rail span {
+    display: inline-grid; place-items: center; min-width: 2.4rem; height: 2.4rem;
+    padding: 0 6px; border-radius: 999px; font-size: 18px; font-weight: 800;
+    color: #f6b933; background: transparent; border: 2px solid rgba(246,185,51,.5);
+    transition: .2s ease;
+  }
+  .steps-rail span.on {
+    background: #f6b933; color: #0c0638; border-color: #fff;
+    transform: scale(1.15); box-shadow: 0 0 0 3px rgba(246,185,51,.4);
+  }
 
   .option-card {
     position: absolute; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center;
@@ -603,8 +628,9 @@ Jacksonville, FL</div>
   var optTitle = document.getElementById('opt-title');
   var optLede = document.getElementById('opt-lede');
 
-  var OPT1_STEPS = ['Step 1 · Checkout', 'Step 2 · Choose wrap', 'Step 3 · Customize', 'Step 4 · Hub', 'Step 5 · Pay', 'Step 6 · Wrap', 'Step 7 · Deliver'];
-  var OPT2_STEPS = ['Step 1 · Open /buy', 'Step 2 · Giftee ZIP', 'Step 3 · Paste link', 'Step 4 · Review', 'Step 5 · Wrap', 'Step 6 · Deliver'];
+  var OPT1_STEPS = ['Checkout', 'Choose wrap', 'Customize', 'Confirm hub', 'Pay Wrrapd', 'We wrap', 'Delivered'];
+  var OPT2_STEPS = ['Open /buy', 'Giftee ZIP', 'Paste link', 'Review', 'We wrap', 'Delivered'];
+  var stepsList = OPT1_STEPS.slice();
 
   function setScene(name, zoom, label, showSteps) {
     stage.className = 'stage s-' + name + ' z-' + zoom + (showSteps ? ' show-steps' : '');
@@ -617,18 +643,34 @@ Jacksonville, FL</div>
     optLede.textContent = lede;
   }
   function setSteps(list, active) {
+    stepsList = list.slice();
     stepsEl.innerHTML = '';
-    list.forEach(function (label, i) {
+    var now = document.createElement('div');
+    now.className = 'steps-now';
+    now.innerHTML = '<b></b><em></em>';
+    stepsEl.appendChild(now);
+    var rail = document.createElement('div');
+    rail.className = 'steps-rail';
+    list.forEach(function (_, i) {
       var s = document.createElement('span');
-      s.textContent = label;
-      if (i === active) s.className = 'on';
-      stepsEl.appendChild(s);
+      s.textContent = String(i + 1);
+      rail.appendChild(s);
     });
+    stepsEl.appendChild(rail);
+    markStep(active);
   }
   function markStep(i) {
-    Array.prototype.forEach.call(stepsEl.children, function (el, k) {
-      el.classList.toggle('on', k === i);
-    });
+    var now = stepsEl.querySelector('.steps-now');
+    var rail = stepsEl.querySelector('.steps-rail');
+    if (now) {
+      now.querySelector('b').textContent = 'Step ' + (i + 1);
+      now.querySelector('em').textContent = stepsList[i] || '';
+    }
+    if (rail) {
+      Array.prototype.forEach.call(rail.children, function (el, k) {
+        el.classList.toggle('on', k === i);
+      });
+    }
   }
   function moveCursor(x, y, press) {
     cursor.style.left = x + 'px';
@@ -654,134 +696,128 @@ Jacksonville, FL</div>
     document.getElementById('bq3').classList.add('on');
     moveCursor(900, 280, false);
 
-    /* Intro */
+    /* Intro — slightly faster pacing throughout */
     setOptionCard('①②', 'Two ways to gift-wrap', 'Wrrapd', 'Chrome extension or copy-paste on the website');
     setScene('intro', 'wide', '', false);
 
-    /* Option 1 title */
-    at(2200, function () {
+    at(1600, function () {
       setOptionCard('①', 'Option 1', 'Chrome Extension', 'Gift-wrap right at checkout on your favorite stores');
       setScene('option', 'wide', '', false);
     });
 
-    /* Option 1 flow */
-    at(4800, function () {
+    at(3400, function () {
       setSteps(OPT1_STEPS, 0);
-      setScene('boot', 'wide', 'Option 1 · At checkout', true);
+      setScene('boot', 'wide', 'Option 1', true);
     });
-    at(5400, function () {
-      setScene('optin', 'optin', 'Option 1 · Wrrapd appears', true);
+    at(3900, function () {
+      setScene('optin', 'optin', 'Option 1', true);
       markStep(0);
       moveCursor(rectCenter(document.getElementById('optin')).x, rectCenter(document.getElementById('optin')).y);
     });
-    at(6600, function () {
-      setScene('radio', 'radio', 'Option 1 · Step 2 · Choose wrap', true);
+    at(4800, function () {
+      setScene('radio', 'radio', 'Option 1', true);
       markStep(1);
       moveCursor(rectCenter(radioYes).x, rectCenter(radioYes).y);
     });
-    at(7400, function () {
+    at(5400, function () {
       moveCursor(rectCenter(radioYes).x, rectCenter(radioYes).y, true);
       radioYes.classList.add('on'); radioNo.classList.remove('on');
     });
-    at(8000, function () {
-      setScene('modal', 'modal', 'Option 1 · Step 3 · Customize', true);
+    at(5900, function () {
+      setScene('modal', 'modal', 'Option 1', true);
       markStep(2);
       moveCursor(rectCenter(zip).x, rectCenter(zip).y, true);
       zip.value = '32202'; zip.classList.add('ok');
     });
-    at(9200, function () {
-      setScene('flowers', 'flowers', 'Option 1 · Step 3 · Add flowers', true);
+    at(6800, function () {
+      setScene('flowers', 'flowers', 'Option 1', true);
       moveCursor(rectCenter(flowers).x, rectCenter(flowers).y, true);
       flowers.classList.add('on');
     });
-    at(10400, function () {
+    at(7700, function () {
       var b = document.getElementById('bq2');
       moveCursor(rectCenter(b).x, rectCenter(b).y, true);
       document.querySelectorAll('.bq').forEach(function (x) { x.classList.remove('on'); });
       b.classList.add('on');
     });
-    at(11400, function () {
+    at(8400, function () {
       moveCursor(rectCenter(document.getElementById('save-btn')).x, rectCenter(document.getElementById('save-btn')).y, true);
     });
-    at(12000, function () {
-      setScene('hub', 'hub', 'Option 1 · Step 4 · Confirm hub', true);
+    at(8900, function () {
+      setScene('hub', 'hub', 'Option 1', true);
       markStep(3);
       document.getElementById('hub-addr').textContent = 'Wrrapd Gift Hub\nJacksonville, FL 32202';
       moveCursor(rectCenter(document.getElementById('hub-accept')).x, rectCenter(document.getElementById('hub-accept')).y);
     });
-    at(13400, function () {
+    at(9900, function () {
       moveCursor(rectCenter(document.getElementById('hub-accept')).x, rectCenter(document.getElementById('hub-accept')).y, true);
     });
-    at(14200, function () {
-      setScene('pay', 'pay', 'Option 1 · Step 5 · Pay Wrrapd', true);
+    at(10500, function () {
+      setScene('pay', 'pay', 'Option 1', true);
       markStep(4);
       url.textContent = 'target.com/checkout · Wrrapd ready';
       moveCursor(rectCenter(payBtn).x, rectCenter(payBtn).y);
     });
-    at(15200, function () {
+    at(11200, function () {
       moveCursor(rectCenter(payBtn).x, rectCenter(payBtn).y, true);
       pay.classList.add('paid'); payBtn.textContent = 'Paid — continue checkout';
     });
-    at(16200, function () {
-      setScene('wrap', 'wrap', 'Option 1 · Step 6 · We wrap', true);
+    at(11900, function () {
+      setScene('wrap', 'wrap', 'Option 1', true);
       markStep(5);
       moveCursor(640, 360, false);
     });
-    at(18600, function () {
-      setScene('deliver', 'deliver', 'Option 1 · Step 7 · Delivered', true);
+    at(13600, function () {
+      setScene('deliver', 'deliver', 'Option 1', true);
       markStep(6);
     });
 
-    /* Option 2 title */
-    at(21400, function () {
+    at(15600, function () {
       setOptionCard('②', 'Option 2', 'Copy-paste on wrrapd.com', 'No extension needed — paste a product link on the website');
       setScene('option', 'wide', '', false);
     });
 
-    /* Option 2 flow */
-    at(24000, function () {
+    at(17400, function () {
       setSteps(OPT2_STEPS, 0);
       url.textContent = 'wrrapd.com/buy';
-      setScene('paste', 'paste', 'Option 2 · Step 1 · Open /buy', true);
+      setScene('paste', 'paste', 'Option 2', true);
       moveCursor(rectCenter(pasteZip).x, rectCenter(pasteZip).y);
     });
-    at(25600, function () {
+    at(18600, function () {
       markStep(1);
-      badge.textContent = 'Option 2 · Step 2 · Giftee ZIP';
       moveCursor(rectCenter(pasteZip).x, rectCenter(pasteZip).y, true);
       pasteZip.value = '32202'; pasteZip.classList.add('ok');
     });
-    at(27200, function () {
+    at(19800, function () {
       markStep(2);
-      badge.textContent = 'Option 2 · Step 3 · Paste link';
       moveCursor(rectCenter(pasteUrl).x, rectCenter(pasteUrl).y, true);
     });
-    at(28200, function () {
+    at(20600, function () {
       pasteUrl.value = 'https://www.target.com/p/lego-icons-bumblebee/-/A-879';
       pasteUrl.classList.add('on');
       moveCursor(rectCenter(document.getElementById('paste-go')).x, rectCenter(document.getElementById('paste-go')).y, true);
     });
-    at(29600, function () {
+    at(21600, function () {
       markStep(3);
-      setScene('review', 'buy', 'Option 2 · Step 4 · Review & wrap', true);
+      setScene('review', 'buy', 'Option 2', true);
       moveCursor(rectCenter(document.getElementById('buy-pay')).x, rectCenter(document.getElementById('buy-pay')).y);
     });
-    at(31800, function () {
+    at(23200, function () {
       moveCursor(rectCenter(document.getElementById('buy-pay')).x, rectCenter(document.getElementById('buy-pay')).y, true);
     });
-    at(32800, function () {
+    at(23900, function () {
       markStep(4);
-      setScene('wrap', 'wrap', 'Option 2 · Step 5 · We wrap', true);
+      setScene('wrap', 'wrap', 'Option 2', true);
       moveCursor(640, 360, false);
     });
-    at(35000, function () {
+    at(25500, function () {
       markStep(5);
-      setScene('deliver', 'deliver', 'Option 2 · Step 6 · Delivered', true);
+      setScene('deliver', 'deliver', 'Option 2', true);
     });
-    at(37800, function () { /* hold final */ });
+    at(27500, function () { /* hold final */ });
   }
 
-  window.__WRRAPD_DEMO_DURATION_MS = 39000;
+  window.__WRRAPD_DEMO_DURATION_MS = 28500;
   window.__WRRAPD_DEMO_RUN = run;
   if (location.search.indexOf('auto=1') >= 0) run();
 })();

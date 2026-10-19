@@ -9,7 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_GIFT_POPUP_BUILD', '2026-10-19-extension-flow-demo-v3' );
+define( 'WRRAPD_GIFT_POPUP_BUILD', '2026-10-19-extension-flow-demo-v4' );
 
 /**
  * Homepage popup intro clip (Media Library, muted autoplay then copy).
@@ -22,6 +22,10 @@ function wrrapd_gift_wrap_popup_video_url() {
 	}
 
 	/* Prefer the extension-flow demo (checkout radio → modal → hub → wrap → delivery). */
+	$by_id = wp_get_attachment_url( 7410 );
+	if ( is_string( $by_id ) && $by_id !== '' ) {
+		return $by_id;
+	}
 	$by_id = wp_get_attachment_url( 7409 );
 	if ( is_string( $by_id ) && $by_id !== '' ) {
 		return $by_id;
