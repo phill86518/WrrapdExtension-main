@@ -7,13 +7,25 @@
   var root = document.getElementById('wrrapd-landing') || mountHomeParts();
   if (!root) return;
 
-  /* Homepage: ticker + old How it works / gift guides swapped for these parts. */
+  /* Homepage: hide old sections (CSS + DOM), place new body sections, mount two-ways note only. */
   function mountHomeParts() {
     var tpl = document.getElementById('wl6-parts');
-    if (!tpl || !tpl.content) return null;
+    var bodyMount = document.getElementById('wl6-body');
     var parts = {};
-    Array.prototype.forEach.call(tpl.content.querySelectorAll('[data-wl6]'), function (el) { parts[el.getAttribute('data-wl6')] = el; });
+    if (tpl && tpl.content) {
+      Array.prototype.forEach.call(tpl.content.querySelectorAll('[data-wl6]'), function (el) {
+        parts[el.getAttribute('data-wl6')] = el;
+      });
+    }
+    if (bodyMount) {
+      Array.prototype.forEach.call(bodyMount.querySelectorAll('[data-wl6]'), function (el) {
+        parts[el.getAttribute('data-wl6')] = el;
+      });
+    }
+    if (!parts.strip && !parts.hiw) return null;
+
     function placeStrip() {
+      if (!parts.strip) return;
       var shell = document.querySelector('.occasion-ticker-shell');
       var ticker = document.querySelector('.elementor-element-0a7e92b');
       var wheels = document.getElementById('wrrapd-retailer-wheels-row');
@@ -22,12 +34,12 @@
       else if (shell && shell.parentNode) shell.parentNode.insertBefore(parts.strip, shell);
       else if (ticker && ticker.parentNode) ticker.parentNode.insertBefore(parts.strip, ticker);
       else if (header) header.insertAdjacentElement('afterend', parts.strip);
-      if (parts.strip.parentNode) parts.strip.parentNode.insertBefore(parts.waysbar, parts.strip);
+      if (parts.waysbar && parts.strip.parentNode) parts.strip.parentNode.insertBefore(parts.waysbar, parts.strip);
     }
     placeStrip();
     setTimeout(placeStrip, 400);
     setTimeout(placeStrip, 1400);
-    /* Collapse ticker via CSS; only remove the sections we fully replace. */
+
     [document.querySelector('.occasion-ticker-shell'), document.querySelector('.elementor-element-0a7e92b')].forEach(function (el) {
       if (el) el.setAttribute('aria-hidden', 'true');
     });
@@ -36,30 +48,33 @@
         if (el.parentNode) el.parentNode.removeChild(el);
       });
     });
+
     var footer = document.querySelector('.elementor-element-bdc63f8') || document.querySelector('.elementor-location-footer');
     if (footer && footer.parentNode) {
       [parts.hiw, parts.paste, parts.ideas].forEach(function (p) {
         if (p) footer.parentNode.insertBefore(p, footer);
       });
     }
-    ensureHeaderWays();
+    if (bodyMount && bodyMount.parentNode && !bodyMount.children.length) bodyMount.parentNode.removeChild(bodyMount);
+
+    ensureHeaderWays(parts.ways);
     return document.body;
   }
 
-  function takeWaysNode() {
+  function takeWaysNode(preferred) {
+    if (preferred && preferred.nodeType === 1) return preferred;
     var live = document.querySelector('.wl6-ways');
     if (live) return live;
     var tpl = document.getElementById('wl6-parts');
     return tpl && tpl.content ? tpl.content.querySelector('[data-wl6="ways"]') : null;
   }
 
-  function ensureHeaderWays() {
-    var want = 'Add your FREE Chrome extension';
+  /* Only adds the tiny "Two ways…" note. Never changes header/footer button text or styling. */
+  function ensureHeaderWays(preferredWays) {
     function apply() {
-      var ways = takeWaysNode();
+      var ways = takeWaysNode(preferredWays);
       var header = document.querySelector('.elementor-location-header');
       if (!ways || !header) return false;
-      /* Prefer the centered CTA wrapper (reparented by orders-bridge), then the button widget. */
       var host = header.querySelector('.elementor-element-00ec9fc, [data-id="00ec9fc"]') ||
         header.querySelector('.elementor-element-7f1bdc1, [data-id="7f1bdc1"]');
       if (!host) {
@@ -70,11 +85,6 @@
       host.classList.add('wl6-has-ways');
       host.style.setProperty('overflow', 'visible', 'important');
       if (host.firstChild !== ways) host.insertBefore(ways, host.firstChild);
-      var label = host.querySelector('.elementor-button-text');
-      var btn = label || host.querySelector('.elementor-button');
-      if (btn && (btn.textContent || '').replace(/\s+/g, ' ').trim() !== want) btn.textContent = want;
-      var a = host.querySelector('a.elementor-button, a.wrrapd-ext-cta');
-      if (a && EXT) a.setAttribute('href', EXT);
       return true;
     }
     if (apply()) return;

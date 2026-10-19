@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_LANDINGS_BUILD', '2026-10-19-landings-v19' );
+define( 'WRRAPD_LANDINGS_BUILD', '2026-10-19-landings-v20' );
 define( 'WRRAPD_LANDING_COOKIE', 'wrrapd_lp' );
 define( 'WRRAPD_LANDING_RETIRED_SLUG', 'landing-retired-20261019' );
 
@@ -553,21 +553,22 @@ function wrrapd_landing_head( $eyebrow, $title, $lede = '' ) {
 }
 
 /**
- * Parts the script moves into the homepage: two-ways header note, occasion strip,
- * How it works, Paste & wrap, and the gift-ideas blurb.
+ * Homepage parts: header note stays in <template> (JS mounts above the existing CTA).
+ * Body sections print as live HTML so the new face shows even if JS is delayed/blocked;
+ * JS only repositions them.
  */
 function wrrapd_landing_6_parts() {
 	$ext  = wrrapd_landing_extension_url( 6 );
 	$buy  = home_url( '/buy/' );
 	$icon = content_url( 'mu-plugins/icons/favicon/android-chrome-512x512.png' );
 	echo '<template id="wl6-parts">';
-
 	echo '<div class="wl6-ways" data-wl6="ways">Two ways to gift-wrap: <a class="wl6-ways-ext" href="' . esc_url( $ext ) . '" target="_blank" rel="noopener">Chrome extension</a> or <a href="#paste-and-wrap">paste a link</a></div>';
-
 	echo '<section class="wl wl-ways-bar" data-wl6="waysbar" aria-label="Two ways to gift-wrap"><p>Two ways to gift-wrap</p><div>'
 		. wrrapd_landing_orange( $ext, 'Chrome extension' )
 		. '<a class="wl-ghost" href="#paste-and-wrap">Paste a link</a></div></section>';
+	echo '</template>';
 
+	echo '<div id="wl6-body">';
 	echo '<section class="wl wl-strip" data-wl6="strip" aria-label="Upcoming gifting days"><div class="wl-strip-inner"><p class="wl-strip-title">Upcoming gifting days</p><div class="wl-strip-row" data-wl-strip></div></div></section>';
 
 	echo '<section class="wl wl-hiw" data-wl6="hiw" id="how-it-works"><div class="wl-inner">';
@@ -658,8 +659,7 @@ function wrrapd_landing_6_parts() {
 	echo '<a class="wl-idea" href="' . esc_url( home_url( '/gift-ideas/' ) ) . '"><b>Gift ideas by store</b><span>Birthdays, weddings, holidays and more at Target, Nordstrom, Kohl\'s, Ulta, Sephora, Etsy, Walmart, LEGO and Best Buy.</span><em>See gift ideas &rsaquo;</em></a>';
 	echo '<a class="wl-idea" href="' . esc_url( home_url( '/top-gifting-choices/' ) ) . '"><b>Wrrapd\'s Top Gifting Choices</b><span>Hand-picked brands: chocolates, beauty, jewelry, electronics and more.</span><em>Browse top choices &rsaquo;</em></a>';
 	echo '</div></div></section>';
-
-	echo '</template>';
+	echo '</div>';
 }
 
 /* ---------- /gift-ideas/: the homepage store gift guides, on their own page ---------- */
