@@ -199,14 +199,14 @@ function applyRead(line, read, cfg) {
     line.product = p;
     const openNow = (p.variantGroups || []).filter((g) => !g.selected || !(g.options || []).includes(g.selected));
     if (p.shipUnavailable) {
-        return markUnavailable(line, 'ship_unavailable', 'This item is not available for shipping.');
+        return markUnavailable(line, 'ship_unavailable', `${line.retailerName || 'The store'} does not ship this item.`);
     }
     if (p.inStock === false && !openNow.length) return markUnavailable(line, 'out_of_stock');
     if (p.isElectronics && !cfg.allowElectronics) return markUnavailable(line, 'electronics_blocked');
     // Soft launch: pause wearables (shoes/clothing/lingerie). Jewelry + beauty/lotions stay.
     const wearKind = pageReader.wearablePauseKind(line.url, p.title, p.category, p.brand);
     if (wearKind) {
-        return markUnavailable(line, 'wearable_paused', pageReader.wearablePauseMessage(wearKind));
+        return markUnavailable(line, 'wearable_paused', pageReader.wearablePauseMessage(wearKind, line.retailerName));
     }
     if (p.pagePriceCents && p.pagePriceCents > cfg.perItemCapCents) {
         return markUnavailable(line, 'over_item_limit', overLimitMessage(p.pagePriceCents, cfg.perItemCapCents));

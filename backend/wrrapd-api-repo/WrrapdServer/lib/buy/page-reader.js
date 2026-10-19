@@ -282,11 +282,12 @@ function wearablePauseKind(url, title, category, brand) {
     return '';
 }
 
-function wearablePauseMessage(kind) {
+function wearablePauseMessage(kind, retailerName) {
     const label = kind === 'shoes' ? 'shoes'
         : kind === 'lingerie' ? 'lingerie'
             : 'clothing';
-    return `Wrrapd is working on including ${label} for gift-wrapping. Please check back soon.`;
+    const store = retailerName || 'the store';
+    return `Wrrapd gift-wraps ${label} through the free Wrrapd Chrome extension: buy this item on ${store} and choose Wrrapd at checkout.`;
 }
 
 /**

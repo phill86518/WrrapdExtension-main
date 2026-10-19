@@ -312,7 +312,7 @@
       h += '</div>';
     }
     var asked = l.manual === 'requested';
-    if (excluded(l) && !asked) h += '<p class="wb-unavailable">' + esc(limitMessage(l)) + '</p>';
+    if (excluded(l) && !asked) h += '<p class="wb-unavailable">' + esc(excludedMessage(l)) + '</p>' + extCta(l);
     else if (l.state === 'unavailable' && !asked) h += '<p class="wb-unavailable">' + esc(l.message || "We can't buy this item right now.") + '</p>';
     if (l.state === 'unavailable') h += manualCell(l);
     else if (l.manual === 'in_cart') h += '<p class="wb-manual-note">' + MAIL_SVG + 'Added by Wrrapd</p>';
@@ -526,6 +526,43 @@
       return l.message || 'This item is over the purchase limit.';
     }
     return l.message || "We can't buy this item right now.";
+  }
+
+  /** This store cannot ship it right now; another store can, through the extension. */
+  var ELSEWHERE_REASONS = { ship_unavailable: 1, out_of_stock: 1 };
+  /** Not a single product — nothing to gift-wrap yet. */
+  var NO_EXT_REASONS = {
+    product_list: 1, not_a_product_page: 1, retailer_not_supported: 1, not_a_link: 1, too_long: 1, duplicate: 1,
+  };
+  function extFits(l) {
+    return !NO_EXT_REASONS[String(l.reason || '')];
+  }
+  function storeName(l) {
+    return l.retailerName || 'the store';
+  }
+  function wearableLabel(l) {
+    var m = String(l.message || '');
+    if (/\bshoes\b/i.test(m)) return 'shoes';
+    if (/\blingerie\b/i.test(m)) return 'lingerie';
+    return 'clothing';
+  }
+  /** Shopper text for an Excluded row. */
+  function excludedMessage(l) {
+    if (l.reason === 'wearable_paused') {
+      return 'Wrrapd gift-wraps ' + wearableLabel(l) + ' through the free Wrrapd Chrome extension: buy this item on ' + storeName(l) + ' and choose Wrrapd at checkout.';
+    }
+    if (l.reason === 'ship_unavailable') return storeName(l) + ' does not ship this item.';
+    return limitMessage(l);
+  }
+  function extCta(l) {
+    if (!extFits(l)) return '';
+    var lead = l.reason === 'wearable_paused'
+      ? ''
+      : ELSEWHERE_REASONS[l.reason]
+        ? '<span class="wb-ext-cta-lead">Find it at another store and gift-wrap it with Wrrapd.</span>'
+        : '<span class="wb-ext-cta-lead">Buy it on ' + esc(storeName(l)) + ' and gift-wrap it with Wrrapd.</span>';
+    return '<p class="wb-ext-cta">' + lead +
+      '<a class="wb-ext-cta-btn" href="' + esc(EXT) + '" target="_blank" rel="noopener">Install Wrrapd extension</a></p>';
   }
   function itemTables(lines) {
     return cartTable(lines);
@@ -857,6 +894,7 @@
   function viewPaid() {
     return '<section class="wb-card wb-center"><h2>Thank you!</h2><p>Your order number is <b>' + esc(S.batch.orderNumber || S.batch.id) + '</b>.</p><p>Your order is in. We are gift-wrapping your items and delivering them.</p>' +
       (S.batch.manualPending ? '<p>We are adding your other item by hand. We will email you to approve it.</p>' : '') +
+      '<p class="wb-ext-line">Shopping at the store next time? Gift-wrap any item at checkout with the free <a href="' + esc(EXT) + '" target="_blank" rel="noopener">Wrrapd Chrome extension</a>.</p>' +
       '<button type="button" class="wb-btn wb-btn-ghost wb-start-over" data-act="start-over">Start over</button></section>';
   }
 
