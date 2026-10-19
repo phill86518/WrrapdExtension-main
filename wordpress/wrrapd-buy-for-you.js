@@ -305,6 +305,9 @@
 
   function deliveryCell(l) {
     var s = shipOf(l);
+    if (s && s.arrivalDate && s.arrivalDateEnd && s.arrivalDateEnd !== s.arrivalDate) {
+      return esc(fmtDate(s.arrivalDate) + ' – ' + fmtDate(s.arrivalDateEnd));
+    }
     if (s && s.arrivalDate) return esc(fmtDate(s.arrivalDate));
     if (waiting(l)) return '<span class="wb-spin" aria-hidden="true"></span>';
     return '—';
@@ -530,22 +533,24 @@
     var targets = wrapTargets();
     var canGo = targets.length > 0;
     var allWrapped = canGo && targets.every(function (l) { return l.wrap && l.wrap.done; });
-    var room = lines.length > 0 && lines.length < maxLinks();
+    var empty = lines.length === 0;
+    var room = lines.length < maxLinks();
     var draft = S.draftLinks;
     S.draftLinks = null;
     var left = maxLinks() - lines.length;
     var more = left === 1 ? 'Add up to 1 more item' : 'Add up to ' + left + ' more items';
+    var paste = LOAD_TIP + linkFields(left, draft) + buyButton(true);
     ensureFlowers();
     var h = '<section class="wb-card"><div class="wb-card-top"><h2>Gift-wrapping shopping cart</h2>' +
       '<button type="button" class="wb-btn wb-btn-ghost wb-start-over" data-act="start-over">Start over</button></div>' +
       '<div class="wb-cart-head">' + zipBar('wb-zip-edit', b.gifteeZip, 'cart-zip', false) +
       extLine() + '</div>' +
       (S.notice ? '<p class="wb-notice">' + esc(S.notice) + '</p>' : '') +
-      (rows || (excludedHtml ? '' : '<p class="wb-muted">Paste a product link to start.</p>')) +
+      (rows || (empty ? '<p class="wb-muted">Paste a product link to start.</p>' + paste : (excludedHtml ? '' : '<p class="wb-muted">Paste a product link to start.</p>'))) +
       (rows ? '<p class="wb-asterisk">* Final gift delivery to the giftee may add 1 day.</p><p class="wb-ship-note">Shipping prices do not reflect any club membership or other discounts.</p>' : '') +
       excludedHtml +
-      (room && !S.addOpen ? '<button type="button" class="wb-btn wb-add-more" data-act="add-more">' + more + '</button>' : '') +
-      (room && S.addOpen ? '<p class="wb-ask">' + more + ' for gift-wrapping</p>' + LOAD_TIP + linkFields(left, draft) + buyButton(true) : '') +
+      (room && !empty && !S.addOpen ? '<button type="button" class="wb-btn wb-add-more" data-act="add-more">' + more + '</button>' : '') +
+      (room && !empty && S.addOpen ? '<p class="wb-ask">' + more + ' for gift-wrapping</p>' + paste : '') +
       '</section>';
     if (!b.bill && b.billError && !stillWorking() && readyLines().length) h += '<p class="wb-error">' + esc(b.billError) + '</p>';
     h += limitLine();
