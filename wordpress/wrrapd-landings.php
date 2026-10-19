@@ -11,7 +11,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_LANDINGS_BUILD', '2026-10-18-landings-v3' );
+define( 'WRRAPD_LANDINGS_BUILD', '2026-10-18-landings-v4' );
 
 function wrrapd_landing_number() {
 	$path = wp_parse_url( isset( $_SERVER['REQUEST_URI'] ) ? (string) wp_unslash( $_SERVER['REQUEST_URI'] ) : '', PHP_URL_PATH );
@@ -338,7 +338,7 @@ function wrrapd_landing_body_5( $ext ) {
 	$items = array(
 		array( 'Target', 'https://target.scene7.com/is/image/Target/GUEST_5603dbdd-4869-40aa-8828-0ed08ab7c58d?wid=300&hei=300&qlt=80' ),
 		array( 'Etsy', 'https://i.etsystatic.com/12200091/r/il/e19d8e/5475173991/il_794xN.5475173991_dadd.jpg' ),
-		array( 'Books-A-Million', 'https://covers.openlibrary.org/b/isbn/9780694003617-M.jpg' ),
+		array( 'Amazon', 'https://covers.openlibrary.org/b/isbn/9780694003617-M.jpg' ),
 	);
 	foreach ( $items as $i => $it ) {
 		echo '<figure class="wl-combo-item wl-ci-' . ( $i + 1 ) . '"><img src="' . esc_url( $it[1] ) . '" alt="" loading="eager"><figcaption>' . esc_html( $it[0] ) . '</figcaption></figure>';
@@ -348,8 +348,8 @@ function wrrapd_landing_body_5( $ext ) {
 
 	echo '<section class="wl-section"><div class="wl-inner"><h2>Ready-made combos</h2><div class="wl-combos">';
 	$combos = array(
-		array( 'Cozy Night In', 'A plush throw, a scented candle and holiday coffee.', array( 'Target', 'Etsy', "Peet's" ), 'plaid' ),
-		array( 'Little Builder', 'A LEGO set and a favorite picture book.', array( 'LEGO', 'Books-A-Million' ), 'dots' ),
+		array( 'Cozy Night In', 'A plush throw, a scented candle and holiday coffee.', array( 'Target', 'Etsy', 'Amazon' ), 'plaid' ),
+		array( 'Little Builder', 'A LEGO set and a favorite picture book.', array( 'LEGO', 'Amazon' ), 'dots' ),
 		array( 'Glow Up', 'Skincare and beauty favorites, wrapped as one.', array( 'Ulta', 'Sephora' ), 'stripe' ),
 	);
 	foreach ( $combos as $c ) {
