@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_LANDINGS_BUILD', '2026-10-19-landings-v30' );
+define( 'WRRAPD_LANDINGS_BUILD', '2026-10-20-landings-v31' );
 define( 'WRRAPD_LANDING_COOKIE', 'wrrapd_lp' );
 define( 'WRRAPD_LANDING_RETIRED_SLUG', 'landing-retired-20261019' );
 
@@ -578,13 +578,12 @@ function wrrapd_landing_6_parts() {
 	echo '<div id="wl6-body">';
 	echo '<section class="wl wl-strip" data-wl6="strip" aria-label="Upcoming gifting days"><div class="wl-strip-inner"><p class="wl-strip-title">Upcoming gifting days</p><div class="wl-strip-row" data-wl-strip></div></div></section>';
 
-	echo '<div class="wl-deal-pop" id="wl-deal-pop" data-wl6="dealpop" role="status" aria-live="polite" hidden>'
-		. '<span class="wl-deal-pop-burst" aria-hidden="true"></span>'
-		. '<span class="wl-deal-pop-text">Multi-item gift-wrap discounts on 2+ items</span>'
-		. '</div>';
-
 	echo '<section class="wl wl-hiw" data-wl6="hiw" id="how-it-works"><div class="wl-inner">';
 	echo wrrapd_landing_head( 'How it works', 'Your store. Your cart. Our wrapping.', 'Add the free Wrrapd Chrome extension and gift-wrap right at checkout.' );
+	echo '<aside class="wl-deal-banner" id="wl-deal-banner" data-wl6="dealbanner" role="status">'
+		. '<p class="wl-deal-banner-yay">Yay!</p>'
+		. '<p class="wl-deal-banner-copy">Earn <strong>10% off</strong> wrapping with 2+ gifts. Earn <strong>15% off</strong> with 5+ gifts.</p>'
+		. '</aside>';
 	echo '<div class="wl-hiw-grid"><div class="wl-hiw-left">';
 	$steps = array(
 		array( 'Add Wrrapd to Chrome', 'One click, free. Wrrapd shows up at Amazon, Target, Walmart, Nordstrom, Kohl\'s, Ulta, Sephora, Best Buy, LEGO and Etsy.' ),

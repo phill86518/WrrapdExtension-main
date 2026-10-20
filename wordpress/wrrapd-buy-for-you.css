@@ -449,13 +449,76 @@ textarea.wb-input { resize: vertical; }
 
 .wb-discount-toast {
   position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
-  z-index: 100050; display: flex; align-items: center; gap: 12px;
+  z-index: 100050; display: flex; align-items: center; gap: 10px;
   max-width: min(92vw, 34rem); padding: 12px 14px 12px 16px;
-  border-radius: 12px; background: #0c0638; color: #fff;
-  box-shadow: 0 14px 36px rgba(12, 6, 56, .35); font-size: 14px; font-weight: 560; line-height: 1.35;
+  border-radius: 12px; background: #0c0638; color: #fffaf0;
+  border: 1px solid rgba(246, 185, 51, .45);
+  box-shadow: 0 14px 36px rgba(12, 6, 56, .28); font-size: 14px; font-weight: 460; line-height: 1.35;
+}
+.wb-discount-toast-yay {
+  flex: 0 0 auto; color: #f6b933; font-weight: 650; font-size: 15px;
 }
 .wb-discount-toast span { flex: 1 1 auto; }
 .wb-discount-toast-x {
   flex: 0 0 auto; border: 0; background: transparent; color: #f6b933;
   font-size: 22px; line-height: 1; cursor: pointer; padding: 0 4px;
+}
+
+/* Product-read wait — Kayak-style operational transparency + 60s anticlockwise clock */
+.wb-wait {
+  position: fixed; inset: 0; z-index: 100040;
+  display: flex; align-items: center; justify-content: center;
+  padding: 1rem; background: rgba(12, 6, 56, .48);
+  backdrop-filter: blur(2px);
+}
+.wb-wait-card {
+  width: min(92vw, 22rem);
+  padding: 1.4rem 1.35rem 1.25rem;
+  border-radius: 1.1rem;
+  background: #fffaf0;
+  border: 1px solid rgba(246, 185, 51, .4);
+  box-shadow: 0 22px 48px rgba(12, 6, 56, .28);
+  text-align: center;
+}
+.wb-wait-title {
+  margin: 0 0 .35rem;
+  color: #0f0351;
+  font-size: 1.12rem;
+  font-weight: 560;
+  line-height: 1.25;
+  text-wrap: balance;
+}
+.wb-wait-sub {
+  margin: 0 0 1rem;
+  color: #162a52;
+  font-size: .95rem;
+  font-weight: 460;
+  line-height: 1.3;
+  min-height: 1.3em;
+}
+.wb-wait-clock {
+  position: relative;
+  width: 7.5rem; height: 7.5rem;
+  margin: 0 auto .9rem;
+}
+.wb-wait-svg { display: block; width: 100%; height: 100%; }
+.wb-wait-track { stroke: #efe6cf; }
+.wb-wait-arc { stroke: #f6b933; transition: stroke-dashoffset .2s linear; }
+.wb-wait-hand { stroke: #0c0638; stroke-width: 3; transition: transform .2s linear; }
+.wb-wait-hub { fill: #0c0638; }
+.wb-wait-secs {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  color: #0f0351; font-size: 1.65rem; font-weight: 650;
+  pointer-events: none;
+}
+.wb-wait-foot {
+  margin: 0;
+  color: #64748b;
+  font-size: .82rem;
+  font-weight: 460;
+  line-height: 1.35;
+}
+@media (prefers-reduced-motion: reduce) {
+  .wb-wait-arc, .wb-wait-hand { transition: none; }
 }

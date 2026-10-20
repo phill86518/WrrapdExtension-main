@@ -292,67 +292,16 @@
     }).join('');
   }
 
-  /* Splashy multi-item discount pop — flashes on Step 2 + paste hover. */
-  var dealPopTimer = null;
-  var dealPopHold = 0;
-  function dealPopEl() {
-    var el = document.getElementById('wl-deal-pop');
-    if (el && !document.body.contains(el)) document.body.appendChild(el);
-    return el;
-  }
-  function placeDealPopNear(anchor) {
-    var pop = dealPopEl();
-    if (!pop) return;
-    if (!anchor || !anchor.getBoundingClientRect) {
-      pop.style.left = '50%';
-      pop.style.top = '42%';
-      return;
-    }
-    var r = anchor.getBoundingClientRect();
-    var x = Math.min(window.innerWidth - 24, Math.max(24, r.left + r.width / 2));
-    var y = Math.min(window.innerHeight - 24, Math.max(72, r.top - 18));
-    pop.style.left = x + 'px';
-    pop.style.top = y + 'px';
-  }
-  function flashDealPop(anchor) {
-    var pop = dealPopEl();
-    if (!pop) return;
-    placeDealPopNear(anchor);
-    pop.hidden = false;
-    pop.classList.remove('is-hold', 'is-on');
-    void pop.offsetWidth;
-    pop.classList.add('is-on');
-    clearTimeout(dealPopTimer);
-    dealPopTimer = setTimeout(function () {
-      if (dealPopHold > 0) return;
-      pop.classList.remove('is-on');
-      pop.hidden = true;
-    }, 2600);
-  }
-  function holdDealPop(on, anchor) {
-    var pop = dealPopEl();
-    if (!pop) return;
-    if (on) {
-      dealPopHold += 1;
-      placeDealPopNear(anchor);
-      pop.hidden = false;
-      pop.classList.remove('is-on');
-      pop.classList.add('is-hold');
-      clearTimeout(dealPopTimer);
-    } else {
-      dealPopHold = Math.max(0, dealPopHold - 1);
-      if (dealPopHold > 0) return;
-      pop.classList.remove('is-hold', 'is-on');
-      pop.hidden = true;
-    }
-  }
-  function wireDealPopHover(el) {
-    if (!el || el._wlDealPop) return;
-    el._wlDealPop = true;
-    el.addEventListener('mouseenter', function () { holdDealPop(true, el); });
-    el.addEventListener('mouseleave', function () { holdDealPop(false); });
-    el.addEventListener('focus', function () { holdDealPop(true, el); });
-    el.addEventListener('blur', function () { holdDealPop(false); });
+  /* Soft highlight on the navy/gold multi-item discount banner (Step 2). */
+  var dealBannerTimer = null;
+  function softDealBanner() {
+    var el = document.getElementById('wl-deal-banner');
+    if (!el) return;
+    el.classList.remove('is-soft');
+    void el.offsetWidth;
+    el.classList.add('is-soft');
+    clearTimeout(dealBannerTimer);
+    dealBannerTimer = setTimeout(function () { el.classList.remove('is-soft'); }, 1000);
   }
 
   /* ---------- How it works demo (landing6) ---------- */
@@ -388,7 +337,7 @@
       stepBtns.forEach(function (b, k) { b.parentNode.classList.toggle('wl-on', k === i); });
       if (i === 1 && lastStep !== 1) {
         var shopBtn = stepBtns[1];
-        flashDealPop(shopBtn || demo);
+        softDealBanner();
       }
       lastStep = i;
     }
@@ -479,8 +428,6 @@
   /* ---------- Paste & wrap (landing6) ---------- */
   function initPaste() {
     /* Paste section only — never the header Option 2 link. */
-    wireDealPopHover(document.querySelector('label[for="wl-paste-link"]'));
-    wireDealPopHover(document.getElementById('wl-paste-link'));
     var form = $('[data-wl-paste]');
     if (form) {
       var input = $('input[name="link"]', form);
@@ -668,7 +615,5 @@
   initPapers();
   if (document.body && document.body.classList.contains('wrrapd-landing-6')) ensureHeaderWays();
   setTimeout(function () {
-    wireDealPopHover(document.querySelector('label[for="wl-paste-link"]'));
-    wireDealPopHover(document.getElementById('wl-paste-link'));
   }, 600);
 })();

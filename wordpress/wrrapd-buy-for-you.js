@@ -42,7 +42,19 @@
     zipStatus: '',
     allowedZips: null,
     discountToast: '',
+    waitStart: null,
+    waitTick: null,
+    waitMsgIdx: 0,
   };
+
+  var WAIT_MS = 60000;
+  var WAIT_MSGS = [
+    'Waiting to add this to your cart',
+    'Getting details from the retailer…',
+    'Checking price and shipping…',
+    'Reading the product page…',
+    'Almost there — finishing up…'
+  ];
 
   /* Same copy as the Chrome extension giftee-ZIP gate. */
   var OUT_OF_AREA_MSG =
@@ -217,11 +229,17 @@
     else if (S.view === 'wrap') html = viewWrap();
     else if (S.view === 'review') html = viewReview();
     else if (S.view === 'paid') html = viewPaid();
-    var next = '<div class="wb-wrap">' + html + '</div>' + (S.termsOpen ? viewTerms() : '') + (S.wrapOpen && !S.termsOpen ? viewWrap() : '') + discountToastHtml();
-    if (next === S.lastHtml) return;
+    var next = '<div class="wb-wrap">' + html + '</div>' + (S.termsOpen ? viewTerms() : '') + (S.wrapOpen && !S.termsOpen ? viewWrap() : '') + discountToastHtml() + waitOverlayHtml();
+    if (next === S.lastHtml) {
+      ensureWaitTick();
+      paintWaitClock();
+      return;
+    }
     S.lastHtml = next;
     root.innerHTML = next;
     bind();
+    ensureWaitTick();
+    paintWaitClock();
     var again = root.querySelector('.wb-wrap-scroll');
     if (again && keepWrapTop) again.scrollTop = keepWrapTop;
     if (keepPageTop) window.scrollTo(0, keepPageTop);
@@ -244,7 +262,7 @@
       S.discountToast = '';
       return;
     }
-    S.discountToast = 'You earned a ' + pct + '% multi-item wrap discount for ' + count + ' items!';
+    S.discountToast = 'Yay! You\'ve earned a ' + pct + '% wrap discount on ' + count + ' gifts.';
     if (S._discountToastTimer) clearTimeout(S._discountToastTimer);
     S._discountToastTimer = setTimeout(function () {
       S.discountToast = '';
@@ -255,8 +273,101 @@
   function discountToastHtml() {
     if (!S.discountToast) return '';
     return '<div class="wb-discount-toast" role="status">' +
-      '<span>' + esc(S.discountToast) + '</span>' +
+      '<span class="wb-discount-toast-yay">Yay!</span>' +
+      '<span>' + esc(S.discountToast.replace(/^Yay!\s*/, '')) + '</span>' +
       '<button type="button" class="wb-discount-toast-x" data-act="dismiss-discount" aria-label="Dismiss">×</button></div>';
+  }
+
+  function readingLines() {
+    if (!S.batch || !S.batch.lines) return [];
+    return S.batch.lines.filter(function (l) { return l.state === 'reading'; });
+  }
+  function syncWaitClock() {
+    var reading = readingLines();
+    if (!reading.length) {
+      S.waitStart = null;
+      S.waitMsgIdx = 0;
+      if (S.waitTick) { clearInterval(S.waitTick); S.waitTick = null; }
+      return null;
+    }
+    if (!S.waitStart) S.waitStart = Date.now();
+    return reading;
+  }
+  function waitOverlayHtml() {
+    var reading = syncWaitClock();
+    if (!reading) return '';
+    var n = reading.length;
+    var which = n === 1
+      ? 'Waiting to add this product to your cart'
+      : 'Waiting to add ' + n + ' products to your cart';
+    var tip = WAIT_MSGS[S.waitMsgIdx % WAIT_MSGS.length];
+    var r = 54;
+    var c = 2 * Math.PI * r;
+    return '<div class="wb-wait" id="wb-wait" role="status" aria-live="polite" aria-busy="true">' +
+      '<div class="wb-wait-card">' +
+      '<p class="wb-wait-title" id="wb-wait-title">' + esc(which) + '</p>' +
+      '<p class="wb-wait-sub" id="wb-wait-sub">' + esc(tip) + '</p>' +
+      '<div class="wb-wait-clock" aria-hidden="true">' +
+      '<svg class="wb-wait-svg" viewBox="0 0 120 120" width="120" height="120">' +
+      '<circle class="wb-wait-track" cx="60" cy="60" r="' + r + '" fill="none" stroke-width="8"/>' +
+      '<circle class="wb-wait-arc" id="wb-wait-arc" cx="60" cy="60" r="' + r + '" fill="none" stroke-width="8"' +
+      ' stroke-dasharray="' + c.toFixed(2) + '" stroke-dashoffset="0" transform="rotate(-90 60 60)"/>' +
+      '<line class="wb-wait-hand" id="wb-wait-hand" x1="60" y1="60" x2="60" y2="14" stroke-linecap="round"/>' +
+      '<circle class="wb-wait-hub" cx="60" cy="60" r="4"/>' +
+      '</svg>' +
+      '<span class="wb-wait-secs" id="wb-wait-secs">60</span>' +
+      '</div>' +
+      '<p class="wb-wait-foot">Retailer pages can take up to a minute. Please keep this tab open.</p>' +
+      '</div></div>';
+  }
+  function paintWaitClock() {
+    var reading = syncWaitClock();
+    var overlay = document.getElementById('wb-wait');
+    if (!reading || !overlay) return;
+    var elapsed = Date.now() - S.waitStart;
+    var leftMs = Math.max(0, WAIT_MS - elapsed);
+    var secs = Math.max(0, Math.ceil(leftMs / 1000));
+    var used = Math.min(1, elapsed / WAIT_MS);
+    var r = 54;
+    var c = 2 * Math.PI * r;
+    var arc = document.getElementById('wb-wait-arc');
+    var hand = document.getElementById('wb-wait-hand');
+    var secsEl = document.getElementById('wb-wait-secs');
+    var sub = document.getElementById('wb-wait-sub');
+    var title = document.getElementById('wb-wait-title');
+    if (arc) arc.setAttribute('stroke-dashoffset', String(c * used));
+    /* Anticlockwise hand: 0s at 12 o'clock, sweeps left as time passes. */
+    if (hand) hand.setAttribute('transform', 'rotate(' + (-used * 360) + ' 60 60)');
+    if (secsEl) secsEl.textContent = String(secs);
+    var msgIdx = Math.min(WAIT_MSGS.length - 1, Math.floor(elapsed / 12000));
+    if (msgIdx !== S.waitMsgIdx) {
+      S.waitMsgIdx = msgIdx;
+      if (sub) sub.textContent = WAIT_MSGS[S.waitMsgIdx];
+    }
+    if (title) {
+      var n = reading.length;
+      title.textContent = n === 1
+        ? 'Waiting to add this product to your cart'
+        : 'Waiting to add ' + n + ' products to your cart';
+    }
+  }
+  function ensureWaitTick() {
+    if (!S.waitStart) {
+      if (S.waitTick) { clearInterval(S.waitTick); S.waitTick = null; }
+      return;
+    }
+    if (S.waitTick) return;
+    S.waitTick = setInterval(function () {
+      if (!S.waitStart) { clearInterval(S.waitTick); S.waitTick = null; return; }
+      paintWaitClock();
+      if (Date.now() - S.waitStart > WAIT_MS + 5000 && !readingLines().length) {
+        S.waitStart = null;
+        clearInterval(S.waitTick);
+        S.waitTick = null;
+        S.lastHtml = '';
+        render();
+      }
+    }, 200);
   }
 
   function maxLinks() {
@@ -311,7 +422,7 @@
   }
 
   var WAIT_ADD = 'Please wait while we add that to your gift-wrapping cart…';
-  var LOAD_TIP = '<p class="wb-muted wb-load-tip">Items can take up to 90 seconds each to load. Paste all your product links at once for a faster cart.</p>';
+  var LOAD_TIP = '<p class="wb-muted wb-load-tip">Items can take up to a minute each. Paste all your product links at once for a faster cart.</p>';
   var WAIT_DETAILS = 'Getting additional details…';
 
   function canEdit() {
@@ -710,7 +821,6 @@
       h += '<button type="button" class="wb-btn wb-btn-ghost" data-act="pay" disabled>Review and pay</button>';
     }
     h += '</div>';
-    if (lines.some(function (l) { return l.state === 'reading'; })) h += '<p class="wb-muted">Please keep this page open. Each item can take up to 90 seconds to load.</p>';
     return h;
   }
   function endTotals(lines) {
