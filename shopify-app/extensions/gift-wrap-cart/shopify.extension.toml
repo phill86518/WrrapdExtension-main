@@ -1,0 +1,7 @@
+api_version = "2026-10"
+
+[[extensions]]
+name = "Wrrapd cart gift wrap"
+handle = "wrrapd-gift-wrap-cart"
+type = "theme"
+uid = "wrrapd-gift-wrap-cart-001"

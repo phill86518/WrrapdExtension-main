@@ -1,0 +1,9 @@
+node_modules
+.shopify
+docs
+.env
+.env.*
+!.env.example
+prisma/dev.sqlite
+*.md
+.git

@@ -73,6 +73,28 @@ cd /home/phill/wrrapd-GCP/backend/wrrapd-api-repo/WrrapdServer
 node --test test/shopify-orders.test.js
 ```
 
+## Getting orders/paid + wrap opt-in live (dev store)
+
+Protected Customer Data (PCD) must be **approved** for the app (dev store is enough to start). Then:
+
+1. **Webhooks in `shopify.app.toml`** — `orders/paid` plus compliance topics (`customers/data_request`, `customers/redact`, `shop/redact`). Deploy with `npx shopify app deploy --version …`.
+2. **App host URL** — Cloud Run service `wrrapd-shopify` (permanent `*.run.app` URL). Set Partner **App URL** + `SHOPIFY_APP_URL` to that URL; `application_url` / `redirect_urls` update on deploy.
+3. **Privacy + ingest on api.wrrapd.com** — `POST /api/shopify/orders` and `POST /api/shopify/privacy` (shared `SHOPIFY_WRRAPD_WEBHOOK_SECRET`). Privacy forwards into Command Center `/api/internal/shopify-privacy`.
+4. **Wrap opt-in on the storefront**
+   - **Checkout:** enable the **Wrrapd gift wrap** checkout UI extension in **Settings → Checkout → Customize** (block: Gift wrap & deliver with Wrrapd). Sets `_wrrapd_wrap=1` + giftee zip / message attributes.
+   - **Cart (optional):** theme app block **Wrrapd gift wrap** on the cart template (needs theme editor access; storefront password OK).
+5. **Retention (Shopify only)** — Cloud Scheduler monthly job hits tracking `POST /api/cron/shopify-recipient-retention`. It anonymizes recipient PII **only** on orders with `retailer === "Shopify"` delivered 12+ months ago.
+
+### Hard boundary (do not blur)
+
+Shopify privacy webhooks, redaction, and the 12‑month retention job apply **only** to the Shopify app channel (`retailer: "Shopify"` / `SH-…` ingest). They do **not** apply to:
+
+- Chrome extension checkouts (Amazon and other retailers)
+- wrrapd.com / `/buy` / pay.wrrapd.com website orders
+- Any other Command Center order whose `retailer` is not `"Shopify"`
+
+We keep full operational data from extension and website flows under our own policies. Shopify’s PCD / privacy addendum obligations are scoped to Shopify-sourced records only.
+
 ## Status
 
-Scaffold + pay-server ingest + listing/Partner docs are in-repo. Partner org creation, `shopify app config link`, pilot store install, and App Store submission are still manual steps in the Partner Dashboard (see Partner signup + build plan).
+Pay-server ingest, privacy webhooks, checkout/cart extensions, and Cloud Run host path are in-repo. App Store submission remains a Partner Dashboard step.

@@ -1,6 +1,6 @@
 {
   "name": "wrrapd-shopify-app",
-  "version": "0.1.0",
+  "version": "3.0.13",
   "private": true,
   "author": "Wrrapd Inc.",
   "description": "Wrrapd Gift Wrap & Delivery — Shopify app for Wrrapd Inc.",
@@ -24,6 +24,7 @@
     "@shopify/polaris": "^13.9.0",
     "@shopify/shopify-app-remix": "^3.4.0",
     "@shopify/shopify-app-session-storage-prisma": "^5.1.5",
+    "firebase-admin": "^12.7.0",
     "isbot": "^5.1.17",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"

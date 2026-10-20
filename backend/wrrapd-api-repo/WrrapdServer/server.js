@@ -32,6 +32,7 @@ const extensionConfig = require(path.join(__dirname, 'lib', 'extension-config'))
 const deliveryHubs = require(path.join(__dirname, 'lib', 'delivery-hubs'));
 const giftBox = require(path.join(__dirname, 'lib', 'gift-box'));
 const shopifyOrders = require(path.join(__dirname, 'lib', 'shopify-orders'));
+const shopifyPrivacy = require(path.join(__dirname, 'lib', 'shopify-privacy'));
 
 // Initialize Google Cloud Storage
 let storageOptions = {
@@ -110,6 +111,7 @@ for (const p of [
     '/process-payment',
     '/api/proxy-tracking-ingest',
     '/api/shopify/orders',
+    '/api/shopify/privacy',
     '/api/retailer-order-ref',
 ]) {
     app.post(p, payLimiter);
@@ -2647,6 +2649,33 @@ app.post('/api/shopify/orders', async (req, res) => {
         externalOrderId: built.ingest.externalOrderId,
         notify: ingestResult.notify || null,
     });
+});
+
+/**
+ * Shopify mandatory privacy webhooks (customers/data_request, customers/redact, shop/redact).
+ * Remix app verifies Shopify HMAC, then forwards here with X-Wrrapd-Shopify-Secret.
+ * Shopify channel only — does not apply to Chrome extension or website orders.
+ */
+app.post('/api/shopify/privacy', async (req, res) => {
+    if (!req.isApiDomain) {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
+    const expected = String(process.env.SHOPIFY_WRRAPD_WEBHOOK_SECRET || '').trim();
+    const got = String(req.get('x-wrrapd-shopify-secret') || '').trim();
+    if (!expected || !got || got !== expected) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+    try {
+        const result = await shopifyPrivacy.handlePrivacyWebhook({
+            shop: req.body && req.body.shop,
+            topic: req.body && req.body.topic,
+            payload: req.body && (req.body.payload || req.body),
+        });
+        return res.status(200).json(result);
+    } catch (e) {
+        console.error('[shopify/privacy]', e && e.message);
+        return res.status(500).json({ ok: false, error: 'Privacy handler failed' });
+    }
 });
 
 /**

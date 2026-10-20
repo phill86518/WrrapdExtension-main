@@ -1,30 +1,31 @@
 /**
- * Forward a verified Shopify order payload to api.wrrapd.com.
+ * Forward verified Shopify payloads to api.wrrapd.com.
  * Developer: Wrrapd Inc.
  */
 
 const DEFAULT_API = "https://api.wrrapd.com";
 
-/**
- * @param {object} body — normalized Shopify order + shop domain
- * @returns {Promise<{ ok: boolean, status: number, body: object }>}
- */
-export async function forwardOrderToWrrapd(body) {
-  const base = String(process.env.WRRAPD_API_BASE || DEFAULT_API).replace(/\/$/, "");
-  const secret = String(process.env.SHOPIFY_WRRAPD_WEBHOOK_SECRET || "").trim();
-  if (!secret) {
+function apiBase() {
+  return String(process.env.WRRAPD_API_BASE || DEFAULT_API).replace(/\/$/, "");
+}
+
+function secret() {
+  return String(process.env.SHOPIFY_WRRAPD_WEBHOOK_SECRET || "").trim();
+}
+
+async function postWrrapd(path, body) {
+  const s = secret();
+  if (!s) {
     return { ok: false, status: 500, body: { error: "SHOPIFY_WRRAPD_WEBHOOK_SECRET missing" } };
   }
-
-  const response = await fetch(`${base}/api/shopify/orders`, {
+  const response = await fetch(`${apiBase()}${path}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "X-Wrrapd-Shopify-Secret": secret,
+      "X-Wrrapd-Shopify-Secret": s,
     },
     body: JSON.stringify(body),
   });
-
   const text = await response.text();
   let parsed = {};
   try {
@@ -33,6 +34,20 @@ export async function forwardOrderToWrrapd(body) {
     parsed = { raw: text.slice(0, 500) };
   }
   return { ok: response.ok, status: response.status, body: parsed };
+}
+
+/**
+ * @param {object} body — { shop, topic?, order }
+ */
+export async function forwardOrderToWrrapd(body) {
+  return postWrrapd("/api/shopify/orders", body);
+}
+
+/**
+ * @param {object} body — { shop, topic, payload }
+ */
+export async function forwardPrivacyToWrrapd(body) {
+  return postWrrapd("/api/shopify/privacy", body);
 }
 
 /** Cart / note attributes that mark a Wrrapd wrap order. */

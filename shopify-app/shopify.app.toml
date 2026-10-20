@@ -2,7 +2,7 @@
 
 client_id = "83d27a18ca878791480d19d4f45d4d3c"
 name = "Wrrapd"
-application_url = "https://example.com"
+application_url = "https://wrrapd-shopify-639608249439.us-central1.run.app"
 embedded = true
 
 [build]
@@ -11,11 +11,13 @@ automatically_update_urls_on_dev = true
 [webhooks]
 api_version = "2026-10"
 
-  # orders/paid + orders/create need Protected Customer Data approval in Partner Dashboard
-  # (Apps → Wrrapd → API access requests). Re-add after Shopify approves.
   [[webhooks.subscriptions]]
   uri = "/webhooks"
-  topics = [ "app/uninstalled" ]
+  topics = [ "app/uninstalled", "orders/paid" ]
+
+  [[webhooks.subscriptions]]
+  uri = "/webhooks"
+  compliance_topics = [ "customers/data_request", "customers/redact", "shop/redact" ]
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
@@ -24,7 +26,11 @@ optional_scopes = [ ]
 use_legacy_install_flow = false
 
 [auth]
-redirect_urls = [ ]
+redirect_urls = [
+  "https://wrrapd-shopify-639608249439.us-central1.run.app/auth/callback",
+  "https://wrrapd-shopify-639608249439.us-central1.run.app/auth/shopify/callback",
+  "https://wrrapd-shopify-639608249439.us-central1.run.app/api/auth/callback"
+]
 
 [pos]
 embedded = false
