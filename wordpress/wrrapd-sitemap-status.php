@@ -360,12 +360,22 @@ if ( ! function_exists( 'wrrapd_seo_output_head' ) ) {
 			return;
 		}
 		$url = home_url( wrrapd_request_path() );
+		$og  = 'https://wrrapd.com/wp-content/uploads/2026/10/wrrapd-homepage-og.jpg';
 		echo '<meta name="description" content="' . esc_attr( $seo['description'] ) . '" />' . "\n";
 		echo '<meta property="og:title" content="' . esc_attr( $seo['title'] ) . '" />' . "\n";
 		echo '<meta property="og:description" content="' . esc_attr( $seo['description'] ) . '" />' . "\n";
 		echo '<meta property="og:url" content="' . esc_url( $url ) . '" />' . "\n";
 		echo '<meta property="og:type" content="website" />' . "\n";
 		echo '<meta property="og:site_name" content="Wrrapd" />' . "\n";
+		echo '<meta property="og:image" content="' . esc_url( $og ) . '" />' . "\n";
+		echo '<meta property="og:image:secure_url" content="' . esc_url( $og ) . '" />' . "\n";
+		echo '<meta property="og:image:width" content="1200" />' . "\n";
+		echo '<meta property="og:image:height" content="630" />' . "\n";
+		echo '<meta property="og:image:alt" content="Wrrapd" />' . "\n";
+		echo '<meta name="twitter:card" content="summary_large_image" />' . "\n";
+		echo '<meta name="twitter:title" content="' . esc_attr( $seo['title'] ) . '" />' . "\n";
+		echo '<meta name="twitter:description" content="' . esc_attr( $seo['description'] ) . '" />' . "\n";
+		echo '<meta name="twitter:image" content="' . esc_url( $og ) . '" />' . "\n";
 		if ( wrrapd_request_path() === '/' ) {
 			$schema = wp_json_encode(
 				array(
@@ -454,7 +464,8 @@ if ( ! function_exists( 'wrrapd_output_focus_icon_tags' ) ) {
 			return;
 		}
 		$post = get_queried_object();
-		if ( ! $post || (int) $post->ID !== 7372 ) {
+		$essay_ids = array( 7372, 7387 );
+		if ( ! $post || ! in_array( (int) $post->ID, $essay_ids, true ) ) {
 			return;
 		}
 		$og = esc_url( 'https://wrrapd.com/wp-content/uploads/2026/10/wrrapd-focus-og.jpg' );

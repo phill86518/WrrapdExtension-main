@@ -19,7 +19,7 @@ Check the finished JPEG before it is posted. Do not publish from a prompt alone.
 ## Picture
 
 - One different person for each role. Do not reuse the same face.
-- "WrapStar" is wrapping. "JoyRider" is delivering a finished gift. "WrapRider" wraps and carries the gift to the door.
+- "WrapStar" is wrapping several gifts. "JoyRider" and "WrapRider" are shown with flowers and more than one wrapped package. "WrapRider" carries them to the door.
 - **Apply now** is the link under the picture. The gold button is the label.
 
 ## Before posting
@@ -30,3 +30,6 @@ Open the saved JPEG and confirm all of the following:
 2. Both arms of the W are visible.
 3. The role name on the logo and in the headline can be read.
 4. The three ads do not show the same person.
+5. The person has two arms and two legs, attached normally. Both hands are in front of the body. Nothing grows out of the back. Flowers and packages are held in front, not tucked behind the person.
+6. "JoyRider" is clearly outside at a door. "WrapRider" is clearly inside, heading for the door, or clearly outside at the doorstep. The setting is obvious.
+7. Packages are gift-wrapped in printed paper with a visible design (floral, snowflake, geometric, stars). Paper folds show. Solid colored boxes with a bow on top do not count. Plain beige paper does not count.

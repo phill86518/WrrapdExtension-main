@@ -124,6 +124,46 @@ test('Kohl\'s scraper maps blocked snapshots to brightdata_kohls_blocked', async
     else process.env.BRIGHTDATA_API_KEY = prev;
 });
 
+test('Kohl\'s browser page uses the sale price, colors, and the standard ship estimate', () => {
+    const html = [
+        '<title>LifeStride London 3 Women\'s Loafers | Kohl\'s</title>',
+        '<img src="https://media.kohlsimg.com/is/image/kohls/7513461_Tan">',
+        '"skuCode":[0,"50653163"],"color":[0,"Tan"] "color":[0,"Black"] "color":[0,"Cognac"]',
+        '"size":[0,"7M"] "size":[0,"8M"]',
+        'LifeStride London 3 Women\'s Loafers $47.99 with GET20 $59.99 Sale $79.99 Reg. Arrives by Thu, Oct 23 - Mon, Oct 27. Add to cart',
+    ].join(' ');
+    const product = reader.kohlsProductFromBrowserHtml(
+        html,
+        'https://www.kohls.com/product/prd-7513461/x.jsp?skuId=50653163',
+    );
+    assert.equal(product.pagePriceCents, 4799);
+    assert.equal(product.standardShip.cents, 895);
+    assert.equal(product.standardShip.arrivalDate, '2026-10-23');
+    assert.equal(product.standardShip.arrivalDateEnd, '2026-10-27');
+    assert.equal(product.variantGroups[0].name, 'Color');
+    assert.equal(product.variantGroups[0].selected, null);
+    assert.ok(product.variantGroups[0].options.includes('Tan'));
+    assert.equal(product.readBy, 'brightdata_browser');
+    const under = reader.kohlsProductFromBrowserHtml(
+        '<title>Tee | Kohl\'s</title> $24.99 Sale Add to cart',
+        'https://www.kohls.com/product/prd-1.jsp',
+    );
+    assert.equal(under.pagePriceCents, 2499);
+    assert.equal(under.standardShip.cents, 895);
+    const split = reader.kohlsProductFromBrowserHtml(
+        '<title>Loafers | Kohl\'s</title> $47.99 with GET20 <span>$59.99</span><span>Sale</span> $79.99 Reg Add to cart',
+        'https://www.kohls.com/product/prd-1.jsp',
+    );
+    assert.equal(split.pagePriceCents, 4799);
+    assert.equal(split.standardShip.cents, 895);
+    const fromApi = reader.kohlsProductFromBrowserHtml(
+        '<title>Loafers | Kohl\'s</title> $47.99 with GET20 <script type="application/json">{"estimatedDeliveryDates":{"startDate":"2026-10-22T00:00:00-05:00","endDate":"2026-10-26T00:00:00-05:00","shipDateRange":"Thu, Oct 22 - Mon, Oct 26"}}</script>',
+        'https://www.kohls.com/product/prd-1.jsp',
+    );
+    assert.equal(fromApi.standardShip.arrivalDate, '2026-10-22');
+    assert.equal(fromApi.standardShip.arrivalDateEnd, '2026-10-26');
+});
+
 test('Bright Data unlocker POST uses Bearer auth and never echoes the key', async () => {
     const prev = process.env.BRIGHTDATA_API_KEY;
     const prevZone = process.env.BRIGHTDATA_UNLOCKER_ZONE;

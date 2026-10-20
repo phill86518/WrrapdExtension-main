@@ -1,10 +1,13 @@
 /**
  * Retailer store index from CSVs → retailer-stores-index.json
- * Nearest Publix / Target / Sam's within 4 miles of a giftee ZIP.
+ * Nearest Publix / Sam's, plus Whole Foods, Trader Joe's, Food Emporium, and Lidl,
+ * within 4 miles of a giftee ZIP.
  */
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
+
+const grocerySearch = require('./grocery-search');
 
 const DIR = path.join(__dirname, '..', '..', 'data', 'retailer-stores');
 const INDEX_PATH = path.join(DIR, 'retailer-stores-index.json');
@@ -288,14 +291,25 @@ async function ensureIndex() {
 /**
  * @returns {Promise<{ origin: {lat:number,lng:number}|null, nearby: object[], byRetailer: object }>}
  */
+function emptyByRetailer() {
+  return {
+    publix: null,
+    sams: null,
+    lidl: null,
+    wholefoods: null,
+    traderjoes: null,
+    foodemporium: null,
+  };
+}
+
 async function nearestStoresForZip(postalCode, maxMiles = MAX_MILES) {
   const index = await ensureIndex();
   const origin = await lookupZipCoords(postalCode);
-  if (!origin || !index?.stores?.length) {
-    return { origin, nearby: [], byRetailer: { publix: null, sams: null } };
+  if (!origin) {
+    return { origin, nearby: [], byRetailer: emptyByRetailer() };
   }
   const scored = [];
-  for (const s of index.stores) {
+  for (const s of index?.stores || []) {
     if (s.lat == null || s.lng == null) continue;
     if (s.retailer === 'target') continue; // floral supplier paused
     const miles = haversineMiles(origin.lat, origin.lng, s.lat, s.lng);
@@ -303,8 +317,17 @@ async function nearestStoresForZip(postalCode, maxMiles = MAX_MILES) {
       scored.push({ ...s, miles: Math.round(miles * 100) / 100 });
     }
   }
+  const hasPublixOrSams = scored.some((s) => s.retailer === 'publix' || s.retailer === 'sams');
+  if (!hasPublixOrSams) {
+    try {
+      const grocers = await grocerySearch.searchGroceryFlorists(origin, maxMiles, haversineMiles);
+      scored.push(...grocers);
+    } catch (e) {
+      console.warn('[flowers-stores] grocery search failed', e.message);
+    }
+  }
   scored.sort((a, b) => a.miles - b.miles);
-  const byRetailer = { publix: null, sams: null };
+  const byRetailer = emptyByRetailer();
   for (const s of scored) {
     if (!byRetailer[s.retailer]) byRetailer[s.retailer] = s;
   }

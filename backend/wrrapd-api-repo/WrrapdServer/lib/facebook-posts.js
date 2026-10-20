@@ -24,7 +24,7 @@ const POSTS = [
 		image: 'wrapstar.jpg',
 		link: APPLY.wrapstar,
 		message:
-			'Do you love wrapping gifts? How about getting paid hourly to enjoy what you love? Become a "WrapStar" and wrap beautiful gifts from your own space, on your own schedule. Your rate is confirmed when you’re approved.\n\nApply now: ' +
+			'The bow should look like it took all afternoon. That is the craft of a "WrapStar": beautiful gifts, wrapped from your own space, on your own hours, paid hourly. Your rate is confirmed when you’re approved.\n\nApply now: ' +
 			APPLY.wrapstar,
 	},
 	{
@@ -34,7 +34,7 @@ const POSTS = [
 		image: 'wrapstar.jpg',
 		link: APPLY.wrapstar,
 		message:
-			'Do you love wrapping gifts? How about getting paid hourly to enjoy what you love? A "WrapStar" is the hands behind the ribbon — holidays, birthdays, and weddings, wrapped from your own space. Your rate is confirmed when you’re approved.\n\nApply now: ' +
+			'Printed paper. A real fold. A bow someone will photograph. Become a "WrapStar" and wrap beautiful gifts from your own space, paid hourly, on a schedule you choose. Your rate is confirmed when you’re approved.\n\nApply now: ' +
 			APPLY.wrapstar,
 	},
 	{
@@ -44,7 +44,7 @@ const POSTS = [
 		image: 'joyrider.jpg',
 		link: APPLY.joyrider,
 		message:
-			'Do you love making someone’s day? How about getting paid hourly to deliver that smile? Become a "JoyRider". Pick up a beautifully wrapped gift and bring it to the door on your schedule. Your rate is confirmed when you’re approved.\n\nApply now: ' +
+			'The best second of the day is the one when the door opens. A "JoyRider" carries flowers and beautifully wrapped gifts to that moment, and gets paid hourly to do it. Your rate is confirmed when you’re approved.\n\nApply now: ' +
 			APPLY.joyrider,
 	},
 	{
@@ -54,7 +54,7 @@ const POSTS = [
 		image: 'joyrider.jpg',
 		link: APPLY.joyrider,
 		message:
-			'Do you love making someone’s day? How about getting paid hourly to deliver that smile? A "JoyRider" sees a delivery that fits the day, picks up a finished gift, and hands someone a surprise at the door. Your rate is confirmed when you’re approved.\n\nApply now: ' +
+			'Someone is waiting on a surprise. Become a "JoyRider" and be the person who brings it: flowers, a finished gift, and a smile at the door. Paid hourly. Your rate is confirmed when you’re approved.\n\nApply now: ' +
 			APPLY.joyrider,
 	},
 	{
@@ -64,7 +64,7 @@ const POSTS = [
 		image: 'wraprider.jpg',
 		link: APPLY.wraprider,
 		message:
-			'Do you love wrapping gifts? How about getting paid hourly to enjoy what you love — then carry that joy to the door yourself? Become a "WrapRider". Wrap it in your own space and deliver the finished surprise. Your rate is confirmed when you’re approved.\n\nApply now: ' +
+			'From the first fold of the paper to the front step. A "WrapRider" wraps the gift, then carries it to the door, flowers included, and gets paid hourly for the whole beautiful job. Your rate is confirmed when you’re approved.\n\nApply now: ' +
 			APPLY.wraprider,
 	},
 	{
@@ -74,7 +74,7 @@ const POSTS = [
 		image: 'wraprider.jpg',
 		link: APPLY.wraprider,
 		message:
-			'Do you love wrapping gifts? How about getting paid hourly to wrap them and deliver them yourself? A "WrapRider" takes a gift from the first fold to the front door and brightens someone’s day. Your rate is confirmed when you’re approved.\n\nApply now: ' +
+			'Own the moment from the ribbon to the doorbell. Become a "WrapRider": wrap the gifts beautifully, then carry them to the door yourself. Paid hourly, with your rate confirmed when you’re approved.\n\nApply now: ' +
 			APPLY.wraprider,
 	},
 ];

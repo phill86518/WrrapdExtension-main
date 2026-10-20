@@ -92,18 +92,19 @@ function estimateArrivalDate(from = new Date(), businessDays = ESTIMATE_BUSINESS
 }
 
 /**
- * Fills missing standard-ship cents from the retailer schedule, and a calendar
- * estimate when Kohl's (or anyone) printed no date — including when the page ZIP
- * is not the giftee ZIP. Never leave the cart blank for shipping/date.
+ * Fills missing standard-ship cents from the retailer schedule.
+ * For most stores, also estimates a calendar date when none printed.
+ * Target is different: never invent a date — shoppers set delivery + store ZIP and re-paste.
  */
 function fillMissing(retailer, chosen, merchandiseCents) {
     const scheduled = scheduleCents(retailer, Number(merchandiseCents) || 0);
     const cents = chosen && chosen.cents != null ? chosen.cents : scheduled;
     if (cents == null && !(chosen && chosen.arrivalDate)) return chosen || null;
+    const estimate = retailer === 'target' ? null : estimateArrivalDate();
     return {
         label: (chosen && chosen.label) || 'Standard shipping',
         cents: cents != null ? cents : null,
-        arrivalDate: (chosen && chosen.arrivalDate) || estimateArrivalDate(),
+        arrivalDate: (chosen && chosen.arrivalDate) || estimate,
         arrivalDateEnd: (chosen && chosen.arrivalDateEnd) || null,
         note: (chosen && chosen.note) || '',
     };
