@@ -444,6 +444,53 @@ body .wl .wl-strip-next { padding: 2px 8px; border-radius: 999px; background: va
 /* How it works */
 .wl-hiw { padding: 46px 0 50px; border-top: 1px solid var(--wl-line); }
 .wl-hiw-grid { display: grid; grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); gap: clamp(24px, 4vw, 48px); align-items: center; }
+.wl-hiw-video {
+  position: relative;
+  border-radius: 1rem;
+  overflow: hidden;
+  background: #0c0638;
+  border: 1px solid rgba(246, 185, 51, .35);
+  box-shadow: 0 16px 40px rgba(12, 6, 56, .14);
+  cursor: pointer;
+}
+.wl-hiw-player {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  height: auto;
+  object-fit: contain;
+  background: #0c0638;
+  vertical-align: top;
+}
+.wl-hiw-video-cap {
+  margin: 0;
+  padding: .55rem .85rem .7rem;
+  background: #0c0638;
+  color: #f6b933;
+  font-size: .82rem;
+  font-weight: 560;
+  text-align: center;
+}
+.wl-hiw-video::after {
+  content: "Hover to watch";
+  position: absolute;
+  left: 50%;
+  top: 42%;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+  padding: .55rem 1rem;
+  border-radius: 999px;
+  background: rgba(12, 6, 56, .78);
+  border: 1px solid rgba(246, 185, 51, .55);
+  color: #fffaf0;
+  font-family: Fraunces, Georgia, "Times New Roman", serif;
+  font-size: .9rem;
+  font-weight: 650;
+  pointer-events: none;
+  transition: opacity .2s ease;
+}
+.wl-hiw-video.wl-touch::after { content: "Tap to watch"; }
+.wl-hiw-video.wl-playing::after { opacity: 0; }
 .wl-hiw-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
 body.wrrapd-landing-6 .wl .wl-hiw-steps button, body.wrrapd-landing-6 .wl .wl-hiw-steps button:hover, body.wrrapd-landing-6 .wl .wl-hiw-steps button:focus {
   display: flex; align-items: flex-start; gap: 12px; width: 100%; padding: 8px 12px; margin: 0; border-radius: 14px; border: 1px solid transparent;

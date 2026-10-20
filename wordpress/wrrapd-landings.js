@@ -304,125 +304,59 @@
     dealBannerTimer = setTimeout(function () { el.classList.remove('is-soft'); }, 1000);
   }
 
-  /* ---------- How it works demo (landing6) ---------- */
+  /* ---------- How it works video (landing6) — play only on hover / tap ---------- */
   function initHowItWorks() {
-    var demo = $('[data-wl-hiw]');
-    if (!demo) return;
-    var body = $('.wl-browser-body', demo);
-    var cursor = $('[data-wl-h-cursor]', demo);
-    var url = $('[data-wl-h-url]', demo);
-    var sw = $$('[data-wl-h-sw]', demo);
+    var wrap = $('[data-wl-hiw-video]');
     var stepBtns = $$('[data-wl-hiw-steps] button');
-    var bar = $('[data-wl-h-bar]', demo);
-    var STATES = ['wl-s-added', 'wl-s-panel', 'wl-s-toggle', 'wl-s-flowers', 'wl-s-hub', 'wl-s-sum', 'wl-s-paid', 'wl-s-press', 'wl-s-ship', 'wl-s-cart', 'wl-s-install', 'wl-s-done'];
-    var LOOP = 15000;
-    var START = [0, 2300, 4700, 7400, 9500, 12200];
-    var timers = [];
-    var t0 = 0;
-    var loop = 0;
-    var store = DEMO_STORES[0];
     var lastStep = -1;
-    DEMO_STORES.forEach(function (s) { var i = new Image(); i.src = s.img; });
+    stepBtns.forEach(function (b) {
+      b.addEventListener('click', function () {
+        var i = Number(b.dataset.step) || 0;
+        stepBtns.forEach(function (x, k) { x.parentNode.classList.toggle('wl-on', k === i); });
+        if (i === 1 && lastStep !== 1) softDealBanner();
+        lastStep = i;
+      });
+    });
+    if (!wrap) return;
+    var video = $('.wl-hiw-player', wrap);
+    if (!video) return;
+    video.muted = true;
+    video.defaultMuted = true;
+    video.setAttribute('muted', '');
+    video.playsInline = true;
+    video.removeAttribute('controls');
 
-    function set(cls, on) { demo.classList.toggle(cls, on); }
-    function scene(name) { ['wl-s-install', 'wl-s-cart', 'wl-s-ship', 'wl-s-done'].forEach(function (c) { set(c, c === 'wl-s-' + name); }); }
-    function pointAt(el) {
-      if (!el) return;
-      var b = body.getBoundingClientRect();
-      var r = el.getBoundingClientRect();
-      cursor.style.left = (r.left - b.left + r.width / 2 - 11) + 'px';
-      cursor.style.top = (r.top - b.top + r.height / 2 - 11) + 'px';
-    }
-    function step(i) {
-      stepBtns.forEach(function (b, k) { b.parentNode.classList.toggle('wl-on', k === i); });
-      if (i === 1 && lastStep !== 1) {
-        var shopBtn = stepBtns[1];
-        softDealBanner();
-      }
-      lastStep = i;
-    }
-    function pick(i) { sw.forEach(function (x, k) { x.classList.toggle('wl-on', k === i); }); }
-    function press(el) { if (!el) return; el.classList.add('wl-pressed'); setTimeout(function () { el.classList.remove('wl-pressed'); }, 220); }
-
-    var TL = [
-      [0, function () { STATES.forEach(function (c) { set(c, false); }); pick(-1); scene('install'); step(0); url.textContent = 'chromewebstore.google.com'; pointAt($('.wl-cws img', demo)); }],
-      [700, function () { pointAt($('[data-wl-h-add]', demo)); }],
-      [1400, function () { press($('[data-wl-h-add]', demo)); set('wl-s-added', true); }],
-      [2300, function () {
-        scene('cart'); step(1); url.textContent = store.url;
-        $('[data-wl-h-store]', demo).textContent = store.store;
-        $('[data-wl-h-title]', demo).textContent = store.title;
-        $('[data-wl-h-img]', demo).src = store.img;
-        pointAt($('.wl-cart-item', demo));
-      }],
-      [3000, function () { set('wl-s-panel', true); }],
-      [3500, function () { pointAt($('[data-wl-h-toggle]', demo)); }],
-      [4100, function () { set('wl-s-toggle', true); }],
-      [4700, function () { step(2); pointAt(sw[1]); pick(1); }],
-      [5300, function () { pointAt(sw[2]); pick(2); }],
-      [5900, function () { pointAt(sw[0]); pick(0); }],
-      [6500, function () { pointAt($('[data-wl-h-flowers] .wl-box', demo)); }],
-      [6900, function () { set('wl-s-flowers', true); }],
-      [7400, function () { scene('ship'); step(3); url.textContent = store.url.replace(/(cart|checkout)$/, 'shipping'); pointAt($('.wl-addr', demo)); }],
-      [8100, function () { pointAt($('[data-wl-h-hub]', demo)); }],
-      [8700, function () { set('wl-s-hub', true); }],
-      [9500, function () { scene('cart'); step(4); url.textContent = store.url; set('wl-s-sum', true); pointAt($('.wl-cart-item', demo)); }],
-      [10100, function () { pointAt($('[data-wl-h-pay]', demo)); }],
-      [10700, function () { press($('[data-wl-h-pay]', demo)); set('wl-s-paid', true); }],
-      [11300, function () { set('wl-s-panel', false); pointAt($('[data-wl-h-place]', demo)); }],
-      [11800, function () { press($('[data-wl-h-place]', demo)); }],
-      [12200, function () { scene('done'); step(5); url.textContent = 'wrrapd.com/orders'; pointAt($('.wl-proof', demo)); }],
-    ];
-
-    function run(from) {
-      timers.forEach(clearTimeout);
-      timers = [];
-      if (!from) store = DEMO_STORES[loop++ % DEMO_STORES.length];
-      demo.classList.add('wl-jump');
-      TL.forEach(function (e) { if (e[0] <= from) e[1](); });
-      void demo.offsetWidth;
-      demo.classList.remove('wl-jump');
-      t0 = Date.now() - from;
-      TL.forEach(function (e) { if (e[0] > from) timers.push(setTimeout(e[1], e[0] - from)); });
-      timers.push(setTimeout(function () { run(0); }, LOOP - from));
-    }
-
-    /* Plays only while the visitor hovers the section (tap to play on touch screens). */
     var playing = false;
-    var pos = 0;
-    function stopTimers() { timers.forEach(clearTimeout); timers = []; }
-    function play(from) {
+    function play() {
+      if (playing) return;
       playing = true;
-      demo.classList.add('wl-playing');
-      run(from == null ? pos : from);
+      wrap.classList.add('wl-playing');
+      var p = video.play();
+      if (p && typeof p.catch === 'function') p.catch(function () { playing = false; wrap.classList.remove('wl-playing'); });
     }
     function pause() {
       if (!playing) return;
       playing = false;
-      pos = (Date.now() - t0) % LOOP;
-      stopTimers();
-      demo.classList.remove('wl-playing');
+      wrap.classList.remove('wl-playing');
+      try { video.pause(); } catch (e) {}
     }
-    stepBtns.forEach(function (b) {
-      b.addEventListener('click', function () { play(START[Number(b.dataset.step)] || 0); });
+    video.addEventListener('ended', function () {
+      playing = false;
+      wrap.classList.remove('wl-playing');
+      try { video.currentTime = 0; } catch (e) {}
     });
-    var section = demo.closest('.wl-hiw') || demo;
+
     var canHover = window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
     if (canHover) {
-      section.addEventListener('mouseenter', function () { play(); });
-      section.addEventListener('mouseleave', pause);
+      wrap.addEventListener('mouseenter', play);
+      wrap.addEventListener('mouseleave', pause);
     } else {
-      demo.classList.add('wl-touch');
-      demo.addEventListener('click', function () { if (playing) pause(); else play(); });
+      wrap.classList.add('wl-touch');
+      wrap.addEventListener('click', function (e) {
+        e.preventDefault();
+        if (playing) pause(); else play();
+      });
     }
-    function frame() {
-      if (bar && t0 && playing) bar.style.width = Math.min(100, (Date.now() - t0) / LOOP * 100) + '%';
-      requestAnimationFrame(frame);
-    }
-    run(0);
-    stopTimers();
-    t0 = Date.now();
-    requestAnimationFrame(frame);
   }
 
   /* ---------- Paste & wrap (landing6) ---------- */

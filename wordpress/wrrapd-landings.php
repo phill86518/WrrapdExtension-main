@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_LANDINGS_BUILD', '2026-10-20-landings-v31' );
+define( 'WRRAPD_LANDINGS_BUILD', '2026-10-20-landings-v34' );
 define( 'WRRAPD_LANDING_COOKIE', 'wrrapd_lp' );
 define( 'WRRAPD_LANDING_RETIRED_SLUG', 'landing-retired-20261019' );
 
@@ -601,36 +601,14 @@ function wrrapd_landing_6_parts() {
 	echo '<div class="wl-hiw-cta">' . wrrapd_landing_orange( $ext, 'Add your FREE Chrome extension today' ) . '</div>';
 	echo '</div>';
 
-	echo '<div class="wl-demo wl-hiw-demo" data-wl-hiw aria-label="Animated demo of Wrrapd at checkout">';
-	echo '<div class="wl-browser"><div class="wl-browser-bar"><i></i><i></i><i></i><span class="wl-url" data-wl-h-url>chromewebstore.google.com</span></div>';
-	echo '<div class="wl-browser-body">';
-
-	echo '<div class="wl-sc wl-sc-install"><div class="wl-cws"><img src="' . esc_url( $icon ) . '" alt="" width="72" height="72"><div class="wl-cws-meta"><b>Wrrapd</b><small>Gift-wrap at checkout</small><small class="wl-cws-free">Free</small></div></div>';
-	echo '<button type="button" class="wl-cws-btn" tabindex="-1" data-wl-h-add><span class="wl-cws-a">Add to Chrome</span><span class="wl-cws-b">Added to Chrome</span></button></div>';
-
-	echo '<div class="wl-sc wl-sc-cart"><div class="wl-cart"><p class="wl-cart-store" data-wl-h-store>Target</p>';
-	echo '<div class="wl-cart-item"><img src="https://target.scene7.com/is/image/Target/GUEST_2c7410d9-3a5a-41d2-a0fe-f53eeabd2726?wid=300&hei=300&qlt=80" alt="" data-wl-h-img><div><p class="wl-cart-title" data-wl-h-title>LEGO Icons Bumblebee Set</p><p class="wl-cart-meta">Qty 1 · Arrives Tue</p></div></div>';
-	echo '<div class="wl-cart-line"><span>Order total</span><span class="wl-skel"></span></div>';
-	echo '<button type="button" class="wl-place" tabindex="-1" data-wl-h-place>Place your order</button></div>';
-	echo '<div class="wl-panel" data-wl-h-panel><div class="wl-panel-head">' . wrrapd_landing_bow_svg( 'wl-bow-xs' ) . '<b>Wrrapd</b></div>';
-	echo '<div class="wl-panel-pick"><p class="wl-panel-q">Gift-wrap this order?</p><div class="wl-toggle" data-wl-h-toggle><span></span></div>';
-	echo '<p class="wl-panel-sub">Choose a design</p><div class="wl-swatches"><i class="wl-pat-plaid" data-wl-h-sw></i><i class="wl-pat-dots" data-wl-h-sw></i><i class="wl-pat-stripe" data-wl-h-sw></i><i class="wl-pat-star" data-wl-h-sw></i></div>';
-	echo '<label class="wl-panel-check" data-wl-h-flowers><span class="wl-box"></span>Add fresh flowers</label></div>';
-	echo '<div class="wl-panel-sum"><p class="wl-panel-q">Wrrapd Summary</p><ul class="wl-sum"><li><span>Gift-wrap</span><b>Holiday Plaid</b></li><li><span>Flowers</span><b>Added</b></li><li><span>Delivery</span><b>Free</b></li></ul>';
-	echo '<button type="button" class="wl-pay" tabindex="-1" data-wl-h-pay><span class="wl-pay-a">Pay Wrrapd</span><span class="wl-pay-b">Paid</span></button></div></div></div>';
-
-	echo '<div class="wl-sc wl-sc-ship"><p class="wl-ship-h">Choose a shipping address</p>';
-	echo '<div class="wl-addr"><span class="wl-radio"></span><div><b>Jamie Rivera</b><small>Home address</small></div></div>';
-	echo '<div class="wl-addr wl-addr-hub" data-wl-h-hub><span class="wl-radio"></span><div><b>Wrrapd hub</b><small>We wrap it, then deliver it to Jamie</small></div>' . wrrapd_landing_bow_svg( 'wl-bow-xs' ) . '</div>';
-	echo '<button type="button" class="wl-place" tabindex="-1">Use this address</button></div>';
-
-	echo '<div class="wl-sc wl-sc-done">' . wrrapd_landing_gift( 'plaid', 'wl-gift-sm' ) . '<p>Wrapped and delivered!</p><div class="wl-proof"><span class="wl-proof-pic">' . wrrapd_landing_gift( 'plaid', 'wl-gift-xs' ) . '</span><span>Delivery photo sent to you</span></div></div>';
-
-	echo '<span class="wl-cursor" data-wl-h-cursor></span>';
-	echo '<span class="wl-play" data-wl-h-play><span class="wl-play-ic"></span><span class="wl-play-hover">Hover to watch</span><span class="wl-play-tap">Tap to watch</span></span>';
-	echo '</div></div>';
-	echo '<div class="wl-demo-progress"><span data-wl-h-bar></span></div>';
-	echo '</div>';
+	$hiw_video = 'https://wrrapd.com/wp-content/uploads/2026/10/Wrrapd-Extension-Flow-Demo-4.mp4?v=' . rawurlencode( (string) WRRAPD_LANDINGS_BUILD );
+	echo '<div class="wl-hiw-video" data-wl-hiw-video>'
+		. '<video class="wl-hiw-player" muted playsinline preload="metadata"'
+		. ' aria-label="How Wrrapd works — hover to watch">'
+		. '<source src="' . esc_url( $hiw_video ) . '" type="video/mp4" />'
+		. '</video>'
+		. '<p class="wl-hiw-video-cap">Hover to watch: checkout → wrap → hub → delivery</p>'
+		. '</div>';
 	echo '</div></div></section>';
 
 	echo '<section class="wl wl-paste" data-wl6="paste" id="paste-and-wrap"><div class="wl-inner">';
