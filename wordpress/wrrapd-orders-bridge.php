@@ -2760,7 +2760,7 @@ add_action( 'wp_head', 'wrrapd_output_site_footer_css', 9998 );
 function wrrapd_legal_page_refs() {
 	return array(
 		'ids'   => array( 5209, 6772, 6930, 6889, 6202, 7420, 7423 ),
-		'slugs' => array( 'terms', 'privacy', 'affiliate-disclosure', 'ecomms-policy', 'sms-consent', 'shop-privacy', 'shopify-terms' ),
+		'slugs' => array( 'terms', 'privacy', 'affiliate-disclosure', 'ecomms-policy', 'sms-consent', 'shop-privacy', 'shop-terms' ),
 	);
 }
 
