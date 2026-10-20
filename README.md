@@ -9,6 +9,7 @@ Single Git repository for the **multi-retailer Chrome extension**, the **Node pa
 | [`extension/`](extension/) | Manifest V3 extension — [Chrome Web Store](https://chromewebstore.google.com/detail/wrrapd/lobngnjcjeimefihnobdmocicopikoip) for shoppers; **Load unpacked** for dev. One content bundle per retailer under `src/content/`; generated root bundles are committed. |
 | [`backend/wrrapd-api-repo/WrrapdServer/`](backend/wrrapd-api-repo/WrrapdServer/) | Node `server.js`, `public/checkout.html`, PM2 process **`wrrapd-server`**, Stripe, proxies, order ingest. |
 | [`tracking-platform/`](tracking-platform/) | Next.js app: ops hub at `/`, admin `/admin`, driver `/driver`, public `/track/[token]`. Deployed to **Cloud Run** (`wrrapd-tracking`). |
+| [`shopify-app/`](shopify-app/) | Shopify Partner app (**Wrrapd Inc.**) — merchant gift-wrap checkout + hub order handoff. See [shopify-app/docs/](shopify-app/docs/). |
 
 ## GitHub
 
@@ -56,8 +57,10 @@ Adjust if your home directory differs. See [backend/wrrapd-api-repo/WrrapdServer
 | Doc | Purpose |
 |-----|---------|
 | **[DEPLOYMENT.md](DEPLOYMENT.md)** | **Copy-paste deploy commands (canonical)** |
+| [docs/SHOPIFY-APP.md](docs/SHOPIFY-APP.md) | Shopify Partner app: stealth listing, ingest, secrets, deploy |
+| [shopify-app/README.md](shopify-app/README.md) | Shopify app scaffold + CLI |
 | [docs/CUSTOMER-ACCOUNTS-AND-ORDER-HISTORY.md](docs/CUSTOMER-ACCOUNTS-AND-ORDER-HISTORY.md) | Guest vs account, order backfill, customer numbers, SQL vs JSON vs Supabase |
-| [docs/INTEGRATION-MAP.md](docs/INTEGRATION-MAP.md) | Extension ↔ pay server ↔ tracking ↔ WordPress (and `wrrapd-logins` GCP) |
+| [docs/INTEGRATION-MAP.md](docs/INTEGRATION-MAP.md) | Extension ↔ pay server ↔ tracking ↔ WordPress ↔ Shopify |
 | [docs/EXTENSION-ARCHITECTURE.md](docs/EXTENSION-ARCHITECTURE.md) | Multi-retailer extension bundle/adaptor rules and release packaging |
 | [docs/WORDPRESS-SITE-EDITS-LOG.md](docs/WORDPRESS-SITE-EDITS-LOG.md) | Changelog of Elementor / Hello CSS / DB-touch site work |
 | [docs/GCP-WRRAPD-LOGINS-ACCESS.md](docs/GCP-WRRAPD-LOGINS-ACCESS.md) | IAM and `gcloud`: access `wrrapd-logins` vs `wrrapd-chrome-extension` |

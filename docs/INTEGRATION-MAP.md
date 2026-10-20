@@ -1,4 +1,4 @@
-# Integration map: Chrome extension, pay/API server, tracking, WordPress
+# Integration map: Chrome extension, pay/API server, tracking, WordPress, Shopify
 
 High-level map of how the major pieces talk today, and where **customer identity** and **order history** should be joined for the “guest → account → see all orders” feature.
 
@@ -10,6 +10,11 @@ flowchart LR
 
   subgraph ext [Chrome extension]
     E[content script bundle]
+  end
+
+  subgraph shopify [Shopify merchants]
+    SStore[Merchant storefront]
+    SApp[shopify-app Remix + extensions]
   end
 
   subgraph vm [GCP VM]
@@ -32,9 +37,11 @@ flowchart LR
   end
 
   A --> E
-  E -->|"HTTPS: Stripe session, payloads"| W
+  E -->|"HTTPS: pay / process-payment"| W
+  SStore --> SApp
+  SApp -->|"POST /api/shopify/orders"| W
   W --> J
-  W -->|"proxy-tracking-ingest"| T
+  W -->|"proxy-tracking-ingest / Shopify ingest"| T
   T --> F
   P --> U
   U -.->|"OAuth client IDs / redirects"| O
@@ -50,8 +57,10 @@ flowchart LR
 
 | Host / process | Repo path | Notes |
 |----------------|-----------|--------|
-| `api.wrrapd.com`, `pay.wrrapd.com` | `backend/wrrapd-api-repo/WrrapdServer/server.js` | PM2 name **`wrrapd-server`**. CORS allows retailer extension origins; Stripe checkout; saves orders under `orders/`. |
+| `api.wrrapd.com`, `pay.wrrapd.com` | `backend/wrrapd-api-repo/WrrapdServer/server.js` | PM2 name **`wrrapd-server`**. CORS allows retailer extension origins; Stripe/Helcim checkout; saves orders under `orders/`. |
 | Tracking ingest | Same server → `POST /api/proxy-tracking-ingest` (see `TRACKING_INGEST_URL`) | Forwards to Cloud Run `…/api/orders/ingest` with shared secret header. |
+| Shopify wrap orders | Same server → `POST /api/shopify/orders` | Header **`X-Wrrapd-Shopify-Secret`** (`SHOPIFY_WRRAPD_WEBHOOK_SECRET`). Normalizes to ingest with **`retailer: Shopify`**. |
+| Shopify Partner app | `shopify-app/` | Embedded admin + cart/checkout extensions. Developer **Wrrapd Inc.** — see [SHOPIFY-APP.md](SHOPIFY-APP.md). |
 | Tracking UI | `tracking-platform/` | Firestore-backed orders; admin/driver/public track routes. |
 | `wrrapd.com` | **Not** in this git repo | WordPress + Elementor + plugins; production DB tables commonly prefixed `dfy_`. |
 
@@ -64,6 +73,7 @@ Exact paths evolve; always confirm in `server.js` before documenting externally.
 - **`POST /create-checkout-session`** — body includes `total`, `orderNumber`, `customerEmail` (used for Stripe customer email when valid).
 - **`GET /api/checkout-session-complete`** — completes Stripe session, persists order JSON via `saveOrderToJsonFile`, triggers downstream email / ingest logic (see file for full flow).
 - **`POST /api/proxy-tracking-ingest`** — authenticated ingest toward tracking platform.
+- **`POST /api/shopify/orders`** — Shopify app → Command Center (`lib/shopify-orders.js`); secret header required.
 - **`POST /api/save-ai-design`**, **`POST /api/get-upload-url`**, **`POST /api/store-final-shipping-address`** — media and address pipeline supporting checkout.
 
 ---
@@ -117,5 +127,6 @@ Store-retailer safety rules:
 
 ## Related documents
 
+- [`SHOPIFY-APP.md`](SHOPIFY-APP.md) — Partner signup, listing, secrets, deploy for the Shopify channel.
 - [`CUSTOMER-ACCOUNTS-AND-ORDER-HISTORY.md`](CUSTOMER-ACCOUNTS-AND-ORDER-HISTORY.md) — product + data model + DB choice.
 - [`WORDPRESS-SITE-EDITS-LOG.md`](WORDPRESS-SITE-EDITS-LOG.md) — changelog of site edits.

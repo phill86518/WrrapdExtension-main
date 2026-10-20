@@ -31,6 +31,7 @@ const shopperTerms = require(path.join(__dirname, 'lib', 'shopper-terms'));
 const extensionConfig = require(path.join(__dirname, 'lib', 'extension-config'));
 const deliveryHubs = require(path.join(__dirname, 'lib', 'delivery-hubs'));
 const giftBox = require(path.join(__dirname, 'lib', 'gift-box'));
+const shopifyOrders = require(path.join(__dirname, 'lib', 'shopify-orders'));
 
 // Initialize Google Cloud Storage
 let storageOptions = {
@@ -108,6 +109,7 @@ for (const p of [
     '/create-checkout-session',
     '/process-payment',
     '/api/proxy-tracking-ingest',
+    '/api/shopify/orders',
     '/api/retailer-order-ref',
 ]) {
     app.post(p, payLimiter);
@@ -2605,6 +2607,46 @@ app.post('/api/proxy-tracking-ingest', async (req, res) => {
     }
     const allOk = results.every((row) => row.ok);
     res.status(200).json({ ok: allOk, results });
+});
+
+/**
+ * Shopify app (Wrrapd Inc.) — verified Partner app forwards wrap-opt-in orders here.
+ * Header: X-Wrrapd-Shopify-Secret must match SHOPIFY_WRRAPD_WEBHOOK_SECRET.
+ * Body: { shop, topic?, order } (Shopify Admin order JSON).
+ */
+app.post('/api/shopify/orders', async (req, res) => {
+    if (!req.isApiDomain) {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
+    const expected = String(process.env.SHOPIFY_WRRAPD_WEBHOOK_SECRET || '').trim();
+    const got = String(req.get('x-wrrapd-shopify-secret') || '').trim();
+    if (!expected || !got || got !== expected) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+    const built = shopifyOrders.buildIngestFromShopify({
+        shop: req.body && req.body.shop,
+        topic: req.body && req.body.topic,
+        order: req.body && req.body.order,
+    });
+    if (!built.ok) {
+        if (built.skip) return res.status(200).json({ ok: true, skipped: true, reason: built.reason });
+        return res.status(400).json({ error: built.reason || 'Invalid Shopify order' });
+    }
+    const ingestResult = await ingestOrderIntoTracking(built.ingest);
+    if (!ingestResult.ok) {
+        console.error('[shopify/orders] ingest failed', built.ingest.externalOrderId, ingestResult.reason);
+        return res.status(502).json({
+            ok: false,
+            error: 'Tracking ingest failed',
+            reason: ingestResult.reason,
+            externalOrderId: built.ingest.externalOrderId,
+        });
+    }
+    return res.status(200).json({
+        ok: true,
+        externalOrderId: built.ingest.externalOrderId,
+        notify: ingestResult.notify || null,
+    });
 });
 
 /**

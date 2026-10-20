@@ -118,6 +118,7 @@ function parseExplicitRetailer(p: IngestOrderPayload, invalidFields: string[]): 
   if (lo === "sephora") return "Sephora";
   if (lo === "bestbuy" || lo === "best buy") return "Best Buy";
   if (lo === "etsy") return "Etsy";
+  if (lo === "shopify") return "Shopify";
   invalidFields.push("retailer");
   return undefined;
 }

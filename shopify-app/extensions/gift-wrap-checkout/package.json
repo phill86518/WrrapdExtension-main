@@ -1,0 +1,11 @@
+{
+  "name": "wrrapd-gift-wrap-checkout",
+  "version": "0.1.0",
+  "private": true,
+  "author": "Wrrapd Inc.",
+  "dependencies": {
+    "@shopify/ui-extensions": "2025.1.x",
+    "@shopify/ui-extensions-react": "2025.1.x",
+    "react": "^18.3.1"
+  }
+}

@@ -41,3 +41,10 @@ curl -sS -X POST 'https://api.wrrapd.com/api/internal/claim-orders-by-email' \
 ```
 
 Monorepo MU plugin + install notes: **[../../../wordpress/README.md](../../../wordpress/README.md)**.
+
+### Shopify app → hub ingest
+
+- **`SHOPIFY_WRRAPD_WEBHOOK_SECRET`** — shared with `shopify-app/.env`. Required for **`POST /api/shopify/orders`** (header **`X-Wrrapd-Shopify-Secret`**). Never commit the value.
+- After setting or changing it: **`pm2 restart wrrapd-server`**.
+- Normalizer: `lib/shopify-orders.js` → Command Center with **`retailer: Shopify`**.
+- Docs: **[../../../docs/SHOPIFY-APP.md](../../../docs/SHOPIFY-APP.md)**.

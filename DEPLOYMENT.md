@@ -9,6 +9,7 @@ Use this file for **exact** commands. Order matters.
 3. **Restart `wrrapd-server` (PM2)** only when **`backend/wrrapd-api-repo/WrrapdServer`** (or its deps) changed.
 4. **Cloud Run (`wrrapd-tracking`)** only when **`tracking-platform/`** changed.
 5. **Extension:** Windows `npm run build` + Chrome Reload when **`extension/`** changed (no PM2).
+6. **Shopify app (`shopify-app/`):** Partner app + checkout/cart extensions. Pay-server piece is **`POST /api/shopify/orders`** (restart PM2 when that backend changes). Full guide: [docs/SHOPIFY-APP.md](docs/SHOPIFY-APP.md).
 
 ---
 
@@ -134,20 +135,37 @@ cd ..
 
 ## Quick “what do I run?”
 
-| What changed | VM: step 2 push | VM: step 3 PM2 | VM: step 4 Cloud Run | Windows: step 5 build |
-|----------------|----------------|----------------|------------------------|------------------------|
-| `extension/` only | If you committed on VM | No | No | Yes |
-| `backend/wrrapd-api-repo/WrrapdServer/` | Yes | Yes | No | No |
-| `tracking-platform/` | Yes | No | Yes | No |
-| More than one of the above | Yes | If backend touched | If tracking touched | If extension touched |
+| What changed | VM: step 2 push | VM: step 3 PM2 | VM: step 4 Cloud Run | Windows: step 5 build | Shopify CLI / app host |
+|----------------|----------------|----------------|------------------------|------------------------|------------------------|
+| `extension/` only | If you committed on VM | No | No | Yes | No |
+| `backend/wrrapd-api-repo/WrrapdServer/` | Yes | Yes | No | No | No |
+| `tracking-platform/` | Yes | No | Yes | No | No |
+| `shopify-app/` only | Yes | Only if you also changed WrrapdServer Shopify route/secret | No | No | Yes (`shopify app dev` / deploy) |
+| Shopify ingest backend (`lib/shopify-orders.js`, `/api/shopify/orders`) | Yes | Yes — set `SHOPIFY_WRRAPD_WEBHOOK_SECRET` first | If `OrderRetailer` / ingest changed | No | Keep app secret in sync |
+| More than one of the above | Yes | If backend touched | If tracking touched | If extension touched | If `shopify-app/` touched |
+
+### Shopify webhook secret (pay server)
+
+When enabling Shopify orders on the VM:
+
+```bash
+# Once: add the same secret to WrrapdServer/.env (never commit the value)
+# SHOPIFY_WRRAPD_WEBHOOK_SECRET=<openssl rand -hex 32>
+cd /home/phill/wrrapd-GCP/backend/wrrapd-api-repo/WrrapdServer
+pm2 restart wrrapd-server
+curl -sS http://127.0.0.1:8080/health
+```
+
+Partner signup, listing, and app CLI: [docs/SHOPIFY-APP.md](docs/SHOPIFY-APP.md) → [`shopify-app/docs/`](shopify-app/docs/).
 
 ---
 
 ## Related docs
 
 - Monorepo overview: [README.md](README.md)
+- Shopify app (Partner, listing, ingest): [docs/SHOPIFY-APP.md](docs/SHOPIFY-APP.md)
 - Customer accounts + order history (spec): [docs/CUSTOMER-ACCOUNTS-AND-ORDER-HISTORY.md](docs/CUSTOMER-ACCOUNTS-AND-ORDER-HISTORY.md)
-- Integration map (extension / API / tracking / WordPress): [docs/INTEGRATION-MAP.md](docs/INTEGRATION-MAP.md)
+- Integration map (extension / API / tracking / WordPress / Shopify): [docs/INTEGRATION-MAP.md](docs/INTEGRATION-MAP.md)
 - WordPress site edits log (Elementor, global CSS): [docs/WORDPRESS-SITE-EDITS-LOG.md](docs/WORDPRESS-SITE-EDITS-LOG.md)
 - GCP IAM: `wrrapd-logins` vs `wrrapd-chrome-extension`: [docs/GCP-WRRAPD-LOGINS-ACCESS.md](docs/GCP-WRRAPD-LOGINS-ACCESS.md)
 - Extension build and paths: [extension/README.md](extension/README.md)

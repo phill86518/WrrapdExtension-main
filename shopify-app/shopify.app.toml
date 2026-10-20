@@ -1,0 +1,38 @@
+# Learn more: https://shopify.dev/docs/apps/tools/cli/configuration
+# Developer: Wrrapd Inc. — Partner login admin@wrrapd.com
+
+name = "Wrrapd Gift Wrap & Delivery"
+client_id = "REPLACE_AFTER_PARTNER_CREATE"
+application_url = "https://REPLACE_TUNNEL_OR_HOST"
+embedded = true
+
+[access_scopes]
+scopes = "read_products,write_products,read_orders,write_orders,read_shipping,write_shipping,read_checkouts,write_checkouts,write_order_edits"
+
+[auth]
+redirect_urls = [
+  "https://REPLACE_TUNNEL_OR_HOST/auth/callback",
+  "https://REPLACE_TUNNEL_OR_HOST/auth/shopify/callback",
+  "https://REPLACE_TUNNEL_OR_HOST/api/auth/callback"
+]
+
+[webhooks]
+api_version = "2025-01"
+
+  [[webhooks.subscriptions]]
+  topics = ["orders/paid"]
+  uri = "/webhooks"
+
+  [[webhooks.subscriptions]]
+  topics = ["orders/create"]
+  uri = "/webhooks"
+
+  [[webhooks.subscriptions]]
+  topics = ["app/uninstalled"]
+  uri = "/webhooks"
+
+[pos]
+embedded = false
+
+[build]
+automatically_update_urls_on_dev = true

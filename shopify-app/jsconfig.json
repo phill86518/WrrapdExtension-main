@@ -1,0 +1,11 @@
+{
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "target": "ES2022",
+    "strict": false,
+    "baseUrl": "."
+  },
+  "include": ["app/**/*.js", "app/**/*.jsx"]
+}

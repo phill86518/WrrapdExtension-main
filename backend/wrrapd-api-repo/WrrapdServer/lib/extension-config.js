@@ -25,6 +25,7 @@ const RETAILER_CODES = {
     etsy: 'EC',
     ulta: 'UT',
     lego: 'LG',
+    shopify: 'SH',
 };
 
 function publicExtensionConfig() {

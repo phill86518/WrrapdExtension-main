@@ -64,7 +64,8 @@ export type OrderRetailer =
   | "Kohl's"
   | "Sephora"
   | "Best Buy"
-  | "Etsy";
+  | "Etsy"
+  | "Shopify";
 
 /** Per-order wrap workflow inside a WrapStar shift. */
 export type WrapOrderPhase =

@@ -1,0 +1,15 @@
+api_version = "2025-01"
+
+[[extensions]]
+name = "Wrrapd gift wrap"
+handle = "wrrapd-gift-wrap-checkout"
+type = "ui_extension"
+uid = "wrrapd-gift-wrap-checkout-001"
+
+  [[extensions.targeting]]
+  module = "./src/Checkout.jsx"
+  target = "purchase.checkout.block.render"
+
+  [extensions.capabilities]
+  api_access = true
+  network_access = true

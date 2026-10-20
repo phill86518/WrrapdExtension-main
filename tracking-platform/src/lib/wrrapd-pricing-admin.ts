@@ -174,6 +174,7 @@ export const RETAILER_LABELS: Record<string, string> = {
   ulta: "Ulta",
   kohls: "Kohl's",
   bestbuy: "Best Buy",
+  shopify: "Shopify",
 };
 
 export function priceFieldKeys(): (keyof UnitPrices)[] {
