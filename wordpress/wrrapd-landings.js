@@ -304,50 +304,111 @@
     dealBannerTimer = setTimeout(function () { el.classList.remove('is-soft'); }, 1000);
   }
 
-  /* ---------- How it works video (landing6) — play only on hover / tap ---------- */
+  /* ---------- How it works video (landing6) — NEVER autoplay; hover / tap only ---------- */
   function initHowItWorks() {
     var wrap = $('[data-wl-hiw-video]');
     var stepBtns = $$('[data-wl-hiw-steps] button');
     var lastStep = -1;
+    /* Roughly match Demo-5 beats: install → shop → personalize → hub → pay → deliver */
+    var STEP_AT = [0, 0.12, 0.28, 0.48, 0.66, 0.82];
+    var stepTimers = [];
+    var canHover = window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+    var video = wrap ? $('.wl-hiw-player', wrap) : null;
+    var playing = false;
+    var armed = false;
+
+    function setStep(i) {
+      stepBtns.forEach(function (x, k) { x.parentNode.classList.toggle('wl-on', k === i); });
+      if (i === 1 && lastStep !== 1) softDealBanner();
+      lastStep = i;
+    }
+    function clearStepTimers() {
+      stepTimers.forEach(clearTimeout);
+      stepTimers = [];
+    }
+    function runStepAnim(fromMs) {
+      clearStepTimers();
+      if (!stepBtns.length) return;
+      var dur = (video && video.duration && isFinite(video.duration) && video.duration > 1)
+        ? video.duration * 1000
+        : 28000;
+      var start = fromMs || 0;
+      STEP_AT.forEach(function (frac, i) {
+        var t = Math.round(frac * dur) - start;
+        if (t <= 0) setStep(i);
+        else stepTimers.push(setTimeout(function () { setStep(i); }, t));
+      });
+    }
+
     stepBtns.forEach(function (b) {
       b.addEventListener('click', function () {
         var i = Number(b.dataset.step) || 0;
-        stepBtns.forEach(function (x, k) { x.parentNode.classList.toggle('wl-on', k === i); });
-        if (i === 1 && lastStep !== 1) softDealBanner();
-        lastStep = i;
+        clearStepTimers();
+        setStep(i);
+        if (video && armed && video.duration) {
+          try { video.currentTime = (STEP_AT[i] || 0) * video.duration; } catch (e) {}
+        }
       });
     });
-    if (!wrap) return;
-    var video = $('.wl-hiw-player', wrap);
-    if (!video) return;
+    setStep(0);
+    if (!wrap || !video) return;
+
     video.muted = true;
     video.defaultMuted = true;
     video.setAttribute('muted', '');
     video.playsInline = true;
+    video.preload = 'none';
+    video.removeAttribute('autoplay');
     video.removeAttribute('controls');
+    try { video.pause(); video.currentTime = 0; } catch (e) {}
 
-    var playing = false;
+    function armSource() {
+      if (armed) return;
+      armed = true;
+      var src = $('source', video);
+      var url = (src && (src.getAttribute('data-src') || src.getAttribute('src'))) || video.getAttribute('src') || '';
+      if (src && url) {
+        src.setAttribute('src', url);
+        try { video.load(); } catch (e) {}
+      }
+    }
+
     function play() {
       if (playing) return;
+      armSource();
       playing = true;
       wrap.classList.add('wl-playing');
+      runStepAnim(Math.max(0, (video.currentTime || 0) * 1000));
       var p = video.play();
-      if (p && typeof p.catch === 'function') p.catch(function () { playing = false; wrap.classList.remove('wl-playing'); });
+      if (p && typeof p.catch === 'function') {
+        p.catch(function () {
+          playing = false;
+          wrap.classList.remove('wl-playing');
+          clearStepTimers();
+        });
+      }
     }
     function pause() {
       if (!playing) return;
       playing = false;
       wrap.classList.remove('wl-playing');
+      clearStepTimers();
       try { video.pause(); } catch (e) {}
     }
     video.addEventListener('ended', function () {
       playing = false;
       wrap.classList.remove('wl-playing');
+      clearStepTimers();
+      setStep(0);
       try { video.currentTime = 0; } catch (e) {}
     });
+    video.addEventListener('loadedmetadata', function () {
+      if (playing) runStepAnim(Math.max(0, (video.currentTime || 0) * 1000));
+    });
 
-    var canHover = window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
     if (canHover) {
+      wrap.addEventListener('pointerenter', play);
+      wrap.addEventListener('pointerleave', pause);
       wrap.addEventListener('mouseenter', play);
       wrap.addEventListener('mouseleave', pause);
     } else {

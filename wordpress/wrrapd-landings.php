@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_LANDINGS_BUILD', '2026-10-20-landings-v34' );
+define( 'WRRAPD_LANDINGS_BUILD', '2026-10-20-landings-v36-hiw-hover' );
 define( 'WRRAPD_LANDING_COOKIE', 'wrrapd_lp' );
 define( 'WRRAPD_LANDING_RETIRED_SLUG', 'landing-retired-20261019' );
 
@@ -601,11 +601,11 @@ function wrrapd_landing_6_parts() {
 	echo '<div class="wl-hiw-cta">' . wrrapd_landing_orange( $ext, 'Add your FREE Chrome extension today' ) . '</div>';
 	echo '</div>';
 
-	$hiw_video = 'https://wrrapd.com/wp-content/uploads/2026/10/Wrrapd-Extension-Flow-Demo-4.mp4?v=' . rawurlencode( (string) WRRAPD_LANDINGS_BUILD );
+	$hiw_video = 'https://wrrapd.com/wp-content/uploads/2026/10/Wrrapd-Extension-Flow-Demo-5.mp4?v=' . rawurlencode( (string) WRRAPD_LANDINGS_BUILD );
 	echo '<div class="wl-hiw-video" data-wl-hiw-video>'
-		. '<video class="wl-hiw-player" muted playsinline preload="metadata"'
+		. '<video class="wl-hiw-player" muted playsinline preload="none"'
 		. ' aria-label="How Wrrapd works — hover to watch">'
-		. '<source src="' . esc_url( $hiw_video ) . '" type="video/mp4" />'
+		. '<source data-src="' . esc_url( $hiw_video ) . '" type="video/mp4" />'
 		. '</video>'
 		. '<p class="wl-hiw-video-cap">Hover to watch: checkout → wrap → hub → delivery</p>'
 		. '</div>';
