@@ -2612,13 +2612,17 @@ app.post('/api/proxy-tracking-ingest', async (req, res) => {
 });
 
 /**
- * Shopify app (Wrrapd Inc.) — verified Partner app forwards wrap-opt-in orders here.
+ * Shopify app (Wrrapd Inc.) — PARKED / siloed (2026-10).
+ * Off unless SHOPIFY_CHANNEL_ENABLED=1. Does not touch extension or website checkout.
  * Header: X-Wrrapd-Shopify-Secret must match SHOPIFY_WRRAPD_WEBHOOK_SECRET.
  * Body: { shop, topic?, order } (Shopify Admin order JSON).
  */
 app.post('/api/shopify/orders', async (req, res) => {
     if (!req.isApiDomain) {
         return res.status(403).json({ error: 'Forbidden' });
+    }
+    if (String(process.env.SHOPIFY_CHANNEL_ENABLED || '').trim() !== '1') {
+        return res.status(503).json({ error: 'Shopify channel parked', parked: true });
     }
     const expected = String(process.env.SHOPIFY_WRRAPD_WEBHOOK_SECRET || '').trim();
     const got = String(req.get('x-wrrapd-shopify-secret') || '').trim();
@@ -2652,13 +2656,15 @@ app.post('/api/shopify/orders', async (req, res) => {
 });
 
 /**
- * Shopify mandatory privacy webhooks (customers/data_request, customers/redact, shop/redact).
- * Remix app verifies Shopify HMAC, then forwards here with X-Wrrapd-Shopify-Secret.
+ * Shopify mandatory privacy webhooks — PARKED / siloed with SHOPIFY_CHANNEL_ENABLED.
  * Shopify channel only — does not apply to Chrome extension or website orders.
  */
 app.post('/api/shopify/privacy', async (req, res) => {
     if (!req.isApiDomain) {
         return res.status(403).json({ error: 'Forbidden' });
+    }
+    if (String(process.env.SHOPIFY_CHANNEL_ENABLED || '').trim() !== '1') {
+        return res.status(503).json({ error: 'Shopify channel parked', parked: true });
     }
     const expected = String(process.env.SHOPIFY_WRRAPD_WEBHOOK_SECRET || '').trim();
     const got = String(req.get('x-wrrapd-shopify-secret') || '').trim();

@@ -95,6 +95,16 @@ Shopify privacy webhooks, redaction, and the 12‑month retention job apply **on
 
 We keep full operational data from extension and website flows under our own policies. Shopify’s PCD / privacy addendum obligations are scoped to Shopify-sourced records only.
 
-## Status
+## Status — PARKED (2026-10-20)
 
-Pay-server ingest, privacy webhooks, checkout/cart extensions, and Cloud Run host path are in-repo. App Store submission remains a Partner Dashboard step.
+**Tabled.** Shoppers order through Wrrapd (Chrome extension / website), not Shopify checkout enhancements. Explore again only if product strategy changes.
+
+| Control | State |
+|---|---|
+| `npx shopify app dev` | Stopped |
+| Cloud Run `wrrapd-shopify` | Ingress **internal**, min instances 0 |
+| Scheduler `wrrapd-shopify-recipient-retention` | **PAUSED** |
+| Pay routes `/api/shopify/*` | Off unless `SHOPIFY_CHANNEL_ENABLED=1` |
+| Chrome extension / wrrapd.com / `/buy` | Untouched by this channel |
+
+Code stays under `shopify-app/` + siloed pay/tracking helpers for a future revisit. Do **not** wire Shopify into the extension checkout path.

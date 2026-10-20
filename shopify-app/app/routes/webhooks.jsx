@@ -1,4 +1,4 @@
-import { authenticate, prisma } from "../shopify.server";
+import { authenticate, clearShopData } from "../shopify.server";
 import {
   forwardOrderToWrrapd,
   forwardPrivacyToWrrapd,
@@ -10,10 +10,7 @@ export const action = async ({ request }) => {
 
   switch (topic) {
     case "APP_UNINSTALLED":
-      if (shop) {
-        await prisma.session.deleteMany({ where: { shop } });
-        await prisma.shopSettings.deleteMany({ where: { shop } }).catch(() => undefined);
-      }
+      await clearShopData(shop);
       break;
 
     case "ORDERS_PAID":

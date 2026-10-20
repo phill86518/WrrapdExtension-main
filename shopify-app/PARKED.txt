@@ -1,0 +1,1 @@
+PARKED 2026-10-20 — do not run app dev / deploy for demos. See docs/SHOPIFY-APP.md Status.

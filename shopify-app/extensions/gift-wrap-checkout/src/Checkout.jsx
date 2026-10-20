@@ -1,105 +1,102 @@
 /**
- * Checkout UI — Wrrapd Inc. gift wrap opt-in.
+ * Checkout UI — Wrrapd Inc. gift wrap opt-in (Preact / Polaris web components).
  * Support: help@wrrapd.com
  */
-import {
-  reactExtension,
-  BlockStack,
-  Checkbox,
-  Text,
-  TextField,
-  Banner,
-  useApplyAttributeChange,
-  useAttributeValues,
-} from "@shopify/ui-extensions-react/checkout";
+import "@shopify/ui-extensions/preact";
+import { render } from "preact";
+import { useState } from "preact/hooks";
+import { useAttributeValues } from "@shopify/ui-extensions/checkout/preact";
 
-const WRRAPD_API = "https://api.wrrapd.com";
-
-export default reactExtension("purchase.checkout.block.render", () => <GiftWrapBlock />);
+export default async () => {
+  render(<GiftWrapBlock />, document.body);
+};
 
 function GiftWrapBlock() {
-  const applyAttributeChange = useApplyAttributeChange();
-  const [wrapOn, gifteeZip, giftMessage, occasion] = useAttributeValues([
-    "_wrrapd_wrap",
-    "_wrrapd_giftee_zip",
-    "_wrrapd_gift_message",
-    "_wrrapd_occasion",
+  const [wrapOn, gifteeZipAttr, giftMessageAttr, occasionAttr] = useAttributeValues([
+    "wrrapd_wrap",
+    "wrrapd_giftee_zip",
+    "wrrapd_gift_message",
+    "wrrapd_occasion",
   ]);
 
-  const enabled = wrapOn === "1" || wrapOn === "true";
+  const [localOn, setLocalOn] = useState(false);
+  const [gifteeZip, setGifteeZip] = useState("");
+  const [occasion, setOccasion] = useState("");
+  const [giftMessage, setGiftMessage] = useState("");
+
+  const enabled = wrapOn === "1" || wrapOn === "true" || localOn;
 
   async function setAttr(key, value) {
-    await applyAttributeChange({ type: "updateAttribute", key, value: String(value || "") });
-  }
-
-  async function onToggle(checked) {
-    await setAttr("_wrrapd_wrap", checked ? "1" : "");
-    if (!checked) {
-      await setAttr("_wrrapd_giftee_zip", "");
-      await setAttr("_wrrapd_gift_message", "");
-      await setAttr("_wrrapd_occasion", "");
-      await setAttr("_wrrapd_hub_label", "");
+    try {
+      await shopify.applyAttributeChange({
+        type: "updateAttribute",
+        key,
+        value: String(value || ""),
+      });
+    } catch {
+      /* accelerated checkout / instructions can block writes */
     }
   }
 
-  async function onZipBlur(value) {
-    const zip = String(value || "").replace(/\D/g, "").slice(0, 5);
-    await setAttr("_wrrapd_giftee_zip", zip);
-    if (zip.length !== 5) return;
-    try {
-      const res = await fetch(`${WRRAPD_API}/api/delivery-hub?postalCode=${encodeURIComponent(zip)}`, {
-        credentials: "omit",
-        cache: "no-store",
-      });
-      const body = await res.json();
-      const hub = body?.hub;
-      if (hub?.addressLine1) {
-        const label = [
-          hub.organization || "Wrrapd Inc.",
-          hub.addressLine1,
-          `${hub.city}, ${hub.state} ${hub.postalCode}`,
-        ]
-          .filter(Boolean)
-          .join(", ");
-        await setAttr("_wrrapd_hub_label", label);
-      }
-    } catch {
-      /* hub lookup is best-effort in checkout */
+  async function onToggle(event) {
+    const checked = Boolean(event?.currentTarget?.checked ?? event?.target?.checked);
+    setLocalOn(checked);
+    await setAttr("wrrapd_wrap", checked ? "1" : "");
+    if (!checked) {
+      setGifteeZip("");
+      setOccasion("");
+      setGiftMessage("");
+      await setAttr("wrrapd_giftee_zip", "");
+      await setAttr("wrrapd_gift_message", "");
+      await setAttr("wrrapd_occasion", "");
+      await setAttr("wrrapd_hub_label", "");
     }
   }
 
   return (
-    <BlockStack spacing="base">
-      <Checkbox checked={enabled} onChange={onToggle}>
-        Gift wrap & deliver with Wrrapd
-      </Checkbox>
+    <s-stack direction="block" gap="base">
+      <s-text type="strong">Wrrapd gift wrap</s-text>
+      <s-checkbox
+        checked={enabled}
+        onChange={onToggle}
+        label="Gift wrap & deliver with Wrrapd"
+      />
       {enabled ? (
-        <BlockStack spacing="tight">
-          <Banner status="info">
+        <s-stack direction="block" gap="base">
+          <s-banner tone="info" heading="Gift wrap & delivery">
             Your order ships to the Wrrapd hub. Wrrapd Inc. wraps it and delivers it to the giftee.
-          </Banner>
-          <TextField
+          </s-banner>
+          <s-text-field
             label="Giftee / gift-recipient's zip code"
-            value={gifteeZip || ""}
-            onChange={(v) => setAttr("_wrrapd_giftee_zip", v)}
-            onBlur={() => onZipBlur(gifteeZip)}
+            value={gifteeZip || gifteeZipAttr || ""}
+            onChange={(event) => {
+              const v = event?.currentTarget?.value ?? event?.target?.value ?? "";
+              setGifteeZip(v);
+              setAttr("wrrapd_giftee_zip", v);
+            }}
           />
-          <TextField
+          <s-text-field
             label="Occasion"
-            value={occasion || ""}
-            onChange={(v) => setAttr("_wrrapd_occasion", v)}
+            value={occasion || occasionAttr || ""}
+            onChange={(event) => {
+              const v = event?.currentTarget?.value ?? event?.target?.value ?? "";
+              setOccasion(v);
+              setAttr("wrrapd_occasion", v);
+            }}
           />
-          <TextField
+          <s-text-field
             label="Gift message"
-            value={giftMessage || ""}
-            multiline={3}
-            onChange={(v) => setAttr("_wrrapd_gift_message", v)}
+            value={giftMessage || giftMessageAttr || ""}
+            rows={3}
+            onChange={(event) => {
+              const v = event?.currentTarget?.value ?? event?.target?.value ?? "";
+              setGiftMessage(v);
+              setAttr("wrrapd_gift_message", v);
+            }}
           />
-          <Text appearance="subdued" size="small">
-            Questions? help@wrrapd.com · Wrrapd Inc.
-          </Text>
-        </BlockStack>
+          <s-text color="subdued">Questions? help@wrrapd.com · Wrrapd Inc.</s-text>
+        </s-stack>
       ) : null}
-    </BlockStack>
+    </s-stack>
   );
 }

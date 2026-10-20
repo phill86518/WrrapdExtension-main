@@ -9,7 +9,7 @@ uid = "wrrapd-gift-wrap-checkout-001"
   [[extensions.targeting]]
   module = "./src/Checkout.jsx"
   target = "purchase.checkout.block.render"
+  default_placement = "INFORMATION2"
 
   [extensions.capabilities]
   api_access = true
-  network_access = true

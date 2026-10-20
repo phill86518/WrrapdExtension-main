@@ -12,17 +12,13 @@ import {
   InlineStack,
   BlockStack,
 } from "@shopify/polaris";
-import { authenticate, prisma } from "../shopify.server";
+import { authenticate } from "../shopify.server";
+import { getShopSettings, setShopWrapEnabled } from "../shop-settings.server";
 
 export const loader = async ({ request }) => {
   const { session } = await authenticate.admin(request);
   const shop = session.shop;
-  let settings = await prisma.shopSettings.findUnique({ where: { shop } });
-  if (!settings) {
-    settings = await prisma.shopSettings.create({
-      data: { shop, wrapEnabled: true },
-    });
-  }
+  const settings = await getShopSettings(shop);
   return json({
     shop,
     wrapEnabled: settings.wrapEnabled,
@@ -39,11 +35,7 @@ export const action = async ({ request }) => {
   const shop = session.shop;
   const form = await request.formData();
   const wrapEnabled = form.get("wrapEnabled") === "true";
-  await prisma.shopSettings.upsert({
-    where: { shop },
-    create: { shop, wrapEnabled },
-    update: { wrapEnabled },
-  });
+  await setShopWrapEnabled(shop, wrapEnabled);
   return json({ ok: true, wrapEnabled });
 };
 
