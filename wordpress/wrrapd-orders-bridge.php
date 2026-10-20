@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /** Bump when account UI / header polish changes — view-source should contain this string. */
-define( 'WRRAPD_MU_BUILD', '2026-10-19-header-cta-2s' );
+define( 'WRRAPD_MU_BUILD', '2026-10-20-shopify-legal' );
 
 /** Published Chrome Web Store item id (Wrrapd 3.0.14, approved Oct 8, 2026). */
 if ( ! defined( 'WRRAPD_CHROME_EXTENSION_ID' ) ) {
@@ -2759,8 +2759,8 @@ add_action( 'wp_head', 'wrrapd_output_site_footer_css', 9998 );
  */
 function wrrapd_legal_page_refs() {
 	return array(
-		'ids'   => array( 5209, 6772, 6930, 6889, 6202 ),
-		'slugs' => array( 'terms', 'privacy', 'affiliate-disclosure', 'ecomms-policy', 'sms-consent' ),
+		'ids'   => array( 5209, 6772, 6930, 6889, 6202, 7420, 7423 ),
+		'slugs' => array( 'terms', 'privacy', 'affiliate-disclosure', 'ecomms-policy', 'sms-consent', 'shopify-privacy', 'shopify-terms' ),
 	);
 }
 
@@ -2784,17 +2784,17 @@ function wrrapd_output_legal_page_css() {
 	}
 	echo '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,560;0,9..144,700;1,9..144,560&amp;display=swap" />';
 	echo '<style id="wrrapd-legal-fraunces">';
-	echo 'body.page-id-5209,body.page-id-6772,body.page-id-6930,body.page-id-6889,body.page-id-6202,';
-	echo 'body.page-id-5209 .elementor-widget-text-editor,body.page-id-6772 .elementor-widget-text-editor,body.page-id-6930 .elementor-widget-text-editor,body.page-id-6889 .elementor-widget-text-editor,body.page-id-6202 .elementor-widget-text-editor,';
-	echo 'body.page-id-5209 .elementor-heading-title,body.page-id-6772 .elementor-heading-title,body.page-id-6930 .elementor-heading-title,body.page-id-6889 .elementor-heading-title,body.page-id-6202 .elementor-heading-title,';
-	echo 'body.page-id-5209 h1,body.page-id-6772 h1,body.page-id-6930 h1,body.page-id-6889 h1,body.page-id-6202 h1,';
-	echo 'body.page-id-5209 h2,body.page-id-6772 h2,body.page-id-6930 h2,body.page-id-6889 h2,body.page-id-6202 h2,';
-	echo 'body.page-id-5209 h3,body.page-id-6772 h3,body.page-id-6930 h3,body.page-id-6889 h3,body.page-id-6202 h3,';
-	echo 'body.page-id-5209 p,body.page-id-6772 p,body.page-id-6930 p,body.page-id-6889 p,body.page-id-6202 p,';
-	echo 'body.page-id-5209 li,body.page-id-6772 li,body.page-id-6930 li,body.page-id-6889 li,body.page-id-6202 li,';
-	echo 'body.page-id-5209 a,body.page-id-6772 a,body.page-id-6930 a,body.page-id-6889 a,body.page-id-6202 a,';
-	echo 'body.page-id-5209 .wrrapd-page-shell,body.page-id-6772 .wrrapd-page-shell,body.page-id-6930 .wrrapd-page-shell,body.page-id-6889 .wrrapd-page-shell,body.page-id-6202 .wrrapd-page-shell,';
-	echo 'body.page-id-5209 .wrrapd-legal-card,body.page-id-6772 .wrrapd-legal-card,body.page-id-6930 .wrrapd-legal-card,body.page-id-6889 .wrrapd-legal-card,body.page-id-6202 .wrrapd-legal-card';
+	echo 'body.page-id-5209,body.page-id-6772,body.page-id-6930,body.page-id-6889,body.page-id-6202,body.page-id-7420,body.page-id-7423,';
+	echo 'body.page-id-5209 .elementor-widget-text-editor,body.page-id-6772 .elementor-widget-text-editor,body.page-id-6930 .elementor-widget-text-editor,body.page-id-6889 .elementor-widget-text-editor,body.page-id-6202 .elementor-widget-text-editor,body.page-id-7420 .elementor-widget-text-editor,body.page-id-7423 .elementor-widget-text-editor,';
+	echo 'body.page-id-5209 .elementor-heading-title,body.page-id-6772 .elementor-heading-title,body.page-id-6930 .elementor-heading-title,body.page-id-6889 .elementor-heading-title,body.page-id-6202 .elementor-heading-title,body.page-id-7420 .elementor-heading-title,body.page-id-7423 .elementor-heading-title,';
+	echo 'body.page-id-5209 h1,body.page-id-6772 h1,body.page-id-6930 h1,body.page-id-6889 h1,body.page-id-6202 h1,body.page-id-7420 h1,body.page-id-7423 h1,';
+	echo 'body.page-id-5209 h2,body.page-id-6772 h2,body.page-id-6930 h2,body.page-id-6889 h2,body.page-id-6202 h2,body.page-id-7420 h2,body.page-id-7423 h2,';
+	echo 'body.page-id-5209 h3,body.page-id-6772 h3,body.page-id-6930 h3,body.page-id-6889 h3,body.page-id-6202 h3,body.page-id-7420 h3,body.page-id-7423 h3,';
+	echo 'body.page-id-5209 p,body.page-id-6772 p,body.page-id-6930 p,body.page-id-6889 p,body.page-id-6202 p,body.page-id-7420 p,body.page-id-7423 p,';
+	echo 'body.page-id-5209 li,body.page-id-6772 li,body.page-id-6930 li,body.page-id-6889 li,body.page-id-6202 li,body.page-id-7420 li,body.page-id-7423 li,';
+	echo 'body.page-id-5209 a,body.page-id-6772 a,body.page-id-6930 a,body.page-id-6889 a,body.page-id-6202 a,body.page-id-7420 a,body.page-id-7423 a,';
+	echo 'body.page-id-5209 .wrrapd-page-shell,body.page-id-6772 .wrrapd-page-shell,body.page-id-6930 .wrrapd-page-shell,body.page-id-6889 .wrrapd-page-shell,body.page-id-6202 .wrrapd-page-shell,body.page-id-7420 .wrrapd-page-shell,body.page-id-7423 .wrrapd-page-shell,';
+	echo 'body.page-id-5209 .wrrapd-legal-card,body.page-id-6772 .wrrapd-legal-card,body.page-id-6930 .wrrapd-legal-card,body.page-id-6889 .wrrapd-legal-card,body.page-id-6202 .wrrapd-legal-card,body.page-id-7420 .wrrapd-legal-card,body.page-id-7423 .wrrapd-legal-card';
 	echo '{font-family:Fraunces,Georgia,"Times New Roman",serif!important;}';
 	echo '</style>';
 	echo '<!-- ' . esc_html( WRRAPD_MU_BUILD ) . ' -->';
