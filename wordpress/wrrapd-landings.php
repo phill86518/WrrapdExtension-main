@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_LANDINGS_BUILD', '2026-10-20-landings-v36-hiw-hover' );
+define( 'WRRAPD_LANDINGS_BUILD', '2026-10-21-landings-v37-hiw-stage' );
 define( 'WRRAPD_LANDING_COOKIE', 'wrrapd_lp' );
 define( 'WRRAPD_LANDING_RETIRED_SLUG', 'landing-retired-20261019' );
 
@@ -584,7 +584,6 @@ function wrrapd_landing_6_parts() {
 		. '<p class="wl-deal-banner-yay">Yay!</p>'
 		. '<p class="wl-deal-banner-copy">Earn <strong>10% off</strong> wrapping with 2+ gifts. Earn <strong>15% off</strong> with 5+ gifts.</p>'
 		. '</aside>';
-	echo '<div class="wl-hiw-grid"><div class="wl-hiw-left">';
 	$steps = array(
 		array( 'Add Wrrapd to Chrome', 'One click, free. Wrrapd shows up at Amazon, Target, Walmart, Nordstrom, Kohl\'s, Ulta, Sephora, Best Buy, LEGO and Etsy.' ),
 		array( 'Shop as usual', 'Fill your cart like always. At checkout, Wrrapd asks if you would like it gift-wrapped.' ),
@@ -593,23 +592,29 @@ function wrrapd_landing_6_parts() {
 		array( 'Pay Wrrapd, then check out', 'Pay for the wrapping and add-ons, then place your store order as usual. Final delivery is free.' ),
 		array( 'We wrap and deliver', 'Often the same day. You get a photo the moment it arrives.' ),
 	);
+	$hiw_video = 'https://wrrapd.com/wp-content/uploads/2026/10/Wrrapd-Extension-Flow-Demo-5.mp4?v=' . rawurlencode( (string) WRRAPD_LANDINGS_BUILD );
+
+	/* Cinema stage: ~15% step rail + ~85% video (clean light chrome). */
+	echo '<div class="wl-hiw-stage" data-wl-hiw-video>';
+	echo '<aside class="wl-hiw-rail" aria-live="polite">';
+	echo '<span class="wl-hiw-rail-label">Step</span>';
+	echo '<span class="wl-hiw-rail-n" data-wl-hiw-rail-n>1</span>';
+	echo '<p class="wl-hiw-rail-title" data-wl-hiw-rail-title>' . esc_html( $steps[0][0] ) . '</p>';
+	echo '</aside>';
+	echo '<div class="wl-hiw-screen">';
+	echo '<video class="wl-hiw-player" muted playsinline preload="none" aria-label="How Wrrapd works — hover to watch">';
+	echo '<source data-src="' . esc_url( $hiw_video ) . '" type="video/mp4" />';
+	echo '</video>';
+	echo '<p class="wl-hiw-video-cap">Hover to watch</p>';
+	echo '</div></div>';
+
 	echo '<ol class="wl-hiw-steps" data-wl-hiw-steps>';
 	foreach ( $steps as $i => $s ) {
-		echo '<li' . ( 0 === $i ? ' class="wl-on"' : '' ) . '><button type="button" data-step="' . (int) $i . '"><span class="wl-step-n">' . ( $i + 1 ) . '</span><span class="wl-hiw-copy"><b>' . esc_html( $s[0] ) . '</b><span>' . esc_html( $s[1] ) . '</span></span></button></li>';
+		echo '<li' . ( 0 === $i ? ' class="wl-on"' : '' ) . '><button type="button" data-step="' . (int) $i . '" data-title="' . esc_attr( $s[0] ) . '"><span class="wl-step-n">' . ( $i + 1 ) . '</span><span class="wl-hiw-copy"><b>' . esc_html( $s[0] ) . '</b><span>' . esc_html( $s[1] ) . '</span></span></button></li>';
 	}
 	echo '</ol>';
 	echo '<div class="wl-hiw-cta">' . wrrapd_landing_orange( $ext, 'Add your FREE Chrome extension today' ) . '</div>';
-	echo '</div>';
-
-	$hiw_video = 'https://wrrapd.com/wp-content/uploads/2026/10/Wrrapd-Extension-Flow-Demo-5.mp4?v=' . rawurlencode( (string) WRRAPD_LANDINGS_BUILD );
-	echo '<div class="wl-hiw-video" data-wl-hiw-video>'
-		. '<video class="wl-hiw-player" muted playsinline preload="none"'
-		. ' aria-label="How Wrrapd works — hover to watch">'
-		. '<source data-src="' . esc_url( $hiw_video ) . '" type="video/mp4" />'
-		. '</video>'
-		. '<p class="wl-hiw-video-cap">Hover to watch: checkout → wrap → hub → delivery</p>'
-		. '</div>';
-	echo '</div></div></section>';
+	echo '</div></section>';
 
 	echo '<section class="wl wl-paste" data-wl6="paste" id="paste-and-wrap"><div class="wl-inner">';
 	echo wrrapd_landing_head( 'Try without the Extension (simpler)', 'Copy, paste, beautifully wrapped.', 'Miles away from the people you miss? Copy a gift\'s link from one of our partner stores and paste it here. We purchase it, wrap it by hand and deliver it to their door, finished with a bow.' );

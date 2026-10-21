@@ -319,6 +319,13 @@
 
     function setStep(i) {
       stepBtns.forEach(function (x, k) { x.parentNode.classList.toggle('wl-on', k === i); });
+      var btn = stepBtns[i];
+      var railN = $('[data-wl-hiw-rail-n]');
+      var railT = $('[data-wl-hiw-rail-title]');
+      if (railN) railN.textContent = String(i + 1);
+      if (railT) {
+        railT.textContent = (btn && btn.getAttribute('data-title')) || (btn && $('.wl-hiw-copy b', btn) && $('.wl-hiw-copy b', btn).textContent) || '';
+      }
       if (i === 1 && lastStep !== 1) softDealBanner();
       lastStep = i;
     }
