@@ -9,7 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_GIFT_POPUP_BUILD', '2026-10-20-extension-flow-demo-v7' );
+define( 'WRRAPD_GIFT_POPUP_BUILD', '2026-10-21-extension-flow-demo-v8' );
 
 /** Set false to bring the homepage gift-wrap intro popup back. */
 define( 'WRRAPD_GIFT_POPUP_SUSPENDED', true );
@@ -37,7 +37,7 @@ function wrrapd_gift_wrap_popup_video_url() {
 	}
 
 	if ( $url === '' ) {
-		$fallback = 'https://wrrapd.com/wp-content/uploads/2026/10/Wrrapd-Extension-Flow-Demo-5.mp4';
+		$fallback = 'https://wrrapd.com/wp-content/uploads/2026/10/Wrrapd-Extension-Flow-Demo-6.mp4';
 		$needles  = array( 'extension-flow-demo', 'wrrapd-extension-flow', 'gift-wrapped-in-a-flash' );
 		$atts     = get_posts(
 			array(

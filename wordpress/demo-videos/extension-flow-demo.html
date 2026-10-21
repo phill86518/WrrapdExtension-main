@@ -12,11 +12,11 @@
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body {
-    width: 1280px; height: 720px; overflow: hidden;
+    margin: 0; width: 1280px; height: 720px; overflow: hidden;
     font-family: Fraunces, Georgia, "Times New Roman", serif;
-    font-optical-sizing: auto; background: #07041c; color: var(--ink);
+    font-optical-sizing: auto; background: #fffaf0; color: var(--ink);
   }
-  .stage { position: relative; width: 1280px; height: 720px; overflow: hidden; background: #07041c; }
+  .stage { position: relative; width: 1280px; height: 720px; overflow: hidden; background: #fffaf0; }
   .cam {
     position: absolute; left: 50%; top: 50%; width: 1280px; height: 720px;
     transform: translate(-50%, -50%) scale(1);
@@ -226,8 +226,8 @@
     opacity: 0; pointer-events: none; transition: opacity .45s ease;
   }
   .wrap-scene, .deliver-scene {
-    background: radial-gradient(900px 420px at 70% 10%, rgba(246,185,51,.22), transparent 55%),
-      linear-gradient(160deg, #0c0638 0%, #170a5e 100%); color: #fff;
+    background: radial-gradient(900px 420px at 70% 10%, rgba(246,185,51,.18), transparent 55%),
+      linear-gradient(160deg, #fffaf0 0%, #ffffff 100%); color: var(--navy-text);
   }
   .stage.s-wrap .wrap-scene, .stage.s-deliver .deliver-scene,
   .stage.s-paste .paste-scene, .stage.s-buy .buy-scene,
@@ -262,8 +262,8 @@
   .bouquet-hero .petal:nth-child(2) { left: 28px; top: 0; background: radial-gradient(circle at 35% 35%, #fde68a, #f59e0b); }
   .bouquet-hero .petal:nth-child(3) { left: 36px; top: 22px; background: radial-gradient(circle at 35% 35%, #f9a8d4, #db2777); }
   .bouquet-hero .petal:nth-child(4) { left: 14px; top: 28px; background: radial-gradient(circle at 35% 35%, #fdba74, #ea580c); }
-  .caption { font-size: 22px; font-weight: 650; text-align: center; }
-  .caption small { display: block; margin-top: 5px; font-size: 14px; font-weight: 460; color: rgba(255,255,255,.78); }
+  .caption { font-size: 22px; font-weight: 650; text-align: center; color: var(--navy-text); }
+  .caption small { display: block; margin-top: 5px; font-size: 14px; font-weight: 460; color: #64748b; }
 
   .deliver-stack { display: flex; flex-direction: column; align-items: center; gap: 12px; }
   .proof {
@@ -385,7 +385,7 @@
 
   .badge {
     position: absolute; top: 14px; left: 50%; transform: translateX(-50%); z-index: 30;
-    padding: 5px 12px; border-radius: 999px; background: rgba(12,6,56,.9); color: var(--gold);
+    padding: 5px 12px; border-radius: 999px; background: #0c0638; color: var(--gold);
     font-size: 11px; font-weight: 650; letter-spacing: .08em; text-transform: uppercase;
     transition: opacity .25s ease;
   }
@@ -430,27 +430,55 @@
 
   .option-card {
     position: absolute; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center;
-    background: radial-gradient(700px 380px at 50% 40%, rgba(246,185,51,.28), transparent 60%),
-      linear-gradient(160deg, #0c0638, #170a5e);
+    background: radial-gradient(700px 380px at 50% 40%, rgba(246,185,51,.22), transparent 60%),
+      linear-gradient(160deg, #fffaf0, #ffffff);
     opacity: 0; pointer-events: none; transition: opacity .4s ease;
+    padding: 24px;
   }
   .stage.s-option .option-card, .stage.s-intro .option-card { opacity: 1; }
   .option-card .inner {
-    text-align: center; color: #fff; transform: scale(.92);
+    text-align: center; color: var(--navy-text); transform: scale(.92);
     transition: transform .45s cubic-bezier(.2,.9,.2,1.1);
+    max-width: 96%;
   }
   .stage.s-option .option-card .inner, .stage.s-intro .option-card .inner { transform: scale(1); }
   .option-card .eyebrow {
     display: inline-block; margin-bottom: 12px; padding: 5px 12px; border-radius: 999px;
-    background: rgba(246,185,51,.18); border: 1px solid rgba(246,185,51,.5);
-    color: var(--gold); font-size: 12px; font-weight: 650; letter-spacing: .12em; text-transform: uppercase;
+    background: rgba(246,185,51,.2); border: 1px solid rgba(246,185,51,.55);
+    color: var(--navy-text); font-size: 12px; font-weight: 650; letter-spacing: .12em; text-transform: uppercase;
   }
-  .option-card h1 { font-size: 48px; font-weight: 800; line-height: 1.1; margin-bottom: 10px; }
-  .option-card p { font-size: 18px; font-weight: 460; color: rgba(255,255,255,.82); max-width: 28ch; margin: 0 auto; }
+  .option-card h1 { font-size: 48px; font-weight: 800; line-height: 1.05; margin-bottom: 10px; color: var(--navy-text); }
+  .option-card p { font-size: 18px; font-weight: 460; color: #162a52; max-width: 28ch; margin: 0 auto; }
   .option-card .circle {
     display: inline-grid; place-items: center; width: 64px; height: 64px; margin-bottom: 14px;
     border-radius: 50%; background: var(--gold); color: var(--navy-text);
     font-size: 28px; font-weight: 800;
+  }
+  /* Intro — two options: ~5× type */
+  .stage.s-intro .option-card .circle {
+    width: 200px; height: 200px; margin-bottom: 22px; font-size: 110px;
+  }
+  .stage.s-intro .option-card .eyebrow {
+    margin-bottom: 18px; padding: 14px 28px; font-size: 60px; letter-spacing: .06em;
+  }
+  .stage.s-intro .option-card h1 {
+    font-size: 200px; margin-bottom: 16px; line-height: .95;
+  }
+  .stage.s-intro .option-card #opt-lede {
+    font-size: 72px; max-width: 16ch; line-height: 1.15; font-weight: 560;
+  }
+  /* Option 2 title card — ~4× type */
+  .stage.s-option.is-opt2 .option-card .circle {
+    width: 180px; height: 180px; margin-bottom: 18px; font-size: 96px;
+  }
+  .stage.s-option.is-opt2 .option-card .eyebrow {
+    margin-bottom: 16px; padding: 12px 24px; font-size: 48px; letter-spacing: .06em;
+  }
+  .stage.s-option.is-opt2 .option-card h1 {
+    font-size: 140px; margin-bottom: 14px; line-height: .98;
+  }
+  .stage.s-option.is-opt2 .option-card #opt-lede {
+    font-size: 56px; max-width: 18ch; line-height: 1.15; font-weight: 560;
   }
 </style>
 </head>
@@ -632,8 +660,10 @@ Jacksonville, FL</div>
   var OPT2_STEPS = ['Open /buy', 'Giftee ZIP', 'Paste link', 'Review', 'We wrap', 'Delivered'];
   var stepsList = OPT1_STEPS.slice();
 
-  function setScene(name, zoom, label, showSteps) {
-    stage.className = 'stage s-' + name + ' z-' + zoom + (showSteps ? ' show-steps' : '');
+  function setScene(name, zoom, label, showSteps, optClass) {
+    stage.className = 'stage s-' + name + ' z-' + zoom
+      + (showSteps ? ' show-steps' : '')
+      + (optClass ? ' ' + optClass : '');
     if (label) badge.textContent = label;
   }
   function setOptionCard(circle, eyebrow, title, lede) {
@@ -698,11 +728,11 @@ Jacksonville, FL</div>
 
     /* Intro — slightly faster pacing throughout */
     setOptionCard('①②', 'Two ways to gift-wrap', 'Wrrapd', 'Chrome extension or copy-paste on the website');
-    setScene('intro', 'wide', '', false);
+    setScene('intro', 'wide', '', false, 'is-intro-card');
 
     at(1600, function () {
       setOptionCard('①', 'Option 1', 'Chrome Extension', 'Gift-wrap right at checkout on your favorite stores');
-      setScene('option', 'wide', '', false);
+      setScene('option', 'wide', '', false, 'is-opt1');
     });
 
     at(3400, function () {
@@ -774,7 +804,7 @@ Jacksonville, FL</div>
 
     at(15600, function () {
       setOptionCard('②', 'Option 2', 'Copy-paste on wrrapd.com', 'No extension needed — paste a product link on the website');
-      setScene('option', 'wide', '', false);
+      setScene('option', 'wide', '', false, 'is-opt2');
     });
 
     at(17400, function () {

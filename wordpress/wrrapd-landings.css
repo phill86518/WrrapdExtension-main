@@ -442,7 +442,11 @@ body .wl .wl-strip-next { padding: 2px 8px; border-radius: 999px; background: va
 }
 
 /* How it works — clean stage: ~15% step rail + ~85% video */
-.wl-hiw { padding: 46px 0 50px; border-top: 1px solid var(--wl-line); }
+.wl-hiw {
+  padding: 46px 0 50px;
+  border-top: 1px solid var(--wl-line);
+  overflow: visible;
+}
 .wl-hiw-stage {
   display: grid;
   grid-template-columns: minmax(5.5rem, 15%) minmax(0, 85%);
@@ -454,6 +458,32 @@ body .wl .wl-strip-next { padding: 2px 8px; border-radius: 999px; background: va
   background: #f7f8fb;
   box-shadow: 0 12px 32px rgba(22, 42, 82, .07);
   cursor: pointer;
+  position: relative;
+  z-index: 1;
+  transform: scale(1);
+  transform-origin: center center;
+  transition:
+    transform .45s cubic-bezier(.2, .85, .2, 1),
+    box-shadow .45s ease;
+  will-change: transform;
+}
+/* Hover / playing: whole stage enlarges so the demo reads clearer */
+.wl-hiw-stage:hover,
+.wl-hiw-stage.wl-playing,
+.wl-hiw-stage:focus-within {
+  transform: scale(1.16);
+  z-index: 12;
+  box-shadow: 0 28px 64px rgba(22, 42, 82, .16);
+}
+@media (prefers-reduced-motion: reduce) {
+  .wl-hiw-stage {
+    transition: box-shadow .2s ease;
+  }
+  .wl-hiw-stage:hover,
+  .wl-hiw-stage.wl-playing,
+  .wl-hiw-stage:focus-within {
+    transform: none;
+  }
 }
 .wl-hiw-rail {
   display: flex;
@@ -540,7 +570,6 @@ body .wl .wl-strip-next { padding: 2px 8px; border-radius: 999px; background: va
   box-shadow: 0 8px 20px rgba(22, 42, 82, .1);
   transition: opacity .2s ease;
 }
-.wl-hiw-stage { position: relative; }
 .wl-hiw-stage.wl-touch::after { content: "Tap to watch"; }
 .wl-hiw-stage.wl-playing::after { opacity: 0; }
 .wl-hiw-steps {

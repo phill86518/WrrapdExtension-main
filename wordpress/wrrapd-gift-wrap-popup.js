@@ -1,9 +1,9 @@
 (function () {
 	'use strict';
 
-	var STORAGE_KEY = 'wrrapd_gift_popup_dismissed_v6';
+	var STORAGE_KEY = 'wrrapd_gift_popup_dismissed_v7';
 	var OPEN_DELAY_MS = 1800;
-	var VIDEO_BUST = '2026-10-19-extension-flow-demo-v6';
+	var VIDEO_BUST = '2026-10-21-extension-flow-demo-v8';
 
 	var root = document.getElementById('wrrapd-gift-popup');
 	if (!root) {
@@ -23,10 +23,10 @@
 		node.remove();
 	});
 	var ctaEl = root.querySelector('.wrrapd-gift-popup__cta');
-	var videoUrl = config.videoUrl || 'https://wrrapd.com/wp-content/uploads/2026/10/Wrrapd-Extension-Flow-Demo-4.mp4';
-	/* Always prefer Demo-4 — older Demo-3 URLs are year-cached in browsers. */
-	if (videoUrl && videoUrl.indexOf('Extension-Flow-Demo-3') !== -1) {
-		videoUrl = 'https://wrrapd.com/wp-content/uploads/2026/10/Wrrapd-Extension-Flow-Demo-4.mp4';
+	var videoUrl = config.videoUrl || 'https://wrrapd.com/wp-content/uploads/2026/10/Wrrapd-Extension-Flow-Demo-6.mp4';
+	/* Always prefer Demo-6 — older Demo-3/4/5 URLs are year-cached in browsers. */
+	if (videoUrl && (videoUrl.indexOf('Extension-Flow-Demo-3') !== -1 || videoUrl.indexOf('Extension-Flow-Demo-4') !== -1 || videoUrl.indexOf('Extension-Flow-Demo-5') !== -1)) {
+		videoUrl = 'https://wrrapd.com/wp-content/uploads/2026/10/Wrrapd-Extension-Flow-Demo-6.mp4';
 	}
 	if (videoUrl && videoUrl.indexOf('v=') === -1) {
 		videoUrl += (videoUrl.indexOf('?') === -1 ? '?' : '&') + 'v=' + encodeURIComponent(VIDEO_BUST);

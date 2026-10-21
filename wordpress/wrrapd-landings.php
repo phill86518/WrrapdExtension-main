@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_LANDINGS_BUILD', '2026-10-21-landings-v37-hiw-stage' );
+define( 'WRRAPD_LANDINGS_BUILD', '2026-10-21-landings-v38-hiw-zoom-fonts' );
 define( 'WRRAPD_LANDING_COOKIE', 'wrrapd_lp' );
 define( 'WRRAPD_LANDING_RETIRED_SLUG', 'landing-retired-20261019' );
 
@@ -592,7 +592,7 @@ function wrrapd_landing_6_parts() {
 		array( 'Pay Wrrapd, then check out', 'Pay for the wrapping and add-ons, then place your store order as usual. Final delivery is free.' ),
 		array( 'We wrap and deliver', 'Often the same day. You get a photo the moment it arrives.' ),
 	);
-	$hiw_video = 'https://wrrapd.com/wp-content/uploads/2026/10/Wrrapd-Extension-Flow-Demo-5.mp4?v=' . rawurlencode( (string) WRRAPD_LANDINGS_BUILD );
+	$hiw_video = 'https://wrrapd.com/wp-content/uploads/2026/10/Wrrapd-Extension-Flow-Demo-6.mp4?v=' . rawurlencode( (string) WRRAPD_LANDINGS_BUILD );
 
 	/* Cinema stage: ~15% step rail + ~85% video (clean light chrome). */
 	echo '<div class="wl-hiw-stage" data-wl-hiw-video>';
