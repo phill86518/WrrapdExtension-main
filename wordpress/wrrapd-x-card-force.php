@@ -8,7 +8,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_X_CARD_VER', '20261022b' );
+define( 'WRRAPD_X_CARD_VER', '20261022c' );
 
 /**
  * @return string Request path with leading slash, no trailing slash (except root "/").
@@ -158,7 +158,7 @@ add_action(
 		if ( ! headers_sent() && wrrapd_x_card_is_bot() ) {
 			header( 'Cache-Control: no-store, no-cache, must-revalidate, max-age=0' );
 			header( 'Pragma: no-cache' );
-			header( 'X-Wrrapd-Card: force-6' );
+			header( 'X-Wrrapd-Card: force-7' );
 		}
 		ob_start( 'wrrapd_x_card_rewrite' );
 	},

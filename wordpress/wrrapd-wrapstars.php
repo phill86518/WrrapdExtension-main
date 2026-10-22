@@ -452,7 +452,7 @@ function wrrapd_wrapstars_og_image_url( $role ) {
 		$role = 'wrapstar';
 	}
 	// Always use the pay-server static URL so X/Twitterbot never hits a missing mu-plugins path.
-	return 'https://api.wrrapd.com/img/og/' . $role . '-og.jpg?v=20261022b';
+	return 'https://api.wrrapd.com/img/og/' . $role . '-og.jpg?v=20261022c';
 }
 
 /**
