@@ -22,6 +22,9 @@ if ( ! function_exists( 'wrrapd_public_sitemap_xml' ) ) {
 			'https://wrrapd.com/about-us/',
 			'https://wrrapd.com/contact/',
 			'https://wrrapd.com/top-gifting-choices/',
+			'https://wrrapd.com/holiday-gifting-season/',
+			'https://wrrapd.com/give-them-a-season/',
+			'https://wrrapd.com/what-belongs-under-the-ribbon/',
 			'https://wrrapd.com/privacy/',
 			'https://wrrapd.com/terms/',
 			'https://wrrapd.com/affiliate-disclosure/',
@@ -248,8 +251,8 @@ if ( ! function_exists( 'wrrapd_seo_public_map' ) ) {
 	function wrrapd_seo_public_map() {
 		return array(
 			'/'                         => array(
-				'title'       => 'Wrrapd | Wrapping Happiness',
-				'description' => 'Shop as usual. We wrap your gift at checkout.',
+				'title'       => 'Wrrapd, sometimes spelled Wrappd | Wrapping Happiness',
+				'description' => 'Shop as usual. We wrap your gift at checkout. Searching Wrappd, Wrapd, Wrarp, or Wrappz? That’s Wrrapd.',
 			),
 			'/about-us/'                => array(
 				'title'       => 'About Wrrapd',
@@ -360,7 +363,9 @@ if ( ! function_exists( 'wrrapd_seo_output_head' ) ) {
 			return;
 		}
 		$url = home_url( wrrapd_request_path() );
-		$og  = 'https://wrrapd.com/wp-content/uploads/2026/10/wrrapd-homepage-og.jpg';
+		$og  = function_exists( 'wrrapd_x_card_image_url' )
+			? wrrapd_x_card_image_url()
+			: 'https://wrrapd.com/wp-content/uploads/2026/10/wrrapd-share-home-20261022.jpg?v=20261022b';
 		echo '<meta name="description" content="' . esc_attr( $seo['description'] ) . '" />' . "\n";
 		echo '<meta property="og:title" content="' . esc_attr( $seo['title'] ) . '" />' . "\n";
 		echo '<meta property="og:description" content="' . esc_attr( $seo['description'] ) . '" />' . "\n";
@@ -379,12 +384,24 @@ if ( ! function_exists( 'wrrapd_seo_output_head' ) ) {
 		if ( wrrapd_request_path() === '/' ) {
 			$schema = wp_json_encode(
 				array(
-					'@context' => 'https://schema.org',
-					'@type'    => 'Organization',
-					'name'     => 'Wrrapd',
-					'url'      => 'https://wrrapd.com/',
-					'email'    => 'help@wrrapd.com',
-					'telephone'=> '+1-844-638-5484',
+					'@context'  => 'https://schema.org',
+					'@type'     => 'Organization',
+					'name'      => 'Wrrapd',
+					'legalName' => 'Wrrapd Inc.',
+					'url'       => 'https://wrrapd.com/',
+					'logo'      => array(
+						'@type'  => 'ImageObject',
+						'url'    => 'https://wrrapd.com/wp-content/mu-plugins/icons/favicon/android-chrome-512x512.png',
+						'width'  => 512,
+						'height' => 512,
+					),
+					'email'     => 'help@wrrapd.com',
+					'telephone' => '+1-844-638-5484',
+					'sameAs'    => array(
+						'https://www.facebook.com/wrrapd',
+						'https://www.x.com/wrrapd',
+						'https://www.linkedin.com/company/wrrapd',
+					),
 				),
 				JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
 			);
@@ -464,11 +481,14 @@ if ( ! function_exists( 'wrrapd_output_focus_icon_tags' ) ) {
 			return;
 		}
 		$post = get_queried_object();
-		$essay_ids = array( 7372, 7387 );
-		if ( ! $post || ! in_array( (int) $post->ID, $essay_ids, true ) ) {
+		if ( ! $post || $post->post_type !== 'post' ) {
 			return;
 		}
-		$og = esc_url( 'https://wrrapd.com/wp-content/uploads/2026/10/wrrapd-focus-og.jpg' );
+		$og = esc_url(
+			function_exists( 'wrrapd_x_card_image_url' )
+				? wrrapd_x_card_image_url()
+				: 'https://wrrapd.com/wp-content/uploads/2026/10/wrrapd-share-blog-20261022.jpg?v=20261022b'
+		);
 		echo '<meta property="og:image" content="' . $og . '" />' . "\n";
 		echo '<meta property="og:image:width" content="1200" />' . "\n";
 		echo '<meta property="og:image:height" content="630" />' . "\n";

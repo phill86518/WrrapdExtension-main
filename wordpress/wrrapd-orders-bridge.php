@@ -2056,6 +2056,9 @@ function wrrapd_output_occasion_ticker_ensure() {
 	if ( ! $on_home && ! $on_welcome ) {
 		return;
 	}
+	if ( is_singular( 'post' ) ) {
+		return;
+	}
 	echo '<style id="wrrapd-occasion-ticker-ensure-css">';
 	echo 'body.logged-in .occasion-ticker-shell,body.page-id-5576 .occasion-ticker-shell,body.home .occasion-ticker-shell,body.page-id-4857 .occasion-ticker-shell{display:block!important;visibility:visible!important;height:auto!important;max-height:none!important;overflow:visible!important;margin:0!important;}';
 	echo 'body.logged-in .occasion-ticker-shell.is-collapsed .occasion-ticker-panel,body.page-id-5576 .occasion-ticker-shell.is-collapsed .occasion-ticker-panel{display:none!important;}';

@@ -86,6 +86,7 @@ Never commit real API keys to Git.
 | Repo file | Server path |
 |-----------|-------------|
 | `wordpress/wrrapd-wrapstars.php` | `mu-plugins/wrrapd-wrapstars.php` |
+| `wordpress/icons/og/*.jpg` (optional) | `mu-plugins/icons/og/` — X share images also live at `https://api.wrrapd.com/img/og/` |
 | `wordpress/wrrapd-wrapstars-apply.php` | `mu-plugins/wrrapd-wrapstars-apply.php` |
 | `wordpress/wrrapd-wrapstars-apply.js` | `mu-plugins/wrrapd-wrapstars-apply.js` |
 | `wordpress/wrrapd-wrapstars-ops-api.php` | `mu-plugins/wrrapd-wrapstars-ops-api.php` |

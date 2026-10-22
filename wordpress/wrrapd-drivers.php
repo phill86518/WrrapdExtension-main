@@ -744,6 +744,16 @@ function wrrapd_drivers_host_routing() {
 		$path = '/';
 	}
 
+	// Common misspelling / ad short link → JoyRider landing.
+	if ( preg_match( '#^/joyrider(/|$)#', $path ) ) {
+		$target = preg_replace( '#^/joyrider#', '/drive', $path, 1 );
+		if ( ! is_string( $target ) || $target === '' ) {
+			$target = '/drive/';
+		}
+		wp_safe_redirect( wrrapd_drivers_apply_url( $target ), 301 );
+		exit;
+	}
+
 	$is_drive_apply = (bool) preg_match( '#^/drive(/|$)#', $path )
 		|| (bool) preg_match( '#^/(drive/driver-login|drive/decline-driver|driver-login|driver-decline|decline-driver)(/|$)#', $path );
 	$is_drive_ob = (bool) preg_match( '#^/driver-onboarding#', $path );
@@ -1567,7 +1577,7 @@ function wrrapd_drivers_shortcode_landing() {
 			</div>
 			<div class="wrrapd-wrapstars-cinema-hero__scrim" aria-hidden="true"></div>
 			<div class="wrrapd-wrapstars-cinema-hero__content">
-				<p class="wrrapd-wrapstars-cinema-hero__kicker">Now accepting applications · Florida &amp; Georgia</p>
+				<p class="wrrapd-wrapstars-cinema-hero__kicker">Launching city by city — apply from anywhere</p>
 				<h1>Become a JoyRider</h1>
 				<p class="wrrapd-wrapstars-cinema-hero__tagline">Deliver joy on your schedule.</p>
 				<p class="wrrapd-wrapstars-cinema-hero__sub">Carry finished gifts to the door on a planned route, when it works for you. You keep 100% of the tips given to you when you deliver.</p>
@@ -1619,11 +1629,6 @@ function wrrapd_drivers_shortcode_landing() {
 						<h3>Background check</h3>
 						<p>Identity verification and a background check are required before you can accept live delivery offers.</p>
 					</div>
-					<div class="wrrapd-wrapstars-reqs-dd__item">
-						<span class="wrrapd-wrapstars-reqs-dd__num" aria-hidden="true">6</span>
-						<h3>Where we launch</h3>
-						<p>Currently accepting applicants in <strong>Florida</strong> and <strong>Georgia</strong>. Additional markets may open as the network grows.</p>
-					</div>
 				</div>
 			</section>
 
@@ -1664,10 +1669,6 @@ function wrrapd_drivers_shortcode_landing() {
 				<details class="wrrapd-wrapstars-faq-dd__item">
 					<summary>May I apply for a wrapping role instead?</summary>
 					<p>Yes. If you prefer to wrap gifts without delivering them, you may <a href="<?php echo esc_url( wrrapd_drivers_apply_url( '/apply/' ) ); ?>">apply to become a WrapStar</a>. If you prefer to wrap and deliver the same orders yourself, you may <a href="<?php echo esc_url( wrrapd_drivers_apply_url( '/wraprider/' ) ); ?>">apply to become a WrapRider</a>.</p>
-				</details>
-				<details class="wrrapd-wrapstars-faq-dd__item">
-					<summary>Where is JoyRider currently available?</summary>
-					<p>We are launching in <strong>Florida</strong> and <strong>Georgia</strong>. Applicants elsewhere are welcome to apply; opportunities outside launch markets may be limited at first.</p>
 				</details>
 			</section>
 

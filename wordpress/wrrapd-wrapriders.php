@@ -1739,7 +1739,7 @@ function wrrapd_wrapriders_shortcode_landing() {
 	<div class="wrrapd-wrapstars wrrapd-wrapstars-dasher wrrapd-wrapriders wrrapd-wrapriders-flex">
 		<section class="wrrapd-wrapriders-landing-hero">
 			<div class="wrrapd-wrapriders-landing-hero__copy">
-				<p class="wrrapd-wrapriders-landing-hero__kicker">Now accepting applications · Florida &amp; Georgia</p>
+				<p class="wrrapd-wrapriders-landing-hero__kicker">Launching city by city — apply from anywhere</p>
 				<h1>Become a WrapRider</h1>
 				<p class="wrrapd-wrapriders-landing-hero__tagline">Craft the gift. Carry the joy.</p>
 				<p class="wrrapd-wrapriders-landing-hero__sub">Turn an ordinary box into something unforgettable in your own space, then bring that finished surprise to the door yourself. You keep 100% of the tips given to you when you deliver.</p>
@@ -1815,11 +1815,6 @@ function wrrapd_wrapriders_shortcode_landing() {
 						<h3>A place to wrap</h3>
 						<p>A clean, dedicated space where you can wrap gifts and hold finished orders safely until you deliver them.</p>
 					</div>
-					<div class="wrrapd-wrapstars-reqs-dd__item">
-						<span class="wrrapd-wrapstars-reqs-dd__num" aria-hidden="true">6</span>
-						<h3>Where we launch</h3>
-						<p>Currently accepting applicants in <strong>Florida</strong> and <strong>Georgia</strong>. Additional markets may open as the network grows.</p>
-					</div>
 				</div>
 			</section>
 
@@ -1864,10 +1859,6 @@ function wrrapd_wrapriders_shortcode_landing() {
 				<details class="wrrapd-wrapstars-faq-dd__item">
 					<summary>May I choose a wrap-only or delivery-only role instead?</summary>
 					<p>Yes. If you prefer to wrap gifts without delivering them, you may <a href="<?php echo esc_url( wrrapd_wrapriders_apply_url( '/apply/' ) ); ?>">apply to become a WrapStar</a>. If you prefer to deliver finished gifts only, you may <a href="<?php echo esc_url( wrrapd_wrapriders_apply_url( '/drive/' ) ); ?>">apply to become a JoyRider</a>.</p>
-				</details>
-				<details class="wrrapd-wrapstars-faq-dd__item">
-					<summary>Where is WrapRider currently available?</summary>
-					<p>We are launching in <strong>Florida</strong> and <strong>Georgia</strong>. Applicants elsewhere are welcome to apply; opportunities outside launch markets may be limited at first.</p>
 				</details>
 			</section>
 

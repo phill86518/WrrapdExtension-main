@@ -14,8 +14,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 function wrrapd_wrapriders_apply_state_options() {
 	return array(
-		'FL'    => 'Florida',
-		'GA'    => 'Georgia',
 		'AL'    => 'Alabama',
 		'SC'    => 'South Carolina',
 		'NC'    => 'North Carolina',
@@ -482,7 +480,6 @@ function wrrapd_wrapriders_shortcode_apply() {
 									<input type="text" id="wr-postal" name="postal_code" autocomplete="postal-code" inputmode="numeric" maxlength="10" required pattern="[0-9]{5}(-[0-9]{4})?" />
 								</div>
 							</div>
-							<p class="wrrapd-apply-note">Launching in Florida &amp; Georgia first — other states welcome; service may be limited initially.</p>
 						</div>
 
 						<div class="wrrapd-apply-basics-nav">

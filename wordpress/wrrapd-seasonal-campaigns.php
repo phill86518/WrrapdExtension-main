@@ -1265,6 +1265,9 @@ function wrrapd_output_seasonal_campaign_assets() {
 	if ( is_admin() ) {
 		return;
 	}
+	if ( ! wrrapd_should_output_seasonal_blocks() && ! is_page( 'my-orders' ) ) {
+		return;
+	}
 	$c = wrrapd_active_campaign();
 	if ( ! $c ) {
 		return;
@@ -1285,6 +1288,10 @@ add_action( 'wp_head', 'wrrapd_output_seasonal_campaign_assets', 98 );
 function wrrapd_output_seasonal_campaign_blocks() {
 	static $done = false;
 	if ( $done || is_admin() || is_404() ) {
+		return;
+	}
+	// Homepage / blog index only — never dump the hot-gifts rail onto essays or other singles.
+	if ( ! wrrapd_should_output_seasonal_blocks() && ! is_page( 'my-orders' ) ) {
 		return;
 	}
 	$c = wrrapd_active_campaign();

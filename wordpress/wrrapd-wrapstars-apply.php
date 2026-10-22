@@ -87,8 +87,10 @@ function wrrapd_wrapstars_printer_size_options() {
 function wrrapd_wrapstars_apply_state_options() {
 	return array(
 		''      => 'Select…',
-		'FL'    => 'Florida',
-		'GA'    => 'Georgia',
+		'AL'    => 'Alabama',
+		'SC'    => 'South Carolina',
+		'NC'    => 'North Carolina',
+		'TN'    => 'Tennessee',
 		'OTHER' => 'Other',
 	);
 }
@@ -749,7 +751,6 @@ function wrrapd_wrapstars_shortcode_apply() {
 								<input type="text" id="ws-postal-code" name="postal_code" autocomplete="postal-code" inputmode="numeric" maxlength="10" required pattern="[0-9]{5}(-[0-9]{4})?" />
 							</div>
 						</div>
-						<p class="wrrapd-apply-note" id="wrrapd-ws-state-note" hidden>We're launching in Florida and Georgia first — applicants in other states are welcome; service may be limited initially.</p>
 						<div class="wrrapd-address-suggest-panel" id="wrrapd-address-suggest-panel" hidden>
 							<p class="wrrapd-address-suggest-panel__label">Did you mean this address?</p>
 							<p class="wrrapd-address-suggest-panel__text" id="wrrapd-address-suggest-text"></p>

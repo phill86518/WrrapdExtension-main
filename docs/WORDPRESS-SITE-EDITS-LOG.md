@@ -8,6 +8,15 @@ WordPress + Elementor + Hello theme content mostly lives **in the production dat
 
 ## Recent changes
 
+### 2026-10-22 — Social share cards (X / FB / LI) sitewide
+
+- Full runbook: **`docs/SOCIAL-SHARE-CARDS.md`**.
+- New MU `wrrapd-x-card-force.php` v2: path-aware OG/Twitter images on **wrrapd.com** and **apply.wrrapd.com**; strip `noindex` for social bots only; header `X-Wrrapd-Card: force-6`.
+- `/buy/` share tags + social-bot exception in `wrrapd-buy-for-you.php` (Google still noindex).
+- Essay featured images set: posts **7372** / **7387** / **7416** → media **7438** / **7439** / **7440** (`wrrapd-share-essay-*-20261022.jpg`).
+- Seasonal hot-gifts + occasion ticker gated off essay singles (`wrrapd-seasonal-campaigns.php`, `wrrapd-orders-bridge.php`).
+- Role OG bytes on pay server: `backend/.../public/img/og/`. Live MU paste still required on SiteGround (see doc).
+
 ### 2026-10-08 — Chrome Web Store 3.0.14
 
 - Google published **3.0.14** on a new item, **`lobngnjcjeimefihnobdmocicopikoip`**: https://chromewebstore.google.com/detail/wrrapd/lobngnjcjeimefihnobdmocicopikoip

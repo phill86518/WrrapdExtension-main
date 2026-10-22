@@ -47,14 +47,25 @@ function wrrapd_buy_render() {
 		},
 		99
 	);
-	add_filter(
-		'wp_robots',
-		function ( $robots ) {
-			$robots['noindex']  = true;
-			$robots['nofollow'] = true;
-			return $robots;
+	// Keep /buy out of Google; social bots need an indexable page or X/FB skip the card.
+	$ua = isset( $_SERVER['HTTP_USER_AGENT'] ) ? strtolower( (string) $_SERVER['HTTP_USER_AGENT'] ) : '';
+	$social = false;
+	foreach ( array( 'twitterbot', 'facebookexternalhit', 'linkedinbot', 'slackbot', 'discordbot', 'whatsapp', 'telegrambot' ) as $needle ) {
+		if ( $ua !== '' && strpos( $ua, $needle ) !== false ) {
+			$social = true;
+			break;
 		}
-	);
+	}
+	if ( ! $social ) {
+		add_filter(
+			'wp_robots',
+			function ( $robots ) {
+				$robots['noindex']  = true;
+				$robots['nofollow'] = true;
+				return $robots;
+			}
+		);
+	}
 	add_filter(
 		'body_class',
 		function ( $classes ) {
@@ -70,6 +81,7 @@ function wrrapd_buy_render() {
 		}
 	);
 
+	add_action( 'wp_head', 'wrrapd_buy_output_share_tags', 1 );
 	add_action( 'wp_head', 'wrrapd_buy_header_match_css', 10000 );
 	add_action( 'wp_body_open', 'wrrapd_buy_retailer_strip', 6 );
 
@@ -106,6 +118,29 @@ add_action( 'template_redirect', 'wrrapd_buy_render', 1 );
  * The landing page scopes its header logo, tagline, and retailer-strip spacing to body.home
  * (header layout CSS, Customizer CSS, home-top tighten). Same rules for /buy/.
  */
+
+function wrrapd_buy_output_share_tags() {
+	$title = 'Order through us | Wrrapd';
+	$desc  = 'Paste a gift link. We buy it, wrap it in real patterned paper, and deliver it to their door.';
+	$img   = 'https://wrrapd.com/wp-content/uploads/2026/10/wrrapd-share-buy-20261022.jpg?v=20261022b';
+	$url   = home_url( '/buy/' );
+	echo '<meta name="description" content="' . esc_attr( $desc ) . '" />' . "\n";
+	echo '<meta property="og:title" content="' . esc_attr( $title ) . '" />' . "\n";
+	echo '<meta property="og:description" content="' . esc_attr( $desc ) . '" />' . "\n";
+	echo '<meta property="og:url" content="' . esc_url( $url ) . '" />' . "\n";
+	echo '<meta property="og:type" content="website" />' . "\n";
+	echo '<meta property="og:site_name" content="Wrrapd" />' . "\n";
+	echo '<meta property="og:image" content="' . esc_url( $img ) . '" />' . "\n";
+	echo '<meta property="og:image:secure_url" content="' . esc_url( $img ) . '" />' . "\n";
+	echo '<meta property="og:image:width" content="1200" />' . "\n";
+	echo '<meta property="og:image:height" content="630" />' . "\n";
+	echo '<meta property="og:image:alt" content="Wrrapd" />' . "\n";
+	echo '<meta name="twitter:card" content="summary_large_image" />' . "\n";
+	echo '<meta name="twitter:title" content="' . esc_attr( $title ) . '" />' . "\n";
+	echo '<meta name="twitter:description" content="' . esc_attr( $desc ) . '" />' . "\n";
+	echo '<meta name="twitter:image" content="' . esc_url( $img ) . '" />' . "\n";
+}
+
 function wrrapd_buy_header_match_css() {
 	$b = 'body.wrrapd-buy-page:not(.logged-in)';
 	echo '<style id="wrrapd-buy-header-match">';

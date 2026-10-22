@@ -441,6 +441,21 @@ function wrrapd_wrapstars_request_path() {
 }
 
 /**
+ * 1200×628 share image for X / Open Graph (hosted on api.wrrapd.com; also in mu-plugins/icons/og/).
+ *
+ * @param string $role wrapstar|joyrider|wraprider
+ * @return string Absolute URL.
+ */
+function wrrapd_wrapstars_og_image_url( $role ) {
+	$role = strtolower( (string) $role );
+	if ( ! in_array( $role, array( 'wrapstar', 'joyrider', 'wraprider' ), true ) ) {
+		$role = 'wrapstar';
+	}
+	// Always use the pay-server static URL so X/Twitterbot never hits a missing mu-plugins path.
+	return 'https://api.wrrapd.com/img/og/' . $role . '-og.jpg?v=20261022b';
+}
+
+/**
  * Share-card copy for a portal path (and optional page title).
  *
  * @param string $path  URL path with leading slash.
@@ -455,21 +470,21 @@ function wrrapd_wrapstars_social_card_for_path( $path, $title = '' ) {
 	$logo = function_exists( 'wrrapd_wrapstars_brand_logo_url' )
 		? wrrapd_wrapstars_brand_logo_url()
 		: 'https://wrrapd.com/wp-content/uploads/2025/03/Wrrapd_f-Logo-800-x-458-px.png';
-	$wrap = 'https://apply.wrrapd.com/wp-content/uploads/2026/07/Applications_Wrrapd-mp4-image.jpg';
+	$wrap = wrrapd_wrapstars_og_image_url( 'wrapstar' );
 	$card = array(
 		'title'       => 'Become a WrapStar',
-		'description' => 'Wrap gifts from home as an independent WrapStar. Now accepting applications in Florida & Georgia.',
+		'description' => 'Wrap gifts from home as an independent WrapStar. Launching city by city — apply from anywhere.',
 		'image'       => $wrap,
 	);
 
 	if ( preg_match( '#^/wraprider(/|$)#', $path ) ) {
 		$card['title']       = 'Become a WrapRider';
-		$card['description'] = 'Wrap and deliver — apply to become a WrapRider, the hybrid WrapStar + JoyRider role. Florida & Georgia.';
-		$card['image']       = $wrap;
-	} elseif ( preg_match( '#^/drive(/|$)#', $path ) || preg_match( '#^/driver#', $path ) ) {
+		$card['description'] = 'Wrap and deliver — apply to become a WrapRider. Launching city by city — apply from anywhere.';
+		$card['image']       = wrrapd_wrapstars_og_image_url( 'wraprider' );
+	} elseif ( preg_match( '#^/(drive|joyrider)(/|$)#', $path ) || preg_match( '#^/driver#', $path ) ) {
 		$card['title']       = 'Become a JoyRider';
-		$card['description'] = 'Deliver wrapped gifts on your schedule. Apply to become a Wrrapd JoyRider — launching in Florida & Georgia.';
-		$card['image']       = $logo;
+		$card['description'] = 'Deliver wrapped gifts on your schedule. Launching city by city — apply from anywhere.';
+		$card['image']       = wrrapd_wrapstars_og_image_url( 'joyrider' );
 	} elseif ( preg_match( '#^/thank-you(/|$)#', $path ) ) {
 		$card['title']       = 'Thank you for applying';
 		$card['description'] = 'We received your WrapStar application. We will be in touch within about seven days.';
@@ -484,7 +499,7 @@ function wrrapd_wrapstars_social_card_for_path( $path, $title = '' ) {
 		$card['image']       = $logo;
 	} elseif ( $path === '/' ) {
 		$card['title']       = 'Become a WrapStar';
-		$card['description'] = 'Wrap gifts from home as an independent WrapStar. Now accepting applications in Florida & Georgia.';
+		$card['description'] = 'Wrap gifts from home as an independent WrapStar. Launching city by city — apply from anywhere.';
 		$card['image']       = $wrap;
 	} else {
 		$clean = wrrapd_wrapstars_strip_title_serial( (string) $title );
@@ -541,7 +556,10 @@ function wrrapd_wrapstars_output_social_meta() {
 	echo '<meta property="og:url" content="' . esc_url( $url ) . '" />' . "\n";
 	echo '<meta property="og:image" content="' . esc_url( $card['image'] ) . '" />' . "\n";
 	echo '<meta property="og:image:secure_url" content="' . esc_url( $card['image'] ) . '" />' . "\n";
-	echo '<meta property="og:image:alt" content="Wrrapd" />' . "\n";
+	echo '<meta property="og:image:width" content="1200" />' . "\n";
+	echo '<meta property="og:image:height" content="628" />' . "\n";
+	echo '<meta property="og:image:type" content="image/jpeg" />' . "\n";
+	echo '<meta property="og:image:alt" content="' . esc_attr( $card['title'] ) . '" />' . "\n";
 	echo '<meta name="twitter:card" content="summary_large_image" />' . "\n";
 	echo '<meta name="twitter:title" content="' . esc_attr( $card['title'] ) . '" />' . "\n";
 	echo '<meta name="twitter:description" content="' . esc_attr( $card['description'] ) . '" />' . "\n";
@@ -3302,7 +3320,7 @@ add_action( 'wp_footer', 'wrrapd_wrapstars_output_theme_cleanup_css', 1 );
 function wrrapd_wrapstars_landing_content() {
 	return array(
 		'hero'      => array(
-			'kicker'  => 'Now accepting applications · Florida &amp; Georgia',
+			'kicker'  => 'Launching city by city — apply from anywhere',
 			'title'   => 'Become a WrapStar',
 			'tagline' => 'Turn your gift-wrapping talent into something people remember.',
 			'sub'     => 'Wrap beautiful gifts from your own space, on your own schedule. You earn for every finished wrap, and milestone bonuses can grow with your volume.',
@@ -3340,16 +3358,16 @@ function wrrapd_wrapstars_landing_content() {
 				array( 'title' => 'Standards &amp; support', 'text' => 'Clear presentation guides, supply recommendations, and a team that has your back.' ),
 				array( 'title' => 'Seasons that sparkle', 'text' => 'Holidays, birthdays, graduations, and weddings keep the orders coming all year long.' ),
 				array( 'title' => 'Custom &amp; creative', 'text' => 'Bonus opportunities for WrapStars who can print or design custom wrapping paper.' ),
-				array( 'title' => 'Be first', 'text' => 'Join the founding network of WrapStars in Florida and Georgia as Wrrapd grows.' ),
+				array( 'title' => 'Be first', 'text' => 'Join the founding network of WrapStars as Wrrapd grows.' ),
 			),
 		),
 		'reqs'      => array(
 			'title' => 'Requirements',
 			'items' => array(
 				array(
-					'title' => 'Age &amp; location',
+					'title' => 'Age',
 					'text'  => 'WrapStars must be <strong>19 years or older</strong>.',
-					'note'  => 'Launching in <strong>Florida</strong> and <strong>Georgia</strong> first — applicants in other states are welcome; opportunities may be limited initially.',
+					'note'  => '',
 				),
 				array(
 					'title' => 'Space &amp; supplies',
@@ -3369,11 +3387,6 @@ function wrrapd_wrapstars_landing_content() {
 				array(
 					'title' => 'Reliability',
 					'text'  => 'You must be able to complete orders within the wrapping window you accept and follow Wrrapd presentation standards.',
-					'note'  => '',
-				),
-				array(
-					'title' => 'Where we launch',
-					'text'  => 'Currently accepting applicants in <strong>Florida</strong> and <strong>Georgia</strong>. Additional markets may open as the network grows.',
 					'note'  => '',
 				),
 			),
@@ -3400,10 +3413,6 @@ function wrrapd_wrapstars_landing_content() {
 				array(
 					'q' => 'When and how do I receive payouts?',
 					'a' => 'Approved earnings are paid on a regular schedule to the bank account you provide during onboarding. You can review activity and payout status in the WrapStar app after you are activated.',
-				),
-				array(
-					'q' => 'Where is WrapStars available?',
-					'a' => 'We are launching in <strong>Florida</strong> and <strong>Georgia</strong>. Applicants in other states are welcome — opportunities may be limited at first as the network grows.',
 				),
 				array(
 					'q' => 'What supplies do I need?',

@@ -447,14 +447,11 @@
 		var stateSel = document.getElementById('wrrapd-ws-state');
 		if (!stateSel || !abbr) return;
 		var up = String(abbr).toUpperCase();
-		if (up.length > 2) {
-			var map = {
-				FLORIDA: 'FL',
-				GEORGIA: 'GA'
-			};
-			up = map[up] || up;
-		}
-		stateSel.value = (up === 'FL' || up === 'GA') ? up : 'OTHER';
+		var known = false;
+		Array.prototype.forEach.call(stateSel.options, function (opt) {
+			if (opt.value === up) known = true;
+		});
+		stateSel.value = known ? up : 'OTHER';
 		stateSel.dispatchEvent(new Event('change'));
 	}
 
@@ -588,15 +585,6 @@
 
 	bindPhoneMask('ws-phone-mobile');
 	bindPhoneMask('ws-phone-work');
-
-	var stateSel = document.getElementById('wrrapd-ws-state');
-	var stateNote = document.getElementById('wrrapd-ws-state-note');
-	if (stateSel && stateNote) {
-		stateSel.addEventListener('change', function () {
-			stateNote.hidden = stateSel.value !== 'OTHER';
-			syncBasicsFields();
-		});
-	}
 
 	var basicsScreen = screens[0];
 	if (basicsScreen) {
