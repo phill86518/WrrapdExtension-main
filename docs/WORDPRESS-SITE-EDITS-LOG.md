@@ -8,6 +8,12 @@ WordPress + Elementor + Hello theme content mostly lives **in the production dat
 
 ## Recent changes
 
+### 2026-10-22 — Meta Page posts (X echo) + `wordpress/images/`
+
+- Five photo posts on facebook.com/wrrapd (buy ×2, "JoyRider", "WrapStar", gift-box craft). IDs in **`docs/META-PAGE-POSTS.md`**.
+- Images in Git: `wordpress/images/social/meta-20261022-*.jpg` + `wordpress/images/shopify-images/` + README.
+- Pay-server creatives updated: `data/facebook-creatives/` (incl. refreshed `joyrider.jpg` from Driver Ad OG).
+
 ### 2026-10-22 — Social share cards (X / FB / LI) sitewide
 
 - Full runbook: **`docs/SOCIAL-SHARE-CARDS.md`**.
