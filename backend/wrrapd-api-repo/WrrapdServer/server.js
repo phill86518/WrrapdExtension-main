@@ -399,6 +399,17 @@ async function sendProcessPaymentPairEmails(opts) {
     ]);
 }
 
+// OG / X share JPEGs: long cache + CORS so social crawlers can fetch reliably.
+app.use(
+	'/img/og',
+	express.static(path.join(__dirname, 'public', 'img', 'og'), {
+		maxAge: '7d',
+		setHeaders(res) {
+			res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
+			res.setHeader('Access-Control-Allow-Origin', '*');
+		},
+	})
+);
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Warm flower store index in background (CSV → JSON + zip coords)

@@ -94,7 +94,8 @@ function wrrapd_x_card_image_url() {
 	}
 
 	// Homepage + everything else on the shopper site.
-	$cached = $api . 'wrrapd-home-banner-20261022d.jpg?v=' . $v;
+	// Fresh filename (no query string) — X often sticks on a failed image URL forever.
+	$cached = $api . 'wrrapd-x-home-e.jpg';
 	return $cached;
 }
 
@@ -148,7 +149,7 @@ add_action(
 		if ( ! headers_sent() && wrrapd_x_card_is_bot() ) {
 			header( 'Cache-Control: no-store, no-cache, must-revalidate, max-age=0' );
 			header( 'Pragma: no-cache' );
-			header( 'X-Wrrapd-Card: force-8' );
+			header( 'X-Wrrapd-Card: force-9' );
 		}
 		ob_start( 'wrrapd_x_card_rewrite' );
 	},
