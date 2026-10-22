@@ -28,7 +28,7 @@ When someone pastes a Wrrapd URL into X, Facebook, LinkedIn, Slack, etc., the cr
 | Essay: season | `…/wrrapd-share-essay-season-20261022.jpg` | same |
 | Essay: ribbon | `…/wrrapd-share-essay-ribbon-20261022.jpg` | same |
 | WrapStar | `wordpress/icons/og/wrapstar-og.jpg` | `https://api.wrrapd.com/img/og/wrapstar-og.jpg` |
-| JoyRider | `wordpress/icons/og/joyrider-og.jpg` | `https://api.wrrapd.com/img/og/joyrider-og.jpg` |
+| JoyRider | `wordpress/icons/og/joyrider-og.jpg` (frame from `Wrrapd-Driver-Ad.mp4` — yellow bag + porch handoff) | `https://api.wrrapd.com/img/og/joyrider-og.jpg` |
 | WrapRider | `wordpress/icons/og/wraprider-og.jpg` | `https://api.wrrapd.com/img/og/wraprider-og.jpg` |
 
 Pay-server copies (always push with this work): `backend/wrrapd-api-repo/WrrapdServer/public/img/og/`.
