@@ -21,7 +21,7 @@ When someone pastes a Wrrapd URL into X, Facebook, LinkedIn, Slack, etc., the cr
 
 | Use | File (repo) | Live URL |
 |---|---|---|
-| Homepage / default shopper | `wordpress/icons/og/wrrapd-share-home-20261022.jpg` | `https://wrrapd.com/wp-content/uploads/2026/10/wrrapd-share-home-20261022.jpg` |
+| Homepage / default shopper | `wordpress/icons/og/wrrapd-home-banner-20261022d.jpg` | `https://api.wrrapd.com/img/og/wrrapd-home-banner-20261022d.jpg` (prefer API — X often fails SiteGround `/uploads/` and falls back to the logo) |
 | `/buy/` | `wordpress/icons/og/wrrapd-share-buy-20261022.jpg` | `https://wrrapd.com/wp-content/uploads/2026/10/wrrapd-share-buy-20261022.jpg` |
 | Blog default | `wordpress/icons/og/wrrapd-share-blog-20261022.jpg` | `https://wrrapd.com/wp-content/uploads/2026/10/wrrapd-share-blog-20261022.jpg` |
 | Essay: holiday | `…/wrrapd-share-essay-holiday-20261022.jpg` | same under `uploads/2026/10/` |
@@ -33,7 +33,7 @@ When someone pastes a Wrrapd URL into X, Facebook, LinkedIn, Slack, etc., the cr
 
 Pay-server copies (always push with this work): `backend/wrrapd-api-repo/WrrapdServer/public/img/og/`.
 
-Cache-bust query used in MU code: `?v=20261022b` (bump when bytes change).
+Cache-bust query used in MU code: `?v=20261022d` (bump when bytes change). Shopper OG images are forced onto **api.wrrapd.com** so Twitterbot can fetch the JPEG.
 
 ---
 

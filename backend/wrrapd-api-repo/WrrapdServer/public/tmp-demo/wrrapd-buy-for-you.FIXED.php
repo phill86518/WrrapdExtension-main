@@ -122,7 +122,7 @@ add_action( 'template_redirect', 'wrrapd_buy_render', 1 );
 function wrrapd_buy_output_share_tags() {
 	$title = 'Order through us | Wrrapd';
 	$desc  = 'Paste a gift link. We buy it, wrap it in real patterned paper, and deliver it to their door.';
-	$img   = 'https://wrrapd.com/wp-content/uploads/2026/10/wrrapd-share-buy-20261022.jpg?v=20261022b';
+	$img   = 'https://api.wrrapd.com/img/og/wrrapd-buy-card.jpg?v=20261022d';
 	$url   = home_url( '/buy/' );
 	echo '<meta name="description" content="' . esc_attr( $desc ) . '" />' . "\n";
 	echo '<meta property="og:title" content="' . esc_attr( $title ) . '" />' . "\n";
