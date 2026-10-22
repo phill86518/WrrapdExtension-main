@@ -1,8 +1,8 @@
 <?php
 /**
  * Plugin Name: Wrrapd X Card Force
- * Description: Path-aware OG/Twitter share images. Clean /share/ page for X (homepage HTML is too noisy and X sticks on failed image scrapes). Shopper JPEGs on api.wrrapd.com.
- * Version: 2.2.0
+ * Description: Path-aware OG/Twitter share images. Clean card HTML for social bots on /share/ and hire landings (X often fails noisy pages and shows the logo). JPEGs on api.wrrapd.com via nginx.
+ * Version: 2.3.0
  */
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -41,39 +41,86 @@ function wrrapd_x_card_is_bot() {
 			return true;
 		}
 	}
-	return isset( $_GET['wrrapd_card_debug'] );
+	return isset( $_GET['wrrapd_card_debug'] ) || isset( $_GET['card'] );
 }
 
 /**
- * Canonical 1200×630 share image for this request.
+ * @return array{title:string,description:string,url:string,image:string}|null
+ */
+function wrrapd_x_card_clean_payload() {
+	$api  = 'https://api.wrrapd.com/img/og/';
+	$path = wrrapd_x_card_path();
+
+	if ( wrrapd_x_card_is_apply_host() ) {
+		if ( preg_match( '#^/wraprider(/|$)#', $path ) ) {
+			return array(
+				'title'       => 'Become a "WrapRider"',
+				'description' => 'Wrap gifts beautifully, then deliver them yourself. Paid hourly — rate confirmed when you’re approved.',
+				'url'         => 'https://apply.wrrapd.com/wraprider/',
+				'image'       => $api . 'wrrapd-x-wraprider-e.jpg',
+			);
+		}
+		if ( preg_match( '#^/(drive|joyrider)(/|$)#', $path ) || preg_match( '#^/driver#', $path ) ) {
+			return array(
+				'title'       => 'Become a "JoyRider"',
+				'description' => 'Deliver wrapped gifts and flowers on your schedule. Paid hourly — rate confirmed when you’re approved.',
+				'url'         => 'https://apply.wrrapd.com/drive/',
+				'image'       => $api . 'wrrapd-x-joyrider-e.jpg',
+			);
+		}
+		if ( preg_match( '#^/(apply)?/?$#', $path ) || preg_match( '#^/apply(/|$)#', $path ) ) {
+			return array(
+				'title'       => 'Become a "WrapStar"',
+				'description' => 'Wrap beautiful gifts from your own space, on your own hours. Paid hourly — rate confirmed when you’re approved.',
+				'url'         => 'https://apply.wrrapd.com/apply/',
+				'image'       => $api . 'wrrapd-x-wrapstar-e.jpg',
+			);
+		}
+		return array(
+			'title'       => 'Become a "WrapStar"',
+			'description' => 'Wrap beautiful gifts from your own space. Paid hourly — rate confirmed when you’re approved.',
+			'url'         => 'https://apply.wrrapd.com/apply/',
+			'image'       => $api . 'wrrapd-x-wrapstar-e.jpg',
+		);
+	}
+
+	if ( $path === '/share' || $path === '/' ) {
+		return array(
+			'title'       => 'Wrrapd | Wrapping Happiness',
+			'description' => 'Gift wrapping and delivery, done for you. Shop with our free Chrome extension, or paste any gift link.',
+			'url'         => 'https://wrrapd.com/share/',
+			'image'       => $api . 'wrrapd-x-home-e.jpg',
+		);
+	}
+
+	if ( preg_match( '#^/buy/?$#', $path ) ) {
+		return array(
+			'title'       => 'Order through us | Wrrapd',
+			'description' => 'Paste a gift link. We buy it, wrap it in real patterned paper, and deliver it to their door.',
+			'url'         => 'https://wrrapd.com/buy/',
+			'image'       => $api . 'wrrapd-buy-card.jpg',
+		);
+	}
+
+	return null;
+}
+
+/**
+ * Canonical image URL for rewrite / wp_head.
  */
 function wrrapd_x_card_image_url() {
 	static $cached = null;
 	if ( is_string( $cached ) ) {
 		return $cached;
 	}
+	$payload = wrrapd_x_card_clean_payload();
+	if ( $payload ) {
+		$cached = $payload['image'];
+		return $cached;
+	}
 
 	$api  = 'https://api.wrrapd.com/img/og/';
 	$path = wrrapd_x_card_path();
-
-	if ( wrrapd_x_card_is_apply_host() ) {
-		if ( preg_match( '#^/wraprider(/|$)#', $path ) ) {
-			$cached = $api . 'wraprider-og.jpg';
-			return $cached;
-		}
-		if ( preg_match( '#^/(drive|joyrider)(/|$)#', $path ) || preg_match( '#^/driver#', $path ) ) {
-			$cached = $api . 'joyrider-og.jpg';
-			return $cached;
-		}
-		$cached = $api . 'wrapstar-og.jpg';
-		return $cached;
-	}
-
-	if ( preg_match( '#^/buy/?$#', $path ) ) {
-		$cached = $api . 'wrrapd-buy-card.jpg';
-		return $cached;
-	}
-
 	$essays = array(
 		'/holiday-gifting-season'        => 'wrrapd-essay-holiday-card.jpg',
 		'/give-them-a-season'            => 'wrrapd-essay-season-card.jpg',
@@ -85,52 +132,47 @@ function wrrapd_x_card_image_url() {
 			return $cached;
 		}
 	}
-
 	if ( function_exists( 'is_singular' ) && is_singular( 'post' ) ) {
 		$cached = $api . 'wrrapd-blog-card.jpg';
 		return $cached;
 	}
-
-	// Homepage + /share/ + default.
 	$cached = $api . 'wrrapd-x-home-e.jpg';
 	return $cached;
 }
 
 /**
  * Minimal HTML for social crawlers — no WordPress chrome, no logo fallbacks.
+ *
+ * @param array{title:string,description:string,url:string,image:string} $card
  */
-function wrrapd_x_card_emit_share_document() {
-	$img   = wrrapd_x_card_image_url();
-	$title = 'Wrrapd | Wrapping Happiness';
-	$desc  = 'Gift wrapping and delivery, done for you. Shop with our free Chrome extension, or paste any gift link.';
-	$url   = 'https://wrrapd.com/share/';
+function wrrapd_x_card_emit_clean_document( $card ) {
 	if ( ! headers_sent() ) {
 		status_header( 200 );
 		header( 'Content-Type: text/html; charset=UTF-8' );
 		header( 'Cache-Control: no-store, no-cache, must-revalidate, max-age=0' );
-		header( 'X-Wrrapd-Card: force-10' );
+		header( 'X-Wrrapd-Card: force-11' );
 	}
 	echo '<!DOCTYPE html><html lang="en"><head>';
 	echo '<meta charset="utf-8" />';
-	echo '<title>' . esc_html( $title ) . '</title>';
-	echo '<meta name="description" content="' . esc_attr( $desc ) . '" />';
+	echo '<title>' . esc_html( $card['title'] ) . '</title>';
+	echo '<meta name="description" content="' . esc_attr( $card['description'] ) . '" />';
 	echo '<meta name="robots" content="max-image-preview:large" />';
 	echo '<meta property="og:locale" content="en_US" />';
 	echo '<meta property="og:type" content="website" />';
 	echo '<meta property="og:site_name" content="Wrrapd" />';
-	echo '<meta property="og:title" content="' . esc_attr( $title ) . '" />';
-	echo '<meta property="og:description" content="' . esc_attr( $desc ) . '" />';
-	echo '<meta property="og:url" content="' . esc_url( $url ) . '" />';
-	echo '<meta property="og:image" content="' . esc_url( $img ) . '" />';
-	echo '<meta property="og:image:secure_url" content="' . esc_url( $img ) . '" />';
+	echo '<meta property="og:title" content="' . esc_attr( $card['title'] ) . '" />';
+	echo '<meta property="og:description" content="' . esc_attr( $card['description'] ) . '" />';
+	echo '<meta property="og:url" content="' . esc_url( $card['url'] ) . '" />';
+	echo '<meta property="og:image" content="' . esc_url( $card['image'] ) . '" />';
+	echo '<meta property="og:image:secure_url" content="' . esc_url( $card['image'] ) . '" />';
 	echo '<meta property="og:image:width" content="1200" />';
 	echo '<meta property="og:image:height" content="630" />';
 	echo '<meta property="og:image:type" content="image/jpeg" />';
 	echo '<meta name="twitter:card" content="summary_large_image" />';
-	echo '<meta name="twitter:title" content="' . esc_attr( $title ) . '" />';
-	echo '<meta name="twitter:description" content="' . esc_attr( $desc ) . '" />';
-	echo '<meta name="twitter:image" content="' . esc_url( $img ) . '" />';
-	echo '</head><body><p><a href="https://wrrapd.com/">Wrrapd</a></p></body></html>';
+	echo '<meta name="twitter:title" content="' . esc_attr( $card['title'] ) . '" />';
+	echo '<meta name="twitter:description" content="' . esc_attr( $card['description'] ) . '" />';
+	echo '<meta name="twitter:image" content="' . esc_url( $card['image'] ) . '" />';
+	echo '</head><body><p><a href="' . esc_url( $card['url'] ) . '">Wrrapd</a></p></body></html>';
 	exit;
 }
 
@@ -143,8 +185,7 @@ if ( wrrapd_x_card_is_bot() ) {
 add_filter(
 	'w3tc_can_cache',
 	function ( $can ) {
-		$path = wrrapd_x_card_path();
-		if ( $path === '/share' || wrrapd_x_card_is_bot() ) {
+		if ( wrrapd_x_card_is_bot() || wrrapd_x_card_path() === '/share' ) {
 			return false;
 		}
 		return $can;
@@ -185,22 +226,41 @@ add_action(
 	function () {
 		$path = wrrapd_x_card_path();
 
-		// Clean share URL for X/FB. Humans go to the real homepage.
-		if ( $path === '/share' ) {
+		// Shopper /share/ — humans → homepage; bots → clean card.
+		if ( $path === '/share' && ! wrrapd_x_card_is_apply_host() ) {
 			if ( ! defined( 'DONOTCACHEPAGE' ) ) {
 				define( 'DONOTCACHEPAGE', true );
 			}
-			if ( wrrapd_x_card_is_bot() || isset( $_GET['card'] ) ) {
-				wrrapd_x_card_emit_share_document();
+			if ( wrrapd_x_card_is_bot() ) {
+				$card = wrrapd_x_card_clean_payload();
+				if ( $card ) {
+					wrrapd_x_card_emit_clean_document( $card );
+				}
 			}
 			wp_safe_redirect( 'https://wrrapd.com/', 302 );
 			exit;
 		}
 
+		// Hire landings: bots get clean card HTML (stops logo fallback on X).
+		if ( wrrapd_x_card_is_bot() && wrrapd_x_card_is_apply_host() ) {
+			$card = wrrapd_x_card_clean_payload();
+			if ( $card ) {
+				wrrapd_x_card_emit_clean_document( $card );
+			}
+		}
+
+		// Shopper homepage/buy for bots: clean card when we have a payload.
+		if ( wrrapd_x_card_is_bot() && ! wrrapd_x_card_is_apply_host() ) {
+			$card = wrrapd_x_card_clean_payload();
+			if ( $card && ( $path === '/' || preg_match( '#^/buy/?$#', $path ) ) ) {
+				wrrapd_x_card_emit_clean_document( $card );
+			}
+		}
+
 		if ( ! headers_sent() && wrrapd_x_card_is_bot() ) {
 			header( 'Cache-Control: no-store, no-cache, must-revalidate, max-age=0' );
 			header( 'Pragma: no-cache' );
-			header( 'X-Wrrapd-Card: force-10' );
+			header( 'X-Wrrapd-Card: force-11' );
 		}
 		ob_start( 'wrrapd_x_card_rewrite' );
 	},
