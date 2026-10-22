@@ -136,3 +136,13 @@ Pay server: `img/og/` is static under `WrrapdServer/public/` — no `pm2` restar
 Social bot responses should include:
 
 `X-Wrrapd-Card: force-6`
+
+
+## Homepage on X — use `/share/`
+
+Bare `https://wrrapd.com/` often scrapes title/description but **never paints the large image** (X sticks on a failed image fetch and shows the gray icon). For shopper brand posts on X, use:
+
+`https://wrrapd.com/share/`
+
+That path serves a tiny HTML document to social bots (MU `wrrapd-x-card-force` v2.2) and redirects humans to `/`. Image: `https://api.wrrapd.com/img/og/wrrapd-x-home-e.jpg` (nginx static).
+
