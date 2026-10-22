@@ -1,5 +1,7 @@
 # Wrrapd Latest Golden versions — 2026-09-19
 
+**Website superseded 22 October 2026.** The shopper site golden is now [GOLDEN-VERSIONS-2026-10-22.md](./GOLDEN-VERSIONS-2026-10-22.md), tag `golden-website-2026-10-22`. Extension and admin tags below are still current.
+
 Recorded on **Saturday, 19 September 2026** on the GCP VM (`/home/phill/wrrapd-GCP`), then pushed to `origin/main`.
 
 These three names are the restore vocabulary:

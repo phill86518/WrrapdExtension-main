@@ -1,0 +1,23 @@
+---
+description: Social posts use copy-paste banner JPEGs. Never rewrite the live header, footer, or logo.
+alwaysApply: true
+---
+
+# Social banners only — never touch the live header or footer
+
+When the user wants a JoyRider, WrapStar, WrapRider, or shopper image for X, Facebook, LinkedIn, or any other post:
+
+- Give them the **banner JPEG URL** to copy and paste.
+- JoyRider first when the post is about delivery: `https://api.wrrapd.com/img/og/wrrapd-x-joyrider-e.jpg`
+- WrapStar: `https://api.wrrapd.com/img/og/wrrapd-x-wrapstar-e.jpg`
+- WrapRider: `https://api.wrrapd.com/img/og/wrrapd-x-wraprider-e.jpg`
+
+Full table: [docs/SOCIAL-SHARE-CARDS.md](../../docs/SOCIAL-SHARE-CARDS.md).
+
+## Forbidden
+
+- Do not replace the header logo, the footer logo, or any other image shoppers see.
+- Do not rewrite `Wrrapd_f-Logo`, `cropped-Wrrapd`, or `Applications_Wrrapd` in page HTML, for bots or for people.
+- Do not install a plugin that runs on every page view to “fix” share cards.
+
+Open Graph meta tags may point at the banner. The visible site stays the wordmark.

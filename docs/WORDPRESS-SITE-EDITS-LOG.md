@@ -8,6 +8,12 @@ WordPress + Elementor + Hello theme content mostly lives **in the production dat
 
 ## Recent changes
 
+### 2026-10-22 — Header and footer wordmarks restored (website golden)
+
+- Shopper header and footer are the Wrrapd wordmark again: `uploads/2025/03/Wrrapd_f-Logo-800-x-458-px.png`.
+- `wrrapd-x-card-force.php` no longer rewrites logo URLs in page HTML. Hire banners for social posts are copy-paste JPEGs only. See **`docs/SOCIAL-SHARE-CARDS.md`**.
+- This live shopper site is **WEBSITE LATEST GOLDEN VERSION** `golden-website-2026-10-22`. Inventory: **`GOLDEN-VERSIONS-2026-10-22.md`**.
+
 ### 2026-10-22 — Meta Page posts (X echo) + `wordpress/images/`
 
 - Five photo posts on facebook.com/wrrapd (buy ×2, "JoyRider", "WrapStar", gift-box craft). IDs in **`docs/META-PAGE-POSTS.md`**.

@@ -1,36 +1,35 @@
 ---
-description: Latest Golden snapshots (2026-09-19) — Extension 3.0.10, wrrapd.com website, and Command Center admin. Restore these when the user says latest golden.
+description: Latest Golden snapshots — website October 2026 after the logo restore; extension and admin remain 2026-09-19.
 alwaysApply: true
 ---
 
-# Latest Golden versions — 2026-09-19
+# Latest Golden versions
 
-When the user says **latest golden**, **EXTENSION LATEST GOLDEN**, **WEBSITE LATEST GOLDEN**, or **ADMIN LATEST GOLDEN**, use this snapshot. Do **not** invent a newer baseline.
-
-Full inventory: [GOLDEN-VERSIONS-2026-09-19.md](../../GOLDEN-VERSIONS-2026-09-19.md)
+When the user says **latest golden** or **WEBSITE LATEST GOLDEN**, restore the **22 October 2026 website**. Extension and admin stay on 19 September 2026 until the user names a newer one for those.
 
 | Name | Git tag | What it freezes |
 |---|---|---|
-| **EXTENSION LATEST GOLDEN VERSION** | `golden-extension-2026-09-19` | Chrome extension **3.0.10** (working Amazon + other-retailer pay) |
-| **WEBSITE LATEST GOLDEN VERSION** | `golden-website-2026-09-19` | wrrapd.com shopper site + MU plugins (header, orders, legal, auth) |
-| **ADMIN LATEST GOLDEN VERSION** | `golden-admin-2026-09-19` | Tracking Command Center (`tracking-platform/`) — happy with it; not fully tested |
-| Umbrella | `golden-latest-2026-09-19` | All three on the same commit |
+| **WEBSITE LATEST GOLDEN VERSION** | `golden-website-2026-10-22` | wrrapd.com after the header/footer wordmark restore |
+| **EXTENSION LATEST GOLDEN VERSION** | `golden-extension-2026-09-19` | Chrome extension **3.0.10** |
+| **ADMIN LATEST GOLDEN VERSION** | `golden-admin-2026-09-19` | Tracking Command Center (`tracking-platform/`) |
 
-**Code commit:** `b9bc9f2` (extension 3.0.10) plus the docs commit on `main` that added this file. Tags point at the docs commit on `origin/main`.
+Website inventory: [GOLDEN-VERSIONS-2026-10-22.md](../../GOLDEN-VERSIONS-2026-10-22.md)
 
-The older homepage-only tag `golden-homepage-2026-09-08` is **historical**. Use it only if the user asks for that 2026-09-08 homepage snapshot.
+September website tag `golden-website-2026-09-19` and homepage tag `golden-homepage-2026-09-08` are historical.
+
+Social images are copy-paste banners. Never rewrite the live header or footer. See [wrrapd-social-banners-only.mdc](./wrrapd-social-banners-only.mdc).
 
 ## Restore (GCP VM — never `git pull`)
 
 ```bash
 cd /home/phill/wrrapd-GCP
 git fetch origin --tags
+# Website (October 2026):
+git checkout golden-website-2026-10-22 -- wordpress/ docs/SOCIAL-SHARE-CARDS.md docs/WORDPRESS-SITE-EDITS-LOG.md .cursor/rules/wrrapd-social-banners-only.mdc .cursor/rules/wrrapd-latest-golden-versions.mdc GOLDEN-VERSIONS-2026-10-22.md
 # Extension:
 git checkout golden-extension-2026-09-19 -- extension/
-# Website MU / shopper CSS+PHP:
-git checkout golden-website-2026-09-19 -- wordpress/ .cursor/rules/wrrapd-latest-golden-versions.mdc GOLDEN-VERSIONS-2026-09-19.md
 # Admin / Command Center:
 git checkout golden-admin-2026-09-19 -- tracking-platform/
 ```
 
-Then: push is already on GitHub; Windows rebuilds the extension; SiteGround gets MU copies + W3 purge; Cloud Run only if tracking files changed.
+Then: SiteGround gets changed MU copies + cache flush; Windows rebuilds the extension only if `extension/` was restored; Cloud Run only if tracking files changed.

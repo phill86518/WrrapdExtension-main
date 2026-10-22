@@ -3,7 +3,23 @@
 **Last updated:** 2026-10-22 (Eastern)  
 **Owner path:** GCP VM `/home/phill/wrrapd-GCP` → push to GitHub → paste MU files on SiteGround.
 
-When someone pastes a Wrrapd URL into X, Facebook, LinkedIn, Slack, etc., the crawler reads Open Graph / Twitter Card tags and shows a large image. This doc is the source of truth for those images and the MU plugins that force them.
+## NEVER change the live site to make a social post
+
+Social posts use a **banner JPEG**. Copy the image URL and paste it into the post. That is the whole job.
+
+**Never** replace the header logo, the footer logo, or any other on-page image so a crawler or a preview will look right. **Never** rewrite `Wrrapd_f-Logo`, `cropped-Wrrapd`, or `Applications_Wrrapd` inside page HTML. That swap put a hire-landing photo in the shopper header and footer on 2026-10-22 and then took `wrrapd.com` down. It is forbidden.
+
+JoyRider is the one to reach for first when the post is about delivery. WrapStar and WrapRider have their own banners. Paste these:
+
+| Role | Paste this image |
+|---|---|
+| **JoyRider** | `https://api.wrrapd.com/img/og/wrrapd-x-joyrider-e.jpg` |
+| **WrapStar** | `https://api.wrrapd.com/img/og/wrrapd-x-wrapstar-e.jpg` |
+| **WrapRider** | `https://api.wrrapd.com/img/og/wrrapd-x-wraprider-e.jpg` |
+
+Older copies of the same roles, if a post already uses them: `joyrider-og.jpg`, `wrapstar-og.jpg`, `wraprider-og.jpg` in that same `/img/og/` folder.
+
+When someone pastes a Wrrapd URL into X, Facebook, LinkedIn, Slack, etc., the crawler reads Open Graph / Twitter Card tags and shows a large image. This doc is the source of truth for those images and the MU plugins that set the tags. The plugins may set `og:image`. They may not change what shoppers see in the header or footer.
 
 ---
 
@@ -74,11 +90,11 @@ Convenience paste mirrors (same bytes as repo):
 - `https://api.wrrapd.com/tmp-demo/wrrapd-buy-for-you.FIXED.php` → paste into **`wrrapd-buy-for-you.php`**  
 - `https://api.wrrapd.com/tmp-demo/wrrapd-sitemap-status.php`
 
-### What `wrrapd-x-card-force` does (v2)
+### What `wrrapd-x-card-force` does
 
 - Emits late `og:image` / `twitter:image` for the correct path.
-- Output-buffer rewrite: replaces logo / Applications still / stale share JPGs with the path-correct URL.
-- For social bot user-agents: `DONOTCACHEPAGE`, no-store headers, header `X-Wrrapd-Card: force-6`, and **strip `noindex`** from the robots meta so X/FB will card `/buy/`.
+- Does **not** replace header, footer, or any other visible logo URL. That rewrite is removed.
+- For social bot user-agents: `DONOTCACHEPAGE`, no-store headers, and **strip `noindex`** from the robots meta so X/FB will card `/buy/`.
 - Googlebot still gets `noindex` on `/buy/` (filter only skipped for social UAs in `wrrapd-buy-for-you.php`).
 
 ### Related shopper MU (same deploy wave)

@@ -205,11 +205,8 @@ function wrrapd_x_card_rewrite( $html ) {
 		$html
 	);
 
-	$html = preg_replace(
-		'#https://(?:wrrapd\.com|apply\.wrrapd\.com)/wp-content/uploads/[^"\']*(?:Wrrapd_f-Logo|cropped-Wrrapd|Applications_Wrrapd)[^"\']*#i',
-		$img,
-		$html
-	);
+	// Never rewrite header, footer, or any other visible logo URL.
+	// Social posts use the banner JPEG itself. See docs/SOCIAL-SHARE-CARDS.md.
 
 	if ( wrrapd_x_card_is_bot() ) {
 		$html = preg_replace(
