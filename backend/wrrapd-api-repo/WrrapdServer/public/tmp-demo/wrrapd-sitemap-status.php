@@ -251,8 +251,8 @@ if ( ! function_exists( 'wrrapd_seo_public_map' ) ) {
 	function wrrapd_seo_public_map() {
 		return array(
 			'/'                         => array(
-				'title'       => 'Wrrapd, sometimes spelled Wrappd | Wrapping Happiness',
-				'description' => 'Shop as usual. We wrap your gift at checkout. Searching Wrappd, Wrapd, Wrarp, or Wrappz? That’s Wrrapd.',
+				'title'       => 'Wrrapd | Wrapping Happiness',
+				'description' => 'Shop as usual. We wrap your gift at checkout.',
 			),
 			'/about-us/'                => array(
 				'title'       => 'About Wrrapd',
