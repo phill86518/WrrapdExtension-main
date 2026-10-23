@@ -45,6 +45,12 @@ import {
 } from '../shared/wrrapd-unit-pricing.js';
 import { formatUsd } from '../shared/wrrapd-unit-pricing.js';
 import {
+    giftChoiceIsCurrent,
+    selectAmazonCheckoutGiftItems,
+    optionHasWrrapdCharges,
+} from '../shared/amazon-gift-choice.js';
+import { wrrapdReadAmazonAccountGreeting } from './lib/amazon-account-signed-in.js';
+import {
     allocateDiscountCents,
     computeMultiItemBaseDiscount,
     formatDiscountUsd,
@@ -273,6 +279,10 @@ import {
      * Compact cart for server-side PaymentIntent amount (must mirror checkout math).
      */
     const WRRAPD_PRICING_CART_CACHE_KEY = 'wrrapd-amazon-pricing-cart-v1';
+    const WRRAPD_GIFT_CHOICE_META_KEY = 'wrrapd-amazon-gift-choice-meta';
+    const WRRAPD_AMAZON_HELLO_SEEN_KEY = 'wrrapd-amazon-hello-seen';
+    let wrrapdGiftChoiceTouchedPath = '';
+    let wrrapdGiftChoiceActivityAt = 0;
 
     function pricingItemsFromCheckoutItems(itemsInCurrentCheckout) {
         return Object.values(itemsInCurrentCheckout || {})
@@ -323,21 +333,9 @@ import {
         }
     }
 
-    function readCachedPricingCart() {
-        try {
-            const parsed = JSON.parse(sessionStorage.getItem(WRRAPD_PRICING_CART_CACHE_KEY) || 'null');
-            if (parsed && Array.isArray(parsed.items) && parsed.items.length > 0) return parsed;
-        } catch (_) {
-            /* ignore */
-        }
-        return null;
-    }
-
     function buildPricingCartForPayment(addressObject) {
         const itemsInCurrentCheckout = collectWrrapdItemsForCheckout();
-        const freshItems = pricingItemsFromCheckoutItems(itemsInCurrentCheckout);
-        const cached = freshItems.length === 0 ? readCachedPricingCart() : null;
-        const items = freshItems.length > 0 ? freshItems : cached?.items || [];
+        const items = pricingItemsFromCheckoutItems(itemsInCurrentCheckout);
         const ao = addressObject && typeof addressObject === 'object' ? addressObject : {};
         // Always price + tax from the giftee ZIP (modal), never the hub address Amazon ships to.
         const gifteeZip = amazonGifteeZipForPricing();
@@ -351,7 +349,14 @@ import {
             retailer: 'amazon',
             multiItemDiscountAware: true,
         };
-        cachePricingCart(cart);
+        if (items.length) cachePricingCart(cart);
+        else {
+            try {
+                sessionStorage.removeItem(WRRAPD_PRICING_CART_CACHE_KEY);
+            } catch (_) {
+                /* ignore */
+            }
+        }
         return cart;
     }
 
@@ -702,6 +707,9 @@ import {
 
             if (changed) {
                 saveAllItemsToLocalStorage(allItems);
+                if (Object.values(allItems).some((p) => p?.options?.some((o) => optionHasWrrapdCharges(o)))) {
+                    touchAmazonGiftChoice();
+                }
                 console.log('[syncWrrapdSelectionsFromGiftDom] Synchronized gift-row Wrrapd checkboxes into localStorage.');
             }
             return changed;
@@ -795,6 +803,8 @@ import {
             const currentURL = window.location.href;
             if (currentURL.includes('amazon.com')) {
                 syncAmazonDeliverToGreeting();
+                noteAmazonAccountGreeting();
+                expireAmazonGiftChoiceIfNeeded();
             }
 
             const isRelevantPage = isCommercePageForWrrapd(currentURL);
@@ -1026,8 +1036,9 @@ import {
                     }
                     
                     // Payment step: addresses are set — never re-run address automation here.
-                    paymentSection(allItems);
-                    if (hasAnyWrrapdGiftWrapInCart(allItems)) {
+                    const giftItemsForThisOrder = filterItemsInCurrentCheckout(allItems);
+                    paymentSection(giftItemsForThisOrder);
+                    if (hasAnyWrrapdGiftWrapInCart(giftItemsForThisOrder)) {
                         localStorage.setItem('wrrapd-should-change-address', 'false');
                         if (localStorage.getItem('wrrapd-payment-status') !== 'success') {
                             disableAmazonAddressChangeControls();
@@ -1084,6 +1095,10 @@ import {
         setInterval(checkURLAndExecute, 1000);
     }
     
+    ['pointerdown', 'keydown'].forEach((type) => {
+        document.addEventListener(type, noteAmazonGiftChoiceActivity, true);
+    });
+
     // Hub address matching needs /api/extension-config before any address step runs.
     ensureExtensionConfig()
         .catch(() => null)
@@ -1123,6 +1138,7 @@ import {
 
         // We remove all previously stored items from localStorage to start fresh
         removeAllItemsFromLocalStorage();
+        localStorage.removeItem(WRRAPD_GIFT_CHOICE_META_KEY);
         try {
             sessionStorage.removeItem(WRRAPD_PRICING_CART_CACHE_KEY);
         } catch (_) {
@@ -4096,6 +4112,7 @@ Provide ONLY a valid CSS selector that uniquely identifies this element. The sel
                         if (this.checked) {
                             modal.style.display = 'flex';
                             // Update storage when checkbox is checked
+                            touchAmazonGiftChoice();
                             subItem.checkbox_wrrapd = true;
                             saveItemToLocalStorage(productObj);
                             // Later Wrrapd items in this order reuse the first item's giftee ZIP.
@@ -10379,6 +10396,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             
             console.log("[showTermsAndConditionsModal] User clicked agreement link");
             
+            touchAmazonGiftChoice();
             localStorage.setItem('wrrapd-terms-accepted', 'true');
             localStorage.setItem('wrrapd-keep-loading-until-summary', 'true');
             localStorage.setItem(WRRAPD_MANUAL_ADDRESS_TAPS_KEY, '1');
@@ -10446,6 +10464,7 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
             return;
         }
         paymentSectionRetryCount = 0;
+        touchAmazonGiftChoiceForCheckoutStep();
 
         removeNotSelectedTextInGiftOptions(itemsInCurrentCheckout);
 
@@ -11220,14 +11239,6 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
         return flowers === true || flowers === 1 || flowers === 'true' || flowers === '1';
     }
 
-    function wrrapdItemsWithCharges(allItems) {
-        const out = {};
-        for (const [title, item] of Object.entries(allItems || {})) {
-            if (item?.options?.some((opt) => wrrapdOptionHasWrrapdCharges(opt))) out[title] = item;
-        }
-        return out;
-    }
-
     function collectWrrapdItemsForCheckout() {
         let allItems = {};
         try {
@@ -11235,11 +11246,203 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
         } catch (_) {
             allItems = {};
         }
-        const filtered = filterItemsInCurrentCheckout(allItems);
-        if (Object.keys(filtered).length) return filtered;
-        const charged = wrrapdItemsWithCharges(allItems);
-        if (Object.keys(charged).length) return charged;
-        return allItems;
+        return filterItemsInCurrentCheckout(allItems);
+    }
+
+    function readAmazonGiftChoiceMeta() {
+        try {
+            const parsed = JSON.parse(localStorage.getItem(WRRAPD_GIFT_CHOICE_META_KEY) || 'null');
+            if (!parsed || typeof parsed.touchedAt !== 'number' || !Number.isFinite(parsed.touchedAt)) return null;
+            return {
+                greeting: String(parsed.greeting || '').trim().toLowerCase(),
+                touchedAt: parsed.touchedAt,
+            };
+        } catch (_) {
+            return null;
+        }
+    }
+
+    function rememberedAmazonGreeting() {
+        let live = '';
+        try {
+            live = wrrapdReadAmazonAccountGreeting() || '';
+        } catch (_) {
+            live = '';
+        }
+        if (live) return live;
+        try {
+            return sessionStorage.getItem(WRRAPD_AMAZON_HELLO_SEEN_KEY) || '';
+        } catch (_) {
+            return '';
+        }
+    }
+
+    function touchAmazonGiftChoice() {
+        const greeting = rememberedAmazonGreeting();
+        try {
+            localStorage.setItem(
+                WRRAPD_GIFT_CHOICE_META_KEY,
+                JSON.stringify({ greeting, touchedAt: Date.now() }),
+            );
+        } catch (_) {
+            /* ignore */
+        }
+    }
+
+    function touchAmazonGiftChoiceForCheckoutStep() {
+        try {
+            const path = window.location.pathname || '';
+            if (wrrapdGiftChoiceTouchedPath === path) return;
+            if (!amazonGiftChoiceAllowsSummary()) return;
+            wrrapdGiftChoiceTouchedPath = path;
+            touchAmazonGiftChoice();
+        } catch (_) {
+            /* ignore */
+        }
+    }
+
+    /** Clicks and typing keep a live gift choice from timing out mid-checkout. */
+    function noteAmazonGiftChoiceActivity() {
+        const now = Date.now();
+        if (now - wrrapdGiftChoiceActivityAt < 60 * 1000) return;
+        wrrapdGiftChoiceActivityAt = now;
+        try {
+            if (!readAmazonGiftChoiceMeta()) return;
+            if (!amazonGiftChoiceAllowsSummary()) return;
+            touchAmazonGiftChoice();
+        } catch (_) {
+            /* ignore */
+        }
+    }
+
+    function storedAmazonItemsHaveWrrapdCharges() {
+        try {
+            const items = getAllItemsFromLocalStorage() || {};
+            return Object.values(items).some((item) => item?.options?.some((opt) => optionHasWrrapdCharges(opt)));
+        } catch (_) {
+            return false;
+        }
+    }
+
+    function clearAmazonGiftChoice() {
+        try {
+            removeAllItemsFromLocalStorage();
+        } catch (_) {
+            /* ignore */
+        }
+        try {
+            localStorage.removeItem(WRRAPD_GIFT_CHOICE_META_KEY);
+            localStorage.removeItem('wrrapd-giftee-intended-address');
+            localStorage.removeItem('wrrapd-terms-accepted');
+            localStorage.removeItem('wrrapd-terms-gift-signature');
+            localStorage.removeItem('wrrapd-keep-loading-until-summary');
+            localStorage.removeItem('wrrapd-should-change-address');
+            localStorage.removeItem('wrrapd-addresses-changed');
+            localStorage.removeItem('wrrapd-multi-address-completed');
+            localStorage.removeItem('wrrapd-all-items');
+            localStorage.removeItem('wrrapd-order-number');
+            localStorage.removeItem('wrrapd-default-address');
+            localStorage.setItem('wrrapd-payment-status', 'reset');
+        } catch (_) {
+            /* ignore */
+        }
+        try {
+            sessionStorage.removeItem(WRRAPD_PRICING_CART_CACHE_KEY);
+            sessionStorage.removeItem('wrrapdAmazonValidatedEstimateZip');
+            sessionStorage.removeItem('wrrapdAmazonResolvedUnitPrices');
+        } catch (_) {
+            /* ignore */
+        }
+        try {
+            const existingSummary = document.querySelector('#wrrapd-summary');
+            if (existingSummary) existingSummary.remove();
+        } catch (_) {
+            /* ignore */
+        }
+        try {
+            enablePlaceOrderButtons();
+        } catch (_) {
+            /* ignore */
+        }
+        try {
+            enableAmazonAddressChangeControls();
+        } catch (_) {
+            /* ignore */
+        }
+        wrrapdGiftChoiceTouchedPath = '';
+    }
+
+    function noteAmazonAccountGreeting() {
+        let greeting = '';
+        try {
+            greeting = wrrapdReadAmazonAccountGreeting() || '';
+        } catch (_) {
+            greeting = '';
+        }
+        if (!greeting) return;
+        let prev = '';
+        try {
+            prev = sessionStorage.getItem(WRRAPD_AMAZON_HELLO_SEEN_KEY) || '';
+        } catch (_) {
+            prev = '';
+        }
+        if (prev && prev !== greeting) clearAmazonGiftChoice();
+        try {
+            sessionStorage.setItem(WRRAPD_AMAZON_HELLO_SEEN_KEY, greeting);
+        } catch (_) {
+            /* ignore */
+        }
+    }
+
+    /** A paid choice does not time out before Amazon's Place your order; an account change still drops it. */
+    function amazonGiftChoiceClock(meta) {
+        const paid = localStorage.getItem('wrrapd-payment-status') === 'success';
+        return paid && meta ? meta.touchedAt : Date.now();
+    }
+
+    function amazonGiftChoiceAllowsSummary() {
+        const meta = readAmazonGiftChoiceMeta();
+        const greeting = rememberedAmazonGreeting();
+        if (!meta) {
+            if (storedAmazonItemsHaveWrrapdCharges()) clearAmazonGiftChoice();
+            return false;
+        }
+        if (!giftChoiceIsCurrent(meta, amazonGiftChoiceClock(meta), greeting)) {
+            clearAmazonGiftChoice();
+            return false;
+        }
+        return true;
+    }
+
+    function expireAmazonGiftChoiceIfNeeded() {
+        amazonGiftChoiceAllowsSummary();
+    }
+
+    function readCheckoutPageForGiftMatch() {
+        const asins = new Set();
+        try {
+            document.querySelectorAll('[data-asin]').forEach((el) => {
+                const asin = String(el.getAttribute('data-asin') || '').trim().toUpperCase();
+                if (/^[A-Z0-9]{10}$/.test(asin)) asins.add(asin);
+            });
+            document.querySelectorAll('[id^="asin_"]').forEach((el) => {
+                const asin = String(el.textContent || '').trim().toUpperCase();
+                if (/^[A-Z0-9]{10}$/.test(asin)) asins.add(asin);
+            });
+            const html = document.body ? document.body.innerHTML : '';
+            const re = /\/(?:dp|gp\/product)\/([A-Z0-9]{10})/gi;
+            let match;
+            while ((match = re.exec(html))) asins.add(match[1].toUpperCase());
+        } catch (_) {
+            /* ignore */
+        }
+        let text = '';
+        try {
+            text = document.body ? document.body.textContent || '' : '';
+        } catch (_) {
+            text = '';
+        }
+        return { asins, text };
     }
 
     function readPaintedWrrapdSummaryTotal() {
@@ -11264,44 +11467,21 @@ Respond with ONLY the index number (0, 1, 2, etc.) of the address that matches t
 
     function filterItemsInCurrentCheckout(allItems) {
         console.log("[filterItemsInCurrentCheckout] Filtering items to only include those in current checkout...");
-        
-        const itemsInCheckout = {};
+        if (!amazonGiftChoiceAllowsSummary()) {
+            console.log("[filterItemsInCurrentCheckout] Saved gift is not for this account or has expired.");
+            return {};
+        }
         const source = allItems && typeof allItems === 'object' ? allItems : {};
-        const currentURL = window.location.href;
-        const isPaymentPage =
-            wrrapdUrlLooksLikeAmazonPaymentStep(currentURL) || wrrapdDomLooksLikeAmazonPaymentStep();
-
-        const takeCharged = () => {
-            for (const [title, item] of Object.entries(source)) {
-                if (item?.options?.some((opt) => wrrapdOptionHasWrrapdCharges(opt))) {
-                    itemsInCheckout[title] = item;
-                }
-            }
-        };
-
-        // On payment / SPC, prefer Wrrapd-selected lines. If that filter is empty
-        // (Chewbacca often drops checkbox_wrrapd), fall back to page text then any charged items.
-        if (isPaymentPage) {
-            console.log("[filterItemsInCurrentCheckout] Payment page detected - using Wrrapd selection as filter criteria");
-            takeCharged();
-        }
-        if (Object.keys(itemsInCheckout).length === 0) {
-            const pageText = document.body.textContent || '';
-            for (const [title, item] of Object.entries(source)) {
-                const titleSubstring = String(title || '').substring(0, 50);
-                const asinInPage = item?.asin && pageText.includes(item.asin);
-                const titleInPage = titleSubstring && pageText.includes(titleSubstring);
-                if (asinInPage || titleInPage) {
-                    itemsInCheckout[title] = item;
-                }
-            }
-        }
-        if (Object.keys(itemsInCheckout).length === 0) {
-            takeCharged();
-        }
-        
-        console.log(`[filterItemsInCurrentCheckout] Found ${Object.keys(itemsInCheckout).length} items in current checkout out of ${Object.keys(source).length} total items.`);
-        return itemsInCheckout;
+        const meta = readAmazonGiftChoiceMeta();
+        const selected = selectAmazonCheckoutGiftItems(
+            source,
+            readCheckoutPageForGiftMatch(),
+            meta,
+            amazonGiftChoiceClock(meta),
+            rememberedAmazonGreeting(),
+        );
+        console.log(`[filterItemsInCurrentCheckout] Found ${Object.keys(selected).length} items in current checkout out of ${Object.keys(source).length} total items.`);
+        return selected;
     }
 
     function readGifteeIntendedAddressForIngest() {

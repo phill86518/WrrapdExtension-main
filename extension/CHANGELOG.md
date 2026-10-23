@@ -8,6 +8,44 @@ Build for the store on Windows: `npm run build:store` → upload `extension/wrra
 
 ---
 
+## 3.0.15 — ready for Chrome Web Store (Oct 23, 2026)
+
+Same listing as 3.0.14 (`lobngnjcjeimefihnobdmocicopikoip`), so installed copies update on their own.
+Leave the website nudge (`$latest_version` in `wrrapd-orders-bridge.php`) at 3.0.14 until Google approves this version.
+No server or Command Center change is needed.
+
+### A. Amazon: no Wrrapd Summary for a gift that is not in this order (Oct 23)
+
+**Bug:** after switching to another Amazon account in the same Chrome profile, a checkout with no Wrrapd
+choices showed a Wrrapd Summary with an old gift's wrap, custom design, and flowers, and a Pay Wrrapd button.
+Saved choices live in `amazon.com` page storage (`wrrapd-items`), which is shared by every Amazon account in
+the profile, and the payment step accepted any saved line with Wrrapd charges.
+
+The summary and Pay Wrrapd now need all three:
+
+1. **Same product** — the saved line's ASIN is in this checkout (including Amazon's hidden `asin_*` tags) or the
+   start of its title is on the page. The old "any charged line" and cached pricing-cart fallbacks are gone.
+2. **Same account** — the saved choice records the Amazon "Hello, &lt;name&gt;" greeting. A different greeting in any
+   tab clears the saved gift, its giftee ZIP, prices, and addresses.
+3. **A real, recent Wrrapd choice** — gift wrap or flowers actually checked, with a choice record no older than
+   **30 minutes** since the shopper's last click or key press in checkout. Saved lines with charges but no record
+   (left by older versions) are cleared. After Pay Wrrapd succeeds the timer stops, so a paid order is never
+   dropped before Place your order. An account change still drops it.
+
+- Files: `src/shared/amazon-gift-choice.js` (rules), `src/content/content-legacy.js`,
+  `src/content/lib/amazon-account-signed-in.js` (`wrrapdReadAmazonAccountGreeting`).
+- Checks: `node scripts/check-amazon-gift-choice.mjs`, and a simulated Amazon payment page with the built
+  `content.js` (old gift hidden; different product hidden; real gift shown; account switch hidden; over 30 minutes
+  hidden; paid and over 30 minutes still shown).
+
+### B. Held over from Oct 19 (built, never uploaded)
+
+- Giftee ZIP label: "Giftee / gift-recipient's zip code (currently limited to Jacksonville, FL):".
+- Multi-item discount tiers: 2–4 wrapped items and 5+ (matches the pay server).
+- Toast after saving gift choices on the other retailers when the shopper has earned a multi-item discount.
+
+---
+
 ## 3.0.14 — published on Chrome Web Store (approved Oct 8, 2026)
 
 Item ID **`lobngnjcjeimefihnobdmocicopikoip`**: [Wrrapd on the Chrome Web Store](https://chromewebstore.google.com/detail/wrrapd/lobngnjcjeimefihnobdmocicopikoip). Website install links and `$latest_version` point here. 3.0.13 remains item `ofokdnajfbjmpbeocibingpiadnoccfc` and is still probed so those installs see the update nudge.

@@ -49,6 +49,17 @@ function textLooksLikeHelloSignIn(s) {
   return typeof s === 'string' && /\bhello\s*,\s*sign\s+in\b/i.test(s);
 }
 
+/** "Hello, Roger" → "roger". Empty when the nav greeting is missing or signed out. */
+export function wrrapdReadAmazonAccountGreeting() {
+  const line1 = readAmazonAccountNavLine1Text();
+  if (!line1 || textLooksLikeHelloSignIn(line1)) return '';
+  const match = line1.match(/^hello\s*,\s*(.+)$/i);
+  if (!match) return '';
+  const name = match[1].replace(/\s+/g, ' ').trim().toLowerCase();
+  if (!name || name === 'sign in') return '';
+  return name;
+}
+
 export function wrrapdIsAmazonAccountSignedIn() {
   const line1 = readAmazonAccountNavLine1Text();
   const accountSnippet = readNavAccountListSnippet();
@@ -82,4 +93,5 @@ export function wrrapdIsAmazonAccountSignedIn() {
 
 if (typeof window !== 'undefined') {
   window.wrrapdIsAmazonAccountSignedIn = wrrapdIsAmazonAccountSignedIn;
+  window.wrrapdReadAmazonAccountGreeting = wrrapdReadAmazonAccountGreeting;
 }
