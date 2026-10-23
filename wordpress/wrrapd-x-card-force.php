@@ -1,17 +1,15 @@
 <?php
 /**
  * Plugin Name: Wrrapd X Card Force
- * Description: Path-aware OG/Twitter share images. Clean card HTML for social bots on /share/ and hire landings (X often fails noisy pages and shows the logo). JPEGs on api.wrrapd.com via nginx.
- * Version: 2.3.1
+ * Description: Social OG/Twitter cards only. Never rewrites page HTML for humans (header/body/footer stay untouched). Bots get a tiny clean card document.
+ * Version: 2.4.0
  */
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_X_CARD_VER', '20261022f' );
-
 /**
- * @return string Request path with leading slash, no trailing slash (except root "/").
+ * @return string
  */
 function wrrapd_x_card_path() {
 	$path = isset( $_SERVER['REQUEST_URI'] ) ? (string) wp_parse_url( wp_unslash( $_SERVER['REQUEST_URI'] ), PHP_URL_PATH ) : '/';
@@ -68,17 +66,9 @@ function wrrapd_x_card_clean_payload() {
 				'image'       => $api . 'wrrapd-x-joyrider-e.jpg',
 			);
 		}
-		if ( preg_match( '#^/(apply)?/?$#', $path ) || preg_match( '#^/apply(/|$)#', $path ) ) {
-			return array(
-				'title'       => 'Become a "WrapStar"',
-				'description' => 'Wrap beautiful gifts from your own space, on your own hours. Paid hourly — rate confirmed when you’re approved.',
-				'url'         => 'https://apply.wrrapd.com/apply/',
-				'image'       => $api . 'wrrapd-x-wrapstar-e.jpg',
-			);
-		}
 		return array(
 			'title'       => 'Become a "WrapStar"',
-			'description' => 'Wrap beautiful gifts from your own space. Paid hourly — rate confirmed when you’re approved.',
+			'description' => 'Wrap beautiful gifts from your own space, on your own hours. Paid hourly — rate confirmed when you’re approved.',
 			'url'         => 'https://apply.wrrapd.com/apply/',
 			'image'       => $api . 'wrrapd-x-wrapstar-e.jpg',
 		);
@@ -102,47 +92,26 @@ function wrrapd_x_card_clean_payload() {
 		);
 	}
 
+	$essays = array(
+		'/holiday-gifting-season'        => array( 'title' => 'This holiday season, make the unwrapping the moment!', 'file' => 'wrrapd-essay-holiday-card.jpg', 'url' => 'https://wrrapd.com/holiday-gifting-season/' ),
+		'/give-them-a-season'            => array( 'title' => 'Give them a season they can keep!', 'file' => 'wrrapd-essay-season-card.jpg', 'url' => 'https://wrrapd.com/give-them-a-season/' ),
+		'/what-belongs-under-the-ribbon' => array( 'title' => 'What belongs under the ribbon this year!', 'file' => 'wrrapd-essay-ribbon-card.jpg', 'url' => 'https://wrrapd.com/what-belongs-under-the-ribbon/' ),
+	);
+	foreach ( $essays as $slug => $info ) {
+		if ( $path === $slug || $path === $slug . '/' ) {
+			return array(
+				'title'       => $info['title'],
+				'description' => 'Gift stories from Wrrapd.',
+				'url'         => $info['url'],
+				'image'       => $api . $info['file'],
+			);
+		}
+	}
+
 	return null;
 }
 
 /**
- * Canonical image URL for rewrite / wp_head.
- */
-function wrrapd_x_card_image_url() {
-	static $cached = null;
-	if ( is_string( $cached ) ) {
-		return $cached;
-	}
-	$payload = wrrapd_x_card_clean_payload();
-	if ( $payload ) {
-		$cached = $payload['image'];
-		return $cached;
-	}
-
-	$api  = 'https://api.wrrapd.com/img/og/';
-	$path = wrrapd_x_card_path();
-	$essays = array(
-		'/holiday-gifting-season'        => 'wrrapd-essay-holiday-card.jpg',
-		'/give-them-a-season'            => 'wrrapd-essay-season-card.jpg',
-		'/what-belongs-under-the-ribbon' => 'wrrapd-essay-ribbon-card.jpg',
-	);
-	foreach ( $essays as $slug => $file ) {
-		if ( $path === $slug || $path === $slug . '/' ) {
-			$cached = $api . $file;
-			return $cached;
-		}
-	}
-	if ( function_exists( 'is_singular' ) && is_singular( 'post' ) ) {
-		$cached = $api . 'wrrapd-blog-card.jpg';
-		return $cached;
-	}
-	$cached = $api . 'wrrapd-x-home-e.jpg';
-	return $cached;
-}
-
-/**
- * Minimal HTML for social crawlers — no WordPress chrome, no logo fallbacks.
- *
  * @param array{title:string,description:string,url:string,image:string} $card
  */
 function wrrapd_x_card_emit_clean_document( $card ) {
@@ -150,7 +119,7 @@ function wrrapd_x_card_emit_clean_document( $card ) {
 		status_header( 200 );
 		header( 'Content-Type: text/html; charset=UTF-8' );
 		header( 'Cache-Control: no-store, no-cache, must-revalidate, max-age=0' );
-		header( 'X-Wrrapd-Card: force-12' );
+		header( 'X-Wrrapd-Card: force-13' );
 	}
 	echo '<!DOCTYPE html><html lang="en"><head>';
 	echo '<meta charset="utf-8" />';
@@ -176,12 +145,6 @@ function wrrapd_x_card_emit_clean_document( $card ) {
 	exit;
 }
 
-if ( wrrapd_x_card_is_bot() ) {
-	if ( ! defined( 'DONOTCACHEPAGE' ) ) {
-		define( 'DONOTCACHEPAGE', true );
-	}
-}
-
 add_filter(
 	'w3tc_can_cache',
 	function ( $can ) {
@@ -192,31 +155,6 @@ add_filter(
 	},
 	0
 );
-
-function wrrapd_x_card_rewrite( $html ) {
-	if ( ! is_string( $html ) || $html === '' ) {
-		return $html;
-	}
-	$img = wrrapd_x_card_image_url();
-
-	$html = preg_replace(
-		'#(<meta[^>]+(?:property|name)=["\'](?:og:image|og:image:secure_url|twitter:image)["\'][^>]+content=["\'])[^"\']+(["\'])#i',
-		'$1' . $img . '$2',
-		$html
-	);
-
-	// Never rewrite header, footer, or any other visible logo URL.
-	// Social posts use the banner JPEG itself. See docs/SOCIAL-SHARE-CARDS.md.
-
-	if ( wrrapd_x_card_is_bot() ) {
-		$html = preg_replace(
-			"#<meta\s+name=['\"]robots['\"]\s+content=['\"][^'\"]*noindex[^'\"]*['\"]\s*/?>#i",
-			'<meta name="robots" content="max-image-preview:large" />',
-			$html
-		);
-	}
-	return $html;
-}
 
 add_action(
 	'template_redirect',
@@ -238,36 +176,35 @@ add_action(
 			exit;
 		}
 
-		// Hire landings: bots get clean card HTML (stops logo fallback on X).
-		if ( wrrapd_x_card_is_bot() && wrrapd_x_card_is_apply_host() ) {
-			$card = wrrapd_x_card_clean_payload();
-			if ( $card ) {
-				wrrapd_x_card_emit_clean_document( $card );
-			}
+		// Humans: do nothing. No output buffering. No HTML rewrite. Pages render as WordPress built them.
+		if ( ! wrrapd_x_card_is_bot() ) {
+			return;
 		}
 
-		// Shopper homepage/buy for bots: clean card when we have a payload.
-		if ( wrrapd_x_card_is_bot() && ! wrrapd_x_card_is_apply_host() ) {
-			$card = wrrapd_x_card_clean_payload();
-			if ( $card && ( $path === '/' || preg_match( '#^/buy/?$#', $path ) ) ) {
-				wrrapd_x_card_emit_clean_document( $card );
-			}
+		if ( ! defined( 'DONOTCACHEPAGE' ) ) {
+			define( 'DONOTCACHEPAGE', true );
 		}
 
-		if ( ! headers_sent() && wrrapd_x_card_is_bot() ) {
-			header( 'Cache-Control: no-store, no-cache, must-revalidate, max-age=0' );
-			header( 'Pragma: no-cache' );
-			header( 'X-Wrrapd-Card: force-12' );
+		$card = wrrapd_x_card_clean_payload();
+		if ( $card ) {
+			wrrapd_x_card_emit_clean_document( $card );
 		}
-		ob_start( 'wrrapd_x_card_rewrite' );
 	},
 	0
 );
 
+// Humans only: add OG meta in head (does not touch header/body/footer markup).
 add_action(
 	'wp_head',
 	function () {
-		$img = esc_url( wrrapd_x_card_image_url() );
+		if ( wrrapd_x_card_is_bot() ) {
+			return;
+		}
+		$card = wrrapd_x_card_clean_payload();
+		if ( ! $card ) {
+			return;
+		}
+		$img = esc_url( $card['image'] );
 		echo "\n<!-- wrrapd-x-card-force -->\n";
 		echo '<meta property="og:image" content="' . $img . '" />' . "\n";
 		echo '<meta property="og:image:secure_url" content="' . $img . '" />' . "\n";

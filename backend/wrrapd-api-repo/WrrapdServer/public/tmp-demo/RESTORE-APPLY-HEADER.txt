@@ -1,0 +1,10 @@
+APPLY.WRRAPD.COM — restore header/body/footer NOW
+
+1. Site Tools → apply.wrrapd.com → File Manager → wp-content/mu-plugins/
+2. FASTEST restore: rename wrrapd-x-card-force.php → wrrapd-x-card-force.php.BROKEN
+   (pages immediately go back to normal WordPress header/logo)
+3. Then paste contents of https://api.wrrapd.com/tmp-demo/wrrapd-x-card-force.php
+   into a NEW file named wrrapd-x-card-force.php (force-13 — never rewrites human HTML)
+4. Flush Speed → Caching on apply
+
+Also paste the same file on wrrapd.com mu-plugins/ if that copy is still old.
