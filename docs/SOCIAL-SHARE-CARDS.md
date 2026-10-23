@@ -162,3 +162,7 @@ Bare `https://wrrapd.com/` often scrapes title/description but **never paints th
 
 That path serves a tiny HTML document to social bots (MU `wrrapd-x-card-force` v2.2) and redirects humans to `/`. Image: `https://api.wrrapd.com/img/og/wrrapd-x-home-e.jpg` (nginx static).
 
+## Do not rewrite logo `<img src>` URLs
+
+`wrrapd-x-card-force` must **only** change `og:image` / `twitter:image` meta tags. An earlier version replaced every `Wrrapd_f-Logo*.png` and `Applications_Wrrapd*` URL in the HTML body with the share JPEG, which made the apply.wrrapd.com header show the JoyRider banner instead of the wordmark. Fixed in force-12 / v2.3.1.
+

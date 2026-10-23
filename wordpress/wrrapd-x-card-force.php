@@ -2,13 +2,13 @@
 /**
  * Plugin Name: Wrrapd X Card Force
  * Description: Path-aware OG/Twitter share images. Clean card HTML for social bots on /share/ and hire landings (X often fails noisy pages and shows the logo). JPEGs on api.wrrapd.com via nginx.
- * Version: 2.3.0
+ * Version: 2.3.1
  */
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_X_CARD_VER', '20261022e' );
+define( 'WRRAPD_X_CARD_VER', '20261022f' );
 
 /**
  * @return string Request path with leading slash, no trailing slash (except root "/").
@@ -150,7 +150,7 @@ function wrrapd_x_card_emit_clean_document( $card ) {
 		status_header( 200 );
 		header( 'Content-Type: text/html; charset=UTF-8' );
 		header( 'Cache-Control: no-store, no-cache, must-revalidate, max-age=0' );
-		header( 'X-Wrrapd-Card: force-11' );
+		header( 'X-Wrrapd-Card: force-12' );
 	}
 	echo '<!DOCTYPE html><html lang="en"><head>';
 	echo '<meta charset="utf-8" />';
@@ -257,7 +257,7 @@ add_action(
 		if ( ! headers_sent() && wrrapd_x_card_is_bot() ) {
 			header( 'Cache-Control: no-store, no-cache, must-revalidate, max-age=0' );
 			header( 'Pragma: no-cache' );
-			header( 'X-Wrrapd-Card: force-11' );
+			header( 'X-Wrrapd-Card: force-12' );
 		}
 		ob_start( 'wrrapd_x_card_rewrite' );
 	},
