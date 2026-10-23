@@ -156,6 +156,17 @@ add_filter(
 	0
 );
 
+// Keep human HTML and bot card HTML in separate edge-cache keys (SiteGround proxy).
+add_action(
+	'send_headers',
+	function () {
+		if ( wrrapd_x_card_clean_payload() && ! headers_sent() ) {
+			header( 'Vary: User-Agent', false );
+		}
+	},
+	0
+);
+
 add_action(
 	'template_redirect',
 	function () {

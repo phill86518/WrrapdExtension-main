@@ -8,6 +8,14 @@ WordPress + Elementor + Hello theme content mostly lives **in the production dat
 
 ## Recent changes
 
+### 2026-10-22 — X-card force-13 (humans untouched; bots get clean card)
+
+- MU `wordpress/wrrapd-x-card-force.php` **v2.4.0** — header `X-Wrrapd-Card: force-13`.
+- **Humans:** no HTML rewrite / no output buffering (hire header logos stay wordmarks). Optional `wp_head` OG tags only.
+- **Social bots** (or `?card=1`): tiny clean HTML document with one `api.wrrapd.com/img/og/*` image; `no-store`; `Vary: User-Agent`.
+- Live on **wrrapd.com** and **apply.wrrapd.com** (paste from repo or `https://api.wrrapd.com/tmp-demo/wrrapd-x-card-force.php`). Flush SiteGround cache after paste.
+- Runbook: **`docs/SOCIAL-SHARE-CARDS.md`**.
+
 ### 2026-10-22 — Header and footer wordmarks restored (website golden)
 
 - Shopper header and footer are the Wrrapd wordmark again: `uploads/2025/03/Wrrapd_f-Logo-800-x-458-px.png`.

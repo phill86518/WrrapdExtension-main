@@ -3,6 +3,8 @@
 **Last updated:** 2026-10-22 (Eastern)  
 **Owner path:** GCP VM `/home/phill/wrrapd-GCP` → push to GitHub → paste MU files on SiteGround.
 
+**Live MU build:** `wrrapd-x-card-force.php` **v2.4.0** — response header `X-Wrrapd-Card: force-13`.
+
 ## NEVER change the live site to make a social post
 
 Social posts use a **banner JPEG**. Copy the image URL and paste it into the post. That is the whole job.
@@ -25,31 +27,32 @@ When someone pastes a Wrrapd URL into X, Facebook, LinkedIn, Slack, etc., the cr
 
 ## Why a card sometimes fails
 
-1. **`noindex`** — X and Meta often **refuse** to build a preview if the HTML has `robots` = `noindex`. `/buy/` stays noindex for Google (counsel); social bots must see an indexable robots line.
-2. **Stale edge cache** — SiteGround proxy can serve old HTML/images. Flush Speed → Caching after MU paste. Cache-bust image URLs with `?v=YYYYMMDDx`.
+1. **`noindex`** — X and Meta often **refuse** to build a preview if the HTML has `robots` = `noindex`. `/buy/` stays noindex for Google (counsel); social bots must see an indexable robots line (force-13 clean doc uses `max-image-preview:large` only).
+2. **Stale edge cache** — SiteGround proxy can serve cached **human** HTML to Twitterbot (full page, no `X-Wrrapd-Card`). Flush Speed → Caching after MU paste. Bypass with `?nocache=1` or `?card=1` when verifying. force-13 sends `Vary: User-Agent` so human and bot responses stay in separate cache keys.
 3. **Quoted whole tweet** — Put the URL **outside** quotation marks so X treats it as a link entity.
 4. **Wrong host** — Hire roles are on **apply.wrrapd.com**, not `wrrapd.com/wrapstars/`.
-5. **Logo-only OG** — Fallbacks that point at `Wrrapd_f-Logo-*.png` look like “just the logo” on X.
+5. **Logo-only OG** — Fallbacks that point at `Wrrapd_f-Logo-*.png` look like “just the logo” on X. Prefer **api.wrrapd.com/img/og/** JPEGs (X often fails SiteGround `/uploads/`).
 
 ---
 
 ## Canonical images (1200×630 JPEG)
 
-| Use | File (repo) | Live URL |
-|---|---|---|
-| Homepage / default shopper | `wordpress/icons/og/wrrapd-home-banner-20261022d.jpg` | `https://api.wrrapd.com/img/og/wrrapd-home-banner-20261022d.jpg` (prefer API — X often fails SiteGround `/uploads/` and falls back to the logo) |
-| `/buy/` | `wordpress/icons/og/wrrapd-share-buy-20261022.jpg` | `https://wrrapd.com/wp-content/uploads/2026/10/wrrapd-share-buy-20261022.jpg` |
-| Blog default | `wordpress/icons/og/wrrapd-share-blog-20261022.jpg` | `https://wrrapd.com/wp-content/uploads/2026/10/wrrapd-share-blog-20261022.jpg` |
-| Essay: holiday | `…/wrrapd-share-essay-holiday-20261022.jpg` | same under `uploads/2026/10/` |
-| Essay: season | `…/wrrapd-share-essay-season-20261022.jpg` | same |
-| Essay: ribbon | `…/wrrapd-share-essay-ribbon-20261022.jpg` | same |
-| WrapStar | `wordpress/icons/og/wrapstar-og.jpg` | `https://api.wrrapd.com/img/og/wrapstar-og.jpg` |
-| JoyRider | `wordpress/icons/og/joyrider-og.jpg` (frame from `Wrrapd-Driver-Ad.mp4` — yellow bag + porch handoff) | `https://api.wrrapd.com/img/og/joyrider-og.jpg` |
-| WrapRider | `wordpress/icons/og/wraprider-og.jpg` | `https://api.wrrapd.com/img/og/wraprider-og.jpg` |
+Prefer **api.wrrapd.com** for every share URL X/FB will fetch.
+
+| Use | Live URL (prefer) |
+|---|---|
+| Homepage / `/share/` | `https://api.wrrapd.com/img/og/wrrapd-x-home-e.jpg` |
+| `/buy/` | `https://api.wrrapd.com/img/og/wrrapd-buy-card.jpg` |
+| Essay: holiday | `https://api.wrrapd.com/img/og/wrrapd-essay-holiday-card.jpg` |
+| Essay: season | `https://api.wrrapd.com/img/og/wrrapd-essay-season-card.jpg` |
+| Essay: ribbon | `https://api.wrrapd.com/img/og/wrrapd-essay-ribbon-card.jpg` |
+| WrapStar | `https://api.wrrapd.com/img/og/wrrapd-x-wrapstar-e.jpg` |
+| JoyRider | `https://api.wrrapd.com/img/og/wrrapd-x-joyrider-e.jpg` |
+| WrapRider | `https://api.wrrapd.com/img/og/wrrapd-x-wraprider-e.jpg` |
+
+Repo / pay-server bytes: `backend/wrrapd-api-repo/WrrapdServer/public/img/og/` (also mirrored under `wordpress/icons/og/` / `wordpress/images/social/` where noted). Older SiteGround `uploads/2026/10/wrrapd-share-*-20261022.jpg` copies may still exist; do not rely on them for X.
 
 Pay-server copies (always push with this work): `backend/wrrapd-api-repo/WrrapdServer/public/img/og/`.
-
-Cache-bust query used in MU code: `?v=20261022d` (bump when bytes change). Shopper OG images are forced onto **api.wrrapd.com** so Twitterbot can fetch the JPEG.
 
 ---
 
@@ -59,20 +62,19 @@ Cache-bust query used in MU code: `?v=20261022d` (bump when bytes change). Shopp
 
 | Path | Image |
 |---|---|
-| `/` | share-home |
-| `/buy/` | share-buy |
-| `/holiday-gifting-season/` | essay-holiday (also WP featured media **7438**) |
-| `/give-them-a-season/` | essay-season (featured **7439**) |
-| `/what-belongs-under-the-ribbon/` | essay-ribbon (featured **7440**) |
-| Other singular posts | featured image if set; else share-blog |
+| `/`, `/share/` | `wrrapd-x-home-e.jpg` |
+| `/buy/` | `wrrapd-buy-card.jpg` |
+| `/holiday-gifting-season/` | essay-holiday |
+| `/give-them-a-season/` | essay-season |
+| `/what-belongs-under-the-ribbon/` | essay-ribbon |
 
 ### Hire — `apply.wrrapd.com` (and `pros.wrrapd.com`)
 
 | Path | Image |
 |---|---|
-| `/`, `/apply/`, WrapStar flows | wrapstar-og (API) |
-| `/drive/`, `/joyrider/` → redirects to drive | joyrider-og (API) |
-| `/wraprider/`, `/wraprider/apply/` | wraprider-og (API) |
+| `/`, `/apply/`, WrapStar flows | `wrrapd-x-wrapstar-e.jpg` |
+| `/drive/`, `/joyrider/`, `/driver*` | `wrrapd-x-joyrider-e.jpg` |
+| `/wraprider/` | `wrrapd-x-wraprider-e.jpg` |
 
 ---
 
@@ -90,18 +92,22 @@ Convenience paste mirrors (same bytes as repo):
 - `https://api.wrrapd.com/tmp-demo/wrrapd-buy-for-you.FIXED.php` → paste into **`wrrapd-buy-for-you.php`**  
 - `https://api.wrrapd.com/tmp-demo/wrrapd-sitemap-status.php`
 
-### What `wrrapd-x-card-force` does
+### What `wrrapd-x-card-force` v2.4.0 / force-13 does
 
-- Emits late `og:image` / `twitter:image` for the correct path.
-- Does **not** replace header, footer, or any other visible logo URL. That rewrite is removed.
-- For social bot user-agents: `DONOTCACHEPAGE`, no-store headers, and **strip `noindex`** from the robots meta so X/FB will card `/buy/`.
-- Googlebot still gets `noindex` on `/buy/` (filter only skipped for social UAs in `wrrapd-buy-for-you.php`).
+- **Humans:** never rewrites page HTML (no output buffering, no logo `<img src>` swaps). Optionally adds `og:image` / `twitter:image` in `wp_head` only.
+- **Social bots** (Twitterbot, facebookexternalhit, LinkedIn, Slack, Discord, WhatsApp, Telegram) **or** `?card=1` / `?wrrapd_card_debug=1`: emit a **tiny clean HTML document** with a single OG/Twitter image, then `exit`. Header: `X-Wrrapd-Card: force-13`. Cache: `no-store`.
+- Shopper `/share/`: bots get the home card; humans 302 to `/`.
+- `Vary: User-Agent` on paths that have a card payload (avoids SiteGround serving human HTML to bots).
+- W3TC: `w3tc_can_cache` false for bots and `/share`.
+- Googlebot still gets `noindex` on `/buy/` via `wrrapd-buy-for-you.php` (social UAs excepted there).
 
-### Related shopper MU (same deploy wave)
+### History (do not reintroduce)
 
-- `wrrapd-seasonal-campaigns.php` — do not dump hot-gifts rail on essay singles.
-- `wrrapd-orders-bridge.php` — skip occasion ticker ensure on singular posts.
-- `wrrapd-wrapstars.php` — portal OG URLs bump to `api…/img/og/*?v=20261022b`.
+| Build | Mistake |
+|---|---|
+| force-6…11 | Various OG / cache experiments |
+| force-12 / v2.3.x | Stopped body rewrite of wordmarks → OG banners (hire headers broken) |
+| **force-13 / v2.4.0** | Humans are a complete no-op for HTML; bots get clean card doc only |
 
 ---
 
@@ -111,7 +117,7 @@ Prefer full `https://` links, **not** wrapped inside the only set of quotes in t
 
 | Post about | Share this URL |
 |---|---|
-| Shopper brand / homepage | `https://wrrapd.com/?v=x1` or `https://wrrapd.com/` |
+| Shopper brand / homepage (X) | `https://wrrapd.com/share/` (preferred) or `https://wrrapd.com/?v=x1` |
 | Order-through-us | `https://wrrapd.com/buy/?v=x1` |
 | WrapStar hiring | `https://apply.wrrapd.com/apply/` |
 | JoyRider hiring | `https://apply.wrrapd.com/drive/` |
@@ -126,15 +132,17 @@ Affiliate product hops stay on `https://wrrapd.com/go/…` only (existing hop ru
 
 ## Deploy checklist (after git push from the VM)
 
-1. SiteGround File Manager → each site’s `mu-plugins/` → overwrite/create files per table above (copy-paste contents).
-2. Speed → Caching → Flush (wrrapd.com and apply.wrrapd.com).
-3. Confirm Twitterbot HTML:  
-   `curl -sS -A 'Twitterbot/1.0' 'https://wrrapd.com/buy/' | grep -E 'og:image|robots'`  
-   Expect share-buy image and **no** `noindex` for Twitterbot.
+1. SiteGround File Manager → each site’s `mu-plugins/` → overwrite/create `wrrapd-x-card-force.php` (paste from repo or `https://api.wrrapd.com/tmp-demo/wrrapd-x-card-force.php`). Same file on **wrrapd.com** and **apply.wrrapd.com**.
+2. Speed → Caching → Flush (both sites).
+3. Confirm Twitterbot (bypass edge with a unique query):  
+   `curl -sS -D - -A 'Twitterbot/1.0' "https://wrrapd.com/buy/?nocache=$RANDOM" | grep -iE 'x-wrrapd-card|og:image'`  
+   Expect `force-13` and `api.wrrapd.com/img/og/wrrapd-buy-card.jpg`.
 4. Confirm apply:  
-   `curl -sS -A 'Twitterbot/1.0' 'https://apply.wrrapd.com/drive/' | grep og:image`  
-   Expect `api.wrrapd.com/img/og/joyrider-og.jpg`.
-5. New X post (edits do not always refetch). If gray: bump `?v=` on the URL.
+   `curl -sS -D - -A 'Twitterbot/1.0' "https://apply.wrrapd.com/drive/?nocache=$RANDOM" | grep -iE 'x-wrrapd-card|og:image'`  
+   Expect `force-13` and `wrrapd-x-joyrider-e.jpg`.
+5. Confirm humans still see wordmarks (not OG banners as `<img src>`):  
+   `curl -sS -A 'Mozilla/5.0' 'https://apply.wrrapd.com/drive/' | grep -c 'Applications_Wrrapd\|Wrrapd_f-Logo'` (should be &gt; 0) and zero `src="https://api.wrrapd.com/img/og/`.
+6. New X post (edits do not always refetch). If gray: bump `?v=` on the URL or use `/share/` for home.
 
 Pay server: `img/og/` is static under `WrrapdServer/public/` — no `pm2` restart required for new JPEGs once files are on disk (push + already on this VM).
 
@@ -151,18 +159,18 @@ Pay server: `img/og/` is static under `WrrapdServer/public/` — no `pm2` restar
 
 Social bot responses should include:
 
-`X-Wrrapd-Card: force-6`
+`X-Wrrapd-Card: force-13`
 
+Clean document size is ~1.5–2 KB (not the full WordPress page).
 
 ## Homepage on X — use `/share/`
 
-Bare `https://wrrapd.com/` often scrapes title/description but **never paints the large image** (X sticks on a failed image fetch and shows the gray icon). For shopper brand posts on X, use:
+Bare `https://wrrapd.com/` can scrape title/description but sometimes fails to paint the large image. For shopper brand posts on X, use:
 
 `https://wrrapd.com/share/`
 
-That path serves a tiny HTML document to social bots (MU `wrrapd-x-card-force` v2.2) and redirects humans to `/`. Image: `https://api.wrrapd.com/img/og/wrrapd-x-home-e.jpg` (nginx static).
+Bots get the tiny home card (`wrrapd-x-home-e.jpg`); humans redirect to `/`.
 
 ## Do not rewrite logo `<img src>` URLs
 
-`wrrapd-x-card-force` must **only** change `og:image` / `twitter:image` meta tags. An earlier version replaced every `Wrrapd_f-Logo*.png` and `Applications_Wrrapd*` URL in the HTML body with the share JPEG, which made the apply.wrrapd.com header show the JoyRider banner instead of the wordmark. Fixed in force-12 / v2.3.1.
-
+`wrrapd-x-card-force` must **only** change meta tags for humans, or emit a separate clean document for bots. Never replace `Wrrapd_f-Logo*` or `Applications_Wrrapd*` in the HTML body with share JPEGs.
