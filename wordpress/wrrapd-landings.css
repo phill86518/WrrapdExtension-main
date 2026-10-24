@@ -478,7 +478,7 @@ body .wl .wl-strip-next { padding: 2px 8px; border-radius: 999px; background: va
   border: 1px solid #e2e6ee;
   background: #f7f8fb;
   box-shadow: 0 12px 32px rgba(22, 42, 82, .07);
-  cursor: pointer;
+  cursor: default;
   transform: scale(1);
   /* Left edge stays put so the pop grows into the right margin, never over the steps. */
   transform-origin: left center;
@@ -512,37 +512,6 @@ body .wl .wl-strip-next { padding: 2px 8px; border-radius: 999px; background: va
   background: #f0f2f6;
   vertical-align: top;
 }
-.wl-hiw-video-cap {
-  margin: 0;
-  padding: .5rem .85rem .6rem;
-  background: #eef1f6;
-  color: #5b6478;
-  font-size: .8rem;
-  font-weight: 560;
-  text-align: center;
-  border-top: 1px solid #e2e6ee;
-}
-.wl-hiw-video::after {
-  content: "Hover to watch";
-  position: absolute;
-  left: 50%;
-  top: 42%;
-  transform: translate(-50%, -50%);
-  z-index: 2;
-  padding: .5rem .95rem;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, .92);
-  border: 1px solid #d7dce8;
-  color: var(--wl-navy-text);
-  font-family: Fraunces, Georgia, "Times New Roman", serif;
-  font-size: .88rem;
-  font-weight: 650;
-  pointer-events: none;
-  box-shadow: 0 8px 20px rgba(22, 42, 82, .1);
-  transition: opacity .2s ease;
-}
-.wl-hiw-video.wl-touch::after { content: "Tap to watch"; }
-.wl-hiw-video.wl-playing::after { opacity: 0; }
 .wl-hiw-steps {
   list-style: none;
   margin: 0;

@@ -85,7 +85,7 @@
     return tpl && tpl.content ? tpl.content.querySelector('[data-wl6="ways"]') : null;
   }
 
-  /* Mount ① label + orange button on one row; OR + ② sit below the button. */
+  /* Mount 1 + orange button on one row; OR + 2 sit below the button. */
   function ensureHeaderWays(preferredWays) {
     function findBtn(scope) {
       return (scope || document).querySelector('.elementor-element-7f1bdc1, [data-id="7f1bdc1"]') ||
@@ -292,18 +292,6 @@
     }).join('');
   }
 
-  /* Soft highlight on the navy/gold multi-item discount banner (Step 2). */
-  var dealBannerTimer = null;
-  function softDealBanner() {
-    var el = document.getElementById('wl-deal-banner');
-    if (!el) return;
-    el.classList.remove('is-soft');
-    void el.offsetWidth;
-    el.classList.add('is-soft');
-    clearTimeout(dealBannerTimer);
-    dealBannerTimer = setTimeout(function () { el.classList.remove('is-soft'); }, 1000);
-  }
-
   /* ---------- How it works video (landing6) — NEVER autoplay; hover / tap only ---------- */
   function initHowItWorks() {
     var wrap = $('[data-wl-hiw-video]');
@@ -326,7 +314,6 @@
       if (railT) {
         railT.textContent = (btn && btn.getAttribute('data-title')) || (btn && $('.wl-hiw-copy b', btn) && $('.wl-hiw-copy b', btn).textContent) || '';
       }
-      if (i === 1 && lastStep !== 1) softDealBanner();
       lastStep = i;
     }
     function clearStepTimers() {
@@ -360,14 +347,17 @@
     setStep(0);
     if (!wrap || !video) return;
 
+    /* Opening card ("Two ways to gift-wrap") is on screen by ~1.5s. Frame 0 is blank. */
+    var OPENING = 1.45;
+    var playGen = 0;
     video.muted = true;
     video.defaultMuted = true;
     video.setAttribute('muted', '');
     video.playsInline = true;
-    video.preload = 'none';
+    video.preload = 'auto';
     video.removeAttribute('autoplay');
     video.removeAttribute('controls');
-    try { video.pause(); video.currentTime = 0; } catch (e) {}
+    try { video.pause(); } catch (e) {}
 
     function armSource() {
       if (armed) return;
@@ -379,16 +369,32 @@
         try { video.load(); } catch (e) {}
       }
     }
+    function parkOnOpening() {
+      try {
+        var t = video.currentTime || 0;
+        if (t < 0.3 || (video.duration && t > video.duration - 0.25)) video.currentTime = OPENING;
+        video.pause();
+      } catch (e) {}
+    }
 
     function play() {
       if (playing) return;
       armSource();
+      if ((video.currentTime || 0) < 0.3) {
+        try { video.currentTime = OPENING; } catch (e) {}
+      }
+      var gen = ++playGen;
       playing = true;
       wrap.classList.add('wl-playing');
       runStepAnim(Math.max(0, (video.currentTime || 0) * 1000));
       var p = video.play();
-      if (p && typeof p.catch === 'function') {
-        p.catch(function () {
+      if (p && typeof p.then === 'function') {
+        p.then(function () {
+          if (gen !== playGen || !playing) {
+            try { video.pause(); } catch (e) {}
+          }
+        }).catch(function () {
+          if (gen !== playGen) return;
           playing = false;
           wrap.classList.remove('wl-playing');
           clearStepTimers();
@@ -396,19 +402,24 @@
       }
     }
     function pause() {
-      if (!playing) return;
+      playGen++;
       playing = false;
       wrap.classList.remove('wl-playing');
       clearStepTimers();
       try { video.pause(); } catch (e) {}
     }
     video.addEventListener('ended', function () {
+      playGen++;
       playing = false;
       wrap.classList.remove('wl-playing');
       clearStepTimers();
       setStep(0);
-      try { video.currentTime = 0; } catch (e) {}
+      parkOnOpening();
     });
+    video.addEventListener('loadeddata', function () {
+      if (!playing) parkOnOpening();
+    });
+    armSource();
     video.addEventListener('loadedmetadata', function () {
       if (playing) runStepAnim(Math.max(0, (video.currentTime || 0) * 1000));
     });

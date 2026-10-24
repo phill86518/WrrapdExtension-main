@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_LANDINGS_BUILD', '2026-10-23-landings-v43-thirds' );
+define( 'WRRAPD_LANDINGS_BUILD', '2026-10-23-landings-v44-still' );
 define( 'WRRAPD_LANDING_COOKIE', 'wrrapd_lp' );
 define( 'WRRAPD_LANDING_RETIRED_SLUG', 'landing-retired-20261019' );
 
@@ -601,10 +601,9 @@ function wrrapd_landing_6_parts() {
 	echo '<div class="wl-hiw-cta">' . wrrapd_landing_orange( $ext, 'Add your FREE Chrome extension today' ) . '</div>';
 	echo '</div>';
 	echo '<div class="wl-hiw-video" data-wl-hiw-video>';
-	echo '<video class="wl-hiw-player" muted playsinline preload="none" aria-label="How Wrrapd works — hover to watch">';
+	echo '<video class="wl-hiw-player" muted playsinline preload="auto" poster="https://api.wrrapd.com/img/wrrapd-hiw-still.jpg" aria-label="Two ways to gift-wrap with Wrrapd">';
 	echo '<source data-src="' . esc_url( $hiw_video ) . '" type="video/mp4" />';
 	echo '</video>';
-	echo '<p class="wl-hiw-video-cap">Hover to watch</p>';
 	echo '</div></div></div></section>';
 
 	echo '<section class="wl wl-paste" data-wl6="paste" id="paste-and-wrap"><div class="wl-inner">';
