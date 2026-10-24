@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_LANDINGS_BUILD', '2026-10-21-landings-v38-hiw-zoom-fonts' );
+define( 'WRRAPD_LANDINGS_BUILD', '2026-10-23-landings-v43-thirds' );
 define( 'WRRAPD_LANDING_COOKIE', 'wrrapd_lp' );
 define( 'WRRAPD_LANDING_RETIRED_SLUG', 'landing-retired-20261019' );
 
@@ -565,10 +565,11 @@ function wrrapd_landing_6_parts() {
 	echo '<div class="wl6-ways" data-wl6="ways">'
 		. '<p class="wl6-ways-lede">Premium gift-wrapping using either option below:</p>'
 		. '<div class="wl6-ways-row1">'
+		. '<span class="wl6-ways-n" aria-hidden="true">1</span>'
 		. '<div class="wl6-ways-btn-slot"></div>'
 		. '</div>'
 		. '<p class="wl6-ways-or">OR</p>'
-		. '<p class="wl6-ways-opt2">② <a href="#paste-and-wrap">Copy-paste your product link</a></p>'
+		. '<p class="wl6-ways-opt2"><span class="wl6-ways-n" aria-hidden="true">2</span> <a href="#paste-and-wrap">Copy-paste your product link</a></p>'
 		. '</div>';
 	echo '<section class="wl wl-ways-bar" data-wl6="waysbar" aria-label="Two ways to gift-wrap"><p>Two ways to gift-wrap</p><div>'
 		. wrrapd_landing_orange( $ext, 'Chrome extension' )
@@ -580,10 +581,6 @@ function wrrapd_landing_6_parts() {
 
 	echo '<section class="wl wl-hiw" data-wl6="hiw" id="how-it-works"><div class="wl-inner">';
 	echo wrrapd_landing_head( 'How it works', 'Your store. Your cart. Our wrapping.', 'Add the free Wrrapd Chrome extension and gift-wrap right at checkout.' );
-	echo '<aside class="wl-deal-banner" id="wl-deal-banner" data-wl6="dealbanner" role="status">'
-		. '<p class="wl-deal-banner-yay">Yay!</p>'
-		. '<p class="wl-deal-banner-copy">Earn <strong>10% off</strong> wrapping with 2+ gifts. Earn <strong>15% off</strong> with 5+ gifts.</p>'
-		. '</aside>';
 	$steps = array(
 		array( 'Add Wrrapd to Chrome', 'One click, free. Wrrapd shows up at Amazon, Target, Walmart, Nordstrom, Kohl\'s, Ulta, Sephora, Best Buy, LEGO and Etsy.' ),
 		array( 'Shop as usual', 'Fill your cart like always. At checkout, Wrrapd asks if you would like it gift-wrapped.' ),
@@ -594,27 +591,21 @@ function wrrapd_landing_6_parts() {
 	);
 	$hiw_video = 'https://wrrapd.com/wp-content/uploads/2026/10/Wrrapd-Extension-Flow-Demo-6.mp4?v=' . rawurlencode( (string) WRRAPD_LANDINGS_BUILD );
 
-	/* Cinema stage: ~15% step rail + ~85% video (clean light chrome). */
-	echo '<div class="wl-hiw-stage" data-wl-hiw-video>';
-	echo '<aside class="wl-hiw-rail" aria-live="polite">';
-	echo '<span class="wl-hiw-rail-label">Step</span>';
-	echo '<span class="wl-hiw-rail-n" data-wl-hiw-rail-n>1</span>';
-	echo '<p class="wl-hiw-rail-title" data-wl-hiw-rail-title>' . esc_html( $steps[0][0] ) . '</p>';
-	echo '</aside>';
-	echo '<div class="wl-hiw-screen">';
-	echo '<video class="wl-hiw-player" muted playsinline preload="none" aria-label="How Wrrapd works — hover to watch">';
-	echo '<source data-src="' . esc_url( $hiw_video ) . '" type="video/mp4" />';
-	echo '</video>';
-	echo '<p class="wl-hiw-video-cap">Hover to watch</p>';
-	echo '</div></div>';
-
+	/* Steps stay a vertical column on the left. Video sits to the right and only grows rightward. */
+	echo '<div class="wl-hiw-grid"><div class="wl-hiw-left">';
 	echo '<ol class="wl-hiw-steps" data-wl-hiw-steps>';
 	foreach ( $steps as $i => $s ) {
 		echo '<li' . ( 0 === $i ? ' class="wl-on"' : '' ) . '><button type="button" data-step="' . (int) $i . '" data-title="' . esc_attr( $s[0] ) . '"><span class="wl-step-n">' . ( $i + 1 ) . '</span><span class="wl-hiw-copy"><b>' . esc_html( $s[0] ) . '</b><span>' . esc_html( $s[1] ) . '</span></span></button></li>';
 	}
 	echo '</ol>';
 	echo '<div class="wl-hiw-cta">' . wrrapd_landing_orange( $ext, 'Add your FREE Chrome extension today' ) . '</div>';
-	echo '</div></section>';
+	echo '</div>';
+	echo '<div class="wl-hiw-video" data-wl-hiw-video>';
+	echo '<video class="wl-hiw-player" muted playsinline preload="none" aria-label="How Wrrapd works — hover to watch">';
+	echo '<source data-src="' . esc_url( $hiw_video ) . '" type="video/mp4" />';
+	echo '</video>';
+	echo '<p class="wl-hiw-video-cap">Hover to watch</p>';
+	echo '</div></div></div></section>';
 
 	echo '<section class="wl wl-paste" data-wl6="paste" id="paste-and-wrap"><div class="wl-inner">';
 	echo wrrapd_landing_head( 'Try without the Extension (simpler)', 'Copy, paste, beautifully wrapped.', 'Miles away from the people you miss? Copy a gift\'s link from one of our partner stores and paste it here. We purchase it, wrap it by hand and deliver it to their door, finished with a bow.' );
