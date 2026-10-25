@@ -8,10 +8,19 @@ Build for the store on Windows: `npm run build:store` → upload `extension/wrra
 
 ---
 
-## 3.0.15 — ready for Chrome Web Store (Oct 23, 2026)
+## 3.0.16 — ready for Chrome Web Store (Oct 25, 2026)
+
+Same code as 3.0.15 (Amazon gift-choice fix + Oct 19 ZIP/tier/toast holdovers), plus the `background.js`
+comment that GA4 credentials stay on the pay server. Same listing as 3.0.14
+(`lobngnjcjeimefihnobdmocicopikoip`). Leave `$latest_version` at **3.0.14** until Google approves.
+When uploading: do **not** list retailer brand names in the store description (Keyword Spam / Yellow Argon).
+
+---
+
+## 3.0.15 — submitted Oct 23, 2026 (superseded by 3.0.16 for re-upload)
 
 Same listing as 3.0.14 (`lobngnjcjeimefihnobdmocicopikoip`), so installed copies update on their own.
-Leave the website nudge (`$latest_version` in `wrrapd-orders-bridge.php`) at 3.0.14 until Google approves this version.
+Leave the website nudge (`$latest_version` in `wrrapd-orders-bridge.php`) at 3.0.14 until Google approves a newer version.
 
 ### A. Amazon: no Wrrapd Summary for a gift that is not in this order (Oct 23)
 
