@@ -200,6 +200,7 @@ function wrrapd_contact_hub_html() {
 	$wrap    = 'https://apply.wrrapd.com/apply/';
 	$rider   = 'https://apply.wrrapd.com/wraprider/';
 	$joy     = 'https://apply.wrrapd.com/drive/';
+	$pros    = 'https://pros.wrrapd.com/';
 	$fb      = 'https://www.facebook.com/wrrapd';
 	$x       = 'https://www.x.com/wrrapd';
 
@@ -232,16 +233,18 @@ function wrrapd_contact_hub_html() {
 			</a>
 
 			<a class="wrrapd-ch-card" href="<?php echo esc_url( $apply ); ?>" role="listitem">
+				<p class="wrrapd-ch-kicker"><?php esc_html_e( 'Pros', 'wrrapd' ); ?></p>
 				<h2><?php esc_html_e( 'Join the team', 'wrrapd' ); ?></h2>
 				<p><?php esc_html_e( 'Apply to wrap gifts, deliver finished wraps, or do both — choose the track that fits how you like to work.', 'wrrapd' ); ?></p>
 				<span class="wrrapd-ch-card-cta"><?php esc_html_e( 'Visit apply.wrrapd.com →', 'wrrapd' ); ?></span>
 			</a>
 		</div>
 
-		<div class="wrrapd-ch-pills" aria-label="<?php esc_attr_e( 'Application tracks', 'wrrapd' ); ?>">
+		<div class="wrrapd-ch-pros" aria-label="<?php esc_attr_e( 'Pro application tracks', 'wrrapd' ); ?>">
 			<a href="<?php echo esc_url( $wrap ); ?>"><?php esc_html_e( 'WrapStar apply', 'wrrapd' ); ?></a>
 			<a href="<?php echo esc_url( $rider ); ?>"><?php esc_html_e( 'WrapRider apply', 'wrrapd' ); ?></a>
 			<a href="<?php echo esc_url( $joy ); ?>"><?php esc_html_e( 'JoyRider apply', 'wrrapd' ); ?></a>
+			<a href="<?php echo esc_url( $pros ); ?>"><?php esc_html_e( 'Pro portals', 'wrrapd' ); ?></a>
 		</div>
 
 		<h2 class="wrrapd-ch-section-title"><?php esc_html_e( 'Reach us directly', 'wrrapd' ); ?></h2>
@@ -266,7 +269,7 @@ function wrrapd_contact_hub_html() {
 			<div class="wrrapd-ch-note-copy">
 				<h2><?php esc_html_e( 'Press, partners & everything else', 'wrrapd' ); ?></h2>
 				<p><?php esc_html_e( 'Media, retail partnerships, and general company mail go to', 'wrrapd' ); ?> <a href="mailto:info@wrrapd.com" style="color:#f6b933;">info@wrrapd.com</a>. <?php esc_html_e( 'For policies, see Terms and Privacy in the footer. Follow along on Facebook and X @wrrapd.', 'wrrapd' ); ?></p>
-				<div class="wrrapd-ch-pills" style="margin-top:1.1rem;">
+				<div class="wrrapd-ch-pros" style="margin-top:1.1rem;">
 					<a href="<?php echo esc_url( $fb ); ?>" target="_blank" rel="noopener"><?php esc_html_e( 'Facebook', 'wrrapd' ); ?></a>
 					<a href="<?php echo esc_url( $x ); ?>" target="_blank" rel="noopener">X</a>
 					<a href="<?php echo esc_url( $about ); ?>"><?php esc_html_e( 'About us', 'wrrapd' ); ?></a>
@@ -337,16 +340,16 @@ function wrrapd_contact_hub_css_text() {
 .wrrapd-contact-hub input,.wrrapd-contact-hub select,.wrrapd-contact-hub textarea,.wrrapd-contact-hub button{font-family:Fraunces,Georgia,serif;}
 .wrrapd-contact-hub a{color:var(--ch-navy-2);font-weight:700;text-decoration-thickness:.08em;text-underline-offset:.18em;}
 .wrrapd-contact-hub a:hover{color:#d14900;}
-.wrrapd-ch-pills a,.wrrapd-ch-pills a:hover{color:var(--ch-navy-2)!important;text-decoration:none!important;}
+.wrrapd-ch-pros a,.wrrapd-ch-pros a:hover{color:var(--ch-navy-2)!important;text-decoration:none!important;}
 .wrrapd-ch-hero{
   background:#0c0638;
   color:#fff;
-  padding:clamp(1.5rem,3.5vw,2.2rem) clamp(1.15rem,4vw,2.5rem);
+  padding:.5rem clamp(1.15rem,4vw,2.5rem) 1rem;
   position:relative;
 }
 .wrrapd-ch-hero-inner{max-width:72rem;margin:0 auto;position:relative;z-index:1;}
 .wrrapd-ch-hero h1{
-  margin:0 0 .4rem;
+  margin:0 0 .25rem;
   font-family:Fraunces,Georgia,serif;
   font-optical-sizing:auto;
   font-size:clamp(2.05rem,4.2vw,2.8rem);
@@ -366,7 +369,7 @@ function wrrapd_contact_hub_css_text() {
 .wrrapd-ch-body{max-width:72rem;margin:0 auto;padding:0 clamp(1.15rem,4vw,2.5rem);}
 .wrrapd-ch-section-title{
   margin:clamp(1.75rem,4vw,2.4rem) 0 .85rem;
-  font-family:inherit;
+  font-family:Fraunces,Georgia,serif;
   font-size:clamp(1.35rem,3vw,1.7rem);
   font-weight:700;
   letter-spacing:-.02em;
@@ -416,7 +419,7 @@ a.wrrapd-ch-card{color:inherit;font-weight:inherit;}
 }
 .wrrapd-ch-card h2{
   margin:0;
-  font-family:inherit;
+  font-family:Fraunces,Georgia,serif;
   font-size:clamp(1.2rem,2.4vw,1.4rem);
   font-weight:700;
   color:var(--ch-navy);
@@ -455,7 +458,7 @@ a.wrrapd-ch-card{color:inherit;font-weight:inherit;}
 }
 .wrrapd-ch-channel h3{
   margin:0 0 .35rem;
-  font-family:inherit;
+  font-family:Fraunces,Georgia,serif;
   font-size:1.08rem;
   font-weight:700;
   color:var(--ch-navy);
@@ -477,7 +480,7 @@ a.wrrapd-ch-card{color:inherit;font-weight:inherit;}
 }
 .wrrapd-ch-note-copy h2{
   margin:0 0 .55rem;
-  font-family:inherit;
+  font-family:Fraunces,Georgia,serif;
   font-size:clamp(1.35rem,3vw,1.7rem);
   font-weight:700;
   color:#fff;
@@ -493,7 +496,7 @@ a.wrrapd-ch-card{color:inherit;font-weight:inherit;}
 }
 .wrrapd-ch-form h2{
   margin:0 0 1rem;
-  font-family:inherit;
+  font-family:Fraunces,Georgia,serif;
   font-size:1.25rem;
   font-weight:700;
   color:var(--ch-navy);
@@ -543,13 +546,13 @@ a.wrrapd-ch-card{color:inherit;font-weight:inherit;}
   font-size:.9rem;
   font-weight:600;
 }
-.wrrapd-ch-pills{
+.wrrapd-ch-pros{
   display:flex;
   flex-wrap:wrap;
   gap:.55rem;
   margin-top:.85rem;
 }
-.wrrapd-ch-pills a{
+.wrrapd-ch-pros a{
   display:inline-flex;
   align-items:center;
   padding:.45rem .85rem;
@@ -561,7 +564,7 @@ a.wrrapd-ch-card{color:inherit;font-weight:inherit;}
   font-weight:800;
   border:1px solid rgba(246,185,51,.9);
 }
-.wrrapd-ch-pills a:hover,.wrrapd-ch-pills a:focus-visible{background:#ffd056;color:var(--ch-navy-2)!important;box-shadow:0 .35rem .8rem rgba(12,6,56,.16);}
+.wrrapd-ch-pros a:hover,.wrrapd-ch-pros a:focus-visible{background:#ffd056;color:var(--ch-navy-2)!important;box-shadow:0 .35rem .8rem rgba(12,6,56,.16);}
 @media(max-width:900px){
   .wrrapd-ch-grid,.wrrapd-ch-channels,.wrrapd-ch-note{grid-template-columns:1fr;}
   .wrrapd-ch-hero h1{max-width:none;}

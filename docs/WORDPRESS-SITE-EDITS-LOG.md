@@ -8,6 +8,16 @@ WordPress + Elementor + Hello theme content mostly lives **in the production dat
 
 ## Recent changes
 
+### 2026-10-25 — Site outage fixed; birthday picks, idea cards, contact hero live
+
+- **Outage (Oct 24 evening ET):** every uncached wrrapd.com page and wp-admin showed "There has been a critical error". Cause: a live-only plugin `wp-content/plugins/wrrapd-xcard-safe-once/` (added during the X-card meta-image work) called `w3tc_flush_all()` on `plugins_loaded`, before W3 Total Cache was ready (`CacheFlush.php:229`, `clear_cache()` on null). Fixed by renaming that folder to `.off`; it is gone from the plugin list now. Restoring `mu-plugins` from backup did not help because the crash was in `plugins/`.
+- **One-shot plugins:** deactivated `wrrapd-cache-purge-once` (v1.7.0). Its activation hook overwrites live `wrrapd-buy-for-you.php`, `wrrapd-x-card-force.php` and `wrrapd-sitemap-status.php` with old embedded copies. Do not reactivate it. Never add a plugin that flushes caches on every load.
+- **MU deploy (`8f02967`):** `wrrapd-landings.php` / `.css` (`WRRAPD_LANDINGS_BUILD` `2026-10-25-landings-v46-bday`: idea cards with two rows of store logos, occasion picks line), `wrrapd-seasonal-campaigns.php` (stays on the occasion's list when it has enough real photos; `hot_gifts_prefer_categories` rotate weekly first), `wrrapd-campaigns.json` (birthday hot gifts: toys / electronics / gaming). Deployed with `POST /wp-json/wrrapd/v1/mu-deploy/run`. That endpoint ignores `files` unless `scope` is not `auto` (send `"scope":"consumer"` with `files`); this run rewrote all 33 manifest files in wrrapd.com `mu-plugins` from GitHub `main`. Uncached home, contact, privacy and apply all return 200 afterward.
+- **Contact Hub 1.2.2** (`plugins/wrrapd-contact-hub/wrrapd-contact-hub.php`, repo `wordpress/wrrapd-contact-hub-plugin.php`): flat navy hero with one short white line, tight top spacing, header logo sized like the homepage, Pros kicker plus WrapStar / WrapRider / JoyRider / Pro portals pills. Live and repo match.
+- **Pay server:** `289b4d2` keeps a printed delivery window's start in the same year as its end (restarted `wrrapd-server`, health OK). CI test made date-independent (`3101e8d`).
+- **Chrome Web Store:** next step is uploading 3.0.15 onto item `lobngnjcjeimefihnobdmocicopikoip` with Privacy `https://wrrapd.com/privacy/` and Support `https://wrrapd.com/contact/` (both reachable again), then unpublishing the empty Oct 23 3.0.15 item.
+- **To do after the outage:** set `WP_DEBUG` back to `false` in `public_html/wp-config.php` so `wp-content/debug.log` (was 638 MB, deleted) does not grow again; delete the `wrrapd-xcard-safe-once.off` folder.
+
 ### 2026-10-22 — X-card force-13 (humans untouched; bots get clean card)
 
 - MU `wordpress/wrrapd-x-card-force.php` **v2.4.0** — header `X-Wrrapd-Card: force-13`.
