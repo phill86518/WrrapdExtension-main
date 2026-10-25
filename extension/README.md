@@ -6,7 +6,7 @@ Manifest V3 **multi-retailer** extension (see `manifest.json`): a **separate con
 
 ## Current release notes
 
-**Version:** `3.0.16`
+**Version:** `3.0.15`
 
 **Install tracking:** `background.js` heartbeats to `api.wrrapd.com` (Command Center → Extension installs). Optional GA4 Measurement Protocol is configured on the **pay server** with `GA4_MEASUREMENT_ID` / `GA4_API_SECRET` — see `.env.example`. Do not put the API secret in the extension zip.
 
