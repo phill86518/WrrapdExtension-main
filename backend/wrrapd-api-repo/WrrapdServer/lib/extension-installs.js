@@ -28,9 +28,10 @@ function validId(installId) {
 
 function recordHeartbeat({ installId, extensionVersion, firstSeen }) {
     const id = String(installId || '').trim();
-    if (!validId(id)) return false;
+    if (!validId(id)) return { ok: false, isNew: false };
     const map = readMap();
     const prev = map[id] && typeof map[id] === 'object' ? map[id] : {};
+    const isNew = !prev.installId;
     map[id] = {
         ...prev,
         installId: id,
@@ -39,7 +40,7 @@ function recordHeartbeat({ installId, extensionVersion, firstSeen }) {
         lastSeen: new Date().toISOString(),
     };
     writeMap(map);
-    return true;
+    return { ok: true, isNew };
 }
 
 function attachPayer(installId, email) {

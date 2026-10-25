@@ -11,7 +11,7 @@
 - Prefer small, focused changes in **`src/shared/`** for retailer-agnostic helpers and **`src/retailers/<retailer>/`** for DOM selectors/adapters.
 - **`content-legacy.js`** remains Amazon-only and large; migrate carefully and rebuild after every change.
 - After edits: **`cd extension && npm run build`** before Chrome Reload.
-- **Chrome Web Store 3.0.11** includes the install id and once-a-day heartbeat. Do not add page-level analytics.
+- **Chrome Web Store 3.0.11+** includes the install id and once-a-day heartbeat to `api.wrrapd.com/extension-heartbeat`. Do not add page-level analytics. Optional GA4: set `GA4_MEASUREMENT_ID` + `GA4_API_SECRET` on the **pay server** `.env` only (see `extension/.env.example`); never bake the API secret into `background.js` or the store zip.
 
 ## Deploy
 

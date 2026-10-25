@@ -1,3 +1,6 @@
+// Install + daily heartbeat → api.wrrapd.com/extension-heartbeat.
+// GA4 Measurement Protocol credentials live in the pay server .env
+// (GA4_MEASUREMENT_ID, GA4_API_SECRET) — never bake the API secret into this file or the CWS zip.
 const INSTALL_KEY = "wrrapdInstall";
 const HEARTBEAT_DAY_KEY = "wrrapdHeartbeatDay";
 

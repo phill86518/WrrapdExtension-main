@@ -12,7 +12,6 @@ Build for the store on Windows: `npm run build:store` → upload `extension/wrra
 
 Same listing as 3.0.14 (`lobngnjcjeimefihnobdmocicopikoip`), so installed copies update on their own.
 Leave the website nudge (`$latest_version` in `wrrapd-orders-bridge.php`) at 3.0.14 until Google approves this version.
-No server or Command Center change is needed.
 
 ### A. Amazon: no Wrrapd Summary for a gift that is not in this order (Oct 23)
 
@@ -43,6 +42,14 @@ The summary and Pay Wrrapd now need all three:
 - Giftee ZIP label: "Giftee / gift-recipient's zip code (currently limited to Jacksonville, FL):".
 - Multi-item discount tiers: 2–4 wrapped items and 5+ (matches the pay server).
 - Toast after saving gift choices on the other retailers when the shopper has earned a multi-item discount.
+
+### C. GA4 Measurement Protocol (server, Oct 24, 2026)
+
+Daily `background.js` heartbeat → `POST /extension-heartbeat` is unchanged. When the pay server
+`.env` has `GA4_MEASUREMENT_ID` + `GA4_API_SECRET`, that route also sends GA4 events
+`extension_heartbeat` and (on first seen) `extension_first_open`. The API secret stays on the
+server — never in the Chrome Web Store zip. Template: `extension/.env.example`. After editing
+server `.env`: `pm2 restart wrrapd-server`.
 
 ---
 

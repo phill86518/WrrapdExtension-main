@@ -3195,7 +3195,21 @@ app.post('/extension-heartbeat', (req, res) => {
     if (!req.isApiDomain) {
         return res.status(403).json({ ok: false });
     }
-    const saved = extensionInstalls.recordHeartbeat(req.body || {});
+    const body = req.body || {};
+    const result = extensionInstalls.recordHeartbeat(body);
+    const saved = !!(result && result.ok);
+    if (saved) {
+        try {
+            const ga4 = require('./lib/ga4-measurement');
+            ga4.trackExtensionHeartbeat({
+                installId: body.installId,
+                extensionVersion: body.extensionVersion,
+                isNew: !!result.isNew,
+            });
+        } catch (_) {
+            /* GA4 optional */
+        }
+    }
     return res.status(saved ? 200 : 400).json({ ok: saved });
 });
 
