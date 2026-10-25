@@ -635,12 +635,97 @@ body .wl .wl-paste-row .wl-orange { margin: 0; height: 34px; padding: 0 14px; fo
 
 /* More gift ideas blurb */
 .wl-ideas { padding: 44px 0 52px; }
-.wl-ideas-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; max-width: 900px; margin: 0 auto; }
-body .wl a.wl-idea { display: grid; gap: 6px; padding: 20px 24px; border-radius: 18px; border: 1px solid var(--wl-line); background: #fff; color: var(--wl-ink); text-decoration: none; transition: border-color .15s ease, transform .15s ease, box-shadow .15s ease; }
-body .wl a.wl-idea:hover { border-color: var(--wl-gold); transform: translateY(-2px); box-shadow: 0 14px 28px rgba(12, 6, 56, .08); }
+.wl-ideas-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; max-width: 900px; margin: 0 auto; align-items: stretch; }
+body .wl .wl-idea {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 20px 24px;
+  border-radius: 18px;
+  border: 1px solid var(--wl-line);
+  background: #fff;
+  color: var(--wl-ink);
+  transition: border-color .15s ease, transform .15s ease, box-shadow .15s ease;
+  min-height: 100%;
+  box-sizing: border-box;
+}
+body .wl .wl-idea:hover { border-color: var(--wl-gold); transform: translateY(-2px); box-shadow: 0 14px 28px rgba(12, 6, 56, .08); }
+.wl-idea-copy { display: grid; gap: 6px; text-decoration: none; color: inherit; }
+.wl-idea-copy:hover { text-decoration: none; color: inherit; }
 .wl-idea b { font-size: 1.15rem; font-weight: 650; color: #0c1222; }
-.wl-idea span { color: #475569; font-size: .95rem; line-height: 1.45; }
-.wl-idea em { font-style: normal; font-weight: 650; color: #d14900; }
+.wl-idea-copy span { color: #475569; font-size: .95rem; line-height: 1.45; }
+.wl-idea-cta {
+  margin-top: auto;
+  font-style: normal;
+  font-weight: 650;
+  color: #d14900 !important;
+  text-decoration: none !important;
+  font-size: .95rem;
+}
+.wl-idea-cta:hover { color: #a33800 !important; }
+.wl-idea-logos {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px 6px;
+  justify-items: center;
+  align-items: center;
+  margin: 4px 0 2px;
+}
+.wl-idea-logo {
+  display: block;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, .14);
+  background: #fff;
+}
+.wl-idea-logo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+.wl-idea-picks {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 4px 0 2px;
+}
+.wl-idea-pick {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-decoration: none !important;
+  color: inherit;
+  min-width: 0;
+}
+.wl-idea-pick-photo {
+  display: block;
+  aspect-ratio: 1;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #f1f5f9;
+  border: 1px solid rgba(12, 6, 56, .08);
+}
+.wl-idea-pick-photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.wl-idea-pick-name {
+  display: block;
+  font-size: .68rem;
+  line-height: 1.2;
+  font-weight: 600;
+  color: #334155;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.wl-idea-pick:hover .wl-idea-pick-name { color: #0c0638; }
 
 /* /gift-ideas/ page */
 .wl-gift-ideas { padding: 28px 0 48px; }

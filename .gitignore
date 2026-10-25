@@ -31,6 +31,12 @@ venv/
 **/*.log
 server.log
 
+# Render scratch: demo-video frames, draft cuts, social previews, tmp-demo staging copies
+wordpress/demo-videos/out/*.png
+wordpress/demo-videos/out/Wrrapd-Extension-Flow-Demo-[1-5].mp4
+wordpress/images/social/_preview-*
+backend/wrrapd-api-repo/WrrapdServer/public/tmp-demo/*
+
 # WrrapdServer runtime (optional: do not commit customer orders)
 backend/wrrapd-api-repo/WrrapdServer/orders/*.json
 backend/wrrapd-api-repo/WrrapdServer/orders/buy-for-you/

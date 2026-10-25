@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRRAPD_LANDINGS_BUILD', '2026-10-23-landings-v44-still' );
+define( 'WRRAPD_LANDINGS_BUILD', '2026-10-25-landings-v46-bday' );
 define( 'WRRAPD_LANDING_COOKIE', 'wrrapd_lp' );
 define( 'WRRAPD_LANDING_RETIRED_SLUG', 'landing-retired-20261019' );
 
@@ -640,10 +640,122 @@ function wrrapd_landing_6_parts() {
 	echo '<section class="wl wl-ideas" data-wl6="ideas"><div class="wl-inner">';
 	echo wrrapd_landing_head( 'More gift ideas', 'Find the perfect gift', 'Browse ideas by store, or explore brands we love.' );
 	echo '<div class="wl-ideas-grid">';
-	echo '<a class="wl-idea" href="' . esc_url( home_url( '/gift-ideas/' ) ) . '"><b>Gift ideas by store</b><span>Birthdays, weddings, holidays and more at Target, Nordstrom, Kohl\'s, Ulta, Sephora, Etsy, Walmart, LEGO and Best Buy.</span><em>See gift ideas &rsaquo;</em></a>';
-	echo '<a class="wl-idea" href="' . esc_url( home_url( '/top-gifting-choices/' ) ) . '"><b>Wrrapd\'s Top Gifting Choices</b><span>Hand-picked brands: chocolates, beauty, jewelry, electronics and more.</span><em>Browse top choices &rsaquo;</em></a>';
+	echo '<article class="wl-idea">';
+	echo '<a class="wl-idea-copy" href="' . esc_url( home_url( '/gift-ideas/' ) ) . '"><b>Gift ideas by store</b><span>Birthdays, weddings, holidays and more — wrap from any of these stores.</span></a>';
+	echo wrrapd_landing_idea_store_logos_html();
+	echo '<a class="wl-idea-cta" href="' . esc_url( home_url( '/gift-ideas/' ) ) . '">See gift ideas &rsaquo;</a>';
+	echo '</article>';
+	echo '<article class="wl-idea">';
+	echo '<a class="wl-idea-copy" href="' . esc_url( home_url( '/top-gifting-choices/' ) ) . '"><b>Wrrapd\'s Top Gifting Choices</b><span>' . esc_html( wrrapd_landing_idea_picks_lede() ) . '</span></a>';
+	echo wrrapd_landing_idea_picks_html();
+	echo '<a class="wl-idea-cta" href="' . esc_url( home_url( '/top-gifting-choices/' ) ) . '">Browse top choices &rsaquo;</a>';
+	echo '</article>';
 	echo '</div></div></section>';
 	echo '</div>';
+}
+
+/**
+ * Tiny circular retailer logos (same set as the header wheels), two rows of five.
+ */
+function wrrapd_landing_idea_store_logos_html() {
+	if ( ! function_exists( 'wrrapd_home_retailer_wheel_brands' ) || ! function_exists( 'wrrapd_mu_logo_url_for_slug' ) ) {
+		return '';
+	}
+	$h = '<div class="wl-idea-logos" aria-label="' . esc_attr__( 'Stores we wrap for', 'wrrapd' ) . '">';
+	foreach ( wrrapd_home_retailer_wheel_brands() as $b ) {
+		$src   = esc_url( wrrapd_mu_logo_url_for_slug( $b['slug'], $b['domain'] ) );
+		$fb    = 'https://www.google.com/s2/favicons?domain=' . rawurlencode( $b['domain'] ) . '&sz=128';
+		$label = isset( $b['label'] ) ? (string) $b['label'] : (string) $b['slug'];
+		$h    .= '<span class="wl-idea-logo" title="' . esc_attr( $label ) . '">';
+		$h    .= '<img src="' . $src . '" data-fallback="' . esc_url( $fb ) . '" width="36" height="36" alt="' . esc_attr( $label ) . '" loading="lazy" decoding="async" onerror="var u=this.dataset.fallback;if(u){this.onerror=null;this.src=u;}" />';
+		$h    .= '</span>';
+	}
+	$h .= '</div>';
+	return $h;
+}
+
+/**
+ * Short lede for the Top Gifting Choices card — matches the active occasion.
+ */
+function wrrapd_landing_idea_picks_lede() {
+	if ( function_exists( 'wrrapd_active_campaign' ) ) {
+		$c = wrrapd_active_campaign();
+		if ( is_array( $c ) ) {
+			$slug = isset( $c['slug'] ) ? (string) $c['slug'] : '';
+			if ( $slug === 'generic-birthdays' || ( isset( $c['holiday_key'] ) && (string) $c['holiday_key'] === 'generic-birthdays' ) ) {
+				return 'Birthday picks: toys, gadgets, and more — refreshed weekly.';
+			}
+			if ( ! empty( $c['hot_gifts_prefer_categories'] ) && is_array( $c['hot_gifts_prefer_categories'] ) ) {
+				$cats = array_values(
+					array_filter(
+						array_map(
+							static function ( $v ) {
+								return strtolower( trim( (string) $v ) );
+							},
+							$c['hot_gifts_prefer_categories']
+						)
+					)
+				);
+				if ( $cats === array( 'toys', 'electronics', 'gaming' ) || ( in_array( 'toys', $cats, true ) && in_array( 'electronics', $cats, true ) ) ) {
+					$label = isset( $c['label'] ) ? trim( (string) $c['label'] ) : '';
+					if ( $label !== '' ) {
+						return $label . ' picks: toys, gadgets, and more — refreshed weekly.';
+					}
+				}
+			}
+			if ( ! empty( $c['hot_gifts_title'] ) ) {
+				return trim( (string) $c['hot_gifts_title'] ) . ' — refreshed weekly.';
+			}
+		}
+	}
+	return 'Hand-picked brands: chocolates, beauty, jewelry, electronics and more.';
+}
+
+/**
+ * Four mini product tiles — first four of the same weekly hot-gifts rail as the homepage top.
+ */
+function wrrapd_landing_idea_picks_html() {
+	if ( ! function_exists( 'wrrapd_active_campaign' ) || ! function_exists( 'wrrapd_campaign_hot_gifts_pick' ) ) {
+		return '';
+	}
+	$c = wrrapd_active_campaign();
+	if ( ! is_array( $c ) ) {
+		return '';
+	}
+	$slug  = isset( $c['slug'] ) ? (string) $c['slug'] : '';
+	$rail  = function_exists( 'wrrapd_campaign_hot_gifts_display_count' )
+		? (int) wrrapd_campaign_hot_gifts_display_count( $c, 10 )
+		: 10;
+	$gifts = wrrapd_campaign_hot_gifts_pick( $c, max( 4, $rail ) );
+	if ( ! is_array( $gifts ) || count( $gifts ) === 0 ) {
+		return '';
+	}
+	$gifts = array_slice( $gifts, 0, 4 );
+	$h     = '<div class="wl-idea-picks" role="list">';
+	$n     = 0;
+	foreach ( $gifts as $g ) {
+		if ( $n >= 4 || ! is_array( $g ) || empty( $g['title'] ) ) {
+			continue;
+		}
+		if ( function_exists( 'wrrapd_campaign_gift_has_real_product_image' ) && ! wrrapd_campaign_gift_has_real_product_image( $g ) ) {
+			continue;
+		}
+		$href = function_exists( 'wrrapd_campaign_gift_href' ) ? wrrapd_campaign_gift_href( $g, $slug ) : '';
+		$img  = function_exists( 'wrrapd_campaign_gift_image_url' ) ? wrrapd_campaign_gift_image_url( $g ) : '';
+		if ( $href === '' || $img === '' ) {
+			continue;
+		}
+		$name = isset( $g['product'] ) && trim( (string) $g['product'] ) !== ''
+			? trim( (string) $g['product'] )
+			: trim( (string) $g['title'] );
+		$h .= '<a class="wl-idea-pick" role="listitem" href="' . esc_url( $href ) . '" rel="sponsored noopener noreferrer" title="' . esc_attr( $name ) . '">';
+		$h .= '<span class="wl-idea-pick-photo"><img src="' . esc_url( $img ) . '" width="120" height="120" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" /></span>';
+		$h .= '<span class="wl-idea-pick-name">' . esc_html( $name ) . '</span>';
+		$h .= '</a>';
+		++$n;
+	}
+	$h .= '</div>';
+	return $n > 0 ? $h : '';
 }
 
 /* ---------- /gift-ideas/: the homepage store gift guides, on their own page ---------- */

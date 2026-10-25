@@ -459,7 +459,132 @@
 			"hook": "Shop their wish list anywhere online\u2014Wrrapd adds wrap, optional flowers, and a gift message at checkout.",
 			"theme_class": "wrrapd-season-default",
 			"hot_gifts_title": "Hot gifts for birthdays",
-			"hot_gifts": []
+			"hot_gifts_display_count": 10,
+			"hot_gifts_max_per_retailer": 2,
+			"hot_gifts_min_retailers": 4,
+			"hot_gifts_prefer_categories": ["toys", "electronics", "gaming"],
+			"hot_gifts": [
+				{
+					"product": "LEGO Icons Bumblebee Set",
+					"title": "LEGO Icons Bumblebee Set",
+					"occasion": "Birthday",
+					"category": "toys",
+					"price_approx": 72,
+					"image": "https://target.scene7.com/is/image/Target/GUEST_2c7410d9-3a5a-41d2-a0fe-f53eeabd2726?wid=600&hei=600&qlt=80",
+					"href": "https://wrrapd.com/go/target/?to=https%3A%2F%2Fwww.target.com%2Fp%2Flego-icons-transformers-bumblebee-collectible-building-set-10338%2F-%2FA-90573756",
+					"retailer": "Target",
+					"domain": "target.com",
+					"retailer_slug": "target"
+				},
+				{
+					"product": "LEGO Icons Flower Bouquet",
+					"title": "LEGO Icons Flower Bouquet",
+					"occasion": "Birthday",
+					"category": "toys",
+					"price_approx": 55,
+					"image": "https://target.scene7.com/is/image/Target/GUEST_5603dbdd-4869-40aa-8828-0ed08ab7c58d?wid=600&hei=600&qlt=80",
+					"href": "https://wrrapd.com/go/target/?to=https%3A%2F%2Fwww.target.com%2Fp%2Flego-flower-bouquet-building-kit-10280%2F-%2FA-80130340",
+					"retailer": "Target",
+					"domain": "target.com",
+					"retailer_slug": "target"
+				},
+				{
+					"product": "Serena Williams x Barbie",
+					"title": "Serena Williams x Barbie",
+					"occasion": "Birthday",
+					"category": "toys",
+					"price_approx": 45,
+					"image": "https://target.scene7.com/is/image/Target/GUEST_8ec0d805-ed5f-4dfc-855c-39646224e0fc?wid=600&hei=600&qlt=80",
+					"href": "https://wrrapd.com/go/target/?to=https%3A%2F%2Fwww.target.com%2Fp%2Fbarbie-role-model-doll-project-dolphin-jjx58%2F-%2FA-94998619",
+					"retailer": "Target",
+					"domain": "target.com",
+					"retailer_slug": "target"
+				},
+				{
+					"product": "Nintendo Switch Neon",
+					"title": "Nintendo Switch Neon Joy-Con",
+					"occasion": "Birthday",
+					"category": "gaming",
+					"price_approx": 300,
+					"image": "https://pisces.bbystatic.com/image2/BestBuy_US/images/products/6522/6522225_sd.jpg",
+					"href": "https://wrrapd.com/go/bestbuy/?to=https%3A%2F%2Fwww.bestbuy.com%2Fproduct%2Fswitch-with-neon-blue-and-neon-red-joycon%2FJ7GSL57RJ7",
+					"retailer": "Best Buy",
+					"domain": "bestbuy.com",
+					"retailer_slug": "bestbuy"
+				},
+				{
+					"product": "Nintendo Switch 2 System",
+					"title": "Nintendo Switch 2 System",
+					"occasion": "Birthday",
+					"category": "gaming",
+					"price_approx": 450,
+					"image": "https://pisces.bbystatic.com/image2/BestBuy_US/images/products/e4008a0f-5ef2-4fc7-8cb3-37c7c52d26cb.jpg",
+					"href": "https://wrrapd.com/go/bestbuy/?to=https%3A%2F%2Fwww.bestbuy.com%2Fproduct%2Fswitch-2-system%2FJ7GSL57TGH%2Fsku%2F6614313",
+					"retailer": "Best Buy",
+					"domain": "bestbuy.com",
+					"retailer_slug": "bestbuy"
+				},
+				{
+					"product": "Sony WH-1000XM5 Headphones",
+					"title": "Sony WH-1000XM5 Headphones",
+					"occasion": "Birthday",
+					"category": "electronics",
+					"price_approx": 348,
+					"image": "https://pisces.bbystatic.com/image2/BestBuy_US/images/products/6505/6505727_rd.jpg",
+					"href": "https://wrrapd.com/go/bestbuy/?to=https%3A%2F%2Fwww.bestbuy.com%2Fproduct%2Fsony-wh-1000xm5-wireless-noise-cancelling-over-the-ear-headphones-black%2FJ7XSRH5CXG%2Fsku%2F6505727",
+					"retailer": "Best Buy",
+					"domain": "bestbuy.com",
+					"retailer_slug": "bestbuy"
+				},
+				{
+					"product": "Apple AirPods Pro 3",
+					"title": "Apple AirPods Pro 3",
+					"occasion": "Birthday",
+					"category": "electronics",
+					"price_approx": 249,
+					"image": "https://pisces.bbystatic.com/image2/BestBuy_US/images/products/c3abe0d2-3129-4e47-8904-aadaf47eb4af.jpg",
+					"href": "https://wrrapd.com/go/bestbuy/?to=https%3A%2F%2Fwww.bestbuy.com%2Fproduct%2Fapple-airpods-pro-3-wireless-active-noise-cancelling-earbuds-with-heart-rate-sensing-feature-white%2FJJGCQLYK5F",
+					"retailer": "Best Buy",
+					"domain": "bestbuy.com",
+					"retailer_slug": "bestbuy"
+				},
+				{
+					"product": "Apple AirPods 5",
+					"title": "Apple AirPods 5",
+					"occasion": "Birthday",
+					"category": "electronics",
+					"price_approx": 179,
+					"image": "https://pisces.bbystatic.com/image2/BestBuy_US/images/products/c67c787c-ce22-4a50-b1c8-f90ebc90dddb.jpg",
+					"href": "https://wrrapd.com/go/bestbuy/?to=https%3A%2F%2Fwww.bestbuy.com%2Fproduct%2Fapple-airpods-5-true-wireless-active-noise-cancelling-earbuds-with-wireless-charging-case-white%2FJJGCQP634G",
+					"retailer": "Best Buy",
+					"domain": "bestbuy.com",
+					"retailer_slug": "bestbuy"
+				},
+				{
+					"product": "Bose Ultra Open Earbuds",
+					"title": "Bose Ultra Open Earbuds",
+					"occasion": "Birthday",
+					"category": "electronics",
+					"price_approx": 299,
+					"image": "https://pisces.bbystatic.com/image2/BestBuy_US/images/products/ab321920-8f33-4f53-911e-276cc537f85a.png",
+					"href": "https://wrrapd.com/go/bestbuy/?to=https%3A%2F%2Fwww.bestbuy.com%2Fproduct%2Fbose-ultra-open-earbuds-2nd-gen-wireless-bluetooth-open-ear-earbuds-with-immersive-audio-and-wireless-charging-white-smoke%2FJ7C5V6W3L4%2Fsku%2F6687430",
+					"retailer": "Best Buy",
+					"domain": "bestbuy.com",
+					"retailer_slug": "bestbuy"
+				},
+				{
+					"product": "Custom Visa Gift Card",
+					"title": "Custom Visa Gift Card",
+					"occasion": "Birthday",
+					"category": "gift_cards",
+					"price_approx": 75,
+					"image": "https://www.giftcards.com/content/dam/bhn/live/nam/us/en/catalog-assets/product-images/07675022697/07675022697_81054_master.png/_jcr_content/renditions/webp-thumbnail-640-640.webp",
+					"href": "https://wrrapd.com/go/giftcards/?to=https%3A%2F%2Fwww.giftcards.com%2Fus%2Fen%2Fcatalog%2Fproduct-details%2Fvisa-gift-card",
+					"retailer": "GiftCards.com",
+					"domain": "giftcards.com",
+					"retailer_slug": "giftcards"
+				}
+			]
 		},
 		{
 			"holiday_key": "generic-corporate",

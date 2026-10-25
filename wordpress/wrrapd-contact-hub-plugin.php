@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Wrrapd Contact Hub
  * Description: Renders /contact/ and /about-us/ — CSS, form, and JS live here so WordPress cannot dump them as page text.
- * Version: 1.2.1
+ * Version: 1.2.2
  *
  * Live copy is installed on SiteGround as plugins/wrrapd-contact-hub/wrrapd-contact-hub.php.
  * Repo mirror for source control — deploy by copying this file to that path.
@@ -163,6 +163,10 @@ function wrrapd_contact_hub_css() {
 		echo '<style id="wrrapd-contact-hub-css">';
 		echo 'body.wrrapd-contact-page .page-header,body.wrrapd-contact-page .entry-header,body.wrrapd-contact-page .entry-title{display:none!important;}';
 		echo 'body.wrrapd-contact-page .site-main{padding:0!important;margin:0!important;max-width:none!important;}';
+		echo '@media(min-width:1101px){';
+		echo 'body.wrrapd-contact-page:not(.logged-in) .elementor-location-header .elementor-element-68a38868.elementor-widget img{max-height:none!important;max-width:min(19.2rem,54vw)!important;width:auto!important;height:auto!important;}';
+		echo 'body.wrrapd-contact-page:not(.logged-in) .elementor-location-header .elementor-element-1c0d63ad img{max-height:none!important;max-width:min(11rem,34vw)!important;width:auto!important;}';
+		echo '}';
 		echo wrrapd_contact_hub_css_text();
 		echo '</style>';
 	}
@@ -204,15 +208,13 @@ function wrrapd_contact_hub_html() {
 <main class="wrrapd-contact-hub" id="wrrapd-contact">
 	<header class="wrrapd-ch-hero">
 		<div class="wrrapd-ch-hero-inner">
-			<p class="wrrapd-ch-eyebrow"><?php esc_html_e( 'Support & contact', 'wrrapd' ); ?></p>
 			<h1><?php esc_html_e( 'How can we help?', 'wrrapd' ); ?></h1>
-			<p class="wrrapd-ch-lede"><?php esc_html_e( 'Pick the path that fits you — gift orders, joining the wrapping team, or company questions. We’ll point you to the fastest next step.', 'wrrapd' ); ?></p>
+			<p class="wrrapd-ch-lede"><?php esc_html_e( 'Orders, the team, or a note to us.', 'wrrapd' ); ?></p>
 		</div>
 	</header>
 
 	<div class="wrrapd-ch-body">
 		<h2 class="wrrapd-ch-section-title"><?php esc_html_e( 'I need help with…', 'wrrapd' ); ?></h2>
-		<p class="wrrapd-ch-section-sub"><?php esc_html_e( 'Start with who you are, then jump straight to the right place.', 'wrrapd' ); ?></p>
 
 		<div class="wrrapd-ch-grid" role="list">
 			<a class="wrrapd-ch-card" href="<?php echo esc_url( $orders ); ?>" role="listitem">
@@ -337,48 +339,29 @@ function wrrapd_contact_hub_css_text() {
 .wrrapd-contact-hub a:hover{color:#d14900;}
 .wrrapd-ch-pills a,.wrrapd-ch-pills a:hover{color:var(--ch-navy-2)!important;text-decoration:none!important;}
 .wrrapd-ch-hero{
-  background:
-    linear-gradient(125deg, rgba(246,185,51,.16) 0%, transparent 42%),
-    linear-gradient(180deg, var(--ch-navy) 0%, #160a4a 100%);
+  background:#0c0638;
   color:#fff;
-  padding:clamp(2.4rem,6vw,3.6rem) clamp(1.15rem,4vw,2.5rem) clamp(2.6rem,6vw,3.8rem);
+  padding:clamp(1.5rem,3.5vw,2.2rem) clamp(1.15rem,4vw,2.5rem);
   position:relative;
-  overflow:hidden;
-}
-.wrrapd-ch-hero::after{
-  content:"";
-  position:absolute;
-  inset:auto -8% -40% 55%;
-  height:120%;
-  background:radial-gradient(circle at center, rgba(246,185,51,.22), transparent 62%);
-  pointer-events:none;
 }
 .wrrapd-ch-hero-inner{max-width:72rem;margin:0 auto;position:relative;z-index:1;}
-.wrrapd-ch-eyebrow{
-  margin:0 0 .7rem;
-  font-size:.78rem;
-  font-weight:800;
-  letter-spacing:.16em;
-  text-transform:uppercase;
-  color:var(--ch-gold);
-}
 .wrrapd-ch-hero h1{
-  margin:0 0 .75rem;
-  font-family:inherit;
-  font-size:clamp(2.05rem,5.2vw,3.35rem);
-  font-weight:700;
-  line-height:1.05;
-  letter-spacing:-.03em;
+  margin:0 0 .4rem;
+  font-family:Fraunces,Georgia,serif;
+  font-optical-sizing:auto;
+  font-size:clamp(2.05rem,4.2vw,2.8rem);
+  font-weight:560;
+  line-height:1.1;
+  letter-spacing:0;
   color:#fff;
-  max-width:16ch;
 }
 .wrrapd-ch-lede{
   margin:0;
-  max-width:38rem;
-  font-size:clamp(1.02rem,2.2vw,1.18rem);
-  line-height:1.55;
-  color:rgba(255,255,255,.86);
-  font-weight:600;
+  max-width:none;
+  font-size:1.15rem;
+  line-height:1.35;
+  color:#fff;
+  font-weight:460;
 }
 .wrrapd-ch-body{max-width:72rem;margin:0 auto;padding:0 clamp(1.15rem,4vw,2.5rem);}
 .wrrapd-ch-section-title{

@@ -744,9 +744,35 @@ function wrrapd_campaign_hot_gifts_pick( array $campaign, $count = 6 ) {
 	$max_per_retailer = isset( $campaign['hot_gifts_max_per_retailer'] ) ? (int) $campaign['hot_gifts_max_per_retailer'] : 2;
 	$min_retailers    = isset( $campaign['hot_gifts_min_retailers'] ) ? (int) $campaign['hot_gifts_min_retailers'] : 4;
 	$diverse_cats     = ! empty( $campaign['hot_gifts_diverse_categories'] );
-	if ( count( $pool ) < $count ) {
+	$prefer_cats      = array();
+	if ( ! empty( $campaign['hot_gifts_prefer_categories'] ) && is_array( $campaign['hot_gifts_prefer_categories'] ) ) {
+		foreach ( $campaign['hot_gifts_prefer_categories'] as $pc ) {
+			$pc = strtolower( trim( (string) $pc ) );
+			if ( $pc !== '' ) {
+				$prefer_cats[ $pc ] = true;
+			}
+		}
+	}
+	$own_with_photo = 0;
+	foreach ( $pool as $g ) {
+		if ( is_array( $g ) && wrrapd_campaign_gift_has_real_product_image( $g ) ) {
+			++$own_with_photo;
+		}
+	}
+	// Stay on this occasion's list when it already has enough real product photos.
+	// Only borrow extras when the theme pool is short — and then prefer matching categories.
+	if ( $own_with_photo < $count ) {
 		$cfg = wrrapd_campaigns_config();
-		// Prefer real product photos from other campaigns before logo-only evergreen cards.
+		$matches_prefer = static function ( $g ) use ( $prefer_cats ) {
+			if ( ! is_array( $g ) || empty( $g['title'] ) || ! wrrapd_campaign_gift_has_real_product_image( $g ) ) {
+				return false;
+			}
+			if ( count( $prefer_cats ) === 0 ) {
+				return true;
+			}
+			$cat = isset( $g['category'] ) ? strtolower( trim( (string) $g['category'] ) ) : '';
+			return $cat !== '' && isset( $prefer_cats[ $cat ] );
+		};
 		if ( $cfg && ! empty( $cfg['campaigns'] ) && is_array( $cfg['campaigns'] ) ) {
 			foreach ( $cfg['campaigns'] as $other ) {
 				if ( ! is_array( $other ) || empty( $other['hot_gifts'] ) || ! is_array( $other['hot_gifts'] ) ) {
@@ -756,7 +782,7 @@ function wrrapd_campaign_hot_gifts_pick( array $campaign, $count = 6 ) {
 					continue;
 				}
 				foreach ( $other['hot_gifts'] as $g ) {
-					if ( is_array( $g ) && ! empty( $g['title'] ) && wrrapd_campaign_gift_has_real_product_image( $g ) ) {
+					if ( $matches_prefer( $g ) ) {
 						$pool[] = $g;
 					}
 				}
@@ -799,14 +825,40 @@ function wrrapd_campaign_hot_gifts_pick( array $campaign, $count = 6 ) {
 			$rest[] = $g;
 		}
 	}
-	$rotate = count( $rest ) > 0 ? $rest : $pool;
-	$now    = wrrapd_campaigns_now();
-	$seed   = ( $now ? $now->format( 'o-W' ) : gmdate( 'o-W' ) ) . '|' . ( isset( $campaign['slug'] ) ? (string) $campaign['slug'] : 'x' );
-	$off    = abs( crc32( $seed ) ) % count( $rotate );
-	$ordered = $pinned;
-	for ( $i = 0; $i < count( $rotate ); ++$i ) {
-		$ordered[] = $rotate[ ( $off + $i ) % count( $rotate ) ];
+	// Occasion first: preferred categories (toys/electronics/…) rotate weekly ahead of fillers.
+	$rotate_pref = array();
+	$rotate_rest = array();
+	$rotate_src  = count( $rest ) > 0 ? $rest : $pool;
+	foreach ( $rotate_src as $g ) {
+		if ( ! is_array( $g ) ) {
+			continue;
+		}
+		$cat = isset( $g['category'] ) ? strtolower( trim( (string) $g['category'] ) ) : '';
+		if ( count( $prefer_cats ) > 0 && $cat !== '' && isset( $prefer_cats[ $cat ] ) ) {
+			$rotate_pref[] = $g;
+		} else {
+			$rotate_rest[] = $g;
+		}
 	}
+	if ( count( $rotate_pref ) === 0 ) {
+		$rotate_pref = $rotate_src;
+		$rotate_rest = array();
+	}
+	$now  = wrrapd_campaigns_now();
+	$week = $now ? $now->format( 'o-W' ) : gmdate( 'o-W' );
+	$slug = isset( $campaign['slug'] ) ? (string) $campaign['slug'] : 'x';
+	$spin = static function ( array $list, $tag ) use ( $week, $slug ) {
+		if ( count( $list ) === 0 ) {
+			return array();
+		}
+		$off = abs( crc32( $week . '|' . $slug . '|' . $tag ) ) % count( $list );
+		$out = array();
+		for ( $i = 0; $i < count( $list ); ++$i ) {
+			$out[] = $list[ ( $off + $i ) % count( $list ) ];
+		}
+		return $out;
+	};
+	$ordered = array_merge( $pinned, $spin( $rotate_pref, 'pref' ), $spin( $rotate_rest, 'rest' ) );
 	return wrrapd_campaign_hot_gifts_pick_constrained( $ordered, $count, $max_per_retailer, $min_retailers, $diverse_cats );
 }
 
