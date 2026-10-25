@@ -2,11 +2,13 @@
 /**
  * Plugin Name: Wrrapd X Card Force
  * Description: Social OG/Twitter cards only. Never rewrites page HTML for humans (header/body/footer stay untouched). Bots get a tiny clean card document.
- * Version: 2.4.0
+ * Version: 2.5.0
  */
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
+
+define( 'WRRAPD_X_CARD_VER', 'force-14' );
 
 /**
  * @return string
@@ -48,6 +50,8 @@ function wrrapd_x_card_is_bot() {
 function wrrapd_x_card_clean_payload() {
 	$api  = 'https://api.wrrapd.com/img/og/';
 	$path = wrrapd_x_card_path();
+	/* Bare wrrapd.com/ and JoyRider drive use the same share banner Roger approved. */
+	$joy  = $api . 'wrrapd-x-joyrider-e.jpg';
 
 	if ( wrrapd_x_card_is_apply_host() ) {
 		if ( preg_match( '#^/wraprider(/|$)#', $path ) ) {
@@ -63,7 +67,7 @@ function wrrapd_x_card_clean_payload() {
 				'title'       => 'Become a "JoyRider"',
 				'description' => 'Deliver wrapped gifts and flowers on your schedule. Paid hourly — rate confirmed when you’re approved.',
 				'url'         => 'https://apply.wrrapd.com/drive/',
-				'image'       => $api . 'wrrapd-x-joyrider-e.jpg',
+				'image'       => $joy,
 			);
 		}
 		return array(
@@ -78,8 +82,8 @@ function wrrapd_x_card_clean_payload() {
 		return array(
 			'title'       => 'Wrrapd | Wrapping Happiness',
 			'description' => 'Gift wrapping and delivery, done for you. Shop with our free Chrome extension, or paste any gift link.',
-			'url'         => 'https://wrrapd.com/share/',
-			'image'       => $api . 'wrrapd-x-home-e.jpg',
+			'url'         => 'https://wrrapd.com/',
+			'image'       => $joy,
 		);
 	}
 
@@ -112,6 +116,43 @@ function wrrapd_x_card_clean_payload() {
 }
 
 /**
+ * Drop every og:image / twitter:image meta (and size/type variants). Leaves titles, descriptions, body HTML alone.
+ *
+ * @param string $html
+ * @return string
+ */
+function wrrapd_x_card_strip_image_metas( $html ) {
+	$html = preg_replace(
+		'/<meta\b[^>]*(?:property|name)\s*=\s*["\'](?:og:image(?:(?::secure_url)|(?::url)|(?::width)|(?::height)|(?::type)|(?::alt))?|twitter:image(?::src)?)["\'][^>]*>\s*/i',
+		'',
+		$html
+	);
+	$html = preg_replace(
+		'/<meta\b[^>]*content\s*=\s*["\'][^"\']*["\'][^>]*(?:property|name)\s*=\s*["\'](?:og:image(?:(?::secure_url)|(?::url)|(?::width)|(?::height)|(?::type)|(?::alt))?|twitter:image(?::src)?)["\'][^>]*>\s*/i',
+		'',
+		$html
+	);
+	return is_string( $html ) ? $html : '';
+}
+
+/**
+ * @param array{title:string,description:string,url:string,image:string} $card
+ * @return string
+ */
+function wrrapd_x_card_image_meta_block( $card ) {
+	$img = esc_url( $card['image'] );
+	$out  = "\n<!-- wrrapd-x-card-force " . esc_html( WRRAPD_X_CARD_VER ) . " -->\n";
+	$out .= '<meta property="og:image" content="' . $img . '" />' . "\n";
+	$out .= '<meta property="og:image:secure_url" content="' . $img . '" />' . "\n";
+	$out .= '<meta property="og:image:width" content="1200" />' . "\n";
+	$out .= '<meta property="og:image:height" content="630" />' . "\n";
+	$out .= '<meta property="og:image:type" content="image/jpeg" />' . "\n";
+	$out .= '<meta name="twitter:card" content="summary_large_image" />' . "\n";
+	$out .= '<meta name="twitter:image" content="' . $img . '" />' . "\n";
+	return $out;
+}
+
+/**
  * @param array{title:string,description:string,url:string,image:string} $card
  */
 function wrrapd_x_card_emit_clean_document( $card ) {
@@ -119,7 +160,8 @@ function wrrapd_x_card_emit_clean_document( $card ) {
 		status_header( 200 );
 		header( 'Content-Type: text/html; charset=UTF-8' );
 		header( 'Cache-Control: no-store, no-cache, must-revalidate, max-age=0' );
-		header( 'X-Wrrapd-Card: force-13' );
+		header( 'X-Wrrapd-Card: ' . WRRAPD_X_CARD_VER );
+		header( 'Vary: User-Agent', false );
 	}
 	echo '<!DOCTYPE html><html lang="en"><head>';
 	echo '<meta charset="utf-8" />';
@@ -132,15 +174,9 @@ function wrrapd_x_card_emit_clean_document( $card ) {
 	echo '<meta property="og:title" content="' . esc_attr( $card['title'] ) . '" />';
 	echo '<meta property="og:description" content="' . esc_attr( $card['description'] ) . '" />';
 	echo '<meta property="og:url" content="' . esc_url( $card['url'] ) . '" />';
-	echo '<meta property="og:image" content="' . esc_url( $card['image'] ) . '" />';
-	echo '<meta property="og:image:secure_url" content="' . esc_url( $card['image'] ) . '" />';
-	echo '<meta property="og:image:width" content="1200" />';
-	echo '<meta property="og:image:height" content="630" />';
-	echo '<meta property="og:image:type" content="image/jpeg" />';
-	echo '<meta name="twitter:card" content="summary_large_image" />';
+	echo wrrapd_x_card_image_meta_block( $card );
 	echo '<meta name="twitter:title" content="' . esc_attr( $card['title'] ) . '" />';
 	echo '<meta name="twitter:description" content="' . esc_attr( $card['description'] ) . '" />';
-	echo '<meta name="twitter:image" content="' . esc_url( $card['image'] ) . '" />';
 	echo '</head><body><p><a href="' . esc_url( $card['url'] ) . '">Wrrapd</a></p></body></html>';
 	exit;
 }
@@ -162,6 +198,10 @@ add_action(
 	function () {
 		if ( wrrapd_x_card_clean_payload() && ! headers_sent() ) {
 			header( 'Vary: User-Agent', false );
+			if ( wrrapd_x_card_is_bot() ) {
+				header( 'Cache-Control: no-store, no-cache, must-revalidate, max-age=0' );
+				header( 'X-Wrrapd-Card: ' . WRRAPD_X_CARD_VER );
+			}
 		}
 	},
 	0
@@ -187,24 +227,42 @@ add_action(
 			exit;
 		}
 
-		// Humans: do nothing. No output buffering. No HTML rewrite. Pages render as WordPress built them.
-		if ( ! wrrapd_x_card_is_bot() ) {
+		$card = wrrapd_x_card_clean_payload();
+
+		// Bots: tiny clean card with exactly one image. No theme HTML, no logo metas.
+		if ( wrrapd_x_card_is_bot() ) {
+			if ( ! defined( 'DONOTCACHEPAGE' ) ) {
+				define( 'DONOTCACHEPAGE', true );
+			}
+			if ( $card ) {
+				wrrapd_x_card_emit_clean_document( $card );
+			}
 			return;
 		}
 
-		if ( ! defined( 'DONOTCACHEPAGE' ) ) {
-			define( 'DONOTCACHEPAGE', true );
+		// Humans: never rewrite body/header/footer. Only collapse competing image metas in <head>.
+		if ( ! $card ) {
+			return;
 		}
-
-		$card = wrrapd_x_card_clean_payload();
-		if ( $card ) {
-			wrrapd_x_card_emit_clean_document( $card );
-		}
+		ob_start(
+			function ( $html ) use ( $card ) {
+				if ( ! is_string( $html ) || $html === '' ) {
+					return $html;
+				}
+				// Never rewrite <img> / logo URLs — meta tags only.
+				$clean = wrrapd_x_card_strip_image_metas( $html );
+				$block = wrrapd_x_card_image_meta_block( $card );
+				if ( stripos( $clean, '</head>' ) !== false ) {
+					$clean = preg_replace( '/<\/head>/i', $block . '</head>', $clean, 1 );
+				}
+				return $clean;
+			}
+		);
 	},
 	0
 );
 
-// Humans only: add OG meta in head (does not touch header/body/footer markup).
+// Humans: also print the block early so something is present even if OB is skipped.
 add_action(
 	'wp_head',
 	function () {
@@ -215,15 +273,7 @@ add_action(
 		if ( ! $card ) {
 			return;
 		}
-		$img = esc_url( $card['image'] );
-		echo "\n<!-- wrrapd-x-card-force -->\n";
-		echo '<meta property="og:image" content="' . $img . '" />' . "\n";
-		echo '<meta property="og:image:secure_url" content="' . $img . '" />' . "\n";
-		echo '<meta property="og:image:width" content="1200" />' . "\n";
-		echo '<meta property="og:image:height" content="630" />' . "\n";
-		echo '<meta property="og:image:type" content="image/jpeg" />' . "\n";
-		echo '<meta name="twitter:card" content="summary_large_image" />' . "\n";
-		echo '<meta name="twitter:image" content="' . $img . '" />' . "\n";
+		echo wrrapd_x_card_image_meta_block( $card );
 	},
 	1
 );

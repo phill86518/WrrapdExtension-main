@@ -41,7 +41,7 @@ Prefer **api.wrrapd.com** for every share URL X/FB will fetch.
 
 | Use | Live URL (prefer) |
 |---|---|
-| Homepage / `/share/` | `https://api.wrrapd.com/img/og/wrrapd-x-home-e.jpg` |
+| Homepage / `/share/` | `https://api.wrrapd.com/img/og/wrrapd-x-joyrider-e.jpg` (same JoyRider banner) |
 | `/buy/` | `https://api.wrrapd.com/img/og/wrrapd-buy-card.jpg` |
 | Essay: holiday | `https://api.wrrapd.com/img/og/wrrapd-essay-holiday-card.jpg` |
 | Essay: season | `https://api.wrrapd.com/img/og/wrrapd-essay-season-card.jpg` |
@@ -62,7 +62,7 @@ Pay-server copies (always push with this work): `backend/wrrapd-api-repo/WrrapdS
 
 | Path | Image |
 |---|---|
-| `/`, `/share/` | `wrrapd-x-home-e.jpg` |
+| `/`, `/share/` | `wrrapd-x-joyrider-e.jpg` |
 | `/buy/` | `wrrapd-buy-card.jpg` |
 | `/holiday-gifting-season/` | essay-holiday |
 | `/give-them-a-season/` | essay-season |
