@@ -155,6 +155,13 @@ test('Kohl\'s browser page uses the sale price, colors, and the standard ship es
     assert.equal(product.variantGroups[0].selected, null);
     assert.ok(product.variantGroups[0].options.includes('Tan'));
     assert.equal(product.readBy, 'brightdata_browser');
+    const begun = daysOut(-3);
+    const late = reader.kohlsProductFromBrowserHtml(
+        `<title>Loafers | Kohl's</title> $47.99 Sale Arrives by ${label(begun)} - ${label(end)}. Add to cart`,
+        'https://www.kohls.com/product/prd-1.jsp',
+    );
+    assert.equal(late.standardShip.arrivalDate, ymd(begun));
+    assert.equal(late.standardShip.arrivalDateEnd, ymd(end));
     const under = reader.kohlsProductFromBrowserHtml(
         '<title>Tee | Kohl\'s</title> $24.99 Sale Add to cart',
         'https://www.kohls.com/product/prd-1.jsp',

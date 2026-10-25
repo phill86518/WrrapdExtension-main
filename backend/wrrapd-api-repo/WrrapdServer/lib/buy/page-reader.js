@@ -430,6 +430,14 @@ function ymdFromMonthDay(monName, day) {
     return `${year}-${String(mon).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 }
 
+/** A printed window whose first day already passed still ends this year; keep start on or before end. */
+function ymdRangeFromMonthDays(startMon, startDay, endMon, endDay) {
+    let start = ymdFromMonthDay(startMon, startDay);
+    const end = ymdFromMonthDay(endMon, endDay);
+    if (start && end && start > end) start = `${Number(start.slice(0, 4)) - 1}${start.slice(4)}`;
+    return { start, end };
+}
+
 /** Regular delivery printed on the page. Skips Prime and other membership sentences. No extra request. */
 function standardFromPage(html, itemCents) {
     const text = visibleText(html).replace(/\s+/g, ' ');
@@ -437,8 +445,7 @@ function standardFromPage(html, itemCents) {
     const dashed = text.match(/arrives\s+(?:by\s+)?(?:[A-Za-z]+,\s+)?([A-Za-z]+)\s+(\d{1,2})\s*[-–]\s*(?:[A-Za-z]+,\s+)?([A-Za-z]+)\s+(\d{1,2})/i);
     const windowed = between || dashed;
     if (windowed) {
-        const start = ymdFromMonthDay(windowed[1], windowed[2]);
-        const end = ymdFromMonthDay(windowed[3], windowed[4]);
+        const { start, end } = ymdRangeFromMonthDays(windowed[1], windowed[2], windowed[3], windowed[4]);
         const arrivalDate = end && (!start || end > start) ? end : start;
         if (arrivalDate) return { label: 'Standard shipping', cents: null, arrivalDate, note: '' };
     }
@@ -735,8 +742,7 @@ function kohlsDeliveryWindow(text) {
     const src = String(text || '').replace(/\s+/g, ' ');
     const range = src.match(/(?:arriv(?:e|es|ing)|get it|estimated delivery)(?:(?!kohl'?s cash).){0,90}?([A-Za-z]{3,9})\s+(\d{1,2})\s*[-–]\s*(?:[A-Za-z]{3,9},\s+)?([A-Za-z]{3,9})\s+(\d{1,2})/i);
     if (range) {
-        const arrivalDate = ymdFromMonthDay(range[1], range[2]);
-        const arrivalDateEnd = ymdFromMonthDay(range[3], range[4]);
+        const { start: arrivalDate, end: arrivalDateEnd } = ymdRangeFromMonthDays(range[1], range[2], range[3], range[4]);
         if (arrivalDate && arrivalDateEnd) return { arrivalDate, arrivalDateEnd };
     }
     const one = src.match(/(?:arriv(?:e|es|ing)|get it|estimated delivery)[^.]{0,40}?([A-Za-z]{3,9})\s+(\d{1,2})\b/i);
