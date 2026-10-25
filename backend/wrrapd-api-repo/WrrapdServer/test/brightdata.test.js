@@ -125,12 +125,23 @@ test('Kohl\'s scraper maps blocked snapshots to brightdata_kohls_blocked', async
 });
 
 test('Kohl\'s browser page uses the sale price, colors, and the standard ship estimate', () => {
+    const daysOut = (n) => {
+        const d = new Date();
+        d.setDate(d.getDate() + n);
+        return d;
+    };
+    const label = (d) =>
+        d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    const ymd = (d) =>
+        `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const start = daysOut(3);
+    const end = daysOut(7);
     const html = [
         '<title>LifeStride London 3 Women\'s Loafers | Kohl\'s</title>',
         '<img src="https://media.kohlsimg.com/is/image/kohls/7513461_Tan">',
         '"skuCode":[0,"50653163"],"color":[0,"Tan"] "color":[0,"Black"] "color":[0,"Cognac"]',
         '"size":[0,"7M"] "size":[0,"8M"]',
-        'LifeStride London 3 Women\'s Loafers $47.99 with GET20 $59.99 Sale $79.99 Reg. Arrives by Thu, Oct 23 - Mon, Oct 27. Add to cart',
+        `LifeStride London 3 Women's Loafers $47.99 with GET20 $59.99 Sale $79.99 Reg. Arrives by ${label(start)} - ${label(end)}. Add to cart`,
     ].join(' ');
     const product = reader.kohlsProductFromBrowserHtml(
         html,
@@ -138,8 +149,8 @@ test('Kohl\'s browser page uses the sale price, colors, and the standard ship es
     );
     assert.equal(product.pagePriceCents, 4799);
     assert.equal(product.standardShip.cents, 895);
-    assert.equal(product.standardShip.arrivalDate, '2026-10-23');
-    assert.equal(product.standardShip.arrivalDateEnd, '2026-10-27');
+    assert.equal(product.standardShip.arrivalDate, ymd(start));
+    assert.equal(product.standardShip.arrivalDateEnd, ymd(end));
     assert.equal(product.variantGroups[0].name, 'Color');
     assert.equal(product.variantGroups[0].selected, null);
     assert.ok(product.variantGroups[0].options.includes('Tan'));

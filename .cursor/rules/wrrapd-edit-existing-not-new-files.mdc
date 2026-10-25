@@ -1,0 +1,28 @@
+---
+description: Prefer editing existing files; never invent extraneous new files when a content change will do
+alwaysApply: true
+---
+
+# Edit existing files — do not create extras
+
+Whenever possible, fix problems by **changing contents of files that already exist**. Do not create new files, plugins, snippets, wrappers, or docs as a workaround.
+
+## Rule of thumb
+
+1. Name the **existing** path (repo and/or live SiteGround path).
+2. Say **exactly which contents** must change (field, function, string, block).
+3. Prefer overwrite / paste into that file over adding a sibling file.
+4. New files only when the user explicitly asks, or when no existing file can hold the change.
+
+## Examples
+
+| Situation | Do this | Not this |
+|---|---|---|
+| Contact page broken | Edit live `wp-content/plugins/wrrapd-contact-hub/wrrapd-contact-hub.php` (same content as repo `wordpress/wrrapd-contact-hub-plugin.php`) | New MU plugin, new page, or new HTML file |
+| CWS listing text | Edit that item’s Store listing / Privacy fields | New store item or new support page |
+| Extension update | Upload zip on the **existing** item’s Package tab | New Item |
+| Copy / CSS fix | Patch the existing PHP/CSS that already owns it | New “fix” stylesheet or one-shot plugin |
+
+## Agent replies
+
+Lead with the file path and the content change. Do not open with “create a new file” unless nothing else works, and say so explicitly.
