@@ -1,21 +1,21 @@
 ---
-description: Latest Golden snapshots — website October 2026 after the logo restore; extension and admin remain 2026-09-19.
+description: Latest Golden snapshots — website November 2026; extension and admin remain 2026-09-19.
 alwaysApply: true
 ---
 
 # Latest Golden versions
 
-When the user says **latest golden** or **WEBSITE LATEST GOLDEN**, restore the **22 October 2026 website**. Extension and admin stay on 19 September 2026 until the user names a newer one for those.
+When the user says **latest golden** or **WEBSITE LATEST GOLDEN**, restore the **19 November 2026 website**. Extension and Command Center stay on 19 September 2026 until the user names a newer one for those.
 
 | Name | Git tag | What it freezes |
 |---|---|---|
-| **WEBSITE LATEST GOLDEN VERSION** | `golden-website-2026-10-22` | wrrapd.com after the header/footer wordmark restore |
+| **WEBSITE LATEST GOLDEN VERSION** | `golden-website-2026-11-19` | wrrapd.com after birthday/contact/landings + post-outage stable |
 | **EXTENSION LATEST GOLDEN VERSION** | `golden-extension-2026-09-19` | Chrome extension **3.0.10** |
 | **ADMIN LATEST GOLDEN VERSION** | `golden-admin-2026-09-19` | Tracking Command Center (`tracking-platform/`) |
 
-Website inventory: [GOLDEN-VERSIONS-2026-10-22.md](../../GOLDEN-VERSIONS-2026-10-22.md)
+Website inventory: [GOLDEN-VERSIONS-2026-11-19.md](../../GOLDEN-VERSIONS-2026-11-19.md)
 
-September website tag `golden-website-2026-09-19` and homepage tag `golden-homepage-2026-09-08` are historical.
+October website tag `golden-website-2026-10-22`, September website tag `golden-website-2026-09-19`, and homepage tag `golden-homepage-2026-09-08` are historical.
 
 Social images are copy-paste banners. Never rewrite the live header or footer. See [wrrapd-social-banners-only.mdc](./wrrapd-social-banners-only.mdc).
 
@@ -24,8 +24,8 @@ Social images are copy-paste banners. Never rewrite the live header or footer. S
 ```bash
 cd /home/phill/wrrapd-GCP
 git fetch origin --tags
-# Website (October 2026):
-git checkout golden-website-2026-10-22 -- wordpress/ docs/SOCIAL-SHARE-CARDS.md docs/WORDPRESS-SITE-EDITS-LOG.md .cursor/rules/wrrapd-social-banners-only.mdc .cursor/rules/wrrapd-latest-golden-versions.mdc GOLDEN-VERSIONS-2026-10-22.md
+# Website (November 2026):
+git checkout golden-website-2026-11-19 -- wordpress/ docs/SOCIAL-SHARE-CARDS.md docs/WORDPRESS-SITE-EDITS-LOG.md .cursor/rules/wrrapd-social-banners-only.mdc .cursor/rules/wrrapd-latest-golden-versions.mdc .cursor/rules/wrrapd-edit-existing-not-new-files.mdc GOLDEN-VERSIONS-2026-11-19.md
 # Extension:
 git checkout golden-extension-2026-09-19 -- extension/
 # Admin / Command Center:

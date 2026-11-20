@@ -1,8 +1,10 @@
 # Wrrapd website golden — October 2026
 
+**Website superseded 19 November 2026.** The shopper site golden is now [GOLDEN-VERSIONS-2026-11-19.md](./GOLDEN-VERSIONS-2026-11-19.md), tag `golden-website-2026-11-19`. Extension and admin tags below are still current.
+
 Recorded **Thursday, 22 October 2026** on the GCP VM (`/home/phill/wrrapd-GCP`) after the shopper header and footer wordmarks were restored, then pushed to `origin/main`.
 
-This is **WEBSITE LATEST GOLDEN VERSION**. Extension and Command Center stay on the 19 September 2026 tags until someone names a newer one for those.
+Historical **WEBSITE** snapshot (22 Oct). Extension and Command Center stay on the 19 September 2026 tags until someone names a newer one for those.
 
 | Spoken name | Git tag | What it freezes |
 |---|---|---|

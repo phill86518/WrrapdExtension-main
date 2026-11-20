@@ -8,6 +8,11 @@ WordPress + Elementor + Hello theme content mostly lives **in the production dat
 
 ## Recent changes
 
+### 2026-11-19 — WEBSITE LATEST GOLDEN + SiteGround disk cleanup
+
+- **Golden:** `GOLDEN-VERSIONS-2026-11-19.md`, git tag `golden-website-2026-11-19`. Rule `.cursor/rules/wrrapd-latest-golden-versions.mdc` points here. Extension / admin remain `golden-*-2026-09-19`.
+- **SiteGround StartUp 10 GB:** cleared All-in-One `.wpress` backups and old Updraft sets; kept `backup_2026-05-05-…` only. Plan usage ~**3.5 GB / 35%** (was 80%).
+
 ### 2026-10-25 — Site outage fixed; birthday picks, idea cards, contact hero live
 
 - **Outage (Oct 24 evening ET):** every uncached wrrapd.com page and wp-admin showed "There has been a critical error". Cause: a live-only plugin `wp-content/plugins/wrrapd-xcard-safe-once/` (added during the X-card meta-image work) called `w3tc_flush_all()` on `plugins_loaded`, before W3 Total Cache was ready (`CacheFlush.php:229`, `clear_cache()` on null). Fixed by renaming that folder to `.off`; it is gone from the plugin list now. Restoring `mu-plugins` from backup did not help because the crash was in `plugins/`.
