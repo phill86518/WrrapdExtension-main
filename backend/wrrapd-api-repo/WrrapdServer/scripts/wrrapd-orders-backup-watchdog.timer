@@ -1,0 +1,11 @@
+[Unit]
+Description=Check every 30 minutes that Wrrapd order backups are fresh
+
+[Timer]
+OnBootSec=10min
+OnUnitActiveSec=30min
+Persistent=true
+Unit=wrrapd-orders-backup-watchdog.service
+
+[Install]
+WantedBy=timers.target

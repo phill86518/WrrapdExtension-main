@@ -56,6 +56,21 @@ pm2 logs wrrapd-server --lines 80
 
 **Skip this entire section** for extension-only or tracking-only releases.
 
+### Order backups (VM → `gs://wrrapd-ops-backups`)
+
+Hourly/daily backups are **systemd timers** (not cron). They call `scripts/backup-orders.sh`, which uploads with `/snap/google-cloud-cli/current/bin/gcloud` (never `/snap/bin/gcloud` — that wrapper flakes under non-interactive sessions). A watchdog timer remediates if `/health/backup` would go stale.
+
+```bash
+systemctl list-timers 'wrrapd-orders-backup*'
+curl -sS https://api.wrrapd.com/health/backup   # expect {"status":"ok",...}
+# After editing unit files in scripts/:
+sudo cp backend/wrrapd-api-repo/WrrapdServer/scripts/wrrapd-orders-backup*.{service,timer} /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now wrrapd-orders-backup.timer wrrapd-orders-backup-full.timer wrrapd-orders-backup-watchdog.timer
+```
+
+Alerting: **Wrrapd site down** excludes this check; **Wrrapd order backups stale** emails only after ~15 minutes of failure.
+
 ---
 
 ## 4) On the VM — tracking app (Cloud Run) — **only if `tracking-platform/` changed**

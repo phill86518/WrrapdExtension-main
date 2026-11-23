@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Wrrapd daily full backup at 03:17 America/New_York
+
+[Timer]
+# 03:17 America/New_York during EST (= 08:17 UTC). During EDT this is 04:17 ET — still fine.
+OnCalendar=*-*-* 08:17:00
+Persistent=true
+Unit=wrrapd-orders-backup-full.service
+
+[Install]
+WantedBy=timers.target

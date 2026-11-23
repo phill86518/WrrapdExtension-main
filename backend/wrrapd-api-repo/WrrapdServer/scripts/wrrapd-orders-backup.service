@@ -1,0 +1,21 @@
+[Unit]
+Description=Wrrapd hourly orders backup to GCS
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=admin_
+Group=admin_
+WorkingDirectory=/home/phill/wrrapd-GCP/backend/wrrapd-api-repo/WrrapdServer
+Environment=HOME=/home/admin_
+Environment=CLOUDSDK_CONFIG=/home/admin_/.config/gcloud
+ExecStart=/home/phill/wrrapd-GCP/backend/wrrapd-api-repo/WrrapdServer/scripts/backup-orders.sh hourly
+StandardOutput=append:/home/phill/wrrapd-GCP/backend/wrrapd-api-repo/WrrapdServer/logs/backup.log
+StandardError=append:/home/phill/wrrapd-GCP/backend/wrrapd-api-repo/WrrapdServer/logs/backup.log
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+
+[Install]
+WantedBy=multi-user.target

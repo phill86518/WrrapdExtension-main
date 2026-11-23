@@ -1,0 +1,10 @@
+[Unit]
+Description=Run Wrrapd hourly orders backup at minute 7
+
+[Timer]
+OnCalendar=*:7:00
+Persistent=true
+Unit=wrrapd-orders-backup.service
+
+[Install]
+WantedBy=timers.target
